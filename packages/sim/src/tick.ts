@@ -1170,8 +1170,10 @@ function peasantsToLaborers(w: World, r: Region) {
   const idle = r.households.unskilled.population * regionUnemployment(w, r.id, 'unskilled');
   const gap = vacancy - idle;
   if (gap < 1) return;
-  // 공장 일자리는 소작보다 훨씬 나으므로 빈자리는 며칠 안에 찬다
-  move(peasants, r.households.unskilled, Math.min(gap * 0.5, peasants.population * 0.02));
+  // 공장 일자리는 소작보다 훨씬 나으므로 빈자리는 빨리 찬다. 다만 글을 읽고 셈을 할 줄 아는 사람이 먼저 간다:
+  // 교육 수준이 낮은 지역은 옮겨 가는 속도가 느리다 (교육 10% → 0.4배, 50% → 1배, 상한 1.5배)
+  const literacy = clamp(0.25 + 1.5 * r.education, 0.25, 1.5);
+  move(peasants, r.households.unskilled, Math.min(gap * 0.5, peasants.population * 0.02 * literacy));
 }
 
 /** 일자리를 못 구한 노동자는 땅이 남아 있으면 농민으로 돌아간다 */
