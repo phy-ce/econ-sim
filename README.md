@@ -89,3 +89,9 @@ AI houses use the same command path as the player. Each week they build a market
 ## Art
 
 All pixel art (16×16 and 64×64) is original to this project. See `packages/client/public/ASSETS.md`.
+
+## License
+
+Copyright 2026 phy-ce. Licensed under the [Apache License 2.0](LICENSE).
+
+You may use, modify and redistribute this project, including commercially, as long as you keep the copyright notice, the license and the [NOTICE](NOTICE) file, which credits the original author, in your distribution, and state the changes you made.
