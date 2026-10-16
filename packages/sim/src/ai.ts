@@ -1,11 +1,11 @@
-import { BUILDING_BY_ID, BUILDING_TYPES, GOOD_IDS, GOODS, SCHOOL_CAPACITY, SKILL_DEFS, TECH_BY_ID, TICKS_PER_WEEK, TICKS_PER_YEAR, getMethod, POP_SCALE, regionPerk } from './data';
+import { BUILDING_BY_ID, BUILDING_TYPES, GOOD_IDS, GOODS, LEVELS_PER_BLOCK, SCHOOL_CAPACITY, SKILL_DEFS, TECH_BY_ID, TICKS_PER_WEEK, TICKS_PER_YEAR, getMethod, POP_SCALE, regionPerk } from './data';
 import {
   availableMethods, bookValue, canBuildType, colonyPrice, constructionEstimate, payClassIn, creditLimit, estimateAfterEntry, expectedSellThrough, hasBuilder, estimateMethod, landFree,
   payHouseholds, regionById, regionPopulation, regionUnemployment, researchableTechs, slots, unemploymentRate, ownerJobs, shippingRate, CARTAGE_RATE,
 } from './economy';
 import { applyCommand } from './commands';
-import { skillShareCap } from './tick';
-import { MAX_RESEARCH_BUDGET } from './commands';
+import { PEASANT_TO_LABORER, skillShareCap } from './tick';
+import { MAX_CONCURRENT_CONSTRUCTIONS, MAX_LEVELS_PER_PROJECT, MAX_RESEARCH_BUDGET } from './commands';
 import { rand } from './rng';
 import { marketOutlook, techValue, valueMethod } from './outlook';
 import type { Outlook } from './outlook';
@@ -74,7 +74,7 @@ function pendingOutput(w: World): GoodBag {
   const out: Record<string, number> = {};
   for (const k of w.constructions) {
     const m = getMethod(k.typeId, k.methodId);
-    for (const g of GOOD_IDS) if (m.outputs[g]) out[`${k.regionId}:${g}`] = (out[`${k.regionId}:${g}`] ?? 0) + m.outputs[g]!;
+    for (const g of GOOD_IDS) if (m.outputs[g]) out[`${k.regionId}:${g}`] = (out[`${k.regionId}:${g}`] ?? 0) + m.outputs[g]! * (k.levels ?? 1);
   }
   return out as GoodBag;
 }
@@ -115,7 +115,8 @@ function adjustWages(w: World, c: Company) {
     const floor = s === 'unskilled' ? reservationWage(w, c) * 1.08 : base * 0.5;
     // 노동자 빈자리는 지역에 소작농이 남아 있으면 임금을 올리지 않아도 곧 찬다
     const reservoir = s === 'unskilled' && w.buildings.some((b) => b.companyId === c.id && isReservoir(regionById(w, b.regionId)));
-    if (vacancy > 0.05 && paysInFull && c.lastWeekProfit > 0 && !reservoir) wage *= 1.02;
+    // 실업자가 남아 있으면 빈자리는 채용 속도 때문이지 임금 때문이 아니다: 그때는 올리지 않는다
+    if (vacancy > 0.05 && paysInFull && c.lastWeekProfit > 0 && !reservoir && unemp < 0.05) wage *= 1.02;
     else if (c.lastWeekProfit < 0) wage *= 0.98;
     else if (unemp > 0.08 && wage > floor) wage *= 0.985;
     wage = Math.min(base * 3, Math.max(floor, base * 0.3, wage));
@@ -191,7 +192,8 @@ function manageBuildings(w: World, c: Company) {
         b.lossWeeks = 0;
         b.profitEma = 0;
       } else if (b.pausedWeeks >= 26) {
-        applyCommand(w, c.id, { type: 'demolish', buildingId: b.id });
+        // 오래 멈춘 건물은 4분의 1씩 헐어 낸다
+        applyCommand(w, c.id, { type: 'demolish', buildingId: b.id, levels: Math.max(1, Math.round(b.level * 0.25)) });
         b.pausedWeeks = 0;
       }
       continue;
@@ -205,17 +207,14 @@ function manageBuildings(w: World, c: Company) {
     const actualMargin = cost > 0 ? (b.last.revenue - cost) / cost : 0;
     const bleeding = (b.profitEma < 0 && (current.margin < -0.2 || actualMargin < -0.2)) || starved;
     b.lossWeeks = bleeding ? b.lossWeeks + 1 : 0;
-    if (b.lossWeeks >= 8) {
-      if (b.utilization <= 0.2 && b.level > 1) {
-        // 여러 개짜리 건물은 멈추기 전에 하나씩 철거해 규모를 줄인다 (4주마다 하나)
-        applyCommand(w, c.id, { type: 'demolish', buildingId: b.id });
-        b.lossWeeks = 4;
-      } else if (b.utilization <= 0.2) {
-        applyCommand(w, c.id, { type: 'setActive', buildingId: b.id, active: false });
-        b.pausedWeeks = 0;
-      } else {
-        applyCommand(w, c.id, { type: 'setUtilization', buildingId: b.id, utilization: b.utilization - 0.1 });
-      }
+    // 적자면 끄지 않고 가동률부터 줄인다 (4주 적자마다 10%씩, 최저 10%). 최저 가동률로도 넉 달 적자면 그때 하나 철거하거나 멈춘다
+    if (b.lossWeeks >= 4 && b.utilization > 0.1 + 1e-9) {
+      applyCommand(w, c.id, { type: 'setUtilization', buildingId: b.id, utilization: Math.max(0.1, b.utilization - 0.1) });
+      b.lossWeeks = 0;
+    } else if (b.lossWeeks >= 16) {
+      if (b.level > 1) applyCommand(w, c.id, { type: 'demolish', buildingId: b.id, levels: Math.max(1, Math.min(b.level - 1, Math.round(b.level * 0.25))) });
+      else { applyCommand(w, c.id, { type: 'setActive', buildingId: b.id, active: false }); b.pausedWeeks = 0; }
+      b.lossWeeks = 0;
     } else if (b.utilization < 1 && current.margin > 0) {
       applyCommand(w, c.id, { type: 'setUtilization', buildingId: b.id, utilization: b.utilization + 0.1 });
     }
@@ -230,6 +229,10 @@ function planResearch(w: World, c: Company, o: Outlook) {
     // 연구비 대비 가치가 큰 기술부터: 기술이 여는 방식의 장기 이윤(기존 건물 개선 + 새 건물). 가치가 없어 보이면 선행 기술로서의 가치를 본다
     const options = researchableTechs(c);
     const direct = new Map(Object.keys(TECH_BY_ID).map((id) => [id, techValue(w, o, c, id)] as const));
+    // 학교를 여는 기술(인쇄술): 왕국의 기술자 빈자리를 메우는 가치
+    let shortage = 0;
+    for (const reg of w.regions) shortage += skilledShortage(w, reg.id);
+    for (const t of BUILDING_TYPES) for (const m of t.methods) if (m.grant && m.tech) direct.set(m.tech, (direct.get(m.tech) ?? 0) + shortage * c.wages.skilled * 0.3);
     const memo = new Map<string, number>();
     const deep = (id: string): number => {
       if (memo.has(id)) return memo.get(id)!;
@@ -242,8 +245,9 @@ function planResearch(w: World, c: Company, o: Outlook) {
     const ranked = options.map((id) => ({ id, s: ((deep(id) + 1) / TECH_BY_ID[id].cost) * (0.85 + rand(w) * 0.3) })).sort((a, b) => b.s - a.s);
     if (ranked.length) applyCommand(w, c.id, { type: 'setResearch', techId: ranked[0].id });
   }
-    // 연구가 건설을 굶기지 않게: 한 달에 여유 현금의 30%와 매출의 8%까지
-  const budget = r.current && spare > 0 ? Math.min(MAX_RESEARCH_BUDGET, (spare * 0.3) / 30 + c.revenueEma * 0.08) : 0;
+    // 연구가 건설을 굶기지 않게: 공사 몫을 빼고 남는 돈 기준으로, 한 달에 그 30%와 매출의 5%까지
+  const left = spare - committedCost(w, c);
+  const budget = r.current && left > 0 ? Math.min(MAX_RESEARCH_BUDGET, (left * 0.3) / 30 + c.revenueEma * 0.05) : 0;
   if (budget !== r.budget) applyCommand(w, c.id, { type: 'setResearchBudget', budget });
 }
 
@@ -257,7 +261,7 @@ function weeklyWageBill(w: World, c: Company): number {
 }
 
 export function reserveOf(w: World, c: Company): number {
-  return 500 * POP_SCALE + weeklyWageBill(w, c) * 2 + c.research.budget * TICKS_PER_WEEK;
+  return 500 * POP_SCALE + weeklyWageBill(w, c) + c.research.budget * TICKS_PER_WEEK;
 }
 
 export function committedCost(w: World, c: Company): number {
@@ -266,7 +270,7 @@ export function committedCost(w: World, c: Company): number {
     if (k.companyId !== c.id) continue;
     const est = constructionEstimate(w, c, k.typeId);
     if (!Number.isFinite(est.cost)) continue;
-    total += Math.max(0, est.cost * (1 - k.points / k.required));
+    total += Math.max(0, est.cost * (k.levels ?? 1) * (1 - k.points / k.required));
   }
   return total;
 }
@@ -305,18 +309,20 @@ function bottleneckEstimate(w: World, r: Region, typeId: string, m: MethodDef, w
  * 그 지역(과 이웃 일부)에 이 방식을 돌릴 일손이 있는가 0..1.
  * 노동자는 소작농이 곧바로 공장으로 오므로 소작농도 센다. 기술자·전문가는 빈자리가 임금을 올려 끌어오므로 느슨하게 본다.
  */
-export function laborAvailability(w: World, r: Region, m: MethodDef): number {
+export function laborAvailability(w: World, r: Region, m: MethodDef, levels = 1): number {
   let labor = 1;
   for (const s of SKILLS) {
-    const need = m.workers[s] ?? 0;
+    const need = (m.workers[s] ?? 0) * levels;
     if (need <= 0) continue;
     let idle = r.households[s].population * regionUnemployment(w, r.id, s);
-    if (s === 'unskilled') idle += r.households.peasant.population;
-    for (const nb of r.neighbors) {
-      const n = regionById(w, nb);
-      idle += n.households[s].population * regionUnemployment(w, nb, s) * 0.3;
-      if (s === 'unskilled') idle += n.households.peasant.population * 0.3;
+    // 소작농은 한꺼번에 오지 않는다: 공사 기간(약 60일) 동안 소작농→노동자 이동 속도로 올 수 있는 만큼만 센다
+    if (s === 'unskilled') {
+      const p = r.households.peasant.population;
+      const literacy = Math.min(1.5, Math.max(0.25, 0.25 + 1.5 * r.education));
+      idle += Math.min(p, p * PEASANT_TO_LABORER * literacy * 60);
     }
+    // 이웃 지역 실업자는 이주가 느리므로 조금만 센다
+    for (const nb of r.neighbors) idle += regionById(w, nb).households[s].population * regionUnemployment(w, nb, s) * 0.1;
     // 교육 수준이 받쳐 주면 하위 직종에서 승급해 올 사람도 센다 (공사 기간 동안 채워질 만큼)
     const pop = regionPopulation(r);
     if (s !== 'unskilled' && r.households[s].population / pop < skillShareCap(r.education, s)) {
@@ -334,9 +340,9 @@ export function laborAvailability(w: World, r: Region, m: MethodDef): number {
 export function schoolsSaturated(w: World, r: Region): boolean {
   let seats = 0;
   for (const b of w.buildings) if (b.regionId === r.id && getMethod(b.typeId, b.methodId).grant) seats += b.level * SCHOOL_CAPACITY;
-  for (const k of w.constructions) if (k.regionId === r.id && getMethod(k.typeId, k.methodId).grant) seats += SCHOOL_CAPACITY;
+  for (const k of w.constructions) if (k.regionId === r.id && getMethod(k.typeId, k.methodId).grant) seats += SCHOOL_CAPACITY * (k.levels ?? 1);
   // 국고가 보조금을 다 못 대면 더 짓지 않는다
-  if (w.grantRatio < 0.9) return true;
+  if (w.grantRatio < 0.6) return true;
   return seats >= regionPopulation(r) * 0.3;
 }
 
@@ -380,7 +386,7 @@ export function bottleneckGoods(w: World): Map<GoodId, number> {
         if (!GOOD_IDS.some((g) => m.outputs[g] && needed.has(g))) continue;
         for (const g of GOOD_IDS) {
           if (!m.inputs[g] || needed.has(g) || (available(g) && !scarce(g))) continue;
-          needed.set(g, m.inputs[g]!);
+          needed.set(g, m.inputs[g]! * LEVELS_PER_BLOCK);
           grew = true;
         }
       }
@@ -389,64 +395,103 @@ export function bottleneckGoods(w: World): Map<GoodId, number> {
   return needed;
 }
 
+/** 공사 하나의 레벨 수 후보 (큰 것부터). 수요가 받쳐 주는 가장 큰 덩어리를 고른다 */
+const CHUNKS = [20, 10, 5, 2, 1];
+/** 한 주에 새로 벌이는 공사 수 상한 */
+const MAX_STARTS_PER_WEEK = 3;
+/** 건축사무소 하나(예전 크기) = 레벨 OFFICE_BLOCK 개. 사무소는 이 단위로 늘리고 최대 10블록까지 */
+const OFFICE_BLOCK = Math.round(LEVELS_PER_BLOCK);
+const OFFICE_CAP = OFFICE_BLOCK * 10;
+
 function planConstruction(w: World, c: Company, o: Outlook) {
   // 건축사무소가 없으면 그것부터 (개항장에)
   if (!hasBuilder(w, c)) {
-    if (!w.constructions.some((k) => k.companyId === c.id && k.typeId === 'builder')) applyCommand(w, c.id, { type: 'build', typeId: 'builder', regionId: 1 });
+    if (!w.constructions.some((k) => k.companyId === c.id && k.typeId === 'builder')) applyCommand(w, c.id, { type: 'build', typeId: 'builder', regionId: 1, levels: Math.min(OFFICE_BLOCK, MAX_LEVELS_PER_PROJECT) });
     return;
   }
-  const ongoing = w.constructions.filter((k) => k.companyId === c.id);
   // 2년 넘게 절반도 못 나간 공사는 포기한다
-  for (const k of ongoing) if (k.ticksElapsed > 720 && k.points < k.required * 0.5) applyCommand(w, c.id, { type: 'cancelConstruction', constructionId: k.id });
-  // 공사가 밀려 있고 현금이 넉넉하면 사무소를 늘린다
+  for (const k of w.constructions.filter((x) => x.companyId === c.id)) if (k.ticksElapsed > 720 && k.points < k.required * 0.5) applyCommand(w, c.id, { type: 'cancelConstruction', constructionId: k.id });
   const est = constructionEstimate(w, c, 'farm');
-  const backlogDays = ongoing.reduce((s, k) => s + (k.required - k.points), 0) / Math.max(1, est.pointsPerDay);
-  // 공사가 두 달 넘게 밀려 있고 사무소 하나 더 지을 돈(공사비의 3배)이 있으면 사무소를 늘린다 (최대 10개)
+  const backlog = () => w.constructions.filter((k) => k.companyId === c.id).reduce((s, k) => s + (k.required - k.points), 0) / Math.max(1, est.pointsPerDay);
+  // 공사가 두 달 넘게 밀려 있고 사무소 한 블록 더 지을 돈(공사비의 3배)이 있으면 사무소를 늘린다 (최대 10블록)
   const officeLevel = w.buildings.filter((b) => b.companyId === c.id && b.typeId === 'builder').reduce((s, b) => s + b.level, 0);
-  const officeCost = constructionEstimate(w, c, 'builder').cost;
-  if (backlogDays > 60 && c.cash > officeCost * 3 && officeLevel < 10 && !ongoing.some((k) => k.typeId === 'builder')) {
+  const officeCost = constructionEstimate(w, c, 'builder').cost * OFFICE_BLOCK;
+  if (backlog() > 60 && c.cash > officeCost * 3 && officeLevel < OFFICE_CAP && !w.constructions.some((k) => k.companyId === c.id && k.typeId === 'builder')) {
     const office = w.buildings.find((b) => b.companyId === c.id && b.typeId === 'builder');
-    if (office) applyCommand(w, c.id, { type: 'expand', buildingId: office.id });
+    const levels = Math.min(OFFICE_BLOCK, OFFICE_CAP - officeLevel, MAX_LEVELS_PER_PROJECT);
+    if (office && landFree(w, office.regionId, 'plot') >= levels) applyCommand(w, c.id, { type: 'expand', buildingId: office.id, levels });
   }
-  // AI는 빚으로 짓지 않는다
-  // 동시 공사는 최대 10건, 그리고 사무소가 넉 달 안에 소화할 만큼만 쌓는다. 몇 건을 벌일지는 남는 현금(free)이 정한다
-  if (ongoing.length >= 10 || backlogDays > 120) return;
-  if (c.debt > creditLimit(w, c) * 0.3) return;
-  const free = c.cash - reserveOf(w, c) - committedCost(w, c) - est.costPerDay * 30;
-  if (free <= 0) return;
+  // AI는 빚으로 짓지 않는다. 동시 공사 상한과, 사무소가 넉 달 안에 소화할 만큼만 쌓는다.
+  // 남는 현금(free)이 허락하는 만큼 한 주에 여러 건을 벌인다
+  for (let started = 0; started < MAX_STARTS_PER_WEEK; started++) {
+    const ongoing = w.constructions.filter((k) => k.companyId === c.id).length;
+    if (ongoing >= MAX_CONCURRENT_CONSTRUCTIONS || backlog() > 120) return;
+    if (c.debt > creditLimit(w, c) * 0.3) return;
+    const free = c.cash - reserveOf(w, c) - committedCost(w, c) - est.costPerDay * 30;
+    if (free <= 0) return;
+    const pick = pickProject(w, c, o, free, started === 0);
+    if (!pick) return;
+    const existing = w.buildings.find((b) => b.companyId === c.id && b.regionId === pick.regionId && b.typeId === pick.typeId);
+    const err = existing
+      ? applyCommand(w, c.id, { type: 'expand', buildingId: existing.id, levels: pick.levels })
+      : applyCommand(w, c.id, { type: 'build', typeId: pick.typeId, regionId: pick.regionId, methodId: pick.methodId, levels: pick.levels });
+    if (err) return;
+    o.add(getMethod(pick.typeId, pick.methodId), pick.levels, 1 + regionPerk(pick.regionId, pick.typeId));
+  }
+}
 
-  // 모든 후보를 같은 기준으로: 시장 전망으로 본 장기 손익 / 공사비
-  let best: { regionId: number; typeId: string; methodId: string; score: number } | null = null;
+interface Pick { regionId: number; typeId: string; methodId: string; levels: number; score: number }
+
+/**
+ * 모든 후보를 같은 기준으로: 시장 전망으로 본 장기 손익 / 공사비. 후보마다 수요가 받쳐 주는 가장 큰 덩어리(레벨 수)를 고른다:
+ * 연간 수익률이 기준(MIN_ROI)의 1.25배를 넘는 가장 큰 덩어리, 없으면 기준을 넘는 것 중 수익률이 가장 높은 덩어리.
+ */
+function pickProject(w: World, c: Company, o: Outlook, free: number, explore: boolean): Pick | null {
+  let best: Pick | null = null;
   for (const r of w.regions) {
     for (const t of BUILDING_TYPES) {
-      if (t.id === 'builder' || !canBuildType(c, t) || landFree(w, r.id, t.land) < 1) continue;
-      const cost = constructionEstimate(w, c, t.id).cost;
-      if (!Number.isFinite(cost) || free < cost) continue;
+      if (t.id === 'builder' || !canBuildType(c, t)) continue;
+      const land = landFree(w, r.id, t.land);
+      if (land < 1) continue;
+      const perLevel = constructionEstimate(w, c, t.id).cost;
+      if (!Number.isFinite(perLevel) || free < perLevel) continue;
       // 같은 지역의 같은 건물은 방식이 통일되므로, 이미 있으면 그 방식으로만 늘린다
       const existing = w.buildings.find((b) => b.companyId === c.id && b.regionId === r.id && b.typeId === t.id);
       for (const m of availableMethods(c, t.id)) {
         if (existing && existing.methodId !== m.id) continue;
         if (m.grant && schoolsSaturated(w, r)) continue;
-        const e = valueMethod(w, o, r, t.id, m, c.wages);
-        if (e.profit <= 0 || laborAvailability(w, r, m) < 0.5) continue;
-        const roi = (e.profit * TICKS_PER_YEAR) / cost;
-        const score = roi * (0.85 + rand(w) * 0.3);
-        if (roi > MIN_ROI && (!best || score > best.score)) best = { regionId: r.id, typeId: t.id, methodId: m.id, score };
+        let choice: { levels: number; roi: number } | null = null, top: { levels: number; roi: number } | null = null;
+        for (const levels of CHUNKS) {
+          if (levels > land || free < perLevel * levels) continue;
+          const e = valueMethod(w, o, r, t.id, m, c.wages, levels);
+          // 학교는 보조금만 보지 않는다: 지역 기술자 빈자리를 메우면 공장이 제대로 돈다 (빈자리 × 기술자 임금의 일부를 가치로 본다)
+          if (m.grant) e.profit += skilledShortage(w, r.id) * c.wages.skilled * 0.3 * Math.min(1, levels / LEVELS_PER_BLOCK);
+          if (e.profit <= 0 || laborAvailability(w, r, m, levels) < 0.5) continue;
+          const roi = (e.profit * TICKS_PER_YEAR) / (perLevel * levels);
+          if (roi <= MIN_ROI) continue;
+          if (!top || roi > top.roi) top = { levels, roi };
+          if (!choice && roi > MIN_ROI * 1.25) choice = { levels, roi };
+        }
+        const pick = choice ?? top;
+        if (!pick) continue;
+        const score = pick.roi * (0.85 + rand(w) * 0.3);
+        if (!best || score > best.score) best = { regionId: r.id, typeId: t.id, methodId: m.id, levels: pick.levels, score };
       }
     }
   }
   // 탐색 투자: 여유 현금이 공사비의 3배를 넘으면 가끔(주 8%) 당장 이익이 안 보여도 새 산업에 손을 댄다.
   // 아직 아무도 제대로 만들지 않아 비싼 상품일수록 고를 확률이 높다 (사슬의 첫 고리를 놓는 역할)
-  if (rand(w) < EXPLORE_CHANCE) {
+  if (explore && rand(w) < EXPLORE_CHANCE) {
+    const levels = 5;
     const picks: { regionId: number; typeId: string; methodId: string; weight: number }[] = [];
     for (const r of w.regions) {
       for (const t of BUILDING_TYPES) {
-        if (t.id === 'builder' || !canBuildType(c, t) || landFree(w, r.id, t.land) < 1) continue;
-        const cost = constructionEstimate(w, c, t.id).cost;
+        if (t.id === 'builder' || !canBuildType(c, t) || landFree(w, r.id, t.land) < levels) continue;
+        const cost = constructionEstimate(w, c, t.id).cost * levels;
         if (!Number.isFinite(cost) || free < cost * 3) continue;
         if (w.buildings.some((b) => b.companyId === c.id && b.regionId === r.id && b.typeId === t.id)) continue;
         for (const m of availableMethods(c, t.id)) {
-          if (m.grant || laborAvailability(w, r, m) < 0.5) continue;
+          if (m.grant || laborAvailability(w, r, m, levels) < 0.5) continue;
           let weight = 0;
           for (const g of GOOD_IDS) if (m.outputs[g]) weight += Math.max(0, o.price(g) / GOODS[g].basePrice - 0.8);
           if (weight > 0) picks.push({ regionId: r.id, typeId: t.id, methodId: m.id, weight });
@@ -458,18 +503,11 @@ function planConstruction(w: World, c: Company, o: Outlook) {
     for (const p of picks) {
       x -= p.weight;
       if (x > 0) continue;
-      if (!best || p.weight > 1) best = { regionId: p.regionId, typeId: p.typeId, methodId: p.methodId, score: 0 };
+      if (!best || p.weight > 1) best = { regionId: p.regionId, typeId: p.typeId, methodId: p.methodId, levels, score: 0 };
       break;
     }
   }
-  if (!best) return;
-
-  const pick = best;
-  const existing = w.buildings.find((b) => b.companyId === c.id && b.regionId === pick.regionId && b.typeId === pick.typeId);
-  const err = existing
-    ? applyCommand(w, c.id, { type: 'expand', buildingId: existing.id })
-    : applyCommand(w, c.id, { type: 'build', typeId: pick.typeId, regionId: pick.regionId, methodId: pick.methodId });
-  if (!err) o.add(getMethod(pick.typeId, pick.methodId), 1, 1 + regionPerk(pick.regionId, pick.typeId));
+  return best;
 }
 
 /**
@@ -494,4 +532,11 @@ function payDividends(w: World, c: Company) {
     // 배당은 그 건물의 소유주 계층(자본가 또는 지주 귀족)에게 간다
     payClassIn(w, r, ownerJobs(b).cls, (pay * bookValue(b)) / totalBook);
   }
+}
+
+/** 지역 기술자 빈자리 수 (공장 일자리 - 고용된 기술자) */
+export function skilledShortage(w: World, regionId: number): number {
+  let gap = 0;
+  for (const b of w.buildings) if (b.regionId === regionId) gap += Math.max(0, slots(b, 'skilled') - b.employed.skilled);
+  return gap;
 }

@@ -4,7 +4,7 @@ import type { FromWorker, ToWorker } from './protocol';
 import { EN, KO } from './strings';
 import type { Dict } from './strings';
 
-const SAVE_KEY = 'estera-save-v3';
+const SAVE_KEY = 'estera-save-v4';
 const PREF_KEY = 'estera-prefs-v1';
 
 /** text 는 한국어, textEn 은 영어 (없으면 한국어로 보인다) */

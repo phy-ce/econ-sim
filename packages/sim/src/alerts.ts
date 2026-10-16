@@ -4,6 +4,9 @@ import { buildingNameEn, goodNameEn, regionNameEn } from './i18n';
 import type { World } from './types';
 
 const COOLDOWN = TICKS_PER_WEEK * 4;
+/** 이주 알림: 이 기간(4주) 동안 떠난 사람이 원래 인구의 이 비율 이상일 때만 */
+const MIGRATION_WINDOW = TICKS_PER_WEEK * 4;
+const MIGRATION_ALERT_SHARE = 0.005;
 
 /**
  * 주 1회 상태를 점검해 회사·지역에 알림을 남긴다. 같은 알림은 4주에 한 번만.
@@ -77,17 +80,29 @@ export function weeklyAlerts(w: World) {
       }
     }
   }
-  // 기근 이주
+  // 이주: 최근 4주 동안 떠난 사람이 원래 계층 인구의 0.5%를 넘을 때만 알린다 (매일 조금씩 새는 것은 알리지 않는다)
+  const window = w.tick % MIGRATION_WINDOW === 0;
   for (const r of w.regions) {
-    if (r.famineOut >= 20 * POP_SCALE) {
+    const h = r.households;
+    const famineBase = h.peasant.population + h.unskilled.population + h.skilled.population + h.expert.population;
+    if (r.famineOut > 0 && r.famineOut >= famineBase * MIGRATION_ALERT_SHARE) {
       const [dest] = Object.entries(r.famineTo).sort((a, b) => b[1] - a[1])[0];
       const n = Math.round(r.famineOut);
-      alertOnce(w, `famine-move:${r.id}`, TICKS_PER_WEEK * 4, null,
+      alertOnce(w, `famine-move:${r.id}`, MIGRATION_WINDOW, null,
         `${r.name}에서 기근으로 ${n.toLocaleString('ko-KR')}명이 ${regionById(w, Number(dest)).name} 쪽으로 떠났습니다.`,
         { kind: 'warn', regionId: r.id, en: `Famine drove ${n.toLocaleString('en-US')} people out of ${regionNameEn(r.id)} towards ${regionNameEn(Number(dest))}.` });
+      r.famineOut = 0; r.famineTo = {};
     }
-    r.famineOut = 0;
-    r.famineTo = {};
+    const wageBase = h.unskilled.population + h.skilled.population;
+    if ((r.wageOut ?? 0) > 0 && r.wageOut! >= wageBase * MIGRATION_ALERT_SHARE) {
+      const [dest] = Object.entries(r.wageTo ?? {}).sort((a, b) => b[1] - a[1])[0];
+      const n = Math.round(r.wageOut!);
+      alertOnce(w, `wage-move:${r.id}`, MIGRATION_WINDOW, null,
+        `${r.name}의 노동자·기술자 ${n.toLocaleString('ko-KR')}명이 더 높은 임금을 찾아 ${regionById(w, Number(dest)).name}(으)로 옮겨 갔습니다.`,
+        { kind: 'info', regionId: r.id, en: `${n.toLocaleString('en-US')} labourers and skilled workers left ${regionNameEn(r.id)} for higher wages in ${regionNameEn(Number(dest))}.` });
+      r.wageOut = 0; r.wageTo = {};
+    }
+    if (window) { r.famineOut = 0; r.famineTo = {}; r.wageOut = 0; r.wageTo = {}; }
   }
   // 지역 기아
   for (const r of w.regions) {

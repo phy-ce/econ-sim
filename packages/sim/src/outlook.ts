@@ -1,5 +1,5 @@
-import { BUILDING_BY_ID, GOOD_IDS, GOODS, getMethod, regionPerk } from './data';
-import { availableMethods, outputCapacity, regionById, shippingRate } from './economy';
+import { BUILDING_BY_ID, GOOD_IDS, GOODS, LEVELS_PER_BLOCK, NEEDS, getMethod, regionPerk } from './data';
+import { availableMethods, expectedOwnerFactor, outputCapacity, regionById, shippingRate } from './economy';
 import { clamp } from './rng';
 import { SKILLS } from './types';
 import type { Company, GoodId, MethodDef, Region, Skill, World } from './types';
@@ -37,14 +37,17 @@ export function marketOutlook(w: World): Outlook {
       cap += outputCapacity(w, r.id, g);
     }
     demand[g] = d;
-    supply[g] = Math.max(s, cap);
+    // 정격 생산 능력이 아니라 실제로 나온 공급을 본다 (인원이 모자라 덜 돌아가는 공장이 많다)
+    supply[g] = s;
+    void cap;
   }
   for (const k of w.constructions) {
     const m = getMethod(k.typeId, k.methodId);
     const perk = 1 + regionPerk(k.regionId, k.typeId);
+    const lv = k.levels ?? 1;
     for (const g of GOOD_IDS) {
-      supply[g] += (m.outputs[g] ?? 0) * perk;
-      demand[g] += m.inputs[g] ?? 0;
+      supply[g] += (m.outputs[g] ?? 0) * perk * lv;
+      demand[g] += (m.inputs[g] ?? 0) * lv;
     }
   }
   // 잠재 수요: 기본가로 따졌을 때 지금 방식보다 나은 방식이 있으면, 그 방식의 투입재 중 지금 안 쓰는 몫이 수요다
@@ -64,6 +67,17 @@ export function marketOutlook(w: World): Outlook {
     for (const g of GOOD_IDS) {
       const extra = (best.inputs[g] ?? 0) - (cur.inputs[g] ?? 0);
       if (extra > 0) demand[g] += extra * b.level;
+    }
+  }
+  // 대체 수요: 가공품(빵·연료·옷)이 비싸서 사람들이 원자재(곡물·목재·섬유)로 버티고 있으면, 값이 내려갈 때 돌아올 수요다.
+  // 대체품 수요의 절반을 이 상품 단위로 바꿔 잠재 수요로 센다
+  for (const n of NEEDS) {
+    for (const opt of n.options) {
+      if (!opt.appeal || opt.appeal <= 1) continue;
+      for (const other of n.options) {
+        if (other === opt) continue;
+        demand[opt.good] += (demand[other.good] / other.units) * opt.units * 0.5;
+      }
     }
   }
   const o: Outlook = {
@@ -114,7 +128,8 @@ export function valueMethod(
 function valueAt(
   w: World, o: Outlook, r: Region, typeId: string, m: MethodDef, wages: Record<Skill, number>, levels: number,
 ): Valuation {
-  const perk = 1 + regionPerk(r.id, typeId);
+  // 소유주가 모자란 지역에서는 덜 만든다 (소유주 배율)
+  const perk = (1 + regionPerk(r.id, typeId)) * expectedOwnerFactor(w, r, typeId, levels);
   const ship = shippingRate(w, r.id);
   let revenue = 0, inputCost = 0;
   for (const g of GOOD_IDS) {
@@ -127,7 +142,8 @@ function valueAt(
       // 지역 밖으로 나가는 몫: 지역 수요가 감당 못 하는 만큼
       const local = r.market[g].demandEma;
       const outside = GOODS[g].perishable ? 0 : clamp(1 - local / out, 0, 1);
-      const unit = p * (1 - ship * outside);
+      // 지역 안에서 팔리는 몫은 지역 시세보다 비싸게 받을 수 없다 (그 지역에 이미 넘치면 싸다)
+      const unit = (1 - outside) * Math.min(p, r.market[g].price) + outside * p * (1 - ship);
       const dump = GOODS[g].perishable ? 0 : GOODS[g].basePrice * 0.35 * (1 - ship);
       revenue += out * (unit * sell + dump * (1 - sell));
     }
@@ -166,7 +182,7 @@ export function techValue(w: World, o: Outlook, c: Company, techId: string): num
         value += Math.max(0, gain);
       }
       // 새 건물 하나를 지을 수 있게 되는 가치
-      value += Math.max(0, valueMethod(w, o, port, t.id, m, c.wages, 1).profit);
+      value += Math.max(0, valueMethod(w, o, port, t.id, m, c.wages, Math.round(LEVELS_PER_BLOCK)).profit);
     }
   }
   return value;

@@ -1,5 +1,5 @@
-import { GOOD_IDS, GOODS, REGIONS, SKILL_DEFS, SUBSISTENCE, getMethod, POP_SCALE } from './data';
-import { landFree, newBuilding } from './economy';
+import { GOOD_IDS, GOODS, LEVELS_PER_BLOCK, REGIONS, SKILL_DEFS, SUBSISTENCE, getMethod, POP_SCALE } from './data';
+import { landFree, newBuilding, ownerJobs } from './economy';
 import { POP_CLASSES, SKILLS } from './types';
 import type { Building, Company, GoodId, Household, MarketGood, PopClass, Region, Skill, World } from './types';
 
@@ -108,7 +108,8 @@ export function createWorld(seed = 1, opts: CreateWorldOptions = {}): World {
   const buildings: Building[] = INITIAL_BUILDINGS.map(([regionId, ci, typeId, methodId, level]) =>
     newBuilding(nextId++, typeId, regionId, companies[ci].id, methodId, level));
   // 모든 상회는 개항장에 건축사무소 하나를 갖고 시작한다. 건설은 이 사무소의 건설 포인트로만 진행된다
-  for (const c of companies) buildings.push(newBuilding(nextId++, 'builder', 1, c.id, 'build_manual', 1));
+  // 크기는 예전 사무소 하나와 같은 레벨 수 (레벨 하나가 작으므로)
+  for (const c of companies) buildings.push(newBuilding(nextId++, 'builder', 1, c.id, 'build_manual', Math.round(LEVELS_PER_BLOCK)));
 
   // 초기 고용: 지역별로 인구를 일자리 비율대로 배분 (충원율 상한 95%)
   for (const r of regions) {
@@ -129,6 +130,15 @@ export function createWorld(seed = 1, opts: CreateWorldOptions = {}): World {
     companies, buildings, constructions: [],
     history: [], events: [{ tick: 0, companyId: null, text: '에스테라 왕국의 시장이 열렸습니다.', textEn: 'The markets of the Kingdom of Estera are open.', kind: 'info' }], alertState: {},
   };
+  // 시작 건물(건축사무소)의 소유주 자리는 그 지역의 기존 소유 계층으로 바로 채운다
+  for (const r of w.regions) {
+    for (const cls of ['capitalist', 'aristocrat'] as const) {
+      const local = w.buildings.filter((b) => b.regionId === r.id && ownerJobs(b).cls === cls);
+      const jobs = local.reduce((a, b) => a + ownerJobs(b).jobs, 0);
+      const seated = jobs > 0 ? Math.min(1, r.households[cls].population / jobs) : 0;
+      for (const b of local) b.owners = ownerJobs(b).jobs * seated;
+    }
+  }
   // 첫 화면에서도 자급 농민 수가 보이도록 미리 계산해 둔다
   for (const r of w.regions) {
     const cap = landFree(w, r.id, 'arable') * SUBSISTENCE.workersPerArable + landFree(w, r.id, 'forest') * SUBSISTENCE.workersPerForest;

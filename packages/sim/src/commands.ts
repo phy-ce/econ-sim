@@ -7,7 +7,9 @@ import type { Command, World } from './types';
 export interface CommandError { text: string; textEn: string }
 const fail = (text: string, textEn: string): CommandError => ({ text, textEn });
 
-export const MAX_CONCURRENT_CONSTRUCTIONS = 10;
+export const MAX_CONCURRENT_CONSTRUCTIONS = 40;
+/** 공사 하나로 한 번에 지을 수 있는 최대 레벨 수 */
+export const MAX_LEVELS_PER_PROJECT = 50;
 /** 하루 연구비 상한 */
 export const MAX_RESEARCH_BUDGET = 500 * POP_SCALE;
 
@@ -29,24 +31,27 @@ export function applyCommandMsg(w: World, actor: number, cmd: Command): CommandE
     return b && b.companyId === actor ? b : undefined;
   };
 
-  const startConstruction = (regionId: number, typeId: string, methodId: string, targetBuildingId: number | null) => {
+  const startConstruction = (regionId: number, typeId: string, methodId: string, targetBuildingId: number | null, levelsIn = 1) => {
+    const levels = Math.floor(levelsIn);
+    if (!Number.isFinite(levels) || levels < 1 || levels > MAX_LEVELS_PER_PROJECT) return fail(`한 번에 1~${MAX_LEVELS_PER_PROJECT}레벨까지 지을 수 있습니다.`, `A project can build 1 to ${MAX_LEVELS_PER_PROJECT} levels.`);
     const def = BUILDING_BY_ID[typeId];
     const region = regionById(w, regionId);
     if (w.constructions.filter((k) => k.companyId === actor).length >= MAX_CONCURRENT_CONSTRUCTIONS) {
       return fail(`동시 공사는 최대 ${MAX_CONCURRENT_CONSTRUCTIONS}건입니다.`, `At most ${MAX_CONCURRENT_CONSTRUCTIONS} projects can run at once.`);
     }
-    if (landFree(w, regionId, def.land) < 1) {
-      return fail(`${region.name}에 남은 ${LAND_NAMES[def.land]}가 없습니다.`, `No free ${landNameEn(def.land).toLowerCase()} left in ${regionNameEn(regionId)}.`);
+    if (landFree(w, regionId, def.land) < levels) {
+      return fail(`${region.name}에 남은 ${LAND_NAMES[def.land]}가 ${levels === 1 ? '없습니다' : `${levels}칸이 안 됩니다`}.`, `${levels === 1 ? 'No' : `Fewer than ${levels} cells of`} free ${landNameEn(def.land).toLowerCase()} left in ${regionNameEn(regionId)}.`);
     }
     if (!hasBuilder(w, company) && typeId !== 'builder') {
       return fail('건축사무소가 없습니다. 먼저 건축사무소를 지어야 다른 건물을 지을 수 있습니다.', 'You have no construction office. Build one first before building anything else.');
     }
     w.constructions.push({
       id: w.nextId++, companyId: actor, regionId, typeId, methodId, targetBuildingId,
-      points: 0, required: def.buildPoints, spent: 0, ticksElapsed: 0,
+      points: 0, required: def.buildPoints * levels, spent: 0, ticksElapsed: 0, ...(levels > 1 ? { levels } : {}),
     });
-    logEvent(w, actor, `${region.name} ${def.name} ${targetBuildingId != null ? '증설' : '건설'} 착공`,
-      { regionId, en: `${targetBuildingId != null ? 'Expansion' : 'Construction'} started: ${buildingNameEn(typeId)} in ${regionNameEn(regionId)}` });
+    const lv = levels > 1 ? ` ${levels}레벨` : '', lvEn = levels > 1 ? ` (${levels} levels)` : '';
+    logEvent(w, actor, `${region.name} ${def.name}${lv} ${targetBuildingId != null ? '증설' : '건설'} 착공`,
+      { regionId, en: `${targetBuildingId != null ? 'Expansion' : 'Construction'} started: ${buildingNameEn(typeId)} in ${regionNameEn(regionId)}${lvEn}` });
     return null;
   };
 
@@ -61,13 +66,13 @@ export function applyCommandMsg(w: World, actor: number, cmd: Command): CommandE
       if (!usable.some((m) => m.id === methodId)) return fail('아직 쓸 수 없는 생산 방식입니다.', 'That production method is not available yet.');
       // 같은 지역에 같은 종류의 건물이 이미 있으면 증설한다 (지역당 건물 하나, 생산 방식은 통일)
       const existing = w.buildings.find((b) => b.companyId === actor && b.regionId === cmd.regionId && b.typeId === cmd.typeId);
-      if (existing) return startConstruction(existing.regionId, existing.typeId, existing.methodId, existing.id);
-      return startConstruction(cmd.regionId, cmd.typeId, methodId, null);
+      if (existing) return startConstruction(existing.regionId, existing.typeId, existing.methodId, existing.id, cmd.levels);
+      return startConstruction(cmd.regionId, cmd.typeId, methodId, null, cmd.levels);
     }
     case 'expand': {
       const b = ownBuilding(cmd.buildingId);
       if (!b) return fail('소유한 건물이 아닙니다.', 'You do not own that building.');
-      return startConstruction(b.regionId, b.typeId, b.methodId, b.id);
+      return startConstruction(b.regionId, b.typeId, b.methodId, b.id, cmd.levels);
     }
     case 'setMethod': {
       const b = ownBuilding(cmd.buildingId);
@@ -112,7 +117,8 @@ export function applyCommandMsg(w: World, actor: number, cmd: Command): CommandE
     case 'demolish': {
       const b = ownBuilding(cmd.buildingId);
       if (!b) return fail('소유한 건물이 아닙니다.', 'You do not own that building.');
-      b.level -= 1;
+      const n = Math.max(1, Math.min(b.level, Math.floor(cmd.levels ?? 1)));
+      b.level -= n;
       if (b.level <= 0) {
         w.buildings = w.buildings.filter((x) => x.id !== b.id);
         logEvent(w, actor, `${regionById(w, b.regionId).name} ${BUILDING_BY_ID[b.typeId].name}(#${b.id}) 철거`,

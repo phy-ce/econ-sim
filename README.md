@@ -18,6 +18,9 @@ npx tsx packages/sim/cli/run.ts --years 30 --seed 1   # long run, CSV output in 
 npx tsx packages/sim/cli/sweep.ts --seeds 10 --years 10  # stability sweep across seeds
 npx tsx packages/sim/cli/curve.ts --seeds 1,2         # wealth by class over 15 years
 npx tsx packages/sim/cli/calib.ts 1,2                 # price vs base price and supply/demand per good
+npx tsx packages/sim/cli/scale.ts 1                   # per good: sales, building supply, imports, price vs base, one level vs sales
+npx tsx packages/sim/cli/methods.ts                   # every production method per level: inputs, outputs, wages, margin
+npx tsx packages/sim/cli/diag.ts 1 5 10 15            # levels per method, efficiency, owner seats, class movements
 ```
 
 Controls: `Space` pauses and resumes, `1`–`4` set the speed (1× = one game hour per real second, then 10×, 100×, 500×).
@@ -39,7 +42,7 @@ packages/client   React + Vite. The simulation runs in a Web Worker; the UI only
 
 ## World
 
-- **Seven regions**, each with a fixed number of land cells (arable, forest, ore, building plots). Buildings occupy cells. Each region has its own market. Each region also has a perk, for example +10% output for mines in the northern mining district.
+- **Seven regions**, each with a fixed number of land cells (arable, forest, ore, building plots). Each building level occupies one cell; regions have hundreds to thousands of cells. Each region has its own market. Each region also has a perk, for example +10% output for mines in the northern mining district.
 - **About 2.9 million people** at the start, almost all of them tenant farmers.
 - **Twelve goods** in a production chain: raw goods (grain, fibre, timber, ore), processed goods (food, fuel, clothing, metal), finished goods (tools, furniture, precision instruments), plus **transport**, a service produced by railways.
 - **Trade and transport.** Moving goods out of a region (traders, buying inputs from a neighbour, port imports and exports) requires transport bought in the origin market. Rail transport costs about 6% of the cargo value. Whatever cannot go by rail is carried by porters and carts at 30%, paid to local labourers. Only the port city trades abroad, and foreign buyers only pay low prices, so exporting is a loss-making outlet for surplus.
@@ -53,11 +56,15 @@ Some better methods need no tech at all: iron tools raise the output of farms, l
 
 ## Construction and buildings
 
-- **Construction offices build everything.** Every house starts with one office. Projects advance with construction points produced daily by offices; better office methods (timber scaffolding, steel frames) are faster. Up to ten projects run at once.
-- **One building per type per region and house.** Building the same type again adds a unit to the existing building, and the whole building shares one production method. The UI shows a count with +/− buttons.
-- **Owners.** Each unit employs owners as well as workers: capitalists for buildings on plots, landed aristocrats for farms, lumber camps and mines. Dividends go to the owners seated there.
-- **Experience.** New staff start at 40% efficiency and reach 100% in about a month. Switching methods halves experience.
-- **Economies of scale.** +10% output per 10 units of the same building, up to +50%.
+- **Small levels, big markets.** A building level is small compared with a regional market: every method makes fewer than 100 units a day per level (a basic farm level: 300 labourers and 12 skilled workers making 72 grain), while a region trades thousands to tens of thousands of units a day. Regional industries are built from tens to hundreds of levels, as in Victoria 3. Population is scaled by `POP_SCALE` (100) and building levels by `BUILDING_SCALE` (3) in `data.ts`.
+- **Construction offices build everything.** Every house starts with a 33-level office. Projects advance with construction points produced daily by offices; better office methods (timber scaffolding, steel frames) are faster. A project builds 1 to 50 levels at once, and up to 40 projects run at once.
+- **One building per type per region and house.** Building the same type again adds levels to the existing building, and the whole building shares one production method. The UI shows a level count with −, + and +10 buttons.
+- **Owners.** Each level has owner seats (3 per level): capitalists for buildings on plots, landed aristocrats for farms, lumber camps and mines. The region's existing owners are seated in its buildings first, all buildings at the same fill ratio. Dividends go to the owner class of the building's region.
+- **Efficiency** = experience × owners × scale × regional perk.
+  - Experience: new staff start at 40% and reach 100% in about a month. Switching methods halves experience.
+  - Owners: 0.7 + 0.3 × owner fill, so a building with no seated owners makes 30% less. The fill follows seat changes at 8% a day, like the work crew. The AI values new levels with the owner fill it can expect in that region.
+  - Economies of scale: +10% output per 333 levels of the same building, up to +50%.
+- **Technology changes the labour mix.** Tech methods replace labourers with skilled workers and experts: improved farming, water-powered sawing, pumped mining, power looms, food preservation, steam railways and the better office methods need 40–60% fewer labourers and about twice the skilled workers of the method they replace (experts where the work is technical), and produce each unit more cheaply. The no-tech iron tools methods keep the basic workforce and add tools.
 
 ## Classes
 
@@ -71,8 +78,34 @@ Some better methods need no tech at all: iron tools raise the output of farms, l
 
 - **Wealth** is a standard of living from 1 to 99. It rises when spendable income exceeds the cost of the next consumption basket and falls when it cannot cover the current one.
 - **Starvation** is based on food fulfilment, not wealth. Below 90% people die faster, and they migrate to better-fed neighbouring regions.
-- **Tenants become labourers** whenever factories have vacancies. Laid-off labourers return to the land if there is room.
+- **Tenants become labourers** when factories have vacancies, but slowly: new factories take weeks to months to staff. Education also caps how far this goes: labourers can be at most 25% + 2 × education (up to 95%) of the lower class. Laid-off labourers return to the land if there is room.
 - **Promotion** to skilled worker or expert needs wealth, savings and vacancies, and is limited by the region's education level, which schools raise.
+- **Upper classes are the hardest to enter.** Owner seats are filled first by conversion between capitalists and aristocrats, then by rich experts and skilled workers in well-educated regions only.
+- **Wage migration.** Labourers and skilled workers drift to a neighbouring region whose average paid wage is more than 30% higher, if it has vacancies or lower unemployment.
+
+### Population movement
+
+All rates are per day and per region.
+
+| Movement | Rate | Conditions |
+|---|---|---|
+| Tenant → labourer | ≤ 0.2% of tenants × (0.25 + 1.5 × education) | labourer vacancies above unemployed labourers (at most half the gap); labourers ≤ 25% + 2 × education of the lower class |
+| Labourer → tenant | 0.1% of labourers × unemployment | unemployment ≥ 10%, free land |
+| Labourer → skilled | ≈ 0.04% × education × wage pull (0.5–4) | wealth ≥ 6, savings ≥ ƒ8 a head, skilled vacancies, skilled share below 4% + 40% × education |
+| Skilled → expert | ≈ 0.04% × 2 × (education − 25%) × wage pull | wealth ≥ 9, savings ≥ ƒ30 a head, expert vacancies |
+| Expert → skilled, skilled → labourer | 0.05% × unemployment | unemployment ≥ 15% |
+| Aristocrat → capitalist | ≤ 0.05% of aristocrats | aristocrats exceed their seats, capitalist seats vacant |
+| Capitalist → aristocrat | ≤ 0.01% of capitalists | aristocrat seats vacant, wealth ≥ 18, savings ≥ ƒ150 a head, education ≥ 50% |
+| Expert/skilled → capitalist | ≤ 0.01% of the source class (experts first) | vacant seats, education ≥ 40%, wealth ≥ 12, savings ≥ ƒ80 a head |
+| Expert/skilled → aristocrat | ≤ 0.005% of the source class (experts first) | vacant seats, education ≥ 50%, wealth ≥ 12, savings ≥ ƒ100 a head |
+| Surplus owners → skilled | 0.05% of the surplus | more owners than seats |
+| Hiring | ≤ 2% of a building's slots | unemployed people of that skill in the region |
+| Job switching | ≤ 1% of the lower-paying building's staff | wage ≥ 15% higher |
+| Unemployment migration | 0.3% × unemployment gap | neighbour unemployment at least 5 points lower |
+| Famine migration | ≤ 0.1% (0.2% × food gap) | food below 90%, neighbour better fed |
+| Wage migration (labourers, skilled) | ≤ 0.05% (full at a 2× wage gap) | neighbour average paid wage > 1.3×, vacancies or lower unemployment |
+
+People carry their savings with them in every move. Migration notifications appear only when at least 0.5% of the source population has left within four weeks.
 - Goods are substitutable within a need (food or grain, fuel or timber, clothing or fibre). Processed goods are preferred at equal price.
 
 ## Money
@@ -84,7 +117,9 @@ Some better methods need no tech at all: iron tools raise the output of farms, l
 
 ## AI
 
-AI houses use the same command path as the player. Each week they build a market outlook: for every good, kingdom-wide demand (including inputs of projects under construction and latent demand from better methods they could switch to) against supply capacity (including projects under construction), turned into an expected long-run price. Every candidate building is valued the same way. Outputs are valued at the price after entry, minus transport. Inputs are valued at the price after purchase, plus transport. Utilisation is chosen to maximise profit. Houses with spare cash occasionally invest in an industry that does not pay yet, preferring scarce goods, which is how new production chains get started. Research is chosen by the value of the methods a tech unlocks, divided by its cost.
+AI houses use the same command path as the player. Each week they build a market outlook: for every good, kingdom-wide demand (including inputs of projects under construction and latent demand from better methods they could switch to) against supply capacity (including projects under construction), turned into an expected long-run price. Every candidate building is valued the same way. Outputs are valued at the price after entry, minus transport. Inputs are valued at the price after purchase, plus transport. Utilisation is chosen to maximise profit. Houses with spare cash occasionally invest in an industry that does not pay yet, preferring scarce goods, which is how new production chains get started. Research is chosen by the value of the methods a tech unlocks, divided by its cost; printing (schools) also gets the value of the kingdom's skilled-worker shortage.
+
+Each week a house can start up to three projects while its spare cash, the 40-project limit and a four-month office backlog allow. For each candidate it picks the largest chunk (20, 10, 5, 2 or 1 levels) whose expected annual return is still comfortably above the 40% hurdle. Labour is counted realistically: idle people in the region, tenants that can arrive within about 60 days at the tenant → labourer rate, a little from neighbours, and middle-class promotion if education allows. Schools are valued by their grant plus the regional skilled-worker shortage they relieve.
 
 ## Art
 

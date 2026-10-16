@@ -1,4 +1,4 @@
-import { BUILDING_BY_ID, GOOD_IDS, GOODS, POINT_VALUE, SKILL_DEFS, TECH_BY_ID, getMethod, scaleBonus, POP_SCALE , regionPerk } from './data';
+import { BUILDING_BY_ID, BUILDING_SCALE, GOOD_IDS, GOODS, POINT_VALUE, SKILL_DEFS, TECH_BY_ID, getMethod, scaleBonus, POP_SCALE , regionPerk } from './data';
 import { clamp } from './rng';
 import { POP_CLASSES, SKILLS } from './types';
 import type { Building, BuildingTypeDef, Company, EventKind, GoodBag, GoodId, LandType, MethodDef, PopClass, Region, Skill, World } from './types';
@@ -90,7 +90,7 @@ export function regionPopulation(r: Region): number {
 export function landUsed(w: World, regionId: number, land: LandType): number {
   let n = 0;
   for (const b of w.buildings) if (b.regionId === regionId && BUILDING_BY_ID[b.typeId].land === land) n += b.level;
-  for (const k of w.constructions) if (k.regionId === regionId && BUILDING_BY_ID[k.typeId].land === land) n += 1;
+  for (const k of w.constructions) if (k.regionId === regionId && BUILDING_BY_ID[k.typeId].land === land) n += k.levels ?? 1;
   return n;
 }
 
@@ -127,9 +127,56 @@ export function slots(b: Building, skill: Skill): number {
   return (getMethod(b.typeId, b.methodId).workers[skill] ?? 0) * b.level * b.utilization;
 }
 
-/** 효율: 숙련도(0.4 → 1.0)와 규모의 경제 */
+/** 소유주가 하나도 없을 때의 효율 배율. 소유주 충원율 f 에서 OWNERLESS + (1 - OWNERLESS) × f */
+export const OWNERLESS_EFFICIENCY = 0.7;
+
+/** 지금 앉아 있는 소유주 / 소유주 일자리 (0..1) */
+export function ownerFillNow(b: Building): number {
+  const jobs = ownerJobs(b).jobs;
+  return jobs > 0 ? clamp(b.owners / jobs, 0, 1) : 1;
+}
+
+/** 소유주 배율: 소유주 충원율(서서히 따라간 값)이 낮으면 최대 30% 덜 만든다 */
+export function ownerFactor(fill: number): number {
+  return OWNERLESS_EFFICIENCY + (1 - OWNERLESS_EFFICIENCY) * clamp(fill, 0, 1);
+}
+
+export interface EfficiencyParts {
+  /** 숙련도 배율 0.4..1 */
+  experience: number;
+  /** 소유주 배율 0.7..1 과 그 바탕인 소유주 충원율(지연 반영) */
+  owners: number;
+  ownerFill: number;
+  /** 규모의 경제 배율 1..1.5 */
+  scale: number;
+  /** 지역 특산 배율 */
+  perk: number;
+  /** 작업 인원 비율 0..1 (효율에는 곱하지 않고 생산량에 따로 곱해진다. 화면 표시용) */
+  crew: number;
+  /** experience × owners × scale × perk */
+  total: number;
+}
+
+/** 효율의 구성 요소 (화면의 막대 표시용) */
+export function efficiencyParts(b: Building): EfficiencyParts {
+  const experience = 0.4 + 0.6 * b.exp;
+  const ownerFill = b.ownerFill ?? ownerFillNow(b);
+  const owners = ownerFactor(ownerFill);
+  const scale = scaleBonus(b.level);
+  const perk = 1 + regionPerk(b.regionId, b.typeId);
+  return { experience, owners, ownerFill, scale, perk, crew: b.crew ?? b.last.staffing, total: experience * owners * scale * perk };
+}
+
+/** 효율: 숙련도(0.4 → 1.0), 소유주 충원(0.7 → 1.0), 규모의 경제, 지역 특산 */
 export function efficiency(b: Building): number {
-  return (0.4 + 0.6 * b.exp) * scaleBonus(b.level) * (1 + regionPerk(b.regionId, b.typeId));
+  return efficiencyParts(b).total;
+}
+
+/** 이 지역에 levels 개를 더 지으면 기대할 수 있는 소유주 배율 (지역의 그 소유 계층 인구 / 자리 수) */
+export function expectedOwnerFactor(w: World, r: Region, typeId: string, levels = 1): number {
+  const cls = BUILDING_BY_ID[typeId].land === 'plot' ? 'capitalist' : 'aristocrat';
+  const jobs = regionOwnerJobs(w, r)[cls] + OWNERS_PER_LEVEL * levels;
+  return ownerFactor(jobs > 0 ? r.households[cls].population / jobs : 1);
 }
 
 /** 임금 기준 가중 평균 충원율 0..1 */
@@ -447,7 +494,7 @@ export function formatDate(tick: number, hour?: number): string {
 
 /** 기본 소유 지분: 땅에 세운 건물은 지주 귀족, 공장 부지는 자본가. 경영진(기술자·전문가)이 약간 */
 /** 건물 1개당 소유주 일자리 수 */
-export const OWNERS_PER_LEVEL = 3 * POP_SCALE;
+export const OWNERS_PER_LEVEL = 1 * BUILDING_SCALE;
 /** 소작농 이만큼마다 지주 귀족 일자리 하나 (빈 땅을 빌려 주는 지주) */
 export const TENANTS_PER_LANDLORD = 200;
 
@@ -473,7 +520,7 @@ export function regionOwnerJobs(w: World, r: Region): Record<'capitalist' | 'ari
 
 export function newBuilding(id: number, typeId: string, regionId: number, companyId: number, methodId: string, level: number): Building {
   return {
-    id, typeId, regionId, companyId, level, methodId, active: true, utilization: 1, lastSwitchTick: -1e9, exp: 0, idle: false,
+    id, typeId, regionId, companyId, level, methodId, active: true, utilization: 1, lastSwitchTick: -1e9, exp: 0, crew: 0, idle: false,
     owners: 0,
     employed: { unskilled: 0, skilled: 0, expert: 0 }, stock: {}, unpaid: false,
     last: emptyStats(), profitEma: 0, lossWeeks: 0, pausedWeeks: 0,

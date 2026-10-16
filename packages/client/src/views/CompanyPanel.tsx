@@ -20,7 +20,7 @@ const Bag = ({ bag }: { bag: GoodBag }) => {
 };
 
 const workersText = (m: MethodDef) =>
-  SKILLS.filter((s) => m.workers[s]).map((s) => `${skillName(s)} ${m.workers[s]}`).join(', ');
+  SKILLS.filter((s) => m.workers[s]).map((s) => `${skillName(s)} ${m.workers[s]! < 10 ? one(m.workers[s]!) : int(m.workers[s]!)}`).join(', ');
 
 /**
  * 소유주 일자리 (빅토리아3식). 시뮬에 ownerJobs 가 생기기 전에도 컴파일되도록 이름으로 찾아 쓴다.
@@ -212,7 +212,7 @@ function BuildingRow({ b, game, world, me }: { b: Building; game?: Game; world: 
   const profit = b.last.revenue - b.last.inputCost - b.last.wageCost;
   const region = regionById(world, b.regionId);
   const rname = regionName(region), tname = buildingName(b.typeId);
-  const queued = world.constructions.filter((k) => k.targetBuildingId === b.id).length;
+  const queued = world.constructions.filter((k) => k.targetBuildingId === b.id).reduce((a, k) => a + (k.levels ?? 1), 0);
   const isOffice = type.methods.some((m) => m.construction);
   const noLand = landFree(world, b.regionId, type.land) < 1;
   const owner = ownerSlots(b);
@@ -235,6 +235,9 @@ function BuildingRow({ b, game, world, me }: { b: Building; game?: Game; world: 
             <button aria-label={T.expandOne} disabled={noLand}
               title={noLand ? T.landFullShort(rname, landName(type.land)) : T.expandOne}
               onClick={() => game.command({ type: 'expand', buildingId: b.id })}>+</button>
+            <button aria-label={T.expandTen} disabled={landFree(world, b.regionId, type.land) < 10}
+              title={T.expandTen}
+              onClick={() => game.command({ type: 'expand', buildingId: b.id, levels: 10 })}>+10</button>
           </span>
           : <span className="stepper" aria-label={T.levelsOf(tname, b.level)}><output>×{b.level}{queued > 0 && <small>+{queued}</small>}</output></span>}
         <span className={`pill ${isOffice ? 'neutral' : profit >= 0 ? 'up' : 'dn'}`} title={T.yesterdayPL}>

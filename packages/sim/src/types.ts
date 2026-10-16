@@ -141,6 +141,10 @@ export interface Building {
   lastSwitchTick: number;
   /** 숙련도 0..1. 고용 뒤 서서히 올라 효율이 최대에 이른다. 방식을 바꾸거나 크게 늘리면 떨어진다 */
   exp: number;
+  /** 실제로 손이 맞는 작업 인원 비율 0..1: 충원율을 하루 8%씩 따라간다 (사람이 빠지거나 새로 와도 생산은 서서히 바뀐다) */
+  crew?: number;
+  /** 소유주 충원율 0..1 (owners / 소유주 일자리)을 작업 인원처럼 하루 8%씩 따라간 값. 효율에 0.7 + 0.3 × 이 값으로 곱해진다 */
+  ownerFill?: number;
   /** 건축사무소가 할 일이 없어 인부를 해산한 상태. 임금이 나가지 않고 공사가 잡히면 다시 모은다 */
   idle: boolean;
   employed: Record<Skill, number>;
@@ -175,6 +179,8 @@ export interface Construction {
   methodId: string;
   /** 증설 대상. 없으면 신규 건물 */
   targetBuildingId: number | null;
+  /** 한 번에 짓는 레벨 수 (없으면 1). 필요 포인트와 땅도 이만큼 */
+  levels?: number;
   /** 지금까지 받은 건설 포인트 / 필요 포인트 */
   points: number;
   required: number;
@@ -290,6 +296,9 @@ export interface Region {
   /** 이번 주 기근으로 떠난 사람 수와 지역별 행선지 (주간 알림용) */
   famineOut: number;
   famineTo: Record<number, number>;
+  /** 최근(최대 4주) 임금 이주로 떠난 사람 수와 지역별 행선지 (알림용) */
+  wageOut?: number;
+  wageTo?: Record<number, number>;
 }
 
 /** 운송 중인 화물: 출발 지역에서 산 물건이 다음 틱에 도착 지역에 위탁된다 */
@@ -378,21 +387,23 @@ export interface World {
   events: GameEvent[];
   /** 반복 알림 억제용: 알림 키 → 마지막으로 띄운 틱 */
   alertState: Record<string, number>;
+  /** 계층 이동 누적 ("from>to" → 사람 수). 분석·화면용 */
+  mobility?: Record<string, number>;
 }
 
 // ---- 명령 ----
 
 export type Command =
   /** 생산 방식을 생략하면 회사가 쓸 수 있는 첫 번째 방식으로 완공된다 */
-  | { type: 'build'; typeId: string; regionId: number; methodId?: string }
-  | { type: 'expand'; buildingId: number }
+  | { type: 'build'; typeId: string; regionId: number; methodId?: string; levels?: number }
+  | { type: 'expand'; buildingId: number; levels?: number }
   | { type: 'setMethod'; buildingId: number; methodId: string }
   | { type: 'setWage'; skill: Skill; wage: number }
   /** 시장임금 대비 비율 (-0.5 ~ +1.0). 임금이 매일 시장을 따라간다 */
   | { type: 'setWageOffset'; skill: Skill; offset: number }
   | { type: 'setActive'; buildingId: number; active: boolean }
   | { type: 'setUtilization'; buildingId: number; utilization: number }
-  | { type: 'demolish'; buildingId: number }
+  | { type: 'demolish'; buildingId: number; levels?: number }
   | { type: 'cancelConstruction'; constructionId: number }
   | { type: 'setResearch'; techId: string | null }
   | { type: 'setResearchBudget'; budget: number };

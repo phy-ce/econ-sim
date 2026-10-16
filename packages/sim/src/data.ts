@@ -4,11 +4,20 @@ import type { BuildingTypeDef, ClassDef, GoodDef, GoodId, MethodDef, NeedDef, Ne
 // 기본 생산 방식은 일손이 많이 들고 생산성이 낮다. 기술을 연구하면 적은 인원과 숙련 인력으로 더 많이 만든다.
 
 /**
- * 인구 규모 배율. 인구, 건물 1개당 인원·투입·산출·건설 포인트, 창고 재고, 소작지 1칸 인원, 학교 정원,
- * 시작 자본과 은행·상인 자본, 신용 한도 기본값, 연구비, 소유주 일자리 수가 모두 이 배율로 커진다.
+ * 인구 규모 배율. 인구, 창고 재고, 시작 자본과 은행·상인 자본, 신용 한도 기본값, 연구비, 기술 비용이 이 배율로 커진다.
  * 1인당 필요량, 1인당 임금, 가격은 그대로라서 경제의 움직임은 같고 숫자만 커진다.
  */
 export const POP_SCALE = 100;
+
+/**
+ * 건물 1레벨의 크기 배율. 건물 1레벨당 인원·투입·산출·건설 포인트, 공사에 드는 포인트, 소유주 자리, 학교 정원이 이 배율을 받는다.
+ * 레벨 하나는 시장에 비해 작고(산출 하루 100단위 미만), 지역 경제는 수십~수백 레벨로 이뤄진다 (빅토리아3 방식).
+ */
+export const BUILDING_SCALE = 3;
+/** 인구 규모 대비 건물 레벨 수: 예전(인구 배율 크기의) 건물 하나 = 레벨 LEVELS_PER_BLOCK 개 */
+export const LEVELS_PER_BLOCK = POP_SCALE / BUILDING_SCALE;
+/** 땅 칸 수: 레벨 하나가 한 칸을 쓰므로 땅도 같은 비율로 잘게 나눈다 */
+const cells = (n: number) => Math.round(n * LEVELS_PER_BLOCK);
 
 export const GOOD_IDS: GoodId[] = [
   'grain', 'fiber', 'timber', 'ore',
@@ -28,7 +37,7 @@ export const GOODS: Record<GoodId, GoodDef> = {
   tools: { id: 'tools', name: '공구', nameEn: 'Tools', basePrice: 40, minStock: 250 * POP_SCALE },
   furniture: { id: 'furniture', name: '가구', nameEn: 'Furniture', basePrice: 80, minStock: 150 * POP_SCALE },
   electronics: { id: 'electronics', name: '정밀기계', nameEn: 'Instruments', basePrice: 300, minStock: 40 * POP_SCALE },
-  transport: { id: 'transport', name: '운송', nameEn: 'Transport', basePrice: 2, minStock: 0 * POP_SCALE, perishable: true },
+  transport: { id: 'transport', name: '운송', nameEn: 'Transport', basePrice: 10, minStock: 0 * POP_SCALE, perishable: true },
 };
 
 export const SKILL_DEFS: Record<'unskilled' | 'skilled' | 'expert', SkillDef> = {
@@ -76,95 +85,95 @@ export const TECHS: TechDef[] = [
 export const TECH_BY_ID: Record<string, TechDef> = Object.fromEntries(TECHS.map((t) => [t.id, t]));
 
 const scaleBag = <T extends Record<string, number | undefined>>(bag: T): T =>
-  Object.fromEntries(Object.entries(bag).map(([k, v]) => [k, (v ?? 0) * POP_SCALE])) as T;
-/** 생산 방식 정의: 건물 1개당 인원·투입·산출·건설 포인트는 인구 배율만큼 커진다 */
+  Object.fromEntries(Object.entries(bag).map(([k, v]) => [k, (v ?? 0) * BUILDING_SCALE])) as T;
+/** 생산 방식 정의: 건물 1레벨당 인원·투입·산출·건설 포인트는 건물 크기 배율만큼 커진다 */
 const m = (def: MethodDef): MethodDef => ({
   ...def,
   workers: scaleBag(def.workers),
   inputs: scaleBag(def.inputs),
   outputs: scaleBag(def.outputs),
-  ...(def.construction ? { construction: def.construction * POP_SCALE } : {}),
+  ...(def.construction ? { construction: def.construction * BUILDING_SCALE } : {}),
 });
 
 export const BUILDING_TYPES: BuildingTypeDef[] = [
   {
-    id: 'farm', name: '농장', nameEn: 'Farm', land: 'arable', buildPoints: 450 * POP_SCALE,
+    id: 'farm', name: '농장', nameEn: 'Farm', land: 'arable', buildPoints: 450 * BUILDING_SCALE,
     methods: [
       m({ id: 'farm_grain', name: '곡물 재배', nameEn: 'Grain farming', workers: { unskilled: 100, skilled: 4 }, inputs: {}, outputs: { grain: 24 } }),
       m({ id: 'farm_fiber', name: '섬유작물 재배', nameEn: 'Fibre farming', workers: { unskilled: 100, skilled: 4 }, inputs: {}, outputs: { fiber: 24 } }),
       // 기술 없이도 쓸 수 있는 공구 방식: 쇠 농기구를 쓰면 같은 일손으로 더 거둔다 (공구는 처음엔 수입품)
       m({ id: 'farm_grain_tools', name: '쇠 농기구 곡물', nameEn: 'Grain with iron tools', workers: { unskilled: 90, skilled: 4 }, inputs: { tools: 0.25 }, outputs: { grain: 31 } }),
       m({ id: 'farm_fiber_tools', name: '쇠 농기구 섬유', nameEn: 'Fibre with iron tools', workers: { unskilled: 90, skilled: 4 }, inputs: { tools: 0.25 }, outputs: { fiber: 31 } }),
-      m({ id: 'farm_grain_mech', name: '개량 곡물 농법', nameEn: 'Improved grain farming', tech: 'agri_mech', workers: { unskilled: 45, skilled: 12 }, inputs: { tools: 0.6 }, outputs: { grain: 32 } }),
-      m({ id: 'farm_fiber_mech', name: '개량 섬유 농법', nameEn: 'Improved fibre farming', tech: 'agri_mech', workers: { unskilled: 45, skilled: 12 }, inputs: { tools: 0.6 }, outputs: { fiber: 32 } }),
+      m({ id: 'farm_grain_mech', name: '개량 곡물 농법', nameEn: 'Improved grain farming', tech: 'agri_mech', workers: { unskilled: 45, skilled: 8 }, inputs: { tools: 0.6 }, outputs: { grain: 32 } }),
+      m({ id: 'farm_fiber_mech', name: '개량 섬유 농법', nameEn: 'Improved fibre farming', tech: 'agri_mech', workers: { unskilled: 45, skilled: 8 }, inputs: { tools: 0.6 }, outputs: { fiber: 32 } }),
     ],
   },
   {
-    id: 'lumber', name: '벌목장', nameEn: 'Lumber camp', land: 'forest', buildPoints: 400 * POP_SCALE,
+    id: 'lumber', name: '벌목장', nameEn: 'Lumber camp', land: 'forest', buildPoints: 400 * BUILDING_SCALE,
     methods: [
       m({ id: 'lumber_manual', name: '수작업 벌목', nameEn: 'Hand felling', workers: { unskilled: 80, skilled: 4 }, inputs: {}, outputs: { timber: 20 } }),
       m({ id: 'lumber_axe', name: '쇠도끼와 톱', nameEn: 'Iron axes and saws', workers: { unskilled: 72, skilled: 4 }, inputs: { tools: 0.25 }, outputs: { timber: 27 } }),
-      m({ id: 'lumber_saw', name: '수력 제재', nameEn: 'Water-powered sawing', tech: 'power_saw', workers: { unskilled: 40, skilled: 10 }, inputs: { fuel: 1.5, tools: 0.3 }, outputs: { timber: 30 } }),
+      m({ id: 'lumber_saw', name: '수력 제재', nameEn: 'Water-powered sawing', tech: 'power_saw', workers: { unskilled: 40, skilled: 8 }, inputs: { fuel: 1.5, tools: 0.3 }, outputs: { timber: 30 } }),
     ],
   },
   {
-    id: 'mine', name: '광산', nameEn: 'Mine', land: 'ore', buildPoints: 600 * POP_SCALE,
+    id: 'mine', name: '광산', nameEn: 'Mine', land: 'ore', buildPoints: 600 * BUILDING_SCALE,
     methods: [
       m({ id: 'mine_manual', name: '갱도 채굴', nameEn: 'Shaft mining', workers: { unskilled: 90, skilled: 8 }, inputs: {}, outputs: { ore: 20 } }),
       m({ id: 'mine_pick', name: '쇠곡괭이 채굴', nameEn: 'Iron pick mining', workers: { unskilled: 82, skilled: 8 }, inputs: { tools: 0.3 }, outputs: { ore: 27 } }),
-      m({ id: 'mine_mech', name: '양수 채굴', nameEn: 'Pumped mining', tech: 'mech_mining', workers: { unskilled: 45, skilled: 15, expert: 2 }, inputs: { fuel: 2, tools: 0.8 }, outputs: { ore: 36 } }),
+      m({ id: 'mine_mech', name: '양수 채굴', nameEn: 'Pumped mining', tech: 'mech_mining', workers: { unskilled: 40, skilled: 14, expert: 2 }, inputs: { fuel: 1.8, tools: 0.5 }, outputs: { ore: 33 } }),
     ],
   },
   {
-    id: 'foodplant', name: '식품 공장', nameEn: 'Food plant', land: 'plot', buildPoints: 500 * POP_SCALE,
+    id: 'foodplant', name: '식품 공장', nameEn: 'Food plant', land: 'plot', buildPoints: 166.667 * BUILDING_SCALE,
     methods: [
-      m({ id: 'food_basic', name: '기본 가공', nameEn: 'Basic processing', tech: 'milling', workers: { unskilled: 55, skilled: 8 }, inputs: { grain: 28 }, outputs: { food: 15 } }),
-      m({ id: 'food_frozen', name: '보존 가공', nameEn: 'Preserving', tech: 'refrigeration', workers: { unskilled: 35, skilled: 15, expert: 2 }, inputs: { grain: 30, fuel: 2 }, outputs: { food: 19 } }),
+      m({ id: 'food_basic', name: '기본 가공', nameEn: 'Basic processing', tech: 'milling', workers: { unskilled: 24, skilled: 3.5 }, inputs: { grain: 9.3333 }, outputs: { food: 5 } }),
+      m({ id: 'food_frozen', name: '보존 가공', nameEn: 'Preserving', tech: 'refrigeration', workers: { unskilled: 12, skilled: 6, expert: 0.7 }, inputs: { grain: 10, fuel: 0.6667 }, outputs: { food: 6.3333 } }),
     ],
   },
   {
-    id: 'fuelworks', name: '연료 공장', nameEn: 'Fuel works', land: 'plot', buildPoints: 450 * POP_SCALE,
+    id: 'fuelworks', name: '연료 공장', nameEn: 'Fuel works', land: 'plot', buildPoints: 450 * BUILDING_SCALE,
     methods: [
       m({ id: 'fuel_wood', name: '목탄 연료', nameEn: 'Charcoal fuel', tech: 'charcoal', workers: { unskilled: 40, skilled: 5 }, inputs: { timber: 20 }, outputs: { fuel: 13 } }),
       m({ id: 'fuel_ore', name: '석탄 연료', nameEn: 'Coal fuel', tech: 'mineral_fuel', workers: { unskilled: 35, skilled: 10 }, inputs: { ore: 15 }, outputs: { fuel: 15 } }),
     ],
   },
   {
-    id: 'textile', name: '방직 공장', nameEn: 'Textile mill', land: 'plot', buildPoints: 500 * POP_SCALE,
+    id: 'textile', name: '방직 공장', nameEn: 'Textile mill', land: 'plot', buildPoints: 500 * BUILDING_SCALE,
     methods: [
-      m({ id: 'textile_hand', name: '수직기', nameEn: 'Handloom', tech: 'spinning', workers: { unskilled: 65, skilled: 8 }, inputs: { fiber: 25 }, outputs: { cloth: 9 } }),
-      m({ id: 'textile_power', name: '수력 직기', nameEn: 'Power loom', tech: 'power_loom', workers: { unskilled: 30, skilled: 20, expert: 2 }, inputs: { fiber: 25, fuel: 3 }, outputs: { cloth: 12 } }),
+      m({ id: 'textile_hand', name: '수직기', nameEn: 'Handloom', tech: 'spinning', workers: { unskilled: 65, skilled: 8 }, inputs: { fiber: 25 }, outputs: { cloth: 8.5 } }),
+      m({ id: 'textile_power', name: '수력 직기', nameEn: 'Power loom', tech: 'power_loom', workers: { unskilled: 30, skilled: 16, expert: 2 }, inputs: { fiber: 25, fuel: 3 }, outputs: { cloth: 11.5 } }),
     ],
   },
   {
-    id: 'smelter', name: '제련소', nameEn: 'Smelter', land: 'plot', buildPoints: 600 * POP_SCALE,
+    id: 'smelter', name: '제련소', nameEn: 'Smelter', land: 'plot', buildPoints: 200 * BUILDING_SCALE,
     methods: [
-      m({ id: 'smelt_basic', name: '용광로', nameEn: 'Furnace', tech: 'bloomery', workers: { unskilled: 50, skilled: 12 }, inputs: { ore: 20, fuel: 4 }, outputs: { metal: 9 } }),
+      m({ id: 'smelt_basic', name: '용광로', nameEn: 'Furnace', tech: 'bloomery', workers: { unskilled: 16.6667, skilled: 4 }, inputs: { ore: 6.6667, fuel: 1.3333 }, outputs: { metal: 3 } }),
     ],
   },
   {
-    id: 'workshop', name: '공방', nameEn: 'Workshop', land: 'plot', buildPoints: 450 * POP_SCALE,
+    id: 'workshop', name: '공방', nameEn: 'Workshop', land: 'plot', buildPoints: 225 * BUILDING_SCALE,
     methods: [
-      m({ id: 'ws_tools', name: '공구 제작', nameEn: 'Toolmaking', tech: 'guilds', workers: { unskilled: 45, skilled: 15 }, inputs: { metal: 4, timber: 6 }, outputs: { tools: 8 } }),
-      m({ id: 'ws_furniture', name: '가구 제작', nameEn: 'Furniture making', tech: 'guilds', workers: { unskilled: 45, skilled: 10 }, inputs: { timber: 10, cloth: 2 }, outputs: { furniture: 3.2 } }),
+      m({ id: 'ws_tools', name: '공구 제작', nameEn: 'Toolmaking', tech: 'guilds', workers: { unskilled: 22.5, skilled: 7.5 }, inputs: { metal: 2, timber: 3 }, outputs: { tools: 4 } }),
+      m({ id: 'ws_furniture', name: '가구 제작', nameEn: 'Furniture making', tech: 'guilds', workers: { unskilled: 22.5, skilled: 5 }, inputs: { timber: 5, cloth: 1 }, outputs: { furniture: 1.6 } }),
     ],
   },
   {
-    id: 'fab', name: '정밀 공방', nameEn: 'Precision workshop', land: 'plot', buildPoints: 800 * POP_SCALE,
+    id: 'fab', name: '정밀 공방', nameEn: 'Precision workshop', land: 'plot', buildPoints: 800 * BUILDING_SCALE,
     methods: [
-      m({ id: 'fab_basic', name: '정밀 조립', nameEn: 'Precision assembly', tech: 'electronics', workers: { unskilled: 30, skilled: 40, expert: 10 }, inputs: { metal: 5, tools: 1, fuel: 3 }, outputs: { electronics: 2.2 } }),
+      m({ id: 'fab_basic', name: '정밀 조립', nameEn: 'Precision assembly', tech: 'electronics', workers: { unskilled: 30, skilled: 44, expert: 14 }, inputs: { metal: 5, tools: 1, fuel: 3 }, outputs: { electronics: 2 } }),
     ],
   },
   {
     // 지역 간 교역·개항장 수출입에 필요한 운송을 만든다. 모자라면 짐꾼과 마차로 옮겨 비용이 크게 든다
-    id: 'railway', name: '철도', nameEn: 'Railway', land: 'plot', buildPoints: 500 * POP_SCALE,
+    id: 'railway', name: '철도', nameEn: 'Railway', land: 'plot', buildPoints: 125 * BUILDING_SCALE,
     methods: [
-      m({ id: 'rail_horse', name: '마차 철도', nameEn: 'Horse railway', tech: 'wagonway', workers: { unskilled: 40, skilled: 4 }, inputs: { grain: 3, timber: 1 }, outputs: { transport: 40 } }),
-      m({ id: 'rail_steam', name: '증기 철도', nameEn: 'Steam railway', tech: 'steam_rail', workers: { unskilled: 30, skilled: 12, expert: 1 }, inputs: { fuel: 3, metal: 0.5, tools: 0.5 }, outputs: { transport: 120 } }),
+      m({ id: 'rail_horse', name: '마차 철도', nameEn: 'Horse railway', tech: 'wagonway', workers: { unskilled: 10, skilled: 1 }, inputs: { grain: 0.75, timber: 0.25 }, outputs: { transport: 2 } }),
+      m({ id: 'rail_steam', name: '증기 철도', nameEn: 'Steam railway', tech: 'steam_rail', workers: { unskilled: 5, skilled: 2, expert: 0.25 }, inputs: { fuel: 0.75, metal: 0.125, tools: 0.125 }, outputs: { transport: 6 } }),
     ],
   },
   {
-    id: 'school', name: '학교', nameEn: 'School', land: 'plot', buildPoints: 500 * POP_SCALE,
+    id: 'school', name: '학교', nameEn: 'School', land: 'plot', buildPoints: 500 * BUILDING_SCALE,
     methods: [
       m({ id: 'school_basic', name: '공립 학교', nameEn: 'Public school', tech: 'printing', workers: { unskilled: 15, skilled: 5 }, inputs: {}, outputs: {}, grant: 1.25 }),
     ],
@@ -173,20 +182,20 @@ export const BUILDING_TYPES: BuildingTypeDef[] = [
 
 // 건축사무소: 건설 포인트를 만든다. 모든 공사는 이 포인트로 진행되고, 방식이 좋을수록 하루 포인트가 많다
 BUILDING_TYPES.push({
-  id: 'builder', name: '건축사무소', nameEn: 'Construction office', land: 'plot', buildPoints: 400 * POP_SCALE,
+  id: 'builder', name: '건축사무소', nameEn: 'Construction office', land: 'plot', buildPoints: 400 * BUILDING_SCALE,
   methods: [
     m({ id: 'build_manual', name: '인력 건설', nameEn: 'Manual building', workers: { unskilled: 30, skilled: 3 }, inputs: { timber: 4 }, outputs: {}, construction: 12 }),
-    m({ id: 'build_scaffold', name: '목재 비계', nameEn: 'Timber scaffolding', tech: 'guilds', workers: { unskilled: 25, skilled: 6 }, inputs: { timber: 6, tools: 0.6 }, outputs: {}, construction: 22 }),
-    m({ id: 'build_steel', name: '철골 공법', nameEn: 'Steel frames', tech: 'steel_frame', workers: { unskilled: 20, skilled: 8, expert: 1 }, inputs: { timber: 5, metal: 2, tools: 1.2 }, outputs: {}, construction: 40 }),
+    m({ id: 'build_scaffold', name: '목재 비계', nameEn: 'Timber scaffolding', tech: 'guilds', workers: { unskilled: 15, skilled: 6 }, inputs: { timber: 6, tools: 0.6 }, outputs: {}, construction: 22 }),
+    m({ id: 'build_steel', name: '철골 공법', nameEn: 'Steel frames', tech: 'steel_frame', workers: { unskilled: 14, skilled: 6, expert: 1 }, inputs: { timber: 5, metal: 2, tools: 1.2 }, outputs: {}, construction: 40 }),
   ],
 });
 
 /** 건설 포인트 1점의 장부 가치 (신용 한도·경매가 계산용) */
 export const POINT_VALUE = 3;
 
-/** 규모의 경제: 같은 건물이 10레벨 늘 때마다 생산성 +10%, 최대 +50% */
+/** 규모의 경제: 같은 건물이 10블록(레벨 10 × LEVELS_PER_BLOCK) 늘 때마다 생산성 +10%, 최대 +50% */
 export function scaleBonus(level: number): number {
-  return 1 + Math.min(0.5, Math.floor(level / 10) * 0.1);
+  return 1 + Math.min(0.5, Math.floor(level / (10 * LEVELS_PER_BLOCK) + 1e-9) * 0.1);
 }
 
 export const BUILDING_BY_ID: Record<string, BuildingTypeDef> =
@@ -204,8 +213,8 @@ export function getMethod(typeId: string, methodId: string): MethodDef {
  * 땅 1칸이 감당하는 인원과 1인당 하루 생산량.
  */
 export const SUBSISTENCE = {
-  workersPerArable: 100 * POP_SCALE,
-  workersPerForest: 80 * POP_SCALE,
+  workersPerArable: 100 * BUILDING_SCALE,
+  workersPerForest: 80 * BUILDING_SCALE,
   /** 농지 소작농 1인당 하루 산출 */
   grainPerWorker: 0.075,
   fiberPerWorker: 0.045,
@@ -220,7 +229,7 @@ export const SUBSISTENCE = {
 };
 
 /** 학교 1레벨이 (만원 가동 시) 감당하는 학생 수 */
-export const SCHOOL_CAPACITY = 300 * POP_SCALE;
+export const SCHOOL_CAPACITY = 300 * BUILDING_SCALE;
 
 export const LAND_NAMES = { arable: '농지', forest: '산림', ore: '광맥', plot: '공장 부지' } as const;
 export const LAND_NAMES_EN = { arable: 'Farmland', forest: 'Forest', ore: 'Ore veins', plot: 'Building plots' } as const;
@@ -234,51 +243,51 @@ export const REGIONS: RegionDef[] = [
   {
     id: 1, name: '벨마르 항', nameEn: 'Port Belmar', spaceport: true, neighbors: [2, 3], education: 0.35, perks: { foodplant: 0.1, textile: 0.1, workshop: 0.1 },
     description: '왕국의 관문인 항구 도시. 해외 무역은 이곳 개항장에서만 이뤄진다. 땅은 좁지만 공장 부지가 많다.', descriptionEn: 'The kingdom\'s gateway port city. Foreign trade happens only at this port. Little land, but many building plots.',
-    land: { arable: 60, forest: 20, ore: 0, plot: 180 },
+    land: { arable: cells(60), forest: cells(20), ore: cells(0), plot: cells(180) },
     population: { unskilled: 6500 * POP_SCALE, skilled: 850 * POP_SCALE, expert: 75 * POP_SCALE, peasant: 0 * POP_SCALE, capitalist: 125 * POP_SCALE, aristocrat: 50 * POP_SCALE },
   },
   {
     id: 2, name: '강변 평야', nameEn: 'River Plain', spaceport: false, neighbors: [1, 3, 4], education: 0.2, perks: { farm: 0.1 },
     description: '넓은 충적 평야. 왕국의 곡창이다.', descriptionEn: 'Broad alluvial plains. The kingdom\'s granary.',
-    land: { arable: 180, forest: 20, ore: 0, plot: 60 },
+    land: { arable: cells(180), forest: cells(20), ore: cells(0), plot: cells(60) },
     population: { unskilled: 5500 * POP_SCALE, skilled: 300 * POP_SCALE, expert: 15 * POP_SCALE, peasant: 0 * POP_SCALE, capitalist: 10 * POP_SCALE, aristocrat: 125 * POP_SCALE },
   },
   {
     id: 3, name: '중앙 고원', nameEn: 'Central Highlands', spaceport: false, neighbors: [1, 2, 5, 6], education: 0.25, perks: { farm: 0.05, railway: 0.1 },
     description: '여러 길이 만나는 고원. 무엇이든 조금씩 있다.', descriptionEn: 'Highlands where many roads meet. A little of everything.',
-    land: { arable: 70, forest: 40, ore: 30, plot: 100 },
+    land: { arable: cells(70), forest: cells(40), ore: cells(30), plot: cells(100) },
     population: { unskilled: 4500 * POP_SCALE, skilled: 350 * POP_SCALE, expert: 25 * POP_SCALE, peasant: 0 * POP_SCALE, capitalist: 40 * POP_SCALE, aristocrat: 75 * POP_SCALE },
   },
   {
     id: 4, name: '남부 습지', nameEn: 'Southern Marshes', spaceport: false, neighbors: [2, 5], education: 0.12, perks: { farm: 0.1 },
     description: '섬유작물이 잘 자라는 습지대.', descriptionEn: 'Wetlands where fibre crops grow well.',
-    land: { arable: 120, forest: 70, ore: 0, plot: 30 },
+    land: { arable: cells(120), forest: cells(70), ore: cells(0), plot: cells(30) },
     population: { unskilled: 3250 * POP_SCALE, skilled: 125 * POP_SCALE, expert: 5 * POP_SCALE, peasant: 0 * POP_SCALE, capitalist: 5 * POP_SCALE, aristocrat: 50 * POP_SCALE },
   },
   {
     id: 5, name: '동부 삼림', nameEn: 'Eastern Forest', spaceport: false, neighbors: [3, 4, 7], education: 0.15, perks: { lumber: 0.1, fuelworks: 0.1 },
     description: '울창한 원시림. 목재와 연료의 공급지.', descriptionEn: 'Dense old-growth forest. The source of timber and fuel.',
-    land: { arable: 30, forest: 160, ore: 20, plot: 40 },
+    land: { arable: cells(30), forest: cells(160), ore: cells(20), plot: cells(40) },
     population: { unskilled: 3000 * POP_SCALE, skilled: 175 * POP_SCALE, expert: 5 * POP_SCALE, peasant: 0 * POP_SCALE, capitalist: 10 * POP_SCALE, aristocrat: 40 * POP_SCALE },
   },
   {
     id: 6, name: '북부 광산지대', nameEn: 'Northern Mining District', spaceport: false, neighbors: [3, 7], education: 0.18, perks: { mine: 0.1, smelter: 0.1 },
     description: '광맥이 풍부한 산악 지대.', descriptionEn: 'Mountains rich in ore veins.',
-    land: { arable: 10, forest: 20, ore: 100, plot: 70 },
+    land: { arable: cells(10), forest: cells(20), ore: cells(100), plot: cells(70) },
     population: { unskilled: 1900 * POP_SCALE, skilled: 175 * POP_SCALE, expert: 10 * POP_SCALE, peasant: 0 * POP_SCALE, capitalist: 20 * POP_SCALE, aristocrat: 25 * POP_SCALE },
   },
   {
     id: 7, name: '회색 협곡', nameEn: 'Grey Gorge', spaceport: false, neighbors: [5, 6], education: 0.1, perks: { mine: 0.1 },
     description: '외딴 협곡. 광맥은 좋지만 사람이 적다.', descriptionEn: 'A remote gorge. Good ore veins, but few people.',
-    land: { arable: 20, forest: 30, ore: 70, plot: 30 },
+    land: { arable: cells(20), forest: cells(30), ore: cells(70), plot: cells(30) },
     population: { unskilled: 1300 * POP_SCALE, skilled: 75 * POP_SCALE, expert: 0 * POP_SCALE, peasant: 0 * POP_SCALE, capitalist: 5 * POP_SCALE, aristocrat: 15 * POP_SCALE },
   },
 ];
 
 export const NEEDS: NeedDef[] = [
-  { id: 'nourishment', name: '식량', nameEn: 'Food', options: [{ good: 'food', units: 1, appeal: 1.5 }, { good: 'grain', units: 5 }] },
-  { id: 'heating', name: '난방', nameEn: 'Heating', options: [{ good: 'fuel', units: 1, appeal: 1.5 }, { good: 'timber', units: 4 }] },
-  { id: 'clothing', name: '의복', nameEn: 'Clothing', options: [{ good: 'cloth', units: 1, appeal: 1.5 }, { good: 'fiber', units: 6 }] },
+  { id: 'nourishment', name: '식량', nameEn: 'Food', options: [{ good: 'food', units: 1, appeal: 2.5 }, { good: 'grain', units: 5 }] },
+  { id: 'heating', name: '난방', nameEn: 'Heating', options: [{ good: 'fuel', units: 1, appeal: 2.5 }, { good: 'timber', units: 4 }] },
+  { id: 'clothing', name: '의복', nameEn: 'Clothing', options: [{ good: 'cloth', units: 1, appeal: 2.5 }, { good: 'fiber', units: 6 }] },
   { id: 'furnishing', name: '주거', nameEn: 'Housing', options: [{ good: 'furniture', units: 1 }] },
   { id: 'gadgets', name: '문화', nameEn: 'Culture', options: [{ good: 'electronics', units: 1 }] },
 ];

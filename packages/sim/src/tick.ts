@@ -1,6 +1,6 @@
 import { BUILDING_BY_ID, GOOD_IDS, GOODS, NEEDS, SCHOOL_CAPACITY, SKILL_DEFS, SUBSISTENCE, TECH_BY_ID, TICKS_PER_WEEK, getMethod, needsAt, POP_SCALE } from './data';
 import {
-  bookValue, borrow, colonyPopulation, colonySol, companyById, creditLimit, efficiency, emptyStats, employedIn, landFree, logEvent, newBuilding,
+  bookValue, borrow, colonyPopulation, colonySol, companyById, creditLimit, efficiency, ownerFillNow, emptyStats, employedIn, landFree, logEvent, newBuilding,
   marketWage, payClassIn, payHouseholds, regionById, regionPopulation, regionUnemployment, repay, slots, staffing, totalMoney, unemploymentRate, ownerJobs, regionOwnerJobs, shippingRate, RAIL_RATE, CARTAGE_RATE, EXPORT_START, EXPORT_FULL, exportNetback,
 } from './economy';
 import { runAi } from './ai';
@@ -24,17 +24,16 @@ export function step(w: World, commands: QueuedCommand[] = []): string[] {
   }
 
   for (const c of w.companies) c.revenueEma *= 0.98;
-  const typeOf = new Map(w.buildings.map((b) => [b.id, b.typeId]));
   for (const r of w.regions) {
     for (const s of POP_CLASSES) r.households[s].lastIncome = 0;
     for (const g of GOOD_IDS) {
       const mg = r.market[g];
       mg.demand = 0; mg.sold = 0; mg.shippedIn = 0; mg.shippedOut = 0;
-      // 어제 안 팔려 다시 내놓은 위탁분(상인 화물)도 오늘 공급이다
-      mg.supply = mg.consigned.reduce((q, l) => q + l.q, 0);
+      // 공급은 그날 새로 나온 물량만 센다 (생산·소작 판매·수입·도착 화물). 어제 생산분이나 안 팔려 다시 내놓은
+      // 위탁분을 또 세면 공급이 두 번 잡혀 가격 신호가 틀어진다
+      mg.supply = 0;
       mg.demandBy = {};
       mg.supplyBy = {};
-      for (const l of mg.consigned) addBy(mg.supplyBy, lotSource(l, typeOf), l.q);
     }
   }
   deliverInbound(w);
@@ -67,15 +66,6 @@ export function step(w: World, commands: QueuedCommand[] = []): string[] {
 function addBy(by: Record<string, number> | undefined, key: string, q: number) {
   if (!by || !(q > 0)) return;
   by[key] = (by[key] ?? 0) + q;
-}
-
-/** 위탁 물량의 공급 출처 키 */
-function lotSource(l: { b: number; c: number }, typeOf: Map<number, string>): string {
-  if (l.c === TRADER) return 'trader';
-  if (l.c === OFFWORLD) return 'import';
-  if (l.c === SUBSISTENCE_SELLER) return 'subsistence';
-  const t = typeOf.get(l.b);
-  return t ? `bld:${t}` : 'other';
 }
 
 /** 출처별 내역의 이동평균. 거의 사라진 출처는 지운다 */
@@ -322,8 +312,8 @@ function doResearch(w: World) {
 // ---------------------------------------------------------------- 노동시장 (지역 단위)
 
 const RESERVATION = 0.3; // 기본 임금의 30% 미만이면 일하지 않음
-const HIRE_RATE = 0.08; // 틱당 최대 충원 비율
-const SWITCH_RATE = 0.03; // 틱당 최대 이직 비율
+const HIRE_RATE = 0.02; // 틱당 최대 충원 비율
+const SWITCH_RATE = 0.01; // 틱당 최대 이직 비율
 const SWITCH_PREMIUM = 1.15; // 이 배율 이상 임금 차이가 나야 이직
 
 function laborMarket(w: World, r: Region) {
@@ -716,6 +706,11 @@ const IMPORT_CREDIT = 15000 * POP_SCALE;
 
 const ramp = (x: number, from: number, to: number) => clamp((x - from) / (to - from), 0, 1);
 
+/** 해외 시장이 하루에 사 가거나 팔 수 있는 상품별 상한 (왕국 기준 재고의 3%) */
+export function foreignQuota(g: GoodId): number {
+  return GOODS[g].minStock * 0.03;
+}
+
 function addExports(w: World, r: Region, list: Order[]) {
   const budget = Math.max(0, w.offworld.balance) * RECYCLE_RATE;
   const appetite = {} as Record<GoodId, number>;
@@ -730,7 +725,8 @@ function addExports(w: World, r: Region, list: Order[]) {
     const rel = mg.price / GOODS[g].basePrice;
     const floorQ = (mg.supplyEma + mg.inventory * 0.05 + GOODS[g].minStock * 0.01) * ramp(rel, EXPORT_START, EXPORT_FULL);
     const recycleQ = sum > 0 ? Math.min((budget * appetite[g]) / sum / mg.price, mg.supplyEma * 0.3) : 0;
-    const q = floorQ + recycleQ;
+    // 해외 시장이 사 갈 수 있는 양에는 한도가 있다
+    const q = Math.min(floorQ + recycleQ, foreignQuota(g));
     if (q <= 1e-6 || GOODS[g].perishable) continue;
     list.push({
       src: 'export', regionId: r.id, good: g, qty: q, payer: { kind: 'offworld' },
@@ -758,7 +754,8 @@ function addImports(w: World, r: Region, list: Order[]) {
     const shortfall = Math.max(0, mg.demand - domestic - mg.inventory * 0.2) + Math.max(0, inlandUnmet - inTransit - mg.inventory * 0.2);
     const credit = clamp(1 - w.offworld.balance / IMPORT_CREDIT, 0, 1);
     const cap = ((mg.demandEma + inlandUnmet) * TRADE_CAP + GOODS[g].minStock * 0.01) * ramp(maxRel, IMPORT_START, IMPORT_FULL) * credit;
-    const q = Math.min(shortfall, cap);
+    // 해외 시장도 무한하지 않다: 상품별 하루 수입 상한
+    const q = Math.min(shortfall, cap, foreignQuota(g) - (w.offworld.imports[g] ?? 0));
     if (q <= 1e-6) continue;
     mg.consigned.push({ b: OFFWORLD, c: OFFWORLD, q });
     mg.supply += q;
@@ -931,7 +928,9 @@ function subsistence(w: World) {
     for (const g of GOOD_IDS) {
       const q = out[g];
       if (!q || q <= 1e-6) continue;
-      const keep = q * SUBSISTENCE.inKindShare;
+      // 먹을 곡물은 먼저 남긴다: 식량 필요분(곡물 5단위 = 식량 1)까지는 팔지 않는다
+      const food = g === 'grain' ? needsAt(h.wealth).nourishment * h.population * 5 : 0;
+      const keep = Math.max(q * SUBSISTENCE.inKindShare, Math.min(q, food));
       h.inKind[g] = keep;
       inKindValue += keep * r.market[g].price; // 지역 시세로 평가 (아래 이동평균이 곡물값 급등을 눌러 준다)
       const sell = q - keep;
@@ -956,6 +955,8 @@ function paySubsistence(w: World, r: Region, amt: number) {
 
 /** 숙련도가 하루에 오르는 양 (약 한 달이면 최대 효율) */
 const EXP_GAIN = 0.035;
+/** 작업 인원이 충원율을 따라가는 하루 비율 (약 2주에 절반) */
+const CREW_RATE = 0.08;
 
 function produce(w: World) {
   for (const c of w.companies) { c.buildPoints = 0; c.buildCost = 0; }
@@ -963,9 +964,14 @@ function produce(w: World) {
     if (!b.active) continue;
     const c = companyById(w, b.companyId)!;
     const method = getMethod(b.typeId, b.methodId);
-    const st = b.last.staffing;
+    // 생산은 충원율을 바로 따르지 않고 작업 인원(crew)이 서서히 따라간 만큼 돈다
+    b.crew = (b.crew ?? b.last.staffing) + (b.last.staffing - (b.crew ?? b.last.staffing)) * CREW_RATE;
+    // 소유주 충원율도 같은 속도로 따라간다 (소유주가 떠나거나 새로 와도 효율은 서서히 바뀐다)
+    const of = ownerFillNow(b);
+    b.ownerFill = (b.ownerFill ?? of) + (of - (b.ownerFill ?? of)) * CREW_RATE;
+    const st = b.crew;
     b.last.points = 0;
-    if (st > 0) {
+    if (st > 1e-4) {
       const idle = b.idle;
       const eff = efficiency(b);
       let fill = 1;
@@ -1042,12 +1048,13 @@ function advanceConstruction(w: World) {
       ?? w.buildings.find((b) => b.companyId === k.companyId && b.regionId === k.regionId && b.typeId === k.typeId);
     if (target) {
       // 늘어난 만큼 새 인력이 섞이므로 숙련도가 희석된다
-      target.exp *= target.level / (target.level + 1);
-      target.level += 1;
-      logEvent(w, k.companyId, `${rname} ${def.name} 증설 완료 → ${target.level}개`,
-        { regionId: k.regionId, buildingId: target.id, en: `${regionNameEn(k.regionId)} ${buildingNameEn(k.typeId)} expanded → ${target.level}` });
+      const add = k.levels ?? 1;
+      target.exp *= target.level / (target.level + add);
+      target.level += add;
+      logEvent(w, k.companyId, `${rname} ${def.name} 증설 완료 → ${target.level}레벨`,
+        { regionId: k.regionId, buildingId: target.id, en: `${regionNameEn(k.regionId)} ${buildingNameEn(k.typeId)} expanded to ${target.level} levels` });
     } else {
-      const b = newBuilding(w.nextId++, k.typeId, k.regionId, k.companyId, k.methodId, 1);
+      const b = newBuilding(w.nextId++, k.typeId, k.regionId, k.companyId, k.methodId, k.levels ?? 1);
       w.buildings.push(b);
       logEvent(w, k.companyId, `${rname} ${def.name} 신규 건설 완료. 사람을 뽑기 시작합니다.`,
         { regionId: k.regionId, buildingId: b.id, en: `New ${buildingNameEn(k.typeId).toLowerCase()} completed in ${regionNameEn(k.regionId)}. Hiring has begun.` });
@@ -1060,7 +1067,9 @@ function advanceConstruction(w: World) {
 export const PRICE_MIN = 0.25;
 export const PRICE_MAX = 4;
 /** 틱당 목표 가격으로 다가가는 비율 */
-const PRICE_SPEED = 0.03;
+const PRICE_SPEED = 0.1;
+/** 수요·공급 평균이 하루에 따라가는 비율 (가격 반응과 함께 약 2주에 변화의 절반이 반영된다) */
+const FLOW_EMA = 0.1;
 
 /**
  * 목표 가격 = 기본가 × (수요/공급)^0.8 × 재고 보정
@@ -1083,8 +1092,8 @@ function updatePrices(w: World) {
       const base = GOODS[g].basePrice;
       const vol = Math.max(mg.demand, mg.supply);
       mg.volumeEma = mg.volumeEma * 0.98 + vol * 0.02;
-      mg.demandEma = mg.demandEma * 0.97 + mg.demand * 0.03;
-      mg.supplyEma = mg.supplyEma * 0.97 + mg.supply * 0.03;
+      mg.demandEma = mg.demandEma * (1 - FLOW_EMA) + mg.demand * FLOW_EMA;
+      mg.supplyEma = mg.supplyEma * (1 - FLOW_EMA) + mg.supply * FLOW_EMA;
       mg.demandByEma = emaBy(mg.demandByEma, mg.demandBy);
       mg.supplyByEma = emaBy(mg.supplyByEma, mg.supplyBy);
       mg.target = Math.max(GOODS[g].minStock * share, mg.volumeEma * 10);
@@ -1133,6 +1142,7 @@ function updatePopulation(w: World) {
   }
   migrate(w);
   famineMigration(w);
+  wageMigration(w);
   // 인구가 줄거나 옮겨 가서 고용자가 지역 인구를 넘으면 그날 바로 비례 감원한다
   for (const r of w.regions) {
     for (const s of SKILLS) {
@@ -1146,34 +1156,92 @@ function updatePopulation(w: World) {
   }
 }
 
-/** 소유주 승급 자격: 기술자의 부와 1인당 저축 */
-const OWNER_REQ = { wealth: 10, savings: 50 };
+/**
+ * 상층 진입 자격과 속도: 위로 갈수록 어렵다. 지역 교육 수준, 부 단계, 1인당 저축을 모두 넘어야 하고,
+ * 하루에 원래 계층 인구의 rate 비율까지만 (빈 소유주 자리 안에서) 올라간다.
+ */
+export const OWNER_REQ = {
+  capitalist: { education: 0.4, wealth: 12, savings: 80, rate: 0.0001 },
+  aristocrat: { education: 0.5, wealth: 12, savings: 100, rate: 0.00005 },
+} as const;
+/** 땅이 없는(자리보다 많은) 지주 귀족이 빈 자본가 자리로 옮겨 가는 하루 최대 비율 (몰락 귀족의 산업 투자) */
+const ARISTO_TO_CAPITALIST = 0.0005;
+/** 부유한 자본가가 빈 지주 자리로 옮겨 가는 하루 최대 비율 (신흥 부자의 땅 매입)과 자격 */
+const CAPITALIST_TO_ARISTO = { rate: 0.0001, wealth: 18, savings: 150, education: 0.5 } as const;
+/** 자리가 없는 소유 계층이 기술자로 내려가는 하루 비율 (남는 인원 대비) */
+const OWNER_SURPLUS_DEMOTE = 0.0005;
+
+/** 계층 이동 누적 기록 (분석·화면용): "from>to" → 사람 수 */
+function track(w: World, from: PopClass, to: PopClass, n: number) {
+  if (!(n > 0)) return;
+  const m = (w.mobility ??= {});
+  const k = `${from}>${to}`;
+  m[k] = (m[k] ?? 0) + n;
+}
+function moveClass(w: World, r: Region, from: PopClass, to: PopClass, n: number) {
+  const a = r.households[from];
+  n = Math.min(n, a.population);
+  if (!(n > 0)) return;
+  move(a, r.households[to], n);
+  track(w, from, to, n);
+}
 
 /**
- * 소유주 일자리 배정과 이동. 일자리가 남으면 부유한 기술자가 소유 계층으로 올라가고,
- * 일자리보다 소유 계층이 많으면 남는 사람이 천천히 기술자로 내려간다.
+ * 소유주 일자리 배정과 이동 (지역 단위).
+ *  1) 상층끼리의 전환: 자리 없는 지주 → 빈 자본가 자리, 부유한 자본가 → 빈 지주 자리 (더 느리고 까다롭다).
+ *  2) 그래도 빈 자리는 교육 수준이 높은 지역에서만, 부유한 전문가(먼저)와 기술자가 아주 느리게 채운다.
+ *  3) 자리보다 많은 소유 계층은 천천히 기술자로 내려간다.
+ *  4) 지역에 있는 자본가·지주가 그 지역 건물의 소유주 자리에 앉는다 (모든 건물에 같은 비율로).
+ *     새 건물도 그날 바로 지역의 기존 소유 계층으로 채워지므로, 사람이 남아 있는 한 승급을 기다리지 않는다.
  */
 function seatOwners(w: World, r: Region) {
   const jobs = regionOwnerJobs(w, r);
-  const skilled = r.households.skilled;
+  const H = r.households;
+  // 1) 상층끼리의 전환
+  const surplusAristo = H.aristocrat.population - jobs.aristocrat;
+  const vacantCap = jobs.capitalist - H.capitalist.population;
+  if (surplusAristo > 0 && vacantCap > 0) {
+    moveClass(w, r, 'aristocrat', 'capitalist', Math.min(surplusAristo, vacantCap, H.aristocrat.population * ARISTO_TO_CAPITALIST));
+  }
+  const vacantAristo = jobs.aristocrat - H.aristocrat.population;
+  const cap = H.capitalist;
+  if (vacantAristo > 0 && cap.population >= 1 && r.education >= CAPITALIST_TO_ARISTO.education
+    && cap.wealth >= CAPITALIST_TO_ARISTO.wealth && cap.savings / cap.population >= CAPITALIST_TO_ARISTO.savings) {
+    moveClass(w, r, 'capitalist', 'aristocrat', Math.min(vacantAristo, cap.population * CAPITALIST_TO_ARISTO.rate));
+  }
   for (const cls of ['capitalist', 'aristocrat'] as const) {
-    const h = r.households[cls];
-    const seated = jobs[cls] > 0 ? Math.min(1, h.population / jobs[cls]) : 0;
+    const h = H[cls];
+    const gap = jobs[cls] - h.population;
+    if (gap >= 1) {
+      // 2) 중층에서 상층으로: 교육이 높은 지역에서만, 전문가가 먼저
+      const req = OWNER_REQ[cls];
+      if (r.education < req.education) continue;
+      let left = gap;
+      for (const src of ['expert', 'skilled'] as const) {
+        const s = H[src];
+        if (left <= 0 || s.population < 1 || s.wealth < req.wealth || s.savings / s.population < req.savings) continue;
+        const n = Math.min(left, s.population * req.rate);
+        moveClass(w, r, src, cls, n);
+        left -= n;
+      }
+    } else if (gap <= -1) {
+      // 3) 자리 없는 소유 계층은 천천히 기술자로
+      moveClass(w, r, cls, 'skilled', -gap * OWNER_SURPLUS_DEMOTE);
+    }
+  }
+  // 4) 자리 배정 (이동을 반영한 뒤)
+  for (const cls of ['capitalist', 'aristocrat'] as const) {
+    const seated = jobs[cls] > 0 ? Math.min(1, H[cls].population / jobs[cls]) : 0;
     for (const b of w.buildings) {
       if (b.regionId !== r.id) continue;
       const o = ownerJobs(b);
       if (o.cls === cls) b.owners = o.jobs * seated;
     }
-    const gap = jobs[cls] - h.population;
-    if (gap >= 1) {
-      if (skilled.population < 1 || skilled.wealth < OWNER_REQ.wealth || skilled.savings / skilled.population < OWNER_REQ.savings) continue;
-      move(skilled, h, Math.min(gap * 0.02, skilled.population * 0.0005));
-    } else if (gap <= -1) {
-      move(h, skilled, -gap * 0.002);
-    }
   }
 }
 
+/** 소작농이 노동자로 옮겨 가는 하루 최대 비율 (× 문해력 0.25 + 1.5 × 교육). 새 공장은 몇 주~몇 달에 걸쳐 찬다 */
+export const PEASANT_TO_LABORER = 0.002;
 /** 노동자 빈자리가 실업 노동자보다 많으면 농민이 공장으로 간다 */
 function peasantsToLaborers(w: World, r: Region) {
   const peasants = r.households.peasant;
@@ -1183,10 +1251,14 @@ function peasantsToLaborers(w: World, r: Region) {
   const idle = r.households.unskilled.population * regionUnemployment(w, r.id, 'unskilled');
   const gap = vacancy - idle;
   if (gap < 1) return;
-  // 공장 일자리는 소작보다 훨씬 나으므로 빈자리는 빨리 찬다. 다만 글을 읽고 셈을 할 줄 아는 사람이 먼저 간다:
+  // 공장 일자리는 소작보다 낫지만 땅을 떠나는 데는 시간이 걸린다. 글을 읽고 셈을 할 줄 아는 사람이 먼저 간다:
   // 교육 수준이 낮은 지역은 옮겨 가는 속도가 느리다 (교육 10% → 0.4배, 50% → 1배, 상한 1.5배)
   const literacy = clamp(0.25 + 1.5 * r.education, 0.25, 1.5);
-  move(peasants, r.households.unskilled, Math.min(gap * 0.5, peasants.population * 0.02 * literacy));
+  // 교육이 공장 노동자로 일할 수 있는 사람의 상한도 정한다: 하층 중 노동자 비율 ≤ 25% + 교육 × 2 (최대 95%)
+  const laborers = r.households.unskilled.population;
+  const room = clamp(0.25 + 2 * r.education, 0.25, 0.95) * (laborers + peasants.population) - laborers;
+  if (room < 1) return;
+  moveClass(w, r, 'peasant', 'unskilled', Math.min(gap * 0.5, room, peasants.population * PEASANT_TO_LABORER * literacy));
 }
 
 /** 일자리를 못 구한 노동자는 땅이 남아 있으면 농민으로 돌아간다 */
@@ -1197,7 +1269,7 @@ function laborersToPeasants(w: World, r: Region) {
   const room = landCap - r.households.peasant.population;
   if (room < 1) return;
   const h = r.households.unskilled;
-  move(h, r.households.peasant, Math.min(room, h.population * ur * 0.004));
+  moveClass(w, r, 'unskilled', 'peasant', Math.min(room, h.population * ur * 0.001));
 }
 
 /** 교육 수준의 바닥값과, 학교가 모든 인구를 감당할 때의 최대 상승폭 */
@@ -1246,14 +1318,13 @@ function promote(w: World, r: Region, from: Skill, to: Skill) {
   const premium = (marketWage(w, to) / Math.max(1e-6, marketWage(w, from))) / (SKILL_DEFS[to].baseWage / SKILL_DEFS[from].baseWage);
   const pull = clamp(premium * premium, 0.5, 4);
   const n = Math.min(a.population * 0.0004 * learn * pull, vacancy * 0.02);
-  move(a, b, n);
+  moveClass(w, r, from, to, n);
 }
 
 function demote(w: World, r: Region, from: Skill, to: Skill) {
   const ur = regionUnemployment(w, r.id, from);
   if (ur < 0.15) return;
-  const a = r.households[from];
-  move(a, r.households[to], a.population * ur * 0.002);
+  moveClass(w, r, from, to, r.households[from].population * ur * 0.0005);
 }
 
 function move(a: { population: number; savings: number }, b: { population: number; savings: number }, n: number) {
@@ -1263,14 +1334,14 @@ function move(a: { population: number; savings: number }, b: { population: numbe
   b.population += n; b.savings += money;
 }
 
-/** 기근이 심할 때 하루에 떠나는 최대 비율 */
-const FAMINE_MOVE_MAX = 0.01;
+/** 기근이 심할 때 하루에 떠나는 최대 비율 (식량 차이 0.5 이상에서 최대) */
+const FAMINE_MOVE_MAX = 0.001;
 /** 기근 이주 계층: 소유 계층은 땅·공장에 묶여 있으므로 떠나지 않는다 */
 const FAMINE_MOVERS: PopClass[] = ['peasant', 'unskilled', 'skilled', 'expert'];
 
 /**
  * 기근 이주: 식량 충족률이 기아선(STARVATION_LINE) 아래인 계층은 더 잘 먹는 이웃 지역으로 떠난다.
- * 차이가 클수록 많이(하루 최대 1%), 저축은 사람 수에 비례해 들고 간다.
+ * 차이가 클수록 많이(하루 최대 0.1%), 저축은 사람 수에 비례해 들고 간다.
  * 소작농은 도착 지역에 빌릴 땅이 남아 있으면 소작농으로, 없으면 노동자(일자리를 찾는 사람)로 정착한다.
  */
 function famineMigration(w: World) {
@@ -1283,10 +1354,10 @@ function famineMigration(w: World) {
         const n = regionById(w, nb);
         const nh = n.households[cls];
         const food = nh.population >= 1 ? nh.food : 1;
-        if (food > bestFood) { best = n; bestFood = food; }
+        if (food > bestFood + 1e-9) { best = n; bestFood = food; }
       }
       if (!best) continue;
-      const n = h.population * Math.min(FAMINE_MOVE_MAX, (bestFood - h.food) * 0.02);
+      const n = h.population * Math.min(FAMINE_MOVE_MAX, (bestFood - h.food) * 0.002);
       if (n <= 0) continue;
       let to = best.households[cls];
       if (cls === 'peasant') {
@@ -1297,6 +1368,67 @@ function famineMigration(w: World) {
       move(h, to, n);
       r.famineOut += n;
       r.famineTo[best.id] = (r.famineTo[best.id] ?? 0) + n;
+    }
+  }
+}
+
+/** 이웃 지역 평균 임금이 이 배율을 넘게 높아야 임금 이주가 시작되고, WAGE_MOVE_FULL 배에서 최대가 된다 */
+const WAGE_MOVE_START = 1.3;
+const WAGE_MOVE_FULL = 2;
+/** 임금 이주의 하루 최대 비율 */
+const WAGE_MOVE_MAX = 0.0005;
+
+/** 지역에서 고용된 사람 1인당 실제로 받는 평균 임금 (고용이 없으면 null) */
+export function regionAvgWage(w: World, regionId: number, s: Skill): number | null {
+  let paid = 0, n = 0;
+  for (const b of w.buildings) {
+    if (b.regionId !== regionId || b.employed[s] <= 0) continue;
+    const c = companyById(w, b.companyId);
+    if (!c) continue;
+    paid += b.employed[s] * c.wages[s];
+    n += b.employed[s];
+  }
+  return n > 0 ? paid / n : null;
+}
+
+/**
+ * 임금 이주: 노동자·기술자는 이웃 지역의 평균 임금이 30% 넘게 높고, 그곳에 빈자리가 있거나 실업률이 더 낮으면
+ * 조금씩 옮겨 간다 (임금 차이에 비례해 하루 최대 0.05%, 두 배 차이에서 최대). 저축은 사람 수에 비례해 들고 간다.
+ */
+function wageMigration(w: World) {
+  for (const s of ['unskilled', 'skilled'] as const) {
+    const wage = new Map<number, number | null>();
+    const vacancy = new Map<number, number>();
+    for (const r of w.regions) {
+      wage.set(r.id, regionAvgWage(w, r.id, s));
+      let v = 0;
+      for (const b of w.buildings) if (b.regionId === r.id) v += Math.max(0, slots(b, s) - b.employed[s]);
+      vacancy.set(r.id, v);
+    }
+    for (const r of w.regions) {
+      const h = r.households[s];
+      if (h.population < 1) continue;
+      // 일자리가 없는 지역의 사람은 그 지역에서 받을 수 있는 임금을 시장임금의 절반으로 본다
+      const here = wage.get(r.id) ?? marketWage(w, s) * 0.5;
+      if (!(here > 0)) continue;
+      const ur = regionUnemployment(w, r.id, s);
+      let best: Region | null = null, bestRatio = WAGE_MOVE_START;
+      for (const nb of r.neighbors) {
+        const there = wage.get(nb);
+        if (there == null) continue;
+        const ratio = there / here;
+        if (ratio <= bestRatio + 1e-9) continue;
+        if (vacancy.get(nb)! < 1 && regionUnemployment(w, nb, s) >= ur) continue;
+        best = regionById(w, nb); bestRatio = ratio;
+      }
+      if (!best) continue;
+      const share = WAGE_MOVE_MAX * clamp((bestRatio - WAGE_MOVE_START) / (WAGE_MOVE_FULL - WAGE_MOVE_START), 0, 1);
+      const n = h.population * share;
+      if (!(n > 0)) continue;
+      move(h, best.households[s], n);
+      r.wageOut = (r.wageOut ?? 0) + n;
+      r.wageTo ??= {};
+      r.wageTo[best.id] = (r.wageTo[best.id] ?? 0) + n;
     }
   }
 }
