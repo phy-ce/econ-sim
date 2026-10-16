@@ -1,0 +1,14 @@
+{
+  "name": "@econ/sim",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "test": "vitest run",
+    "run": "tsx cli/run.ts",
+    "sweep": "tsx cli/sweep.ts",
+    "typecheck": "tsc --noEmit -p ."
+  }
+}
