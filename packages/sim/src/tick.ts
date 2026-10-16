@@ -6,6 +6,7 @@ import {
 import { runAi } from './ai';
 import { weeklyAlerts } from './alerts';
 import { applyCommand } from './commands';
+import { buildingNameEn, companyNameEn, regionNameEn, techNameEn } from './i18n';
 import { clamp } from './rng';
 import { POP_CLASSES, SKILLS, WEALTH_MAX, WEALTH_MIN } from './types';
 import type {
@@ -162,15 +163,18 @@ function restructure(w: World) {
     const was = c.distressWeeks;
     c.distressWeeks = distressed ? c.distressWeeks + 1 : 0;
     if (c.isPlayer && !distressed && was > 0) {
-      logEvent(w, c.id, '은행 관리가 풀렸습니다. 현금과 대출이 안전선 안으로 돌아왔습니다.', { kind: 'info' });
+      logEvent(w, c.id, '은행 관리가 풀렸습니다. 현금과 대출이 안전선 안으로 돌아왔습니다.',
+        { kind: 'info', en: 'Bank supervision has ended. Cash and debt are back within the safe line.' });
     }
     if (!distressed) continue;
     if (c.isPlayer) {
       const left = SEIZURE_WEEKS - c.distressWeeks;
       if (c.distressWeeks === 1) {
-        logEvent(w, c.id, `은행 경고: 대출이 한도의 90%를 넘었고 현금이 하루 임금에 못 미칩니다. ${left}주 안에 회복하지 못하면 건물 한 곳이 압류됩니다. 적자 건물을 멈추거나 임금을 낮춰 현금을 확보하세요.`, { kind: 'danger' });
+        logEvent(w, c.id, `은행 경고: 대출이 한도의 90%를 넘었고 현금이 하루 임금에 못 미칩니다. ${left}주 안에 회복하지 못하면 건물 한 곳이 압류됩니다. 적자 건물을 멈추거나 임금을 낮춰 현금을 확보하세요.`,
+          { kind: 'danger', en: `Bank warning: debt is over 90% of your limit and cash is below a day of wages. If you do not recover within ${left} week${left === 1 ? '' : 's'}, one building will be seized. Stop loss-making buildings or lower wages to raise cash.` });
       } else if (c.distressWeeks < SEIZURE_WEEKS) {
-        logEvent(w, c.id, `은행 경고: 부실 ${c.distressWeeks}주째. ${left}주 뒤 건물 한 곳이 압류됩니다.`, { kind: 'danger' });
+        logEvent(w, c.id, `은행 경고: 부실 ${c.distressWeeks}주째. ${left}주 뒤 건물 한 곳이 압류됩니다.`,
+          { kind: 'danger', en: `Bank warning: week ${c.distressWeeks} of distress. One building will be seized in ${left} week${left === 1 ? '' : 's'}.` });
       }
       if (c.distressWeeks >= SEIZURE_WEEKS && (c.distressWeeks - SEIZURE_WEEKS) % SEIZURE_WEEKS === 0) seizeOne(w, c);
       continue;
@@ -184,7 +188,8 @@ function restructure(w: World) {
     c.lastRestructureTick = w.tick;
     worst.active = false;
     worst.employed = { unskilled: 0, skilled: 0, expert: 0 };
-    logEvent(w, c.id, `은행 관리: ${BUILDING_BY_ID[worst.typeId].name}(#${worst.id}) 가동 중단`, { kind: 'warn', regionId: worst.regionId, buildingId: worst.id });
+    logEvent(w, c.id, `은행 관리: ${BUILDING_BY_ID[worst.typeId].name}(#${worst.id}) 가동 중단`,
+      { kind: 'warn', regionId: worst.regionId, buildingId: worst.id, en: `Bank supervision: ${buildingNameEn(worst.typeId)} (#${worst.id}) shut down` });
   }
 }
 
@@ -232,16 +237,19 @@ function seizeOne(w: World, c: Company) {
     const buyer = findBuyer(w, c, b, price);
     if (!buyer) continue;
     const name = `${regionById(w, b.regionId).name} ${BUILDING_BY_ID[b.typeId].name}(#${b.id})`;
+    const nameEn = `${regionNameEn(b.regionId)} ${buildingNameEn(b.typeId)} (#${b.id})`;
     transferBuilding(w, c, buyer, b, price);
     const paid = repay(w, c, price);
-    logEvent(w, c.id, `은행 압류: ${name}이(가) ${buyer.name}에 ƒ${Math.round(price)}에 넘어갔습니다. 빚 ƒ${Math.round(paid)} 상환, 남은 빚 ƒ${Math.round(c.debt)}.`, { kind: 'danger', regionId: b.regionId });
+    logEvent(w, c.id, `은행 압류: ${name}이(가) ${buyer.name}에 ƒ${Math.round(price)}에 넘어갔습니다. 빚 ƒ${Math.round(paid)} 상환, 남은 빚 ƒ${Math.round(c.debt)}.`,
+      { kind: 'danger', regionId: b.regionId, en: `Bank seizure: ${nameEn} went to ${companyNameEn(buyer)} for ƒ${Math.round(price)}. ƒ${Math.round(paid)} of debt repaid, ƒ${Math.round(c.debt)} still owed.` });
     return;
   }
   const worst = assets.filter((b) => b.active && b.profitEma < 0).sort((a, b) => a.profitEma - b.profitEma)[0];
-  if (!worst) { logEvent(w, c.id, '은행 경고: 압류할 건물을 사겠다는 회사가 없어 이번 주는 넘어갑니다.', { kind: 'warn' }); return; }
+  if (!worst) { logEvent(w, c.id, '은행 경고: 압류할 건물을 사겠다는 회사가 없어 이번 주는 넘어갑니다.', { kind: 'warn', en: 'Bank warning: no house is willing to buy a seized building, so nothing is taken this week.' }); return; }
   worst.active = false;
   worst.employed = { unskilled: 0, skilled: 0, expert: 0 };
-  logEvent(w, c.id, `은행 관리: 살 회사가 없어 ${BUILDING_BY_ID[worst.typeId].name}(#${worst.id}) 가동을 중단시켰습니다.`, { kind: 'danger', regionId: worst.regionId, buildingId: worst.id });
+  logEvent(w, c.id, `은행 관리: 살 회사가 없어 ${BUILDING_BY_ID[worst.typeId].name}(#${worst.id}) 가동을 중단시켰습니다.`,
+    { kind: 'danger', regionId: worst.regionId, buildingId: worst.id, en: `Bank supervision: no buyer was found, so ${buildingNameEn(worst.typeId)} (#${worst.id}) has been shut down.` });
 }
 
 /**
@@ -257,14 +265,16 @@ function bankrupt(w: World, c: Company) {
     if (!buyer) continue;
     transferBuilding(w, c, buyer, b, price);
     sold += 1;
-    logEvent(w, buyer.id, `${c.name}의 ${BUILDING_BY_ID[b.typeId].name}(#${b.id}) 인수 (ƒ${Math.round(price)})`, { regionId: b.regionId, buildingId: b.id });
+    logEvent(w, buyer.id, `${c.name}의 ${BUILDING_BY_ID[b.typeId].name}(#${b.id}) 인수 (ƒ${Math.round(price)})`,
+      { regionId: b.regionId, buildingId: b.id, en: `Acquired ${companyNameEn(c)}'s ${buildingNameEn(b.typeId)} (#${b.id}) for ƒ${Math.round(price)}` });
   }
   repay(w, c, c.cash);
   const forgiven = c.debt;
   c.debt = 0;
   c.distressWeeks = 0;
   for (const s of SKILLS) c.wages[s] = SKILL_DEFS[s].baseWage;
-  logEvent(w, c.id, `파산 처리: 건물 ${sold}곳 매각, 남은 빚 ƒ${Math.round(forgiven)} 탕감`, { kind: 'warn' });
+  logEvent(w, c.id, `파산 처리: 건물 ${sold}곳 매각, 남은 빚 ƒ${Math.round(forgiven)} 탕감`,
+    { kind: 'warn', en: `Bankruptcy: ${sold} building${sold === 1 ? '' : 's'} sold, remaining debt of ƒ${Math.round(forgiven)} written off` });
 }
 
 function weeklyBanking(w: World) {
@@ -303,7 +313,8 @@ function doResearch(w: World) {
     if (r.progress[tech.id] >= tech.cost - 1e-6) {
       r.known.push(tech.id);
       r.current = null;
-      logEvent(w, c.id, `기술 연구 완료: ${tech.name}. 보유 건물의 생산 방식에서 새 방식을 고를 수 있습니다.`, { kind: 'info' });
+      logEvent(w, c.id, `기술 연구 완료: ${tech.name}. 보유 건물의 생산 방식에서 새 방식을 고를 수 있습니다.`,
+        { kind: 'info', en: `Research complete: ${techNameEn(tech.id)}. New production methods can now be chosen for your buildings.` });
     }
   }
 }
@@ -1033,11 +1044,13 @@ function advanceConstruction(w: World) {
       // 늘어난 만큼 새 인력이 섞이므로 숙련도가 희석된다
       target.exp *= target.level / (target.level + 1);
       target.level += 1;
-      logEvent(w, k.companyId, `${rname} ${def.name} 증설 완료 → ${target.level}개`, { regionId: k.regionId, buildingId: target.id });
+      logEvent(w, k.companyId, `${rname} ${def.name} 증설 완료 → ${target.level}개`,
+        { regionId: k.regionId, buildingId: target.id, en: `${regionNameEn(k.regionId)} ${buildingNameEn(k.typeId)} expanded → ${target.level}` });
     } else {
       const b = newBuilding(w.nextId++, k.typeId, k.regionId, k.companyId, k.methodId, 1);
       w.buildings.push(b);
-      logEvent(w, k.companyId, `${rname} ${def.name} 신규 건설 완료. 사람을 뽑기 시작합니다.`, { regionId: k.regionId, buildingId: b.id });
+      logEvent(w, k.companyId, `${rname} ${def.name} 신규 건설 완료. 사람을 뽑기 시작합니다.`,
+        { regionId: k.regionId, buildingId: b.id, en: `New ${buildingNameEn(k.typeId).toLowerCase()} completed in ${regionNameEn(k.regionId)}. Hiring has begun.` });
     }
   }
 }

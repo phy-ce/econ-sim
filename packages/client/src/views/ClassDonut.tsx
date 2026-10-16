@@ -1,17 +1,21 @@
 // 지역 계층 도넛: 원 전체를 인구 / 부(인구×부 단계) / 하루 소득(현물 포함) 중 하나로 나눈다.
 // 디자인 기준: .tmp/classdesign/project/Main.dc.html
 import { useState } from 'react';
-import { CLASS_DEFS, GOOD_IDS, POP_CLASSES } from '@econ/sim';
+import { GOOD_IDS, POP_CLASSES } from '@econ/sim';
 import type { PopClass, Region } from '@econ/sim';
 import { ClassSprite, SvgSprite64 } from '../sprites';
 import { CLASS_COLOR } from '../ui';
 import { compact, compactMoney, pct } from '../format';
+import { classDesc, className, regionName, useT } from '../i18n';
+import type { Dict } from '../i18n';
 
 type Metric = 'pop' | 'wealth' | 'income';
-const METRICS: { id: Metric; label: string; col: string; center: string; note: string; icon: string }[] = [
-  { id: 'pop', label: '인구', col: '인구', center: '총인구', note: '원 전체 = 지역 인구.', icon: 'M2 1h2v2h-2zM6 1h2v2h-2zM1 4h4v4h-4zM5 4h4v4h-4z' },
-  { id: 'wealth', label: '부', col: '인구 × 부', center: '부 총량', note: '원 전체 = 인구 × 부 단계의 합. 계층이 누리는 생활수준의 총량입니다.', icon: 'M3 1h4v1h-4zM2 2h1v1h-1zM7 2h1v1h-1zM1 3h8v2h-8zM2 5h6v1h-6zM1 6h8v2h-8zM2 8h6v1h-6z' },
-  { id: 'income', label: '소득', col: '하루 소득', center: '하루 소득 총액', note: '원 전체 = 하루 소득 총액(현물 포함). 소수의 귀족과 자본가가 큰 몫을 가져갑니다.', icon: 'M3 2h4v1h-4zM2 3h1v4h-1zM7 3h1v4h-1zM3 7h4v1h-4zM4 4h2v2h-2zM8 0h2v1h-2zM9 1h1v1h-1z' },
+type TextKey = keyof Dict & `m${string}`;
+/** 문구는 사전 키 (mPop, mPopCol, mPopCenter, mPopNote …) */
+const METRICS: { id: Metric; key: 'mPop' | 'mWealth' | 'mIncome'; icon: string }[] = [
+  { id: 'pop', key: 'mPop', icon: 'M2 1h2v2h-2zM6 1h2v2h-2zM1 4h4v4h-4zM5 4h4v4h-4z' },
+  { id: 'wealth', key: 'mWealth', icon: 'M3 1h4v1h-4zM2 2h1v1h-1zM7 2h1v1h-1zM1 3h8v2h-8zM2 5h6v1h-6zM1 6h8v2h-8zM2 8h6v1h-6z' },
+  { id: 'income', key: 'mIncome', icon: 'M3 2h4v1h-4zM2 3h1v4h-1zM7 3h1v4h-1zM3 7h4v1h-4zM4 4h2v2h-2zM8 0h2v1h-2zM9 1h1v1h-1z' },
 ];
 const MIN = 0.03, GAP = 0.012, C = 200;
 
@@ -24,7 +28,10 @@ function arc(r0: number, r1: number, a0: number, a1: number): string {
 export function ClassDonut({ region: r }: { region: Region }) {
   const [metric, setMetric] = useState<Metric>('pop');
   const [sel, setSel] = useState<PopClass | null>(null);
-  const cur = METRICS.find((m) => m.id === metric)!;
+  const T = useT();
+  const txt = (m: (typeof METRICS)[number], part: '' | 'Col' | 'Center' | 'Note') => T[`${m.key}${part}` as TextKey] as string;
+  const curM = METRICS.find((m) => m.id === metric)!;
+  const cur = { label: txt(curM, ''), col: txt(curM, 'Col'), center: txt(curM, 'Center'), note: txt(curM, 'Note') };
 
   const rows = POP_CLASSES.filter((c) => r.households[c].population >= 0.5).map((c) => {
     const h = r.households[c];
@@ -34,7 +41,7 @@ export function ClassDonut({ region: r }: { region: Region }) {
     return { c, h, v, food: h.food ?? h.fulfillment };
   }).sort((p, q) => q.v - p.v); // 비율이 큰 계층부터 (12시에서 시계 방향, 목록 위에서 아래)
   const total = rows.reduce((a, x) => a + x.v, 0) || 1;
-  const show = (v: number) => (metric === 'income' ? compactMoney(v) : metric === 'pop' ? `${compact(v)}명` : compact(v));
+  const show = (v: number) => (metric === 'income' ? compactMoney(v) : metric === 'pop' ? T.people(compact(v)) : compact(v));
 
   // 아주 작은 조각도 보이게 최소 각도를 주고 나머지를 비례 축소
   const raw = rows.map((x) => (x.v / total) * Math.PI * 2);
@@ -60,16 +67,16 @@ export function ClassDonut({ region: r }: { region: Region }) {
   while (cells.length < 100) cells.push('var(--sheet)');
 
   const selRow = rows.find((x) => x.c === sel);
-  const label = `${r.name} 계층별 ${cur.label} 비율: ${rows.map((x) => `${CLASS_DEFS[x.c].name} ${pct(x.v / total)}`).join(', ')}`;
+  const label = T.donutAria(regionName(r), cur.label, rows.map((x) => `${className(x.c)} ${pct(x.v / total)}`).join(', '));
 
   return (
     <div className="donut-block">
       <div className="donut-top">
-        <div className="pxseg" role="group" aria-label="원 전체를 무엇으로 나눌지">
+        <div className="pxseg" role="group" aria-label={T.donutPick}>
           {METRICS.map((m) => (
             <button key={m.id} aria-pressed={metric === m.id} onClick={() => setMetric(m.id)}>
               <svg width="16" height="16" viewBox="0 0 10 10" aria-hidden="true" shapeRendering="crispEdges"><path d={m.icon} fill="currentColor" /></svg>
-              {m.label}
+              {txt(m, '')}
             </button>
           ))}
         </div>
@@ -86,38 +93,38 @@ export function ClassDonut({ region: r }: { region: Region }) {
             {selRow
               ? <>
                 <SvgSprite64 id={selRow.c} x={164} y={112} size={72} />
-                <text x={C} y={222} className="donut-name">{CLASS_DEFS[selRow.c].name}</text>
+                <text x={C} y={222} className="donut-name">{className(selRow.c)}</text>
                 <text x={C} y={254} className="donut-val">{show(selRow.v)}</text>
-                <text x={C} y={280} className="donut-sub">전체의 {pct(selRow.v / total)}</text>
+                <text x={C} y={280} className="donut-sub">{T.ofTotal(pct(selRow.v / total))}</text>
               </>
               : <>
                 <text x={C} y={176} className="donut-sub">{cur.center}</text>
                 <text x={C} y={218} className="donut-total">{show(total)}</text>
-                <text x={C} y={248} className="donut-sub">계층을 누르면 자세히</text>
+                <text x={C} y={248} className="donut-sub">{T.clickClass}</text>
               </>}
           </svg>
         </div>
         <div className="donut-legend">
-          <div className="dl-head lbl"><span /><span>계층 · 부 단계</span><span className="num">{cur.col}</span><span className="num">비율</span></div>
+          <div className="dl-head lbl"><span /><span>{T.classWealth}</span><span className="num">{cur.col}</span><span className="num">{T.share}</span></div>
           {rows.map((x) => {
             const on = x.c === sel;
             const filled = Math.round(x.h.wealth / 2);
             const share = x.v / total;
             return (
               <button key={x.c} className={`dl-row ${on ? 'on' : ''}`} aria-pressed={on} onClick={() => setSel(on ? null : x.c)}
-                title={CLASS_DEFS[x.c].description}>
+                title={classDesc(x.c)}>
                 <span className="dl-tile" style={{ color: CLASS_COLOR[x.c] }}><ClassSprite c={x.c} size={32} /></span>
                 <span className="dl-main">
                   <span className="dl-name">
                     <span className="dl-sw" style={{ background: CLASS_COLOR[x.c] }} />
-                    <b>{CLASS_DEFS[x.c].name}</b>
-                    <span className={`dl-food ${x.food < 0.9 ? 'neg' : ''}`}>식량 {pct(x.food)}</span>
+                    <b>{className(x.c)}</b>
+                    <span className={`dl-food ${x.food < 0.9 ? 'neg' : ''}`}>{T.food(pct(x.food))}</span>
                   </span>
                   <span className="dl-wealth">
                     <span className="blocks" aria-hidden="true">
                       {Array.from({ length: 15 }, (_, j) => <i key={j} style={{ background: j < filled ? CLASS_COLOR[x.c] : undefined }} />)}
                     </span>
-                    <span className="pxnum small">부 {x.h.wealth.toFixed(1)}</span>
+                    <span className="pxnum small">{T.wealthN(x.h.wealth.toFixed(1))}</span>
                   </span>
                 </span>
                 <span className="pxnum num">{show(x.v)}</span>
@@ -128,7 +135,7 @@ export function ClassDonut({ region: r }: { region: Region }) {
         </div>
       </div>
       <div className="waffle-wrap">
-        <div className="waffle-note lbl"><span>한 칸 = 전체의 1%</span><span>1% 미만은 칸이 없습니다</span></div>
+        <div className="waffle-note lbl"><span>{T.waffleCell}</span><span>{T.waffleSmall}</span></div>
         <div className="waffle" role="img" aria-label={label}>
           {cells.map((bg, i) => <span key={i} style={{ background: bg }} />)}
         </div>

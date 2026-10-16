@@ -3,6 +3,7 @@ import { regionPopulation , regionAvgWealth } from '@econ/sim';
 import type { World } from '@econ/sim';
 import { Sprite, SvgSprite } from '../sprites';
 import { int, pct } from '../format';
+import { regionName, t, useT } from '../i18n';
 
 const PLAYER_ID = 100;
 
@@ -36,16 +37,17 @@ function clip(poly: Pt[], a: Pt, c: number): Pt[] {
 }
 const toPath = (poly: Pt[]) => `M${poly.map((p) => `${p[0].toFixed(2)},${p[1].toFixed(2)}`).join('L')}Z`;
 
-/** 지역 1인당 평균 부 → 4단계 색 */
+/** 지역 1인당 평균 부 → 4단계 색 (이름표는 그릴 때 언어에 맞춰 만든다) */
 export const WEALTH_STEPS = [
-  { max: 4, color: '#b8573b', label: '빈곤 <4' },
-  { max: 6, color: '#d9a35b', label: '4–6' },
-  { max: 9, color: '#a9b38a', label: '6–9' },
-  { max: Infinity, color: '#5f8592', label: '9+ 여유' },
+  { max: 4, color: '#b8573b', label: () => t().poor(4) },
+  { max: 6, color: '#d9a35b', label: () => '4–6' },
+  { max: 9, color: '#a9b38a', label: () => '6–9' },
+  { max: Infinity, color: '#5f8592', label: () => t().comfortable(9) },
 ];
 export const wealthColor = (w: number) => WEALTH_STEPS.find((s) => w < s.max)!.color;
 
 export function RegionMap({ world, selected, onSelect }: { world: World; selected: number; onSelect: (id: number) => void }) {
+  const T = useT();
   const cells = useMemo(() => {
     const ids = Object.keys(POS).map(Number);
     const out: Record<number, string> = {};
@@ -72,8 +74,8 @@ export function RegionMap({ world, selected, onSelect }: { world: World; selecte
 
   return (
     <>
-      <div className="map-title"><h2>왕국 지도</h2><span className="lbl">색: 1인당 평균 부</span></div>
-      <svg className="map" viewBox="0 0 100 95" role="group" aria-label="에스테라 왕국 지도. 지역을 고르면 상세가 나옵니다.">
+      <div className="map-title"><h2>{T.paneMap}</h2><span className="lbl">{T.mapColour}</span></div>
+      <svg className="map" viewBox="0 0 100 95" role="group" aria-label={T.mapAria}>
         <rect x="0" y="0" width="100" height="100" className="map-bg" />
         <path d="M0,0H20L17,8L13,18L11,30L8,40L9,52L6,64L0,72Z" className="sea" />
         {order.map((r) => {
@@ -82,7 +84,7 @@ export function RegionMap({ world, selected, onSelect }: { world: World; selecte
           return (
             <g key={r.id} className={`map-cell ${selected === r.id ? 'selected' : ''}`} onClick={() => onSelect(r.id)}
               tabIndex={0} role="button" aria-pressed={selected === r.id}
-              aria-label={`${r.name}, 인구 ${int(pop)}명, 1인당 부 ${regionAvgWealth(r).toFixed(1)}, 소작농 ${pct(peasants)}`}
+              aria-label={T.mapCellAria(regionName(r), int(pop), regionAvgWealth(r).toFixed(1), pct(peasants))}
               onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect(r.id); } }}>
               <path d={cells[r.id]} fill={wealthColor(regionAvgWealth(r))} className="cell-fill" />
             </g>
@@ -102,7 +104,7 @@ export function RegionMap({ world, selected, onSelect }: { world: World; selecte
           return (
             <g key={`l${r.id}`} className="map-label-g" aria-hidden="true">
               <SvgSprite name={motif} x={x - 3.5} y={y + 0.4} size={7} />
-              <text x={x} y={y - 1} className="map-label">{r.name}</text>
+              <text x={x} y={y - 1} className="map-label">{regionName(r)}</text>
               {r.spaceport && (
                 <g className="badge-port">
                   <rect x={x - 12.6} y={y + 0.6} width={8.2} height={8.2} rx={0.6} />
@@ -121,12 +123,12 @@ export function RegionMap({ world, selected, onSelect }: { world: World; selecte
       </svg>
       <div className="map-legend">
         <div className="scale-bar">{WEALTH_STEPS.map((s) => <span key={s.color} style={{ background: s.color }} />)}</div>
-        <div className="scale-ticks lbl">{WEALTH_STEPS.map((s) => <span key={s.color}>{s.label}</span>)}</div>
+        <div className="scale-ticks lbl">{WEALTH_STEPS.map((s) => <span key={s.color}>{s.label()}</span>)}</div>
         <div className="map-keys lbl">
-          <span><i className="key-rail" /> 철도·길</span>
-          <span><i className="key-mine" /> 내 건물 수</span>
-          <span><Sprite name="m-ship" size={16} /> 개항장</span>
-          <span><Sprite name="m-wheat" size={16} /><Sprite name="m-tree" size={16} /><Sprite name="m-mine" size={16} /> 주된 땅</span>
+          <span><i className="key-rail" /> {T.keyRail}</span>
+          <span><i className="key-mine" /> {T.keyMine}</span>
+          <span><Sprite name="m-ship" size={16} /> {T.port}</span>
+          <span><Sprite name="m-wheat" size={16} /><Sprite name="m-tree" size={16} /><Sprite name="m-mine" size={16} /> {T.keyLand}</span>
         </div>
       </div>
     </>

@@ -1,11 +1,17 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Command, GameEvent, HistoryPoint, World } from '@econ/sim';
 import type { FromWorker, ToWorker } from './protocol';
+import { EN, KO } from './strings';
+import type { Dict } from './strings';
 
 const SAVE_KEY = 'estera-save-v3';
 const PREF_KEY = 'estera-prefs-v1';
 
-export interface Toast { id: number; text: string; kind: 'error' | 'info' | 'warn' | 'danger'; regionId?: number }
+/** text 는 한국어, textEn 은 영어 (없으면 한국어로 보인다) */
+export interface Toast { id: number; text: string; textEn?: string; kind: 'error' | 'info' | 'warn' | 'danger'; regionId?: number }
+
+/** 사전의 같은 문구를 두 언어로 */
+const both = (k: { [K in keyof Dict]: Dict[K] extends string ? K : never }[keyof Dict]) => ({ text: KO[k] as string, textEn: EN[k] as string });
 
 interface Prefs { pauseOnDanger: boolean }
 
@@ -29,9 +35,9 @@ export function useGame() {
   const toastId = useRef(0);
   const seenEvents = useRef<Set<string> | null>(null);
 
-  const toast = useCallback((text: string, kind: Toast['kind'] = 'info', regionId?: number) => {
+  const toast = useCallback((msg: { text: string; textEn?: string }, kind: Toast['kind'] = 'info', regionId?: number) => {
     const id = ++toastId.current;
-    setToasts((t) => [...t.slice(-4), { id, text, kind, regionId }]);
+    setToasts((t) => [...t.slice(-4), { id, text: msg.text, textEn: msg.textEn, kind, regionId }]);
     const ttl = kind === 'danger' ? 12000 : kind === 'warn' ? 8000 : 4000;
     setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), ttl);
   }, []);
@@ -63,7 +69,7 @@ export function useGame() {
           for (const ev of msg.world.events) {
             if (seenEvents.current.has(eventKey(ev))) continue;
             // 내 상회 소식은 모두, 왕국 전체 소식은 위험만 알림으로 띄운다 (나머지는 알림 목록에만)
-            if (ev.companyId === 100 || (ev.companyId === null && ev.kind === 'danger')) toast(ev.text, ev.kind, ev.regionId);
+            if (ev.companyId === 100 || (ev.companyId === null && ev.kind === 'danger')) toast(ev, ev.kind, ev.regionId);
             else continue;
             if (ev.kind === 'danger' && ev.companyId === 100) pause = true;
           }
@@ -77,9 +83,9 @@ export function useGame() {
       } else if (msg.type === 'saved') {
         try {
           localStorage.setItem(SAVE_KEY, msg.json);
-          toast('저장했습니다.');
+          toast(both('saved'));
         } catch {
-          toast('브라우저 저장소에 쓸 수 없습니다. 저장 공간을 확인하세요.', 'error');
+          toast(both('saveFailed'), 'error');
         }
       }
     };
@@ -115,19 +121,19 @@ export function useGame() {
     load: () => {
       try {
         const saved = localStorage.getItem(SAVE_KEY);
-        if (!saved) { toast('저장된 게임이 없습니다.', 'error'); return; }
+        if (!saved) { toast(both('noSave'), 'error'); return; }
         seenEvents.current = null;
         send({ type: 'load', world: JSON.parse(saved) });
-        toast('불러왔습니다.');
+        toast(both('loaded'));
       } catch {
-        toast('저장 파일을 읽을 수 없습니다.', 'error');
+        toast(both('loadFailed'), 'error');
       }
     },
     newGame: () => {
       seenEvents.current = null;
       setLastReadTick(-1);
       send({ type: 'new', seed: Math.floor(Math.random() * 1e6) });
-      toast('새 게임을 시작했습니다.');
+      toast(both('started'));
     },
   };
 }

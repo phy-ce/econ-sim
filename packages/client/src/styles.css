@@ -173,6 +173,11 @@ input[type="checkbox"] { accent-color: var(--accent); width: 16px; height: 16px;
 .menu button:hover:not(:disabled) { background: var(--chip); border-color: var(--ink); }
 .menu hr { border: none; border-top: 2px dashed var(--rule); margin: 4px 0; width: 100%; }
 .check { display: flex; align-items: center; gap: 8px; padding: 6px 14px; font-size: 14px; cursor: pointer; min-height: 36px; }
+.lang-switch { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 4px 14px; }
+.menu .lang-switch .segmented { box-shadow: none; }
+.menu .lang-switch button { width: auto; min-height: 34px; justify-content: center; border: 0; border-right: 2px solid var(--ink); }
+.menu .lang-switch button:last-child { border-right: 0; }
+.menu .lang-switch button[aria-pressed="true"] { background: var(--ink); color: var(--sheet); }
 
 .banner { margin: 14px 24px 0; padding: 10px 14px; border-radius: 4px; background: var(--chip); border: 2px solid var(--ink); box-shadow: 4px 4px 0 var(--gold); font-size: 14px; }
 .banner.danger { box-shadow: 4px 4px 0 var(--bad); color: var(--bad); }

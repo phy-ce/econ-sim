@@ -127,7 +127,7 @@ export function createWorld(seed = 1, opts: CreateWorldOptions = {}): World {
     traders: { cash: TRADER_CAPITAL, capital: TRADER_CAPITAL, shipments: [], inbound: [] },
     offworld: { balance: 0, imports: {}, exports: {} },
     companies, buildings, constructions: [],
-    history: [], events: [{ tick: 0, companyId: null, text: '에스테라 왕국의 시장이 열렸습니다.', kind: 'info' }], alertState: {},
+    history: [], events: [{ tick: 0, companyId: null, text: '에스테라 왕국의 시장이 열렸습니다.', textEn: 'The markets of the Kingdom of Estera are open.', kind: 'info' }], alertState: {},
   };
   // 첫 화면에서도 자급 농민 수가 보이도록 미리 계산해 둔다
   for (const r of w.regions) {

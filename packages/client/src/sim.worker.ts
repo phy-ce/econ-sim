@@ -1,9 +1,9 @@
 /// <reference lib="webworker" />
 // 시뮬레이션은 워커에서 돈다. UI는 명령만 보내고 상태 스냅샷을 받는다.
 // 나중에 서버 권위형으로 옮길 때 이 파일의 역할을 서버가 맡는다.
-import { applyCommand, createWorld, playerCompany, recordHistory, step } from '@econ/sim';
+import { applyCommandMsg, createWorld, playerCompany, recordHistory, step } from '@econ/sim';
 import type { Command, QueuedCommand, World } from '@econ/sim';
-import type { FromWorker, ToWorker } from './protocol';
+import type { FromWorker, ToWorker, WorkerError } from './protocol';
 
 let world: World = createWorld(Date.now() % 100000);
 recordHistory(world);
@@ -11,7 +11,7 @@ let ticksPerSecond = 0;
 let queue: QueuedCommand[] = []; // 외부(서버)에서 들어올 명령용. 지금은 비어 있다
 let sentHistory = 0;
 let resetHistory = true;
-let pendingErrors: string[] = [];
+let pendingErrors: WorkerError[] = [];
 let budget = 0;
 
 const post = (msg: FromWorker) => (self as DedicatedWorkerGlobalScope).postMessage(msg);
@@ -28,7 +28,7 @@ function advance(n: number) {
   for (let i = 0; i < n; i++) {
     const errs = step(world, queue);
     queue = [];
-    pendingErrors.push(...errs);
+    pendingErrors.push(...errs.map((text) => ({ text })));
     // 히스토리가 앞에서 잘리면 전체를 다시 보낸다
     if (world.history.length < sentHistory) { sentHistory = 0; resetHistory = true; }
   }
@@ -38,7 +38,7 @@ function enqueue(cmd: Command) {
   const me = playerCompany(world);
   if (!me) return;
   // 1배속에서는 하루가 24초라 다음 틱을 기다리면 너무 늦다. 틱 사이에 바로 적용한다 (같은 검증 경로)
-  const err = applyCommand(world, me.id, cmd);
+  const err = applyCommandMsg(world, me.id, cmd);
   if (err) pendingErrors.push(err);
 }
 

@@ -2,6 +2,7 @@
 import { Info as InfoIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import type { PopClass } from '@econ/sim';
+import { t } from './i18n';
 
 /** 계층 색: 차트·범례·표·지도 어디서나 같은 색 (styles.css 의 --c-* 토큰) */
 export const CLASS_COLOR: Record<PopClass, string> = {
@@ -10,7 +11,7 @@ export const CLASS_COLOR: Record<PopClass, string> = {
 };
 
 /** (i) 아이콘: 마우스를 올리거나 초점을 주면 설명이 뜬다. 긴 안내문을 본문에서 빼기 위한 것 */
-export function Info({ text, label = '설명' }: { text: ReactNode; label?: string }) {
+export function Info({ text, label = t().info }: { text: ReactNode; label?: string }) {
   return (
     <span className="info" tabIndex={0} aria-label={label}>
       <InfoIcon size={13} strokeWidth={2} aria-hidden="true" />

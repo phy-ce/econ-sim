@@ -26,8 +26,11 @@ export type Stratum = 'lower' | 'middle' | 'upper';
 export interface ClassDef {
   id: PopClass;
   name: string;
+  /** English name (UI language option) */
+  nameEn?: string;
   stratum: Stratum;
   description: string;
+  descriptionEn?: string;
 }
 
 /** 건물이 차지하는 땅의 종류. 지역마다 수량이 정해져 있다 */
@@ -40,6 +43,7 @@ export type SkillBag = Partial<Record<Skill, number>>;
 export interface GoodDef {
   id: GoodId;
   name: string;
+  nameEn?: string;
   basePrice: number;
   /** 왕국 전체 기준 창고 목표 재고의 하한 (지역별로 인구 비율만큼 나눠 쓴다) */
   minStock: number;
@@ -50,6 +54,7 @@ export interface GoodDef {
 export interface MethodDef {
   id: string;
   name: string;
+  nameEn?: string;
   /** 이 방식을 쓰려면 회사가 연구해야 하는 기술. 없으면 처음부터 쓸 수 있다 */
   tech?: string;
   /** 레벨 1당 일자리 */
@@ -67,6 +72,7 @@ export interface MethodDef {
 export interface BuildingTypeDef {
   id: string;
   name: string;
+  nameEn?: string;
   land: LandType;
   methods: MethodDef[];
   /** 1레벨 완공에 필요한 건설 포인트. 건축사무소가 하루에 만드는 포인트로 나누면 공기가 된다 */
@@ -76,7 +82,9 @@ export interface BuildingTypeDef {
 export interface TechDef {
   id: string;
   name: string;
+  nameEn?: string;
   description: string;
+  descriptionEn?: string;
   cost: number;
   requires: string[];
 }
@@ -86,6 +94,7 @@ export type NeedId = 'nourishment' | 'heating' | 'clothing' | 'furnishing' | 'ga
 export interface NeedDef {
   id: NeedId;
   name: string;
+  nameEn?: string;
   /** 1 수요 단위를 채우는 상품과 필요량. 가격에 따라 비중을 나눈다 */
   /** appeal: 같은 값이면 더 선호하는 정도 (가공품 > 원자재). 고를 때 가격을 appeal 로 나눠 비교한다 */
   options: { good: GoodId; units: number; appeal?: number }[];
@@ -95,13 +104,16 @@ export interface NeedDef {
 export interface SkillDef {
   id: Skill;
   name: string;
+  nameEn?: string;
   baseWage: number;
 }
 
 export interface RegionDef {
   id: number;
   name: string;
+  nameEn?: string;
   description: string;
+  descriptionEn?: string;
   /** 해외 무역(수입·수출)이 가능한 개항장 */
   spaceport: boolean;
   neighbors: number[];
@@ -333,6 +345,8 @@ export interface GameEvent {
   tick: number;
   companyId: number | null;
   text: string;
+  /** English text with the same numbers (UI language option). Older saves lack it */
+  textEn?: string;
   kind: EventKind;
   regionId?: number;
   buildingId?: number;

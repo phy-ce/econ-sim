@@ -2,10 +2,11 @@ import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { Menu, Moon, Pause, SkipForward } from 'lucide-react';
 import { Sprite } from './sprites';
-import { DISTRESS_DEBT_RATIO, SEIZURE_WEEKS, companyById, creditLimit, formatDate, isDistressed, playerCompany, regionById } from '@econ/sim';
+import { DISTRESS_DEBT_RATIO, SEIZURE_WEEKS, companyById, creditLimit, isDistressed, playerCompany, regionById } from '@econ/sim';
 import type { GoodId } from '@econ/sim';
 import { useGame } from './useGame';
-import { money, signedMoney } from './format';
+import { dateParts, money, signedMoney } from './format';
+import { companyName, eventText, setLang, useLang, useT } from './i18n';
 import { RegionMap } from './views/RegionMap';
 import { RegionPanel } from './views/RegionPanel';
 import { CompanyPanel, CompanyView } from './views/CompanyPanel';
@@ -15,10 +16,10 @@ import { Notifications } from './views/Notifications';
 /** 1배 = 현실 1초에 게임 1시간 (하루 24초) */
 const HOUR = 1 / 24;
 const SPEEDS = [
-  { label: '1×', tps: HOUR, title: '1배: 현실 1초에 1시간' },
-  { label: '10×', tps: HOUR * 10, title: '10배' },
-  { label: '100×', tps: HOUR * 100, title: '100배' },
-  { label: '500×', tps: HOUR * 500, title: '500배' },
+  { label: '1×', tps: HOUR },
+  { label: '10×', tps: HOUR * 10 },
+  { label: '100×', tps: HOUR * 100 },
+  { label: '500×', tps: HOUR * 500 },
 ];
 const THEME_KEY = 'estera-theme';
 const PLAYER_ID = 100;
@@ -55,6 +56,13 @@ export function App() {
   const [viewId, setViewId] = useState<number | null>(null);
   const [theme, setTheme] = useState<'light' | 'dark'>(loadTheme);
   const { world } = game;
+  const lang = useLang();
+  const T = useT();
+
+  useEffect(() => {
+    document.documentElement.lang = lang;
+    document.title = T.title;
+  }, [lang, T]);
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -81,7 +89,7 @@ export function App() {
     return () => document.removeEventListener('keydown', onKey);
   }, []);
 
-  if (!world) return <div className="boot"><Sprite name="crest" size={48} /><span>왕국의 시장을 여는 중…</span></div>;
+  if (!world) return <div className="boot"><Sprite name="crest" size={48} /><span>{T.booting}</span></div>;
   const me = playerCompany(world);
   const region = regionById(world, regionId);
   const viewed = viewId != null ? companyById(world, viewId) : undefined;
@@ -90,11 +98,7 @@ export function App() {
   const debtRatio = me && limit > 0 ? me.debt / limit : 0;
   const distressed = me ? isDistressed(world, me) : false;
   const unread = world.events.filter((e) => e.tick > game.lastReadTick && (e.companyId === PLAYER_ID || e.companyId === null) && e.kind !== 'info').length;
-  const [datePart, timePart] = (() => {
-    const s = formatDate(world.tick, game.hour).replace('왕국력 ', '');
-    const i = s.lastIndexOf(' ');
-    return i > 0 && /시$/.test(s) ? [s.slice(0, i), s.slice(i + 1)] : [s, ''];
-  })();
+  const [datePart, timePart] = dateParts(world.tick, game.hour);
   const running = game.speed > 0;
 
   return (
@@ -103,32 +107,32 @@ export function App() {
         <div className="brand">
           <span className="crest"><Sprite name="crest" size={48} /></span>
           <div className="brand-text">
-            <span className="brand-name">에스테라 왕국{me ? ` · ${me.name}` : ''}</span>
-            <span className="date">왕국력 {datePart} {timePart && <small>{timePart}</small>}</span>
+            <span className="brand-name">{T.title}{me ? ` · ${companyName(me)}` : ''}</span>
+            <span className="date">{T.datePrefix}{datePart} {timePart && <small>{timePart}</small>}</span>
           </div>
         </div>
 
         {me && (
           <dl className="ledger">
-            <div className="chip"><dt><Sprite name="coin" size={16} /> 금고</dt><dd>{money(me.cash)}</dd></div>
+            <div className="chip"><dt><Sprite name="coin" size={16} /> {T.treasury}</dt><dd>{money(me.cash)}</dd></div>
             <div className={`chip ${debtRatio >= DISTRESS_DEBT_RATIO ? 'bad' : debtRatio >= 0.7 ? 'warn' : ''}`}>
-              <dt>대출 / 한도</dt><dd>{money(me.debt)} <small>/ {money(limit)}</small></dd>
+              <dt>{T.loanLimit}</dt><dd>{money(me.debt)} <small>/ {money(limit)}</small></dd>
             </div>
-            <div className={`chip ${me.lastWeekProfit >= 0 ? 'good' : 'bad'}`}><dt>지난주 손익</dt><dd>{signedMoney(me.lastWeekProfit)}</dd></div>
+            <div className={`chip ${me.lastWeekProfit >= 0 ? 'good' : 'bad'}`}><dt>{T.lastWeekPL}</dt><dd>{signedMoney(me.lastWeekProfit)}</dd></div>
           </dl>
         )}
 
         <div className="controls">
-          <div className="segmented" role="group" aria-label="게임 속도 (1배는 현실 1초에 게임 1시간)">
-            <button className="seg-play" aria-pressed={!running} aria-label="일시정지 (Space)" title="일시정지 (Space)"
+          <div className="segmented" role="group" aria-label={T.speedGroup}>
+            <button className="seg-play" aria-pressed={!running} aria-label={T.pause} title={T.pause}
               onClick={() => game.setSpeed(0)}><Pause size={16} strokeWidth={2.4} aria-hidden="true" /></button>
             {SPEEDS.map((s) => (
-              <button key={s.tps} aria-pressed={game.speed === s.tps} onClick={() => game.setSpeed(s.tps)} title={`${s.title} (${SPEEDS.indexOf(s) + 1})`}>{s.label}</button>
+              <button key={s.tps} aria-pressed={game.speed === s.tps} onClick={() => game.setSpeed(s.tps)} title={`${T.speedTitle(SPEEDS.indexOf(s), s.label)} (${SPEEDS.indexOf(s) + 1})`}>{s.label}</button>
             ))}
-            <button onClick={game.stepOnce} disabled={running} title="하루 진행" aria-label="하루 진행"><SkipForward size={14} aria-hidden="true" /></button>
+            <button onClick={game.stepOnce} disabled={running} title={T.stepDay} aria-label={T.stepDay}><SkipForward size={14} aria-hidden="true" /></button>
           </div>
 
-          <Popover label={`알림${unread ? ` ${unread}건 안 읽음` : ''}`} className="bell"
+          <Popover label={T.notifications(unread)} className="bell"
             button={<><Sprite name="bell" size={32} />{unread > 0 && <span className="badge">{unread > 99 ? '99+' : unread}</span>}</>}>
             {() => (
               <div className="bell-panel">
@@ -137,20 +141,28 @@ export function App() {
             )}
           </Popover>
 
-          <Popover label="메뉴" button={<Menu size={18} aria-hidden="true" />}>
+          <Popover label={T.menu} button={<Menu size={18} aria-hidden="true" />}>
             {(close) => (
               <div className="menu">
-                <button onClick={() => { game.save(); close(); }}>저장</button>
-                <button onClick={() => { game.load(); close(); }}>불러오기</button>
-                <button onClick={() => { if (confirm('지금 게임을 버리고 새로 시작할까요? 저장하지 않은 진행은 사라집니다.')) { game.newGame(); setViewId(null); } close(); }}>새 게임</button>
+                <button onClick={() => { game.save(); close(); }}>{T.save}</button>
+                <button onClick={() => { game.load(); close(); }}>{T.load}</button>
+                <button onClick={() => { if (confirm(T.confirmNewGame)) { game.newGame(); setViewId(null); } close(); }}>{T.newGame}</button>
                 <hr />
                 <label className="check">
                   <input type="checkbox" checked={game.prefs.pauseOnDanger} onChange={(e) => game.setPrefs({ pauseOnDanger: e.target.checked })} />
-                  위험 알림이 오면 멈추기
+                  {T.pauseOnDanger}
                 </label>
                 <button onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>
-                  {theme === 'dark' ? <><Sprite name="sun" size={16} /> 낮 양피지</> : <><Moon size={14} aria-hidden="true" /> 밤 등불</>}
+                  {theme === 'dark' ? <><Sprite name="sun" size={16} /> {T.dayTheme}</> : <><Moon size={14} aria-hidden="true" /> {T.nightTheme}</>}
                 </button>
+                <hr />
+                <div className="lang-switch" role="group" aria-label={T.language}>
+                  <span className="lbl">{T.language}</span>
+                  <div className="segmented">
+                    <button aria-pressed={lang === 'ko'} lang="ko" onClick={() => setLang('ko')}>KO</button>
+                    <button aria-pressed={lang === 'en'} lang="en" onClick={() => setLang('en')}>EN</button>
+                  </div>
+                </div>
               </div>
             )}
           </Popover>
@@ -161,25 +173,25 @@ export function App() {
         <div className={`banner ${distressed ? 'danger' : ''}`} role="status">
           {distressed
             ? me.distressWeeks >= SEIZURE_WEEKS
-              ? `은행 관리 중: 부실 ${me.distressWeeks}주째. ${SEIZURE_WEEKS}주마다 건물 한 곳이 경매로 넘어가 빚을 갚습니다. 현금을 하루 임금 이상으로 올리거나 빚을 한도의 90% 아래로 줄이면 풀립니다.`
-              : `은행 경고: 대출이 한도의 90%를 넘었고 현금이 하루 임금에 못 미칩니다(부실 ${me.distressWeeks}주째). ${SEIZURE_WEEKS}주째에 건물 한 곳이 압류됩니다. 적자 건물을 멈추거나 임금을 낮춰 현금을 확보하세요.`
-            : `대출이 한도의 ${Math.round(debtRatio * 100)}%입니다. 90%를 넘은 상태에서 현금이 하루 임금 아래로 떨어지면 은행 관리가 시작됩니다.`}
+              ? T.bannerSeized(me.distressWeeks, SEIZURE_WEEKS)
+              : T.bannerDistress(me.distressWeeks, SEIZURE_WEEKS)
+            : T.bannerDebt(Math.round(debtRatio * 100))}
         </div>
       )}
 
       <main className="board">
-        <section className="card pane pane-map" aria-label="왕국 지도">
+        <section className="card pane pane-map" aria-label={T.paneMap}>
           <RegionMap world={world} selected={regionId} onSelect={setRegionId} />
         </section>
-        <section className="card pane pane-region" aria-label="지역 상세">
+        <section className="card pane pane-region" aria-label={T.paneRegion}>
           <RegionPanel world={world} region={region} history={game.history} selectedGood={good} onSelectGood={setGood} onViewCompany={viewCompany} />
         </section>
-        <section className="card pane pane-company" aria-label={viewed && !viewed.isPlayer ? `${viewed.name} 상세` : '내 상회'}>
+        <section className="card pane pane-company" aria-label={viewed && !viewed.isPlayer ? T.paneCompanyOf(companyName(viewed)) : T.myHouse}>
           {viewed && !viewed.isPlayer
             ? <CompanyView world={world} company={viewed} onView={viewCompany} />
-            : me ? <CompanyPanel game={game} world={world} me={me} region={region} onViewCompany={viewCompany} /> : <p className="empty">플레이어 상회가 없는 월드입니다.</p>}
+            : me ? <CompanyPanel game={game} world={world} me={me} region={region} onViewCompany={viewCompany} /> : <p className="empty">{T.noPlayer}</p>}
         </section>
-        <section className="pane pane-bottom" aria-label="추이와 상회 순위">
+        <section className="pane pane-bottom" aria-label={T.paneBottom}>
           <BottomPanel world={world} history={game.history}
             lastReadTick={game.lastReadTick} onRead={game.markRead} onJump={setRegionId}
             viewedId={viewed && !viewed.isPlayer ? viewed.id : (me?.id ?? null)} onViewCompany={viewCompany} />
@@ -189,7 +201,7 @@ export function App() {
       <div className="toasts" aria-live="polite">
         {game.toasts.map((t) => (
           <div key={t.id} className={`toast ${t.kind}`} onClick={() => { if (t.regionId) setRegionId(t.regionId); game.dismissToast(t.id); }} role={t.regionId ? 'button' : undefined}>
-            {t.text}
+            {eventText(t)}
           </div>
         ))}
       </div>

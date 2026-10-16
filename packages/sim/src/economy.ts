@@ -486,18 +486,19 @@ export function emptyStats() {
 
 const EVENT_CAP = 300;
 
+/** opts.en: 같은 소식의 영어 문장 (화면 언어 선택용) */
 export function logEvent(
   w: World, companyId: number | null, text: string,
-  opts: { kind?: EventKind; regionId?: number; buildingId?: number } = {},
+  opts: { kind?: EventKind; regionId?: number; buildingId?: number; en?: string } = {},
 ) {
-  w.events.push({ tick: w.tick, companyId, text, kind: opts.kind ?? 'info', regionId: opts.regionId, buildingId: opts.buildingId });
+  w.events.push({ tick: w.tick, companyId, text, ...(opts.en ? { textEn: opts.en } : {}), kind: opts.kind ?? 'info', regionId: opts.regionId, buildingId: opts.buildingId });
   if (w.events.length > EVENT_CAP) w.events.splice(0, w.events.length - EVENT_CAP);
 }
 
 /** 같은 키의 알림은 cooldown 틱 안에 다시 띄우지 않는다. 띄웠으면 true */
 export function alertOnce(
   w: World, key: string, cooldown: number, companyId: number | null, text: string,
-  opts: { kind?: EventKind; regionId?: number; buildingId?: number } = {},
+  opts: { kind?: EventKind; regionId?: number; buildingId?: number; en?: string } = {},
 ): boolean {
   const last = w.alertState[key];
   if (last !== undefined && w.tick - last < cooldown) return false;
