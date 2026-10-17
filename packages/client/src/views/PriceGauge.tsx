@@ -4,7 +4,7 @@
  */
 import { t } from '../i18n';
 
-export function PriceGauge({ ratio, compact = false }: { ratio: number; compact?: boolean }) {
+export function PriceGauge({ ratio }: { ratio: number }) {
   const MIN = 0.25, MAX = 4;
   const pos = (Math.log(Math.min(MAX, Math.max(MIN, ratio))) - Math.log(MIN)) / (Math.log(MAX) - Math.log(MIN));
   const kind = ratio > 1.05 ? 'short' : ratio < 0.95 ? 'glut' : 'even';
@@ -16,8 +16,7 @@ export function PriceGauge({ ratio, compact = false }: { ratio: number; compact?
         <span className="gauge-mid" />
         <span className={`gauge-mark ${kind}`} style={{ left: `${pos * 100}%` }} />
       </div>
-      {!compact && <span className="gauge-label">×{ratio.toFixed(2)}</span>}
-      {compact && <span className="gauge-label">×{ratio < 10 ? ratio.toFixed(2) : ratio.toFixed(0)}</span>}
+      <span className="gauge-label">×{ratio < 10 ? ratio.toFixed(2) : ratio.toFixed(0)}</span>
     </div>
   );
 }

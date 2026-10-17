@@ -17,7 +17,7 @@ const tickLabel = (tick: number) => t().chartTick(Math.floor(tick / 360) + 1, Ma
 
 /** 한 축짜리 시계열 차트. 범례는 차트 밖(공통 범례)에서 그린다 */
 export function TimeChart({ data, series, format = (v) => v.toFixed(1), reference, height = 200 }: Props) {
-  if (data.length < 2) return <p className="empty chart-empty">{t().chartEmpty}</p>;
+  if (data.length < 2) return <p className="empty chart-empty" style={{ height }}>—</p>;
   return (
     <ResponsiveContainer width="100%" height={height} initialDimension={{ width: 520, height }}>
       <LineChart data={data} margin={{ top: 10, right: 12, bottom: 0, left: -6 }}>
@@ -44,11 +44,3 @@ export function TimeChart({ data, series, format = (v) => v.toFixed(1), referenc
   );
 }
 
-/** 차트 밖 공통 범례 */
-export function Legend({ series }: { series: Series[] }) {
-  return (
-    <ul className="legend">
-      {series.map((s) => <li key={s.key}><span className="legend-line" style={{ background: s.color }} />{s.name}</li>)}
-    </ul>
-  );
-}

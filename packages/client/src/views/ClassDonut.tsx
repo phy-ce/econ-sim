@@ -4,14 +4,14 @@ import { useState } from 'react';
 import { GOOD_IDS, POP_CLASSES } from '@econ/sim';
 import type { PopClass, Region } from '@econ/sim';
 import { ClassSprite, SvgSprite64 } from '../sprites';
-import { CLASS_COLOR } from '../ui';
+import { Bar, CLASS_COLOR } from '../ui';
 import { compact, compactMoney, pct } from '../format';
-import { classDesc, className, regionName, useT } from '../i18n';
+import { className, regionName, useT } from '../i18n';
 import type { Dict } from '../i18n';
 
 type Metric = 'pop' | 'wealth' | 'income';
 type TextKey = keyof Dict & `m${string}`;
-/** 문구는 사전 키 (mPop, mPopCol, mPopCenter, mPopNote …) */
+/** 문구는 사전 키 (mPop, mPopCol, mPopCenter …) */
 const METRICS: { id: Metric; key: 'mPop' | 'mWealth' | 'mIncome'; icon: string }[] = [
   { id: 'pop', key: 'mPop', icon: 'M2 1h2v2h-2zM6 1h2v2h-2zM1 4h4v4h-4zM5 4h4v4h-4z' },
   { id: 'wealth', key: 'mWealth', icon: 'M3 1h4v1h-4zM2 2h1v1h-1zM7 2h1v1h-1zM1 3h8v2h-8zM2 5h6v1h-6zM1 6h8v2h-8zM2 8h6v1h-6z' },
@@ -29,9 +29,9 @@ export function ClassDonut({ region: r }: { region: Region }) {
   const [metric, setMetric] = useState<Metric>('pop');
   const [sel, setSel] = useState<PopClass | null>(null);
   const T = useT();
-  const txt = (m: (typeof METRICS)[number], part: '' | 'Col' | 'Center' | 'Note') => T[`${m.key}${part}` as TextKey] as string;
+  const txt = (m: (typeof METRICS)[number], part: '' | 'Col' | 'Center') => T[`${m.key}${part}` as TextKey] as string;
   const curM = METRICS.find((m) => m.id === metric)!;
-  const cur = { label: txt(curM, ''), col: txt(curM, 'Col'), center: txt(curM, 'Center'), note: txt(curM, 'Note') };
+  const cur = { label: txt(curM, ''), col: txt(curM, 'Col'), center: txt(curM, 'Center') };
 
   const rows = POP_CLASSES.filter((c) => r.households[c].population >= 0.5).map((c) => {
     const h = r.households[c];
@@ -80,7 +80,6 @@ export function ClassDonut({ region: r }: { region: Region }) {
             </button>
           ))}
         </div>
-        <span className="lbl">{cur.note}</span>
       </div>
       <div className="donut-grid">
         <div className="donut">
@@ -95,12 +94,11 @@ export function ClassDonut({ region: r }: { region: Region }) {
                 <SvgSprite64 id={selRow.c} x={164} y={112} size={72} />
                 <text x={C} y={222} className="donut-name">{className(selRow.c)}</text>
                 <text x={C} y={254} className="donut-val">{show(selRow.v)}</text>
-                <text x={C} y={280} className="donut-sub">{T.ofTotal(pct(selRow.v / total))}</text>
+                <text x={C} y={282} className="donut-sub">{pct(selRow.v / total)}</text>
               </>
               : <>
-                <text x={C} y={176} className="donut-sub">{cur.center}</text>
-                <text x={C} y={218} className="donut-total">{show(total)}</text>
-                <text x={C} y={248} className="donut-sub">{T.clickClass}</text>
+                <text x={C} y={188} className="donut-sub">{cur.center}</text>
+                <text x={C} y={232} className="donut-total">{show(total)}</text>
               </>}
           </svg>
         </div>
@@ -108,11 +106,9 @@ export function ClassDonut({ region: r }: { region: Region }) {
           <div className="dl-head lbl"><span /><span>{T.classWealth}</span><span className="num">{cur.col}</span><span className="num">{T.share}</span></div>
           {rows.map((x) => {
             const on = x.c === sel;
-            const filled = Math.round(x.h.wealth / 2);
             const share = x.v / total;
             return (
-              <button key={x.c} className={`dl-row ${on ? 'on' : ''}`} aria-pressed={on} onClick={() => setSel(on ? null : x.c)}
-                title={classDesc(x.c)}>
+              <button key={x.c} className={`dl-row ${on ? 'on' : ''}`} aria-pressed={on} onClick={() => setSel(on ? null : x.c)}>
                 <span className="dl-tile" style={{ color: CLASS_COLOR[x.c] }}><ClassSprite c={x.c} size={32} /></span>
                 <span className="dl-main">
                   <span className="dl-name">
@@ -121,10 +117,8 @@ export function ClassDonut({ region: r }: { region: Region }) {
                     <span className={`dl-food ${x.food < 0.9 ? 'neg' : ''}`}>{T.food(pct(x.food))}</span>
                   </span>
                   <span className="dl-wealth">
-                    <span className="blocks" aria-hidden="true">
-                      {Array.from({ length: 15 }, (_, j) => <i key={j} style={{ background: j < filled ? CLASS_COLOR[x.c] : undefined }} />)}
-                    </span>
-                    <span className="pxnum small">{T.wealthN(x.h.wealth.toFixed(1))}</span>
+                    <Bar value={x.h.wealth / 30} color={CLASS_COLOR[x.c]} size="sm" />
+                    <span className="pxnum small">{x.h.wealth.toFixed(1)}</span>
                   </span>
                 </span>
                 <span className="pxnum num">{show(x.v)}</span>
@@ -134,11 +128,8 @@ export function ClassDonut({ region: r }: { region: Region }) {
           })}
         </div>
       </div>
-      <div className="waffle-wrap">
-        <div className="waffle-note lbl"><span>{T.waffleCell}</span><span>{T.waffleSmall}</span></div>
-        <div className="waffle" role="img" aria-label={label}>
-          {cells.map((bg, i) => <span key={i} style={{ background: bg }} />)}
-        </div>
+      <div className="waffle" role="img" aria-label={label}>
+        {cells.map((bg, i) => <span key={i} style={{ background: bg }} />)}
       </div>
     </div>
   );

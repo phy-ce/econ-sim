@@ -46,7 +46,7 @@ function Side({ title, by, side, extra }: { title: string; by: Record<string, nu
         <span className="strong">{title}</span>
         <span className="lbl">{T.daily} <span className="pxnum">{compact(total)}</span></span>
       </div>
-      {total <= 0 ? <p className="empty">{T.none}</p> : (
+      {total <= 0 ? <p className="empty">—</p> : (
         <>
           <div className="src-bar" role="img" aria-label={T.srcAria(title)}>
             {rows.map((r) => <i key={r.key} style={{ flexGrow: r.v, background: r.color }} />)}
@@ -82,7 +82,7 @@ export function SourceBreakdown({ good, m }: { good: GoodId; m: MarketGood }) {
       <div className="src-cols">
         <Side title={T.demand} by={demand} side="demand" />
         <Side title={T.supply} by={supply} side="supply" extra={
-          m.inventory > 0.5 ? <p className="lbl src-note">{T.warehouse} <span className="pxnum">{compact(m.inventory)}</span>{T.warehouseNote}</p> : null
+          m.inventory > 0.5 ? <p className="lbl src-note">{T.warehouse} <span className="pxnum">{compact(m.inventory)}</span></p> : null
         } />
       </div>
     </div>

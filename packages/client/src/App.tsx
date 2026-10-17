@@ -5,6 +5,7 @@ import { Sprite } from './sprites';
 import { DISTRESS_DEBT_RATIO, SEIZURE_WEEKS, companyById, creditLimit, isDistressed, playerCompany, regionById } from '@econ/sim';
 import type { GoodId } from '@econ/sim';
 import { useGame } from './useGame';
+import { Bar } from './ui';
 import { dateParts, money, signedMoney } from './format';
 import { companyName, eventText, setLang, useLang, useT } from './i18n';
 import { RegionMap } from './views/RegionMap';
@@ -89,7 +90,7 @@ export function App() {
     return () => document.removeEventListener('keydown', onKey);
   }, []);
 
-  if (!world) return <div className="boot"><Sprite name="crest" size={48} /><span>{T.booting}</span></div>;
+  if (!world) return <div className="boot" role="status" aria-label={T.booting}><Sprite name="crest" size={48} /></div>;
   const me = playerCompany(world);
   const region = regionById(world, regionId);
   const viewed = viewId != null ? companyById(world, viewId) : undefined;
@@ -127,7 +128,7 @@ export function App() {
             <button className="seg-play" aria-pressed={!running} aria-label={T.pause} title={T.pause}
               onClick={() => game.setSpeed(0)}><Pause size={16} strokeWidth={2.4} aria-hidden="true" /></button>
             {SPEEDS.map((s) => (
-              <button key={s.tps} aria-pressed={game.speed === s.tps} onClick={() => game.setSpeed(s.tps)} title={`${T.speedTitle(SPEEDS.indexOf(s), s.label)} (${SPEEDS.indexOf(s) + 1})`}>{s.label}</button>
+              <button key={s.tps} aria-pressed={game.speed === s.tps} onClick={() => game.setSpeed(s.tps)} title={`${s.label} (${SPEEDS.indexOf(s) + 1})`}>{s.label}</button>
             ))}
             <button onClick={game.stepOnce} disabled={running} title={T.stepDay} aria-label={T.stepDay}><SkipForward size={14} aria-hidden="true" /></button>
           </div>
@@ -171,11 +172,10 @@ export function App() {
 
       {me && (distressed || debtRatio >= 0.7) && (
         <div className={`banner ${distressed ? 'danger' : ''}`} role="status">
+          <strong>{distressed ? (me.distressWeeks >= SEIZURE_WEEKS ? T.bannerSeized : T.bannerDistress) : T.loanLimit}</strong>
           {distressed
-            ? me.distressWeeks >= SEIZURE_WEEKS
-              ? T.bannerSeized(me.distressWeeks, SEIZURE_WEEKS)
-              : T.bannerDistress(me.distressWeeks, SEIZURE_WEEKS)
-            : T.bannerDebt(Math.round(debtRatio * 100))}
+            ? <><Bar value={me.distressWeeks / SEIZURE_WEEKS} tone="neg" label={T.distressWeeks} /><span className="pxnum">{me.distressWeeks}/{SEIZURE_WEEKS}</span></>
+            : <><Bar value={debtRatio} tone={debtRatio >= DISTRESS_DEBT_RATIO ? 'neg' : 'gold'} label={T.loanLimit} /><span className="pxnum">{Math.round(debtRatio * 100)}%</span></>}
         </div>
       )}
 
@@ -189,7 +189,7 @@ export function App() {
         <section className="card pane pane-company" aria-label={viewed && !viewed.isPlayer ? T.paneCompanyOf(companyName(viewed)) : T.myHouse}>
           {viewed && !viewed.isPlayer
             ? <CompanyView world={world} company={viewed} onView={viewCompany} />
-            : me ? <CompanyPanel game={game} world={world} me={me} region={region} onViewCompany={viewCompany} /> : <p className="empty">{T.noPlayer}</p>}
+            : me ? <CompanyPanel game={game} world={world} me={me} region={region} onViewCompany={viewCompany} /> : <p className="empty">—</p>}
         </section>
         <section className="pane pane-bottom" aria-label={T.paneBottom}>
           <BottomPanel world={world} history={game.history}

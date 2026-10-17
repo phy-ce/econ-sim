@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import {
   GOOD_IDS, REGIONS, GOODS, LAND_TYPES,
-  companyById, landFree, landUsed, regionAvgWealth, regionPopulation, regionUnemployment,
+  companyById, landUsed, regionAvgWealth, regionPopulation, regionUnemployment,
 } from '@econ/sim';
 import type { GoodId, HistoryPoint, Region, World } from '@econ/sim';
 import { ArrowDown, ArrowUp } from 'lucide-react';
@@ -10,9 +10,9 @@ import { PriceGauge } from './PriceGauge';
 import { SourceBreakdown } from './SourceBreakdown';
 import { ClassDonut } from './ClassDonut';
 import { TimeChart } from './Chart';
-import { Info, Meter } from '../ui';
-import { compact, compactMoney, int, money, one, pct } from '../format';
-import { buildingName, companyName, goodName, landName, regionDesc, regionName, useLang, useT } from '../i18n';
+import { Bar } from '../ui';
+import { compact, compactMoney, int, money, pct } from '../format';
+import { buildingName, companyName, goodName, landName, regionName, useLang, useT } from '../i18n';
 
 type SortKey = 'value' | 'name' | 'price' | 'ratio' | 'balance';
 
@@ -24,9 +24,10 @@ export function RegionPanel({ world, region, history, selectedGood, onSelectGood
   const T = useT();
   const pop = regionPopulation(r);
   const buildings = world.buildings.filter((b) => b.regionId === r.id).sort((a, b) => b.level - a.level);
-  const landless = Math.max(0, r.households.peasant.population - r.subsistenceWorkers);
   const lower = r.households.peasant.population + r.households.unskilled.population;
   const laborer = r.households.unskilled;
+  const unemp = regionUnemployment(world, r.id, 'unskilled');
+  const tenantShare = lower > 0 ? r.households.peasant.population / lower : 0;
   // 머리 그림: 이 지역에 가장 많이 지어진 건물 (없으면 주된 땅에 맞춰 농장·벌목장·광산)
   const byType = new Map<string, number>();
   for (const b of buildings) if (b.typeId !== 'builder') byType.set(b.typeId, (byType.get(b.typeId) ?? 0) + b.level);
@@ -63,11 +64,10 @@ export function RegionPanel({ world, region, history, selectedGood, onSelectGood
           <span className="tile lg region-art"><Sprite64 id={headline} size={64} /></span>
           <h2>{regionName(r)}</h2>
           {r.spaceport && <span className="pill soft">{T.port}</span>}
-          <span className="lbl" style={{ flexBasis: '100%' }}>{regionDesc(r)}</span>
           {Object.entries(REGIONS.find((d) => d.id === r.id)?.perks ?? {}).length > 0 && (
-            <span style={{ flexBasis: '100%', display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            <span className="perks">
               {Object.entries(REGIONS.find((d) => d.id === r.id)!.perks).map(([t, v]) => (
-                <span key={t} className="tag-soft" title={T.perkTitle}>
+                <span key={t} className="tag-soft">
                   <BuildingSprite typeId={t} size={16} /> {buildingName(t)} +{Math.round((v ?? 0) * 100)}%
                 </span>
               ))}
@@ -79,35 +79,43 @@ export function RegionPanel({ world, region, history, selectedGood, onSelectGood
           <div className="stat">
             <span className="stat-label">{T.wealthPerHead}</span>
             <span className={`stat-value ${regionAvgWealth(r) < 4 ? 'neg' : ''}`}>{regionAvgWealth(r).toFixed(1)}</span>
-            <span className="stat-sub">{T.laborerSub(laborer.wealth.toFixed(1), pct(regionUnemployment(world, r.id, 'unskilled')))}</span>
           </div>
-          <div className="stat"><span className="stat-label">{T.education}</span><span className="stat-value">{pct(r.education)}</span></div>
-          <div className="stat"><span className="stat-label">{T.tenants}</span><span className="stat-value accent">{pct(lower > 0 ? r.households.peasant.population / lower : 0)}</span></div>
+          <div className="stat">
+            <span className="stat-label">{T.laborerWealth}</span>
+            <span className="stat-value">{laborer.wealth.toFixed(1)}</span>
+          </div>
+          <div className="stat">
+            <span className="stat-label">{T.unemployment}</span>
+            <span className="stat-value">{pct(unemp)}</span>
+            <Bar value={unemp} tone="neg" size="sm" label={T.unemployment} />
+          </div>
+          <div className="stat"><span className="stat-label">{T.education}</span><span className="stat-value">{pct(r.education)}</span><Bar value={r.education} tone="pos" size="sm" label={T.education} /></div>
+          <div className="stat"><span className="stat-label">{T.tenants}</span><span className="stat-value accent">{pct(tenantShare)}</span><Bar value={tenantShare} tone="accent" size="sm" label={T.tenants} /></div>
         </div>
       </header>
 
       <section className="block">
-        <h3>{T.landUse} <Info text={T.landInfo(landFree(world, r.id, 'arable'), landFree(world, r.id, 'forest'), int(r.subsistenceWorkers), landless > 1 ? int(landless) : null)} /></h3>
+        <h3>{T.landUse}</h3>
         <div className="land">
           {LAND_TYPES.map((l) => {
             const used = landUsed(world, r.id, l), total = r.land[l];
             if (total === 0) return null;
             return [
               <span key={`${l}n`}>{landName(l)}</span>,
-              <Meter key={`${l}m`} value={used / total} cells={20} tone={l === 'arable' ? 'pos' : l === 'plot' ? 'accent' : 'gold'} label={`${landName(l)} ${used}/${total}`} />,
-              <span key={`${l}v`} className="num">{used}/{total}</span>,
+              <Bar key={`${l}m`} value={used / total} tone={l === 'arable' ? 'pos' : l === 'plot' ? 'accent' : 'gold'} label={`${landName(l)} ${used}/${total}`} />,
+              <span key={`${l}v`} className="num pxnum">{int(used)}/{int(total)}</span>,
             ];
           })}
         </div>
       </section>
 
       <section className="block">
-        <h3>{T.classes} <Info text={T.classesInfo} /></h3>
+        <h3>{T.classes}</h3>
         <ClassDonut region={r} />
       </section>
 
       <section className="block">
-        <h3>{T.market} <Info text={T.marketInfo} /></h3>
+        <h3>{T.market}</h3>
         <div className="table-scroll">
           <table className="goods">
             <thead><tr>
@@ -117,16 +125,15 @@ export function RegionPanel({ world, region, history, selectedGood, onSelectGood
             <tbody>
               {goods.map((g) => {
                 const m = r.market[g];
-                const net = m.shippedIn - m.shippedOut;
                 const short = m.supplyEma < m.demandEma * 0.5 && m.demandEma > 1;
                 return (
                   <tr key={g} className={g === selectedGood ? 'selected' : ''} onClick={() => onSelectGood(g)} tabIndex={0} aria-selected={g === selectedGood}
                     onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelectGood(g); } }}>
                     <td><span className="good-name"><GoodSprite g={g} /> {goodName(g)}</span></td>
                     <td>{money(m.price)}</td>
-                    <td style={{ width: 130 }}><PriceGauge ratio={m.price / GOODS[g].basePrice} compact /></td>
+                    <td className="gauge-cell"><PriceGauge ratio={m.price / GOODS[g].basePrice} /></td>
                     <td className={short ? 'neg strong' : ''}>{compact(m.supplyEma)} / {compact(m.demandEma)}</td>
-                    <td title={Math.abs(net) < 0.05 ? undefined : T.shippedTitle(`${net > 0 ? '+' : '−'}${one(Math.abs(net))}`)}>{compactMoney(m.price * (m.supplyEma + m.demandEma) / 2)}</td>
+                    <td>{compactMoney(m.price * (m.supplyEma + m.demandEma) / 2)}</td>
                   </tr>
                 );
               })}
@@ -145,15 +152,15 @@ export function RegionPanel({ world, region, history, selectedGood, onSelectGood
       </section>
 
       <section className="block">
-        <h3>{T.buildings} <span className="count-pill">{buildings.length}</span> <Info text={T.buildingsInfo} /></h3>
-        {buildings.length === 0 ? <p className="empty">{T.noBuildingsHere}</p> : (
+        <h3>{T.buildings} <span className="count-pill">{buildings.length}</span> </h3>
+        {buildings.length === 0 ? <p className="empty">—</p> : (
           <ul className="chips-grid">
             {buildings.map((b) => {
               const c = companyById(world, b.companyId);
               return (
                 <li key={b.id}>
                   <button className={`b-chip ${b.active ? '' : 'off'}`} onClick={() => onViewCompany(b.companyId)}
-                    title={`${c?.isPlayer ? T.myHouse : c ? companyName(c) : ''} · ${c?.isPlayer ? T.viewMine : T.viewBuildings}`}>
+                    title={c?.isPlayer ? T.myHouse : c ? companyName(c) : undefined}>
                     <span className="b-chip-icon" style={{ borderColor: c?.color }}><BuildingSprite typeId={b.typeId} size={16} /></span>
                     <span className="b-chip-name">{buildingName(b.typeId)}<small className="lbl"> {c?.isPlayer ? T.meShort : c ? companyName(c) : ''}</small></span>
                     <span className="b-chip-count">×{b.level}</span>

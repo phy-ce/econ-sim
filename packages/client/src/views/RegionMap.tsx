@@ -74,7 +74,7 @@ export function RegionMap({ world, selected, onSelect }: { world: World; selecte
 
   return (
     <>
-      <div className="map-title"><h2>{T.paneMap}</h2><span className="lbl">{T.mapColour}</span></div>
+      <div className="map-title"><h2>{T.paneMap}</h2></div>
       <svg className="map" viewBox="0 0 100 95" role="group" aria-label={T.mapAria}>
         <rect x="0" y="0" width="100" height="100" className="map-bg" />
         <path d="M0,0H20L17,8L13,18L11,30L8,40L9,52L6,64L0,72Z" className="sea" />
@@ -122,6 +122,7 @@ export function RegionMap({ world, selected, onSelect }: { world: World; selecte
         })}
       </svg>
       <div className="map-legend">
+        <span className="lbl">{T.wealthPerHead}</span>
         <div className="scale-bar">{WEALTH_STEPS.map((s) => <span key={s.color} style={{ background: s.color }} />)}</div>
         <div className="scale-ticks lbl">{WEALTH_STEPS.map((s) => <span key={s.color}>{s.label()}</span>)}</div>
         <div className="map-keys lbl">

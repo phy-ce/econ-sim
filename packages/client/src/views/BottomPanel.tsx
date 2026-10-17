@@ -4,7 +4,7 @@ import type { HistoryPoint, World } from '@econ/sim';
 import { TimeChart } from './Chart';
 import { Notifications } from './Notifications';
 import { ClassSprite } from '../sprites';
-import { CLASS_COLOR, Info } from '../ui';
+import { CLASS_COLOR } from '../ui';
 import { compactMoney, signedCompactMoney } from '../format';
 import { className, companyName, useT } from '../i18n';
 
@@ -24,7 +24,7 @@ export function BottomPanel({ world, history, lastReadTick, onRead, onJump, view
     <div className="bottom">
       <section className="card" aria-label={T.wealthByClass}>
         <div className="card-head">
-          <h2>{T.wealthByClassTitle} <Info text={T.wealthInfo} /></h2>
+          <h2>{T.wealthByClassTitle}</h2>
           <ul className="legend">
             {series.map((s) => (
               <li key={s.key}><span className="legend-sp" style={{ color: s.color }}><ClassSprite c={s.key} size={16} /></span>{s.name}</li>
@@ -36,7 +36,7 @@ export function BottomPanel({ world, history, lastReadTick, onRead, onJump, view
 
       <section className="card" aria-label={T.rankings}>
         <h2>{T.rankings}</h2>
-        <table className="ranks">
+        <div className="table-scroll"><table className="ranks">
           <thead><tr><th>{T.colHouse}</th><th>{T.colNet}</th><th>{T.colBuildings}</th><th>{T.colLastWeek}</th></tr></thead>
           <tbody>
             {rows.map(({ c, levels, net }) => (
@@ -52,8 +52,7 @@ export function BottomPanel({ world, history, lastReadTick, onRead, onJump, view
               </tr>
             ))}
           </tbody>
-        </table>
-        <span className="lbl">{T.rankHint}</span>
+        </table></div>
       </section>
 
       <section className="card" aria-label={T.news}>

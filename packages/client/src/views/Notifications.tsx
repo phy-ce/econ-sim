@@ -55,7 +55,7 @@ export function Notifications({ world, lastReadTick, onRead, onJump }: {
         {unread > 0 && <button className="link-btn" onClick={onRead}>{T.markAllRead(unread)}</button>}
       </div>
       <ol className="events">
-        {events.length === 0 && <li className="empty">{T.noNews}</li>}
+        {events.length === 0 && <li className="empty">—</li>}
         {events.map((e, i) => {
           const c = e.companyId != null ? companyById(world, e.companyId) : undefined;
           const fresh = e.tick > lastReadTick;
@@ -64,7 +64,7 @@ export function Notifications({ world, lastReadTick, onRead, onJump }: {
             <li key={`${e.tick}-${i}`} className={`ev ${k.cls} ${fresh ? 'fresh' : ''} ${e.regionId ? 'link' : ''}`}
               onClick={e.regionId ? () => onJump(e.regionId!) : undefined} tabIndex={e.regionId ? 0 : -1}
               onKeyDown={(kk) => { if (e.regionId && (kk.key === 'Enter' || kk.key === ' ')) { kk.preventDefault(); onJump(e.regionId); } }}
-              title={e.regionId ? T.jumpToRegion : undefined}>
+>
               <span className="ev-icon"><Sprite name={k.sprite} size={16} label={k.label} /></span>
               <div className="ev-main">
                 <span className="ev-text">{eventText(e)}</span>
