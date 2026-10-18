@@ -303,7 +303,8 @@ export function scaleBonus(level: number): number {
  * - taxCurve: 징수율 곡선. 'exp' = 1 − e^(−x), 'hyp' = x / (1 + x) (x = 행정청 한도 / 인구)
  * - switchRate, switchPremium: 일하는 사람이 하루에 옮기는 상한 비율, 옮기는 데 필요한 소득(또는 생활수준) 배율
  * - cashBufferDays: 팝이 투자 풀로 보내지 않고 들고 있는 돈 (생활비 + 세금의 며칠분)
- * - landTax, pollTax, incomeTax: 세금 수준 3단계(보통)의 토지세율(소작지 수확 중 국고 몫), 인두세(1인당 하루), 소득세율
+ * - landTax, pollTax, incomeTax: 세금 수준 3단계(보통)의 토지세율(소작지 수확 중 국고 몫), 인두세(1인당 하루), 소득세율.
+ *   세 세율을 함께 키워 비교했다 (×1~×3, 20년 × 시드 1·2): ×1~×2는 AI 세금이 거의 늘 5단계, ×3은 1단계에 몇 년씩 머문다
  * - taxLevels: 세금 수준 1~5단계가 세법의 모든 세율에 곱하는 배율
  * - officeTargetDays: 건축사무소를 늘려 공사 대기를 이 일수 안으로 맞춘다
  * - startsPerWeek: AI 회사 하나가 한 주에 새로 넣는 공사 수 상한
@@ -320,7 +321,8 @@ export function scaleBonus(level: number): number {
  * - schoolValue: 왕실이 학교를 지을 때 학교가 새로 감당하는 1인당 하루 가치 (학교 1레벨 인건비 15,000 ÷ 10만 명 = 0.15)
  * - govWageLevels: 국영 임금 수준 1~5단계의 배율. 국영 임금 = 기본 임금 × 왕국 임금 지수 × 이 배율
  * - researchShare, researchLevels: 주간 연구비 = 주간 경제 규모 × researchShare × 연구비 수준 배율
- * - treasuryLowWeeks, treasuryHighWeeks: AI 왕실은 국고가 주간 국정 지출의 low 주치보다 적으면 조이고 high 주치를 넘으면 푼다
+ * - treasuryLowWeeks, treasuryHighWeeks: AI 왕실은 국고가 주간 국정 지출의 low 주치보다 적으면 조이고 high 주치를 넘으면 푼다.
+ *   왕실 공사도 high 주치를 넘는 돈으로만 한다. 13/26·26/52·26/78·52/104 비교: 26/78이 세금이 한 단계에 가장 짧게 머물고 빚·쌓아 두기가 없다
  * - startTreasuryWeeks: 왕실 시작 국고 = 시작 정부 건물을 다 돌리는 주간 운영비(시작 임금, 기본가) × 이 주 수
  * - taxLaw: 시작 세법 ('land' 토지 기반 / 'capita' 1인당)
  * - peasantPoll: 1인당 과세에서 소작농이 내는 인두세 배율
@@ -344,8 +346,8 @@ export const TUNE = {
   localBias: 0.5,
   taxCurve: 'hyp' as 'exp' | 'hyp',
   cashBufferDays: 10,
-  pollTax: 0.2,
-  incomeTax: 0.1,
+  pollTax: 0.5, // 인두세: 소작농은 peasantPoll 배 (세금 수준 3단계 기준)
+  incomeTax: 0.25,
   officeTargetDays: 30,
   startsPerWeek: 3,
   luxuryLinear: 0.3,
@@ -358,7 +360,7 @@ export const TUNE = {
   qualRate: 0.25,
   schoolValue: 0.3,
   taxLaw: 'land' as 'land' | 'capita',
-  landTax: 0.1,
+  landTax: 0.25, // 토지세: 소작지 수확의 25% (지대 rentShare 와 따로)
   peasantPoll: 0.25,
   rawFullWealth: 5,
   rawCapWealth: 10,
@@ -367,7 +369,7 @@ export const TUNE = {
   researchShare: 0.045,
   researchLevels: [0.5, 0.75, 1, 1.5, 2],
   treasuryLowWeeks: 26,
-  treasuryHighWeeks: 52,
+  treasuryHighWeeks: 78, // 1년 반: 52는 세금이 5단계에 9년씩 머물고, 104는 국고를 2년 넘게 쌓는다
   startTreasuryWeeks: 26,
   shrinkWeeks: 26,
   salvageShare: 0.5,

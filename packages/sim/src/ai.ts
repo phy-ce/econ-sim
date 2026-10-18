@@ -140,6 +140,7 @@ function governmentFill(w: World, c: Company): number {
 
 /**
  * 정책 단계 (AI 왕국, 4주마다 한 칸). 기준은 국고가 주간 국정 지출의 몇 주치인가다.
+ * 국고가 지난 점검보다 늘고 있으면 조이지 않고, 줄고 있으면 풀지 않는다 (재고만 보면 세금이 5단계와 1단계를 오간다).
  * - 조임 (TUNE.treasuryLowWeeks 주치 미만이거나 빚이 있다): 세금 수준을 올린다. 이미 5단계면 연구비를 내리고, 1단계면 연구를 멈춘다
  *   (조이는 동안 새 연구를 고르지 않는다, planResearch). 그다음 국영 임금을 내린다. 정부 건물이 이미 덜 찼으면(90% 미만) 임금은 내리지 않는다.
  *   세금 5단계에서도 순자산(현금 − 빚)이 지난 점검보다 줄었으면 구조적 적자다: 돈을 벌지 않는 학교를 줄인다.
@@ -157,13 +158,17 @@ function adjustBudget(w: World, c: Company) {
   const weeks = treasuryWeeks(c, k);
   let step: [BudgetItem, number] | null = null;
   if (treasuryTight(c, k)) {
-    if (b.tax === BUDGET_STEPS && losing) shrinkSchools(w, c);
-    if (b.tax < BUDGET_STEPS) step = ['tax', b.tax + 1];
-    else if (b.research > 1) step = ['research', b.research - 1];
-    else if (c.research.current) applyCommand(w, c.id, { type: 'setResearch', techId: null });
-    else if (b.wages > 1 && governmentFill(w, c) >= 0.9) step = ['wages', b.wages - 1];
+    // 국고가 지난 점검보다 늘고 있으면(회복 중) 더 조이지 않는다
+    if (losing) {
+      if (b.tax === BUDGET_STEPS) shrinkSchools(w, c);
+      if (b.tax < BUDGET_STEPS) step = ['tax', b.tax + 1];
+      else if (b.research > 1) step = ['research', b.research - 1];
+      else if (c.research.current) applyCommand(w, c.id, { type: 'setResearch', techId: null });
+      else if (b.wages > 1 && governmentFill(w, c) >= 0.9) step = ['wages', b.wages - 1];
+    }
   } else {
-    const rich = weeks > TUNE.treasuryHighWeeks;
+    // 넉넉해도 국고가 지난 점검보다 줄고 있으면 더 풀지 않는다
+    const rich = weeks > TUNE.treasuryHighWeeks && !losing;
     if (rich && b.wages < 3) step = ['wages', b.wages + 1];
     else if (rich && b.research < 3) step = ['research', b.research + 1];
     else if (b.wages >= 3 && b.wages < BUDGET_STEPS && governmentFill(w, c) < 0.9) step = ['wages', b.wages + 1];
@@ -360,7 +365,9 @@ function planConstruction(w: World, c: Company, o: Outlook) {
     const own = w.constructions.filter((k) => k.companyId === c.id).length;
     if (own >= MAX_CONCURRENT_CONSTRUCTIONS) break;
     if (c.debt > creditLimit(w, c) * 0.3) break;
-    const free = c.cash - reserveOf(w, c) - committedCost(w, c) - est.costPerDay * 30;
+    // 왕실은 국고 중 국정 지출 TUNE.treasuryHighWeeks 주치를 넘는 돈으로만 새 공사를 한다 (사무소처럼 넉넉할 때만)
+    const keep = c.state ? TUNE.treasuryHighWeeks * (kingdomById(w, c.kingdomId).expenseEma ?? 0) : 0;
+    const free = c.cash - Math.max(reserveOf(w, c), keep) - committedCost(w, c) - est.costPerDay * 30;
     if (free <= 0) break;
     const out = { best: null as Pick | null };
     const pick = pickProject(w, c, o, free, fallbacks < TUNE.lossBuildsPerWeek, out);
@@ -455,12 +462,9 @@ interface Pick { regionId: number; typeId: string; methodId: string; levels: num
  */
 export function pickProject(w: World, c: Company, o: Outlook, free: number, allowLoss = false, blocked?: { best: Pick | null }): Pick | null {
   let best: Pick | null = null, least: Pick | null = null;
-  // 돈을 벌지 않는 정부 건물(학교)은 건축사무소처럼 국고가 넉넉할 때(빚 없음, 지출 TUNE.treasuryHighWeeks 주치 초과)만 늘린다
-  const rich = c.state && c.debt <= 0 && treasuryWeeks(c, kingdomById(w, c.kingdomId)) > TUNE.treasuryHighWeeks;
   for (const r of ownRegions(w, c)) {
     for (const t of BUILDING_TYPES) {
       if (t.id === 'builder' || !canBuildType(c, t)) continue;
-      if (!rich && t.methods.some((m) => m.seats)) continue;
       const room = roomFor(w, r.id, t.id);
       const perLevel = constructionEstimate(w, c, t.id).cost;
       if (!Number.isFinite(perLevel) || free < perLevel) continue;
