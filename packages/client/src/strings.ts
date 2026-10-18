@@ -6,6 +6,15 @@ import { particle } from './format';
 type S = string;
 
 export const KO = {
+  demolitionQueue:(n:number)=>`철거 중 ${n}레벨`, cancelDemolition:'철거 취소', salvage:'철거 자재', keepConstruction:'계속 건설', popList:'인구 상세', popRegion:'지역', popProfession:'직종', popWork:'일터', popSize:'인구', popFood:'식량', popNeeds:'소비', popIncome:'소득 / 일', popKind:'현물', popLiteracy:'문해력', popGrowth:'연 증감', allRegions:'모든 지역', allProfessions:'모든 직종', unemployedOnly:'실업만', inKindValue:'현물 시장가 / 일', privateEquity:'민간 지분', adjustFinance:'재정에서 조정', pollTax:'인두세', incomeTax:'소득세', budgetShare:'비율', retainedBudget:'국고 적립', budgetRevenue:'예산 세입', loan:'대출', newConstruction:'신규', expansion:'증설', moveProjectUp:'공사 우선순위 올리기', moveProjectDown:'공사 우선순위 내리기', pauseProject:'공사 일시정지', resumeProject:'공사 재개', cancelSpent:(amount:string)=>`공사를 취소할까요? 지출 ${amount}은 돌려받지 못합니다.`, educationPending:'이번 주 교육 집행액은 아직 제공되지 않습니다.',
+
+  weeklyProfit: '주간 손익', foreignTerritory: '다른 왕국 영토',
+  territory: '영토', mapLayers: '지도 표시',
+  finance: '재정', weeklyAccounts: '주간 수지', currentWeek: '이번 주', previousWeek: '지난주', receipts: '수입', expenses: '지출', capitalFlows: '자본 흐름', incomeTaxRates: '소득세율', lowerStratum: '하층', middleStratum: '중층', upperStratum: '상층', construct: '건설', kingdomQueue: '왕국 공사', mySummary: '왕실 요약', companyDetails: '상회 상세', dailyCap: '일일 공사 상한', receivedToday: '오늘 받은 포인트', stage: '단계',
+  ledgerLabels: {sales:'판매',tax:'소득세',mint:'주조',buildFees:'민간 공사 수수료',wages:'임금',inputs:'원자재',research:'연구',interest:'이자',welfare:'복지',dividends:'배당 지급',investment:'투자 풀 유입',buildPaid:'공사비 지급'},
+
+  kingdomLabel: '왕국', stateOwner: '왕실', privateOwner: '민간', playerOwner: '플레이어', dividend: '배당', sharedResearch: '왕실 기술 공유', taxCollection: '세금 징수율', taxCapacity: '세금 역량', investmentPool: '투자 풀', annualGdp: 'GDP / 년', kingdomAccounts: '왕국 재정', standardOfLiving: '생활수준', wealthLevel: '부', portClosed: '항구 폐쇄', ownership: '건물 소유', landlord: '지주', noBuildings: '건물 없음', noMatches: '검색 결과 없음',
+
   language: '언어',
 
   // 앱 머리
@@ -45,8 +54,8 @@ export const KO = {
   started: '새 게임',
 
   // 아래 패널
-  wealthByClass: '계층별 부 단계',
-  wealthByClassTitle: '계층별 부 단계 · 왕국 전체',
+  wealthByClass: '계층별 생활수준',
+  wealthByClassTitle: '계층별 생활수준 · 전체 왕국',
   povertyLine: '빈곤선 5',
   rankings: '상회 순위',
   colHouse: '상회',
@@ -226,6 +235,15 @@ export const KO = {
 export type Dict = typeof KO;
 
 export const EN: Dict = {
+  demolitionQueue:(n:number)=>`Demolishing ${n} levels`, cancelDemolition:'Cancel demolition', salvage:'Salvage', keepConstruction:'Keep construction', popList:'Population details', popRegion:'Region', popProfession:'Profession', popWork:'Workplace', popSize:'Population', popFood:'Food', popNeeds:'Needs', popIncome:'Income / day', popKind:'In kind', popLiteracy:'Literacy', popGrowth:'Annual growth', allRegions:'All regions', allProfessions:'All professions', unemployedOnly:'Unemployed only', inKindValue:'In-kind market value / day', privateEquity:'Private equity', adjustFinance:'Adjust in Finance', pollTax:'Poll tax', incomeTax:'Income tax', budgetShare:'Share', retainedBudget:'Treasury retained', budgetRevenue:'Budget revenue', loan:'Loan', newConstruction:'New', expansion:'Expansion', moveProjectUp:'Raise construction priority', moveProjectDown:'Lower construction priority', pauseProject:'Pause construction', resumeProject:'Resume construction', cancelSpent:(amount:string)=>`Cancel construction? The ${amount} spent will not be refunded.`, educationPending:'Current-week education spending is not provided yet.',
+
+  weeklyProfit: 'Weekly profit', foreignTerritory: 'Foreign territory',
+  territory: 'Territory', mapLayers: 'Map layers',
+  finance: 'Finance', weeklyAccounts: 'Weekly accounts', currentWeek: 'This week', previousWeek: 'Last week', receipts: 'Revenue', expenses: 'Expenses', capitalFlows: 'Capital flows', incomeTaxRates: 'Income tax', lowerStratum: 'Lower', middleStratum: 'Middle', upperStratum: 'Upper', construct: 'Build', kingdomQueue: 'Kingdom construction', mySummary: 'Royal summary', companyDetails: 'Company details', dailyCap: 'Daily construction cap', receivedToday: 'Points received today', stage: 'Stage',
+  ledgerLabels: {sales:'Sales',tax:'Income tax',mint:'Minting',buildFees:'Private construction fees',wages:'Wages',inputs:'Inputs',research:'Research',interest:'Interest',welfare:'Welfare',dividends:'Dividends paid',investment:'Investment inflow',buildPaid:'Construction paid'},
+
+  kingdomLabel: 'Kingdom', stateOwner: 'Royal', privateOwner: 'Private', playerOwner: 'Player', dividend: 'Dividend', sharedResearch: 'Shared royal technology', taxCollection: 'Tax collection', taxCapacity: 'Tax capacity', investmentPool: 'Investment pool', annualGdp: 'GDP / year', kingdomAccounts: 'Kingdom accounts', standardOfLiving: 'Living standard', wealthLevel: 'Wealth', portClosed: 'Port closed', ownership: 'Building ownership', landlord: 'Landlords', noBuildings: 'No buildings', noMatches: 'No results',
+
   language: 'Language',
 
   title: 'Kingdom of Estera',
@@ -262,8 +280,8 @@ export const EN: Dict = {
   loadFailed: 'Load failed',
   started: 'New game',
 
-  wealthByClass: 'Wealth by class',
-  wealthByClassTitle: 'Wealth by class · whole kingdom',
+  wealthByClass: 'Living standard by class',
+  wealthByClassTitle: 'Living standard by class · all kingdoms',
   povertyLine: 'Poverty line 5',
   rankings: 'House rankings',
   colHouse: 'House',

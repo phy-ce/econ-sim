@@ -1,92 +1,82 @@
-import { BUILDING_BY_ID, GOOD_IDS, GOODS, LEVELS_PER_BLOCK, NEEDS, getMethod, regionPerk } from './data';
-import { availableMethods, expectedOwnerFactor, outputCapacity, regionById, shippingRate } from './economy';
+import { BUILDING_BY_ID, GOOD_IDS, GOODS, NEEDS, SKILL_DEFS, TUNE, getMethod, regionPerk } from './data';
+import { availableMethods, collectionRatio, regionById, schoolFunding, shippingRate, wageCostOf } from './economy';
 import { clamp } from './rng';
 import { SKILLS } from './types';
 import type { Company, GoodId, MethodDef, Region, Skill, World } from './types';
 
 /**
- * 시장 전망: AI 투자 판단의 공통 바탕.
- * 상품마다 왕국 전체의 "앞으로의 수요"와 "앞으로의 공급 능력"을 세고, 그 비율로 장기 가격을 예상한다.
- * - 수요 = 지금 수요 + 공사 중인 건물이 쓸 투입재 + 잠재 수요(더 나은 방식으로 바꾸면 쓰게 될 투입재)
- * - 공급 = max(지금 공급, 가동 중인 건물의 생산 능력) + 공사 중인 건물의 산출
- * 같은 주에 다른 회사가 착공하면 전망에 바로 반영해(add) 여럿이 같은 빈자리로 몰리지 않게 한다.
+ * 시장 전망: AI 투자 판단의 공통 바탕. 상품마다 대륙 전체의 앞으로의 수요와 공급을 세고 그 비율로 장기 가격을 본다.
+ * - 수요 = 지금 수요 + 공사 중인 건물의 투입 + 대체 수요 (+ 잠재 수요: 더 나은 방식으로 바꾸면 쓸 투입. 파는 쪽 가격에만 센다)
+ * - 공급 = 지금 공급 + 공사 중인 건물의 산출
+ * 같은 주에 착공하면 전망에 바로 반영해(add) 여럿이 같은 빈자리로 몰리지 않게 한다.
  */
 export interface Outlook {
   demand: Record<GoodId, number>;
+  latent: Record<GoodId, number>;
   supply: Record<GoodId, number>;
-  /** 공급 dS, 수요 dD 가 더해졌을 때의 장기 가격 */
-  price(g: GoodId, dS?: number, dD?: number): number;
-  /** 착공을 전망에 반영한다 */
+  /** withLatent: 잠재 수요까지 센 가격 (파는 쪽). 사는 쪽(원료비)은 false */
+  price(g: GoodId, dS?: number, dD?: number, withLatent?: boolean): number;
   add(m: MethodDef, levels: number, perk: number): void;
 }
 
 /** 아무도 만들지 않는 투입재는 곧 누군가 공급한다고 보고 이 배율로 친다 */
 const UNSUPPLIED_INPUT = 1.25;
-
-/** 어떤 건물이든 만들 수 있는 상품 */
 const PRODUCIBLE = new Set<GoodId>(Object.values(BUILDING_BY_ID).flatMap((t) => t.methods.flatMap((m) => GOOD_IDS.filter((g) => (m.outputs[g] ?? 0) > 0))));
+
+/** 장기 가격: 가격 공식과 같은 모양 (수요/공급 비율) */
+function longRunPrice(g: GoodId, D: number, S: number): number {
+  const base = GOODS[g].basePrice;
+  const lo = Math.min(D, S);
+  const x = lo > 1e-6 ? clamp((D - S) / lo, -1, 1) : D > S ? 1 : -1;
+  return base * (1 + 0.75 * x);
+}
 
 export function marketOutlook(w: World): Outlook {
   const demand = {} as Record<GoodId, number>;
+  const latent = {} as Record<GoodId, number>;
   const supply = {} as Record<GoodId, number>;
   for (const g of GOOD_IDS) {
-    let d = 0, s = 0, cap = 0;
-    for (const r of w.regions) {
-      d += r.market[g].demandEma;
-      s += r.market[g].supplyEma;
-      cap += outputCapacity(w, r.id, g);
-    }
-    demand[g] = d;
-    // 정격 생산 능력이 아니라 실제로 나온 공급을 본다 (인원이 모자라 덜 돌아가는 공장이 많다)
-    supply[g] = s;
-    void cap;
+    let d = 0, s = 0;
+    for (const r of w.regions) { d += r.market[g].demandEma; s += r.market[g].supplyEma; }
+    demand[g] = d; latent[g] = 0; supply[g] = Math.max(0, s);
   }
   for (const k of w.constructions) {
     const m = getMethod(k.typeId, k.methodId);
     const perk = 1 + regionPerk(k.regionId, k.typeId);
-    const lv = k.levels ?? 1;
     for (const g of GOOD_IDS) {
-      supply[g] += (m.outputs[g] ?? 0) * perk * lv;
-      demand[g] += (m.inputs[g] ?? 0) * lv;
+      supply[g] += (m.outputs[g] ?? 0) * perk * (k.levels ?? 1);
+      demand[g] += (m.inputs[g] ?? 0) * (k.levels ?? 1);
     }
   }
-  // 잠재 수요: 기본가로 따졌을 때 지금 방식보다 나은 방식이 있으면, 그 방식의 투입재 중 지금 안 쓰는 몫이 수요다
+  // 잠재 수요: 기본가로 따져 지금 방식보다 나은 방식이 있으면 그 방식이 더 쓰는 투입재
   for (const b of w.buildings) {
     const c = w.companies.find((x) => x.id === b.companyId);
-    if (!c || !b.active) continue;
+    if (!c || !b.active || BUILDING_BY_ID[b.typeId].auto) continue;
     const cur = getMethod(b.typeId, b.methodId);
     if (cur.construction || cur.grant) continue;
-    const curV = baseValue(cur, c.wages);
-    let best: MethodDef | null = null, bestV = curV;
+    let best: MethodDef | null = null, bestV = baseValue(cur, c);
     for (const m of availableMethods(c, b.typeId)) {
-      if (m.id === cur.id || m.grant) continue;
-      const v = baseValue(m, c.wages);
+      if (m.id === cur.id) continue;
+      const v = baseValue(m, c);
       if (v > bestV * 1.05) { best = m; bestV = v; }
     }
-    if (!best) continue;
-    for (const g of GOOD_IDS) {
+    if (best) for (const g of GOOD_IDS) {
       const extra = (best.inputs[g] ?? 0) - (cur.inputs[g] ?? 0);
-      if (extra > 0) demand[g] += extra * b.level;
+      if (extra > 0) latent[g] += extra * b.level;
     }
   }
-  // 대체 수요: 가공품(빵·연료·옷)이 비싸서 사람들이 원자재(곡물·목재·섬유)로 버티고 있으면, 값이 내려갈 때 돌아올 수요다.
-  // 대체품 수요의 절반을 이 상품 단위로 바꿔 잠재 수요로 센다
-  for (const n of NEEDS) {
-    for (const opt of n.options) {
-      if (!opt.appeal || opt.appeal <= 1) continue;
-      for (const other of n.options) {
-        if (other === opt) continue;
-        demand[opt.good] += (demand[other.good] / other.units) * opt.units * 0.5;
-      }
-    }
+  // 대체 수요: 가공품이 비싸서 원자재로 버티는 가계 수요의 절반은 값이 내려가면 돌아온다 (공장의 원료 수요는 대체하지 않는다)
+  const household = (g: GoodId) => w.regions.reduce((a, r) => a + Object.entries(r.market[g].demandByEma ?? {}).reduce((x, [k, v]) => x + (k.startsWith('pop:') ? v : 0), 0), 0);
+  for (const n of NEEDS) for (const opt of n.options) {
+    if (!opt.appeal || opt.appeal <= 1) continue;
+    for (const other of n.options) if (other !== opt) demand[opt.good] += (household(other.good) / other.units) * opt.units * 0.5;
   }
-  const o: Outlook = {
-    demand, supply,
-    price(g, dS = 0, dD = 0) {
-      const base = GOODS[g].basePrice;
-      const S = supply[g] + dS, D = demand[g] + dD;
-      if (S < 1 && dD > 0) return base * UNSUPPLIED_INPUT;
-      return base * clamp(Math.pow((D + 1) / (S + 1), 0.8), 0.25, 4);
+  return {
+    demand, latent, supply,
+    price(g, dS = 0, dD = 0, withLatent = true) {
+      const S = supply[g] + dS, D = demand[g] + dD + (withLatent ? latent[g] : 0);
+      if (S < 1 && dD > 0) return GOODS[g].basePrice * UNSUPPLIED_INPUT;
+      return longRunPrice(g, D, S);
     },
     add(m, levels, perk) {
       for (const g of GOOD_IDS) {
@@ -95,95 +85,117 @@ export function marketOutlook(w: World): Outlook {
       }
     },
   };
-  return o;
 }
 
-/** 기본가 기준 하루 이윤 (방식끼리 비교용, 시장 상황과 무관) */
-function baseValue(m: MethodDef, wages: Record<Skill, number>): number {
+/** 기본가 기준 하루 이윤 (방식끼리 비교용) */
+function baseValue(m: MethodDef, c: Company): number {
   let v = 0;
   for (const g of GOOD_IDS) v += ((m.outputs[g] ?? 0) - (m.inputs[g] ?? 0)) * GOODS[g].basePrice;
-  for (const s of SKILLS) v -= (m.workers[s] ?? 0) * wages[s];
-  return v;
+  return v - wageCostOf(m, c.wages, c.state);
 }
 
-export interface Valuation { revenue: number; inputCost: number; wageCost: number; profit: number }
+export interface Valuation { revenue: number; inputCost: number; wageCost: number; profit: number; utilization: number }
+
+/** 새로 지을지 판단할 때 쓰는 장기 임금: 지금 임금과 기본 임금 × TUNE.investWage 중 큰 값 */
+function longRunWages(c: Company): Record<Skill, number> {
+  return Object.fromEntries(SKILLS.map((s) => [s, Math.max(c.wages[s], SKILL_DEFS[s].baseWage * TUNE.investWage)])) as Record<Skill, number>;
+}
 
 /**
- * 한 지역에 이 방식으로 levels 개를 새로 돌릴 때의 장기 하루 손익.
- * 산출물: 내가 들어간 뒤의 장기 가격, 지역 밖으로 팔리는 몫은 운송비를 뺀다. 수요보다 많이 만들면 남는 몫은 수출 하한가.
- * 투입재: 내가 사들인 뒤의 장기 가격, 지역 밖에서 들여오는 몫은 운송비를 더한다.
+ * 한 지역에 이 방식으로 levels 개를 새로 돌릴 때의 장기 하루 손익 (가장 이익이 나는 가동률로).
+ * existing: 이미 돌고 있는 레벨의 손익 (그 산출과 투입은 이미 전망에 들어 있으므로 더하지 않는다). 짓기와 철거를 같은 계산으로 비교한다.
+ * 산출물은 전량 팔린다고 본다 (남는 공급은 가격으로 나타난다). 값은 들어간 뒤의 장기 가격과 현지 가격의 평균이고,
+ * 지역 밖으로 나가는 몫은 운송비를 뺀다. 투입재도 같은 규칙: 사들인 뒤의 장기 가격(잠재 수요 제외)과 현지 가격의 평균.
  */
-export function valueMethod(
-  w: World, o: Outlook, r: Region, typeId: string, m: MethodDef, wages: Record<Skill, number>, levels = 1,
-): Valuation & { utilization: number } {
-  // 처음부터 만원 가동한다고 보지 않는다: 가장 이익이 나는 가동률로 평가한다 (수요가 작으면 줄여서 돌린다)
-  let best: Valuation & { utilization: number } | null = null;
+export function valueMethod(w: World, o: Outlook, r: Region, c: Company, typeId: string, m: MethodDef, levels = 1, existing = false): Valuation {
+  let best: Valuation | null = null;
   for (const u of [1, 0.75, 0.5, 0.25]) {
-    const v = valueAt(w, o, r, typeId, m, wages, levels * u);
+    const v = valueAt(w, o, r, c, typeId, m, levels * u, existing);
     if (!best || v.profit > best.profit) best = { ...v, utilization: u };
   }
   return best!;
 }
 
-function valueAt(
-  w: World, o: Outlook, r: Region, typeId: string, m: MethodDef, wages: Record<Skill, number>, levels: number,
-): Valuation {
-  // 소유주가 모자란 지역에서는 덜 만든다 (소유주 배율)
-  const perk = (1 + regionPerk(r.id, typeId)) * expectedOwnerFactor(w, r, typeId, levels);
+function valueAt(w: World, o: Outlook, r: Region, c: Company, typeId: string, m: MethodDef, levels: number, existing = false): Omit<Valuation, 'utilization'> {
+  const perk = 1 + regionPerk(r.id, typeId);
   const ship = shippingRate(w, r.id);
   let revenue = 0, inputCost = 0;
   for (const g of GOOD_IDS) {
     const out = (m.outputs[g] ?? 0) * levels * perk;
     if (out > 0) {
-      const p = o.price(g, out, 0);
-      const D = o.demand[g], S = o.supply[g];
-      // 팔리는 비율: 왕국 공급이 수요를 넘으면 위탁분이 비례로 남는다
-      const sell = Math.min(1, (D + 1) / (S + out + 1));
-      // 지역 밖으로 나가는 몫: 지역 수요가 감당 못 하는 만큼
-      const local = r.market[g].demandEma;
-      const outside = GOODS[g].perishable ? 0 : clamp(1 - local / out, 0, 1);
-      // 지역 안에서 팔리는 몫은 지역 시세보다 비싸게 받을 수 없다 (그 지역에 이미 넘치면 싸다)
-      const unit = (1 - outside) * Math.min(p, r.market[g].price) + outside * p * (1 - ship);
-      const dump = GOODS[g].perishable ? 0 : GOODS[g].basePrice * 0.35 * (1 - ship);
-      revenue += out * (unit * sell + dump * (1 - sell));
+      const p = o.price(g, existing ? 0 : out, 0);
+      const outside = GOODS[g].perishable ? 0 : clamp(1 - r.market[g].demandEma / out, 0, 1);
+      const unit = (1 - outside) * (p + r.market[g].price) / 2 + outside * p * (1 - ship);
+      revenue += out * unit;
     }
     const inp = (m.inputs[g] ?? 0) * levels;
     if (inp > 0) {
-      // 왕국에서 만들 수 있는 상품이면 장기적으로는 누군가 기본가 근처에 공급한다 (지금의 품귀 가격이 영원하지 않다)
-      const p = PRODUCIBLE.has(g) ? Math.min(o.price(g, 0, inp), GOODS[g].basePrice * UNSUPPLIED_INPUT) : o.price(g, 0, inp);
-      const local = r.market[g].supplyEma;
-      const imported = GOODS[g].perishable ? 0 : clamp(1 - local / inp, 0, 1);
+      const dD = existing ? 0 : inp;
+      const lr = PRODUCIBLE.has(g) ? Math.min(o.price(g, 0, dD, false), GOODS[g].basePrice * UNSUPPLIED_INPUT) : o.price(g, 0, dD, false);
+      const p = (lr + r.market[g].price) / 2;
+      const imported = GOODS[g].perishable ? 0 : clamp(1 - r.market[g].supplyEma / inp, 0, 1);
       inputCost += inp * p * (1 + ship * imported);
     }
   }
-  if (m.grant) revenue += m.grant * wageOf(m, wages) * levels * w.grantRatio;
-  const wageCost = wageOf(m, wages) * levels;
+  // 학교 보조금은 남의 국고에서 받을 때만 수입이다 (국영 학교는 자기 돈을 자기에게 주는 것)
+  if (m.grant && !c.state) revenue += m.grant * wageCostOf(m, c.wages, c.state) * levels * schoolFunding(w, r.kingdomId);
+  // 행정청: 지금 한도 때문에 못 걷는 세금을 이만큼 더 걷는다
+  if (m.taxCapacity && c.state) {
+    const k = w.kingdoms.find((x) => x.id === r.kingdomId);
+    // 공사 중인 행정청의 한도도 이미 있는 것으로 친다
+    let pending = 0;
+    for (const x of w.constructions) {
+      const pm = getMethod(x.typeId, x.methodId);
+      if (pm.taxCapacity && regionById(w, x.regionId).kingdomId === r.kingdomId) pending += pm.taxCapacity * (x.levels ?? 1);
+    }
+    // 늘어난 한도만큼 징수율 곡선이 오르는 몫 × 걷어야 할 세금
+    if (k) {
+      const cap = (k.taxCapacity ?? 0) + pending * TUNE.adminScale, n = k.taxDue ?? 0, add = m.taxCapacity * TUNE.adminScale * levels * perk;
+      revenue += (k.taxOwed ?? 0) * (existing ? collectionRatio(cap, n) - collectionRatio(Math.max(0, cap - add), n) : collectionRatio(cap + add, n) - collectionRatio(cap, n));
+    }
+  }
+  // 새로 지을지 판단할 때는 장기 임금으로 본다: 지금 임금과 기본 임금 × TUNE.investWage 중 큰 값
+  const wageCost = wageCostOf(m, longRunWages(c), c.state) * levels;
   return { revenue, inputCost, wageCost, profit: revenue - inputCost - wageCost };
 }
 
-function wageOf(m: MethodDef, wages: Record<Skill, number>): number {
-  let v = 0;
-  for (const s of SKILLS) v += (m.workers[s] ?? 0) * wages[s];
-  return v;
-}
-
-/** 이 기술을 열면 회사가 얻는 하루 가치 추정: 기술이 여는 방식 중 가장 나은 것의 장기 이윤 (지금 쓰는 방식 대비 개선분) */
+/** 이 기술을 열면 회사가 얻는 하루 가치 추정 */
 export function techValue(w: World, o: Outlook, c: Company, techId: string): number {
   let value = 0;
-  const port = regionById(w, 1);
+  const home = w.regions.find((r) => r.kingdomId === c.kingdomId)!;
   for (const t of Object.values(BUILDING_BY_ID)) {
     for (const m of t.methods) {
       if (m.tech !== techId) continue;
-      // 이미 가진 같은 종류 건물이 이 방식으로 바뀌면 얻는 개선
       for (const b of w.buildings) {
         if (b.companyId !== c.id || b.typeId !== t.id) continue;
         const r = regionById(w, b.regionId);
-        const gain = valueMethod(w, o, r, t.id, m, c.wages, b.level).profit - valueMethod(w, o, r, t.id, getMethod(b.typeId, b.methodId), c.wages, b.level).profit;
-        value += Math.max(0, gain);
+        value += Math.max(0, valueMethod(w, o, r, c, t.id, m, b.level).profit - valueMethod(w, o, r, c, t.id, getMethod(b.typeId, b.methodId), b.level).profit);
       }
-      // 새 건물 하나를 지을 수 있게 되는 가치
-      value += Math.max(0, valueMethod(w, o, port, t.id, m, c.wages, Math.round(LEVELS_PER_BLOCK)).profit);
+      value += Math.max(0, valueMethod(w, o, home, c, t.id, m, 1).profit);
     }
   }
   return value;
+}
+
+/**
+ * 화면의 건설 후보 미리보기: AI가 짓기 전에 보는 것과 같은 계산(valueMethod)을 1레벨 기준으로 돌려준다.
+ * wages 는 보는 회사의 임금이다. outputPriceChange 는 들어간 뒤 첫 산출물의 장기 가격 변화율이다
+ */
+export function estimateAfterEntry(
+  w: World, regionId: number, typeId: string, methodId: string, wages: Record<Skill, number>, levels = 1,
+): Valuation & { margin: number; outputPriceChange: number } {
+  const r = regionById(w, regionId);
+  const owner = w.companies.find((c) => c.wages === wages) ?? w.companies.find((c) => c.state && c.kingdomId === r.kingdomId)!;
+  const m = getMethod(typeId, methodId);
+  const o = marketOutlook(w);
+  const v = valueMethod(w, o, r, { ...owner, wages }, typeId, m, levels);
+  const g = GOOD_IDS.find((x) => (m.outputs[x] ?? 0) > 0);
+  const before = g ? o.price(g, 0, 0, true) : 0;
+  const after = g ? o.price(g, (m.outputs[g] ?? 0) * levels, 0, true) : 0;
+  const per = (x: number) => x / levels;
+  const cost = per(v.inputCost) + per(v.wageCost);
+  return {
+    revenue: per(v.revenue), inputCost: per(v.inputCost), wageCost: per(v.wageCost), profit: per(v.profit), utilization: v.utilization,
+    margin: cost > 0 ? per(v.profit) / cost : 0, outputPriceChange: before > 0 ? after / before - 1 : 0,
+  };
 }

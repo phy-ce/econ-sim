@@ -1,7 +1,10 @@
-import { BUILDING_BY_ID, BUILDING_SCALE, GOOD_IDS, GOODS, POINT_VALUE, SKILL_DEFS, TECH_BY_ID, getMethod, scaleBonus, POP_SCALE , regionPerk } from './data';
+import {
+  BUILDING_BY_ID, GOOD_IDS, GOODS, MAX_POINTS_PER_LEVEL_DAY, POINT_VALUE, SKILL_DEFS, SUBSISTENCE, TECH_BY_ID, getMethod, regionPerk, scaleBonus, TUNE, TICKS_PER_WEEK,
+} from './data';
+import { borderCost } from './kingdoms';
 import { clamp } from './rng';
-import { POP_CLASSES, SKILLS } from './types';
-import type { Building, BuildingTypeDef, Company, EventKind, GoodBag, GoodId, LandType, MethodDef, PopClass, Region, Skill, World } from './types';
+import { OWNERS, SKILLS, WEALTH_MIN } from './types';
+import type { Building, BuildingTypeDef, Company, DepositId, EventKind, GoodBag, GoodId, LandType, MethodDef, Pop, PopClass, Region, Skill, World } from './types';
 
 // ---------------------------------------------------------------- 지역·시장
 
@@ -13,89 +16,64 @@ export function regionById(w: World, id: number): Region {
 
 export const priceIn = (w: World, regionId: number, g: GoodId) => regionById(w, regionId).market[g].price;
 
-/** 왕국 전체 기준가: 지역 가격을 거래량으로 가중 평균 */
-export function colonyPrice(w: World, g: GoodId): number {
-  let v = 0, q = 0;
-  for (const r of w.regions) {
-    const mg = r.market[g];
-    const weight = mg.volumeEma + 1;
-    v += mg.price * weight;
-    q += weight;
-  }
-  return v / q;
-}
-
-/** 가장 가까운 개항장까지 몇 번 운송해야 하는가 */
-export function hopsToSpaceport(w: World, regionId: number): number {
-  const seen = new Set([regionId]);
-  let frontier = [regionId];
-  for (let d = 0; frontier.length; d++) {
-    const next: number[] = [];
-    for (const id of frontier) {
-      const r = regionById(w, id);
-      if (r.spaceport) return d;
-      for (const nb of r.neighbors) if (!seen.has(nb)) { seen.add(nb); next.push(nb); }
-    }
-    frontier = next;
-  }
-  return 99;
-}
-
-/** 추정용 판매율: 가격이 기본가 이상이면 부족한 시장이므로 다 팔린다고 본다 */
-/** 화물을 지역 밖으로 내보낼 때 필요한 운송 (tick.ts transportOrder 참고) */
+/** 운송 조합 운임 (화물가 대비, 운송 기본가일 때) */
 export const RAIL_RATE = 0.06;
+/** 운송이 모자라 짐꾼·우마차로 옮길 때 운임 (화물가 대비). 그 지역 노동자 몫이 된다 */
 export const CARTAGE_RATE = 0.3;
 
-/** 이 지역에서 화물을 내보낼 때 예상 운송비 (화물가 대비): 철도로 갈 수 있는 비율만큼 철도 운임, 나머지는 짐꾼 운임 */
+/** 이 지역에서 화물을 내보낼 때 예상 운송비 (화물가 대비) */
 export function shippingRate(w: World, regionId: number): number {
   const mt = regionById(w, regionId).market.transport;
   const railShare = mt.demandEma > 1e-6 ? clamp(mt.supplyEma / mt.demandEma, 0, 1) : mt.supplyEma > 0 ? 1 : 0;
   return railShare * RAIL_RATE * (mt.price / GOODS.transport.basePrice) + (1 - railShare) * CARTAGE_RATE;
 }
 
-/** 기본가 대비 이 배율 아래로 내려가면 개항장에 수출 수요가 생기고, FULL에서 남는 물건을 다 사 간다 (헐값) */
-export const EXPORT_START = 0.75;
-export const EXPORT_FULL = 0.5;
-
-/** 이 지역에서 만든 물건을 개항장까지 실어 가 수출할 때 손에 쥐는 값 (기본가 대비): 수출 하한가에서 구간마다 운송비를 뗀다 */
-export function exportNetback(w: World, regionId: number, extraValue = 0): number {
-  return EXPORT_FULL * Math.pow(1 - marginalShippingRate(w, regionId, extraValue), hopsToSpaceport(w, regionId));
+/** 화물을 from 에서 to 로 옮길 때 드는 비용률 = 운송비 + (국경을 넘으면) 관세 */
+export function freightRate(w: World, from: number, to: number, g: GoodId): number {
+  return shippingRate(w, from) + borderCost(w, from, to, g);
 }
 
-/**
- * 화물 extraValue 어치를 더 내보낼 때의 운송비 비율: 철도 운송에 남는 여유가 있는 만큼은 철도 운임,
- * 모자라는 만큼은 짐꾼 운임. extraValue 가 0이면 지금 운송비(shippingRate)와 같다.
- */
-export function marginalShippingRate(w: World, regionId: number, extraValue: number): number {
-  if (extraValue <= 0) return shippingRate(w, regionId);
-  const mt = regionById(w, regionId).market.transport;
-  const capacity = Math.max(mt.supplyEma, outputCapacity(w, regionId, 'transport'));
-  const spare = Math.max(0, capacity - mt.demandEma);
-  const need = (extraValue * RAIL_RATE) / GOODS.transport.basePrice;
-  const railFrac = Math.min(1, spare / need);
-  return railFrac * RAIL_RATE * (mt.price / GOODS.transport.basePrice) + (1 - railFrac) * CARTAGE_RATE;
-}
-
-export function expectedSellThrough(g: GoodId, mg: { price: number; sellThrough: number }): number {
-  return mg.price >= GOODS[g].basePrice ? 1 : Math.max(0.3, mg.sellThrough);
-}
-
+/** 화면용: 지역 인구 (pop 합산 요약) */
 export function regionPopulation(r: Region): number {
-  return POP_CLASSES.reduce((a, s) => a + r.households[s].population, 0);
+  let n = 0;
+  for (const h of Object.values(r.households)) n += h.population;
+  return n;
 }
 
-// ---------------------------------------------------------------- 땅
+export function regionAvgWealth(r: Region): number {
+  let pop = 0, sum = 0;
+  for (const h of Object.values(r.households)) { pop += h.population; sum += h.population * h.wealth; }
+  return pop > 0 ? sum / pop : 0;
+}
 
-/** 지역에서 그 땅을 쓰고 있는 레벨 수 (공사 중 포함) */
+// ---------------------------------------------------------------- 땅과 매장량
+
+const landOf = (typeId: string) => BUILDING_BY_ID[typeId].land;
+
+/** 지역에서 그 땅을 쓰고 있는 레벨 수 (공사 중 포함). 소작지는 빈 땅에 자동으로 생기므로 세지 않는다 */
 export function landUsed(w: World, regionId: number, land: LandType): number {
   let n = 0;
-  for (const b of w.buildings) if (b.regionId === regionId && BUILDING_BY_ID[b.typeId].land === land) n += b.level;
-  for (const k of w.constructions) if (k.regionId === regionId && BUILDING_BY_ID[k.typeId].land === land) n += k.levels ?? 1;
+  for (const b of w.buildings) if (b.regionId === regionId && landOf(b.typeId) === land && !BUILDING_BY_ID[b.typeId].auto) n += b.level;
+  for (const k of w.constructions) if (k.regionId === regionId && landOf(k.typeId) === land) n += k.levels ?? 1;
   return n;
 }
 
 export function landFree(w: World, regionId: number, land: LandType): number {
   return regionById(w, regionId).land[land] - landUsed(w, regionId, land);
+}
+
+/** 매장량 중 남은 레벨 수 */
+export function depositFree(w: World, regionId: number, dep: DepositId): number {
+  let used = 0;
+  for (const b of w.buildings) if (b.regionId === regionId && BUILDING_BY_ID[b.typeId].deposit === dep) used += b.level;
+  for (const k of w.constructions) if (k.regionId === regionId && BUILDING_BY_ID[k.typeId].deposit === dep) used += k.levels ?? 1;
+  return regionById(w, regionId).deposits[dep] - used;
+}
+
+/** 이 건물 종류를 몇 레벨 더 지을 수 있는가 (땅 또는 매장량) */
+export function roomFor(w: World, regionId: number, typeId: string): number {
+  const t = BUILDING_BY_ID[typeId];
+  return t.deposit ? Math.min(depositFree(w, regionId, t.deposit), landFree(w, regionId, t.land)) : landFree(w, regionId, t.land);
 }
 
 // ---------------------------------------------------------------- 기술
@@ -108,12 +86,10 @@ export function availableMethods(c: Company, typeId: string): MethodDef[] {
   return BUILDING_BY_ID[typeId].methods.filter((m) => knowsTech(c, m.tech));
 }
 
-/** 쓸 수 있는 생산 방식이 하나라도 있어야 지을 수 있다 */
 export function canBuildType(c: Company, t: BuildingTypeDef): boolean {
-  return t.methods.some((m) => knowsTech(c, m.tech));
+  return !t.auto && (!t.stateOnly || c.state) && t.methods.some((m) => knowsTech(c, m.tech));
 }
 
-/** 선행 기술을 모두 갖췄고 아직 모르는 기술 */
 export function researchableTechs(c: Company): string[] {
   return Object.values(TECH_BY_ID)
     .filter((t) => !c.research.known.includes(t.id) && t.requires.every((r) => c.research.known.includes(r)))
@@ -127,62 +103,68 @@ export function slots(b: Building, skill: Skill): number {
   return (getMethod(b.typeId, b.methodId).workers[skill] ?? 0) * b.level * b.utilization;
 }
 
-/** 소유주가 하나도 없을 때의 효율 배율. 소유주 충원율 f 에서 OWNERLESS + (1 - OWNERLESS) × f */
-export const OWNERLESS_EFFICIENCY = 0.7;
-
-/** 지금 앉아 있는 소유주 / 소유주 일자리 (0..1) */
-export function ownerFillNow(b: Building): number {
-  const jobs = ownerJobs(b).jobs;
-  return jobs > 0 ? clamp(b.owners / jobs, 0, 1) : 1;
+/** 정부 건물: 행정청, 건축사무소, 학교 (왕국 운영에 쓰는 건물) */
+export function isGovernment(typeId: string): boolean {
+  const t = BUILDING_BY_ID[typeId];
+  return !!t.stateOnly || t.methods.some((m) => m.construction || m.grant);
 }
 
-/** 소유주 배율: 소유주 충원율(서서히 따라간 값)이 낮으면 최대 30% 덜 만든다 */
-export function ownerFactor(fill: number): number {
-  return OWNERLESS_EFFICIENCY + (1 - OWNERLESS_EFFICIENCY) * clamp(fill, 0, 1);
+/** 왕실이 지어도 민간이 지분을 살 수 있는 건물: 행정청과 건축사무소를 뺀 모두 (학교 포함) */
+export function sellsShares(typeId: string): boolean {
+  const t = BUILDING_BY_ID[typeId];
+  return !t.auto && !t.stateOnly && !t.methods.some((m) => m.construction);
+}
+
+/** 소작지인가 (자동 건물 중 소유 건물이 아닌 것) */
+export function isSubsistence(typeId: string): boolean {
+  const t = BUILDING_BY_ID[typeId];
+  return !!t.auto && !t.ownership;
+}
+
+/** 소작지의 소작농 자리 (노동 인구) */
+export function peasantSlots(b: Building): number {
+  return isSubsistence(b.typeId) ? b.level * SUBSISTENCE.workersPerCell : 0;
+}
+
+/** 이 건물을 소유하는 지역의 소유 건물: 농지·산림·광산 건물은 저택, 공장 부지 건물은 금융가 */
+export function ownerBuildingOf(w: World, b: Building): Building | undefined {
+  const t = BUILDING_BY_ID[b.typeId];
+  if (t.auto || b.stateOwned) return undefined;
+  const typeId = t.land === 'plot' ? 'finance' : 'manor';
+  return w.buildings.find((x) => x.regionId === b.regionId && x.typeId === typeId);
+}
+
+/** 이 자리는 임금 대신 배당을 받는가: 민간 건물의 소유 직종 자리 (국영 건물은 국가가 주인이라 모두 임금) */
+export function paysDividend(stateOwned: boolean | undefined, s: Skill): boolean {
+  return !stateOwned && (OWNERS as Skill[]).includes(s);
+}
+
+export function emptyJobs(): Record<Skill, number> {
+  return { unskilled: 0, skilled: 0, expert: 0, gentry: 0, capitalist: 0, aristocrat: 0 };
 }
 
 export interface EfficiencyParts {
-  /** 숙련도 배율 0.4..1 */
   experience: number;
-  /** 소유주 배율 0.7..1 과 그 바탕인 소유주 충원율(지연 반영) */
-  owners: number;
-  ownerFill: number;
-  /** 규모의 경제 배율 1..1.5 */
   scale: number;
-  /** 지역 특산 배율 */
   perk: number;
-  /** 작업 인원 비율 0..1 (효율에는 곱하지 않고 생산량에 따로 곱해진다. 화면 표시용) */
   crew: number;
-  /** experience × owners × scale × perk */
   total: number;
 }
 
-/** 효율의 구성 요소 (화면의 막대 표시용) */
 export function efficiencyParts(b: Building): EfficiencyParts {
   const experience = 0.4 + 0.6 * b.exp;
-  const ownerFill = b.ownerFill ?? ownerFillNow(b);
-  const owners = ownerFactor(ownerFill);
   const scale = scaleBonus(b.level);
   const perk = 1 + regionPerk(b.regionId, b.typeId);
-  return { experience, owners, ownerFill, scale, perk, crew: b.crew ?? b.last.staffing, total: experience * owners * scale * perk };
+  return { experience, scale, perk, crew: b.crew ?? b.last.staffing, total: experience * scale * perk };
 }
 
-/** 효율: 숙련도(0.4 → 1.0), 소유주 충원(0.7 → 1.0), 규모의 경제, 지역 특산 */
 export function efficiency(b: Building): number {
   return efficiencyParts(b).total;
 }
 
-/** 이 지역에 levels 개를 더 지으면 기대할 수 있는 소유주 배율 (지역의 그 소유 계층 인구 / 자리 수) */
-export function expectedOwnerFactor(w: World, r: Region, typeId: string, levels = 1): number {
-  const cls = BUILDING_BY_ID[typeId].land === 'plot' ? 'capitalist' : 'aristocrat';
-  const jobs = regionOwnerJobs(w, r)[cls] + OWNERS_PER_LEVEL * levels;
-  return ownerFactor(jobs > 0 ? r.households[cls].population / jobs : 1);
-}
-
 /** 임금 기준 가중 평균 충원율 0..1 */
 export function staffing(b: Building): number {
-  let need = 0;
-  let have = 0;
+  let need = 0, have = 0;
   for (const s of SKILLS) {
     const n = slots(b, s);
     need += n * SKILL_DEFS[s].baseWage;
@@ -199,28 +181,64 @@ export interface MethodEstimate {
   margin: number;
 }
 
-function wageCostOf(method: MethodDef, wages: Record<Skill, number>): number {
+/** 레벨 1 하루 인건비. 민간 건물의 소유 직종 자리는 배당을 받으므로 빼고 센다 */
+export function wageCostOf(method: MethodDef, wages: Record<Skill, number>, stateOwned = true): number {
   let v = 0;
-  for (const s of SKILLS) v += (method.workers[s] ?? 0) * wages[s];
+  for (const s of SKILLS) if (!paysDividend(stateOwned, s)) v += (method.workers[s] ?? 0) * wages[s];
   return v;
 }
 
-/** 지역 시장의 현재 가격과 주어진 임금으로, 레벨 1 만원 가동 시 틱당 손익 추정 */
-export function estimateMethod(
-  w: World, regionId: number, typeId: string, methodId: string, wages: Record<Skill, number>,
-): MethodEstimate {
+/**
+ * 징수율: 행정청이 감당하는 인구 / 왕국 인구 = x 일 때 1 − e^(−x). 한도가 인구와 같으면 63%, 2배면 86%, 3배면 95%.
+ * 100%에는 닿지 않고, 행정청을 늘릴수록 더 걷히는 몫이 줄어든다
+ */
+export function collectionRatio(capacity: number, people: number): number {
+  if (people <= 0) return 1;
+  const x = Math.max(0, capacity) / people;
+  return TUNE.taxCurve === 'hyp' ? x / (1 + x) : 1 - Math.exp(-x);
+}
+
+/**
+ * 학교 보조금 충족률 (왕국별): 지난주 교육 예산 ÷ 그 왕국 학교들이 원하는 보조금 (인건비 × grant). 학교 손익 추정용
+ */
+export function schoolFunding(w: World, kingdomId: number): number {
+  const k = w.kingdoms.find((x) => x.id === kingdomId);
+  let want = 0;
+  for (const b of w.buildings) {
+    const m = getMethod(b.typeId, b.methodId);
+    if (b.active && m.grant && regionById(w, b.regionId).kingdomId === kingdomId) want += m.grant * b.last.wageCost * TICKS_PER_WEEK;
+  }
+  return want > 0 ? Math.min(1, (k?.lastBudget?.education ?? 0) / want) : 1;
+}
+
+/** 지역 시장의 현재 가격과 주어진 임금으로 본 레벨 1 만원 가동 하루 손익 */
+export function estimateMethod(w: World, regionId: number, typeId: string, methodId: string, wages: Record<Skill, number>, stateOwned = true): MethodEstimate {
   const method = getMethod(typeId, methodId);
   const mk = regionById(w, regionId).market;
-  let revenue = (method.grant ?? 0) * wageCostOf(method, wages) * w.grantRatio;
+  let revenue = (method.grant ?? 0) * wageCostOf(method, wages, stateOwned) * schoolFunding(w, regionById(w, regionId).kingdomId);
+  // 행정청: 감당하는 인구만큼의 세금. 한도가 인구보다 크면 남는 한도는 놀고 있다
+  if (method.taxCapacity) {
+    const k = w.kingdoms.find((x) => x.id === regionById(w, regionId).kingdomId);
+    // 이 1레벨이 없을 때보다 더 걷히는 세금 (징수율 곡선의 마지막 한 칸)
+    if (k) {
+      const cap = k.taxCapacity ?? 0, n = k.taxDue ?? 0;
+      revenue += (k.taxOwed ?? 0) * (collectionRatio(cap, n) - collectionRatio(cap - method.taxCapacity * TUNE.adminScale, n));
+    }
+  }
   let inputCost = 0;
   for (const g of GOOD_IDS) {
-    revenue += (method.outputs[g] ?? 0) * (1 + regionPerk(regionId, typeId)) * mk[g].price * expectedSellThrough(g, mk[g]);
+    revenue += (method.outputs[g] ?? 0) * (1 + regionPerk(regionId, typeId)) * mk[g].price * sellThrough(mk[g]);
     inputCost += (method.inputs[g] ?? 0) * mk[g].price;
   }
-  const wageCost = wageCostOf(method, wages);
+  const wageCost = wageCostOf(method, wages, stateOwned);
   const cost = inputCost + wageCost;
   const profit = revenue - cost;
   return { revenue, inputCost, wageCost, profit, margin: cost > 0 ? profit / cost : 0 };
+}
+
+/** 내놓은 물건 중 팔리는 비율의 추정 (평균 수요 / 평균 공급) */
+export function sellThrough(mg: { demandEma: number; supplyEma: number }): number {
+  return mg.supplyEma > 1e-6 ? clamp(mg.demandEma / mg.supplyEma, 0, 1) : 1;
 }
 
 /** 지역의 가동 중인 건물이 사람을 다 뽑고 돌 때 하루에 만드는 양 */
@@ -234,116 +252,71 @@ export function outputCapacity(w: World, regionId: number, g: GoodId): number {
   return q;
 }
 
-/**
- * 진입 효과를 반영한 추정: 내 산출량만큼 공급이 늘면 산출물 가격이, 내 투입량만큼 수요가 늘면 투입재 가격이
- * 가격 공식((수요/공급)^0.8)을 따라 움직인다고 보고 다시 계산한다. 지역 시장은 운송으로 이어져 있으므로
- * 가격 영향은 왕국 전체 유통량으로 계산하고, 지역에 없는 투입재는 운송비를 붙여 들여온다고 본다.
- */
-export function estimateAfterEntry(
-  w: World, regionId: number, typeId: string, methodId: string, wages: Record<Skill, number>, levels = 1,
-  /** 이미 공사 중이라 곧 늘어날 지역 공급 ("지역id:상품" → 하루 산출) */
-  pending: Record<string, number> = {},
-  /** 곧 다른 건물이 공급할 투입재 (병목 사슬): 기본가에 운송비를 붙여 산다고 본다 */
-  supplied: ReadonlySet<GoodId> | ReadonlyMap<GoodId, unknown> = new Set(),
-): MethodEstimate & { outputPriceChange: number } {
-  const method = getMethod(typeId, methodId);
-  const r = regionById(w, regionId);
-  const mk = r.market;
-  // 이웃 시장은 운송비만큼 덜 닿는다: 철도가 충분하면 대부분 닿고, 짐꾼으로 옮겨야 하면 거의 닿지 않는다
-  const reach = Math.max(0, 1 - shippingRate(w, regionId) / CARTAGE_RATE);
-  let revenue = (method.grant ?? 0) * wageCostOf(method, wages) * w.grantRatio;
-  let inputCost = 0, outBefore = 0, outAfter = 0;
-  for (const g of GOOD_IDS) {
-    const mg = mk[g];
-    const out = (method.outputs[g] ?? 0) * levels * (1 + regionPerk(regionId, typeId));
-    const inp = (method.inputs[g] ?? 0) * levels;
-    if (out <= 0 && inp <= 0) continue;
-    // 이 건물이 실제로 닿는 유통량: 지역 시장 + 운송으로 닿는 만큼의 이웃 시장 (서비스 상품은 지역 안에서만)
-    const k = GOODS[g].perishable ? 0 : reach;
-    // 공급은 평균 유통량과 지금 있는 건물이 다 돌 때의 생산 능력 중 큰 쪽 (갓 지은 건물은 아직 사람을 다 못 뽑았다)
-    const supplyOf = (id: number) => Math.max(regionById(w, id).market[g].supplyEma, outputCapacity(w, id, g)) + (pending[`${id}:${g}`] ?? 0);
-    let supply = supplyOf(regionId), demand = mg.demandEma;
-    for (const nb of r.neighbors) {
-      const m2 = regionById(w, nb).market[g];
-      supply += supplyOf(nb) * k;
-      demand += m2.demandEma * k;
-    }
-    if (out > 0) {
-      // 들어간 뒤 가격: 가격 공식(수요/공급)^0.8 로 본 값. 지금 가격이 더 낮으면(재고 과잉) 지금 가격을 쓴다
-      const base = GOODS[g].basePrice;
-      const ratioPrice = base * clamp(Math.pow((demand + 1) / (supply + out + 1), 0.8), 0.25, 4);
-      const p = Math.min(mg.price, ratioPrice);
-      // 팔리는 비율: 수요보다 공급이 많으면 위탁분이 비례로 남는다. 남는 것은 개항장 수출 헐값(운송비 차감)에 넘긴다
-      const sell = Math.min(1, (demand + 1) / (supply + out + 1));
-      // 남는 물건을 실어 낼 운송: 내 화물만큼 철도 여유가 줄어드는 것까지 본다
-      const surplus = out * (1 - sell);
-      const netback = GOODS[g].perishable ? 0 : base * exportNetback(w, regionId, surplus * base * EXPORT_FULL);
-      const unit = Math.max(p, netback);
-      revenue += (method.outputs[g] ?? 0) * (1 + regionPerk(regionId, typeId)) * (unit * sell + netback * (1 - sell));
-      outBefore += out * mg.price;
-      outAfter += out * unit;
-    }
-    if (inp > 0 && supplied.has(g)) {
-      inputCost += (method.inputs[g] ?? 0) * GOODS[g].basePrice * (1 + shippingRate(w, regionId));
-    } else if (inp > 0) {
-      // 지역에 모자라는 투입재는 이웃에서 운송비를 내고 들여온다
-      const localShort = mg.supplyEma + mg.inventory * 0.05 < mg.demandEma + inp;
-      const unit = localShort ? Math.max(mg.price, colonyPrice(w, g) * (1 + shippingRate(w, regionId))) : mg.price;
-      // 내가 사는 만큼 수요가 늘어 값이 오른다 (가격 상한 안에서)
-      const ratioBefore = clamp(Math.pow((demand + 1) / (supply + 1), 0.8), 0.25, 4);
-      const ratioAfter = clamp(Math.pow((demand + inp + 1) / (supply + 1), 0.8), 0.25, 4);
-      inputCost += (method.inputs[g] ?? 0) * unit * (ratioAfter / ratioBefore);
-    }
-  }
-  const wageCost = wageCostOf(method, wages);
-  const cost = inputCost + wageCost;
-  const profit = revenue - cost;
-  return {
-    revenue, inputCost, wageCost, profit, margin: cost > 0 ? profit / cost : 0,
-    outputPriceChange: outBefore > 0 ? outAfter / outBefore - 1 : 0,
-  };
+/** 가격 공식 (빅토리아3): 기본가 × (1 + 0.75 × clamp((구매 − 판매) / min(구매, 판매), ±1)) */
+export function priceFormula(g: GoodId, demand: number, supply: number): number {
+  const base = GOODS[g].basePrice;
+  const lo = Math.min(demand, supply);
+  const x = lo > 1e-6 ? clamp((demand - supply) / lo, -1, 1) : demand > supply ? 1 : supply > demand ? -1 : 0;
+  return base * (1 + 0.75 * x);
 }
 
 export interface ConstructionEstimate {
-  /** 회사 건축사무소들이 하루에 만드는 포인트 (현재 숙련도·충원 기준) */
   pointsPerDay: number;
-  /** 하루 운영비 (임금 + 투입재) */
   costPerDay: number;
-  /** 사무소가 전부 이 공사에만 매달릴 때의 공기와 비용 */
   days: number;
   cost: number;
   required: number;
 }
 
 /** 회사의 건축사무소로 이 건물 1레벨을 지을 때 걸리는 날과 비용 추정 */
-export function constructionEstimate(w: World, c: Company, typeId: string): ConstructionEstimate {
-  const required = BUILDING_BY_ID[typeId].buildPoints;
+/** 이 회사의 공사를 맡는 건축사무소 주인: 왕실은 자기, 민간은 그 왕국 왕실 (빅토리아3: 국가 건설 부문을 나눠 쓴다) */
+export function builderOf(w: World, c: Company): Company {
+  if (c.state) return c;
+  const k = w.kingdoms.find((x) => x.id === c.kingdomId);
+  return (k && companyById(w, k.governmentId)) ?? c;
+}
+
+/** withEstimateCache 안에서는 사무소 합계를 사무소마다 한 번만 센다 (그동안 건물이 안 바뀌는 구간에서만 쓴다) */
+let officeCache: Map<number, { pointsPerDay: number; costPerDay: number }> | null = null;
+export function withEstimateCache<T>(fn: () => T): T {
+  officeCache = new Map();
+  try { return fn(); } finally { officeCache = null; }
+}
+
+function officeTotals(w: World, builder: Company) {
+  const hit = officeCache?.get(builder.id);
+  if (hit) return hit;
   let pointsPerDay = 0, costPerDay = 0;
   for (const b of w.buildings) {
-    if (b.companyId !== c.id || !b.active) continue;
+    if (b.companyId !== builder.id || !b.active) continue;
     const m = getMethod(b.typeId, b.methodId);
     if (!m.construction) continue;
-    // 대기 중(인부 해산)인 사무소는 공사가 들어오면 다시 채워지므로 만원 기준으로 본다
     const st = b.idle ? 1 : Math.max(0.3, b.last.staffing);
     pointsPerDay += m.construction * b.level * b.utilization * st * efficiency(b);
-    const e = estimateMethod(w, b.regionId, b.typeId, b.methodId, c.wages);
+    const e = estimateMethod(w, b.regionId, b.typeId, b.methodId, builder.wages);
     costPerDay += (e.wageCost + e.inputCost) * b.level * b.utilization * st;
   }
-  const days = pointsPerDay > 0 ? required / pointsPerDay : Infinity;
-  return { pointsPerDay, costPerDay, days, cost: pointsPerDay > 0 ? days * costPerDay : Infinity, required };
+  const t = { pointsPerDay, costPerDay };
+  officeCache?.set(builder.id, t);
+  return t;
 }
 
-/** 회사가 건축사무소를 갖고 있는가 */
+export function constructionEstimate(w: World, c: Company, typeId: string): ConstructionEstimate {
+  const required = BUILDING_BY_ID[typeId].buildPoints;
+  const { pointsPerDay, costPerDay } = officeTotals(w, builderOf(w, c));
+  // 한 공사는 레벨당 하루 MAX_POINTS_PER_LEVEL_DAY 까지만 받는다. 비용은 쓴 포인트만큼이다
+  const days = pointsPerDay > 0 ? required / Math.min(pointsPerDay, MAX_POINTS_PER_LEVEL_DAY) : Infinity;
+  return { pointsPerDay, costPerDay, days, cost: pointsPerDay > 0 ? (required * costPerDay) / pointsPerDay : Infinity, required };
+}
+
 export function hasBuilder(w: World, c: Company): boolean {
-  return w.buildings.some((b) => b.companyId === c.id && !!getMethod(b.typeId, b.methodId).construction);
+  const builder = builderOf(w, c);
+  return w.buildings.some((b) => b.companyId === builder.id && !!getMethod(b.typeId, b.methodId).construction);
 }
 
-// ---------------------------------------------------------------- 임금
+// ---------------------------------------------------------------- 임금·고용
 
-/**
- * 시장임금: 전체 가동 건물의 고용 가중 평균 임금. 자기 회사 건물은 뺀다(자기 임금을 자기가 따라가지 않게).
- * 고용이 없으면 기본 임금.
- */
+/** 시장임금: 고용 가중 평균 임금 (자기 회사 제외). 고용이 없으면 기본 임금 */
 export function marketWage(w: World, skill: Skill, excludeCompanyId?: number): number {
   let paid = 0, n = 0;
   for (const b of w.buildings) {
@@ -356,42 +329,42 @@ export function marketWage(w: World, skill: Skill, excludeCompanyId?: number): n
   return n > 0 ? paid / n : SKILL_DEFS[skill].baseWage;
 }
 
-// ---------------------------------------------------------------- 인구·고용
-
-export function employedIn(w: World, regionId: number, skill: Skill): number {
-  let n = 0;
-  for (const b of w.buildings) if (b.regionId === regionId) n += b.employed[skill];
-  return n;
-}
-
-export function regionUnemployment(w: World, regionId: number, skill: Skill): number {
-  const pop = regionById(w, regionId).households[skill].population;
-  return pop > 0 ? Math.max(0, 1 - employedIn(w, regionId, skill) / pop) : 0;
-}
-
-export function colonyPopulation(w: World, skill: PopClass): number {
-  return w.regions.reduce((a, r) => a + r.households[skill].population, 0);
-}
-
-export function employedTotal(w: World, skill: Skill): number {
-  let n = 0;
-  for (const b of w.buildings) n += b.employed[skill];
-  return n;
-}
-
-export function unemploymentRate(w: World, skill: Skill): number {
-  const pop = colonyPopulation(w, skill);
-  return pop > 0 ? Math.max(0, 1 - employedTotal(w, skill) / pop) : 0;
-}
-
-/** 왕국 전체 계층 생활수준 (인구 가중 평균) */
-export function colonySol(w: World, skill: PopClass): number {
-  let v = 0, n = 0;
-  for (const r of w.regions) {
-    const h = r.households[skill];
-    v += h.sol * h.population;
-    n += h.population;
+/** 지역의 이 직종 실업률 (노동 인구 기준) */
+export function regionUnemployment(w: World, regionId: number, prof: PopClass): number {
+  let all = 0, idle = 0;
+  for (const p of w.pops) {
+    if (p.regionId !== regionId || p.prof !== prof) continue;
+    all += p.size;
+    if (p.work === 0) idle += p.size;
   }
+  return all > 0 ? idle / all : 0;
+}
+
+export function unemploymentRate(w: World, prof: PopClass): number {
+  let all = 0, idle = 0;
+  for (const p of w.pops) {
+    if (p.prof !== prof) continue;
+    all += p.size;
+    if (p.work === 0) idle += p.size;
+  }
+  return all > 0 ? idle / all : 0;
+}
+
+export function colonyPopulation(w: World, prof: PopClass): number {
+  let n = 0;
+  for (const p of w.pops) if (p.prof === prof) n += p.size;
+  return n;
+}
+
+/** 대륙 전체 직종 생활수준 (인구 가중 평균) */
+/** 생활수준 (빅토리아3): 부를 바탕으로, 필요를 못 채운 만큼 깎인다 */
+export function popSol(p: Pop): number {
+  return Math.max(WEALTH_MIN, p.wealth * p.fulfillment);
+}
+
+export function colonySol(w: World, prof: PopClass): number {
+  let v = 0, n = 0;
+  for (const p of w.pops) if (p.prof === prof) { v += popSol(p) * p.size; n += p.size; }
   return n > 0 ? v / n : 0;
 }
 
@@ -400,33 +373,50 @@ export function colonySol(w: World, skill: PopClass): number {
 export function totalMoney(w: World): number {
   let t = w.fund + w.bank.cash + w.traders.cash;
   for (const c of w.companies) t += c.cash;
-  for (const r of w.regions) for (const s of POP_CLASSES) t += r.households[s].savings;
+  for (const p of w.pops) t += p.savings;
+  for (const k of w.kingdoms) t += k.investmentPool;
   return t;
 }
 
-/** 왕국 내 화폐 + 해외 계정 = 항상 일정해야 한다 (검증용) */
-export function moneyIdentity(w: World): number {
-  return totalMoney(w) + w.offworld.balance;
+/** 국가가 지금까지 새로 만든 돈 (주조 + 국채 발행 − 상환 − 이자 − 상한 소멸) */
+export function netMinted(w: World): number {
+  const m = w.mint;
+  return m.minted + m.issued - m.retired - m.interest;
 }
 
-/** 건물 장부가: 건설 포인트 × 포인트 가치 × 레벨 */
+/** 대륙 안의 화폐 + 해외 계정 − 국가가 만든 돈 = 항상 일정해야 한다 (검증용) */
+export function moneyIdentity(w: World): number {
+  return totalMoney(w) - netMinted(w);
+}
+
+/** 왕국의 연간 총생산: 그 왕국 pop 의 소득 합 × 1년 */
+export function kingdomGdp(w: World, kingdomId: number): number {
+  let daily = 0;
+  for (const p of w.pops) if (regionById(w, p.regionId).kingdomId === kingdomId) daily += p.incomeEma;
+  return daily * 360;
+}
+
 export function bookValue(b: Building): number {
   return BUILDING_BY_ID[b.typeId].buildPoints * POINT_VALUE * b.level;
 }
 
-/** 신용 한도: 보유 건물 장부가의 절반 + 기본 한도 (ƒ3,000 × 인구 배율) */
+/** 신용 한도: 보유 건물 장부가의 절반 + 기본 한도. 왕국 정부는 국채 한도(연간 총생산 비례) */
+export const BASE_CREDIT = 300_000;
+/** 국채 한도 = 연간 총생산 × 이 비율 */
+export const STATE_CREDIT_GDP = 0.25;
 export function creditLimit(w: World, c: Company): number {
+  if (c.state) return BASE_CREDIT + kingdomGdp(w, c.kingdomId) * STATE_CREDIT_GDP;
   let book = 0;
   for (const b of w.buildings) if (b.companyId === c.id) book += bookValue(b);
-  return 3000 * POP_SCALE + book * 0.5;
+  return BASE_CREDIT + book * 0.5;
 }
 
-/** 부족한 현금을 은행에서 자동으로 빌린다. 실제로 빌린 금액을 돌려준다 */
 export function borrow(w: World, c: Company, amount: number): number {
   const room = Math.max(0, creditLimit(w, c) - c.debt);
-  const take = Math.max(0, Math.min(amount, room, w.bank.cash));
+  // 왕국 정부는 은행이 아니라 국채를 찍어 빌린다 (새 돈)
+  const take = Math.max(0, Math.min(amount, room, c.state ? Infinity : w.bank.cash));
   if (take <= 0) return 0;
-  w.bank.cash -= take;
+  if (c.state) w.mint.issued += take; else w.bank.cash -= take;
   c.cash += take;
   c.debt += take;
   return take;
@@ -436,37 +426,8 @@ export function repay(w: World, c: Company, amount: number): number {
   const pay = Math.max(0, Math.min(amount, c.debt, c.cash));
   c.cash -= pay;
   c.debt -= pay;
-  w.bank.cash += pay;
+  if (c.state) w.mint.retired += pay; else w.bank.cash += pay;
   return pay;
-}
-
-/** 한 지역의 특정 계층에 돈을 준다. 그 계층이 지역에 없으면 왕국 전체 같은 계층에 나눈다 */
-export function payClassIn(w: World, r: Region, cls: PopClass, amount: number) {
-  if (amount <= 0) return;
-  const h = r.households[cls];
-  if (h.population >= 1) { h.savings += amount; h.lastIncome += amount; return; }
-  payHouseholds(w, amount, { [cls]: 1 });
-}
-
-/** 가계 전체에 (인구 × 계층 가중치) 비율대로 돈을 나눠 준다. 소득으로 잡힌다 */
-export function payHouseholds(
-  w: World, amount: number,
-  weight: Partial<Record<PopClass, number>> = { unskilled: 1, skilled: 1, expert: 1, capitalist: 1, aristocrat: 1 },
-) {
-  if (amount <= 0) return;
-  let total = 0;
-  for (const r of w.regions) for (const s of POP_CLASSES) total += r.households[s].population * (weight[s] ?? 0);
-  if (total <= 0) return;
-  for (const r of w.regions) {
-    for (const s of POP_CLASSES) {
-      const k = weight[s] ?? 0;
-      if (!k) continue;
-      const h = r.households[s];
-      const amt = (amount * h.population * k) / total;
-      h.savings += amt;
-      h.lastIncome += amt;
-    }
-  }
 }
 
 // ---------------------------------------------------------------- 기타
@@ -483,46 +444,10 @@ export function goodName(g: GoodId): string {
   return GOODS[g].name;
 }
 
-/** 360틱 = 1년, 30틱 = 1개월. hour(0..23)를 주면 시각까지 표시한다 */
-export function formatDate(tick: number, hour?: number): string {
-  const y = Math.floor(tick / 360) + 1;
-  const mo = Math.floor((tick % 360) / 30) + 1;
-  const d = (tick % 30) + 1;
-  const base = `왕국력 ${y}년 ${mo}월 ${d}일`;
-  return hour === undefined ? base : `${base} ${String(Math.floor(hour)).padStart(2, '0')}시`;
-}
-
-/** 기본 소유 지분: 땅에 세운 건물은 지주 귀족, 공장 부지는 자본가. 경영진(기술자·전문가)이 약간 */
-/** 건물 1개당 소유주 일자리 수 */
-export const OWNERS_PER_LEVEL = 1 * BUILDING_SCALE;
-/** 소작농 이만큼마다 지주 귀족 일자리 하나 (빈 땅을 빌려 주는 지주) */
-export const TENANTS_PER_LANDLORD = 200;
-
-/**
- * 소유주 일자리 (빅토리아3 방식): 공장부지 건물은 자본가, 농지·산림·광맥 건물은 지주 귀족이 소유주로 앉는다.
- * 건물의 배당은 그 지역의 소유주 계층에게 간다. 일자리가 없는 소유 계층은 배당을 못 받고 점차 기술자로 내려간다.
- */
-export function ownerJobs(b: Building): { cls: 'capitalist' | 'aristocrat'; jobs: number } {
-  const land = BUILDING_BY_ID[b.typeId].land;
-  return { cls: land === 'plot' ? 'capitalist' : 'aristocrat', jobs: OWNERS_PER_LEVEL * b.level };
-}
-
-/** 지역의 소유 계층별 일자리 수 (건물 + 소작지 지주) */
-export function regionOwnerJobs(w: World, r: Region): Record<'capitalist' | 'aristocrat', number> {
-  const jobs = { capitalist: 0, aristocrat: r.subsistenceWorkers / TENANTS_PER_LANDLORD };
-  for (const b of w.buildings) {
-    if (b.regionId !== r.id) continue;
-    const o = ownerJobs(b);
-    jobs[o.cls] += o.jobs;
-  }
-  return jobs;
-}
-
-export function newBuilding(id: number, typeId: string, regionId: number, companyId: number, methodId: string, level: number): Building {
+export function newBuilding(id: number, typeId: string, regionId: number, companyId: number, methodId: string, level: number, stateOwned = false): Building {
   return {
-    id, typeId, regionId, companyId, level, methodId, active: true, utilization: 1, lastSwitchTick: -1e9, exp: 0, crew: 0, idle: false,
-    owners: 0,
-    employed: { unskilled: 0, skilled: 0, expert: 0 }, stock: {}, unpaid: false,
+    id, typeId, regionId, companyId, level, methodId, stateOwned, active: true, utilization: 1, lastSwitchTick: -1e9, exp: 0, crew: 0, idle: false,
+    employed: emptyJobs(), stock: {}, outStock: {}, unpaid: false,
     last: emptyStats(), profitEma: 0, lossWeeks: 0, pausedWeeks: 0,
   };
 }
@@ -533,7 +458,6 @@ export function emptyStats() {
 
 const EVENT_CAP = 300;
 
-/** opts.en: 같은 소식의 영어 문장 (화면 언어 선택용) */
 export function logEvent(
   w: World, companyId: number | null, text: string,
   opts: { kind?: EventKind; regionId?: number; buildingId?: number; en?: string } = {},
@@ -542,7 +466,6 @@ export function logEvent(
   if (w.events.length > EVENT_CAP) w.events.splice(0, w.events.length - EVENT_CAP);
 }
 
-/** 같은 키의 알림은 cooldown 틱 안에 다시 띄우지 않는다. 띄웠으면 true */
 export function alertOnce(
   w: World, key: string, cooldown: number, companyId: number | null, text: string,
   opts: { kind?: EventKind; regionId?: number; buildingId?: number; en?: string } = {},
@@ -552,11 +475,4 @@ export function alertOnce(
   w.alertState[key] = w.tick;
   logEvent(w, companyId, text, opts);
   return true;
-}
-
-/** 지역 1인당 평균 부 단계 (전 계층 인구 가중 평균) */
-export function regionAvgWealth(r: Region): number {
-  let pop = 0, sum = 0;
-  for (const h of Object.values(r.households)) { pop += h.population; sum += h.population * h.wealth; }
-  return pop > 0 ? sum / pop : 0;
 }

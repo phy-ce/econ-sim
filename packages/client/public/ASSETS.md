@@ -1,21 +1,13 @@
-# 그림 자료 출처와 라이선스
+# Pixel sprite atlas v2
 
-## 도트 그림 (모두 이 프로젝트의 원작)
+Generated with the built-in ImageGen tool. Accepted art is preserved; no alpha trimming, recoloring, or post-generation pixel resizing.
 
-- **16×16 그림** (`src/spriteData.ts`): 상품 12종, 건물 12종, 계층 6종, 문장, 지도 표식(배·나무·광산·밀),
-  소식 아이콘(굶주림·이주·건설·가격·압류·연구), 해·동전·종.
-  디자인 목업(`.tmp/classdesign/project/*.dc.html`)에서 그린 그림과, 같은 화풍으로 새로 그린 건물 8종
-  (벌목장·광산·연료 공장·방직 공장·제련소·공방·정밀 공방·학교)이다. 팔레트 글자별 경로로 바꿔 SVG 로 그린다.
-- **64×64 그림** (`src/sprites64.json`): 계층 6종과 건물 12종. 생성 스크립트 `.tmp/px64/gen.py`
-  (도형 → 왼쪽 위 빛 기준 3단 음영·디더 → 먹 테두리 → 줄 단위 SVG 경로)로 만든다. JSON 은 손으로 고치지 않는다.
-- **계층 도넛 전환 버튼의 10×10 기호**: 직접 그림.
+All final sheets have 4 columns × 3 rows of equal 480 × 480 cells (1920 × 1440 PNG, RGBA). The renderer uses the complete cell including transparent padding. Never crop inward or use content bounding boxes as the display viewBox.
 
-예전에 잠시 쓰던 Kenney "1-Bit Pack"(CC0) 타일은 더 이상 쓰지 않는다.
+Each ordinary sheet retains its original 362 × 362 source cells with 59 transparent pixels added on every side. The ownership sheet uses a transparent 1536 × 1152 source canvas with 384 × 384 cells and 48 transparent pixels on every side. These mechanical operations preserve all original source pixels. Unused ownership cells stay transparent.
 
-## 인터페이스 아이콘
+Files in `assets/`: `industry-v2.png`, `society-v2.png`, `goods-v2.png`, `symbols-v2.png`, `regions-v2.png`, `ownership-v2.png`. `sprite-manifest-v2.json` records cell order and source filenames. `src/spriteAtlas.ts` disambiguates furniture goods and buildings. Regional art is dedicated, not aliased to local buildings.
 
-- **lucide-react** (ISC 라이선스, https://lucide.dev): 일시정지·하루 진행·메뉴·달(밤 테마)·정렬 화살표·설명(i)·닫기 같은 작은 조작 아이콘.
+Prompt specification: transparent industrial-era pixel art; predefined 12 equal cells; generous empty padding on four sides; all artwork strictly inside its cell; strong silhouettes, thick outlines, contrasting dominant colors; no labels or visible grid. Region landmarks use blue/ivory sail, golden fields, ochre windmill plateau, turquoise marsh, emerald forest, charcoal/red mine and silver/violet gorge. Buildings use distinct roof colors and recognizable functional objects. Final ownership prompt is recorded verbatim in `docs/sprite-generation-prompts.json`; earlier exact prompt strings were lost when the tool runtime reset, so this document records their specification instead.
 
-## 글꼴 (Google Fonts, SIL Open Font License 1.1)
-
-- Gowun Batang (제목), Noto Sans KR (본문), Silkscreen (숫자).
+UI renders complete cells larger for legibility: market goods 48 px, building cards 72 px, regional headings 88 px, inspector buildings 100 px. Browser downsampling is smooth; sprites are never cropped to fake a larger size. Text and neighboring content reserve the full display box.

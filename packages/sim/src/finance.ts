@@ -1,0 +1,462 @@
+import { BUILDING_BY_ID, CLASS_DEFS, TECH_BY_ID, TICKS_PER_WEEK, TUNE, getMethod } from './data';
+import { collectionRatio, companyById, regionById, constructionEstimate, efficiency, estimateMethod, kingdomGdp, logEvent, ownerBuildingOf, paysDividend, repay } from './economy';
+import { techNameEn } from './i18n';
+import { addToPool, kingdomById, kingdomOf } from './kingdoms';
+import { payPops } from './pops';
+import { round2 } from './rng';
+import { BUDGET_LEVELS, SKILLS } from './types';
+import type { BudgetItem, Building, Company, GoodId, Kingdom, Pop, PopClass, SalvageLot, TaxLaw, World } from './types';
+
+// ---------------------------------------------------------------- 은행
+
+/** 일 이자율 (연 약 9%) */
+export const DAILY_INTEREST = 0.00025;
+
+export function chargeInterest(w: World) {
+  for (const c of w.companies) {
+    if (c.debt <= 0) continue;
+    const interest = c.debt * DAILY_INTEREST;
+    const paid = Math.min(interest, Math.max(0, c.cash));
+    c.cash -= paid;
+    // 국채 이자는 사라지는 돈이다
+    if (c.state) w.mint.interest += paid; else w.bank.cash += paid;
+    c.debt += interest - paid;
+    c.weekProfit -= interest;
+    c.ledger.interest += interest;
+  }
+}
+
+// ---------------------------------------------------------------- 연구
+
+/** 기술은 왕국 단위다: 민간은 따로 연구하지 않고 그 왕국 왕실이 연 기술을 쓴다 */
+function shareTechs(w: World) {
+  for (const k of w.kingdoms) {
+    const gov = companyById(w, k.governmentId);
+    if (!gov) continue;
+    for (const id of k.privateIds) {
+      const c = companyById(w, id);
+      if (!c) continue;
+      c.research.known = [...gov.research.known];
+      c.research.current = null;
+      c.research.budget = 0;
+    }
+  }
+}
+
+/** 연구비는 그 왕국 연구원(전문가·기술자) pop 의 소득이 된다 */
+const RESEARCHER_WEIGHT: Partial<Record<PopClass, number>> = { skilled: 0.3, expert: 1 };
+
+export function doResearch(w: World) {
+  shareTechs(w);
+}
+
+/** 연구비를 쓴다: 그 왕국 연구원 pop 의 소득이 되고 진행 중인 기술에 쌓인다. 쓴 돈을 돌려준다 */
+function fundResearch(w: World, c: Company, amount: number): number {
+  const r = c.research;
+  const tech = r.current ? TECH_BY_ID[r.current] : undefined;
+  if (!tech || r.known.includes(tech.id)) { r.current = null; return 0; }
+  const spend = Math.min(amount, Math.max(0, c.cash), tech.cost - (r.progress[tech.id] ?? 0));
+  if (spend <= 0) return 0;
+  c.cash -= spend;
+  c.weekProfit -= spend;
+  c.ledger.research += spend;
+  const mine = w.pops.filter((p) => kingdomOf(w, p.regionId) === c.kingdomId && RESEARCHER_WEIGHT[p.prof]);
+  if (!payPops(w, mine, spend, (p) => p.size * (RESEARCHER_WEIGHT[p.prof] ?? 0))) {
+    const all = w.pops.filter((p) => RESEARCHER_WEIGHT[p.prof]);
+    if (!payPops(w, all, spend, (p) => p.size * (RESEARCHER_WEIGHT[p.prof] ?? 0))) w.fund += spend;
+  }
+  r.progress[tech.id] = (r.progress[tech.id] ?? 0) + spend;
+  if (r.progress[tech.id] >= tech.cost - 1e-6) {
+    r.known.push(tech.id);
+    r.current = null;
+    logEvent(w, c.id, `기술 연구 완료: ${tech.name}. 보유 건물의 생산 방식에서 새 방식을 고를 수 있습니다.`,
+      { kind: 'info', en: `Research complete: ${techNameEn(tech.id)}. New production methods can now be chosen for your buildings.` });
+  }
+  return spend;
+}
+
+/**
+ * 교육 예산: 민간 학교 보조금(인건비 × grant)과 왕실 학교를 다 돌릴 때의 인건비를 합친 것 중 예산이 감당하는 비율 f 를 구한다.
+ * 민간 학교에는 보조금 × f 를 주고, 왕실 학교는 가동률을 f 로 맞춘다 (10%~100%). 쓴 돈을 돌려준다
+ */
+function fundSchools(w: World, kid: number, gov: Company, amount: number): number {
+  const all = w.buildings.filter((b) => b.active && getMethod(b.typeId, b.methodId).grant && kingdomOf(w, b.regionId) === kid);
+  const own = all.filter((b) => b.companyId === gov.id), schools = all.filter((b) => b.companyId !== gov.id);
+  const want = schools.reduce((a, b) => a + getMethod(b.typeId, b.methodId).grant! * b.last.wageCost * TICKS_PER_WEEK, 0);
+  const run = own.reduce((a, b) => a + estimateMethod(w, b.regionId, b.typeId, b.methodId, gov.wages, true).wageCost * b.level * TICKS_PER_WEEK, 0);
+  const avail = Math.min(amount, Math.max(0, gov.cash));
+  const f = want + run > 0 ? Math.min(1, avail / (want + run)) : 0;
+  const u = Math.round(Math.max(0.1, f) * 100) / 100;
+  for (const b of own) b.utilization = u;
+  const pay = round2(want * f);
+  if (want <= 0 || pay <= 0) return round2(run * u);
+  for (const b of schools) {
+    const amt = (pay * getMethod(b.typeId, b.methodId).grant! * b.last.wageCost * TICKS_PER_WEEK) / want;
+    const owner = companyById(w, b.companyId);
+    if (!owner) continue;
+    gov.cash -= amt;
+    owner.cash += amt;
+    b.profitEma += amt * 0.05;
+    if (owner !== gov) owner.weekProfit += amt;
+    gov.weekProfit -= amt;
+  }
+  return round2(pay + run * u);
+}
+
+/** 실업 수당: 실업 pop 에게 인원 비례로 준다. 쓴 돈을 돌려준다 */
+function fundWelfare(w: World, kid: number, gov: Company, amount: number): number {
+  const jobless = w.pops.filter((p) => p.work === 0 && p.size > 0 && kingdomOf(w, p.regionId) === kid);
+  const pay = Math.min(amount, Math.max(0, gov.cash));
+  if (pay <= 0 || !payPops(w, jobless, pay)) return 0;
+  gov.cash -= pay;
+  gov.weekProfit -= pay;
+  gov.ledger.welfare += pay;
+  return pay;
+}
+
+/** 예산 집행 (매주): 지난주 세입을 왕국이 정한 비율로 연구·교육·복지에 한 번에 쓴다. 나머지는 국고에 남는다 */
+/** 하루 경제 규모: 산출이 있는 건물의 (매출 − 원료) + pop 이 받은 현물의 지역 시장가 */
+export function dailyOutput(w: World, kingdomId: number): number {
+  let v = 0;
+  for (const b of w.buildings) {
+    if (kingdomOf(w, b.regionId) !== kingdomId || !Object.keys(getMethod(b.typeId, b.methodId).outputs).length) continue;
+    v += b.last.revenue - b.last.inputCost;
+  }
+  for (const p of w.pops) {
+    if (kingdomOf(w, p.regionId) !== kingdomId) continue;
+    const mk = regionById(w, p.regionId).market;
+    for (const g of Object.keys(p.inKind) as GoodId[]) v += (p.inKind[g] ?? 0) * mk[g].price;
+  }
+  return v;
+}
+
+/** 예산 항목의 이번 주 편성액: 주간 세입(이동평균) × TUNE.budgetBase[항목] × 단계 배율 */
+export function budgetAmount(k: Kingdom, item: BudgetItem): number {
+  return (k.revenueEma ?? 0) * TUNE.budgetBase[item] * BUDGET_LEVELS[k.budget[item] - 1];
+}
+
+/**
+ * 건설 예산: 왕실 건축사무소의 가동률을 (건설 예산 + 지난주 민간 공사 수수료) ÷ 다 돌릴 때의 주간 운영비로 맞춘다 (10%~100%).
+ * 사무소를 멈추지 않고, 쓸 돈만큼만 돌린다
+ */
+function fundConstruction(w: World, gov: Company, amount: number): number {
+  const offices = w.buildings.filter((b) => b.companyId === gov.id && getMethod(b.typeId, b.methodId).construction);
+  let full = 0;
+  for (const b of offices) {
+    const e = estimateMethod(w, b.regionId, b.typeId, b.methodId, gov.wages, true);
+    full += (e.wageCost + e.inputCost) * b.level * TICKS_PER_WEEK;
+  }
+  if (full <= 0) return 0;
+  const u = Math.round(Math.min(1, Math.max(0.1, (amount + gov.lastLedger.buildFees) / full)) * 100) / 100;
+  for (const b of offices) b.utilization = u;
+  return round2(Math.min(amount, full * u));
+}
+
+export function spendBudget(w: World) {
+  for (const k of w.kingdoms) {
+    const gov = companyById(w, k.governmentId);
+    const revenue = k.revenueWeek;
+    k.revenueWeek = 0;
+    if (!gov) continue;
+    const week = dailyOutput(w, k.id) * TICKS_PER_WEEK;
+    k.output = round2(k.output == null ? week : k.output * 0.75 + week * 0.25);
+    k.revenueEma = round2(k.revenueEma == null ? revenue : k.revenueEma * 0.75 + revenue * 0.25);
+    const research = fundResearch(w, gov, budgetAmount(k, 'research'));
+    const education = fundSchools(w, k.id, gov, budgetAmount(k, 'education'));
+    const welfare = fundWelfare(w, k.id, gov, budgetAmount(k, 'welfare'));
+    const construction = fundConstruction(w, gov, budgetAmount(k, 'construction'));
+    gov.research.budget = round2(research / TICKS_PER_WEEK);
+    k.lastBudget = { revenue: round2(revenue), research: round2(research), education: round2(education), welfare: round2(welfare), construction };
+  }
+}
+
+// ---------------------------------------------------------------- 국고
+
+/** 왕국 행정청이 세금을 걷을 수 있는 인구 (징세 한도) */
+export function taxCapacity(w: World, kingdomId: number): number {
+  let cap = 0;
+  for (const b of w.buildings) {
+    if (!b.active || kingdomOf(w, b.regionId) !== kingdomId) continue;
+    const m = getMethod(b.typeId, b.methodId);
+    if (m.taxCapacity) cap += m.taxCapacity * TUNE.adminScale * b.level * b.utilization * (b.crew ?? b.last.staffing) * efficiency(b);
+  }
+  return cap;
+}
+
+/**
+ * 세금: 인두세(1인당 하루, 신분별)와 소득세(최근 하루 소득에 신분별 세율). 시장에서 쓰기 전에 걷고, 저축을 넘게는 못 걷는다.
+ * 징수율은 행정청 한도와 인구의 비로 정한다 (collectionRatio). 모두에게 같은 비율로 덜 걷고, 못 걷은 몫은 백성 손에 남는다.
+ */
+/** 그 pop 이 하루에 내야 할 세금 (인두세 + 소득세, 저축 한도 전) */
+export function taxDue(w: World, p: Pop, law?: TaxLaw): number {
+  const k = kingdomById(w, kingdomOf(w, p.regionId));
+  if ((law ?? k.taxLaw) === 'land') return 0;
+  const st = CLASS_DEFS[p.prof].stratum;
+  const poll = p.size * k.pollTax[st] * (p.prof === 'peasant' ? TUNE.peasantPoll : 1);
+  return poll + Math.max(0, p.incomeEma) * k.incomeTax[st];
+}
+
+/** 그 세법으로 지금 하루에 걷힐 세금 (징수율 전). 토지 기반 = 소작지 수확의 시장가 × 토지세율, 1인당 = pop 마다 min(저축, 낼 세금) */
+export function lawRevenue(w: World, k: Kingdom, law: TaxLaw): number {
+  if (law === 'land') {
+    let v = 0;
+    for (const b of w.buildings) {
+      if (b.typeId !== 'subsistence' || kingdomOf(w, b.regionId) !== k.id) continue;
+      const mk = regionById(w, b.regionId).market;
+      for (const g of Object.keys(b.last.output) as GoodId[]) v += (b.last.output[g] ?? 0) * mk[g].price;
+    }
+    return v * k.landTax;
+  }
+  let v = 0;
+  for (const p of w.pops) if (kingdomOf(w, p.regionId) === k.id) v += Math.min(p.savings, taxDue(w, p, 'capita'));
+  return v;
+}
+
+export function collectIncomeTax(w: World) {
+  const people = new Map<number, number>(), owed = new Map<number, number>();
+  const taxOf = (p: Pop) => Math.min(p.savings, taxDue(w, p));
+  for (const p of w.pops) {
+    const kid = kingdomOf(w, p.regionId);
+    people.set(kid, (people.get(kid) ?? 0) + p.size);
+    owed.set(kid, (owed.get(kid) ?? 0) + taxOf(p));
+  }
+  const ratio = new Map<number, number>();
+  for (const k of w.kingdoms) {
+    const n = people.get(k.id) ?? 0, cap = taxCapacity(w, k.id);
+    k.taxDue = n;
+    k.taxCapacity = cap;
+    // 토지세는 어제 지대에서 걷힌 몫을 더한다
+    owed.set(k.id, (owed.get(k.id) ?? 0) + (k.landOwed ?? 0));
+    k.taxOwed = (k.taxOwed ?? owed.get(k.id) ?? 0) * 0.9 + (owed.get(k.id) ?? 0) * 0.1;
+    k.taxRatio = round2(collectionRatio(cap, n));
+    ratio.set(k.id, collectionRatio(cap, n));
+  }
+  const got = new Map<number, number>();
+  for (const k of w.kingdoms) {
+    got.set(k.id, k.landGot ?? 0); k.landGot = 0; k.landOwed = 0;
+  }
+  for (const p of w.pops) {
+    const kid = kingdomOf(w, p.regionId);
+    const gov = companyById(w, kingdomById(w, kid).governmentId);
+    const tax = taxOf(p) * (ratio.get(kid) ?? 1);
+    if (!gov || tax <= 0) continue;
+    p.savings -= tax;
+    p.lastIncome -= tax;
+    gov.cash += tax;
+    kingdomById(w, kid).revenueWeek += tax;
+    got.set(kid, (got.get(kid) ?? 0) + tax);
+  }
+  // 걷힌 세금은 행정청이 한도에 기여한 비율만큼 그 행정청의 매출로 잡는다 (돈은 이미 국고에 있다).
+  // 손익과 장부는 같은 날 produce 에서 다른 매출과 함께 한 번만 적는다
+  for (const b of w.buildings) {
+    const m = getMethod(b.typeId, b.methodId);
+    const k = w.kingdoms.find((x) => x.id === kingdomOf(w, b.regionId));
+    if (!m.taxCapacity || !b.active || !k || !(k.taxCapacity ?? 0)) continue;
+    const share = (m.taxCapacity * TUNE.adminScale * b.level * b.utilization * (b.crew ?? b.last.staffing) * efficiency(b)) / k.taxCapacity!;
+    const amt = (got.get(k.id) ?? 0) * share;
+    b.last.revenue += amt;
+    b.last.tax = (b.last.tax ?? 0) + amt;
+  }
+}
+
+// ---------------------------------------------------------------- 주간: 세금, 배당, 투자 풀
+
+/** 소유 직종이 배당에서 투자 풀로 넣는 비율 (빅토리아3 기본률) */
+const INVEST_SHARE: Record<'capitalist' | 'aristocrat', number> = { capitalist: 0.3, aristocrat: 0.2 };
+
+export function weeklyWageBill(w: World, c: Company): number {
+  let bill = 0;
+  for (const b of w.buildings) if (b.companyId === c.id && !BUILDING_BY_ID[b.typeId].auto) for (const s of SKILLS) if (!paysDividend(b.stateOwned, s)) bill += b.employed[s] * c.wages[s];
+  return bill * TICKS_PER_WEEK;
+}
+
+/** 회사가 늘 남겨 두는 현금: 기본 + 주간 임금 + 주간 연구비 */
+export function reserveOf(w: World, c: Company): number {
+  return 50_000 + weeklyWageBill(w, c) + c.research.budget * TICKS_PER_WEEK;
+}
+
+/** 진행 중인 공사를 끝내는 데 더 들 돈 */
+export function committedCost(w: World, c: Company): number {
+  let total = 0;
+  for (const k of w.constructions) {
+    if (k.companyId !== c.id) continue;
+    const est = constructionEstimate(w, c, k.typeId);
+    if (!Number.isFinite(est.cost)) continue;
+    total += Math.max(0, est.cost * (k.levels ?? 1) * (1 - k.points / k.required));
+  }
+  return total;
+}
+
+/** 건물 이익 중 회사가 준비금으로 남기는 몫 (빅토리아3: 25~50%) */
+export const RESERVE_SHARE = 0.35;
+
+/** 소유 직종에게 배당을 준다: 받은 몫의 일부는 그 왕국 투자 풀로 */
+function payOwners(w: World, kingdomId: number, regionId: number, pops: Pop[], amount: number) {
+  let total = 0;
+  for (const p of pops) total += p.size;
+  if (total <= 0) { addToPool(w, kingdomId, regionId, amount); return; }
+  for (const p of pops) {
+    const amt = (amount * p.size) / total;
+    const invest = amt * INVEST_SHARE[p.prof as 'capitalist' | 'aristocrat'];
+    addToPool(w, kingdomId, p.regionId, invest);
+    payPops(w, [p], amt - invest);
+  }
+}
+
+/**
+ * 배당 (민간 회사, 빅토리아3 방식): 건물마다 지난주 이익에서 준비금을 뺀 몫이 그 건물을 소유한 지역 소유 건물
+ * (농지·산림·광산은 저택, 공장 부지는 금융가)로 가고, 거기서 일하는 귀족·자본가의 소득이 된다.
+ * 소유주는 받은 배당의 일부를 왕국 투자 풀에 넣는다. 소유 건물에 아무도 없으면 그 몫은 투자 풀로 간다.
+ */
+export function payDividends(w: World, c: Company) {
+  if (c.state) { payShareDividends(w, c); return; }
+  const mine = w.buildings.filter((b) => b.companyId === c.id && !BUILDING_BY_ID[b.typeId].auto);
+  const toOwner = new Map<Building, number>();
+  const give = (b: Building, amt: number) => {
+    const o = ownerBuildingOf(w, b);
+    if (o) toOwner.set(o, (toOwner.get(o) ?? 0) + amt);
+    else addToPool(w, c.kingdomId, b.regionId, amt);
+  };
+  for (const b of mine) {
+    const profit = Math.min(Math.max(0, c.cash), Math.max(0, b.profitEma) * TICKS_PER_WEEK * (1 - RESERVE_SHARE));
+    if (profit <= 0) continue;
+    c.cash -= profit;
+    c.ledger.dividends += profit;
+    give(b, profit);
+  }
+  for (const [o, amt] of toOwner) {
+    o.last.revenue += amt;
+    const seated = w.pops.filter((p) => p.work === o.id);
+    payOwners(w, c.kingdomId, o.regionId, seated, amt);
+  }
+}
+
+/** 철거 자재 판매 대금: 소유 건물(저택·금융가) 몫은 그 귀족·자본가에게 (배당과 같은 길), 나머지는 건물 주인 회사에 */
+export function paySalvage(w: World, lot: SalvageLot, amt: number) {
+  const toOwner = amt * lot.ownerShare;
+  const o = lot.ownerId != null ? w.buildings.find((x) => x.id === lot.ownerId) : undefined;
+  const kid = kingdomOf(w, lot.regionId);
+  if (toOwner > 0) {
+    if (o) { o.last.revenue += toOwner; payOwners(w, kid, o.regionId, w.pops.filter((p) => p.work === o.id), toOwner); }
+    else addToPool(w, kid, lot.regionId, toOwner);
+  }
+  const rest = amt - toOwner;
+  if (rest <= 0) return;
+  const c = companyById(w, lot.companyId);
+  if (c) { c.cash += rest; c.weekProfit += rest; c.ledger.sales += rest; } else w.fund += rest;
+}
+
+/** 소작지 현금 지대: 그 지역 저택에 앉은 귀족에게 준다 (배당처럼 일부는 투자 풀로). 받을 사람이 없으면 false */
+/** 토지세 판매 대금은 국고로 (행정청 손익용으로 걷힌 몫을 센다) */
+export function payLandTax(w: World, regionId: number, amount: number) {
+  const k = kingdomById(w, kingdomOf(w, regionId));
+  const gov = companyById(w, k.governmentId);
+  if (!gov) { w.fund += amount; return; }
+  gov.cash += amount;
+  k.revenueWeek += amount;
+  k.landGot = (k.landGot ?? 0) + amount;
+}
+
+export function payRent(w: World, regionId: number, amount: number): boolean {
+  const manor = w.buildings.find((x) => x.regionId === regionId && x.typeId === 'manor');
+  if (!manor) return false;
+  const seated = w.pops.filter((p) => p.work === manor.id && p.size > 0);
+  if (seated.length === 0) return false;
+  manor.last.revenue += amount;
+  payOwners(w, kingdomOf(w, regionId), regionId, seated, amount);
+  return true;
+}
+
+/** 국영 건물의 민간 지분 배당: 이익 중 지분 몫을 그 지역 소유 건물(저택·금융가)의 귀족·자본가에게 준다 */
+function payShareDividends(w: World, c: Company) {
+  const toOwner = new Map<Building, number>();
+  for (const b of w.buildings) {
+    if (b.companyId !== c.id || !b.privateShare) continue;
+    const amt = Math.min(Math.max(0, c.cash), Math.max(0, b.profitEma) * TICKS_PER_WEEK * (1 - RESERVE_SHARE) * b.privateShare);
+    if (amt <= 0) continue;
+    c.cash -= amt;
+    c.weekProfit -= amt;
+    c.ledger.dividends += amt;
+    const o = ownerBuildingOf(w, b);
+    if (o) toOwner.set(o, (toOwner.get(o) ?? 0) + amt);
+    else addToPool(w, c.kingdomId, b.regionId, amt);
+  }
+  for (const [o, amt] of toOwner) {
+    o.last.revenue += amt;
+    payOwners(w, c.kingdomId, o.regionId, w.pops.filter((p) => p.work === o.id), amt);
+  }
+}
+
+/** 투자 풀은 매주 그 왕국 민간 상회의 자금이 된다 (나눠 받는다) */
+export function distributeInvestment(w: World) {
+  for (const k of w.kingdoms) {
+    const firms = k.privateIds.map((id) => companyById(w, id)).filter((c): c is Company => !!c);
+    if (firms.length === 0 || k.investmentPool <= 0) continue;
+    const each = k.investmentPool / firms.length;
+    for (const c of firms) {
+      c.cash += each; c.ledger.investment += each;
+      for (const [rid, v] of Object.entries(k.poolByRegion ?? {})) (c.regionFunds ??= {})[Number(rid)] = (c.regionFunds[Number(rid)] ?? 0) + v / firms.length;
+    }
+    k.investmentPool = 0;
+    k.poolByRegion = {};
+    // 지역 표시가 붙은 돈은 회사 현금보다 클 수 없다 (다른 데 쓴 만큼 비례로 줄인다)
+    for (const c of firms) {
+      const tagged = Object.values(c.regionFunds ?? {}).reduce((a, v) => a + v, 0);
+      if (tagged > Math.max(0, c.cash) && tagged > 0) for (const rid of Object.keys(c.regionFunds!)) c.regionFunds![Number(rid)] *= Math.max(0, c.cash) / tagged;
+    }
+  }
+}
+
+/**
+ * 은행·상인 조합이 자본보다 크게 쌓은 돈과 주인 없는 돈은 은행 자본을 먼저 채우고, 남으면 왕국 투자 풀로 간다 (인구 비례).
+ * 돈이 어디에도 고이지 않게 하는 일반 규칙.
+ */
+export function weeklyBanking(w: World) {
+  for (const c of w.companies) {
+    if (c.debt <= 0) continue;
+    const spare = c.cash - weeklyWageBill(w, c) * 2;
+    if (spare > 0) repay(w, c, spare * 0.2);
+  }
+  let pool = Math.max(0, w.fund);
+  w.fund -= pool;
+  const bankExcess = w.bank.cash - w.bank.capital * 2;
+  if (bankExcess > 0) { w.bank.cash -= bankExcess; pool += bankExcess; }
+  const traderExcess = w.traders.cash - w.traders.capital * 1.2;
+  if (traderExcess > 0) { w.traders.cash -= traderExcess; pool += traderExcess; }
+  // 파산으로 떼인 돈 때문에 은행 자본이 줄었으면 먼저 채운다
+  const refill = Math.min(pool, Math.max(0, w.bank.capital - w.bank.cash));
+  w.bank.cash += refill;
+  pool -= refill;
+  if (pool <= 0) return;
+  const popOf = new Map<number, number>();
+  for (const p of w.pops) { const k = kingdomOf(w, p.regionId); popOf.set(k, (popOf.get(k) ?? 0) + p.size); }
+  const total = [...popOf.values()].reduce((a, b) => a + b, 0);
+  if (total <= 0) { w.fund += pool; return; }
+  for (const k of w.kingdoms) addToPool(w, k.id, null, (pool * (popOf.get(k.id) ?? 0)) / total);
+}
+
+// ---------------------------------------------------------------- 주조와 보유고 (빅토리아3 방식)
+
+/** 주조: 왕국마다 매주 기본액 + 주간 총생산 × 비율만큼 국고에 새 돈이 생긴다 */
+export const MINT_BASE = 1_000;
+export const MINT_RATE = 0.03;
+
+/** 국고가 쓸 곳: 준비금 + 진행 중 공사 + 석 달 공사비 + 진행 중 연구의 남은 비용 */
+export function treasuryNeed(w: World, c: Company): number {
+  const t = c.research.current ? TECH_BY_ID[c.research.current] : undefined;
+  const research = t ? Math.max(0, t.cost - (c.research.progress[t.id] ?? 0)) : 0;
+  return reserveOf(w, c) + committedCost(w, c) + constructionEstimate(w, c, 'farm').costPerDay * 90 + research;
+}
+
+export function mintMoney(w: World) {
+  for (const k of w.kingdoms) {
+    const gov = companyById(w, k.governmentId);
+    if (!gov) continue;
+    const amt = MINT_BASE + (kingdomGdp(w, k.id) * TICKS_PER_WEEK / 360) * MINT_RATE;
+    gov.cash += amt;
+    gov.weekProfit += amt;
+    gov.ledger.mint += amt;
+    k.revenueWeek += amt;
+    w.mint.minted += amt;
+  }
+}

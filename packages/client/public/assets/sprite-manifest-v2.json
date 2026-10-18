@@ -1,0 +1,104 @@
+{
+  "columns": 4,
+  "rows": 3,
+  "cell": 480,
+  "padding": 59,
+  "width": 1920,
+  "height": 1440,
+  "sheets": {
+    "industry-v2": {
+      "ids": [
+        "subsistence",
+        "farm",
+        "fiber_farm",
+        "lumber",
+        "mine",
+        "coal_mine",
+        "foodplant",
+        "textile",
+        "smelter",
+        "workshop",
+        "furniture",
+        "fab"
+      ],
+      "source": "exec-d1dc94a8-a984-48f6-8b15-3d36f7bd1aff.png"
+    },
+    "society-v2": {
+      "ids": [
+        "railway",
+        "school",
+        "builder",
+        "admin",
+        "peasant",
+        "unskilled",
+        "skilled",
+        "expert",
+        "capitalist",
+        "aristocrat",
+        "royal-crown",
+        "private-purse"
+      ],
+      "source": "exec-3addcc71-2ef2-42af-afb7-93f0b51e28aa.png"
+    },
+    "goods-v2": {
+      "ids": [
+        "grain",
+        "fiber",
+        "timber",
+        "ore",
+        "fuel",
+        "food",
+        "cloth",
+        "metal",
+        "tools",
+        "furniture",
+        "electronics",
+        "transport"
+      ],
+      "source": "exec-d5e2061d-4710-42f9-b9aa-fc39aa691fd1.png"
+    },
+    "symbols-v2": {
+      "ids": [
+        "crest",
+        "m-ship",
+        "m-tree",
+        "ev-famine",
+        "ev-migrate",
+        "ev-build",
+        "ev-price",
+        "ev-seize",
+        "ev-research",
+        "sun",
+        "coin",
+        "bell"
+      ],
+      "source": "exec-016d1ba0-47b7-4b99-8c7c-f292a1bc1d84.png"
+    },
+    "regions-v2": {
+      "ids": [
+        "region-1",
+        "region-2",
+        "region-3",
+        "region-4",
+        "region-5",
+        "region-6",
+        "region-7",
+        "admin",
+        "school",
+        "builder",
+        "railway",
+        "private-purse"
+      ],
+      "source": "exec-e957894f-d041-413c-8a6a-47340202a419.png"
+    },
+    "ownership-v2": {
+      "ids": [
+        "manor",
+        "finance"
+      ],
+      "source": "exec-e7840891-f7d1-40d3-ac64-1485bc0899e5.png",
+      "sourceCell": 384,
+      "padding": 48
+    }
+  }
+}

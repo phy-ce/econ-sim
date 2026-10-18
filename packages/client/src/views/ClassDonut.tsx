@@ -5,7 +5,7 @@ import { GOOD_IDS, POP_CLASSES } from '@econ/sim';
 import type { PopClass, Region } from '@econ/sim';
 import { ClassSprite, SvgSprite64 } from '../sprites';
 import { Bar, CLASS_COLOR } from '../ui';
-import { compact, compactMoney, pct } from '../format';
+import { compact, compactMoney, pct, exactNumber } from '../format';
 import { className, regionName, useT } from '../i18n';
 import type { Dict } from '../i18n';
 
@@ -25,7 +25,7 @@ function arc(r0: number, r1: number, a0: number, a1: number): string {
   return `M${p(r1, a0)}A${r1} ${r1} 0 ${large} 1 ${p(r1, a1)}L${p(r0, a1)}A${r0} ${r0} 0 ${large} 0 ${p(r0, a0)}Z`;
 }
 
-export function ClassDonut({ region: r }: { region: Region }) {
+export function ClassDonut({ region: r, onViewPops }: { region: Region; onViewPops?:(prof:PopClass)=>void }) {
   const [metric, setMetric] = useState<Metric>('pop');
   const [sel, setSel] = useState<PopClass | null>(null);
   const T = useT();
@@ -108,7 +108,7 @@ export function ClassDonut({ region: r }: { region: Region }) {
             const on = x.c === sel;
             const share = x.v / total;
             return (
-              <button key={x.c} className={`dl-row ${on ? 'on' : ''}`} aria-pressed={on} onClick={() => setSel(on ? null : x.c)}>
+              <button key={x.c} className={`dl-row ${on ? 'on' : ''}`} aria-pressed={on} title={exactNumber(x.v)} onClick={() => {setSel(on ? null : x.c);onViewPops?.(x.c);}}>
                 <span className="dl-tile" style={{ color: CLASS_COLOR[x.c] }}><ClassSprite c={x.c} size={32} /></span>
                 <span className="dl-main">
                   <span className="dl-name">
@@ -116,9 +116,9 @@ export function ClassDonut({ region: r }: { region: Region }) {
                     <b>{className(x.c)}</b>
                     <span className={`dl-food ${x.food < 0.9 ? 'neg' : ''}`}>{T.food(pct(x.food))}</span>
                   </span>
-                  <span className="dl-wealth">
+                  <span className="dl-wealth" title={T.wealthLevel}>
                     <Bar value={x.h.wealth / 30} color={CLASS_COLOR[x.c]} size="sm" />
-                    <span className="pxnum small">{x.h.wealth.toFixed(1)}</span>
+                    <span className="pxnum small">{T.wealthLevel} {x.h.wealth.toFixed(1)}</span></span><span className="dl-wealth" title={T.standardOfLiving}><Bar value={x.h.sol / 30} color={CLASS_COLOR[x.c]} size="sm"/><span className="pxnum small">{T.standardOfLiving} {x.h.sol.toFixed(1)}</span>
                   </span>
                 </span>
                 <span className="pxnum num">{show(x.v)}</span>

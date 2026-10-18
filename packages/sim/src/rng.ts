@@ -11,3 +11,6 @@ export function rand(world: World): number {
 export function clamp(x: number, lo: number, hi: number): number {
   return x < lo ? lo : x > hi ? hi : x;
 }
+
+/** 숫자는 소수 둘째 자리까지 */
+export const round2 = (x: number) => Math.round(x * 100) / 100;

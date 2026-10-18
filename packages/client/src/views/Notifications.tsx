@@ -1,10 +1,13 @@
+import { ArrowUpRight, MapPin, Factory } from 'lucide-react';
+import { eventDestination } from '../eventDestination';
+import { OwnerBadge } from './OwnerBadge';
 import { useState } from 'react';
 import { companyById } from '@econ/sim';
 import type { GameEvent, World } from '@econ/sim';
 import { Sprite } from '../sprites';
 import type { SpriteName } from '../sprites';
 import { shortDate } from '../format';
-import { companyName, eventText, t, useT } from '../i18n';
+import { companyName, regionName, buildingName, eventText, t, useT } from '../i18n';
 
 type Filter = 'all' | 'mine' | 'alerts';
 const PLAYER_ID = 100;
@@ -29,7 +32,8 @@ function kindOf(e: GameEvent): { cls: string; sprite: SpriteName; label: string 
   return { cls, sprite, label };
 }
 
-export function Notifications({ world, lastReadTick, onRead, onJump }: {
+export function Notifications({ world, lastReadTick, onRead, onJump, onCompany, onEvent }: {
+  onCompany:(id:number)=>void; onEvent:(event:GameEvent)=>void;
   world: World;
   /** 이 틱 이하의 알림은 읽은 것으로 본다 */
   lastReadTick: number;
@@ -58,19 +62,21 @@ export function Notifications({ world, lastReadTick, onRead, onJump }: {
         {events.length === 0 && <li className="empty">—</li>}
         {events.map((e, i) => {
           const c = e.companyId != null ? companyById(world, e.companyId) : undefined;
+          const region=world.regions.find(r=>r.id===e.regionId);
+          const building=world.buildings.find(b=>b.id===e.buildingId);
+          const destination=eventDestination(world,e);
           const fresh = e.tick > lastReadTick;
           const k = kindOf(e);
           return (
-            <li key={`${e.tick}-${i}`} className={`ev ${k.cls} ${fresh ? 'fresh' : ''} ${e.regionId ? 'link' : ''}`}
-              onClick={e.regionId ? () => onJump(e.regionId!) : undefined} tabIndex={e.regionId ? 0 : -1}
-              onKeyDown={(kk) => { if (e.regionId && (kk.key === 'Enter' || kk.key === ' ')) { kk.preventDefault(); onJump(e.regionId); } }}
->
-              <span className="ev-icon"><Sprite name={k.sprite} size={16} label={k.label} /></span>
+            <li key={`${e.tick}-${i}`} className={`ev ${k.cls} ${fresh ? 'fresh' : ''}`}>
+              <span className="ev-icon"><Sprite name={k.sprite} size={40} label={k.label} /></span>
               <div className="ev-main">
-                <span className="ev-text">{eventText(e)}</span>
+                {destination?<button className="ev-text event-link" onClick={()=>onEvent(e)}>{eventText(e)}<ArrowUpRight size={14} aria-hidden="true"/></button>:<span className="ev-text">{eventText(e)}</span>}
                 <span className="ev-meta lbl">
                   <time>{shortDate(e.tick)}</time>
-                  {c && <><span className="swatch" style={{ background: c.color }} />{c.isPlayer ? T.myHouse : companyName(c)}</>}
+                  {c && <button className="entity-link" onClick={()=>onCompany(c.id)} title={companyName(c)}><OwnerBadge company={c} world={world}/><ArrowUpRight size={12}/></button>}
+                  {region&&<button className="entity-link" onClick={()=>onJump(region.id)}><MapPin size={12}/>{regionName(region)}</button>}
+                  {building&&<button className="entity-link" onClick={()=>onEvent(e)}><Factory size={12}/>{buildingName(building.typeId)}</button>}
                 </span>
               </div>
             </li>

@@ -1,23 +1,29 @@
 // ---- 정적 데이터 정의 ----
 
+/**
+ * 상품 id. 화면의 아이콘이 이 id에 묶여 있어서 id는 예전 것을 그대로 쓰고 이름만 바꾼다.
+ * fuel = 석탄, food = 식료품, metal = 철, electronics = 기계
+ */
 export type GoodId =
-  | 'grain' | 'fiber' | 'timber' | 'ore'
-  | 'food' | 'fuel' | 'cloth' | 'metal' | 'tools'
-  | 'furniture' | 'electronics'
-  | 'transport';
+  | 'grain' | 'fiber' | 'timber' | 'ore' | 'fuel'
+  | 'food' | 'cloth' | 'metal'
+  | 'tools' | 'furniture' | 'electronics'
+  | 'transport'
+  | 'luxury_furniture' | 'luxury_cloth'
+  | 'meat';
 
-export type Skill = 'unskilled' | 'skilled' | 'expert';
-export const SKILLS: Skill[] = ['unskilled', 'skilled', 'expert'];
-
-/** 일하지 않고 소유로 먹고사는 상층 계급 */
+/** 소유 직종: 민간 건물에서는 배당을, 국영 건물에서는 임금을 받는 일자리 */
 export type Owner = 'capitalist' | 'aristocrat';
 export const OWNERS: Owner[] = ['capitalist', 'aristocrat'];
 
-/** 인구 계층 = 고용 직종 + 자급 농민 + 소유 계층 */
-export type PopClass = Skill | 'peasant' | Owner;
-export const POP_CLASSES: PopClass[] = [...SKILLS, 'peasant', ...OWNERS];
+/** 일자리 직종 (빅토리아3: 소유주도 건물의 일자리다) */
+export type Skill = 'unskilled' | 'skilled' | 'expert' | 'gentry' | Owner;
+export const SKILLS: Skill[] = ['unskilled', 'skilled', 'expert', 'gentry', 'capitalist', 'aristocrat'];
 
-/** 부(wealth) 단계 범위. 생활수준의 기준값이다 */
+/** 직종 = 일자리 직종 + 소작농 */
+export type PopClass = Skill | 'peasant';
+export const POP_CLASSES: PopClass[] = ['unskilled', 'skilled', 'expert', 'gentry', 'peasant', 'capitalist', 'aristocrat'];
+
 export const WEALTH_MIN = 1;
 export const WEALTH_MAX = 99;
 
@@ -26,16 +32,19 @@ export type Stratum = 'lower' | 'middle' | 'upper';
 export interface ClassDef {
   id: PopClass;
   name: string;
-  /** English name (UI language option) */
   nameEn?: string;
   stratum: Stratum;
   description: string;
   descriptionEn?: string;
 }
 
-/** 건물이 차지하는 땅의 종류. 지역마다 수량이 정해져 있다 */
+/** 땅 종류. ore 는 광맥(철·석탄 매장량의 합)이다 */
 export type LandType = 'arable' | 'forest' | 'ore' | 'plot';
 export const LAND_TYPES: LandType[] = ['arable', 'forest', 'ore', 'plot'];
+
+/** 매장량 자원 */
+export type DepositId = 'iron' | 'coal';
+export const DEPOSITS: DepositId[] = ['iron', 'coal'];
 
 export type GoodBag = Partial<Record<GoodId, number>>;
 export type SkillBag = Partial<Record<Skill, number>>;
@@ -45,9 +54,7 @@ export interface GoodDef {
   name: string;
   nameEn?: string;
   basePrice: number;
-  /** 왕국 전체 기준 창고 목표 재고의 하한 (지역별로 인구 비율만큼 나눠 쓴다) */
-  minStock: number;
-  /** 서비스 상품: 쌓아 둘 수 없어 그날 안 팔린 것은 사라진다 */
+  /** 서비스 상품: 쌓아 둘 수 없고 지역 밖으로 옮길 수 없다 */
   perishable?: boolean;
 }
 
@@ -57,16 +64,20 @@ export interface MethodDef {
   nameEn?: string;
   /** 이 방식을 쓰려면 회사가 연구해야 하는 기술. 없으면 처음부터 쓸 수 있다 */
   tech?: string;
-  /** 레벨 1당 일자리 */
+  /** 레벨 1당 일자리 (노동 인구 기준) */
   workers: SkillBag;
-  /** 레벨 1당, 만원 가동 시 틱당 투입 */
+  /** 레벨 1당, 만원 가동 시 하루 투입 */
   inputs: GoodBag;
-  /** 레벨 1당, 만원 가동 시 틱당 산출 */
+  /** 레벨 1당, 만원 가동 시 하루 산출 */
   outputs: GoodBag;
   /** 건축사무소: 레벨당 하루 건설 포인트 */
   construction?: number;
-  /** 왕국 기금이 인건비에 이 배율을 곱해 운영 보조금으로 준다 (학교) */
+  /** 왕국 국고가 인건비에 이 배율을 곱해 운영 보조금으로 준다 (학교) */
   grant?: number;
+  /** 학교: 1레벨이 가르치는 인구 */
+  seats?: number;
+  /** 행정청: 레벨당 하루에 걷을 수 있는 소득세 (징세 한도) */
+  taxCapacity?: number;
 }
 
 export interface BuildingTypeDef {
@@ -74,9 +85,17 @@ export interface BuildingTypeDef {
   name: string;
   nameEn?: string;
   land: LandType;
+  /** 광산: 이 매장량 안에서만 지을 수 있다 */
+  deposit?: DepositId;
   methods: MethodDef[];
-  /** 1레벨 완공에 필요한 건설 포인트. 건축사무소가 하루에 만드는 포인트로 나누면 공기가 된다 */
+  /** 1레벨 완공에 필요한 건설 포인트 */
   buildPoints: number;
+  /** 자동으로 생기는 건물(소작지, 저택, 금융가): 짓거나 헐 수 없다 */
+  auto?: boolean;
+  /** 소유 건물: 이 직종이 일하며 지역 민간 건물의 배당을 받는다 (저택 = 귀족, 금융가 = 자본가) */
+  ownership?: Owner;
+  /** 왕실만 지을 수 있다 (행정청) */
+  stateOnly?: boolean;
 }
 
 export interface TechDef {
@@ -89,17 +108,15 @@ export interface TechDef {
   requires: string[];
 }
 
-export type NeedId = 'nourishment' | 'heating' | 'clothing' | 'furnishing' | 'gadgets';
+export type NeedId = 'nourishment' | 'heating' | 'clothing' | 'standard_clothing' | 'crude_items' | 'household' | 'luxury' | 'meat';
 
 export interface NeedDef {
   id: NeedId;
   name: string;
   nameEn?: string;
-  /** 1 수요 단위를 채우는 상품과 필요량. 가격에 따라 비중을 나눈다 */
-  /** appeal: 같은 값이면 더 선호하는 정도 (가공품 > 원자재). 고를 때 가격을 appeal 로 나눠 비교한다 */
-  options: { good: GoodId; units: number; appeal?: number }[];
+  /** 필요 1단위(기본가 1어치)를 채우는 상품 수량. max: 그 상품이 채울 수 있는 최대 비중. appeal > 1: 가공품 */
+  options: { good: GoodId; units: number; max?: number; appeal?: number }[];
 }
-
 
 export interface SkillDef {
   id: Skill;
@@ -117,14 +134,48 @@ export interface RegionDef {
   /** 해외 무역(수입·수출)이 가능한 개항장 */
   spaceport: boolean;
   neighbors: number[];
-  land: Record<LandType, number>;
-  population: Record<PopClass, number>;
-  education: number;
-  /** 지역 특성: 건물 종류별 생산 보너스 (0.1 = +10%) */
+  /** 산림 칸 수와 매장량 (지형, 고정). 농지·부지·인구·교육은 티어로 정한다 (data.ts TIERS) */
+  forest: number;
+  deposits: Record<DepositId, number>;
   perks: Partial<Record<string, number>>;
 }
 
 // ---- 월드 상태 (모두 직렬화 가능한 순수 객체) ----
+
+/**
+ * pop: 같은 지역, 같은 직종, 같은 일터의 사람 묶음 (빅토리아3 방식).
+ * 소득은 자기 일터에서만 나온다. 일터 0 은 실업.
+ */
+export interface Pop {
+  id: number;
+  regionId: number;
+  prof: PopClass;
+  /** 일하는 건물 id (소작지 포함). 0 이면 실업 */
+  work: number;
+  /** 부양가족 포함 인구 */
+  size: number;
+  savings: number;
+  /** 부 단계 1..99 */
+  wealth: number;
+  /** 문해력 0..1 */
+  literacy: number;
+  /** 다른 직종의 자격을 갖춘 노동 인구 수 */
+  quals: Partial<Record<PopClass, number>>;
+  incomeEma: number;
+  lastIncome: number;
+  lastSpend: number;
+  /** 직전 틱 소비 묶음 충족률, 식량 충족률 */
+  fulfillment: number;
+  food: number;
+  /** 직전 틱 생활수준 */
+  sol: number;
+  /** 직전 틱 인구 증감률 (연 %, 소수 2자리) */
+  growth: number;
+  /** 전날 내놓았지만 팔리지 않은 현물의 시장가 (부 계산에 수확 전체를 소득으로 넣기 위해) */
+  unsoldKind?: number;
+  /** 소작으로 직접 얻어 먹는 현물 */
+  inKind: GoodBag;
+}
 
 export interface Building {
   id: number;
@@ -134,30 +185,52 @@ export interface Building {
   level: number;
   methodId: string;
   active: boolean;
-  /** 가동률 0..1. 일자리와 생산량에 곱해진다 */
+  /** 가동률 0..1 */
   utilization: number;
-  /** 지금 이 건물에 앉아 있는 소유주 수 (공장부지 건물은 자본가, 땅 건물은 지주 귀족). ownerJobs 참고 */
-  owners: number;
+  /** 국영 건물: 이익은 국고에 남고, 소유 직종 자리도 임금을 받는다 */
+  stateOwned?: boolean;
+  /** 국영 건물 중 민간(그 왕국 민간 상회)이 가진 지분 0..1. 이익의 이 몫은 소유 건물을 거쳐 귀족·자본가에게 배당된다 */
+  privateShare?: number;
+  /** 소작지: 일하는 소작농 (노동 인구) */
+  tenants?: number;
   lastSwitchTick: number;
-  /** 숙련도 0..1. 고용 뒤 서서히 올라 효율이 최대에 이른다. 방식을 바꾸거나 크게 늘리면 떨어진다 */
+  /** 숙련도 0..1 */
   exp: number;
-  /** 실제로 손이 맞는 작업 인원 비율 0..1: 충원율을 하루 8%씩 따라간다 (사람이 빠지거나 새로 와도 생산은 서서히 바뀐다) */
+  /** 실제로 손이 맞는 작업 인원 비율: 충원율을 서서히 따라간다 */
   crew?: number;
-  /** 소유주 충원율 0..1 (owners / 소유주 일자리)을 작업 인원처럼 하루 8%씩 따라간 값. 효율에 0.7 + 0.3 × 이 값으로 곱해진다 */
-  ownerFill?: number;
-  /** 건축사무소가 할 일이 없어 인부를 해산한 상태. 임금이 나가지 않고 공사가 잡히면 다시 모은다 */
+  /** 건축사무소가 할 일이 없어 인부를 해산한 상태 */
   idle: boolean;
+  /** 직종별 고용 (노동 인구 기준, pop 에서 합산) */
   employed: Record<Skill, number>;
   /** 투입재 보관분 */
   stock: GoodBag;
-  /** 직전 틱 임금을 다 못 받았는가 */
+  /** 어제 만든 산출물. 오늘 시장에 내놓고, 못 판 것은 사라진다 (재고 없음) */
+  outStock: GoodBag;
   unpaid: boolean;
   last: BuildingStats;
-  /** 틱당 이윤의 지수이동평균 */
   profitEma: number;
-  /** 연속 적자 주 수 (AI 판단용) */
   lossWeeks: number;
   pausedWeeks: number;
+  /** 철거 대기 레벨: 매주 1레벨씩 헐린다 */
+  shrinking?: number;
+  /** 땅 바꾸기로 헐리는 중 (이익이 나도 철거를 취소하지 않는다) */
+  swap?: boolean;
+  /** 마지막 레벨의 손익이 마이너스였던 연속 주 수 (철거 판단) */
+  negWeeks?: number;
+  /** 1레벨을 지을 때 들어간 자재 (철거하면 TUNE.salvageShare 만큼 돌려받는다) */
+  materials?: GoodBag;
+}
+
+/** 철거로 회수한 자재: TUNE.salvageDays 동안 나눠 팔고, 대금은 지분대로 나눈다 */
+export interface SalvageLot {
+  regionId: number;
+  good: GoodId;
+  q: number;
+  days: number;
+  companyId: number;
+  /** 대금을 받을 소유 건물(저택·금융가) id 와 그 몫 (민간 건물 1, 국영 건물은 민간 지분) */
+  ownerId: number | null;
+  ownerShare: number;
 }
 
 export interface BuildingStats {
@@ -167,8 +240,9 @@ export interface BuildingStats {
   staffing: number;
   inputFill: number;
   output: GoodBag;
-  /** 건축사무소가 오늘 만든 건설 포인트 */
   points: number;
+  /** 그날 매출 중 행정청 몫으로 잡힌 세금 (장부에서 판매와 나눠 적는다) */
+  tax?: number;
 }
 
 export interface Construction {
@@ -177,20 +251,20 @@ export interface Construction {
   regionId: number;
   typeId: string;
   methodId: string;
-  /** 증설 대상. 없으면 신규 건물 */
   targetBuildingId: number | null;
-  /** 한 번에 짓는 레벨 수 (없으면 1). 필요 포인트와 땅도 이만큼 */
   levels?: number;
-  /** 지금까지 받은 건설 포인트 / 필요 포인트 */
   points: number;
   required: number;
-  /** 이 공사에 배정된 건축사무소 운영비 누계 */
   spent: number;
   ticksElapsed: number;
+  /** 일시정지된 공사는 건설 포인트를 받지 않는다 */
+  paused?: boolean;
+  /** 왕실 공사에 민간 상회가 낸 돈과 그 돈이 사는 지분 (완공 때 건물 지분이 된다) */
+  privatePaid?: number;
+  privateShare?: number;
 }
 
 export interface Research {
-  /** 하루 연구비 상한 */
   budget: number;
   current: string | null;
   progress: Record<string, number>;
@@ -202,41 +276,50 @@ export interface Company {
   name: string;
   isPlayer: boolean;
   color: string;
+  /** 소속 왕국 */
+  kingdomId: number;
+  /** 국영(왕국 정부) 회사인가. 국영 회사의 현금이 그 왕국의 국고다 */
+  state: boolean;
   cash: number;
   wages: Record<Skill, number>;
-  /** 이번 주 누적 이윤 */
+  /** 지난주 직종별 고용 인원 (AI가 실제로 사람이 찼는지 보고 임금을 정한다) */
+  lastEmployed?: Partial<Record<Skill, number>>;
+  /** 투자 풀에서 받은 돈 중 아직 그 지역에 쓰지 않은 몫 (민간 상회, 지역 우선 투자) */
+  regionFunds?: Record<number, number>;
   weekProfit: number;
   lastWeekProfit: number;
-  /** 이번 주 시작 시점 현금 */
   weekStartCash: number;
-  /** 시장임금 대비 비율로 임금을 정하는 정책. null이면 wages를 직접 쓴다 (AI) */
   wageOffset: Record<Skill, number> | null;
-  /** 은행 대출 잔액 */
   debt: number;
-  /** 틱당 매출 지수이동평균 */
   revenueEma: number;
-  lastRestructureTick: number;
-  /** 연속 부실 주 수. 길어지면 파산 처리 */
+  /** 화면 호환용 (부실 제도는 없앴다. 늘 0). UI_CHANGES 2-17 반영 뒤 지운다 */
   distressWeeks: number;
-  /** 오늘 건축사무소가 만든 건설 포인트와 그 비용 (공사에 배분한 뒤 0으로) */
   buildPoints: number;
   buildCost: number;
   research: Research;
+  /** 이번 주 수입·지출 내역과 지난주 내역 (재정 화면용) */
+  ledger: Ledger;
+  lastLedger: Ledger;
 }
 
+/**
+ * 회사 장부 항목. 손익(weekProfit)에 들어가는 것: 판매, 세금, 주조, 공사 수수료(수입) / 임금, 원자재, 연구, 이자, 복지(지출).
+ * 손익 밖의 자본 흐름: 배당 지급, 투자 풀 유입, 민간이 낸 공사비(건물이라는 자산으로 바뀐다)
+ */
+export const LEDGER_KEYS = ['sales', 'tax', 'mint', 'buildFees', 'wages', 'inputs', 'research', 'interest', 'welfare', 'dividends', 'investment', 'buildPaid'] as const;
+export type LedgerKey = (typeof LEDGER_KEYS)[number];
+export type Ledger = Record<LedgerKey, number>;
+export const emptyLedger = (): Ledger => Object.fromEntries(LEDGER_KEYS.map((k) => [k, 0])) as Ledger;
+
+/** 지역 계층별 합계 (pop 을 합산한 화면용 요약) */
 export interface Household {
   skill: PopClass;
   population: number;
   savings: number;
-  /** 부 단계 1..30. 소득이 다음 단계 소비 묶음 비용을 넘으면 오르고, 지금 단계 비용에 못 미치면 내린다 */
   wealth: number;
-  /** 생활수준 = 부 단계 (표시용 별칭) */
   sol: number;
-  /** 직전 틱 소비 묶음 충족률 0..1 */
   fulfillment: number;
-  /** 직전 틱 식량 충족률 0..1 (현물 포함). 낮으면 굶어 죽는다 */
   food: number;
-  /** 이번 틱 시장을 거치지 않고 직접 소비한 현물 (농민) */
   inKind: GoodBag;
   incomeEma: number;
   lastIncome: number;
@@ -246,101 +329,125 @@ export interface Household {
 
 export interface MarketGood {
   price: number;
-  /** 지역 공동 창고 재고 */
+  /** 지역 생산자들의 팔리지 않은 재고 합 */
   inventory: number;
-  target: number;
-  /** 이번 틱 요청된 구매량 */
+  /** 오늘 구매 주문량, 판매 제안량 */
   demand: number;
-  /** 이번 틱 판매 제안량 */
   supply: number;
   demandEma: number;
   supplyEma: number;
-  /** 위탁 물량 중 실제로 팔린 비율 (지수이동평균) */
-  sellThrough: number;
-  /** 전날 생산되어 위탁 판매 중인 물량 (b: 건물, c: 판매자, q: 수량) */
-  consigned: { b: number; c: number; q: number }[];
-  /** 실제 거래량 */
   sold: number;
   volumeEma: number;
-  /** 직전 틱 지역 간 운송으로 들어온/나간 양 */
   shippedIn: number;
   shippedOut: number;
-  /**
-   * 이번 틱 수요·공급의 출처별 내역 (합 = demand / supply).
-   * 수요 키: pop:<계층>, bld:<건물 종류>, trader(상인 매입), export(해외 수출), import(수입 하역 운송)
-   * 공급 키: bld:<건물 종류>, subsistence(소작농 판매), import(해외 수입), trader(상인 화물)
-   * 옛 저장 파일에는 없을 수 있다.
-   */
+  /** 출처별 수요·공급 (pop:<직종>, bld:<건물>, trader, export, import, subsistence) */
   demandBy?: Record<string, number>;
   supplyBy?: Record<string, number>;
-  /** 위 내역의 이동평균 (화면 표시용) */
   demandByEma?: Record<string, number>;
   supplyByEma?: Record<string, number>;
 }
 
 export interface Region {
+  /** 발전 단계 1(대도시)~4(변경), 시작값을 정한 티어 */
+  tier?: number;
   id: number;
   name: string;
   description: string;
   spaceport: boolean;
   neighbors: number[];
+  kingdomId: number;
   land: Record<LandType, number>;
-  /** 교육 수준 0..1. 승급 속도와 상위 직종 비율의 상한을 정한다 */
+  deposits: Record<DepositId, number>;
+  /** 교육 접근도 0..1 (학교 정원 비율). pop 의 문해력이 이것을 따라간다 */
   education: number;
-  /** 직전 틱 땅이 있어 실제로 경작한 농민 수 */
-  subsistenceWorkers: number;
-  /** 농민 1인당 하루 현물 소득 가치의 이동평균. 노동자가 공장에서 받아들이는 최저 임금의 기준이 된다 */
-  subsistenceIncome: number;
+  /** pop 합산 (화면용). 매 틱 다시 채운다 */
   households: Record<PopClass, Household>;
   market: Record<GoodId, MarketGood>;
-  /** 이번 주 기근으로 떠난 사람 수와 지역별 행선지 (주간 알림용) */
-  famineOut: number;
-  famineTo: Record<number, number>;
-  /** 최근(최대 4주) 임금 이주로 떠난 사람 수와 지역별 행선지 (알림용) */
-  wageOut?: number;
-  wageTo?: Record<number, number>;
 }
 
-/** 운송 중인 화물: 출발 지역에서 산 물건이 다음 틱에 도착 지역에 위탁된다 */
+export interface Kingdom {
+  id: number;
+  name: string;
+  nameEn: string;
+  color: string;
+  /** 국영 회사 id (현금이 국고) */
+  governmentId: number;
+  /** 민간 상회 id 목록 */
+  privateIds: number[];
+  /** 수입 관세율 (상품별, 없으면 기본값) */
+  tariff: Partial<Record<GoodId, number>>;
+  /** 투자 풀: 소유 직종 배당의 일부가 모여 민간 건설 자금이 된다 */
+  investmentPool: number;
+  /** 투자 풀 중 지역별로 들어온 몫 (그 지역 pop 의 재투자와 남는 현금) */
+  poolByRegion?: Record<number, number>;
+  /** 신분별 소득세율 (왕국 정책) */
+  incomeTax: Record<Stratum, number>;
+  /** 신분별 인두세 (1인당 하루, 왕국 정책) */
+  pollTax: Record<Stratum, number>;
+  /** 세법: 'land' = 토지 기반 과세 (소작지 수확의 landTax 비율을 걷는다, 인두세·소득세 없음), 'capita' = 1인당 과세 (인두세 + 소득세) */
+  taxLaw: TaxLaw;
+  /** 토지세율: 소작지 수확 중 국고가 가져가 시장에 파는 비율 */
+  landTax: number;
+  /** 어제 걷은 토지세와 걷어야 했던 토지세 (행정청 손익용, 하루마다 비운다) */
+  landGot?: number;
+  landOwed?: number;
+  /** 마지막으로 세법을 바꾼 틱 */
+  lawTick?: number;
+  /** 세금을 내야 할 인구와 행정청이 감당하는 인구 (징수율 = 한도 / 인구) */
+  taxDue?: number;
+  taxCapacity?: number;
+  /** 하루에 걷어야 할 세금 전액 (이동평균, 행정청 손익 추정용) */
+  taxOwed?: number;
+  /** 징수율 0..1 (행정청 한도와 인구로 정한다, collectionRatio) */
+  taxRatio?: number;
+  /** 예산 편성: 항목별 단계 1~5 (왕국 정책). 주간 지출 = 주간 세입(revenueEma) × 항목 비율 × BUDGET_LEVELS[단계 − 1] */
+  budget: Record<BudgetItem, number>;
+  /** 주간 경제 규모 (이동평균): 민간·국영 생산 건물 부가가치 + 소작 현물의 시장가. 예산 기본액의 기준 */
+  output?: number;
+  /** 주간 세입의 이동평균 (예산 편성 기준) */
+  revenueEma?: number;
+  /** 이번 주에 들어온 세입 (세금 + 관세 + 주조) */
+  revenueWeek: number;
+  /** 지난주 세입과 항목별 지출 */
+  lastBudget?: { revenue: number } & Record<BudgetItem, number>;
+  /** 이번 달 착공 레벨 (지표용): '건물|s'(왕실) '건물|p'(민간) '건물|loss'(AI 손해 짓기) '건물|d'(철거) */
+  startsMonth?: Record<string, number>;
+}
+
+export type TaxLaw = 'land' | 'capita';
+export const BUDGET_ITEMS = ['research', 'education', 'welfare', 'construction'] as const;
+/** 예산 단계별 배율 (1~5단계, 3이 기본) */
+export const BUDGET_LEVELS = [0.5, 0.75, 1, 1.5, 2] as const;
+export type BudgetItem = (typeof BUDGET_ITEMS)[number];
+
 export interface Shipment {
   to: number;
   good: GoodId;
   q: number;
+  /** 도착했지만 팔리지 않아 다시 내놓는 화물 */
+  stale?: boolean;
 }
 
-/** 지역 간 차익 운송을 맡는 상인 조합 */
 export interface Traders {
   cash: number;
   capital: number;
   shipments: Shipment[];
-  /** 건물이 이웃 지역에서 직접 산 투입재. 다음 날 건물 창고에 들어간다 */
-  inbound: { buildingId: number; good: GoodId; q: number }[];
-}
-
-/** 해외 무역. balance는 해외 계정 잔액(우리가 낸 수입 대금 − 받은 수출 대금) */
-export interface Offworld {
-  balance: number;
-  /** 직전 틱 수입·수출량 */
-  imports: GoodBag;
-  exports: GoodBag;
 }
 
 export interface Bank {
   cash: number;
-  /** 초기 자본. 이를 크게 넘는 이자 수익은 기금으로 넘긴다 */
   capital: number;
 }
 
+import type { MetricPoint } from './metrics';
+
 export interface HistoryPoint {
   tick: number;
-  /** 지역별 가격·재고 */
   prices: Record<number, Record<GoodId, number>>;
   inventory: Record<number, Record<GoodId, number>>;
-  /** 왕국 전체 계층별 지표 */
   sol: Record<PopClass, number>;
   unemployment: Record<Skill, number>;
   population: Record<PopClass, number>;
-  /** 지역별 노동자 생활수준과 교육 수준 */
   regionSol: Record<number, number>;
   regionEducation: Record<number, number>;
   companyCash: Record<number, number>;
@@ -354,7 +461,6 @@ export interface GameEvent {
   tick: number;
   companyId: number | null;
   text: string;
-  /** English text with the same numbers (UI language option). Older saves lack it */
   textEn?: string;
   kind: EventKind;
   regionId?: number;
@@ -362,51 +468,69 @@ export interface GameEvent {
 }
 
 export interface WorldConfig {
-  /** AI 회사의 의사결정 (끄면 구조가 고정됨: 밸런스 검증용) */
   ai: boolean;
 }
 
+/** 돈이 생기는 길(주조, 국채 발행)과 없어지는 길(국채 상환, 국채 이자, 보유고 상한)의 누적 */
+export interface MintLedger {
+  minted: number;
+  issued: number;
+  retired: number;
+  interest: number;
+}
+
 export interface World {
-  version: 2;
+  version: 3;
   config: WorldConfig;
   tick: number;
   seed: number;
   rngState: number;
   nextId: number;
   regions: Region[];
+  kingdoms: Kingdom[];
+  pops: Pop[];
+  /** 받을 사람이 없는 돈. 매주 은행 자본과 투자 풀로 돌린다 */
   fund: number;
-  /** 직전 틱 학교 보조금 지급 비율 (기금이 모자라면 1보다 작다) */
-  grantRatio: number;
   bank: Bank;
   traders: Traders;
-  offworld: Offworld;
+  /** 국가가 만들고 없앤 돈의 누적 장부 (화폐 보존 검증용) */
+  mint: MintLedger;
   companies: Company[];
   buildings: Building[];
   constructions: Construction[];
+  /** 철거로 회수해 파는 중인 자재 */
+  salvage: SalvageLot[];
   history: HistoryPoint[];
+  /** 주요 지표 (매달 기록, metrics.ts) */
+  metrics: MetricPoint[];
   events: GameEvent[];
-  /** 반복 알림 억제용: 알림 키 → 마지막으로 띄운 틱 */
   alertState: Record<string, number>;
-  /** 계층 이동 누적 ("from>to" → 사람 수). 분석·화면용 */
   mobility?: Record<string, number>;
 }
 
 // ---- 명령 ----
 
 export type Command =
-  /** 생산 방식을 생략하면 회사가 쓸 수 있는 첫 번째 방식으로 완공된다 */
   | { type: 'build'; typeId: string; regionId: number; methodId?: string; levels?: number }
   | { type: 'expand'; buildingId: number; levels?: number }
   | { type: 'setMethod'; buildingId: number; methodId: string }
   | { type: 'setWage'; skill: Skill; wage: number }
-  /** 시장임금 대비 비율 (-0.5 ~ +1.0). 임금이 매일 시장을 따라간다 */
   | { type: 'setWageOffset'; skill: Skill; offset: number }
   | { type: 'setActive'; buildingId: number; active: boolean }
   | { type: 'setUtilization'; buildingId: number; utilization: number }
+  /** 철거 대기에 레벨을 올린다 (매주 1레벨씩 헐린다) */
   | { type: 'demolish'; buildingId: number; levels?: number }
+  | { type: 'cancelDemolish'; buildingId: number }
   | { type: 'cancelConstruction'; constructionId: number }
+  | { type: 'pauseConstruction'; constructionId: number; paused: boolean }
+  /** 내 공사 목록 안에서 위치를 옮긴다 (0 = 맨 앞) */
+  | { type: 'moveConstruction'; constructionId: number; index: number }
   | { type: 'setResearch'; techId: string | null }
-  | { type: 'setResearchBudget'; budget: number };
+  | { type: 'setResearchBudget'; budget: number }
+  | { type: 'setTax'; tax: 'poll' | 'income'; stratum: Stratum; value: number }
+  | { type: 'setLandTax'; value: number }
+  | { type: 'setTaxLaw'; law: TaxLaw }
+  | { type: 'setBudget'; item: BudgetItem; value: number };
 
 export interface QueuedCommand {
   actor: number;

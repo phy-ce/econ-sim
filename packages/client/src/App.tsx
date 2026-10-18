@@ -1,16 +1,23 @@
+import type { PopRequest } from './views/PopTable';
+import { eventDestination } from './eventDestination';
+import { NumericValue } from './NumericValue';
+import { taxCollectionRatio } from './systemMetrics';
 import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
-import { Menu, Moon, Pause, SkipForward } from 'lucide-react';
+import { Menu, Moon, Pause, SkipForward, Map, HardHat, Users, Package, Factory, Landmark, FlaskConical, ChartNoAxesCombined } from 'lucide-react';
+import { WindowWorkspace } from './views/WindowWorkspace';
+import type { WindowId } from './views/WindowWorkspace';
 import { Sprite } from './sprites';
-import { DISTRESS_DEBT_RATIO, SEIZURE_WEEKS, companyById, creditLimit, isDistressed, playerCompany, regionById } from '@econ/sim';
-import type { GoodId } from '@econ/sim';
+import { companyById, creditLimit, playerCompany, regionById } from '@econ/sim';
+import type { GoodId, GameEvent, PopClass } from '@econ/sim';
 import { useGame } from './useGame';
 import { Bar } from './ui';
 import { dateParts, money, signedMoney } from './format';
 import { companyName, eventText, setLang, useLang, useT } from './i18n';
 import { RegionMap } from './views/RegionMap';
 import { RegionPanel } from './views/RegionPanel';
-import { CompanyPanel, CompanyView } from './views/CompanyPanel';
+import { Research, Projects } from './views/CompanyPanel';
+import { FinancePanel } from './views/FinancePanel';
 import { BottomPanel } from './views/BottomPanel';
 import { Notifications } from './views/Notifications';
 
@@ -51,6 +58,11 @@ function Popover({ button, label, children, className = '' }: { button: ReactNod
 
 export function App() {
   const game = useGame();
+  const [opened, setOpened] = useState<WindowId[]>(['map']);
+  const [revealRequest,setRevealRequest] = useState(0);
+  const showWindow = (id: WindowId) => { setOpened(id==='map'?['map']:['map',id]); setRevealRequest(v=>v+1); };
+  const [popRequest,setPopRequest]=useState<PopRequest|null>(null);
+  const [buildingRequest,setBuildingRequest]=useState<{id:number;sequence:number}|null>(null);
   const [regionId, setRegionId] = useState(1);
   const [good, setGood] = useState<GoodId>('food');
   /** 다른 상회를 들여다보는 중이면 그 회사 id (내 회사면 null) */
@@ -79,6 +91,7 @@ export function App() {
     const onKey = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement | null;
       if (e.ctrlKey || e.metaKey || e.altKey || (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)))) return;
+      if (t?.closest('button, a, [role=button], [tabindex]')) return;
       if (e.code === 'Space') {
         e.preventDefault();
         gameRef.current.setSpeed(gameRef.current.speed > 0 ? 0 : lastSpeed.current);
@@ -94,10 +107,23 @@ export function App() {
   const me = playerCompany(world);
   const region = regionById(world, regionId);
   const viewed = viewId != null ? companyById(world, viewId) : undefined;
-  const viewCompany = (id: number) => setViewId(companyById(world, id)?.isPlayer ? null : id);
+  const viewCompany = (id: number) => { setPopRequest(null);setViewId(id); showWindow('trends'); };
+  const selectRegion = (id: number) => { setRegionId(id); showWindow('industry'); };
+  const openPops=(regionId:number,prof:PopClass)=>{setViewId(null);setPopRequest(p=>({regionId,prof,sequence:(p?.sequence??0)+1}));showWindow('trends');};
+  const openBuilding=(id:number)=>{const b=world.buildings.find(b=>b.id===id);if(b){setRegionId(b.regionId);setBuildingRequest(p=>({id,sequence:(p?.sequence??0)+1}));showWindow('industry');}};
+  const openEvent=(event:GameEvent)=>{
+    const destination=eventDestination(world,event);
+    if(!destination)return;
+    if(destination.kind==='building'){setRegionId(destination.regionId);setBuildingRequest(previous=>({id:destination.id,sequence:(previous?.sequence??0)+1}));showWindow('industry');}
+    else if(destination.kind==='region')selectRegion(destination.id);
+    else if(destination.kind==='company')viewCompany(destination.id);
+    else showWindow(destination.kind);
+  };
+  const selectGood = (id: GoodId) => { setGood(id); showWindow('market'); };
+  const kingdom = world.kingdoms.find(k => k.id === me?.kingdomId);
+  const collection = taxCollectionRatio(kingdom);
   const limit = me ? creditLimit(world, me) : 0;
   const debtRatio = me && limit > 0 ? me.debt / limit : 0;
-  const distressed = me ? isDistressed(world, me) : false;
   const unread = world.events.filter((e) => e.tick > game.lastReadTick && (e.companyId === PLAYER_ID || e.companyId === null) && e.kind !== 'info').length;
   const [datePart, timePart] = dateParts(world.tick, game.hour);
   const running = game.speed > 0;
@@ -114,13 +140,12 @@ export function App() {
         </div>
 
         {me && (
-          <dl className="ledger">
-            <div className="chip"><dt><Sprite name="coin" size={16} /> {T.treasury}</dt><dd>{money(me.cash)}</dd></div>
-            <div className={`chip ${debtRatio >= DISTRESS_DEBT_RATIO ? 'bad' : debtRatio >= 0.7 ? 'warn' : ''}`}>
-              <dt>{T.loanLimit}</dt><dd>{money(me.debt)} <small>/ {money(limit)}</small></dd>
-            </div>
-            <div className={`chip ${me.lastWeekProfit >= 0 ? 'good' : 'bad'}`}><dt>{T.lastWeekPL}</dt><dd>{signedMoney(me.lastWeekProfit)}</dd></div>
-          </dl>
+          <div className="ledger">
+            <dl className="chip"><dt><Sprite name="coin" size={16} /> {T.treasury}</dt><dd><NumericValue value={me.cash} format="money"/></dd></dl>
+            <button className={`chip loan-chip ${debtRatio >= .9 ? 'bad' : debtRatio >= .7 ? 'warn' : ''}`} onClick={()=>showWindow('finance')} aria-label={T.finance}><span className="chip-label"><Landmark size={16}/> {T.loan}</span><span className="chip-value"><NumericValue value={me.debt} format="money"/> / <NumericValue value={limit} format="money"/></span></button>
+            <dl className={`chip ${me.lastWeekProfit >= 0 ? 'good' : 'bad'}`}><dt>{T.lastWeekPL}</dt><dd><NumericValue value={me.lastWeekProfit} format="signedMoney"/></dd></dl>
+            <dl className={`chip ${collection < .8 ? 'warn' : ''}`}><dt>{T.taxCollection}</dt><dd>{Math.round(collection*100)}%</dd><Bar value={collection} tone={collection < .8 ? 'gold' : 'pos'} size="sm" label={T.taxCollection}/></dl>
+          </div>
         )}
 
         <div className="controls">
@@ -134,10 +159,10 @@ export function App() {
           </div>
 
           <Popover label={T.notifications(unread)} className="bell"
-            button={<><Sprite name="bell" size={32} />{unread > 0 && <span className="badge">{unread > 99 ? '99+' : unread}</span>}</>}>
-            {() => (
+            button={<><Sprite name="bell" size={20} />{unread > 0 && <span className="badge">{unread > 99 ? '99+' : unread}</span>}</>}>
+            {(close) => (
               <div className="bell-panel">
-                <Notifications world={world} lastReadTick={game.lastReadTick} onRead={game.markRead} onJump={setRegionId} />
+                <Notifications world={world} lastReadTick={game.lastReadTick} onRead={game.markRead} onJump={id=>{selectRegion(id);close();}} onCompany={id=>{viewCompany(id);close();}} onEvent={event=>{openEvent(event);close();}} />
               </div>
             )}
           </Popover>
@@ -170,38 +195,20 @@ export function App() {
         </div>
       </header>
 
-      {me && (distressed || debtRatio >= 0.7) && (
-        <div className={`banner ${distressed ? 'danger' : ''}`} role="status">
-          <strong>{distressed ? (me.distressWeeks >= SEIZURE_WEEKS ? T.bannerSeized : T.bannerDistress) : T.loanLimit}</strong>
-          {distressed
-            ? <><Bar value={me.distressWeeks / SEIZURE_WEEKS} tone="neg" label={T.distressWeeks} /><span className="pxnum">{me.distressWeeks}/{SEIZURE_WEEKS}</span></>
-            : <><Bar value={debtRatio} tone={debtRatio >= DISTRESS_DEBT_RATIO ? 'neg' : 'gold'} label={T.loanLimit} /><span className="pxnum">{Math.round(debtRatio * 100)}%</span></>}
-        </div>
-      )}
+      <WindowWorkspace revealRequest={revealRequest} opened={opened} onOpened={setOpened} windows={[
+        { id:'map', title:T.paneMap, icon:<Map size={18}/>, content:<RegionMap world={world} selected={regionId} onSelect={selectRegion}/> },
+        ...(['overview','market','industry'] as const).map(mode => ({id:mode, title:mode==='overview'?(lang==='ko'?'지역 개요':'Region'):mode==='market'?T.market:(lang==='ko'?'지역 건물':'Regional buildings'), icon:mode==='overview'?<Users size={18}/>:mode==='market'?<Package size={18}/>:<Factory size={18}/>,content:<RegionPanel onViewPops={openPops} buildingRequest={mode==='industry'?buildingRequest:null} game={game} key={`${regionId}-${mode}`} mode={mode} world={world} region={region} history={game.history} selectedGood={good} onSelectGood={selectGood} onViewCompany={viewCompany} onViewBuildings={()=>showWindow('industry')}/>})),
+        { id:'finance', title:T.finance, icon:<Landmark size={18}/>, content:me?<FinancePanel game={game} world={world} me={me}/>:null },
+        { id:'research', title:T.research, icon:<FlaskConical size={18}/>, content:me?<Research game={game} me={me} onFinance={()=>showWindow('finance')}/>:null },
+        { id:'construction', title:T.construct, icon:<HardHat size={18}/>, content:me?<Projects game={game} world={world} owner={me} projects={world.constructions}/>:null },
+        { id:'trends', title:lang==='ko'?'통계 · 소식':'Statistics', icon:<ChartNoAxesCombined size={18}/>, content:<BottomPanel popRequest={popRequest} onBuilding={openBuilding} onEvent={openEvent} game={game} world={world} history={game.history} lastReadTick={game.lastReadTick} onRead={game.markRead} onJump={selectRegion} viewedId={viewId} onViewCompany={viewCompany}/> },
+      ]}/>
 
-      <main className="board">
-        <section className="card pane pane-map" aria-label={T.paneMap}>
-          <RegionMap world={world} selected={regionId} onSelect={setRegionId} />
-        </section>
-        <section className="card pane pane-region" aria-label={T.paneRegion}>
-          <RegionPanel world={world} region={region} history={game.history} selectedGood={good} onSelectGood={setGood} onViewCompany={viewCompany} />
-        </section>
-        <section className="card pane pane-company" aria-label={viewed && !viewed.isPlayer ? T.paneCompanyOf(companyName(viewed)) : T.myHouse}>
-          {viewed && !viewed.isPlayer
-            ? <CompanyView world={world} company={viewed} onView={viewCompany} />
-            : me ? <CompanyPanel game={game} world={world} me={me} region={region} onViewCompany={viewCompany} /> : <p className="empty">—</p>}
-        </section>
-        <section className="pane pane-bottom" aria-label={T.paneBottom}>
-          <BottomPanel world={world} history={game.history}
-            lastReadTick={game.lastReadTick} onRead={game.markRead} onJump={setRegionId}
-            viewedId={viewed && !viewed.isPlayer ? viewed.id : (me?.id ?? null)} onViewCompany={viewCompany} />
-        </section>
-      </main>
 
       <div className="toasts" aria-live="polite">
         {game.toasts.map((t) => (
-          <div key={t.id} className={`toast ${t.kind}`} onClick={() => { if (t.regionId) setRegionId(t.regionId); game.dismissToast(t.id); }} role={t.regionId ? 'button' : undefined}>
-            {eventText(t)}
+          <div key={t.id} className={`toast ${t.kind}`}>
+            {t.regionId ? <button className="event-link" onClick={()=>{selectRegion(t.regionId!);game.dismissToast(t.id);}}>{eventText(t)} ↗</button> : eventText(t)}
           </div>
         ))}
       </div>

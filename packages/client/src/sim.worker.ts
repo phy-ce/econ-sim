@@ -5,6 +5,9 @@ import { applyCommandMsg, createWorld, playerCompany, recordHistory, step } from
 import type { Command, QueuedCommand, World } from '@econ/sim';
 import type { FromWorker, ToWorker, WorkerError } from './protocol';
 
+import { captureConstruction, constructionActivity } from './constructionActivity';
+import type { ConstructionActivity } from './constructionActivity';
+let activity: ConstructionActivity | null = null;
 let world: World = createWorld(Date.now() % 100000);
 recordHistory(world);
 let ticksPerSecond = 0;
@@ -19,14 +22,16 @@ const post = (msg: FromWorker) => (self as DedicatedWorkerGlobalScope).postMessa
 function publish() {
   const history = world.history.slice(sentHistory);
   sentHistory = world.history.length;
-  post({ type: 'state', world: { ...world, history: [] }, history, resetHistory, errors: pendingErrors, hour: Math.min(23.99, budget * 24) });
+  post({ type: 'state', constructionActivity: activity, world: { ...world, history: [] }, history, resetHistory, errors: pendingErrors, hour: Math.min(23.99, budget * 24) });
   resetHistory = false;
   pendingErrors = [];
 }
 
 function advance(n: number) {
   for (let i = 0; i < n; i++) {
+    const before = captureConstruction(world);
     const errs = step(world, queue);
+    activity = constructionActivity(before, world.tick);
     queue = [];
     pendingErrors.push(...errs.map((text) => ({ text })));
     // 히스토리가 앞에서 잘리면 전체를 다시 보낸다
@@ -59,11 +64,11 @@ self.onmessage = (e: MessageEvent<ToWorker>) => {
     case 'new':
       world = createWorld(msg.seed);
       recordHistory(world);
-      sentHistory = 0; resetHistory = true; queue = []; budget = 0;
+      sentHistory = 0; resetHistory = true; queue = []; budget = 0; activity = null;
       break;
     case 'load':
       world = msg.world;
-      sentHistory = 0; resetHistory = true; queue = []; budget = 0;
+      sentHistory = 0; resetHistory = true; queue = []; budget = 0; activity = null;
       break;
     case 'speed':
       ticksPerSecond = msg.ticksPerSecond;

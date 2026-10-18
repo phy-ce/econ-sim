@@ -1,20 +1,22 @@
-import { BUILDING_BY_ID, GOOD_IDS, GOODS, TICKS_PER_WEEK, getMethod, POP_SCALE } from './data';
+import { BUILDING_BY_ID, GOOD_IDS, GOODS, TICKS_PER_WEEK, getMethod } from './data';
 import { alertOnce, regionById } from './economy';
 import { buildingNameEn, goodNameEn, regionNameEn } from './i18n';
-import type { World } from './types';
+import type { Region, World } from './types';
 
 const COOLDOWN = TICKS_PER_WEEK * 4;
 /** 이주 알림: 이 기간(4주) 동안 떠난 사람이 원래 인구의 이 비율 이상일 때만 */
-const MIGRATION_WINDOW = TICKS_PER_WEEK * 4;
-const MIGRATION_ALERT_SHARE = 0.005;
 
 /**
  * 주 1회 상태를 점검해 회사·지역에 알림을 남긴다. 같은 알림은 4주에 한 번만.
  * 플레이어뿐 아니라 AI 회사에도 남기지만, 화면에서는 내 회사 것만 강조한다.
  * 각 알림은 같은 숫자로 만든 영어 문장(en)도 함께 남긴다.
  */
+/** 이 아래로 식량이 떨어지면 모든 왕국에 알린다 (심한 기아) */
+const SEVERE_FAMINE = 0.2;
+
 export function weeklyAlerts(w: World) {
   for (const b of w.buildings) {
+    if (BUILDING_BY_ID[b.typeId].auto) continue;
     const r = regionById(w, b.regionId);
     const name = `${r.name} ${BUILDING_BY_ID[b.typeId].name}(#${b.id})`;
     const nameEn = `${regionNameEn(b.regionId)} ${buildingNameEn(b.typeId)} (#${b.id})`;
@@ -24,7 +26,7 @@ export function weeklyAlerts(w: World) {
         `${name}: 임금을 다 주지 못해 노동자가 떠나고 있습니다. 현금이나 대출 한도를 확인하세요.`,
         { kind: 'danger', ...at, en: `${nameEn}: wages could not be paid in full and workers are leaving. Check your cash and credit limit.` });
     }
-    if (b.active && b.last.staffing > 0 && b.last.inputFill < 0.5) {
+    if (b.active && !b.idle && b.last.staffing > 0 && b.last.inputFill < 0.5) {
       const method = getMethod(b.typeId, b.methodId);
       const shortIds = GOOD_IDS.filter((g) => method.inputs[g] && (b.stock[g] ?? 0) < method.inputs[g]! * b.level * 0.5);
       const short = shortIds.map((g) => GOODS[g].name);
@@ -71,7 +73,7 @@ export function weeklyAlerts(w: World) {
         if (seen.has(key)) continue;
         seen.add(key);
         const mg = regionById(w, b.regionId).market[g];
-        if (mg.price > GOODS[g].basePrice * 2) {
+        if (mg.price > GOODS[g].basePrice * 1.6) {
           const x = (mg.price / GOODS[g].basePrice).toFixed(1);
           alertOnce(w, `spike:${c.id}:${key}`, COOLDOWN, c.id,
             `${regionById(w, b.regionId).name}의 ${GOODS[g].name} 가격이 기본가의 ${x}배입니다. 투입 비용이 크게 올랐습니다.`,
@@ -80,41 +82,20 @@ export function weeklyAlerts(w: World) {
       }
     }
   }
-  // 이주: 최근 4주 동안 떠난 사람이 원래 계층 인구의 0.5%를 넘을 때만 알린다 (매일 조금씩 새는 것은 알리지 않는다)
-  const window = w.tick % MIGRATION_WINDOW === 0;
-  for (const r of w.regions) {
-    const h = r.households;
-    const famineBase = h.peasant.population + h.unskilled.population + h.skilled.population + h.expert.population;
-    if (r.famineOut > 0 && r.famineOut >= famineBase * MIGRATION_ALERT_SHARE) {
-      const [dest] = Object.entries(r.famineTo).sort((a, b) => b[1] - a[1])[0];
-      const n = Math.round(r.famineOut);
-      alertOnce(w, `famine-move:${r.id}`, MIGRATION_WINDOW, null,
-        `${r.name}에서 기근으로 ${n.toLocaleString('ko-KR')}명이 ${regionById(w, Number(dest)).name} 쪽으로 떠났습니다.`,
-        { kind: 'warn', regionId: r.id, en: `Famine drove ${n.toLocaleString('en-US')} people out of ${regionNameEn(r.id)} towards ${regionNameEn(Number(dest))}.` });
-      r.famineOut = 0; r.famineTo = {};
-    }
-    const wageBase = h.unskilled.population + h.skilled.population;
-    if ((r.wageOut ?? 0) > 0 && r.wageOut! >= wageBase * MIGRATION_ALERT_SHARE) {
-      const [dest] = Object.entries(r.wageTo ?? {}).sort((a, b) => b[1] - a[1])[0];
-      const n = Math.round(r.wageOut!);
-      alertOnce(w, `wage-move:${r.id}`, MIGRATION_WINDOW, null,
-        `${r.name}의 노동자·기술자 ${n.toLocaleString('ko-KR')}명이 더 높은 임금을 찾아 ${regionById(w, Number(dest)).name}(으)로 옮겨 갔습니다.`,
-        { kind: 'info', regionId: r.id, en: `${n.toLocaleString('en-US')} labourers and skilled workers left ${regionNameEn(r.id)} for higher wages in ${regionNameEn(Number(dest))}.` });
-      r.wageOut = 0; r.wageTo = {};
-    }
-    if (window) { r.famineOut = 0; r.famineTo = {}; r.wageOut = 0; r.wageTo = {}; }
-  }
+  // 지역 알림은 그 지역 왕국의 왕실에게만 간다. 다른 왕국에도 알리는 것은 중대한 알림(심한 기아)뿐이다
+  const crownOf = (r: Region) => w.kingdoms.find((k) => k.id === r.kingdomId)?.governmentId ?? null;
   // 지역 기아
   for (const r of w.regions) {
     for (const cls of ['unskilled', 'peasant'] as const) {
       const h = r.households[cls];
       // 기아는 부가 아니라 식량 충족률로 판단한다. 소작농은 원래 배를 곯으므로 더 심할 때만 알린다
       const line = cls === 'unskilled' ? 0.8 : 0.6;
-      if (h.population >= 50 * POP_SCALE && h.food < line) {
+      if (h.population >= 5000 && h.food < line) {
         const food = Math.round(h.food * 100);
-        alertOnce(w, `famine:${r.id}:${cls}`, TICKS_PER_WEEK * 8, null,
+        const severe = h.food < SEVERE_FAMINE;
+        alertOnce(w, `famine:${r.id}:${cls}`, TICKS_PER_WEEK * 8, severe ? null : crownOf(r),
           `${r.name}의 ${cls === 'unskilled' ? '노동자가' : '소작농이'} 굶고 있습니다(식량 충족 ${food}%). 인구가 줄어듭니다.`,
-          { kind: 'warn', regionId: r.id, en: `${cls === 'unskilled' ? 'Labourers' : 'Tenant farmers'} in ${regionNameEn(r.id)} are starving (food ${food}%). The population is shrinking.` });
+          { kind: severe ? 'danger' : 'warn', regionId: r.id, en: `${cls === 'unskilled' ? 'Labourers' : 'Tenant farmers'} in ${regionNameEn(r.id)} are starving (food ${food}%). The population is shrinking.` });
       }
     }
   }

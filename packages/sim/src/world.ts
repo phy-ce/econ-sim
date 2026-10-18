@@ -1,28 +1,35 @@
-import { GOOD_IDS, GOODS, LEVELS_PER_BLOCK, REGIONS, SKILL_DEFS, SUBSISTENCE, getMethod, POP_SCALE } from './data';
-import { landFree, newBuilding, ownerJobs } from './economy';
-import { POP_CLASSES, SKILLS } from './types';
-import type { Building, Company, GoodId, Household, MarketGood, PopClass, Region, Skill, World } from './types';
+import { BUILDING_BY_ID, GOOD_IDS, GOODS, REGIONS, SKILL_DEFS, SUBSISTENCE, TIER_COUNTS, TIER_JITTER, TIERS, TUNE, WORKFORCE_RATIO, getMethod } from './data';
+import { emptyJobs, newBuilding, paysDividend, slots } from './economy';
+import { aggregateHouseholds, findPop, getPop, movePeople, workforce } from './pops';
+import { updateOwnership, updateSubsistence } from './production';
+import { subsistenceKind, syncEmployment } from './labor';
+import { affordableWealth } from './market';
+import type { Company, GoodId, Kingdom, MarketGood, PopClass, Region, Skill, World } from './types';
+import { SKILLS, emptyLedger } from './types';
 
-const INITIAL_SAVINGS_PER_CAPITA: Record<PopClass, number> = { unskilled: 3, skilled: 15, expert: 50, peasant: 1, capitalist: 400, aristocrat: 300 };
-/** 1인당 하루 소득 이동평균의 초기값 */
-const INITIAL_INCOME: Record<PopClass, number> = { unskilled: 0.6, skilled: 1.6, expert: 3.5, peasant: 0.05, capitalist: 8, aristocrat: 8 };
-/** 시작 부 단계 */
-const INITIAL_WEALTH: Record<PopClass, number> = { unskilled: 5, skilled: 10, expert: 12, peasant: 3, capitalist: 20, aristocrat: 20 };
+/** 모든 회사의 시작 자금 (농장 약 다섯 레벨 공사비) */
+export const START_CASH = 30_000_000;
+const BANK_CAPITAL = 300_000_000;
+const TRADER_CAPITAL = 100_000_000;
+/** 시작 세금은 TUNE.pollTax, TUNE.incomeTax. 시작 예산 비율 */
+const DEFAULT_BUDGET = { research: 3, education: 3, welfare: 3, construction: 3 };
+/** 플레이어 회사 id (화면이 이 값을 쓴다) */
+export const PLAYER_ID = 100;
 
-/** [지역, 회사 인덱스, 건물 종류, 생산 방식, 레벨] — 기술이 없는 기본 방식만 쓴다 */
-/** 시작 시 건물은 없다. 모든 상회(AI 포함)가 현금만 들고 시작하고, 하층은 전부 소작농이다 */
-const INITIAL_BUILDINGS: [number, number, string, string, number][] = [];
-/** 모든 상회의 시작 자금 */
-export const START_CASH = 20000 * POP_SCALE;
-
-const AI_COMPANIES = [
-  { name: '북방 상회', color: '#3b82f6' },
-  { name: '남부 상단', color: '#f59e0b' },
-  { name: '왕립 무역회사', color: '#10b981' },
+const KINGDOMS = [
+  { id: 1, name: '에스테라', nameEn: 'Estera', color: '#e11d48', gov: { id: PLAYER_ID, name: '에스테라 왕실' }, firm: { id: 3, name: '에스테라 민간', color: '#f59e0b' } },
+  { id: 2, name: '벨로니아', nameEn: 'Belonia', color: '#3b82f6', gov: { id: 1, name: '벨로니아 왕실' }, firm: { id: 4, name: '벨로니아 민간', color: '#60a5fa' } },
+  { id: 3, name: '카르텐', nameEn: 'Karten', color: '#10b981', gov: { id: 2, name: '카르텐 왕실' }, firm: { id: 5, name: '카르텐 민간', color: '#34d399' } },
 ];
 
-const BANK_CAPITAL = 150000 * POP_SCALE;
-const TRADER_CAPITAL = 75000 * POP_SCALE;
+/** 1인당 시작 저축 (부양가족 포함 1인 기준) */
+const START_SAVINGS: Record<PopClass, number> = { peasant: 5, unskilled: 20, skilled: 100, expert: 300, gentry: 200, capitalist: 500, aristocrat: 500 };
+/** 처음부터 아는 기술: 소작지가 이미 만드는 의복·가구의 수공업 */
+const START_TECHS = ['spinning', 'guilds'];
+/** 왕실이 갖고 시작하는 건축사무소 레벨 (하루 20포인트, 농장 한 레벨을 한 달에) */
+const START_OFFICE_LEVELS = 10;
+/** 상층의 시작 문해력 */
+const UPPER_LITERACY = 0.6;
 
 export interface CreateWorldOptions {
   withPlayer?: boolean;
@@ -31,118 +38,217 @@ export interface CreateWorldOptions {
   ai?: boolean;
 }
 
-const baseWages = (): Record<Skill, number> => ({
-  unskilled: SKILL_DEFS.unskilled.baseWage,
-  skilled: SKILL_DEFS.skilled.baseWage,
-  expert: SKILL_DEFS.expert.baseWage,
-});
-
-/** 개척 초기 AI 회사의 임금: 노동력이 남아도니 기본 임금보다 훨씬 낮게 준다 */
-const AI_START_WAGES: Record<Skill, number> = { unskilled: 0.6, skilled: 1.6, expert: 3.5 };
-
-function newCompany(id: number, name: string, color: string, isPlayer: boolean, cash: number): Company {
-  return {
-    id, name, color, isPlayer, cash, wages: isPlayer ? baseWages() : { ...AI_START_WAGES },
-    wageOffset: isPlayer ? { unskilled: 0, skilled: 0, expert: 0 } : null,
-    weekProfit: 0, lastWeekProfit: 0, weekStartCash: cash, debt: 0, revenueEma: 0,
-    lastRestructureTick: -1e9, distressWeeks: 0, buildPoints: 0, buildCost: 0,
-    research: { budget: 0, current: null, progress: {}, known: [] },
+/** 시드 RNG (월드가 생기기 전에 쓰는 것) */
+function seeded(seed: number) {
+  let s = seed | 0;
+  return () => {
+    let t = (s = (s + 0x6d2b79f5) | 0);
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
 }
 
-function newMarket(popShare: number): Record<GoodId, MarketGood> {
+/**
+ * 지역을 왕국 수만큼 무작위로 나눈다. 조건: 각 왕국은 2지역 이상이고 자기 지역끼리 이웃으로 이어진다.
+ * 무작위 씨앗 지역에서 번갈아 이웃으로 넓혀 가고, 조건을 못 맞추면 다시 뽑는다.
+ */
+export function splitKingdoms(seed: number, count = KINGDOMS.length): Record<number, number> {
+  const rnd = seeded(seed * 7919 + 17);
+  const ids = REGIONS.map((r) => r.id);
+  const nb = new Map(REGIONS.map((r) => [r.id, r.neighbors]));
+  for (let attempt = 0; attempt < 200; attempt++) {
+    const owner: Record<number, number> = {};
+    const pool = [...ids];
+    for (let k = 1; k <= count; k++) owner[pool.splice(Math.floor(rnd() * pool.length), 1)[0]] = k;
+    let progress = true;
+    while (Object.keys(owner).length < ids.length && progress) {
+      progress = false;
+      for (let k = 1; k <= count; k++) {
+        const frontier = ids.filter((id) => owner[id] === undefined && Object.entries(owner).some(([r, o]) => o === k && nb.get(Number(r))!.includes(id)));
+        if (!frontier.length) continue;
+        owner[frontier[Math.floor(rnd() * frontier.length)]] = k;
+        progress = true;
+      }
+    }
+    if (Object.keys(owner).length < ids.length) continue;
+    const sizes = Array.from({ length: count }, (_, i) => ids.filter((id) => owner[id] === i + 1).length);
+    if (sizes.every((n) => n >= 2)) return owner;
+  }
+  throw new Error('kingdom split failed');
+}
+
+function newCompany(id: number, name: string, color: string, kingdomId: number, state: boolean, isPlayer: boolean, cash: number): Company {
+  const wages = Object.fromEntries(SKILLS.map((s) => [s, SKILL_DEFS[s].baseWage * (isPlayer ? 1 : 0.8)])) as Record<Skill, number>;
+  return {
+    id, name, color, isPlayer, kingdomId, state, cash, wages,
+    wageOffset: isPlayer ? emptyJobs() : null,
+    weekProfit: 0, lastWeekProfit: 0, weekStartCash: cash, debt: 0, revenueEma: 0, ledger: emptyLedger(), lastLedger: emptyLedger(),
+    distressWeeks: 0, buildPoints: 0, buildCost: 0,
+    research: { budget: 0, current: null, progress: {}, known: [...START_TECHS] },
+  };
+}
+
+function newMarket(): Record<GoodId, MarketGood> {
   const market = {} as Record<GoodId, MarketGood>;
   for (const g of GOOD_IDS) {
-    const stock = GOODS[g].minStock * popShare * 2;
     market[g] = {
-      price: GOODS[g].basePrice, inventory: stock, target: stock,
-      demand: 0, supply: 0, demandEma: stock / 10, supplyEma: stock / 10,
-      sellThrough: 1, consigned: [], sold: 0, volumeEma: stock / 10, shippedIn: 0, shippedOut: 0,
-      demandBy: {}, supplyBy: {}, demandByEma: {}, supplyByEma: {},
+      price: GOODS[g].basePrice, inventory: 0, demand: 0, supply: 0, demandEma: 0, supplyEma: 0,
+      sold: 0, volumeEma: 0, shippedIn: 0, shippedOut: 0, demandBy: {}, supplyBy: {}, demandByEma: {}, supplyByEma: {},
     };
   }
   return market;
 }
 
-export function createWorld(seed = 1, opts: CreateWorldOptions = {}): World {
-  const { withPlayer = true, playerName = '내 상회', playerCash = START_CASH, ai = true } = opts;
+/** 시드로 정한 지역 시작값: 티어, 인구(계층별), 교육, 경작지·부지 칸, 시작 농장 레벨 */
+interface RegionStart { tier: number; population: Record<PopClass, number>; education: number; arable: number; plot: number; farms: number }
 
-  const totalPop = REGIONS.reduce((a, r) => a + POP_CLASSES.reduce((b, s) => b + r.population[s], 0), 0);
+/**
+ * 지역 티어를 시드로 배정하고(TIER_COUNTS, 각 왕국에 티어 2 이상 하나 이상), 티어 수치에 ±TIER_JITTER 를 준다.
+ * 경작지 = 소작농 노동 인구 ÷ 소작지 1칸 인원 × arableSlack + 시작 농장 칸
+ */
+export function regionStarts(seed: number, owner: Record<number, number>): Map<number, RegionStart> {
+  const rnd = seeded(seed * 104729 + 3);
+  const ids = REGIONS.map((r) => r.id);
+  let tierOf: Record<number, number> = {};
+  for (let attempt = 0; attempt < 200; attempt++) {
+    const order = [...ids];
+    for (let i = order.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [order[i], order[j]] = [order[j], order[i]]; }
+    tierOf = {};
+    let i = 0;
+    TIER_COUNTS.forEach((n, t) => { for (let j = 0; j < n; j++) tierOf[order[i++]] = t; });
+    const ok = KINGDOMS.every((k) => ids.some((id) => owner[id] === k.id && tierOf[id] <= 1));
+    if (ok) break;
+  }
+  const jit = () => 1 + (rnd() * 2 - 1) * TIER_JITTER;
+  const out = new Map<number, RegionStart>();
+  for (const id of ids) {
+    const t = TIERS[tierOf[id]];
+    const total = Math.round((t.pop[0] + rnd() * (t.pop[1] - t.pop[0])) / 1000) * 1000;
+    const aristocrat = Math.round(total * t.aristocrat * jit()), skilled = Math.round(total * t.skilled * jit()), expert = Math.round(total * t.expert * jit());
+    const gentry = Math.round(total * t.gentry);
+    const peasant = total - aristocrat - gentry - skilled - expert;
+    const farms = Math.round((total / 100_000) * t.farms * jit());
+    const arable = Math.ceil(((peasant + skilled + expert) * WORKFORCE_RATIO / SUBSISTENCE.workersPerCell) * t.arableSlack * jit()) + farms;
+    out.set(id, {
+      tier: tierOf[id] + 1,
+      population: { peasant, unskilled: 0, skilled, expert, gentry, capitalist: 0, aristocrat },
+      education: Math.round(t.education * jit() * 100) / 100, arable, plot: Math.ceil((total / 100_000) * t.plot * jit()), farms,
+    });
+  }
+  return out;
+}
+
+export function createWorld(seed = 1, opts: CreateWorldOptions = {}): World {
+  const { withPlayer = true, playerName, playerCash = START_CASH, ai = true } = opts;
+  const owner = splitKingdoms(seed);
+  const starts = regionStarts(seed, owner);
+
   const regions: Region[] = REGIONS.map((def) => {
-    const pop = POP_CLASSES.reduce((b, s) => b + def.population[s], 0);
-    // 하층 인구 중 초기 건물 일자리(여유 10%)만큼만 노동자이고 나머지는 자급 농민이다
-    const jobs = INITIAL_BUILDINGS
-      .filter(([rid]) => rid === def.id)
-      .reduce((a, [, , typeId, methodId, level]) => a + (getMethod(typeId, methodId).workers.unskilled ?? 0) * level, 0);
-    const laborers = Math.min(def.population.unskilled, Math.round(jobs * 1.0));
-    // 중층도 일자리보다 조금 많은 만큼만 있고, 나머지는 농민이다 (초기 실업이 너무 커지지 않게)
-    const jobsOf = (s: Skill) => INITIAL_BUILDINGS.filter(([rid]) => rid === def.id)
-      .reduce((a, [, , typeId, methodId, level]) => a + (getMethod(typeId, methodId).workers[s] ?? 0) * level, 0);
-    // 중층은 지역 정의의 30%만 처음부터 있고(장인·서기), 나머지는 소작농으로 시작한다
-    const skilled = Math.min(def.population.skilled, Math.max(4, Math.round(def.population.skilled * 0.3), Math.round(jobsOf('skilled') * 1.3)));
-    const expert = Math.min(def.population.expert, Math.max(1, Math.round(def.population.expert * 0.3), Math.round(jobsOf('expert') * 1.3)));
-    const split: Record<PopClass, number> = {
-      ...def.population, unskilled: laborers, skilled, expert,
-      peasant: def.population.peasant + (def.population.unskilled - laborers) + (def.population.skilled - skilled) + (def.population.expert - expert),
-    };
-    const households = {} as Record<PopClass, Household>;
-    for (const s of POP_CLASSES) {
-      const n = Math.max(1, split[s]);
-      households[s] = {
-        skill: s, population: n, savings: n * INITIAL_SAVINGS_PER_CAPITA[s],
-        wealth: INITIAL_WEALTH[s], sol: INITIAL_WEALTH[s], fulfillment: 1, food: 1, inKind: {}, incomeEma: n * INITIAL_INCOME[s],
-        lastIncome: 0, lastSpend: 0, consumed: {},
-      };
-    }
+    const st = starts.get(def.id)!;
     return {
-      id: def.id, name: def.name, description: def.description, spaceport: def.spaceport,
-      neighbors: [...def.neighbors], land: { ...def.land }, education: def.education, subsistenceWorkers: 0, subsistenceIncome: 0.3, famineOut: 0, famineTo: {},
-      households, market: newMarket(pop / totalPop),
+      id: def.id, name: def.name, description: def.description, spaceport: def.spaceport, neighbors: [...def.neighbors],
+      kingdomId: owner[def.id], tier: st.tier,
+      land: { arable: st.arable, forest: def.forest, plot: st.plot, ore: def.deposits.iron + def.deposits.coal }, deposits: { ...def.deposits },
+      education: st.education, households: {} as Region['households'], market: newMarket(),
     };
   });
 
-  const companies: Company[] = AI_COMPANIES.map((c, i) => newCompany(i + 1, c.name, c.color, false, START_CASH));
-  if (withPlayer) companies.push(newCompany(100, playerName, '#e11d48', true, playerCash));
-
-  let nextId = 1;
-  const buildings: Building[] = INITIAL_BUILDINGS.map(([regionId, ci, typeId, methodId, level]) =>
-    newBuilding(nextId++, typeId, regionId, companies[ci].id, methodId, level));
-  // 모든 상회는 개항장에 건축사무소 하나를 갖고 시작한다. 건설은 이 사무소의 건설 포인트로만 진행된다
-  // 크기는 예전 사무소 하나와 같은 레벨 수 (레벨 하나가 작으므로)
-  for (const c of companies) buildings.push(newBuilding(nextId++, 'builder', 1, c.id, 'build_manual', Math.round(LEVELS_PER_BLOCK)));
-
-  // 초기 고용: 지역별로 인구를 일자리 비율대로 배분 (충원율 상한 95%)
-  for (const r of regions) {
-    const local = buildings.filter((b) => b.regionId === r.id);
-    for (const s of SKILLS) {
-      const total = local.reduce((a, b) => a + (getMethod(b.typeId, b.methodId).workers[s] ?? 0) * b.level, 0);
-      const ratio = total > 0 ? Math.min(0.95, (r.households[s].population * 0.97) / total) : 0;
-      for (const b of local) b.employed[s] = (getMethod(b.typeId, b.methodId).workers[s] ?? 0) * b.level * ratio;
-    }
+  const kingdoms: Kingdom[] = KINGDOMS.map((k) => ({
+    id: k.id, name: k.name, nameEn: k.nameEn, color: k.color, governmentId: k.gov.id, privateIds: [k.firm.id], tariff: {}, investmentPool: 0, incomeTax: { lower: TUNE.incomeTax, middle: TUNE.incomeTax, upper: TUNE.incomeTax }, pollTax: { lower: TUNE.pollTax, middle: TUNE.pollTax, upper: TUNE.pollTax }, taxLaw: TUNE.taxLaw, landTax: TUNE.landTax, budget: { ...DEFAULT_BUDGET }, revenueWeek: 0,
+  }));
+  const companies: Company[] = [];
+  for (const k of KINGDOMS) {
+    const player = withPlayer && k.gov.id === PLAYER_ID;
+    companies.push(newCompany(k.gov.id, player && playerName ? playerName : k.gov.name, k.color, k.id, true, player, player ? playerCash : START_CASH));
+    companies.push(newCompany(k.firm.id, k.firm.name, k.firm.color, k.id, false, false, START_CASH));
   }
 
   const w: World = {
-    version: 2, config: { ai }, tick: 0, seed, rngState: seed | 0, nextId,
-    regions, fund: 0, grantRatio: 1,
+    version: 3, config: { ai }, tick: 0, seed, rngState: seed | 0, nextId: 1000,
+    regions, kingdoms, pops: [], fund: 0, metrics: [],
     bank: { cash: BANK_CAPITAL, capital: BANK_CAPITAL },
-    traders: { cash: TRADER_CAPITAL, capital: TRADER_CAPITAL, shipments: [], inbound: [] },
-    offworld: { balance: 0, imports: {}, exports: {} },
-    companies, buildings, constructions: [],
-    history: [], events: [{ tick: 0, companyId: null, text: '에스테라 왕국의 시장이 열렸습니다.', textEn: 'The markets of the Kingdom of Estera are open.', kind: 'info' }], alertState: {},
+    traders: { cash: TRADER_CAPITAL, capital: TRADER_CAPITAL, shipments: [] },
+    mint: { minted: 0, issued: 0, retired: 0, interest: 0 },
+    companies, buildings: [], constructions: [], salvage: [],
+    history: [], events: [{ tick: 0, companyId: null, text: '대륙의 시장이 열렸습니다.', textEn: 'The markets of the continent are open.', kind: 'info' }], alertState: {},
   };
-  // 시작 건물(건축사무소)의 소유주 자리는 그 지역의 기존 소유 계층으로 바로 채운다
-  for (const r of w.regions) {
-    for (const cls of ['capitalist', 'aristocrat'] as const) {
-      const local = w.buildings.filter((b) => b.regionId === r.id && ownerJobs(b).cls === cls);
-      const jobs = local.reduce((a, b) => a + ownerJobs(b).jobs, 0);
-      const seated = jobs > 0 ? Math.min(1, r.households[cls].population / jobs) : 0;
-      for (const b of local) b.owners = ownerJobs(b).jobs * seated;
+
+  // 왕실은 자기 왕국에서 공장 부지가 가장 넓은 지역에 건축사무소를 갖고 시작한다 (민간 공사도 이곳이 맡는다).
+  // 행정청은 왕국 인구를 다 감당하는 레벨로 시작한다
+  for (const c of companies.filter((x) => x.state)) {
+    const mine = regions.filter((r) => r.kingdomId === c.kingdomId);
+    const home = [...mine].sort((a, b) => b.land.plot - a.land.plot || a.id - b.id)[0];
+    w.buildings.push(newBuilding(w.nextId++, 'builder', home.id, c.id, 'build_manual', START_OFFICE_LEVELS, c.state));
+    const people = mine.reduce((a, r) => a + Object.values(starts.get(r.id)!.population).reduce((x, y) => x + y, 0), 0);
+    const admin = getMethod('admin', 'admin_hereditary');
+    w.buildings.push(newBuilding(w.nextId++, 'admin', home.id, c.id, admin.id, Math.max(1, Math.ceil((people * TUNE.adminStart) / (admin.taxCapacity! * TUNE.adminScale))), true));
+  }
+  // 티어에 따른 시작 민간 곡물 농장 (일꾼은 첫날부터 소작농에서 뽑는다)
+  for (const r of regions) {
+    const firm = companies.find((c) => !c.state && c.kingdomId === r.kingdomId);
+    const levels = Math.min(starts.get(r.id)!.farms, r.land.arable);
+    if (firm && levels > 0) w.buildings.push(newBuilding(w.nextId++, 'farm', r.id, firm.id, 'farm_basic', levels, false));
+  }
+  updateSubsistence(w);
+
+  // 시작 pop: 하층은 전부 소작농. 숙련 인력은 소작지에 있으면서 자격만 갖고 있다. 상층은 아직 자리가 없다
+  for (const d of REGIONS) {
+    const r = regions.find((x) => x.id === d.id)!;
+    const def = starts.get(d.id)!;
+    const subs = w.buildings.find((b) => b.regionId === r.id && b.typeId === 'subsistence')!;
+    const peasants = def.population.peasant + def.population.skilled + def.population.expert + def.population.unskilled;
+    const room = (subs.level * SUBSISTENCE.workersPerCell) / WORKFORCE_RATIO;
+    const savings = def.population.peasant * START_SAVINGS.peasant + def.population.skilled * START_SAVINGS.skilled + def.population.expert * START_SAVINGS.expert;
+    const placed = Math.min(peasants, room);
+    const parts: [number, number][] = [[subs.id, placed], [0, peasants - placed]];
+    for (const [work, size] of parts) {
+      if (size <= 0) continue;
+      const p = getPop(w, r.id, 'peasant', work);
+      const share = size / peasants;
+      p.size = size; p.savings = savings * share; p.literacy = r.education;
+      p.quals = { skilled: def.population.skilled * WORKFORCE_RATIO * share, expert: def.population.expert * WORKFORCE_RATIO * share };
+    }
+    for (const cls of ['gentry', 'capitalist', 'aristocrat'] as const) {
+      const size = def.population[cls];
+      if (size <= 0) continue;
+      const p = getPop(w, r.id, cls, 0);
+      p.size = size; p.savings = size * START_SAVINGS[cls]; p.literacy = UPPER_LITERACY;
     }
   }
-  // 첫 화면에서도 자급 농민 수가 보이도록 미리 계산해 둔다
-  for (const r of w.regions) {
-    const cap = landFree(w, r.id, 'arable') * SUBSISTENCE.workersPerArable + landFree(w, r.id, 'forest') * SUBSISTENCE.workersPerForest;
-    r.subsistenceWorkers = Math.min(r.households.peasant.population, cap);
+  // 귀족은 저택, 자본가는 금융가에서 일하며 시작한다
+  updateOwnership(w);
+  for (const o of w.buildings.filter((x) => BUILDING_BY_ID[x.typeId].ownership)) {
+    const free = getPop(w, o.regionId, BUILDING_BY_ID[o.typeId].ownership!, 0);
+    if (free.size > 0) movePeople(w, free, getPop(w, o.regionId, free.prof, o.id), workforce(free));
   }
+  // 시작 건물(건축사무소·행정청·농장)은 이미 돌던 건물이라 일꾼이 찬 채로 시작한다: 그 지역 소작농에서 데려온다 (위 직종은 자격자만)
+  for (const b of w.buildings.filter((x) => !BUILDING_BY_ID[x.typeId].auto)) {
+    const subs = w.buildings.find((x) => x.regionId === b.regionId && x.typeId === 'subsistence');
+    const src = subs && findPop(w, b.regionId, 'peasant', subs.id);
+    if (!src) continue;
+    for (const s of SKILLS) {
+      const n = slots(b, s);
+      if (n <= 0 || paysDividend(b.stateOwned, s)) continue;
+      // 그 직종 실업자가 있으면 먼저 데려온다
+      const own = findPop(w, b.regionId, s, 0);
+      const fromOwn = own ? Math.min(n, workforce(own)) : 0;
+      if (own && fromOwn > 0) movePeople(w, own, getPop(w, b.regionId, s, b.id), fromOwn);
+      if (n - fromOwn > 0) movePeople(w, src, getPop(w, b.regionId, s, b.id), n - fromOwn, s === 'unskilled' ? undefined : s);
+    }
+    b.exp = 1;
+  }
+  syncEmployment(w);
+  // 시작 부: 직접 쓰는 현물과 현금 소득으로 감당할 수 있는 단계 (모든 pop 같은 규칙). 처음에는 아무도 현금 소득이 없다.
+  // 소작농의 현물은 수확 중 시장에 팔지 않는 몫이다
+  for (const r of regions) {
+    const subs = w.buildings.find((x) => x.regionId === r.id && x.typeId === 'subsistence');
+    const tenants = subs ? findPop(w, r.id, 'peasant', subs.id) : undefined;
+    for (const p of w.pops.filter((x) => x.regionId === r.id)) {
+      const kind = p === tenants ? subsistenceKind(workforce(p)) : {};
+      p.wealth = affordableWealth(r, p.size, p.incomeEma, kind);
+    }
+  }
+  aggregateHouseholds(w);
   return w;
 }

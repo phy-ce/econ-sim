@@ -1,10 +1,11 @@
+import type { ConstructionActivity } from './constructionActivity';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Command, GameEvent, HistoryPoint, World } from '@econ/sim';
 import type { FromWorker, ToWorker } from './protocol';
 import { EN, KO } from './strings';
 import type { Dict } from './strings';
 
-const SAVE_KEY = 'estera-save-v4';
+const SAVE_KEY = 'estera-save-v6';
 const PREF_KEY = 'estera-prefs-v1';
 
 /** text 는 한국어, textEn 은 영어 (없으면 한국어로 보인다) */
@@ -23,6 +24,7 @@ const eventKey = (e: GameEvent) => `${e.tick}|${e.companyId}|${e.text}`;
 
 export function useGame() {
   const workerRef = useRef<Worker | null>(null);
+  const [constructionActivity,setConstructionActivity] = useState<ConstructionActivity | null>(null);
   const [world, setWorld] = useState<World | null>(null);
   const [hour, setHour] = useState(0);
   const [history, setHistory] = useState<HistoryPoint[]>([]);
@@ -53,10 +55,12 @@ export function useGame() {
   useEffect(() => {
     const worker = new Worker(new URL('./sim.worker.ts', import.meta.url), { type: 'module' });
     workerRef.current = worker;
+    worker.onerror = (event) => console.error('Simulation worker failed:', event.message, event.filename, event.lineno);
     worker.onmessage = (e: MessageEvent<FromWorker>) => {
       const msg = e.data;
       if (msg.type === 'state') {
         setWorld(msg.world);
+        setConstructionActivity(msg.constructionActivity);
         setHour(msg.hour);
         if (import.meta.env.DEV) (globalThis as { __world?: World }).__world = msg.world;
         setHistory((h) => (msg.resetHistory ? msg.history : msg.history.length ? [...h, ...msg.history] : h));
@@ -105,6 +109,7 @@ export function useGame() {
 
   return {
     world,
+    constructionActivity,
     hour,
     history,
     speed,

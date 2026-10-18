@@ -1,3 +1,4 @@
+import { NumericValue } from '../NumericValue';
 // 시세표에서 고른 상품의 수요·공급이 어디서 오는지 (MarketGood.demandByEma / supplyByEma)
 import type { GoodId, MarketGood, PopClass } from '@econ/sim';
 import type { ReactNode } from 'react';
@@ -20,6 +21,7 @@ function describe(key: string, side: 'demand' | 'supply'): { label: string; icon
     return { label: side === 'demand' ? T.srcInputs(buildingName(t)) : T.srcOutput(buildingName(t)), icon: <BuildingSprite typeId={t} size={16} /> };
   }
   switch (key) {
+    case 'salvage': return {label:T.salvage,icon:<GoodSprite g="timber"/>};
     case 'trader': return side === 'demand'
       ? { label: T.srcTraderOut, icon: <GoodSprite g="transport" /> }
       : { label: T.srcTraderIn, icon: <GoodSprite g="transport" /> };
@@ -44,7 +46,7 @@ function Side({ title, by, side, extra }: { title: string; by: Record<string, nu
     <div className="src-side">
       <div className="src-head">
         <span className="strong">{title}</span>
-        <span className="lbl">{T.daily} <span className="pxnum">{compact(total)}</span></span>
+        <span className="lbl">{T.daily} <span className="pxnum"><NumericValue value={total} format="compact"/></span></span>
       </div>
       {total <= 0 ? <p className="empty">—</p> : (
         <>
@@ -57,7 +59,7 @@ function Side({ title, by, side, extra }: { title: string; by: Record<string, nu
                 <i className="src-sw" style={{ background: r.color }} aria-hidden="true" />
                 {r.icon}
                 <span className="src-name" title={r.label}>{r.label}</span>
-                <span className="pxnum num">{compact(r.v)}</span>
+                <span className="pxnum num"><NumericValue value={r.v} format="compact"/></span>
                 <span className="pxnum num src-pct">{pct(r.v / total)}</span>
               </li>
             ))}
@@ -82,7 +84,7 @@ export function SourceBreakdown({ good, m }: { good: GoodId; m: MarketGood }) {
       <div className="src-cols">
         <Side title={T.demand} by={demand} side="demand" />
         <Side title={T.supply} by={supply} side="supply" extra={
-          m.inventory > 0.5 ? <p className="lbl src-note">{T.warehouse} <span className="pxnum">{compact(m.inventory)}</span></p> : null
+          m.inventory > 0.5 ? <p className="lbl src-note">{T.warehouse} <span className="pxnum"><NumericValue value={m.inventory} format="compact"/></span></p> : null
         } />
       </div>
     </div>

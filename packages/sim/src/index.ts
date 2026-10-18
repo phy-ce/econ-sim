@@ -1,9 +1,15 @@
 export * from './types';
 export * from './data';
 export * from './economy';
-export { createWorld, START_CASH } from './world';
+export { createWorld, splitKingdoms, START_CASH, PLAYER_ID } from './world';
 export type { CreateWorldOptions } from './world';
-export { step, recordHistory, needSplit, skillShareCap, isDistressed, starvationAt, STARVATION_LINE, SEIZURE_WEEKS, DISTRESS_DEBT_RATIO } from './tick';
-export { applyCommand, applyCommandMsg, MAX_CONCURRENT_CONSTRUCTIONS, MAX_RESEARCH_BUDGET } from './commands';
+export { step, recordHistory, needSplit, birthRateAt, mortalityAt, growthAt, STARVATION_LINE } from './tick';
+export { isDistressed, SEIZURE_WEEKS, DISTRESS_DEBT_RATIO, landlordJobs, MAX_RESEARCH_BUDGET } from './compat';
+export { applyCommand, applyCommandMsg, MAX_CONCURRENT_CONSTRUCTIONS, MAX_LEVELS_PER_PROJECT } from './commands';
 export type { CommandError } from './commands';
+export { borderCost, kingdomById, kingdomOf, DEFAULT_TARIFF } from './kingdoms';
+export { workforce, QUAL_RATE } from './pops';
 export * from './i18n';
+export { estimateAfterEntry } from './outlook';
+export { recordMetrics, METRICS_EVERY } from './metrics';
+export type { MetricPoint, KingdomMetrics, GoodMetrics } from './metrics';
