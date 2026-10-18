@@ -1,8 +1,9 @@
 import { BUILDING_BY_ID, CLASS_DEFS, SUBSISTENCE, TUNE } from './data';
 import { borrow, companyById, emptyJobs, emptyStats, isSubsistence, paysDividend, peasantSlots, regionById, slots, staffing } from './economy';
+import { harvestShares } from './market';
 import { findPop, getPop, movePeople, popsIn, workforce } from './pops';
 import { clamp } from './rng';
-import { SKILLS } from './types';
+import { POP_CLASSES, SKILLS } from './types';
 import type { Building, GoodBag, Pop, PopClass, Region, Skill, World } from './types';
 
 // 노동시장 (빅토리아3 방식): 직종 이동은 따로 정한 비율이 아니라 건물의 채용으로만 일어난다.
@@ -17,11 +18,16 @@ const RATIO_GATE = 0.9;
 
 interface Seat { b: Building; prof: PopClass; slots: number; wage: number }
 
-/** 소작농 1인당 하루 소득 가치 (현물 + 판매분에서 지대를 뺀 몫). 노동자 일자리와 비교하는 기준 */
-export function subsistenceWage(r: Region): number {
+const PROF_INDEX = Object.fromEntries(POP_CLASSES.map((s, i) => [s, i])) as Record<PopClass, number>;
+/** (일터, 직종) 의 숫자 키 */
+const seatKey = (work: number, prof: PopClass) => work * POP_CLASSES.length + PROF_INDEX[prof];
+
+/** 소작농 1인당 하루 소득 가치 (현물 + 판매분에서 수확과 같은 지대·토지세 몫을 뺀 것). 노동자 일자리와 비교하는 기준 */
+export function subsistenceWage(w: World, r: Region): number {
   const m = r.market;
   const gross = SUBSISTENCE.grainPerWorker * m.grain.price + SUBSISTENCE.fiberPerWorker * m.fiber.price + SUBSISTENCE.timberPerWorker * m.timber.price;
-  return gross * (1 - TUNE.rentShare);
+  const { rent, tax } = harvestShares(w, r);
+  return gross * (1 - rent - tax);
 }
 
 /** 소작지 노동 인구 wf 의 하루 현물 (수확 중 시장에 팔지 않는 몫) */
@@ -41,7 +47,7 @@ function dividendWage(b: Building, s: Skill): number {
 function seatsOf(w: World, r: Region, b: Building): Seat[] {
   const out: Seat[] = [];
   if (isSubsistence(b.typeId)) {
-    out.push({ b, prof: 'peasant', slots: peasantSlots(b), wage: subsistenceWage(r) });
+    out.push({ b, prof: 'peasant', slots: peasantSlots(b), wage: subsistenceWage(w, r) });
     return out;
   }
   const c = companyById(w, b.companyId);
@@ -58,17 +64,17 @@ export function laborMarket(w: World) {
   for (const r of w.regions) {
     const local = w.buildings.filter((b) => b.regionId === r.id);
     const seats = local.flatMap((b) => seatsOf(w, r, b));
-    const seatOf = new Map(seats.map((s) => [`${s.b.id}|${s.prof}`, s]));
+    const seatOf = new Map(seats.map((s) => [seatKey(s.b.id, s.prof), s]));
     const pops = popsIn(w, r.id);
 
     // 1) 해고: 건물이 사라졌거나, 자리가 줄었거나, 임금을 못 받았으면 실업자가 된다
-    const employed = new Map<string, number>();
-    for (const p of pops) if (p.work !== 0) employed.set(`${p.work}|${p.prof}`, (employed.get(`${p.work}|${p.prof}`) ?? 0) + workforce(p));
+    const employed = new Map<number, number>();
+    for (const p of pops) if (p.work !== 0) employed.set(seatKey(p.work, p.prof), (employed.get(seatKey(p.work, p.prof)) ?? 0) + workforce(p));
     for (const p of pops) {
       if (p.work === 0 || p.size <= 0) continue;
       const b = byId.get(p.work);
-      const seat = seatOf.get(`${p.work}|${p.prof}`);
-      const have = employed.get(`${p.work}|${p.prof}`) ?? 0;
+      const seat = seatOf.get(seatKey(p.work, p.prof));
+      const have = employed.get(seatKey(p.work, p.prof)) ?? 0;
       let fire = 0;
       if (!b || !seat) fire = 1;
       else if (have > seat.slots + 1e-6) fire = 1 - seat.slots / have;
@@ -81,7 +87,13 @@ export function laborMarket(w: World) {
       const p = findPop(w, r.id, prof, b.id);
       return p ? workforce(p) : 0;
     };
-    const current = () => popsIn(w, r.id);
+    // 지역 pop 목록: 새로 생긴 pop(getPop 은 w.pops 끝에 붙인다)만 더한다
+    let here: Pop[] | null = null, seen = 0;
+    const current = () => {
+      if (!here) { here = popsIn(w, r.id); seen = w.pops.length; }
+      for (; seen < w.pops.length; seen++) if (w.pops[seen].regionId === r.id) here.push(w.pops[seen]);
+      return here;
+    };
     seats.sort((a, b) => b.wage - a.wage || a.b.id - b.b.id);
     for (const seat of seats) {
       const { b, prof } = seat;
@@ -98,7 +110,7 @@ export function laborMarket(w: World) {
       for (const p of all) { if (room <= 0.01) break; if (p.prof === prof && p.work === 0 && p !== dest) take(p, workforce(p)); }
       // 지금보다 소득이나 생활수준이 TUNE.switchPremium 배 넘게 나은 자리로 옮긴다 (같은 직종, 아래 직종도 마찬가지)
       const better = (p: Pop) => {
-        const from = seatOf.get(`${p.work}|${p.prof}`);
+        const from = seatOf.get(seatKey(p.work, p.prof));
         if (!from) return false;
         if (from.wage * TUNE.switchPremium < seat.wage) return true;
         const there = findPop(w, r.id, prof, b.id);
@@ -201,7 +213,7 @@ function attraction(w: World, r: Region, prof: PopClass): number {
   for (const b of w.buildings) {
     if (b.regionId !== r.id) continue;
     if (isSubsistence(b.typeId)) {
-      if (lower && peasantSlots(b) - (b.tenants ?? 0) > 1) best = Math.max(best, subsistenceWage(r));
+      if (lower && peasantSlots(b) - (b.tenants ?? 0) > 1) best = Math.max(best, subsistenceWage(w, r));
       continue;
     }
     const s: Skill = lower ? 'unskilled' : (prof as Skill);
@@ -215,7 +227,7 @@ function attraction(w: World, r: Region, prof: PopClass): number {
 /** 일하는 pop 이 지금 자리에서 받는 1인당 하루 소득 (소작지는 수확 가치, 소유 자리는 배당 추정) */
 function seatWage(w: World, r: Region, p: Pop, b: Building | undefined): number {
   if (!b) return 0;
-  if (isSubsistence(b.typeId)) return subsistenceWage(r);
+  if (isSubsistence(b.typeId)) return subsistenceWage(w, r);
   const s = p.prof as Skill;
   return paysDividend(b.stateOwned, s) ? dividendWage(b, s) : companyById(w, b.companyId)?.wages[s] ?? 0;
 }

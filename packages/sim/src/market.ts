@@ -8,7 +8,7 @@ import { POP_CLASSES, WEALTH_MAX, WEALTH_MIN } from './types';
 import type { Building, Company, GoodBag, GoodId, MarketGood, NeedDef, NeedId, Pop, Region, SalvageLot, World } from './types';
 
 // 시장 (지역마다 하나): 그날 나온 구매 주문과 판매 제안을 한 가격으로 체결한다.
-// 팔리지 않은 물건은 만든 사람이 그대로 들고 있다가 다음 날 다시 내놓는다 (공동 창고 없음).
+// 건물 산출은 그날 못 팔면 사라진다 (재고 없음). 상인 화물만 남겨 두었다가 다음 날 다시 내놓는다 (하루 2% 상함).
 // 지역 밖으로 나가는 화물은 운송비를, 국경을 넘으면 관세를 더 낸다.
 
 type Payer = { kind: 'company'; c: Company } | { kind: 'trader' };
@@ -35,8 +35,8 @@ interface PopPlan {
   basketCost: number;
   inKindValue: number;
   budget: number;
-  budgetFrac: number;
-  goods: GoodBag;
+  /** 살 수량 (GOOD_IDS 순서) */
+  goods: number[];
   foodNeed: number;
   foodInKind: number;
   foodBuy: { good: GoodId; qty: number; units: number }[];
@@ -45,11 +45,14 @@ interface PopPlan {
 /** 하루 장부: 주문, 판매 제안, 가계 구매 계획 */
 export interface Book {
   orders: Order[];
-  lots: Map<string, Lot[]>;
+  /** 시장(mkey)별 판매 제안 */
+  lots: Map<number, Lot[]>;
   plans: PopPlan[];
 }
 
-const mkey = (regionId: number, g: GoodId) => `${regionId}:${g}`;
+const GOOD_INDEX = Object.fromEntries(GOOD_IDS.map((g, i) => [g, i])) as Record<GoodId, number>;
+/** 시장 (지역, 상품) 의 숫자 키 */
+const mkey = (regionId: number, g: GoodId) => regionId * GOOD_IDS.length + GOOD_INDEX[g];
 
 export function newBook(): Book {
   return { orders: [], lots: new Map(), plans: [] };
@@ -95,12 +98,11 @@ export function harvest(w: World, book: Book) {
     if (!pop || pop.size <= 0) continue;
     const r = regionById(w, b.regionId);
     const k = workforce(pop);
-    const rent = hasLandlords(w, b.regionId) ? TUNE.rentShare : 0;
+    const { rent, tax } = harvestShares(w, r);
     const out: GoodBag = { grain: k * SUBSISTENCE.grainPerWorker, fiber: k * SUBSISTENCE.fiberPerWorker, timber: k * SUBSISTENCE.timberPerWorker };
-    // 토지 기반 과세: 수확의 토지세율을 징수율만큼 국고 몫으로 함께 판다 (1인당 과세면 토지세율 0)
+    // 토지 기반 과세: 걷어야 할 토지세 (팔리는 몫만, 징수율 전). 1인당 과세면 토지세율 0
     const kd = kingdomById(w, r.kingdomId);
     const land = taxRates(kd).land;
-    const tax = Math.min(1 - TUNE.peasantMarketShare - rent, land * (kd.taxRatio ?? 1));
     if (land > 0) kd.landOwed = (kd.landOwed ?? 0) + landTaxValue(r, out, land);
     const total = TUNE.peasantMarketShare + rent + tax;
     const rentFrac = rent / (total || 1), taxFrac = tax / (total || 1);
@@ -116,6 +118,18 @@ export function harvest(w: World, book: Book) {
       addLot(book, r.id, g, { kind: 'sub', pop, q: sell, rentFrac, taxFrac });
     }
   }
+}
+
+/**
+ * 소작 수확 중 시장 판매분과 함께 팔아 남에게 가는 몫: 지대(그 지역 저택에 귀족이 있을 때만)와
+ * 토지세(토지 기반 세법일 때, 수확의 토지세율(taxRates)을 징수율만큼 국고 몫으로. 상한 1 − 시장 판매 − 지대)
+ */
+export function harvestShares(w: World, r: Region): { rent: number; tax: number } {
+  const rent = hasLandlords(w, r.id) ? TUNE.rentShare : 0;
+  const kd = kingdomById(w, r.kingdomId);
+  const land = taxRates(kd).land;
+  const tax = land > 0 ? Math.min(1 - TUNE.peasantMarketShare - rent, land * (kd.taxRatio ?? 1)) : 0;
+  return { rent, tax };
 }
 
 /** 그 지역 저택에 귀족이 앉아 있는가 (소작지 지대를 받을 사람) */
@@ -161,19 +175,25 @@ export function collectOrders(w: World, book: Book) {
   }
 
   // 가계 (pop 마다): 부 단계에 맞는 묶음. 현물을 먼저 쓰고, 예산이 모자라면 비례로 줄인다
-  const splits = new Map<string, ReturnType<typeof needSplit>>();
-  const split = (r: Region, id: NeedId, wealth: number) => {
-    const k = `${r.id}:${id}:${Math.round(wealth * 10)}`;
-    if (!splits.has(k)) splits.set(k, needSplit(r, id, wealth));
-    return splits.get(k)!;
+  // 같은 지역·같은 부(0.1 단위)의 pop 은 그 필요를 처음 계산한 비중을 같이 쓴다
+  const splits = new Map<Region, Map<number, Partial<Record<NeedId, Split>>>>();
+  const splitsOf = (r: Region, wealth: number) => {
+    let byRegion = splits.get(r);
+    if (!byRegion) splits.set(r, (byRegion = new Map()));
+    const k = Math.round(wealth * 10);
+    let s = byRegion.get(k);
+    if (!s) byRegion.set(k, (s = {}));
+    return s;
   };
   for (const p of w.pops) {
     if (p.size < 1e-3) continue;
     const r = regionById(w, p.regionId);
+    const memo = splitsOf(r, p.wealth);
     const need = needsAt(p.wealth);
     const units0 = p.size * CONSUMPTION_PER_CAPITA;
-    const goods: GoodBag = {};
-    const inKind: GoodBag = { ...p.inKind };
+    // 상품별 수량은 GOOD_IDS 순서 배열로 센다
+    const goods = GOOD_IDS.map(() => 0);
+    const inKind = GOOD_IDS.map((g) => p.inKind[g] ?? 0);
     let basketCost = 0, inKindValue = 0, foodNeed = 0, foodInKind = 0;
     const foodBuy: PopPlan['foodBuy'] = [];
     for (const n of NEEDS) {
@@ -185,28 +205,30 @@ export function collectOrders(w: World, book: Book) {
       if (isFood) foodNeed = units;
       // 현물도 그 상품이 채울 수 있는 최대 비중(max)까지만 쓴다
       for (const opt of n.options) {
-        const avail = inKind[opt.good] ?? 0;
+        const i = GOOD_INDEX[opt.good];
+        const avail = inKind[i];
         if (avail <= 0 || units <= 0) continue;
         const use = Math.min(units, avail / opt.units, rawMax(opt.max, p.wealth) * total);
-        inKind[opt.good] = avail - use * opt.units;
+        inKind[i] = avail - use * opt.units;
         units -= use;
         if (isFood) foodInKind += use;
         const value = use * opt.units * r.market[opt.good].price;
         inKindValue += value;
         basketCost += value;
       }
-      for (const opt of split(r, n.id, p.wealth)) {
+      for (const opt of (memo[n.id] ??= needSplit(r, n.id, p.wealth))) {
         const qty = units * opt.units * opt.share;
         if (qty <= 0) continue;
         basketCost += qty * r.market[opt.good].price;
         if (isFood) foodBuy.push({ good: opt.good, qty, units: opt.units });
-        goods[opt.good] = (goods[opt.good] ?? 0) + qty;
+        goods[GOOD_INDEX[opt.good]] += qty;
       }
     }
     // 쓰고 남은 현물은 시장에 내놓지 않는다. 그 가치는 부 계산의 소득에만 넣는다
-    for (const g of GOOD_IDS) {
-      const left = inKind[g] ?? 0;
+    for (let i = 0; i < GOOD_IDS.length; i++) {
+      const left = inKind[i];
       if (left <= 1e-9) continue;
+      const g = GOOD_IDS[i];
       p.inKind[g] = (p.inKind[g] ?? 0) - left;
       p.unsoldKind = (p.unsoldKind ?? 0) + left * r.market[g].price;
     }
@@ -219,19 +241,20 @@ export function collectOrders(w: World, book: Book) {
     const restFrac = restCost > 1e-9 ? clamp((budget - foodCost) / restCost, 0, 1) : 1;
     const foodQty: GoodBag = {};
     for (const f of foodBuy) { foodQty[f.good] = (foodQty[f.good] ?? 0) + f.qty; f.qty *= foodFrac; }
-    for (const g of GOOD_IDS) {
-      const all = goods[g] ?? 0;
+    for (let i = 0; i < GOOD_IDS.length; i++) {
+      const all = goods[i];
       if (all <= 0) continue;
-      const fq = Math.min(all, foodQty[g] ?? 0);
-      goods[g] = fq * foodFrac + (all - fq) * restFrac;
+      const fq = Math.min(all, foodQty[GOOD_IDS[i]] ?? 0);
+      goods[i] = fq * foodFrac + (all - fq) * restFrac;
     }
-    const budgetFrac = 1;
-    book.plans.push({ pop: p, basketCost, inKindValue, budget, budgetFrac, goods, foodNeed, foodInKind, foodBuy });
-    for (const g of GOOD_IDS) {
-      const q = goods[g] ?? 0;
+    book.plans.push({ pop: p, basketCost, inKindValue, budget, goods, foodNeed, foodInKind, foodBuy });
+    const src = `pop:${p.prof}`;
+    for (let i = 0; i < GOOD_IDS.length; i++) {
+      const q = goods[i];
       if (q <= 1e-9) continue;
-      r.market[g].demand += q;
-      addBy(r.market[g].demandBy, `pop:${p.prof}`, q);
+      const mg = r.market[GOOD_IDS[i]];
+      mg.demand += q;
+      addBy(mg.demandBy, src, q);
     }
   }
 
@@ -244,22 +267,33 @@ const SUBSTITUTION_EXP = 10;
 /** 필요 단위 비용^-k 에 비례해서 선택지별 비중을 나누고, 상품별 최대 비중(max)을 넘는 몫은 나머지에 다시 나눈다 */
 type Split = (NeedDef['options'][number] & { share: number })[];
 const NEED_BY_ID = new Map(NEEDS.map((n) => [n.id, n]));
-/** 같은 지역·같은 가격이면 같은 결과라 재사용한다 (가격이 하나라도 바뀌면 다시 계산) */
-const splitCache = new WeakMap<Region, Map<string, { prices: number[]; split: Split }>>();
+/** 필요마다 상한(max)이 있는 선택지. 나머지 선택지의 상한은 늘 1 이다 */
+const CAPPED = new Map(NEEDS.map((n) => [n.id, n.options.filter((o) => o.max != null)]));
+/** 같은 지역·같은 가격·같은 상한이면 같은 결과라 재사용한다 (가격이 하나라도 바뀌면 다시 계산) */
+const splitCache = new WeakMap<Region, Map<NeedId, Map<number | string, { prices: number[]; split: Split }>>>();
 
 /** 그 지역 가격에서 부 wealth 인 pop 이 필요를 상품별로 나눠 사는 비중 (원자재 상한은 rawMax) */
 export function needSplit(r: Region, needId: NeedId, wealth = Infinity): Split {
   const need = NEED_BY_ID.get(needId)!;
+  // 캐시 키: 상한이 있는 선택지의 상한 (그것이 상한 목록 전체를 정한다)
+  const capped = CAPPED.get(needId)!;
+  const key = capped.length === 0 ? 0 : capped.length === 1 ? rawMax(capped[0].max, wealth) : capped.map((o) => rawMax(o.max, wealth)).join(',');
+  let byRegion = splitCache.get(r);
+  if (!byRegion) splitCache.set(r, (byRegion = new Map()));
+  let byNeed = byRegion.get(needId);
+  if (!byNeed) byRegion.set(needId, (byNeed = new Map()));
+  const hit = byNeed.get(key);
+  if (hit && samePrices(hit.prices, need, r)) return hit.split;
   const prices = need.options.map((o) => r.market[o.good].price);
   const caps = need.options.map((o) => rawMax(o.max, wealth));
-  const key = `${needId}:${caps.join(',')}`;
-  let byNeed = splitCache.get(r);
-  if (!byNeed) splitCache.set(r, (byNeed = new Map()));
-  const hit = byNeed.get(key);
-  if (hit && hit.prices.every((x, i) => x === prices[i])) return hit.split;
   const split = computeSplit(need, prices, caps);
   byNeed.set(key, { prices, split });
   return split;
+}
+
+function samePrices(prices: number[], need: NeedDef, r: Region): boolean {
+  for (let i = 0; i < prices.length; i++) if (prices[i] !== r.market[need.options[i].good].price) return false;
+  return true;
 }
 
 function computeSplit(need: NeedDef, prices: number[], caps: number[]): Split {
@@ -315,8 +349,9 @@ const CARGO_DECAY = 0.02;
 /** 이웃 지역 값이 운송비 + 관세보다 더 비싸면 상인이 싼 쪽에서 사서 다음 날 비싼 쪽에 판다 */
 function addTraderOrders(w: World, book: Book) {
   const pending: { o: Order; to: number; tariff: number }[] = [];
-  const inTransitOf = new Map<string, number>();
-  for (const sh of w.traders.shipments) inTransitOf.set(mkey(sh.to, sh.good), (inTransitOf.get(mkey(sh.to, sh.good)) ?? 0) + sh.q);
+  // 시장(mkey)별 합계는 mkey 위치의 배열로 센다
+  const inTransitOf: number[] = [];
+  for (const sh of w.traders.shipments) { const k = mkey(sh.to, sh.good); inTransitOf[k] = (inTransitOf[k] ?? 0) + sh.q; }
   for (const a of w.regions) {
     for (const nb of a.neighbors) {
       const b = regionById(w, nb);
@@ -326,7 +361,7 @@ function addTraderOrders(w: World, book: Book) {
         const rate = freightRate(w, a.id, b.id, g);
         const gap = (mb.price * (1 - rate)) / ma.price - 1;
         if (gap <= 0) continue;
-        const inTransit = inTransitOf.get(mkey(b.id, g)) ?? 0;
+        const inTransit = inTransitOf[mkey(b.id, g)] ?? 0;
         const unmet = Math.max(0, mb.demandEma - mb.supplyEma - inTransit);
         const flow = Math.max(ma.supplyEma, mb.demandEma);
         const q = Math.min(SHIP_RATE * gap * flow, unmet * 1.2 + flow * 0.05, ma.supplyEma * 0.9);
@@ -367,12 +402,13 @@ export function clearMarkets(w: World, book: Book) {
 
   // 판매 제안: 건물이 어제 만든 산출(빅토리아3처럼 재고는 없다: 그날 못 판 것은 사라진다), 전날 도착한 상인 화물
   for (const b of w.buildings) {
+    const src = `bld:${b.typeId}`;
     for (const g of GOOD_IDS) {
       const q = b.outStock[g] ?? 0;
       if (q <= 1e-9) continue;
       const mg = regionById(w, b.regionId).market[g];
       mg.supply += q;
-      addBy(mg.supplyBy, `bld:${b.typeId}`, q);
+      addBy(mg.supplyBy, src, q);
       addLot(book, b.regionId, g, { kind: 'bld', b, q });
     }
   }
@@ -403,14 +439,14 @@ export function clearMarkets(w: World, book: Book) {
   }
 
   // 시장마다: 체결률, 판매 대금 분배, 남은 물건 처리
-  const buyFill = new Map<string, number>();
+  const buyFill: number[] = [];
   for (const r of w.regions) {
     for (const g of GOOD_IDS) {
       const mg = r.market[g];
       const lots = book.lots.get(mkey(r.id, g)) ?? [];
       const offered = lots.reduce((a, l) => a + l.q, 0);
       const sold = Math.min(mg.demand, offered);
-      buyFill.set(mkey(r.id, g), mg.demand > 0 ? sold / mg.demand : 1);
+      buyFill[mkey(r.id, g)] = mg.demand > 0 ? sold / mg.demand : 1;
       const sellFrac = offered > 0 ? sold / offered : 0;
       const p = mg.price;
       for (const lot of lots) {
@@ -453,7 +489,7 @@ export function clearMarkets(w: World, book: Book) {
 
   // 구매자 결제 (같은 시장 안에서는 모두 같은 비율로 받는다)
   for (const o of book.orders) {
-    const fr = buyFill.get(mkey(o.regionId, o.good)) ?? 1;
+    const fr = buyFill[mkey(o.regionId, o.good)] ?? 1;
     const q = o.qty * fr;
     if (o.miss && o.qty - q > 1e-9) o.miss(o.qty - q);
     if (q <= 0) continue;
@@ -468,10 +504,11 @@ export function clearMarkets(w: World, book: Book) {
     const r = regionById(w, p.regionId);
     const hh = r.households[p.prof];
     let got = plan.inKindValue, spent = 0;
-    for (const g of GOOD_IDS) {
-      const want = (plan.goods[g] ?? 0) * plan.budgetFrac;
+    for (let i = 0; i < GOOD_IDS.length; i++) {
+      const want = plan.goods[i];
       if (want <= 0) continue;
-      const q = want * (buyFill.get(mkey(r.id, g)) ?? 1);
+      const g = GOOD_IDS[i];
+      const q = want * (buyFill[mkey(r.id, g)] ?? 1);
       const cost = q * r.market[g].price;
       spent += cost;
       got += cost;
@@ -480,10 +517,10 @@ export function clearMarkets(w: World, book: Book) {
     p.savings -= spent;
     p.lastSpend += spent;
     investSurplus(w, p, plan.basketCost - plan.inKindValue);
-    for (const [g, q] of Object.entries(p.inKind)) if (hh) hh.consumed[g as GoodId] = (hh.consumed[g as GoodId] ?? 0) + (q ?? 0);
+    if (hh) for (const g in p.inKind) hh.consumed[g as GoodId] = (hh.consumed[g as GoodId] ?? 0) + (p.inKind[g as GoodId] ?? 0);
     p.fulfillment = plan.basketCost > 0 ? Math.min(1, got / plan.basketCost) : 1;
     let fed = plan.foodInKind;
-    for (const f of plan.foodBuy) fed += (f.qty * plan.budgetFrac * (buyFill.get(mkey(r.id, f.good)) ?? 1)) / f.units;
+    for (const f of plan.foodBuy) fed += (f.qty * (buyFill[mkey(r.id, f.good)] ?? 1)) / f.units;
     p.food = plan.foodNeed > 0 ? Math.min(1, fed / plan.foodNeed) : 1;
     updateWealth(p, r, plan);
   }
@@ -495,6 +532,7 @@ const INVEST_RATE = 0.05;
 /**
  * 팝은 저축하지 않는다 (빅토리아3): 생활비와 세금의 며칠분(TUNE.cashBufferDays)을 넘는 현금은 매일 조금씩 그 왕국 투자 풀로 간다.
  * 이것이 민간 투자의 재원이다. 쓰고 남는 소득이 꾸준하면 부 단계가 올라 쓰는 양이 는다.
+ * 세금은 걷는 쪽과 같은 계산(taxDue)이다: 토지 기반 세법이면 pop 이 현금으로 낼 세금은 없다.
  */
 function investSurplus(w: World, p: Pop, cashCost: number) {
   const over = (p.savings - (Math.max(0, cashCost) + taxDue(w, p)) * TUNE.cashBufferDays) * INVEST_RATE;
@@ -574,9 +612,15 @@ const BY_EMA = 0.1;
 
 function emaBy(prev: Record<string, number> | undefined, cur: Record<string, number> | undefined): Record<string, number> {
   const out: Record<string, number> = {};
-  const c = cur ?? {};
-  for (const k of new Set([...Object.keys(prev ?? {}), ...Object.keys(c)])) {
-    const v = (prev?.[k] ?? 0) * (1 - BY_EMA) + (c[k] ?? 0) * BY_EMA;
+  const p = prev ?? {}, c = cur ?? {};
+  // 키 순서: 어제 키, 그다음 오늘 새로 생긴 키
+  for (const k in p) {
+    const v = (p[k] ?? 0) * (1 - BY_EMA) + (c[k] ?? 0) * BY_EMA;
+    if (v > 1e-4) out[k] = v;
+  }
+  for (const k in c) {
+    if (Object.hasOwn(p, k)) continue;
+    const v = (c[k] ?? 0) * BY_EMA;
     if (v > 1e-4) out[k] = v;
   }
   return out;
@@ -584,8 +628,8 @@ function emaBy(prev: Record<string, number> | undefined, cur: Record<string, num
 
 /** 가격을 가격 공식 쪽으로 움직인다. 화면용 재고(inventory)는 팔리지 않고 남은 상인 화물이다 */
 export function updatePrices(w: World) {
-  const stockOf = new Map<string, number>();
-  for (const sh of w.traders.shipments) stockOf.set(mkey(sh.to, sh.good), (stockOf.get(mkey(sh.to, sh.good)) ?? 0) + sh.q);
+  const stockOf: number[] = [];
+  for (const sh of w.traders.shipments) { const k = mkey(sh.to, sh.good); stockOf[k] = (stockOf[k] ?? 0) + sh.q; }
   for (const r of w.regions) {
     for (const g of GOOD_IDS) {
       const mg: MarketGood = r.market[g];
@@ -595,7 +639,7 @@ export function updatePrices(w: World) {
       mg.supplyEma = mg.supplyEma * (1 - FLOW_EMA) + mg.supply * FLOW_EMA;
       mg.demandByEma = emaBy(mg.demandByEma, mg.demandBy);
       mg.supplyByEma = emaBy(mg.supplyByEma, mg.supplyBy);
-      mg.inventory = stockOf.get(mkey(r.id, g)) ?? 0;
+      mg.inventory = stockOf[mkey(r.id, g)] ?? 0;
       const target = priceFormula(g, mg.demandEma, mg.supplyEma);
       // 소수 2자리라 작은 차이가 0으로 반올림되지 않게, 차이가 있으면 최소 0.01은 움직인다
       const gap = target - mg.price;

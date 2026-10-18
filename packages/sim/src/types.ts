@@ -74,7 +74,7 @@ export interface MethodDef {
   construction?: number;
   /** 학교: 1레벨이 가르치는 인구 */
   seats?: number;
-  /** 행정청: 레벨당 하루에 걷을 수 있는 소득세 (징세 한도) */
+  /** 행정청: 레벨당 감당하는 인구 (× TUNE.adminScale, 징세 한도) */
   taxCapacity?: number;
 }
 

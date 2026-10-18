@@ -159,7 +159,7 @@ export function recordMetrics(w: World) {
     let pi = 0, pw = 0, lc = 0, lw = 0, va = 0, wages = 0, workers = 0;
     for (const r of w.regions.filter((x) => x.kingdomId === k.id)) {
       const peas = pops.filter((p) => p.regionId === r.id && p.prof === 'peasant' && p.work !== 0).reduce((a, p) => a + workforce(p), 0);
-      pi += subsistenceWage(r) * peas; pw += peas;
+      pi += subsistenceWage(w, r) * peas; pw += peas;
       const people = pops.filter((p) => p.regionId === r.id).reduce((a, p) => a + p.size, 0);
       lc += basketCostAt(r, 1 / WORKFORCE_RATIO, 5) * people; lw += people;
     }

@@ -2,7 +2,7 @@ import { BUILDING_BY_ID, GOOD_IDS, GOODS, NEEDS, SKILL_DEFS, TUNE, getMethod, re
 import { availableMethods, collectionRatio, regionById, shippingRate, wageCostOf } from './economy';
 import { clamp } from './rng';
 import { SKILLS } from './types';
-import type { Company, GoodId, MethodDef, Region, Skill, World } from './types';
+import type { Company, GoodId, Kingdom, MethodDef, Region, Skill, World } from './types';
 
 /**
  * 시장 전망: AI 투자 판단의 공통 바탕. 상품마다 대륙 전체의 앞으로의 수요와 공급을 세고 그 비율로 장기 가격을 본다.
@@ -102,7 +102,9 @@ export interface Valuation { revenue: number; inputCost: number; wageCost: numbe
  */
 function longRunWages(c: Company): Record<Skill, number> {
   if (c.state) return c.wages;
-  return Object.fromEntries(SKILLS.map((s) => [s, Math.max(c.wages[s], SKILL_DEFS[s].baseWage * TUNE.investWage)])) as Record<Skill, number>;
+  const out = {} as Record<Skill, number>;
+  for (const s of SKILLS) out[s] = Math.max(c.wages[s], SKILL_DEFS[s].baseWage * TUNE.investWage);
+  return out;
 }
 
 /**
@@ -112,19 +114,59 @@ function longRunWages(c: Company): Record<Skill, number> {
  * 지역 밖으로 나가는 몫은 운송비를 뺀다. 투입재도 같은 규칙: 사들인 뒤의 장기 가격(잠재 수요 제외)과 현지 가격의 평균.
  */
 export function valueMethod(w: World, o: Outlook, r: Region, c: Company, typeId: string, m: MethodDef, levels = 1, existing = false): Valuation {
+  const fixed = valueFixed(w, r, c, typeId, m);
   let best: Valuation | null = null;
   for (const u of [1, 0.75, 0.5, 0.25]) {
-    const v = valueAt(w, o, r, c, typeId, m, levels * u, existing);
+    const v = valueAt(o, r, c, m, levels * u, existing, fixed);
     if (!best || v.profit > best.profit) best = { ...v, utilization: u };
   }
   return best!;
 }
 
-function valueAt(w: World, o: Outlook, r: Region, c: Company, typeId: string, m: MethodDef, levels: number, existing = false): Omit<Valuation, 'utilization'> {
+/** valueAt 에서 가동률과 무관한 값 (가동률마다 다시 세지 않는다) */
+interface ValueFixed {
+  perk: number;
+  ship: number;
+  /** 행정청: 그 왕국과 공사 중인 행정청까지 센 지금 징수 한도 */
+  kingdom?: Kingdom;
+  cap: number;
+  /** 레벨 1 장기 인건비 */
+  wage: number;
+  /** 이 방식이 쓰거나 만드는 상품 (GOOD_IDS 순서) */
+  goods: GoodId[];
+}
+
+const goodsCache = new WeakMap<MethodDef, GoodId[]>();
+function goodsOf(m: MethodDef): GoodId[] {
+  let gs = goodsCache.get(m);
+  if (!gs) goodsCache.set(m, (gs = GOOD_IDS.filter((g) => (m.outputs[g] ?? 0) !== 0 || (m.inputs[g] ?? 0) !== 0)));
+  return gs;
+}
+
+function valueFixed(w: World, r: Region, c: Company, typeId: string, m: MethodDef): ValueFixed {
   const perk = 1 + regionPerk(r.id, typeId);
   const ship = shippingRate(w, r.id);
+  let kingdom: Kingdom | undefined, cap = 0;
+  if (m.taxCapacity && c.state) {
+    kingdom = w.kingdoms.find((x) => x.id === r.kingdomId);
+    // 공사 중인 행정청의 한도도 이미 있는 것으로 친다
+    let pending = 0;
+    for (const x of w.constructions) {
+      const pm = getMethod(x.typeId, x.methodId);
+      if (pm.taxCapacity && regionById(w, x.regionId).kingdomId === r.kingdomId) pending += pm.taxCapacity * (x.levels ?? 1);
+    }
+    if (kingdom) cap = (kingdom.taxCapacity ?? 0) + pending * TUNE.adminScale;
+  }
+  // 새로 지을지 판단할 때는 장기 임금으로 본다 (longRunWages)
+  const wage = wageCostOf(m, longRunWages(c), c.state);
+  return { perk, ship, kingdom, cap, wage, goods: goodsOf(m) };
+}
+
+function valueAt(o: Outlook, r: Region, c: Company, m: MethodDef, levels: number, existing: boolean, fixed: ValueFixed): Omit<Valuation, 'utilization'> {
+  const { perk, ship } = fixed;
   let revenue = 0, inputCost = 0;
-  for (const g of GOOD_IDS) {
+  // 쓰지도 만들지도 않는 상품은 산출·투입이 0 이라 건너뛴다
+  for (const g of fixed.goods) {
     const out = (m.outputs[g] ?? 0) * levels * perk;
     if (out > 0) {
       const p = o.price(g, existing ? 0 : out, 0);
@@ -143,21 +185,14 @@ function valueAt(w: World, o: Outlook, r: Region, c: Company, typeId: string, m:
   }
   // 행정청: 지금 한도 때문에 못 걷는 세금을 이만큼 더 걷는다
   if (m.taxCapacity && c.state) {
-    const k = w.kingdoms.find((x) => x.id === r.kingdomId);
-    // 공사 중인 행정청의 한도도 이미 있는 것으로 친다
-    let pending = 0;
-    for (const x of w.constructions) {
-      const pm = getMethod(x.typeId, x.methodId);
-      if (pm.taxCapacity && regionById(w, x.regionId).kingdomId === r.kingdomId) pending += pm.taxCapacity * (x.levels ?? 1);
-    }
+    const k = fixed.kingdom;
     // 늘어난 한도만큼 징수율 곡선이 오르는 몫 × 걷어야 할 세금
     if (k) {
-      const cap = (k.taxCapacity ?? 0) + pending * TUNE.adminScale, n = k.taxDue ?? 0, add = m.taxCapacity * TUNE.adminScale * levels * perk;
+      const cap = fixed.cap, n = k.taxDue ?? 0, add = m.taxCapacity * TUNE.adminScale * levels * perk;
       revenue += (k.taxOwed ?? 0) * (existing ? collectionRatio(cap, n) - collectionRatio(Math.max(0, cap - add), n) : collectionRatio(cap + add, n) - collectionRatio(cap, n));
     }
   }
-  // 새로 지을지 판단할 때는 장기 임금으로 본다 (longRunWages)
-  const wageCost = wageCostOf(m, longRunWages(c), c.state) * levels;
+  const wageCost = fixed.wage * levels;
   return { revenue, inputCost, wageCost, profit: revenue - inputCost - wageCost };
 }
 

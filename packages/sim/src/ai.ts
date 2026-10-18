@@ -59,14 +59,21 @@ function labourPool(w: World, r: Region, s: Skill): number {
   return n;
 }
 
-/** 이 방식을 levels 레벨 돌릴 일손이 공사 기간 안에 모이는가 0..1 (민간 건물의 배당 자리는 승진으로 천천히 차므로 세지 않는다) */
-export function laborAvailability(w: World, r: Region, m: MethodDef, levels: number, stateOwned = true): number {
+/**
+ * 이 방식을 levels 레벨 돌릴 일손이 공사 기간 안에 모이는가 0..1 (민간 건물의 배당 자리는 승진으로 천천히 차므로 세지 않는다).
+ * pools: pop 이 바뀌지 않는 동안 (지역, 직종) 별 labourPool 을 한 번만 센다
+ */
+export function laborAvailability(w: World, r: Region, m: MethodDef, levels: number, stateOwned = true, pools?: Map<string, number>): number {
   let ok = 1;
   // 민간 건물의 소유주 자리(1%)는 공사 판단을 막지 않는다
   for (const s of SKILLS) {
     if (paysDividend(stateOwned, s)) continue;
     const need = (m.workers[s] ?? 0) * levels;
-    if (need > 0) ok = Math.min(ok, labourPool(w, r, s) / need);
+    if (!(need > 0)) continue;
+    const k = `${r.id}|${s}`;
+    let pool = pools?.get(k);
+    if (pool === undefined) { pool = labourPool(w, r, s); pools?.set(k, pool); }
+    ok = Math.min(ok, pool / need);
   }
   return ok;
 }
@@ -99,7 +106,7 @@ function adjustWages(w: World, c: Company) {
       if (n <= 0) continue;
       cap += n; emp += b.employed[s];
       const r = regionById(w, b.regionId);
-      outside += (s === 'unskilled' ? subsistenceWage(r) : s === 'skilled' ? c.wages.unskilled : c.wages.skilled) * n;
+      outside += (s === 'unskilled' ? subsistenceWage(w, r) : s === 'skilled' ? c.wages.unskilled : c.wages.skilled) * n;
       people += n;
     }
     c.lastEmployed[s] = emp;
@@ -108,7 +115,8 @@ function adjustWages(w: World, c: Company) {
     const ceiling = SKILL_DEFS[s].baseWage * ceilMult;
     const vacancy = cap - emp, grew = emp - (last[s] ?? emp);
     let wage = c.wages[s];
-    if (TUNE.wageLossCut && c.lastWeekProfit < 0) wage *= 0.98;
+    // runAi 는 주간 장부를 넘기기 전에 돈다: weekProfit 이 막 끝난 주다 (lastWeekProfit 은 그 전 주)
+    if (TUNE.wageLossCut && c.weekProfit < 0) wage *= 0.98;
     else if (vacancy > cap * 0.05 && grew < vacancy * 0.1) wage *= 1.03;
     else if (vacancy < cap * 0.02) wage *= 0.99;
     wage = Math.max(floor, Math.min(ceiling, wage));
@@ -462,6 +470,7 @@ interface Pick { regionId: number; typeId: string; methodId: string; levels: num
  */
 export function pickProject(w: World, c: Company, o: Outlook, free: number, allowLoss = false, blocked?: { best: Pick | null }): Pick | null {
   let best: Pick | null = null, least: Pick | null = null;
+  const pools = new Map<string, number>();
   for (const r of ownRegions(w, c)) {
     for (const t of BUILDING_TYPES) {
       if (t.id === 'builder' || !canBuildType(c, t)) continue;
@@ -475,7 +484,7 @@ export function pickProject(w: World, c: Company, o: Outlook, free: number, allo
         if (!blocked || (t.deposit && depositFree(w, r.id, t.deposit) < 1)) continue;
         for (const m of availableMethods(c, t.id)) {
           if (existing && existing.methodId !== m.id) continue;
-          if (laborAvailability(w, r, m, 1, c.state) < 0.5) continue;
+          if (laborAvailability(w, r, m, 1, c.state, pools) < 0.5) continue;
           const e = valueMethod(w, o, r, c, t.id, m, 1);
           if (m.seats) e.profit += schoolBenefit(w, r, m, 1, false);
           const roi = (e.profit * TICKS_PER_YEAR) / perLevel;
@@ -490,7 +499,7 @@ export function pickProject(w: World, c: Company, o: Outlook, free: number, allo
           if (levels > room || free < perLevel * levels) continue;
           const e = valueMethod(w, o, r, c, t.id, m, levels);
           if (m.seats) e.profit += schoolBenefit(w, r, m, levels, false);
-          if (laborAvailability(w, r, m, levels, c.state) < 0.5) continue;
+          if (laborAvailability(w, r, m, levels, c.state, pools) < 0.5) continue;
           const roi = (e.profit * TICKS_PER_YEAR) / (perLevel * levels);
           if (allowLoss && levels === CHUNKS[CHUNKS.length - 1] && e.profit >= -TUNE.lossTolerance * e.wageCost) {
             const s = roi + Math.abs(roi) * (rand(w) - 0.5) * 0.3;

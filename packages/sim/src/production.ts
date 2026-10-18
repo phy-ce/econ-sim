@@ -133,10 +133,6 @@ export function produce(w: World) {
 }
 
 /**
- * 오늘 만든 건설 포인트를 그 사무소가 맡은 공사(왕실 것과 그 왕국 민간 것)에 착공 순서대로 배분한다.
- * 민간 공사는 받은 포인트의 비용을 왕실에 낸다. 낼 돈만큼만 받는다.
- */
-/**
  * 건축사무소의 하루 포인트를 그 왕국 공사에 나눈다. 왕실 몫 50%, 민간 몫 50%이고, 각 몫 안에서는 공사 순서대로 쓴다.
  * 한 공사는 레벨당 하루 MAX_POINTS_PER_LEVEL_DAY 까지만 받는다 (빅토리아3). 한쪽이 다 못 쓴 몫은 다른 쪽이 쓴다.
  * 민간은 쓴 포인트만큼 사무소 주인에게 공사비를 낸다.
@@ -236,7 +232,7 @@ export function progressDemolition(w: World) {
     const starts = (kingdomById(w, regionById(w, b.regionId).kingdomId).startsMonth ??= {});
     starts[`${b.typeId}|d`] = (starts[`${b.typeId}|d`] ?? 0) + 1;
     const mats = b.materials ?? materialsPerLevel(w, undefined, b.typeId);
-    const owner = ownerBuildingOf(w, b);
+    const owner = ownerBuildingOf(w, b, true);
     const ownerShare = b.stateOwned ? (b.privateShare ?? 0) : 1;
     for (const g of GOOD_IDS) {
       const q = round2((mats[g] ?? 0) * TUNE.salvageShare);
