@@ -1,5 +1,6 @@
 import { BUILDING_BY_ID, CLASS_DEFS, SUBSISTENCE, TUNE } from './data';
 import { borrow, companyById, emptyJobs, emptyStats, isSubsistence, paysDividend, peasantSlots, regionById, slots, staffing } from './economy';
+import { harvestShares } from './market';
 import { findPop, getPop, movePeople, popsIn, workforce } from './pops';
 import { clamp } from './rng';
 import { SKILLS } from './types';
@@ -17,11 +18,12 @@ const RATIO_GATE = 0.9;
 
 interface Seat { b: Building; prof: PopClass; slots: number; wage: number }
 
-/** 소작농 1인당 하루 소득 가치 (현물 + 판매분에서 지대를 뺀 몫). 노동자 일자리와 비교하는 기준 */
-export function subsistenceWage(r: Region): number {
+/** 소작농 1인당 하루 소득 가치 (현물 + 판매분에서 수확과 같은 지대·토지세 몫을 뺀 것). 노동자 일자리와 비교하는 기준 */
+export function subsistenceWage(w: World, r: Region): number {
   const m = r.market;
   const gross = SUBSISTENCE.grainPerWorker * m.grain.price + SUBSISTENCE.fiberPerWorker * m.fiber.price + SUBSISTENCE.timberPerWorker * m.timber.price;
-  return gross * (1 - TUNE.rentShare);
+  const { rent, tax } = harvestShares(w, r);
+  return gross * (1 - rent - tax);
 }
 
 /** 소작지 노동 인구 wf 의 하루 현물 (수확 중 시장에 팔지 않는 몫) */
@@ -41,7 +43,7 @@ function dividendWage(b: Building, s: Skill): number {
 function seatsOf(w: World, r: Region, b: Building): Seat[] {
   const out: Seat[] = [];
   if (isSubsistence(b.typeId)) {
-    out.push({ b, prof: 'peasant', slots: peasantSlots(b), wage: subsistenceWage(r) });
+    out.push({ b, prof: 'peasant', slots: peasantSlots(b), wage: subsistenceWage(w, r) });
     return out;
   }
   const c = companyById(w, b.companyId);
@@ -201,7 +203,7 @@ function attraction(w: World, r: Region, prof: PopClass): number {
   for (const b of w.buildings) {
     if (b.regionId !== r.id) continue;
     if (isSubsistence(b.typeId)) {
-      if (lower && peasantSlots(b) - (b.tenants ?? 0) > 1) best = Math.max(best, subsistenceWage(r));
+      if (lower && peasantSlots(b) - (b.tenants ?? 0) > 1) best = Math.max(best, subsistenceWage(w, r));
       continue;
     }
     const s: Skill = lower ? 'unskilled' : (prof as Skill);
@@ -215,7 +217,7 @@ function attraction(w: World, r: Region, prof: PopClass): number {
 /** 일하는 pop 이 지금 자리에서 받는 1인당 하루 소득 (소작지는 수확 가치, 소유 자리는 배당 추정) */
 function seatWage(w: World, r: Region, p: Pop, b: Building | undefined): number {
   if (!b) return 0;
-  if (isSubsistence(b.typeId)) return subsistenceWage(r);
+  if (isSubsistence(b.typeId)) return subsistenceWage(w, r);
   const s = p.prof as Skill;
   return paysDividend(b.stateOwned, s) ? dividendWage(b, s) : companyById(w, b.companyId)?.wages[s] ?? 0;
 }

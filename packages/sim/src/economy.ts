@@ -126,10 +126,13 @@ export function peasantSlots(b: Building): number {
   return isSubsistence(b.typeId) ? b.level * SUBSISTENCE.workersPerCell : 0;
 }
 
-/** 이 건물을 소유하는 지역의 소유 건물: 농지·산림·광산 건물은 저택, 공장 부지 건물은 금융가 */
-export function ownerBuildingOf(w: World, b: Building): Building | undefined {
+/**
+ * 이 건물을 소유하는 지역의 소유 건물: 농지·산림·광산 건물은 저택, 공장 부지 건물은 금융가.
+ * 국영 건물은 소유 건물이 없다. share 면 국영 건물의 민간 지분 몫이 갈 곳을 찾는다 (배당·철거 대금)
+ */
+export function ownerBuildingOf(w: World, b: Building, share = false): Building | undefined {
   const t = BUILDING_BY_ID[b.typeId];
-  if (t.auto || b.stateOwned) return undefined;
+  if (t.auto || (b.stateOwned && !share)) return undefined;
   const typeId = t.land === 'plot' ? 'finance' : 'manor';
   return w.buildings.find((x) => x.regionId === b.regionId && x.typeId === typeId);
 }
@@ -189,8 +192,8 @@ export function wageCostOf(method: MethodDef, wages: Record<Skill, number>, stat
 }
 
 /**
- * 징수율: 행정청이 감당하는 인구 / 왕국 인구 = x 일 때 1 − e^(−x). 한도가 인구와 같으면 63%, 2배면 86%, 3배면 95%.
- * 100%에는 닿지 않고, 행정청을 늘릴수록 더 걷히는 몫이 줄어든다
+ * 징수율: 행정청이 감당하는 인구 / 왕국 인구 = x 일 때 x / (1 + x) (TUNE.taxCurve = 'hyp'). 한도가 인구와 같으면 50%, 2배면 67%, 3배면 75%.
+ * 'exp' 곡선이면 1 − e^(−x) (63%, 86%, 95%). 100%에는 닿지 않고, 행정청을 늘릴수록 더 걷히는 몫이 줄어든다
  */
 export function collectionRatio(capacity: number, people: number): number {
   if (people <= 0) return 1;

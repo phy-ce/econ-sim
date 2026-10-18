@@ -1,6 +1,6 @@
-import { CLASS_DEFS, CONSUMPTION_PER_CAPITA, GOOD_IDS, GOODS, NEEDS, SUBSISTENCE, TUNE, getMethod, needsAt, rawMax } from './data';
+import { CONSUMPTION_PER_CAPITA, GOOD_IDS, GOODS, NEEDS, SUBSISTENCE, TUNE, getMethod, needsAt, rawMax } from './data';
 import { CARTAGE_RATE, RAIL_RATE, borrow, companyById, freightRate, priceFormula, regionById, shippingRate, isSubsistence } from './economy';
-import { payLandTax, payRent, paySalvage } from './finance';
+import { payLandTax, payRent, paySalvage, taxDue } from './finance';
 import { addToPool, borderCost, kingdomById, kingdomOf, payTariff } from './kingdoms';
 import { findPop, payPops, payProf, workforce } from './pops';
 import { clamp, round2 } from './rng';
@@ -8,7 +8,7 @@ import { POP_CLASSES, WEALTH_MAX, WEALTH_MIN } from './types';
 import type { Building, Company, GoodBag, GoodId, MarketGood, NeedDef, NeedId, Pop, Region, SalvageLot, World } from './types';
 
 // 시장 (지역마다 하나): 그날 나온 구매 주문과 판매 제안을 한 가격으로 체결한다.
-// 팔리지 않은 물건은 만든 사람이 그대로 들고 있다가 다음 날 다시 내놓는다 (공동 창고 없음).
+// 건물 산출은 그날 못 팔면 사라진다 (재고 없음). 상인 화물만 남겨 두었다가 다음 날 다시 내놓는다 (하루 2% 상함).
 // 지역 밖으로 나가는 화물은 운송비를, 국경을 넘으면 관세를 더 낸다.
 
 type Payer = { kind: 'company'; c: Company } | { kind: 'trader' };
@@ -35,7 +35,6 @@ interface PopPlan {
   basketCost: number;
   inKindValue: number;
   budget: number;
-  budgetFrac: number;
   goods: GoodBag;
   foodNeed: number;
   foodInKind: number;
@@ -95,11 +94,9 @@ export function harvest(w: World, book: Book) {
     if (!pop || pop.size <= 0) continue;
     const r = regionById(w, b.regionId);
     const k = workforce(pop);
-    const rent = hasLandlords(w, b.regionId) ? TUNE.rentShare : 0;
+    const { rent, tax } = harvestShares(w, r);
     const out: GoodBag = { grain: k * SUBSISTENCE.grainPerWorker, fiber: k * SUBSISTENCE.fiberPerWorker, timber: k * SUBSISTENCE.timberPerWorker };
-    // 토지 기반 과세: 수확의 landTax 비율을 징수율만큼 국고 몫으로 함께 판다
     const kd = kingdomById(w, r.kingdomId);
-    const tax = kd.taxLaw === 'land' ? Math.min(1 - TUNE.peasantMarketShare - rent, kd.landTax * (kd.taxRatio ?? 1)) : 0;
     if (kd.taxLaw === 'land') kd.landOwed = (kd.landOwed ?? 0) + GOOD_IDS.reduce((a, g) => a + (out[g] ?? 0) * r.market[g].price, 0) * kd.landTax;
     const total = TUNE.peasantMarketShare + rent + tax;
     const rentFrac = rent / (total || 1), taxFrac = tax / (total || 1);
@@ -115,6 +112,17 @@ export function harvest(w: World, book: Book) {
       addLot(book, r.id, g, { kind: 'sub', pop, q: sell, rentFrac, taxFrac });
     }
   }
+}
+
+/**
+ * 소작 수확 중 시장 판매분과 함께 팔아 남에게 가는 몫: 지대(그 지역 저택에 귀족이 있을 때만)와
+ * 토지세(토지 기반 세법일 때, 수확의 landTax 비율을 징수율만큼 국고 몫으로. 상한 1 − 시장 판매 − 지대)
+ */
+export function harvestShares(w: World, r: Region): { rent: number; tax: number } {
+  const rent = hasLandlords(w, r.id) ? TUNE.rentShare : 0;
+  const kd = kingdomById(w, r.kingdomId);
+  const tax = kd.taxLaw === 'land' ? Math.min(1 - TUNE.peasantMarketShare - rent, kd.landTax * (kd.taxRatio ?? 1)) : 0;
+  return { rent, tax };
 }
 
 /** 그 지역 저택에 귀족이 앉아 있는가 (소작지 지대를 받을 사람) */
@@ -224,8 +232,7 @@ export function collectOrders(w: World, book: Book) {
       const fq = Math.min(all, foodQty[g] ?? 0);
       goods[g] = fq * foodFrac + (all - fq) * restFrac;
     }
-    const budgetFrac = 1;
-    book.plans.push({ pop: p, basketCost, inKindValue, budget, budgetFrac, goods, foodNeed, foodInKind, foodBuy });
+    book.plans.push({ pop: p, basketCost, inKindValue, budget, goods, foodNeed, foodInKind, foodBuy });
     for (const g of GOOD_IDS) {
       const q = goods[g] ?? 0;
       if (q <= 1e-9) continue;
@@ -468,7 +475,7 @@ export function clearMarkets(w: World, book: Book) {
     const hh = r.households[p.prof];
     let got = plan.inKindValue, spent = 0;
     for (const g of GOOD_IDS) {
-      const want = (plan.goods[g] ?? 0) * plan.budgetFrac;
+      const want = plan.goods[g] ?? 0;
       if (want <= 0) continue;
       const q = want * (buyFill.get(mkey(r.id, g)) ?? 1);
       const cost = q * r.market[g].price;
@@ -482,7 +489,7 @@ export function clearMarkets(w: World, book: Book) {
     for (const [g, q] of Object.entries(p.inKind)) if (hh) hh.consumed[g as GoodId] = (hh.consumed[g as GoodId] ?? 0) + (q ?? 0);
     p.fulfillment = plan.basketCost > 0 ? Math.min(1, got / plan.basketCost) : 1;
     let fed = plan.foodInKind;
-    for (const f of plan.foodBuy) fed += (f.qty * plan.budgetFrac * (buyFill.get(mkey(r.id, f.good)) ?? 1)) / f.units;
+    for (const f of plan.foodBuy) fed += (f.qty * (buyFill.get(mkey(r.id, f.good)) ?? 1)) / f.units;
     p.food = plan.foodNeed > 0 ? Math.min(1, fed / plan.foodNeed) : 1;
     updateWealth(p, r, plan);
   }
@@ -494,15 +501,13 @@ const INVEST_RATE = 0.05;
 /**
  * 팝은 저축하지 않는다 (빅토리아3): 생활비와 세금의 며칠분(TUNE.cashBufferDays)을 넘는 현금은 매일 조금씩 그 왕국 투자 풀로 간다.
  * 이것이 민간 투자의 재원이다. 쓰고 남는 소득이 꾸준하면 부 단계가 올라 쓰는 양이 는다.
+ * 세금은 걷는 쪽과 같은 계산(taxDue)이다: 토지 기반 세법이면 pop 이 현금으로 낼 세금은 없다.
  */
 function investSurplus(w: World, p: Pop, cashCost: number) {
-  const k = kingdomById(w, kingdomOf(w, p.regionId));
-  const st = CLASS_DEFS[p.prof].stratum;
-  const taxDue = p.size * k.pollTax[st] + Math.max(0, p.incomeEma) * k.incomeTax[st];
-  const over = (p.savings - (Math.max(0, cashCost) + taxDue) * TUNE.cashBufferDays) * INVEST_RATE;
+  const over = (p.savings - (Math.max(0, cashCost) + taxDue(w, p)) * TUNE.cashBufferDays) * INVEST_RATE;
   if (over <= 0) return;
   p.savings -= over;
-  addToPool(w, k.id, p.regionId, over);
+  addToPool(w, kingdomOf(w, p.regionId), p.regionId, over);
 }
 
 /** 그 부 단계의 하루 소비 묶음 비용 (지역 가격 기준) */
