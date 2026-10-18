@@ -377,7 +377,7 @@ function payShareDividends(w: World, c: Company) {
     c.cash -= amt;
     c.weekProfit -= amt;
     c.ledger.dividends += amt;
-    const o = ownerBuildingOf(w, b);
+    const o = ownerBuildingOf(w, b, true);
     if (o) toOwner.set(o, (toOwner.get(o) ?? 0) + amt);
     else addToPool(w, c.kingdomId, b.regionId, amt);
   }

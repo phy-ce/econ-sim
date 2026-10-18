@@ -126,10 +126,13 @@ export function peasantSlots(b: Building): number {
   return isSubsistence(b.typeId) ? b.level * SUBSISTENCE.workersPerCell : 0;
 }
 
-/** 이 건물을 소유하는 지역의 소유 건물: 농지·산림·광산 건물은 저택, 공장 부지 건물은 금융가 */
-export function ownerBuildingOf(w: World, b: Building): Building | undefined {
+/**
+ * 이 건물을 소유하는 지역의 소유 건물: 농지·산림·광산 건물은 저택, 공장 부지 건물은 금융가.
+ * 국영 건물은 소유 건물이 없다. share 면 국영 건물의 민간 지분 몫이 갈 곳을 찾는다 (배당·철거 대금)
+ */
+export function ownerBuildingOf(w: World, b: Building, share = false): Building | undefined {
   const t = BUILDING_BY_ID[b.typeId];
-  if (t.auto || b.stateOwned) return undefined;
+  if (t.auto || (b.stateOwned && !share)) return undefined;
   const typeId = t.land === 'plot' ? 'finance' : 'manor';
   return w.buildings.find((x) => x.regionId === b.regionId && x.typeId === typeId);
 }

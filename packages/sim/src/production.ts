@@ -230,7 +230,7 @@ export function progressDemolition(w: World) {
     const starts = (kingdomById(w, regionById(w, b.regionId).kingdomId).startsMonth ??= {});
     starts[`${b.typeId}|d`] = (starts[`${b.typeId}|d`] ?? 0) + 1;
     const mats = b.materials ?? materialsPerLevel(w, undefined, b.typeId);
-    const owner = ownerBuildingOf(w, b);
+    const owner = ownerBuildingOf(w, b, true);
     const ownerShare = b.stateOwned ? (b.privateShare ?? 0) : 1;
     for (const g of GOOD_IDS) {
       const q = round2((mats[g] ?? 0) * TUNE.salvageShare);
