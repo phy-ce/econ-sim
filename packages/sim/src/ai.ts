@@ -108,7 +108,8 @@ function adjustWages(w: World, c: Company) {
     const ceiling = SKILL_DEFS[s].baseWage * ceilMult;
     const vacancy = cap - emp, grew = emp - (last[s] ?? emp);
     let wage = c.wages[s];
-    if (TUNE.wageLossCut && c.lastWeekProfit < 0) wage *= 0.98;
+    // runAi 는 주간 장부를 넘기기 전에 돈다: weekProfit 이 막 끝난 주다 (lastWeekProfit 은 그 전 주)
+    if (TUNE.wageLossCut && c.weekProfit < 0) wage *= 0.98;
     else if (vacancy > cap * 0.05 && grew < vacancy * 0.1) wage *= 1.03;
     else if (vacancy < cap * 0.02) wage *= 0.99;
     wage = Math.max(floor, Math.min(ceiling, wage));
@@ -333,7 +334,7 @@ function planConstruction(w: World, c: Company, o: Outlook) {
     const officeCost = constructionEstimate(w, c, 'builder').cost * block;
     // 증설 자금: 현금 + 민간 공사 수수료 수입 TUNE.feeWeeks 주치 (수수료는 대기가 밀린 동안 계속 들어온다)
     // 건설 예산이 사무소를 다 못 돌리면 늘리지 않는다
-    if (offices.every((b) => b.utilization >= 1) && backlog() > TUNE.officeTargetDays && c.cash + c.lastLedger.buildFees * TUNE.feeWeeks > officeCost * 1.5 && !w.constructions.some((k) => k.companyId === c.id && k.typeId === 'builder')) {
+    if (offices.every((b) => b.utilization >= 1) && backlog() > TUNE.officeTargetDays && c.cash + c.ledger.buildFees * TUNE.feeWeeks > officeCost * 1.5 && !w.constructions.some((k) => k.companyId === c.id && k.typeId === 'builder')) {
       const office = offices[0];
       // 대기가 TUNE.officeTargetDays 안으로 들어올 만큼 한 번에 늘린다
       const perLevel = est.pointsPerDay / Math.max(1, officeLevel);
