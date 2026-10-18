@@ -47,6 +47,7 @@ data(상품·건물·기술·TUNE) · types · world(시작 상태) · tick(하�
 
 ## 문서
 - `docs/DESIGN.md`: 지금 경제 규칙의 요약 (규칙을 바꾸면 같이 고친다)
+- `docs/VIC3_REFERENCE.md`: 웹에서 확인한 빅토리아3 동작과 출처 (새로 확인하면 덧붙인다)
 - `docs/UI_CHANGES.md`: 화면 작업자에게 넘길 변경
 - `docs/DECISIONS.md`: 사용자 결정이 필요한 것
 - `HANDOFF.md`: 세션 인수인계 (큰 작업이 끝날 때마다)
