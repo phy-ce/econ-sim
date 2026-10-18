@@ -72,8 +72,6 @@ export interface MethodDef {
   outputs: GoodBag;
   /** 건축사무소: 레벨당 하루 건설 포인트 */
   construction?: number;
-  /** 왕국 국고가 인건비에 이 배율을 곱해 운영 보조금으로 준다 (학교) */
-  grant?: number;
   /** 학교: 1레벨이 가르치는 인구 */
   seats?: number;
   /** 행정청: 레벨당 하루에 걷을 수 있는 소득세 (징세 한도) */
@@ -94,7 +92,7 @@ export interface BuildingTypeDef {
   auto?: boolean;
   /** 소유 건물: 이 직종이 일하며 지역 민간 건물의 배당을 받는다 (저택 = 귀족, 금융가 = 자본가) */
   ownership?: Owner;
-  /** 왕실만 지을 수 있다 (행정청) */
+  /** 왕실만 지을 수 있다 (행정청, 학교) */
   stateOnly?: boolean;
 }
 
@@ -213,7 +211,7 @@ export interface Building {
   pausedWeeks: number;
   /** 철거 대기 레벨: 매주 1레벨씩 헐린다 */
   shrinking?: number;
-  /** 땅 바꾸기로 헐리는 중 (이익이 나도 철거를 취소하지 않는다) */
+  /** 땅 바꾸기나 국고 적자(학교)로 헐리는 중 (이익이 나도 철거를 취소하지 않는다) */
   swap?: boolean;
   /** 마지막 레벨의 손익이 마이너스였던 연속 주 수 (철거 판단) */
   negWeeks?: number;
@@ -303,10 +301,10 @@ export interface Company {
 }
 
 /**
- * 회사 장부 항목. 손익(weekProfit)에 들어가는 것: 판매, 세금, 주조, 공사 수수료(수입) / 임금, 원자재, 연구, 이자, 복지(지출).
+ * 회사 장부 항목. 손익(weekProfit)에 들어가는 것: 판매, 세금, 주조, 공사 수수료(수입) / 임금, 원자재, 연구, 이자(지출).
  * 손익 밖의 자본 흐름: 배당 지급, 투자 풀 유입, 민간이 낸 공사비(건물이라는 자산으로 바뀐다)
  */
-export const LEDGER_KEYS = ['sales', 'tax', 'mint', 'buildFees', 'wages', 'inputs', 'research', 'interest', 'welfare', 'dividends', 'investment', 'buildPaid'] as const;
+export const LEDGER_KEYS = ['sales', 'tax', 'mint', 'buildFees', 'wages', 'inputs', 'research', 'interest', 'dividends', 'investment', 'buildPaid'] as const;
 export type LedgerKey = (typeof LEDGER_KEYS)[number];
 export type Ledger = Record<LedgerKey, number>;
 export const emptyLedger = (): Ledger => Object.fromEntries(LEDGER_KEYS.map((k) => [k, 0])) as Ledger;
@@ -380,14 +378,8 @@ export interface Kingdom {
   investmentPool: number;
   /** 투자 풀 중 지역별로 들어온 몫 (그 지역 pop 의 재투자와 남는 현금) */
   poolByRegion?: Record<number, number>;
-  /** 신분별 소득세율 (왕국 정책) */
-  incomeTax: Record<Stratum, number>;
-  /** 신분별 인두세 (1인당 하루, 왕국 정책) */
-  pollTax: Record<Stratum, number>;
-  /** 세법: 'land' = 토지 기반 과세 (소작지 수확의 landTax 비율을 걷는다, 인두세·소득세 없음), 'capita' = 1인당 과세 (인두세 + 소득세) */
+  /** 세법: 'land' = 토지 기반 과세 (소작지 수확의 토지세율만큼 걷는다, 인두세·소득세 없음), 'capita' = 1인당 과세 (인두세 + 소득세). 세율은 taxRates */
   taxLaw: TaxLaw;
-  /** 토지세율: 소작지 수확 중 국고가 가져가 시장에 파는 비율 */
-  landTax: number;
   /** 어제 걷은 토지세와 걷어야 했던 토지세 (행정청 손익용, 하루마다 비운다) */
   landGot?: number;
   landOwed?: number;
@@ -400,24 +392,30 @@ export interface Kingdom {
   taxOwed?: number;
   /** 징수율 0..1 (행정청 한도와 인구로 정한다, collectionRatio) */
   taxRatio?: number;
-  /** 예산 편성: 항목별 단계 1~5 (왕국 정책). 주간 지출 = 주간 세입(revenueEma) × 항목 비율 × BUDGET_LEVELS[단계 − 1] */
+  /** 정책 단계 1~5 (3이 보통): 세금 수준, 국영 임금 수준, 연구비 수준. 배율은 TUNE.taxLevels·govWageLevels·researchLevels */
   budget: Record<BudgetItem, number>;
-  /** 주간 경제 규모 (이동평균): 민간·국영 생산 건물 부가가치 + 소작 현물의 시장가. 예산 기본액의 기준 */
+  /** 주간 경제 규모 (이동평균): 민간·국영 생산 건물 부가가치 + 소작 현물의 시장가. 연구비의 기준 */
   output?: number;
-  /** 주간 세입의 이동평균 (예산 편성 기준) */
-  revenueEma?: number;
+  /** 임금 지수: 왕국 민간 건물이 실제로 주는 임금 ÷ 기본 임금 (일자리 가중, 주간 이동평균). 국영 임금의 기준 */
+  wageIndex?: number;
   /** 이번 주에 들어온 세입 (세금 + 관세 + 주조) */
   revenueWeek: number;
-  /** 지난주 세입과 항목별 지출 */
-  lastBudget?: { revenue: number } & Record<BudgetItem, number>;
+  /** 이번 주 정부 건물(행정청·건축사무소·학교)의 임금과 원료 */
+  spentWeek?: { wages: number; goods: number };
+  /** 지난주 국정 수지: 세입, 민간 공사 수수료 / 정부 건물 임금, 원료, 연구비, 국채 이자 */
+  lastBudget?: { revenue: number; fees: number; wages: number; goods: number; research: number; interest: number };
+  /** 주간 국정 지출(정부 건물 + 연구 + 이자 − 민간 공사 수수료)의 이동평균. 국고가 몇 주를 버티는지의 기준 */
+  expenseEma?: number;
+  /** AI: 지난 정책 점검 때 국고 순자산 (현금 − 빚) */
+  netLast?: number;
   /** 이번 달 착공 레벨 (지표용): '건물|s'(왕실) '건물|p'(민간) '건물|loss'(AI 손해 짓기) '건물|d'(철거) */
   startsMonth?: Record<string, number>;
 }
 
 export type TaxLaw = 'land' | 'capita';
-export const BUDGET_ITEMS = ['research', 'education', 'welfare', 'construction'] as const;
-/** 예산 단계별 배율 (1~5단계, 3이 기본) */
-export const BUDGET_LEVELS = [0.5, 0.75, 1, 1.5, 2] as const;
+/** 정책 손잡이: 세금 수준, 국영 임금 수준, 연구비 수준 (각각 1~5단계) */
+export const BUDGET_ITEMS = ['tax', 'wages', 'research'] as const;
+export const BUDGET_STEPS = 5;
 export type BudgetItem = (typeof BUDGET_ITEMS)[number];
 
 export interface Shipment {
@@ -527,9 +525,8 @@ export type Command =
   | { type: 'moveConstruction'; constructionId: number; index: number }
   | { type: 'setResearch'; techId: string | null }
   | { type: 'setResearchBudget'; budget: number }
-  | { type: 'setTax'; tax: 'poll' | 'income'; stratum: Stratum; value: number }
-  | { type: 'setLandTax'; value: number }
   | { type: 'setTaxLaw'; law: TaxLaw }
+  /** 정책 단계: 세금 수준, 국영 임금 수준, 연구비 수준 (1~5) */
   | { type: 'setBudget'; item: BudgetItem; value: number };
 
 export interface QueuedCommand {

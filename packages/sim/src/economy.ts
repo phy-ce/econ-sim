@@ -1,5 +1,5 @@
 import {
-  BUILDING_BY_ID, GOOD_IDS, GOODS, MAX_POINTS_PER_LEVEL_DAY, POINT_VALUE, SKILL_DEFS, SUBSISTENCE, TECH_BY_ID, getMethod, regionPerk, scaleBonus, TUNE, TICKS_PER_WEEK,
+  BUILDING_BY_ID, GOOD_IDS, GOODS, MAX_POINTS_PER_LEVEL_DAY, POINT_VALUE, SKILL_DEFS, SUBSISTENCE, TECH_BY_ID, getMethod, regionPerk, scaleBonus, TUNE,
 } from './data';
 import { borderCost } from './kingdoms';
 import { clamp } from './rng';
@@ -103,16 +103,15 @@ export function slots(b: Building, skill: Skill): number {
   return (getMethod(b.typeId, b.methodId).workers[skill] ?? 0) * b.level * b.utilization;
 }
 
-/** 정부 건물: 행정청, 건축사무소, 학교 (왕국 운영에 쓰는 건물) */
+/** 정부 건물: 행정청, 건축사무소, 학교 (왕국 운영에 쓰는 건물). 왕실 것은 늘 다 가동하고 국고가 운영비를 낸다 */
 export function isGovernment(typeId: string): boolean {
   const t = BUILDING_BY_ID[typeId];
-  return !!t.stateOnly || t.methods.some((m) => m.construction || m.grant);
+  return !!t.stateOnly || t.methods.some((m) => m.construction);
 }
 
-/** 왕실이 지어도 민간이 지분을 살 수 있는 건물: 행정청과 건축사무소를 뺀 모두 (학교 포함) */
+/** 왕실이 지어도 민간이 지분을 살 수 있는 건물: 정부 건물을 뺀 모두 */
 export function sellsShares(typeId: string): boolean {
-  const t = BUILDING_BY_ID[typeId];
-  return !t.auto && !t.stateOnly && !t.methods.some((m) => m.construction);
+  return !BUILDING_BY_ID[typeId].auto && !isGovernment(typeId);
 }
 
 /** 소작지인가 (자동 건물 중 소유 건물이 아닌 것) */
@@ -198,24 +197,11 @@ export function collectionRatio(capacity: number, people: number): number {
   return TUNE.taxCurve === 'hyp' ? x / (1 + x) : 1 - Math.exp(-x);
 }
 
-/**
- * 학교 보조금 충족률 (왕국별): 지난주 교육 예산 ÷ 그 왕국 학교들이 원하는 보조금 (인건비 × grant). 학교 손익 추정용
- */
-export function schoolFunding(w: World, kingdomId: number): number {
-  const k = w.kingdoms.find((x) => x.id === kingdomId);
-  let want = 0;
-  for (const b of w.buildings) {
-    const m = getMethod(b.typeId, b.methodId);
-    if (b.active && m.grant && regionById(w, b.regionId).kingdomId === kingdomId) want += m.grant * b.last.wageCost * TICKS_PER_WEEK;
-  }
-  return want > 0 ? Math.min(1, (k?.lastBudget?.education ?? 0) / want) : 1;
-}
-
 /** 지역 시장의 현재 가격과 주어진 임금으로 본 레벨 1 만원 가동 하루 손익 */
 export function estimateMethod(w: World, regionId: number, typeId: string, methodId: string, wages: Record<Skill, number>, stateOwned = true): MethodEstimate {
   const method = getMethod(typeId, methodId);
   const mk = regionById(w, regionId).market;
-  let revenue = (method.grant ?? 0) * wageCostOf(method, wages, stateOwned) * schoolFunding(w, regionById(w, regionId).kingdomId);
+  let revenue = 0;
   // 행정청: 감당하는 인구만큼의 세금. 한도가 인구보다 크면 남는 한도는 놀고 있다
   if (method.taxCapacity) {
     const k = w.kingdoms.find((x) => x.id === regionById(w, regionId).kingdomId);

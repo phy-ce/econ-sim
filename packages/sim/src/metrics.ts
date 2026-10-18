@@ -7,7 +7,7 @@ import { workforce } from './pops';
 import { kingdomOf } from './kingdoms';
 import { round2 } from './rng';
 import { POP_CLASSES } from './types';
-import type { GoodId, PopClass, World } from './types';
+import type { BudgetItem, GoodId, PopClass, World } from './types';
 
 // 주요 지표: 매달(30일) 한 번 왕국별·상품별 숫자를 기록한다. 화면, CLI, 비교 실행이 모두 이 기록을 읽는다.
 
@@ -27,16 +27,21 @@ export interface KingdomMetrics {
   solBy: Record<PopClass, number>;
   foodBy: Record<PopClass, number>;
   growthBy: Record<PopClass, number>;
-  /** 연 GDP, 지난주 세입, 지난주 예산 지출 */
+  /** 연 GDP, 지난주 국정 수지: 세입, 민간 공사 수수료, 정부 건물 운영비(임금 + 원료), 연구비, 국채 이자 */
   gdp: number;
   revenueWeek: number;
+  feesWeek: number;
+  govSpendWeek: number;
+  research: number;
+  interest: number;
   /** 징수율 */
   taxRatio: number;
-  research: number;
-  education: number;
-  welfare: number;
-  /** 돈: 국고, 민간 상회 현금, 투자 풀, 가계 저축 */
+  /** 정책 단계 (세금·국영 임금·연구비 수준), 임금 지수 */
+  policy: Record<BudgetItem, number>;
+  wageIndex: number;
+  /** 돈: 국고, 국채, 민간 상회 현금, 투자 풀, 가계 저축 */
   treasury: number;
+  debt: number;
   privateCash: number;
   pool: number;
   savings: number;
@@ -169,9 +174,10 @@ export function recordMetrics(w: World) {
       pop: r0(pop), popBy: byClass((s) => r0(n[s])),
       peasantShare: pop > 0 ? round2(n.peasant / pop) : 0, joblessShare: pop > 0 ? round2(jobless / pop) : 0,
       wealthBy: avg(wealth), solBy: avg(sol), foodBy: avg(food), growthBy: avg(growth),
-      gdp: r0(kingdomGdp(w, k.id)), revenueWeek: r0(k.lastBudget?.revenue ?? 0), taxRatio: k.taxRatio ?? 0,
-      research: r0(k.lastBudget?.research ?? 0), education: r0(k.lastBudget?.education ?? 0), welfare: r0(k.lastBudget?.welfare ?? 0),
-      treasury: r0(gov?.cash ?? 0), privateCash: r0(firms.reduce((a, c) => a + c!.cash, 0)), pool: r0(k.investmentPool), savings: r0(savings),
+      gdp: r0(kingdomGdp(w, k.id)), revenueWeek: r0(k.lastBudget?.revenue ?? 0), feesWeek: r0(k.lastBudget?.fees ?? 0),
+      govSpendWeek: r0((k.lastBudget?.wages ?? 0) + (k.lastBudget?.goods ?? 0)), research: r0(k.lastBudget?.research ?? 0), interest: r0(k.lastBudget?.interest ?? 0),
+      taxRatio: k.taxRatio ?? 0, policy: { ...k.budget }, wageIndex: k.wageIndex ?? 0,
+      treasury: r0(gov?.cash ?? 0), debt: r0(gov?.debt ?? 0), privateCash: r0(firms.reduce((a, c) => a + c!.cash, 0)), pool: r0(k.investmentPool), savings: r0(savings),
       officeLevels: w.buildings.filter((b) => b.companyId === builder?.id && b.typeId === 'builder').reduce((a, b) => a + b.level, 0),
       pointsPerDay: round2(est?.pointsPerDay ?? 0), queuePoints: r0(queuePoints),
       backlogDays: est && est.pointsPerDay > 0 ? r0(queuePoints / est.pointsPerDay) : 0, projects: queue.length,

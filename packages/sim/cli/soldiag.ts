@@ -1,10 +1,11 @@
 // 하층 생활수준 진단: npx tsx cli/soldiag.ts '<TUNE JSON>' [seed] [years]
 // 직종 × 고용/실업별 1인당 하루: 현금 소득, 현물 가치, 인두세·소득세, 지금 부 단계 생활비, 부 5 생활비, 그리고 부·충족률·생활수준
-import { CLASS_DEFS, GOODS, TUNE } from '../src/data';
+import { GOODS, TUNE } from '../src/data';
 import { createWorld, step } from '../src/index';
 import { basketCostAt } from '../src/market';
 import { kingdomOf, kingdomById } from '../src/kingdoms';
 import { companyById } from '../src/economy';
+import { taxDue } from '../src/finance';
 
 const over = JSON.parse(process.argv[2] ?? '{}');
 const seed = Number(process.argv[3] ?? 1), years = Number(process.argv[4] ?? 20);
@@ -23,11 +24,10 @@ const report = () => {
     for (const p of ps) {
       const r = w.regions.find((x) => x.id === p.regionId)!;
       const k = kingdomById(w, kingdomOf(w, p.regionId));
-      const st = CLASS_DEFS[p.prof].stratum;
       wealth += p.wealth * p.size; ful += p.fulfillment * p.size; sol += p.sol * p.size; food += p.food * p.size;
       cash += p.incomeEma; sav += p.savings;
       for (const [g, q] of Object.entries(p.inKind)) kind += (q ?? 0) * r.market[g as keyof typeof r.market].price;
-      tax += p.size * k.pollTax[st] * (k.taxRatio ?? 1) + Math.max(0, p.incomeEma) * k.incomeTax[st] * (k.taxRatio ?? 1);
+      tax += taxDue(w, p) * (k.taxRatio ?? 1);
       cCur += basketCostAt(r, p.size, p.wealth); c3 += basketCostAt(r, p.size, 3); c5 += basketCostAt(r, p.size, 5);
       const b = w.buildings.find((x) => x.id === p.work);
       const c = b ? companyById(w, b.companyId) : undefined;

@@ -1,11 +1,11 @@
-import { BUILDING_BY_ID, CLASS_DEFS, TECH_BY_ID, TICKS_PER_WEEK, TUNE, getMethod } from './data';
-import { collectionRatio, companyById, regionById, constructionEstimate, efficiency, estimateMethod, kingdomGdp, logEvent, ownerBuildingOf, paysDividend, repay } from './economy';
+import { BUILDING_BY_ID, SKILL_DEFS, TECH_BY_ID, TICKS_PER_WEEK, TUNE, getMethod } from './data';
+import { collectionRatio, companyById, regionById, constructionEstimate, efficiency, kingdomGdp, logEvent, ownerBuildingOf, paysDividend, repay, sellThrough } from './economy';
 import { techNameEn } from './i18n';
 import { addToPool, kingdomById, kingdomOf } from './kingdoms';
 import { payPops } from './pops';
 import { round2 } from './rng';
-import { BUDGET_LEVELS, SKILLS } from './types';
-import type { BudgetItem, Building, Company, GoodId, Kingdom, Pop, PopClass, SalvageLot, TaxLaw, World } from './types';
+import { SKILLS } from './types';
+import type { BudgetItem, Building, Company, GoodBag, GoodId, Kingdom, Pop, PopClass, Region, SalvageLot, TaxLaw, World } from './types';
 
 // ---------------------------------------------------------------- 은행
 
@@ -75,46 +75,8 @@ function fundResearch(w: World, c: Company, amount: number): number {
   return spend;
 }
 
-/**
- * 교육 예산: 민간 학교 보조금(인건비 × grant)과 왕실 학교를 다 돌릴 때의 인건비를 합친 것 중 예산이 감당하는 비율 f 를 구한다.
- * 민간 학교에는 보조금 × f 를 주고, 왕실 학교는 가동률을 f 로 맞춘다 (10%~100%). 쓴 돈을 돌려준다
- */
-function fundSchools(w: World, kid: number, gov: Company, amount: number): number {
-  const all = w.buildings.filter((b) => b.active && getMethod(b.typeId, b.methodId).grant && kingdomOf(w, b.regionId) === kid);
-  const own = all.filter((b) => b.companyId === gov.id), schools = all.filter((b) => b.companyId !== gov.id);
-  const want = schools.reduce((a, b) => a + getMethod(b.typeId, b.methodId).grant! * b.last.wageCost * TICKS_PER_WEEK, 0);
-  const run = own.reduce((a, b) => a + estimateMethod(w, b.regionId, b.typeId, b.methodId, gov.wages, true).wageCost * b.level * TICKS_PER_WEEK, 0);
-  const avail = Math.min(amount, Math.max(0, gov.cash));
-  const f = want + run > 0 ? Math.min(1, avail / (want + run)) : 0;
-  const u = Math.round(Math.max(0.1, f) * 100) / 100;
-  for (const b of own) b.utilization = u;
-  const pay = round2(want * f);
-  if (want <= 0 || pay <= 0) return round2(run * u);
-  for (const b of schools) {
-    const amt = (pay * getMethod(b.typeId, b.methodId).grant! * b.last.wageCost * TICKS_PER_WEEK) / want;
-    const owner = companyById(w, b.companyId);
-    if (!owner) continue;
-    gov.cash -= amt;
-    owner.cash += amt;
-    b.profitEma += amt * 0.05;
-    if (owner !== gov) owner.weekProfit += amt;
-    gov.weekProfit -= amt;
-  }
-  return round2(pay + run * u);
-}
+// ---------------------------------------------------------------- 국정 예산 (빅토리아3 방식)
 
-/** 실업 수당: 실업 pop 에게 인원 비례로 준다. 쓴 돈을 돌려준다 */
-function fundWelfare(w: World, kid: number, gov: Company, amount: number): number {
-  const jobless = w.pops.filter((p) => p.work === 0 && p.size > 0 && kingdomOf(w, p.regionId) === kid);
-  const pay = Math.min(amount, Math.max(0, gov.cash));
-  if (pay <= 0 || !payPops(w, jobless, pay)) return 0;
-  gov.cash -= pay;
-  gov.weekProfit -= pay;
-  gov.ledger.welfare += pay;
-  return pay;
-}
-
-/** 예산 집행 (매주): 지난주 세입을 왕국이 정한 비율로 연구·교육·복지에 한 번에 쓴다. 나머지는 국고에 남는다 */
 /** 하루 경제 규모: 산출이 있는 건물의 (매출 − 원료) + pop 이 받은 현물의 지역 시장가 */
 export function dailyOutput(w: World, kingdomId: number): number {
   let v = 0;
@@ -130,43 +92,61 @@ export function dailyOutput(w: World, kingdomId: number): number {
   return v;
 }
 
-/** 예산 항목의 이번 주 편성액: 주간 세입(이동평균) × TUNE.budgetBase[항목] × 단계 배율 */
-export function budgetAmount(k: Kingdom, item: BudgetItem): number {
-  return (k.revenueEma ?? 0) * TUNE.budgetBase[item] * BUDGET_LEVELS[k.budget[item] - 1];
+/** 정책 단계(1~5)의 배율: 세금 수준 TUNE.taxLevels, 국영 임금 수준 TUNE.govWageLevels, 연구비 수준 TUNE.researchLevels */
+export function budgetMult(k: Kingdom, item: BudgetItem): number {
+  const table = item === 'tax' ? TUNE.taxLevels : item === 'wages' ? TUNE.govWageLevels : TUNE.researchLevels;
+  return table[k.budget[item] - 1];
+}
+
+/** 지금 세율 = 세법의 기본 세율(TUNE) × 세금 수준 배율. 토지 기반은 토지세만, 1인당은 인두세와 소득세만 걷는다 */
+export function taxRates(k: Kingdom, law: TaxLaw = k.taxLaw): { land: number; poll: number; income: number } {
+  const m = budgetMult(k, 'tax');
+  return law === 'land' ? { land: TUNE.landTax * m, poll: 0, income: 0 } : { land: 0, poll: TUNE.pollTax * m, income: TUNE.incomeTax * m };
+}
+
+/** 임금 지수 (매주): 왕국 민간 건물이 지금 주는 임금 ÷ 기본 임금 (일자리 가중)의 이동평균. 민간 고용이 없으면 그대로 둔다 */
+export function updateWageIndex(w: World, k: Kingdom) {
+  let paid = 0, base = 0;
+  for (const b of w.buildings) {
+    if (b.stateOwned || BUILDING_BY_ID[b.typeId].auto || kingdomOf(w, b.regionId) !== k.id) continue;
+    const c = companyById(w, b.companyId);
+    if (!c) continue;
+    for (const s of SKILLS) if (!paysDividend(false, s)) { paid += b.employed[s] * c.wages[s]; base += b.employed[s] * SKILL_DEFS[s].baseWage; }
+  }
+  if (base <= 0) return;
+  k.wageIndex = round2(k.wageIndex == null ? paid / base : k.wageIndex * 0.75 + (paid / base) * 0.25);
+}
+
+/** 국영 임금 (빅토리아3 정부 임금): 기본 임금 × 임금 지수 × 국영 임금 수준 배율. 왕실의 모든 건물이 이 임금을 준다 */
+export function applyStateWages(w: World, k: Kingdom) {
+  const gov = companyById(w, k.governmentId);
+  if (!gov) return;
+  for (const s of SKILLS) gov.wages[s] = round2(SKILL_DEFS[s].baseWage * (k.wageIndex ?? 1) * budgetMult(k, 'wages'));
 }
 
 /**
- * 건설 예산: 왕실 건축사무소의 가동률을 (건설 예산 + 지난주 민간 공사 수수료) ÷ 다 돌릴 때의 주간 운영비로 맞춘다 (10%~100%).
- * 사무소를 멈추지 않고, 쓸 돈만큼만 돌린다
+ * 국정 예산 (매주): 금액을 편성하지 않는다. 왕실 정부 건물(행정청·건축사무소·학교)은 늘 다 가동하고 임금과 원료를 국고에서 낸다.
+ * 여기서는 연구비(주간 경제 규모 × TUNE.researchShare × 연구비 수준 배율)를 내고, 국영 임금을 다시 정하고, 지난주 국정 수지를 적는다.
+ * 국고가 모자라면 임금·원료는 국채로 낸다 (payWages, collectOrders). 연구비는 현금이 있는 만큼만 낸다
  */
-function fundConstruction(w: World, gov: Company, amount: number): number {
-  const offices = w.buildings.filter((b) => b.companyId === gov.id && getMethod(b.typeId, b.methodId).construction);
-  let full = 0;
-  for (const b of offices) {
-    const e = estimateMethod(w, b.regionId, b.typeId, b.methodId, gov.wages, true);
-    full += (e.wageCost + e.inputCost) * b.level * TICKS_PER_WEEK;
-  }
-  if (full <= 0) return 0;
-  const u = Math.round(Math.min(1, Math.max(0.1, (amount + gov.lastLedger.buildFees) / full)) * 100) / 100;
-  for (const b of offices) b.utilization = u;
-  return round2(Math.min(amount, full * u));
-}
-
 export function spendBudget(w: World) {
   for (const k of w.kingdoms) {
     const gov = companyById(w, k.governmentId);
-    const revenue = k.revenueWeek;
-    k.revenueWeek = 0;
-    if (!gov) continue;
     const week = dailyOutput(w, k.id) * TICKS_PER_WEEK;
     k.output = round2(k.output == null ? week : k.output * 0.75 + week * 0.25);
-    k.revenueEma = round2(k.revenueEma == null ? revenue : k.revenueEma * 0.75 + revenue * 0.25);
-    const research = fundResearch(w, gov, budgetAmount(k, 'research'));
-    const education = fundSchools(w, k.id, gov, budgetAmount(k, 'education'));
-    const welfare = fundWelfare(w, k.id, gov, budgetAmount(k, 'welfare'));
-    const construction = fundConstruction(w, gov, budgetAmount(k, 'construction'));
+    const spent = k.spentWeek ?? { wages: 0, goods: 0 };
+    const revenue = k.revenueWeek;
+    k.revenueWeek = 0;
+    k.spentWeek = { wages: 0, goods: 0 };
+    if (!gov) continue;
+    const research = fundResearch(w, gov, k.output * TUNE.researchShare * budgetMult(k, 'research'));
     gov.research.budget = round2(research / TICKS_PER_WEEK);
-    k.lastBudget = { revenue: round2(revenue), research: round2(research), education: round2(education), welfare: round2(welfare), construction };
+    const b = { revenue: round2(revenue), fees: round2(gov.ledger.buildFees), wages: round2(spent.wages), goods: round2(spent.goods), research: round2(research), interest: round2(gov.ledger.interest) };
+    k.lastBudget = b;
+    const net = b.wages + b.goods + b.research + b.interest - b.fees;
+    k.expenseEma = round2(k.expenseEma == null ? net : k.expenseEma * 0.75 + net * 0.25);
+    updateWageIndex(w, k);
+    applyStateWages(w, k);
   }
 }
 
@@ -184,28 +164,28 @@ export function taxCapacity(w: World, kingdomId: number): number {
 }
 
 /**
- * 세금: 인두세(1인당 하루, 신분별)와 소득세(최근 하루 소득에 신분별 세율). 시장에서 쓰기 전에 걷고, 저축을 넘게는 못 걷는다.
+ * 세금: 인두세(1인당 하루)와 소득세(최근 하루 소득 × 세율). 시장에서 쓰기 전에 걷고, 저축을 넘게는 못 걷는다.
  * 징수율은 행정청 한도와 인구의 비로 정한다 (collectionRatio). 모두에게 같은 비율로 덜 걷고, 못 걷은 몫은 백성 손에 남는다.
  */
-/** 그 pop 이 하루에 내야 할 세금 (인두세 + 소득세, 저축 한도 전) */
+/** 그 pop 이 하루에 내야 할 세금 (인두세 + 소득세, 저축 한도 전). 토지 기반 과세면 0 (토지세는 수확에서 걷는다) */
 export function taxDue(w: World, p: Pop, law?: TaxLaw): number {
   const k = kingdomById(w, kingdomOf(w, p.regionId));
-  if ((law ?? k.taxLaw) === 'land') return 0;
-  const st = CLASS_DEFS[p.prof].stratum;
-  const poll = p.size * k.pollTax[st] * (p.prof === 'peasant' ? TUNE.peasantPoll : 1);
-  return poll + Math.max(0, p.incomeEma) * k.incomeTax[st];
+  const t = taxRates(k, law ?? k.taxLaw);
+  return p.size * t.poll * (p.prof === 'peasant' ? TUNE.peasantPoll : 1) + Math.max(0, p.incomeEma) * t.income;
 }
 
-/** 그 세법으로 지금 하루에 걷힐 세금 (징수율 전). 토지 기반 = 소작지 수확의 시장가 × 토지세율, 1인당 = pop 마다 min(저축, 낼 세금) */
+/**
+ * 그 세법으로 지금 하루에 걷힐 세금 (징수율 전). 토지 기반 = 소작지 수확 × 토지세율의 판매 대금 (landTaxValue),
+ * 1인당 = pop 마다 min(저축, 낼 세금)
+ */
 export function lawRevenue(w: World, k: Kingdom, law: TaxLaw): number {
   if (law === 'land') {
     let v = 0;
     for (const b of w.buildings) {
       if (b.typeId !== 'subsistence' || kingdomOf(w, b.regionId) !== k.id) continue;
-      const mk = regionById(w, b.regionId).market;
-      for (const g of Object.keys(b.last.output) as GoodId[]) v += (b.last.output[g] ?? 0) * mk[g].price;
+      v += landTaxValue(regionById(w, b.regionId), b.last.output, taxRates(k, 'land').land);
     }
-    return v * k.landTax;
+    return v;
   }
   let v = 0;
   for (const p of w.pops) if (kingdomOf(w, p.regionId) === k.id) v += Math.min(p.savings, taxDue(w, p, 'capita'));
@@ -346,7 +326,13 @@ export function paySalvage(w: World, lot: SalvageLot, amt: number) {
   if (c) { c.cash += rest; c.weekProfit += rest; c.ledger.sales += rest; } else w.fund += rest;
 }
 
-/** 소작지 현금 지대: 그 지역 저택에 앉은 귀족에게 준다 (배당처럼 일부는 투자 풀로). 받을 사람이 없으면 false */
+/** 소작지 수확 out 에서 토지세율 rate 만큼 걷어 팔 때 받을 대금: 시장가 × 팔리는 비율 (안 팔리는 곡물은 세입이 되지 않는다) */
+export function landTaxValue(r: Region, out: GoodBag, rate: number): number {
+  let v = 0;
+  for (const g of Object.keys(out) as GoodId[]) v += (out[g] ?? 0) * r.market[g].price * sellThrough(r.market[g]);
+  return v * rate;
+}
+
 /** 토지세 판매 대금은 국고로 (행정청 손익용으로 걷힌 몫을 센다) */
 export function payLandTax(w: World, regionId: number, amount: number) {
   const k = kingdomById(w, kingdomOf(w, regionId));
@@ -357,6 +343,7 @@ export function payLandTax(w: World, regionId: number, amount: number) {
   k.landGot = (k.landGot ?? 0) + amount;
 }
 
+/** 소작지 현금 지대: 그 지역 저택에 앉은 귀족에게 준다 (배당처럼 일부는 투자 풀로). 받을 사람이 없으면 false */
 export function payRent(w: World, regionId: number, amount: number): boolean {
   const manor = w.buildings.find((x) => x.regionId === regionId && x.typeId === 'manor');
   if (!manor) return false;

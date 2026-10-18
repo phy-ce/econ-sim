@@ -1,12 +1,12 @@
 // 학교 진단: npx tsx cli/schooldiag.ts [seed] [years]
 import { createWorld, step } from '../src/index';
-import { schoolFunding } from '../src/economy';
+import { companyById } from '../src/economy';
 const seed = Number(process.argv[2] ?? 1), years = Number(process.argv[3] ?? 20);
 const w = createWorld(seed, { withPlayer: false });
 for (let d = 1; d <= years * 360; d++) {
   step(w);
   if (w.tick % 1800 !== 0) continue;
-  console.log(`${w.tick / 360}년 | 보조금 충족률 ` + w.kingdoms.map((k) => `${k.id}:${schoolFunding(w, k.id).toFixed(2)} 예산 ${Math.round(k.lastBudget?.education ?? 0)}`).join(' '));
+  console.log(`${w.tick / 360}년 | 국영 임금 수준·하급 귀족 임금 ` + w.kingdoms.map((k) => `${k.id}:${k.budget.wages}·${companyById(w, k.governmentId)?.wages.gentry ?? 0}`).join(' '));
   for (const r of w.regions) {
     const sc = w.buildings.filter((b) => b.regionId === r.id && b.typeId === 'school');
     const pop = w.pops.filter((p) => p.regionId === r.id).reduce((a, p) => a + p.size, 0);

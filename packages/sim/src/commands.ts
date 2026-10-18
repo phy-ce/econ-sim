@@ -1,23 +1,19 @@
 import { BUILDING_BY_ID, DEPOSIT_NAMES, DEPOSIT_NAMES_EN, LAND_NAMES, SKILL_DEFS, TECH_BY_ID, TUNE } from './data';
-import { availableMethods, companyById, constructionEstimate, depositFree, emptyJobs, hasBuilder, knowsTech, landFree, logEvent, regionById, sellsShares } from './economy';
-import { committedCost, reserveOf } from './finance';
+import { availableMethods, companyById, constructionEstimate, depositFree, emptyJobs, hasBuilder, isGovernment, knowsTech, landFree, logEvent, regionById, sellsShares } from './economy';
+import { applyStateWages, committedCost, reserveOf } from './finance';
 import { kingdomById } from './kingdoms';
 import { buildingNameEn, landNameEn, regionNameEn, techNameEn } from './i18n';
 import { round2 } from './rng';
-import { BUDGET_ITEMS, BUDGET_LEVELS } from './types';
+import { BUDGET_ITEMS, BUDGET_STEPS } from './types';
 import type { Command, World } from './types';
 
 /** 명령 오류: 한국어 문장과 같은 내용의 영어 문장 */
 export interface CommandError { text: string; textEn: string }
 const fail = (text: string, textEn: string): CommandError => ({ text, textEn });
+const stateWageError = () => fail('왕실 임금은 재정의 국영 임금 수준으로 정합니다.', 'Royal wages follow the government wage level in Finance.');
 
 export const MAX_CONCURRENT_CONSTRUCTIONS = 40;
 export const MAX_LEVELS_PER_PROJECT = 50;
-/** 세금 상한: 인두세 1인당 하루, 소득세율 */
-export const MAX_POLL_TAX = 5;
-export const MAX_INCOME_TAX = 0.5;
-/** 토지세율 상한 (소작지 수확 중 국고 몫) */
-export const MAX_LAND_TAX = 0.25;
 
 
 /** 명령을 검증하고 적용한다. 플레이어와 AI 모두 이 함수만 거친다 */
@@ -117,6 +113,7 @@ export function applyCommandMsg(w: World, actor: number, cmd: Command): CommandE
       return null;
     }
     case 'setWage': {
+      if (company.state) return stateWageError();
       const base = SKILL_DEFS[cmd.skill]?.baseWage;
       if (!base || !Number.isFinite(cmd.wage)) return fail('잘못된 임금입니다.', 'Invalid wage.');
       company.wages[cmd.skill] = round2(Math.min(base * 10, Math.max(base * 0.1, cmd.wage)));
@@ -124,6 +121,7 @@ export function applyCommandMsg(w: World, actor: number, cmd: Command): CommandE
       return null;
     }
     case 'setWageOffset': {
+      if (company.state) return stateWageError();
       if (!SKILL_DEFS[cmd.skill] || !Number.isFinite(cmd.offset)) return fail('잘못된 임금 비율입니다.', 'Invalid wage ratio.');
       if (!company.wageOffset) company.wageOffset = emptyJobs();
       company.wageOffset[cmd.skill] = Math.min(1, Math.max(-0.5, cmd.offset));
@@ -140,6 +138,7 @@ export function applyCommandMsg(w: World, actor: number, cmd: Command): CommandE
       const b = ownBuilding(cmd.buildingId);
       if (!b) return fail('소유한 건물이 아닙니다.', 'You do not own that building.');
       if (BUILDING_BY_ID[b.typeId].auto) return autoError();
+      if (company.state && isGovernment(b.typeId)) return fail('정부 건물은 늘 다 가동합니다.', 'Government buildings always run at full capacity.');
       if (!Number.isFinite(cmd.utilization)) return fail('잘못된 가동률입니다.', 'Invalid utilisation.');
       b.utilization = Math.min(1, Math.max(0.1, cmd.utilization));
       return null;
@@ -202,27 +201,13 @@ export function applyCommandMsg(w: World, actor: number, cmd: Command): CommandE
       return null;
     }
     case 'setResearchBudget':
-      return fail('연구비는 예산 편성에서 정합니다.', 'Research funding is set in the budget.');
+      return fail('연구비는 재정의 연구비 수준으로 정합니다.', 'Research funding follows the research level in Finance.');
     case 'setBudget': {
       const k = w.kingdoms.find((x) => x.governmentId === actor);
-      if (!k) return fail('왕실만 예산을 정할 수 있습니다.', 'Only a royal house can set the budget.');
-      if (!Number.isInteger(cmd.value) || cmd.value < 1 || cmd.value > BUDGET_LEVELS.length || !BUDGET_ITEMS.includes(cmd.item)) return fail('예산 단계는 1~5입니다.', 'Budget level must be 1 to 5.');
+      if (!k) return fail('왕실만 정책 단계를 정할 수 있습니다.', 'Only a royal house can set policy levels.');
+      if (!Number.isInteger(cmd.value) || cmd.value < 1 || cmd.value > BUDGET_STEPS || !BUDGET_ITEMS.includes(cmd.item)) return fail('정책 단계는 1~5입니다.', 'Policy level must be 1 to 5.');
       k.budget[cmd.item] = cmd.value;
-      return null;
-    }
-    case 'setTax': {
-      const k = w.kingdoms.find((x) => x.governmentId === actor);
-      if (!k) return fail('왕실만 세금을 정할 수 있습니다.', 'Only a royal house can set taxes.');
-      if (!Number.isFinite(cmd.value) || !['lower', 'middle', 'upper'].includes(cmd.stratum)) return fail('잘못된 세율입니다.', 'Invalid tax rate.');
-      if (cmd.tax === 'poll') k.pollTax[cmd.stratum] = round2(Math.min(MAX_POLL_TAX, Math.max(0, cmd.value)));
-      else k.incomeTax[cmd.stratum] = round2(Math.min(MAX_INCOME_TAX, Math.max(0, cmd.value)));
-      return null;
-    }
-    case 'setLandTax': {
-      const k = w.kingdoms.find((x) => x.governmentId === actor);
-      if (!k) return fail('왕실만 세금을 정할 수 있습니다.', 'Only a royal house can set taxes.');
-      if (!Number.isFinite(cmd.value)) return fail('잘못된 세율입니다.', 'Invalid tax rate.');
-      k.landTax = round2(Math.min(MAX_LAND_TAX, Math.max(0, cmd.value)));
+      if (cmd.item === 'wages') applyStateWages(w, k);
       return null;
     }
     case 'setTaxLaw': {

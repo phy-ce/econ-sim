@@ -1,5 +1,5 @@
 import { BUILDING_BY_ID, GOOD_IDS, GOODS, NEEDS, SKILL_DEFS, TUNE, getMethod, regionPerk } from './data';
-import { availableMethods, collectionRatio, regionById, schoolFunding, shippingRate, wageCostOf } from './economy';
+import { availableMethods, collectionRatio, regionById, shippingRate, wageCostOf } from './economy';
 import { clamp } from './rng';
 import { SKILLS } from './types';
 import type { Company, GoodId, MethodDef, Region, Skill, World } from './types';
@@ -53,7 +53,7 @@ export function marketOutlook(w: World): Outlook {
     const c = w.companies.find((x) => x.id === b.companyId);
     if (!c || !b.active || BUILDING_BY_ID[b.typeId].auto) continue;
     const cur = getMethod(b.typeId, b.methodId);
-    if (cur.construction || cur.grant) continue;
+    if (cur.construction || cur.seats) continue;
     let best: MethodDef | null = null, bestV = baseValue(cur, c);
     for (const m of availableMethods(c, b.typeId)) {
       if (m.id === cur.id) continue;
@@ -96,8 +96,12 @@ function baseValue(m: MethodDef, c: Company): number {
 
 export interface Valuation { revenue: number; inputCost: number; wageCost: number; profit: number; utilization: number }
 
-/** 새로 지을지 판단할 때 쓰는 장기 임금: 지금 임금과 기본 임금 × TUNE.investWage 중 큰 값 */
+/**
+ * 새로 지을지 판단할 때 쓰는 장기 임금: 민간은 지금 임금과 기본 임금 × TUNE.investWage 중 큰 값.
+ * 왕실 임금은 정책(국영 임금 수준)이 정하므로 지금 임금 그대로 본다
+ */
 function longRunWages(c: Company): Record<Skill, number> {
+  if (c.state) return c.wages;
   return Object.fromEntries(SKILLS.map((s) => [s, Math.max(c.wages[s], SKILL_DEFS[s].baseWage * TUNE.investWage)])) as Record<Skill, number>;
 }
 
@@ -137,8 +141,6 @@ function valueAt(w: World, o: Outlook, r: Region, c: Company, typeId: string, m:
       inputCost += inp * p * (1 + ship * imported);
     }
   }
-  // 학교 보조금은 남의 국고에서 받을 때만 수입이다 (국영 학교는 자기 돈을 자기에게 주는 것)
-  if (m.grant && !c.state) revenue += m.grant * wageCostOf(m, c.wages, c.state) * levels * schoolFunding(w, r.kingdomId);
   // 행정청: 지금 한도 때문에 못 걷는 세금을 이만큼 더 걷는다
   if (m.taxCapacity && c.state) {
     const k = w.kingdoms.find((x) => x.id === r.kingdomId);
@@ -154,7 +156,7 @@ function valueAt(w: World, o: Outlook, r: Region, c: Company, typeId: string, m:
       revenue += (k.taxOwed ?? 0) * (existing ? collectionRatio(cap, n) - collectionRatio(Math.max(0, cap - add), n) : collectionRatio(cap + add, n) - collectionRatio(cap, n));
     }
   }
-  // 새로 지을지 판단할 때는 장기 임금으로 본다: 지금 임금과 기본 임금 × TUNE.investWage 중 큰 값
+  // 새로 지을지 판단할 때는 장기 임금으로 본다 (longRunWages)
   const wageCost = wageCostOf(m, longRunWages(c), c.state) * levels;
   return { revenue, inputCost, wageCost, profit: revenue - inputCost - wageCost };
 }

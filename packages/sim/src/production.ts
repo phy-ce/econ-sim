@@ -1,5 +1,5 @@
 import { BUILDING_BY_ID, GOOD_IDS, MAX_POINTS_PER_LEVEL_DAY, OWNER_SEATS_PER_LEVEL, OWNERSHIP_SEATS, TUNE, getMethod } from './data';
-import { builderOf, companyById, efficiency, landFree, logEvent, newBuilding, ownerBuildingOf, regionById } from './economy';
+import { builderOf, companyById, efficiency, isGovernment, landFree, logEvent, newBuilding, ownerBuildingOf, regionById } from './economy';
 import { workforce } from './pops';
 import { kingdomById } from './kingdoms';
 import { buildingNameEn, regionNameEn } from './i18n';
@@ -122,6 +122,12 @@ export function produce(w: World) {
     c.ledger.tax += b.last.tax ?? 0;
     c.ledger.inputs += b.last.inputCost;
     c.ledger.wages += b.last.wageCost;
+    // 왕실 정부 건물의 운영비는 국정 지출로 따로 센다 (spendBudget 이 매주 lastBudget 에 적는다)
+    if (c.state && isGovernment(b.typeId)) {
+      const spent = (kingdomById(w, c.kingdomId).spentWeek ??= { wages: 0, goods: 0 });
+      spent.wages += b.last.wageCost;
+      spent.goods += b.last.inputCost;
+    }
   }
   allocateConstruction(w);
 }

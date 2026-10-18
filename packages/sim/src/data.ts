@@ -238,11 +238,11 @@ export const BUILDING_TYPES: BuildingTypeDef[] = [
     ],
   },
   {
-    // 국고가 임금의 1.25배를 보조한다. 1인당 하루 인건비: 가정교사 3,000 ÷ 2만 = 0.15, 공립 15,000 ÷ 10만 = 0.15
-    id: 'school', name: '학교', nameEn: 'School', land: 'plot', buildPoints: 800,
+    // 정부 건물: 왕실만 짓고 국고가 임금을 낸다. 1인당 하루 인건비: 가정교사 3,000 ÷ 2만 = 0.15, 공립 15,000 ÷ 10만 = 0.15
+    id: 'school', name: '학교', nameEn: 'School', land: 'plot', buildPoints: 800, stateOnly: true,
     methods: [
-      m({ id: 'school_tutor', name: '귀족 가정교사', nameEn: 'Noble tutors', workers: { gentry: 100 }, inputs: {}, outputs: {}, grant: 1.25, seats: 20_000 }),
-      m({ id: 'school_basic', name: '공립 학교', nameEn: 'Public school', tech: 'printing', workers: jobs(500, 500), inputs: {}, outputs: {}, grant: 1.25, seats: 100_000 }),
+      m({ id: 'school_tutor', name: '귀족 가정교사', nameEn: 'Noble tutors', workers: { gentry: 100 }, inputs: {}, outputs: {}, seats: 20_000 }),
+      m({ id: 'school_basic', name: '공립 학교', nameEn: 'Public school', tech: 'printing', workers: jobs(500, 500), inputs: {}, outputs: {}, seats: 100_000 }),
     ],
   },
   {
@@ -296,7 +296,6 @@ export function scaleBonus(level: number): number {
  * - wageCeil: AI 임금 천장 = 회사 부가가치 중 임금으로 줄 수 있는 비율
  * - lossBuildsPerWeek: 이익이 나는 후보가 없을 때 AI가 가장 덜 손해 보는 후보를 짓는 주간 횟수
  * - lossTolerance: 그 후보의 예상 손실이 인건비의 이 비율 이하일 때만 짓는다 (Infinity = 제한 없음)
- * - pollShareMax: AI가 인두세를 그 신분 1인당 현금 소득의 이 비율 아래로 유지한다 (넘는 몫은 소득세로 옮긴다)
  * - adminScale: 행정청 1레벨이 감당하는 인구 배율 (기본 50만 명 × 이 값)
  * - adminStart: 시작 행정청이 감당하는 인구 / 왕국 인구
  * - investWage: AI가 새로 지을지 판단할 때 쓰는 임금의 바닥 = 기본 임금 × 이 값 (0이면 지금 임금만 본다)
@@ -304,7 +303,8 @@ export function scaleBonus(level: number): number {
  * - taxCurve: 징수율 곡선. 'exp' = 1 − e^(−x), 'hyp' = x / (1 + x) (x = 행정청 한도 / 인구)
  * - switchRate, switchPremium: 일하는 사람이 하루에 옮기는 상한 비율, 옮기는 데 필요한 소득(또는 생활수준) 배율
  * - cashBufferDays: 팝이 투자 풀로 보내지 않고 들고 있는 돈 (생활비 + 세금의 며칠분)
- * - pollTax, incomeTax: 시작 인두세(1인당 하루), 시작 소득세율 (모든 신분 같은 값)
+ * - landTax, pollTax, incomeTax: 세금 수준 3단계(보통)의 토지세율(소작지 수확 중 국고 몫), 인두세(1인당 하루), 소득세율
+ * - taxLevels: 세금 수준 1~5단계가 세법의 모든 세율에 곱하는 배율
  * - officeTargetDays: 건축사무소를 늘려 공사 대기를 이 일수 안으로 맞춘다
  * - startsPerWeek: AI 회사 하나가 한 주에 새로 넣는 공사 수 상한
  * - luxuryLinear, luxuryQuad: 사치품 필요 = linear × (부 − 10) + quad × (부 − 10)²
@@ -318,12 +318,13 @@ export function scaleBonus(level: number): number {
  * - qualSkilledL, qualExpertL: 기술자·전문가 자격이 쌓이기 시작하는 문해력
  * - qualRate: 자격이 쌓이는 속도 배율
  * - schoolValue: 왕실이 학교를 지을 때 학교가 새로 감당하는 1인당 하루 가치 (학교 1레벨 인건비 15,000 ÷ 10만 명 = 0.15)
- * - budgetBase: 예산 항목별 기본액 = 주간 세입(이동평균) × 이 비율 (3단계 기준. 1~5단계 = ×0.5, 0.75, 1, 1.5, 2)
+ * - govWageLevels: 국영 임금 수준 1~5단계의 배율. 국영 임금 = 기본 임금 × 왕국 임금 지수 × 이 배율
+ * - researchShare, researchLevels: 주간 연구비 = 주간 경제 규모 × researchShare × 연구비 수준 배율
+ * - treasuryLowWeeks, treasuryHighWeeks: AI 왕실은 국고가 주간 국정 지출의 low 주치보다 적으면 조이고 high 주치를 넘으면 푼다
+ * - startTreasuryWeeks: 왕실 시작 국고 = 시작 정부 건물을 다 돌리는 주간 운영비(시작 임금, 기본가) × 이 주 수
  * - taxLaw: 시작 세법 ('land' 토지 기반 / 'capita' 1인당)
- * - landTax: 토지 기반 과세의 시작 토지세율 (소작지 수확 중 국고 몫)
  * - peasantPoll: 1인당 과세에서 소작농이 내는 인두세 배율
  * - rawFullWealth, rawCapWealth: 원자재로 의복·생활용품을 다 채울 수 있는 부 상한, 원래 상한(max)이 되는 부 (rawMax)
- * - feeWeeks: 왕실이 사무소 증설 자금을 볼 때 현금에 더하는 민간 공사 수수료 수입의 주 수
  */
 export const TUNE = {
   peasantMarketShare: 0.1,
@@ -336,7 +337,6 @@ export const TUNE = {
   switchRate: 0.005,
   switchPremium: 1.1,
   adminScale: 0.3,
-  pollShareMax: 0.15,
   lossBuildsPerWeek: 0,
   lossTolerance: Infinity,
   adminStart: 1,
@@ -345,7 +345,7 @@ export const TUNE = {
   taxCurve: 'hyp' as 'exp' | 'hyp',
   cashBufferDays: 10,
   pollTax: 0.2,
-  incomeTax: 0,
+  incomeTax: 0.1,
   officeTargetDays: 30,
   startsPerWeek: 3,
   luxuryLinear: 0.3,
@@ -353,7 +353,6 @@ export const TUNE = {
   meatLinear: 0.3,
   meatQuad: 0.01,
   privateShare: 0.5,
-  feeWeeks: 13,
   qualSkilledL: 0.4,
   qualExpertL: 0.6,
   qualRate: 0.25,
@@ -363,7 +362,13 @@ export const TUNE = {
   peasantPoll: 0.25,
   rawFullWealth: 5,
   rawCapWealth: 10,
-  budgetBase: { research: 0.15, education: 0.3, welfare: 0.05, construction: 0.4 },
+  taxLevels: [0.6, 0.8, 1, 1.2, 1.4],
+  govWageLevels: [0.7, 0.85, 1, 1.15, 1.3],
+  researchShare: 0.045,
+  researchLevels: [0.5, 0.75, 1, 1.5, 2],
+  treasuryLowWeeks: 26,
+  treasuryHighWeeks: 52,
+  startTreasuryWeeks: 26,
   shrinkWeeks: 26,
   salvageShare: 0.5,
   salvageDays: 28,

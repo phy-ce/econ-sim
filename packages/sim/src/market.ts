@@ -1,6 +1,6 @@
-import { CLASS_DEFS, CONSUMPTION_PER_CAPITA, GOOD_IDS, GOODS, NEEDS, SUBSISTENCE, TUNE, getMethod, needsAt, rawMax } from './data';
+import { CONSUMPTION_PER_CAPITA, GOOD_IDS, GOODS, NEEDS, SUBSISTENCE, TUNE, getMethod, needsAt, rawMax } from './data';
 import { CARTAGE_RATE, RAIL_RATE, borrow, companyById, freightRate, priceFormula, regionById, shippingRate, isSubsistence } from './economy';
-import { payLandTax, payRent, paySalvage } from './finance';
+import { landTaxValue, payLandTax, payRent, paySalvage, taxDue, taxRates } from './finance';
 import { addToPool, borderCost, kingdomById, kingdomOf, payTariff } from './kingdoms';
 import { findPop, payPops, payProf, workforce } from './pops';
 import { clamp, round2 } from './rng';
@@ -97,10 +97,11 @@ export function harvest(w: World, book: Book) {
     const k = workforce(pop);
     const rent = hasLandlords(w, b.regionId) ? TUNE.rentShare : 0;
     const out: GoodBag = { grain: k * SUBSISTENCE.grainPerWorker, fiber: k * SUBSISTENCE.fiberPerWorker, timber: k * SUBSISTENCE.timberPerWorker };
-    // 토지 기반 과세: 수확의 landTax 비율을 징수율만큼 국고 몫으로 함께 판다
+    // 토지 기반 과세: 수확의 토지세율을 징수율만큼 국고 몫으로 함께 판다 (1인당 과세면 토지세율 0)
     const kd = kingdomById(w, r.kingdomId);
-    const tax = kd.taxLaw === 'land' ? Math.min(1 - TUNE.peasantMarketShare - rent, kd.landTax * (kd.taxRatio ?? 1)) : 0;
-    if (kd.taxLaw === 'land') kd.landOwed = (kd.landOwed ?? 0) + GOOD_IDS.reduce((a, g) => a + (out[g] ?? 0) * r.market[g].price, 0) * kd.landTax;
+    const land = taxRates(kd).land;
+    const tax = Math.min(1 - TUNE.peasantMarketShare - rent, land * (kd.taxRatio ?? 1));
+    if (land > 0) kd.landOwed = (kd.landOwed ?? 0) + landTaxValue(r, out, land);
     const total = TUNE.peasantMarketShare + rent + tax;
     const rentFrac = rent / (total || 1), taxFrac = tax / (total || 1);
     for (const g of GOOD_IDS) {
@@ -496,13 +497,10 @@ const INVEST_RATE = 0.05;
  * 이것이 민간 투자의 재원이다. 쓰고 남는 소득이 꾸준하면 부 단계가 올라 쓰는 양이 는다.
  */
 function investSurplus(w: World, p: Pop, cashCost: number) {
-  const k = kingdomById(w, kingdomOf(w, p.regionId));
-  const st = CLASS_DEFS[p.prof].stratum;
-  const taxDue = p.size * k.pollTax[st] + Math.max(0, p.incomeEma) * k.incomeTax[st];
-  const over = (p.savings - (Math.max(0, cashCost) + taxDue) * TUNE.cashBufferDays) * INVEST_RATE;
+  const over = (p.savings - (Math.max(0, cashCost) + taxDue(w, p)) * TUNE.cashBufferDays) * INVEST_RATE;
   if (over <= 0) return;
   p.savings -= over;
-  addToPool(w, k.id, p.regionId, over);
+  addToPool(w, kingdomOf(w, p.regionId), p.regionId, over);
 }
 
 /** 그 부 단계의 하루 소비 묶음 비용 (지역 가격 기준) */
