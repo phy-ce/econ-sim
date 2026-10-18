@@ -192,8 +192,8 @@ export function wageCostOf(method: MethodDef, wages: Record<Skill, number>, stat
 }
 
 /**
- * 징수율: 행정청이 감당하는 인구 / 왕국 인구 = x 일 때 1 − e^(−x). 한도가 인구와 같으면 63%, 2배면 86%, 3배면 95%.
- * 100%에는 닿지 않고, 행정청을 늘릴수록 더 걷히는 몫이 줄어든다
+ * 징수율: 행정청이 감당하는 인구 / 왕국 인구 = x 일 때 x / (1 + x) (TUNE.taxCurve = 'hyp'). 한도가 인구와 같으면 50%, 2배면 67%, 3배면 75%.
+ * 'exp' 곡선이면 1 − e^(−x) (63%, 86%, 95%). 100%에는 닿지 않고, 행정청을 늘릴수록 더 걷히는 몫이 줄어든다
  */
 export function collectionRatio(capacity: number, people: number): number {
   if (people <= 0) return 1;

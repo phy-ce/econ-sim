@@ -8,7 +8,7 @@ import { POP_CLASSES, WEALTH_MAX, WEALTH_MIN } from './types';
 import type { Building, Company, GoodBag, GoodId, MarketGood, NeedDef, NeedId, Pop, Region, SalvageLot, World } from './types';
 
 // 시장 (지역마다 하나): 그날 나온 구매 주문과 판매 제안을 한 가격으로 체결한다.
-// 팔리지 않은 물건은 만든 사람이 그대로 들고 있다가 다음 날 다시 내놓는다 (공동 창고 없음).
+// 건물 산출은 그날 못 팔면 사라진다 (재고 없음). 상인 화물만 남겨 두었다가 다음 날 다시 내놓는다 (하루 2% 상함).
 // 지역 밖으로 나가는 화물은 운송비를, 국경을 넘으면 관세를 더 낸다.
 
 type Payer = { kind: 'company'; c: Company } | { kind: 'trader' };
@@ -35,7 +35,6 @@ interface PopPlan {
   basketCost: number;
   inKindValue: number;
   budget: number;
-  budgetFrac: number;
   goods: GoodBag;
   foodNeed: number;
   foodInKind: number;
@@ -233,8 +232,7 @@ export function collectOrders(w: World, book: Book) {
       const fq = Math.min(all, foodQty[g] ?? 0);
       goods[g] = fq * foodFrac + (all - fq) * restFrac;
     }
-    const budgetFrac = 1;
-    book.plans.push({ pop: p, basketCost, inKindValue, budget, budgetFrac, goods, foodNeed, foodInKind, foodBuy });
+    book.plans.push({ pop: p, basketCost, inKindValue, budget, goods, foodNeed, foodInKind, foodBuy });
     for (const g of GOOD_IDS) {
       const q = goods[g] ?? 0;
       if (q <= 1e-9) continue;
@@ -477,7 +475,7 @@ export function clearMarkets(w: World, book: Book) {
     const hh = r.households[p.prof];
     let got = plan.inKindValue, spent = 0;
     for (const g of GOOD_IDS) {
-      const want = (plan.goods[g] ?? 0) * plan.budgetFrac;
+      const want = plan.goods[g] ?? 0;
       if (want <= 0) continue;
       const q = want * (buyFill.get(mkey(r.id, g)) ?? 1);
       const cost = q * r.market[g].price;
@@ -491,7 +489,7 @@ export function clearMarkets(w: World, book: Book) {
     for (const [g, q] of Object.entries(p.inKind)) if (hh) hh.consumed[g as GoodId] = (hh.consumed[g as GoodId] ?? 0) + (q ?? 0);
     p.fulfillment = plan.basketCost > 0 ? Math.min(1, got / plan.basketCost) : 1;
     let fed = plan.foodInKind;
-    for (const f of plan.foodBuy) fed += (f.qty * plan.budgetFrac * (buyFill.get(mkey(r.id, f.good)) ?? 1)) / f.units;
+    for (const f of plan.foodBuy) fed += (f.qty * (buyFill.get(mkey(r.id, f.good)) ?? 1)) / f.units;
     p.food = plan.foodNeed > 0 ? Math.min(1, fed / plan.foodNeed) : 1;
     updateWealth(p, r, plan);
   }
