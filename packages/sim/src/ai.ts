@@ -59,14 +59,21 @@ function labourPool(w: World, r: Region, s: Skill): number {
   return n;
 }
 
-/** 이 방식을 levels 레벨 돌릴 일손이 공사 기간 안에 모이는가 0..1 (민간 건물의 배당 자리는 승진으로 천천히 차므로 세지 않는다) */
-export function laborAvailability(w: World, r: Region, m: MethodDef, levels: number, stateOwned = true): number {
+/**
+ * 이 방식을 levels 레벨 돌릴 일손이 공사 기간 안에 모이는가 0..1 (민간 건물의 배당 자리는 승진으로 천천히 차므로 세지 않는다).
+ * pools: pop 이 바뀌지 않는 동안 (지역, 직종) 별 labourPool 을 한 번만 센다
+ */
+export function laborAvailability(w: World, r: Region, m: MethodDef, levels: number, stateOwned = true, pools?: Map<string, number>): number {
   let ok = 1;
   // 민간 건물의 소유주 자리(1%)는 공사 판단을 막지 않는다
   for (const s of SKILLS) {
     if (paysDividend(stateOwned, s)) continue;
     const need = (m.workers[s] ?? 0) * levels;
-    if (need > 0) ok = Math.min(ok, labourPool(w, r, s) / need);
+    if (!(need > 0)) continue;
+    const k = `${r.id}|${s}`;
+    let pool = pools?.get(k);
+    if (pool === undefined) { pool = labourPool(w, r, s); pools?.set(k, pool); }
+    ok = Math.min(ok, pool / need);
   }
   return ok;
 }
@@ -454,6 +461,7 @@ interface Pick { regionId: number; typeId: string; methodId: string; levels: num
  */
 export function pickProject(w: World, c: Company, o: Outlook, free: number, allowLoss = false, blocked?: { best: Pick | null }): Pick | null {
   let best: Pick | null = null, least: Pick | null = null;
+  const pools = new Map<string, number>();
   for (const r of ownRegions(w, c)) {
     for (const t of BUILDING_TYPES) {
       if (t.id === 'builder' || !canBuildType(c, t)) continue;
@@ -467,7 +475,7 @@ export function pickProject(w: World, c: Company, o: Outlook, free: number, allo
         if (!blocked || (t.deposit && depositFree(w, r.id, t.deposit) < 1)) continue;
         for (const m of availableMethods(c, t.id)) {
           if (existing && existing.methodId !== m.id) continue;
-          if (laborAvailability(w, r, m, 1, c.state) < 0.5) continue;
+          if (laborAvailability(w, r, m, 1, c.state, pools) < 0.5) continue;
           const e = valueMethod(w, o, r, c, t.id, m, 1);
           if (m.grant) e.profit += schoolBenefit(w, c, r, m, 1, false);
           const roi = (e.profit * TICKS_PER_YEAR) / perLevel;
@@ -482,7 +490,7 @@ export function pickProject(w: World, c: Company, o: Outlook, free: number, allo
           if (levels > room || free < perLevel * levels) continue;
           const e = valueMethod(w, o, r, c, t.id, m, levels);
           if (m.grant) e.profit += schoolBenefit(w, c, r, m, levels, false);
-          if (laborAvailability(w, r, m, levels, c.state) < 0.5) continue;
+          if (laborAvailability(w, r, m, levels, c.state, pools) < 0.5) continue;
           const roi = (e.profit * TICKS_PER_YEAR) / (perLevel * levels);
           if (allowLoss && levels === CHUNKS[CHUNKS.length - 1] && e.profit >= -TUNE.lossTolerance * e.wageCost) {
             const s = roi + Math.abs(roi) * (rand(w) - 0.5) * 0.3;

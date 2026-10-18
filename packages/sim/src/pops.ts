@@ -8,15 +8,24 @@ import type { GoodBag, Household, Pop, PopClass, Region, World } from './types';
 
 export const workforce = (p: Pop) => p.size * WORKFORCE_RATIO;
 
-const key = (regionId: number, prof: PopClass, work: number) => `${regionId}|${prof}|${work}`;
-/** (지역, 직종, 일터) → pop 색인. 직렬화하지 않고 필요할 때 다시 만든다 */
-const indexes = new WeakMap<World, { map: Map<string, Pop>; n: number }>();
+const PROF_INDEX = Object.fromEntries(POP_CLASSES.map((s, i) => [s, i])) as Record<PopClass, number>;
+/** (지역, 직종) 의 숫자 키 */
+const key = (regionId: number, prof: PopClass) => regionId * POP_CLASSES.length + PROF_INDEX[prof];
+/** 일터 → (지역, 직종) → pop 색인. 직렬화하지 않고 필요할 때 다시 만든다 */
+type PopIndex = Map<number, Map<number, Pop>>;
+const indexes = new WeakMap<World, { map: PopIndex; n: number }>();
 
-function index(w: World): Map<string, Pop> {
+function put(map: PopIndex, p: Pop) {
+  let byWork = map.get(p.work);
+  if (!byWork) map.set(p.work, (byWork = new Map()));
+  byWork.set(key(p.regionId, p.prof), p);
+}
+
+function index(w: World): PopIndex {
   let ix = indexes.get(w);
   if (!ix || ix.n !== w.pops.length) {
-    const map = new Map<string, Pop>();
-    for (const p of w.pops) map.set(key(p.regionId, p.prof, p.work), p);
+    const map: PopIndex = new Map();
+    for (const p of w.pops) put(map, p);
     ix = { map, n: w.pops.length };
     indexes.set(w, ix);
   }
@@ -24,7 +33,7 @@ function index(w: World): Map<string, Pop> {
 }
 
 export function findPop(w: World, regionId: number, prof: PopClass, work: number): Pop | undefined {
-  return index(w).get(key(regionId, prof, work));
+  return index(w).get(work)?.get(key(regionId, prof));
 }
 
 /** 그 자리의 pop. 없으면 빈 pop 을 만든다 */
@@ -37,7 +46,7 @@ export function getPop(w: World, regionId: number, prof: PopClass, work: number)
   };
   w.pops.push(p);
   const ix = indexes.get(w);
-  if (ix) { ix.map.set(key(regionId, prof, work), p); ix.n = w.pops.length; }
+  if (ix) { put(ix.map, p); ix.n = w.pops.length; }
   return p;
 }
 
@@ -71,10 +80,9 @@ export function movePeople(w: World, from: Pop, to: Pop, workers: number, qualif
     from.quals[q] = have - amt;
     carried[q] = amt;
   }
-  if (to.prof !== from.prof) {
-    carried[from.prof] = (carried[from.prof] ?? 0) + moved;
-    delete carried[to.prof];
-  }
+  // 직종이 바뀌면 원래 직종 자격을 들고 가고, 도착 직종의 자격은 들고 가지 않는다
+  const drop = to.prof !== from.prof ? to.prof : null;
+  if (drop) carried[from.prof] = (carried[from.prof] ?? 0) + moved;
   const total = to.size + people;
   const avg = (a: number, b: number) => (total > 0 ? (a * to.size + b * people) / total : b);
   to.wealth = avg(to.wealth, from.wealth);
@@ -87,7 +95,7 @@ export function movePeople(w: World, from: Pop, to: Pop, workers: number, qualif
   from.size -= people;
   to.size = total;
   const cap = to.size * WORKFORCE_RATIO;
-  for (const q of Object.keys(carried) as PopClass[]) to.quals[q] = Math.min(cap, (to.quals[q] ?? 0) + (carried[q] ?? 0));
+  for (const q of Object.keys(carried) as PopClass[]) if (q !== drop) to.quals[q] = Math.min(cap, (to.quals[q] ?? 0) + (carried[q] ?? 0));
   track(w, from.prof, to.prof, people);
   return moved;
 }
@@ -239,9 +247,12 @@ export function aggregateHouseholds(w: World) {
   const byRegion = new Map<number, Region>(w.regions.map((r) => [r.id, r]));
   const sums = new Map<Region, Record<PopClass, Household>>();
   for (const r of w.regions) {
-    const prevConsumed = r.households ? Object.fromEntries(POP_CLASSES.map((s) => [s, r.households[s]?.consumed ?? {}])) : {};
     const hh = {} as Record<PopClass, Household>;
-    for (const s of POP_CLASSES) hh[s] = { ...emptyHousehold(s), consumed: (prevConsumed as Record<string, GoodBag>)[s] ?? {} };
+    for (const s of POP_CLASSES) {
+      // 그날 소비 기록은 이어서 쓴다
+      hh[s] = emptyHousehold(s);
+      hh[s].consumed = r.households?.[s]?.consumed ?? {};
+    }
     sums.set(r, hh);
   }
   for (const p of w.pops) {
