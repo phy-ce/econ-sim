@@ -95,11 +95,9 @@ export function harvest(w: World, book: Book) {
     if (!pop || pop.size <= 0) continue;
     const r = regionById(w, b.regionId);
     const k = workforce(pop);
-    const rent = hasLandlords(w, b.regionId) ? TUNE.rentShare : 0;
+    const { rent, tax } = harvestShares(w, r);
     const out: GoodBag = { grain: k * SUBSISTENCE.grainPerWorker, fiber: k * SUBSISTENCE.fiberPerWorker, timber: k * SUBSISTENCE.timberPerWorker };
-    // 토지 기반 과세: 수확의 landTax 비율을 징수율만큼 국고 몫으로 함께 판다
     const kd = kingdomById(w, r.kingdomId);
-    const tax = kd.taxLaw === 'land' ? Math.min(1 - TUNE.peasantMarketShare - rent, kd.landTax * (kd.taxRatio ?? 1)) : 0;
     if (kd.taxLaw === 'land') kd.landOwed = (kd.landOwed ?? 0) + GOOD_IDS.reduce((a, g) => a + (out[g] ?? 0) * r.market[g].price, 0) * kd.landTax;
     const total = TUNE.peasantMarketShare + rent + tax;
     const rentFrac = rent / (total || 1), taxFrac = tax / (total || 1);
@@ -115,6 +113,17 @@ export function harvest(w: World, book: Book) {
       addLot(book, r.id, g, { kind: 'sub', pop, q: sell, rentFrac, taxFrac });
     }
   }
+}
+
+/**
+ * 소작 수확 중 시장 판매분과 함께 팔아 남에게 가는 몫: 지대(그 지역 저택에 귀족이 있을 때만)와
+ * 토지세(토지 기반 세법일 때, 수확의 landTax 비율을 징수율만큼 국고 몫으로. 상한 1 − 시장 판매 − 지대)
+ */
+export function harvestShares(w: World, r: Region): { rent: number; tax: number } {
+  const rent = hasLandlords(w, r.id) ? TUNE.rentShare : 0;
+  const kd = kingdomById(w, r.kingdomId);
+  const tax = kd.taxLaw === 'land' ? Math.min(1 - TUNE.peasantMarketShare - rent, kd.landTax * (kd.taxRatio ?? 1)) : 0;
+  return { rent, tax };
 }
 
 /** 그 지역 저택에 귀족이 앉아 있는가 (소작지 지대를 받을 사람) */

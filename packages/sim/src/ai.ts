@@ -99,7 +99,7 @@ function adjustWages(w: World, c: Company) {
       if (n <= 0) continue;
       cap += n; emp += b.employed[s];
       const r = regionById(w, b.regionId);
-      outside += (s === 'unskilled' ? subsistenceWage(r) : s === 'skilled' ? c.wages.unskilled : c.wages.skilled) * n;
+      outside += (s === 'unskilled' ? subsistenceWage(w, r) : s === 'skilled' ? c.wages.unskilled : c.wages.skilled) * n;
       people += n;
     }
     c.lastEmployed[s] = emp;
