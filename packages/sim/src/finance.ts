@@ -104,14 +104,17 @@ export function taxRates(k: Kingdom, law: TaxLaw = k.taxLaw): { land: number; po
   return law === 'land' ? { land: TUNE.landTax * m, poll: 0, income: 0 } : { land: 0, poll: TUNE.pollTax * m, income: TUNE.incomeTax * m };
 }
 
-/** 임금 지수 (매주): 왕국 민간 건물이 지금 주는 임금 ÷ 기본 임금 (일자리 가중)의 이동평균. 민간 고용이 없으면 그대로 둔다 */
+/**
+ * 임금 지수 (매주, 빅토리아3의 '보통 임금'): 왕국 민간 건물 노동자의 평균 임금 ÷ 노동자 기본 임금 (고용 가중)의 이동평균.
+ * 국영 임금은 이 지수에 직종별 기본 임금(노동자 10, 기술자 20, 전문가 40 …)을 곱한다. 민간 노동자 고용이 없으면 그대로 둔다
+ */
 export function updateWageIndex(w: World, k: Kingdom) {
   let paid = 0, base = 0;
   for (const b of w.buildings) {
     if (b.stateOwned || BUILDING_BY_ID[b.typeId].auto || kingdomOf(w, b.regionId) !== k.id) continue;
     const c = companyById(w, b.companyId);
     if (!c) continue;
-    for (const s of SKILLS) if (!paysDividend(false, s)) { paid += b.employed[s] * c.wages[s]; base += b.employed[s] * SKILL_DEFS[s].baseWage; }
+    paid += b.employed.unskilled * c.wages.unskilled; base += b.employed.unskilled * SKILL_DEFS.unskilled.baseWage;
   }
   if (base <= 0) return;
   k.wageIndex = round2(k.wageIndex == null ? paid / base : k.wageIndex * 0.75 + (paid / base) * 0.25);

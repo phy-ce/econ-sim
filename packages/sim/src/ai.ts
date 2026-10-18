@@ -136,25 +136,14 @@ function treasuryTight(c: Company, k: Kingdom): boolean {
   return c.debt > 0 || treasuryWeeks(c, k) < TUNE.treasuryLowWeeks;
 }
 
-/** 왕실 정부 건물의 충원율 (일자리 대비 고용, 인원 기준). 일자리가 없으면 1 */
-function governmentFill(w: World, c: Company): number {
-  let open = 0, emp = 0;
-  for (const b of w.buildings) {
-    if (b.companyId !== c.id || !isGovernment(b.typeId)) continue;
-    for (const s of SKILLS) { open += slots(b, s); emp += b.employed[s]; }
-  }
-  return open > 0 ? emp / open : 1;
-}
-
 /**
- * 정책 단계 (AI 왕국, 4주마다 한 칸). 기준은 국고가 주간 국정 지출의 몇 주치인가다.
- * 국고가 지난 점검보다 늘고 있으면 조이지 않고, 줄고 있으면 풀지 않는다 (재고만 보면 세금이 5단계와 1단계를 오간다).
- * - 조임 (TUNE.treasuryLowWeeks 주치 미만이거나 빚이 있다): 세금 수준을 올린다. 이미 5단계면 연구비를 내리고, 1단계면 연구를 멈춘다
- *   (조이는 동안 새 연구를 고르지 않는다, planResearch). 그다음 국영 임금을 내린다. 정부 건물이 이미 덜 찼으면(90% 미만) 임금은 내리지 않는다.
- *   세금 5단계에서도 순자산(현금 − 빚)이 지난 점검보다 줄었으면 구조적 적자다: 돈을 벌지 않는 학교를 줄인다.
- *   건축사무소는 줄이지 않는다 (민간 공사는 쓴 만큼 수수료로 운영비를 내므로 줄여도 적자가 거의 줄지 않고 민간 건설만 막힌다)
- * - 풂 (TUNE.treasuryHighWeeks 주치 초과, 빚 없음): 국영 임금, 연구비를 보통(3)으로 되돌리고, 그다음 세금 수준을 내린다
- * - 조이지 않을 때 정부 건물 충원율이 90% 미만이면 국영 임금을 보통 위로 올린다 (세금을 내리는 것보다 먼저)
+ * 정책 단계 (AI 왕국, 4주마다 한 칸). 기준은 국고가 주간 국정 지출의 몇 주치인가와, 지난 점검보다 늘었는가다.
+ * 단계는 한 줄 사다리로 움직인다 (후함 → 긴축): 연구비 5·4 → 세금 1~5 → 연구비 2·1 → 연구 멈춤 → 국영 임금 2·1.
+ * - 조임 (빚이 있거나 TUNE.treasuryLowWeeks 주치 미만이고, 지난 점검보다 줄었다): 긴축 쪽으로 한 칸.
+ *   조이는 동안 새 연구를 고르지 않는다 (planResearch). 세금 5단계에서도 줄면 구조적 적자다: 돈을 벌지 않는 학교를 줄인다
+ * - 회복 (빚 없고 low 주치 이상, 줄지 않았다): 보통(3) 아래로 내린 국영 임금, 연구비를 한 칸씩 되돌린다
+ * - 풂 (TUNE.treasuryHighWeeks 주치 초과, 줄지 않았다): 세금을 내리고, 세금이 1단계면 연구비를 보통 위로 올린다.
+ * AI는 국영 임금을 보통 위로 올리지 않는다
  */
 function adjustBudget(w: World, c: Company) {
   const k = w.kingdoms.find((x) => x.governmentId === c.id);
@@ -163,24 +152,22 @@ function adjustBudget(w: World, c: Company) {
   const losing = k.netLast != null && net < k.netLast;
   k.netLast = round2(net);
   const b = k.budget;
-  const weeks = treasuryWeeks(c, k);
   let step: [BudgetItem, number] | null = null;
   if (treasuryTight(c, k)) {
-    // 국고가 지난 점검보다 늘고 있으면(회복 중) 더 조이지 않는다
     if (losing) {
       if (b.tax === BUDGET_STEPS) shrinkSchools(w, c);
-      if (b.tax < BUDGET_STEPS) step = ['tax', b.tax + 1];
+      if (b.research > 3) step = ['research', b.research - 1];
+      else if (b.tax < BUDGET_STEPS) step = ['tax', b.tax + 1];
       else if (b.research > 1) step = ['research', b.research - 1];
       else if (c.research.current) applyCommand(w, c.id, { type: 'setResearch', techId: null });
-      else if (b.wages > 1 && governmentFill(w, c) >= 0.9) step = ['wages', b.wages - 1];
+      else if (b.wages > 1) step = ['wages', b.wages - 1];
     }
-  } else {
-    // 넉넉해도 국고가 지난 점검보다 줄고 있으면 더 풀지 않는다
-    const rich = weeks > TUNE.treasuryHighWeeks && !losing;
-    if (rich && b.wages < 3) step = ['wages', b.wages + 1];
-    else if (rich && b.research < 3) step = ['research', b.research + 1];
-    else if (b.wages >= 3 && b.wages < BUDGET_STEPS && governmentFill(w, c) < 0.9) step = ['wages', b.wages + 1];
+  } else if (!losing) {
+    const rich = treasuryWeeks(c, k) > TUNE.treasuryHighWeeks;
+    if (b.wages < 3) step = ['wages', b.wages + 1];
+    else if (b.research < 3) step = ['research', b.research + 1];
     else if (rich && b.tax > 1) step = ['tax', b.tax - 1];
+    else if (rich && b.research < BUDGET_STEPS) step = ['research', b.research + 1];
   }
   if (step) applyCommand(w, c.id, { type: 'setBudget', item: step[0], value: step[1] });
 }
@@ -250,8 +237,9 @@ function manageBuildings(w: World, c: Company) {
       continue;
     }
 
-    // 생산 방식: 같은 상품을 더 싸게 만드는 방식으로 (3주 쿨다운). 투입재를 못 구해 멈췄으면 쿨다운 없이
-    const starved = Object.keys(cur.inputs).length > 0 && b.active && b.last.inputFill < 0.5 && b.last.staffing > 0;
+    // 생산 방식: 같은 상품을 더 싸게 만드는 방식으로 (3주 쿨다운). 투입재를 못 구해 생산이 멈췄으면 쿨다운 없이.
+    // 산출이 없는 행정청은 투입재가 모자라도 징세 한도가 그대로라 멈춘 것으로 보지 않는다
+    const starved = Object.keys(cur.inputs).length > 0 && Object.keys(cur.outputs).length > 0 && b.active && b.last.inputFill < 0.5 && b.last.staffing > 0;
     if (usable.length > 1 && (starved || w.tick - b.lastSwitchTick >= SWITCH_COOLDOWN)) {
       let best = { m: cur, v: starved ? -Infinity : unitProfit(current.profit, cur) };
       for (const m of usable) {
@@ -339,15 +327,17 @@ function planConstruction(w: World, c: Company, o: Outlook) {
   // 밀린 공사는 같은 사무소가 맡은 공사 전부로 센다 (왕실 + 그 왕국 민간)
   const builder = builderOf(w, c);
   const backlog = () => w.constructions.filter((k) => { const o = companyById(w, k.companyId); return !!o && builderOf(w, o) === builder; }).reduce((s, k) => s + (k.required - k.points), 0) / Math.max(1, est.pointsPerDay);
-  // 공사가 한 달 넘게 밀려 있고 돈이 넉넉하면 사무소를 한 블록 늘린다. 사무소는 왕실만 늘린다
+  // 사무소는 왕실만 늘린다. 사무소는 실제로 쓰인 포인트(buildUsed)로 크기를 정한다: 포인트를 거의 다 쓰고(TUNE.officeUseFull 이상)
+  // 공사가 한 달 넘게 밀려 있으면 늘리고, 남는 포인트는 reviewLevels 가 줄인다.
+  // 늘 다 가동해 운영비가 국고에서 나가므로 국고가 넉넉할 때(지출 TUNE.treasuryHighWeeks 주치 초과, 빚 없음)만 늘린다
   if (builder === c) {
     const offices = w.buildings.filter((b) => b.companyId === c.id && b.typeId === 'builder');
     const officeLevel = offices.reduce((s, b) => s + b.level, 0);
     const block = Math.max(OFFICE_BLOCK, Math.round(officeLevel * OFFICE_GROWTH));
     const officeCost = constructionEstimate(w, c, 'builder').cost * block;
-    // 사무소는 늘 다 가동해 운영비가 국고에서 나간다: 국고가 넉넉할 때(지출 TUNE.treasuryHighWeeks 주치 초과, 빚 없음)만 늘린다
+    const full = (c.buildUsed ?? 0) >= est.pointsPerDay * TUNE.officeUseFull;
     const rich = c.debt <= 0 && treasuryWeeks(c, kingdomById(w, c.kingdomId)) > TUNE.treasuryHighWeeks;
-    if (rich && backlog() > TUNE.officeTargetDays && c.cash > officeCost * 1.5 && !w.constructions.some((k) => k.companyId === c.id && k.typeId === 'builder')) {
+    if (full && rich && backlog() > TUNE.officeTargetDays && c.cash > officeCost * 1.5 && !w.constructions.some((k) => k.companyId === c.id && k.typeId === 'builder')) {
       const office = offices[0];
       // 대기가 TUNE.officeTargetDays 안으로 들어올 만큼 한 번에 늘린다
       const perLevel = est.pointsPerDay / Math.max(1, officeLevel);
@@ -366,16 +356,14 @@ function planConstruction(w: World, c: Company, o: Outlook) {
       if (!err) toFront(w, c);
     }
   }
-  reviewLevels(w, c, o, est.pointsPerDay, backlog());
+  reviewLevels(w, c, o, est.pointsPerDay);
   let fallbacks = 0;
   let blocked: { best: Pick | null } | undefined;
   for (let started = 0; started < TUNE.startsPerWeek; started++) {
     const own = w.constructions.filter((k) => k.companyId === c.id).length;
     if (own >= MAX_CONCURRENT_CONSTRUCTIONS) break;
     if (c.debt > creditLimit(w, c) * 0.3) break;
-    // 왕실은 국고 중 국정 지출 TUNE.treasuryHighWeeks 주치를 넘는 돈으로만 새 공사를 한다 (사무소처럼 넉넉할 때만)
-    const keep = c.state ? TUNE.treasuryHighWeeks * (kingdomById(w, c.kingdomId).expenseEma ?? 0) : 0;
-    const free = c.cash - Math.max(reserveOf(w, c), keep) - committedCost(w, c) - est.costPerDay * 30;
+    const free = freeCash(w, c, est.costPerDay);
     if (free <= 0) break;
     const out = { best: null as Pick | null };
     const pick = pickProject(w, c, o, free, fallbacks < TUNE.lossBuildsPerWeek, out);
@@ -400,16 +388,34 @@ function planConstruction(w: World, c: Company, o: Outlook) {
 }
 
 /**
- * 내 건물 마지막 1레벨의 장기 하루 손익: 짓기 판단(valueMethod)과 같은 계산이고, 이미 도는 레벨이라 전망에 더하지 않는다.
- * 건축사무소는 손익 대신 공사 대기로 본다: 그 레벨을 빼도 대기가 목표 일수의 절반 안이면 −1, 아니면 +1
+ * 새 공사에 쓸 수 있는 돈: 현금 − 남길 돈 − 진행 중 공사에 더 들 돈 − 한 달 공사비.
+ * 왕실은 국정 지출 TUNE.treasuryHighWeeks 주치를 남긴다 (학교·행정청·생산 건물 모두 그 위의 여윳돈으로만 짓는다)
  */
-function levelValue(w: World, c: Company, o: Outlook, b: Building, pointsPerDay: number, backlogDays: number): number {
+function freeCash(w: World, c: Company, costPerDay: number): number {
+  const keep = c.state ? TUNE.treasuryHighWeeks * (kingdomById(w, c.kingdomId).expenseEma ?? 0) : 0;
+  return c.cash - Math.max(reserveOf(w, c), keep) - committedCost(w, c) - costPerDay * 30;
+}
+
+/** 건축사무소가 남기는 하루 포인트: 지금 능력 − 공사에 실제로 쓰인 양(buildUsed) − 이미 철거 대기에 오른 레벨의 몫 */
+function officeSpare(w: World, c: Company, pointsPerDay: number): number {
+  let pending = 0;
+  for (const x of w.buildings) {
+    const m = getMethod(x.typeId, x.methodId);
+    if (x.companyId === c.id && m.construction && x.shrinking) pending += m.construction * x.shrinking * x.utilization * efficiency(x);
+  }
+  return pointsPerDay - (c.buildUsed ?? 0) - pending;
+}
+
+/**
+ * 내 건물 마지막 1레벨의 장기 하루 손익: 짓기 판단(valueMethod)과 같은 계산이고, 이미 도는 레벨이라 전망에 더하지 않는다.
+ * 건축사무소는 손익 대신 포인트 사용량으로 본다: 그 레벨을 빼도 쓰던 포인트를 다 낼 수 있으면 −1, 아니면 +1 (마지막 1레벨은 남긴다)
+ */
+function levelValue(w: World, c: Company, o: Outlook, b: Building, pointsPerDay: number): number {
   const m = getMethod(b.typeId, b.methodId);
   if (m.construction) {
     const perLevel = m.construction * b.utilization * efficiency(b);
-    const left = pointsPerDay - perLevel;
-    if (left <= 0) return 1;
-    return (backlogDays * pointsPerDay) / left < TUNE.officeTargetDays * 0.5 ? -1 : 1;
+    if (pointsPerDay - perLevel <= 0) return 1;
+    return officeSpare(w, c, pointsPerDay) > perLevel ? -1 : 1;
   }
   const r = regionById(w, b.regionId);
   const e = valueMethod(w, o, r, c, b.typeId, m, 1, true);
@@ -419,13 +425,13 @@ function levelValue(w: World, c: Company, o: Outlook, b: Building, pointsPerDay:
 
 /**
  * 철거 판단 (짓기와 같은 주, 같은 전망): 마지막 레벨 손익이 TUNE.shrinkWeeks 주 연속 마이너스면 레벨의 1/4(최소 1)을 철거 대기에 올린다.
- * 손실 때문에 헐리는 중인 건물이 다시 이익을 내면 철거를 취소한다. 증설 공사 중인 건물은 보지 않는다
+ * 건축사무소는 남는 포인트만큼만 (많아야 1/4). 손실 때문에 헐리는 중인 건물이 다시 이익을 내면 철거를 취소한다. 증설 공사 중인 건물은 보지 않는다
  */
-function reviewLevels(w: World, c: Company, o: Outlook, pointsPerDay: number, backlogDays: number) {
+function reviewLevels(w: World, c: Company, o: Outlook, pointsPerDay: number) {
   for (const b of w.buildings) {
     if (b.companyId !== c.id || BUILDING_BY_ID[b.typeId].auto) continue;
     if (w.constructions.some((k) => k.targetBuildingId === b.id)) { b.negWeeks = 0; continue; }
-    const v = levelValue(w, c, o, b, pointsPerDay, backlogDays);
+    const v = levelValue(w, c, o, b, pointsPerDay);
     if (b.shrinking) {
       if (v > 0 && !b.swap) b.shrinking = 0;
       continue;
@@ -433,7 +439,10 @@ function reviewLevels(w: World, c: Company, o: Outlook, pointsPerDay: number, ba
     b.swap = false;
     b.negWeeks = v < 0 ? (b.negWeeks ?? 0) + 1 : 0;
     if (b.negWeeks >= TUNE.shrinkWeeks) {
-      applyCommand(w, c.id, { type: 'demolish', buildingId: b.id, levels: Math.max(1, Math.round(b.level * 0.25)) });
+      const m = getMethod(b.typeId, b.methodId);
+      const quarter = Math.max(1, Math.round(b.level * 0.25));
+      const n = m.construction ? Math.max(1, Math.min(quarter, Math.floor(officeSpare(w, c, pointsPerDay) / (m.construction * b.utilization * efficiency(b))))) : quarter;
+      applyCommand(w, c.id, { type: 'demolish', buildingId: b.id, levels: n });
       b.negWeeks = 0;
     }
   }
@@ -450,11 +459,12 @@ function swapLand(w: World, c: Company, o: Outlook, cand: Pick) {
   for (const b of w.buildings) {
     if (b.companyId !== c.id || b.regionId !== cand.regionId || b.shrinking || BUILDING_BY_ID[b.typeId].auto) continue;
     if (BUILDING_BY_ID[b.typeId].land !== land || b.typeId === cand.typeId) continue;
-    if (getMethod(b.typeId, b.methodId).construction) continue;
+    // 정부 건물(행정청·건축사무소·학교)은 땅 바꾸기로 헐지 않는다 (남길지는 reviewLevels 가 정한다)
+    if (isGovernment(b.typeId)) continue;
     if (w.constructions.some((k) => k.targetBuildingId === b.id)) continue;
     const cost = constructionEstimate(w, c, b.typeId).cost;
     if (!Number.isFinite(cost) || cost <= 0) continue;
-    const roi = (levelValue(w, c, o, b, est.pointsPerDay, 0) * TICKS_PER_YEAR) / cost;
+    const roi = (levelValue(w, c, o, b, est.pointsPerDay) * TICKS_PER_YEAR) / cost;
     if (!worst || roi < worst.roi) worst = { b, roi };
   }
   if (!worst || cand.score <= Math.max(MIN_ROI, worst.roi) * TUNE.swapMult) return;

@@ -294,6 +294,8 @@ export interface Company {
   distressWeeks: number;
   buildPoints: number;
   buildCost: number;
+  /** 건축사무소 포인트 중 공사에 실제로 쓰인 하루 양의 이동평균 (왕실, AI가 사무소 크기를 정한다) */
+  buildUsed?: number;
   research: Research;
   /** 이번 주 수입·지출 내역과 지난주 내역 (재정 화면용) */
   ledger: Ledger;
@@ -478,7 +480,8 @@ export interface MintLedger {
 }
 
 export interface World {
-  version: 3;
+  /** 저장 형식 버전: 저장되는 모양이 바뀌면 올린다 (4: 정책 단계 tax·wages·research, 계층별 세율 없음) */
+  version: 4;
   config: WorldConfig;
   tick: number;
   seed: number;

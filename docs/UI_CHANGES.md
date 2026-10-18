@@ -45,7 +45,7 @@
   - 일자리는 소작농과 지주(귀족)다. 지주 자리 수는 `landlordJobs(b)`, 소작농 자리 수는 `peasantSlots(b)`로 구한다.
 
 ### 1-3. 세금: 행정청 역량만큼만 걷힌다
-- 법인세는 없어졌다. 세금은 소득세뿐이다(`Kingdom.incomeTax`, 계층별 세율).
+- 법인세는 없어졌다. 세금은 소득세뿐이다(`Kingdom.incomeTax`, 계층별 세율). (2-22·2-23에서 바뀜: 세법 두 가지, 계층별 세율 없음)
 - 실제로 걷히는 비율은 `min(1, Kingdom.taxCapacity / Kingdom.taxDue)`다.
   - 역량은 행정청 레벨, 가동률, 인원에서 나온다.
   - 그래서 처음에는 세금이 덜 걷히고, 행정청을 지을수록 늘어난다.
@@ -55,7 +55,7 @@
 - 매주 화폐를 새로 찍어 국고에 넣는다(주조).
 - 왕실이 빌리는 돈은 새로 발행되고, 갚는 돈과 이자는 소멸한다.
   - 왕실의 대출 한도는 기본 한도 + 왕국 GDP의 25%다(`creditLimit`).
-- 국고가 필요 금액의 4배를 넘으면 넘는 몫을 팝에게 복지로 나눠 준다.
+- 국고가 필요 금액의 4배를 넘으면 넘는 몫을 팝에게 복지로 나눠 준다. (2-23에서 없어짐: 복지 없음)
 - 장부: `World.mint` = `{ minted, issued, retired, interest, burned }`
 
 ### 1-5. 항구 폐쇄
@@ -110,11 +110,11 @@
      - 국고: 현금, 부채와 대출 한도(`creditLimit`), 지난주 손익(`lastWeekProfit`)
      - **주간 수지표:** `Company.lastLedger`(지난주)와 `Company.ledger`(이번 주 진행분)를 그대로 보여 준다. 항목 정의는 `packages/sim/src/types.ts`의 `LEDGER_KEYS`에 있다.
        - 수입(손익에 포함): `sales` 판매, `tax` 소득세, `mint` 주조, `buildFees` 민간 공사 수수료
-       - 지출(손익에 포함): `wages` 임금, `inputs` 원자재, `research` 연구, `interest` 이자, `welfare` 복지
+       - 지출(손익에 포함): `wages` 임금, `inputs` 원자재, `research` 연구, `interest` 이자, `welfare` 복지 (`welfare`는 2-23에서 없어짐)
        - 손익 밖(자본 흐름): `dividends` 배당 지급, `investment` 투자 풀 유입, `buildPaid` 민간이 낸 공사비
        - 합계: 손익 = `lastWeekProfit`. 수입 합계 − 지출 합계와 같다.
        - 소득세 옆에 징수율(`taxCapacity / taxDue`)을 표시한다.
-     - 계층별 소득세율(`Kingdom.incomeTax`): 지금은 표시만 한다. 조정 명령이 생기면 여기에 붙인다.
+     - 계층별 소득세율(`Kingdom.incomeTax`): 지금은 표시만 한다. 조정 명령이 생기면 여기에 붙인다. (2-23에서 없어짐: 세금 수준 단계로 대신)
      - 상단 상태 바의 대출 chip(`App.tsx` 127~130행)은 그대로 두고, 누르면 재정 창이 열리게 한다.
    - **연구 창**: 지금 `Research` 컴포넌트를 그대로 옮긴다(연구 주제, 하루 연구비, 아는 기술). 기술 트리를 단계별(1~4단계)로 보여 주면 좋다.
    - `App.tsx` 창 목록에서 `id:'company'`를 지우고 `id:'finance'`, `id:'research'`를 추가한다.
@@ -226,7 +226,7 @@
 - 필터: 지역, 직종, 실업만 보기
 - 정렬: 모든 열. 기본은 인구 내림차순
 - 실업 pop과 식량 충족 40% 미만인 행은 빨간색으로 강조한다.
-- 실업 pop은 예산 편성의 복지 몫(2-12)을 매주 나눠 받는다. 국고 장부의 `welfare` 항목에 합쳐진다.
+- 실업 pop은 예산 편성의 복지 몫(2-12)을 매주 나눠 받는다. 국고 장부의 `welfare` 항목에 합쳐진다. (2-23에서 없어짐: 복지 없음)
 - 지역 패널의 계층 행을 클릭하면 이 표가 그 지역·계층으로 필터되어 열리게 한다.
 
 ### 2-11. 건설 탭 (새 창)
@@ -353,7 +353,10 @@ sim이 아래 제도를 없앴다. 화면이 계속 컴파일되도록 `packages
 - 공급 출처 `subsistence`에는 토지세로 팔린 몫도 들어간다(새 출처 키 없음).
 
 ### 2-23. 예산은 빅토리아3식 정책 단계 세 개 (재정 탭, `views/FinancePanel.tsx`)
-2-12와 2-19의 예산 편성(항목별 금액, 연구·교육·복지·건설)은 없어졌다. 이 절이 그 둘을 대신한다.
+2-12와 2-19의 예산 편성(항목별 금액, 연구·교육·복지·건설)은 없어졌다. 이 절이 그 둘과 1-3·1-4·2-0·2-10의 세율·복지 부분을 대신한다.
+- **가장 먼저 (머지 직후 재정 조작이 모두 막힌다):** 세율 입력 행은 지워졌고, 남은 비율 슬라이더는 `setBudget`이 늘 거부하는 값(0~100% 소수)을 보낸다. 세 손잡이의 1~5단계 선택을 가장 먼저 넣는다. 화면 작업 전에 급하면 `range`를 `min=1 max=5 step=1 value={단계}`로 바꾸는 속성 수정만 해도 동작한다.
+- 장부 항목 이름: `ledgerLabels.tax`는 이제 토지세·인두세·소득세를 다 담는다. "소득세" → "세금" / "Taxes"로 바꾼다.
+- 저장 호환: 저장 형식이 바뀌었다(`World.version` 4). `useGame.ts`의 `SAVE_KEY`를 `'estera-save-v7'`로 올려 두었다 (2-8과 같은 방식). 예전 저장은 열리지 않는다.
 - 금액 편성이 없다. 왕실 정부 건물(행정청·건축사무소·학교)은 늘 100% 가동하고 임금과 원료를 국고에서 낸다. 국고가 모자라면 국채로 낸다.
 - 정책 손잡이는 세 개다. `Kingdom.budget` = `{ tax, wages, research }`, 각각 정수 1~5(3이 보통). `BUDGET_ITEMS` = `['tax', 'wages', 'research']`, 단계 수는 `BUDGET_STEPS`(5).
   - 바꾸기: `{ type: 'setBudget', item: 'tax' | 'wages' | 'research', value: 1~5 }`
@@ -361,6 +364,7 @@ sim이 아래 제도를 없앴다. 화면이 계속 컴파일되도록 `packages
   - 단계 이름: 매우 낮음 / 낮음 / 보통 / 높음 / 매우 높음 (Very low / Low / Normal / High / Very high)
   - 세금 수준: 지금 세법의 모든 세율 × 0.6 / 0.8 / 1 / 1.2 / 1.4 (`TUNE.taxLevels`)
   - 국영 임금: 기본 임금 × 임금 지수(`Kingdom.wageIndex`) × 0.7 / 0.85 / 1 / 1.15 / 1.3 (`TUNE.govWageLevels`). 바꾸면 왕실 임금(`me.wages`)이 바로 바뀐다.
+    - 임금 지수 = 그 왕국 민간 노동자 평균 임금 ÷ 노동자 기본 임금 10 (빅토리아3의 '보통 임금'). 직종별 국영 임금은 이 지수 × 기본 임금(노동자 10, 기술자 20, 전문가 40 …)이다.
   - 연구비: 주간 경제 규모(`Kingdom.output`) × `TUNE.researchShare` × 0.5 / 0.75 / 1 / 1.5 / 2 (`TUNE.researchLevels`). `research.budget`은 지난주 연구비의 하루 평균 그대로다.
 - `FinancePanel.tsx`에서 고칠 것
   - 비율 슬라이더(0~100%)를 1~5단계 선택(버튼 5개나 단계 슬라이더)으로 바꾼다. `BUDGET_ITEMS` 이름이 장부 항목 `tax`·`wages`·`research`와 같으니, 주간 수지 표의 그 세 행 오른쪽 칸에 둔다.
@@ -376,9 +380,11 @@ sim이 아래 제도를 없앴다. 화면이 계속 컴파일되도록 `packages
 - 장부 항목 `welfare`(복지)가 없어졌다. `strings.ts`의 `ledgerLabels.welfare`, 교육 줄(`education`, `educationPending`)을 지운다. 지출 그룹은 이미 `wages, inputs, research, interest`로 줄여 두었다.
 - 왕실 임금: 왕실 회사에는 `setWage`·`setWageOffset`이 오류를 돌려준다(국영 임금 수준으로 정한다). 왕실의 `Company.wageOffset`은 늘 `null`이다.
   - 재정 탭 `Wages` 섹션(`CompanyPanel.tsx` 449~459행의 직종별 임금 슬라이더)은 왕실이면 국영 임금 손잡이와 지금 임금 읽기 전용 표시로 바꾼다.
-- 정부 건물 가동률: 왕실 정부 건물에는 `setUtilization`이 오류를 돌려준다. 건물 패널의 가동률 조절을 숨기거나 막는다.
+- 정부 건물 가동률: 왕실 정부 건물에는 `setUtilization`과 끄기(`setActive` false)가 오류를 돌려준다. 건물 패널의 가동률 조절과 끄기 버튼을 숨기거나 막는다.
+- 모르는 명령(없앤 `setTax`·`setLandTax` 등)은 이제 "알 수 없는 명령입니다" 오류를 돌려준다.
 - 학교: `MethodDef.grant`(보조금 배율)가 없어졌다. 학교는 왕실만 짓는다(`stateOnly`)는 점에서 행정청과 같고, 민간 지분도 붙지 않는다(2-15에서 학교 제외).
   - `ResourceInspector.tsx`의 "교육 서비스" 표시는 `method.seats` 기준으로 바꿔 두었다.
+- 건축사무소: `Company.buildUsed`(왕실) = 사무소 포인트 중 공사에 실제로 쓰인 하루 양의 이동평균. AI는 이것으로 사무소를 늘리고 줄인다. 건설 탭에서 하루 능력(`constructionEstimate(...).pointsPerDay`) 옆에 막대로 보여 주면 좋다.
 - 지표(`KingdomMetrics`): `education`·`welfare`가 없어지고 `feesWeek`, `govSpendWeek`(정부 건물 임금 + 원료), `interest`, `policy`(세 단계), `wageIndex`, `debt`가 생겼다. 화면은 아직 이 지표를 쓰지 않는다.
 
 ---

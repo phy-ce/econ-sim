@@ -169,7 +169,7 @@ export function createWorld(seed = 1, opts: CreateWorldOptions = {}): World {
   }
 
   const w: World = {
-    version: 3, config: { ai }, tick: 0, seed, rngState: seed | 0, nextId: 1000,
+    version: 4, config: { ai }, tick: 0, seed, rngState: seed | 0, nextId: 1000,
     regions, kingdoms, pops: [], fund: 0, metrics: [],
     bank: { cash: BANK_CAPITAL, capital: BANK_CAPITAL },
     traders: { cash: TRADER_CAPITAL, capital: TRADER_CAPITAL, shipments: [] },

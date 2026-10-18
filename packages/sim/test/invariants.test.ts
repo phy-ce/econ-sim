@@ -159,6 +159,7 @@ describe('장기: 20년이면 경제가 다 발전한다', () => {
   // 그동안 노동자는 대체로 먹고 산다 (식량 충족 최저 40%, 평균 80%).
   it.each([1, 2])('시드 %i', (seed) => {
     const w = createWorld(seed, { withPlayer: false });
+    const m0 = moneyIdentity(w);
     const top = Math.max(...TECHS.map((t) => t.cost));
     const share: Record<number, number> = {};
     let allTechs: number | null = null, tier4: number | null = null;
@@ -174,6 +175,8 @@ describe('장기: 20년이면 경제가 다 발전한다', () => {
       if (allTechs === null && govs.some((c) => c.research.known.length === TECHS.length)) allTechs = y;
       if (tier4 === null && govs.some((c) => c.research.known.some((id) => TECH_BY_ID[id].cost === top))) tier4 = y;
     }
+    // 화폐 보존은 20년 내내 지켜진다 (짧은 시험에서 안 보이는 누수)
+    expect(Math.abs(moneyIdentity(w) - m0) / m0).toBeLessThan(1e-9);
     console.log(`seed ${seed}: 소작농 5년 ${(share[5] * 100).toFixed(0)}% 10년 ${(share[10] * 100).toFixed(0)}% 20년 ${(share[20] * 100).toFixed(0)}% | 기술 완료 ${allTechs}년 4단계 ${tier4}년 | 노동자 식량 최저 ${(minFood * 100).toFixed(0)}% 평균 ${((sumFood / n) * 100).toFixed(0)}%`);
     expect(share[5]).toBeGreaterThanOrEqual(0.7);
     expect(share[10]).toBeGreaterThanOrEqual(0.5);

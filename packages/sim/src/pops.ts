@@ -100,14 +100,14 @@ export function movePeople(w: World, from: Pop, to: Pop, workers: number, qualif
   return moved;
 }
 
-/** 다 빠져나간 pop 을 지운다. 남은 저축은 같은 지역·직종의 실업 pop 으로, 그것도 없으면 주인 없는 돈으로 */
+/** 다 빠져나간 pop 을 지운다. 남은 저축은 같은 지역·직종의 실업 pop 으로 (그 pop 도 이번에 지워지면 안 된다), 그것도 없으면 주인 없는 돈으로 */
 export function prunePops(w: World) {
   const keep: Pop[] = [];
   for (const p of w.pops) {
     if (p.size >= 1e-3) { keep.push(p); continue; }
     if (p.savings !== 0 || p.incomeEma !== 0) {
       const heir = p.work !== 0 ? findPop(w, p.regionId, p.prof, 0) : undefined;
-      if (heir && heir !== p) { heir.savings += p.savings; heir.incomeEma += p.incomeEma; } else w.fund += p.savings;
+      if (heir && heir !== p && heir.size >= 1e-3) { heir.savings += p.savings; heir.incomeEma += p.incomeEma; } else w.fund += p.savings;
     }
   }
   if (keep.length !== w.pops.length) { w.pops = keep; indexes.delete(w); }

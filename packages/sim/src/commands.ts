@@ -11,6 +11,7 @@ import type { Command, World } from './types';
 export interface CommandError { text: string; textEn: string }
 const fail = (text: string, textEn: string): CommandError => ({ text, textEn });
 const stateWageError = () => fail('왕실 임금은 재정의 국영 임금 수준으로 정합니다.', 'Royal wages follow the government wage level in Finance.');
+const govRunError = () => fail('정부 건물은 늘 다 가동합니다.', 'Government buildings always run at full capacity.');
 
 export const MAX_CONCURRENT_CONSTRUCTIONS = 40;
 export const MAX_LEVELS_PER_PROJECT = 50;
@@ -131,6 +132,7 @@ export function applyCommandMsg(w: World, actor: number, cmd: Command): CommandE
       const b = ownBuilding(cmd.buildingId);
       if (!b) return fail('소유한 건물이 아닙니다.', 'You do not own that building.');
       if (BUILDING_BY_ID[b.typeId].auto) return autoError();
+      if (company.state && isGovernment(b.typeId) && !cmd.active) return govRunError();
       b.active = cmd.active;
       return null;
     }
@@ -138,7 +140,7 @@ export function applyCommandMsg(w: World, actor: number, cmd: Command): CommandE
       const b = ownBuilding(cmd.buildingId);
       if (!b) return fail('소유한 건물이 아닙니다.', 'You do not own that building.');
       if (BUILDING_BY_ID[b.typeId].auto) return autoError();
-      if (company.state && isGovernment(b.typeId)) return fail('정부 건물은 늘 다 가동합니다.', 'Government buildings always run at full capacity.');
+      if (company.state && isGovernment(b.typeId)) return govRunError();
       if (!Number.isFinite(cmd.utilization)) return fail('잘못된 가동률입니다.', 'Invalid utilisation.');
       b.utilization = Math.min(1, Math.max(0.1, cmd.utilization));
       return null;
@@ -217,5 +219,7 @@ export function applyCommandMsg(w: World, actor: number, cmd: Command): CommandE
       if (k.taxLaw !== cmd.law) { k.taxLaw = cmd.law; k.lawTick = w.tick; }
       return null;
     }
+    default:
+      return fail('알 수 없는 명령입니다.', 'Unknown command.');
   }
 }

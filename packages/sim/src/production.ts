@@ -139,7 +139,10 @@ export function produce(w: World) {
  */
 function allocateConstruction(w: World) {
   for (const c of w.companies) {
-    if (c.buildPoints <= 0) continue;
+    if (c.buildPoints <= 0) {
+      if (c.state) c.buildUsed = round2((c.buildUsed ?? 0) * 0.9);
+      continue;
+    }
     const costPerPoint = c.buildCost / c.buildPoints;
     const mine = w.constructions.filter((k) => { const o = companyById(w, k.companyId); return !!o && builderOf(w, o) === c; });
     const taken = new Map<number, number>();
@@ -170,8 +173,8 @@ function allocateConstruction(w: World) {
     const half = Math.floor(c.buildPoints * 50 + 1e-6) / 100;
     const leftCrown = serve(crown, half);
     const leftPriv = serve(priv, round2(c.buildPoints - half));
-    serve(crown, leftPriv);
-    serve(priv, leftCrown);
+    const unused = serve(crown, leftPriv) + serve(priv, leftCrown);
+    c.buildUsed = round2((c.buildUsed ?? 0) * 0.9 + Math.max(0, c.buildPoints - unused) * 0.1);
   }
 }
 
