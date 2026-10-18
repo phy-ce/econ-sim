@@ -1,6 +1,6 @@
-import { CLASS_DEFS, CONSUMPTION_PER_CAPITA, GOOD_IDS, GOODS, NEEDS, SUBSISTENCE, TUNE, getMethod, needsAt, rawMax } from './data';
+import { CONSUMPTION_PER_CAPITA, GOOD_IDS, GOODS, NEEDS, SUBSISTENCE, TUNE, getMethod, needsAt, rawMax } from './data';
 import { CARTAGE_RATE, RAIL_RATE, borrow, companyById, freightRate, priceFormula, regionById, shippingRate, isSubsistence } from './economy';
-import { payLandTax, payRent, paySalvage } from './finance';
+import { payLandTax, payRent, paySalvage, taxDue } from './finance';
 import { addToPool, borderCost, kingdomById, kingdomOf, payTariff } from './kingdoms';
 import { findPop, payPops, payProf, workforce } from './pops';
 import { clamp, round2 } from './rng';
@@ -503,15 +503,13 @@ const INVEST_RATE = 0.05;
 /**
  * 팝은 저축하지 않는다 (빅토리아3): 생활비와 세금의 며칠분(TUNE.cashBufferDays)을 넘는 현금은 매일 조금씩 그 왕국 투자 풀로 간다.
  * 이것이 민간 투자의 재원이다. 쓰고 남는 소득이 꾸준하면 부 단계가 올라 쓰는 양이 는다.
+ * 세금은 걷는 쪽과 같은 계산(taxDue)이다: 토지 기반 세법이면 pop 이 현금으로 낼 세금은 없다.
  */
 function investSurplus(w: World, p: Pop, cashCost: number) {
-  const k = kingdomById(w, kingdomOf(w, p.regionId));
-  const st = CLASS_DEFS[p.prof].stratum;
-  const taxDue = p.size * k.pollTax[st] + Math.max(0, p.incomeEma) * k.incomeTax[st];
-  const over = (p.savings - (Math.max(0, cashCost) + taxDue) * TUNE.cashBufferDays) * INVEST_RATE;
+  const over = (p.savings - (Math.max(0, cashCost) + taxDue(w, p)) * TUNE.cashBufferDays) * INVEST_RATE;
   if (over <= 0) return;
   p.savings -= over;
-  addToPool(w, k.id, p.regionId, over);
+  addToPool(w, kingdomOf(w, p.regionId), p.regionId, over);
 }
 
 /** 그 부 단계의 하루 소비 묶음 비용 (지역 가격 기준) */
