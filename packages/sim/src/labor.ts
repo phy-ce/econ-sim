@@ -97,6 +97,7 @@ export function laborMarket(w: World) {
     seats.sort((a, b) => b.wage - a.wage || a.b.id - b.b.id);
     for (const seat of seats) {
       const { b, prof } = seat;
+      if (!canHire(b, prof)) continue;
       let room = Math.min(seat.slots - emp(b, prof), Math.max(3, seat.slots * HIRE_RATE));
       if (prof === 'unskilled') room = Math.min(room, seat.slots * ratioGate(b) - emp(b, prof));
       if (room <= 0.01) continue;
@@ -135,6 +136,25 @@ export function laborMarket(w: World) {
     }
   }
   syncEmployment(w);
+}
+
+/**
+ * 이 자리에 사람을 뽑는가: 어제 임금을 다 못 준 건물은 임금 자리를 뽑지 않는다 (빅토리아3처럼 임금을 더 깎는 대신 줄인다).
+ * 일꾼은 하루 3%씩 떠나고, 임금을 다 줄 수 있는 크기가 되면 다시 뽑는다. 소작지·배당 자리는 임금이 없어 늘 뽑는다
+ */
+export function canHire(b: Building, prof: PopClass): boolean {
+  return !b.unpaid || !SKILLS.includes(prof as Skill) || !paysWage(b, prof as Skill);
+}
+
+/**
+ * 그 건물이 내건 임금 중 마지막 지급(payWages)에서 실제로 준 비율. 임금을 다 줬으면 1.
+ * 이주(지금 자리 소득)와 지표(실제 받는 임금)는 내건 임금이 아니라 이 비율을 곱한 임금을 쓴다
+ */
+export function paidShare(b: Building): number {
+  if (!b.unpaid) return 1;
+  let bill = 0;
+  for (const s of SKILLS) if (paysWage(b, s)) bill += b.employed[s] * b.wages[s];
+  return bill > 0 ? clamp(b.last.wageCost / bill, 0, 1) : 0;
 }
 
 /** 노동자 충원 상한 비율: 다른 직종(기술자·전문가) 중 가장 덜 찬 쪽 / 0.9 */
@@ -176,9 +196,11 @@ export function inputNeed(w: World, b: Building, st: number): number {
 
 /**
  * 임금 지급 (매일): 건물이 자기 현금으로 자기 일꾼에게 그 건물 임금을 준다. 빌리지 않는다.
- * 현금이 오늘 임금 + 오늘 살 투입재보다 적으면 둘을 같은 비율로 줄인다 (미지급: 하루 3%가 떠난다). 임금에 다 쓰면 원료를 못 사
- * 생산과 매출이 끊기고 다시 일어서지 못하기 때문이다. 이익이 나는 건물은 이 비율이 날마다 커져 스스로 회복한다.
+ * 현금이 오늘 임금 + 오늘 살 투입재보다 적으면 둘을 같은 비율로 줄인다 (미지급: 하루 3%가 떠나고, 다음 날 사람을 뽑지 않는다 canHire).
+ * 임금에 다 쓰면 원료를 못 사 생산과 매출이 끊기기 때문이다. 흑자 건물은 하루 매출이 그날 비용보다 커 며칠 안에 다 준다.
+ * 현금과 원료가 다 떨어진 건물은 매출도 없어 혼자 다시 일어서지 못한다 (보조금이나 철거, AI는 늘리지 않는다).
  * 보조금 건물은 국고가 그 주 적자만큼을 먼저 채운다 (settleSubsidy). 정부 자금 건물(왕실 행정청·건축사무소·학교)은 국고가 바로 낸다 (모자라면 국채).
+ * 정부 자금 건물을 보조금 건물보다 먼저 낸다 (같은 국고에서 보조금이 먼저 나가면, 빌릴 수 없을 때 국고가 마이너스가 된다).
  * 소유 건물(저택·금융가)의 귀족·자본가는 배당과 지대를, 소작지의 소작농은 수확을 받으므로 임금이 없다.
  */
 export function payWages(w: World) {
@@ -208,7 +230,9 @@ export function payWages(w: World) {
     if (c.cash < bill) borrow(w, c, bill - c.cash);
     govRatio.set(c, bill > 0 ? clamp(c.cash / bill, 0, 1) : 1);
   }
-  for (const b of w.buildings) {
+  // 정부 자금 건물을 먼저 낸다: 보조금(settleSubsidy)이 같은 국고에서 먼저 나가면 위 비율로 낼 돈이 모자란다
+  const order = [...w.buildings.filter((b) => isGovFunded(b)), ...w.buildings.filter((b) => !isGovFunded(b))];
+  for (const b of order) {
     const bill = billOf(b);
     const gov = isGovFunded(b) ? companyById(w, b.companyId) : undefined;
     const st = isSubsistence(b.typeId) ? (b.tenants ?? 0) / Math.max(1, peasantSlots(b)) : staffing(b);
@@ -394,19 +418,19 @@ function attraction(w: World, r: Region, prof: PopClass): number {
       continue;
     }
     const s: Skill = lower ? 'unskilled' : (prof as Skill);
-    if (slots(b, s) - b.employed[s] > 1) best = Math.max(best, paysDividend(b.stateOwned, s) ? dividendWage(b, s) : b.wages[s]);
+    if (slots(b, s) - b.employed[s] > 1 && canHire(b, s)) best = Math.max(best, paysDividend(b.stateOwned, s) ? dividendWage(b, s) : b.wages[s]);
   }
   let food = 0, n = 0;
   for (const p of w.pops) if (p.regionId === r.id) { food += p.food * p.size; n += p.size; }
   return best * (n > 0 ? food / n : 1);
 }
 
-/** 일하는 pop 이 지금 자리에서 받는 1인당 하루 소득 (소작지는 수확 가치, 소유 자리는 배당 추정) */
+/** 일하는 pop 이 지금 자리에서 받는 1인당 하루 소득 (소작지는 수확 가치, 소유 자리는 배당 추정, 임금 자리는 실제로 준 임금) */
 function seatWage(w: World, r: Region, p: Pop, b: Building | undefined): number {
   if (!b) return 0;
   if (isSubsistence(b.typeId)) return subsistenceWage(w, r);
   const s = p.prof as Skill;
-  return paysDividend(b.stateOwned, s) ? dividendWage(b, s) : b.wages[s];
+  return paysDividend(b.stateOwned, s) ? dividendWage(b, s) : b.wages[s] * paidShare(b);
 }
 
 /**

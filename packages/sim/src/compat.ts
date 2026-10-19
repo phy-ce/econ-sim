@@ -1,5 +1,7 @@
-import { fallbackWages } from './economy';
+import { fallbackWages, hasOwnCash } from './economy';
 import { updateCompanyWages } from './labor';
+import { seedAmount } from './production';
+import { floorCents } from './rng';
 import type { Building, Company, Kingdom, Ledger, World } from './types';
 import { LEDGER_KEYS, emptyKingdomWeek, emptyWeek } from './types';
 
@@ -23,7 +25,9 @@ export const MAX_RESEARCH_BUDGET = 100_000;
 /**
  * 저장 파일을 지금 형식으로 바꾼다 (불러오기 직후에 부른다). 지금 형식이면 그대로 돌려준다.
  * 4 → 5 (건물 현금·건물 임금·보조금):
- * - 건물 임금 = 그 건물 주인 회사의 임금표, 건물 현금 = 0, 주간 장부 0. 회사 현금(국고·민간 투자 자금)은 그대로라 돈이 보존된다
+ * - 건물 임금 = 그 건물 주인 회사의 임금표, 주간 장부 0
+ * - 건물 현금 = 새 건물과 같은 시작 현금(만원 주간 임금 × seedWeeks)을 주인 회사 현금에서 옮긴다 (있는 만큼). 돈이 보존된다.
+ *   0으로 시작하면 첫날 현금 건물이 모두 임금을 다 못 줘 일꾼이 한꺼번에 떠난다
  * - 민간 빚: 민간은 이제 빌리지 않는다. 현금으로 갚을 수 있는 만큼 은행에 갚고(돈 보존), 남은 빚은 없앤다 (빚은 돈이 아니다)
  * - 없앤 필드: 회사 wageOffset·weekStartCash·revenueEma·lastEmployed, 왕국 budget.wages·wageIndex
  * - 새 장부 줄: 회사 장부 subsidies, 왕국 lastBudget subsidies·dividends
@@ -53,6 +57,15 @@ export function migrateWorld(input: unknown): World | null {
     for (const k of ['wageOffset', 'weekStartCash', 'revenueEma', 'lastEmployed']) delete c[k];
     c.ledger = fix(c.ledger);
     c.lastLedger = fix(c.lastLedger);
+  }
+  // 4판의 회사 현금에는 건물 운영 돈이 들어 있다: 건물마다 새 건물과 같은 시작 현금을 주인 회사 현금에서 옮긴다 (민간 빚을 갚고 남은 만큼, 빌리지 않는다)
+  for (const b of w.buildings) {
+    const owner = byId.get(b.companyId);
+    if (!owner || !hasOwnCash(b)) continue;
+    const amt = Math.min(seedAmount(b), floorCents(owner.cash));
+    if (amt <= 0) continue;
+    owner.cash -= amt;
+    b.cash = amt;
   }
   for (const k of w.kingdoms as (Kingdom & Record<string, unknown>)[]) {
     const old = k.budget as Record<string, number>;

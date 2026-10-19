@@ -364,7 +364,6 @@ sim이 아래 제도를 없앴다. 화면이 계속 컴파일되도록 `packages
   - 단계 이름: 매우 낮음 / 낮음 / 보통 / 높음 / 매우 높음 (Very low / Low / Normal / High / Very high)
   - 세금 수준: 지금 세법의 모든 세율 × 0.6 / 0.8 / 1 / 1.2 / 1.4 (`TUNE.taxLevels`)
   - (2-24에서 없앰) 국영 임금 단계. `budget.wages`·`govWageLevels`·`wageIndex`는 없다.
-    - 임금 지수 = 그 왕국 민간 노동자 평균 임금 ÷ 노동자 기본 임금 10 (빅토리아3의 '보통 임금'). 직종별 국영 임금은 이 지수 × 기본 임금(노동자 10, 기술자 20, 전문가 40 …)이다.
   - 연구비: 주간 경제 규모(`Kingdom.output`) × `TUNE.researchShare` × 0.5 / 0.75 / 1 / 1.5 / 2 (`TUNE.researchLevels`). `research.budget`은 지난주 연구비의 하루 평균 그대로다.
 - `FinancePanel.tsx`에서 고칠 것
   - 비율 슬라이더(0~100%)를 1~5단계 선택(버튼 5개나 단계 슬라이더)으로 바꾼다. `BUDGET_ITEMS` 이름이 장부 항목 `tax`·`wages`·`research`와 같으니, 주간 수지 표의 그 세 행 오른쪽 칸에 둔다.
@@ -390,8 +389,9 @@ sim이 아래 제도를 없앴다. 화면이 계속 컴파일되도록 `packages
 ### 2-24. 건물마다 임금·현금·보조금 (민간 상회는 묶어 보이는 이름일 뿐)
 임금은 이제 회사가 아니라 건물마다 있고, 누구도 손으로 정하지 않는다 (규칙: `docs/DESIGN.md` 7.3, 7.4, 9.2, 9.3). 화면에는 라벨·숫자·막대만 쓴다.
 - **저장 호환 (가장 먼저):** 저장 형식이 바뀌었다 (`World.version` 5).
-  - `sim.worker.ts`의 `'load'`에서 `world = migrateWorld(msg.world) ?? createWorld(Date.now() % 100000)`로 바꾼다. `migrateWorld`는 index에서 export한다. 4판 저장을 5판으로 바꾸고(돈 보존), 그보다 옛 저장이면 `null`이다.
-  - 변환을 넣으면 `useGame.ts`의 `SAVE_KEY`는 `'estera-save-v7'` 그대로 둬도 된다. 변환을 넣기 전에는 `'estera-save-v8'`로 올린다 (옛 저장을 그대로 넣으면 화면이 멈춘다).
+  - `sim.worker.ts`의 `'load'`는 `migrateWorld(msg.world)`를 부르게 고쳐 두었다 (옛 저장을 그대로 넣으면 첫 틱에서 멈췄다). `migrateWorld`는 index에서 export한다.
+    - 4판 저장을 5판으로 바꾸고(돈 보존, 건물마다 시작 현금을 주인 회사 현금에서 옮긴다), 그보다 옛 저장이면 `null`이다. `null`이면 지금 게임을 그대로 둔다.
+    - 그래서 `useGame.ts`의 `SAVE_KEY`는 `'estera-save-v7'` 그대로다. 불러오기에 실패했을 때 토스트를 보이려면 워커가 결과를 돌려주게 프로토콜을 늘려야 한다 (선택).
 - **건물 새 필드** (`Building`):
   - `cash`: 건물 현금 (소수 2자리). 자동 건물(소작지·저택·금융가)과 왕실 정부 건물(행정청·건축사무소·학교)은 늘 0이다.
   - `wages`: 직종별 하루 임금 (`Record<Skill, number>`). 배당 자리(민간 건물의 귀족·자본가)는 쓰지 않는다 (`paysDividend`).
@@ -420,7 +420,8 @@ sim이 아래 제도를 없앴다. 화면이 계속 컴파일되도록 `packages
   - 민간은 빌리지 않는다: `debt`는 늘 0, `creditLimit`은 0이다. 민간 상회의 대출 막대를 숨긴다.
   - 회사 합계로 "건물 현금 합"(그 회사 건물 `cash`의 합)을 숫자로 보여 주면 좋다.
   - `lastWeekProfit`은 화면용 묶음 손익(건물 수지 합 + 받은 보조금 + 회사 단위 수입·지출)이다. 판단에는 쓰이지 않는다.
-- **건설 후보 미리보기:** `estimateAfterEntry(world, regionId, typeId, methodId, ownerId, levels?)`. 다섯째 인자가 임금표에서 지을 회사 id로 바뀌었다 (임금은 그 지역 임금으로 본다). 두 곳(`CompanyPanel.tsx` 495, 526행)은 `me.id`로 고쳐 두었다.
+- **건설 후보 미리보기:** `estimateAfterEntry(world, regionId, typeId, methodId, ownerId, levels?)`. 다섯째 인자가 임금표에서 지을 회사 id로 바뀌었다. 임금은 AI와 같다: 그 회사가 그 지역에 같은 종류 건물을 이미 가졌으면(증설) 그 건물 임금, 아니면 그 지역 임금. 두 곳(`CompanyPanel.tsx` 495, 526행)은 `me.id`로 고쳐 두었다.
+- **채용 중지:** 어제 임금을 다 못 준 건물(`b.unpaid`)은 임금 자리를 뽑지 않는다 (DESIGN 7.2). 미지급 표시 옆에 "채용 중지" / "Not hiring" 라벨을 붙여도 된다. AI는 이런 건물과 현금이 0이거나 지난주 수지가 마이너스인 건물을 늘리지 않는다.
 - **지표 (`KingdomMetrics`):** 새 필드 `subsidyWeek`, `dividendWeek`, `buildingCash`, `subsidizedLevels`. `policy`는 `{ tax, research }`. `wageIndex`는 왕국 노동자 평균 임금 ÷ 10이다. `wageUnskilled`·`wageSkilled`는 왕실 건물 평균 임금이다.
 - **알림 문구:** 미지급 알림은 "건물 현금이 모자라 임금을 다 주지 못해 노동자가 떠나고 있습니다."로, 인력 부족 알림은 숫자만 남겼다 (임금을 올리라는 안내를 뺐다).
 

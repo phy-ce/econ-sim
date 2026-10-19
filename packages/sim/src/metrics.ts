@@ -1,7 +1,7 @@
 import { BUILDING_BY_ID, GOOD_IDS, GOODS } from './data';
 import { CLASS_DEFS, WORKFORCE_RATIO } from './data';
 import { builderOf, companyById, constructionEstimate, isGovernment, kingdomGdp, paysWage, slots } from './economy';
-import { subsistenceWage } from './labor';
+import { paidShare, subsistenceWage } from './labor';
 import { basketCostAt } from './market';
 import { workforce } from './pops';
 import { kingdomOf } from './kingdoms';
@@ -87,7 +87,7 @@ export interface TypeMetrics {
 }
 
 export interface LaborMetrics {
-  /** 고용 가중 평균 임금, 고용 인원, 일자리 수, 그 직종 실업 노동 인구 */
+  /** 고용 가중 평균 임금 (실제로 준 임금: 내건 임금 × 지급 비율 paidShare), 고용 인원, 일자리 수, 그 직종 실업 노동 인구 */
   wage: number;
   employed: number;
   slots: number;
@@ -157,7 +157,7 @@ export function recordMetrics(w: World) {
       let paid = 0, emp = 0, cap = 0;
       for (const b of w.buildings) {
         if (kingdomOf(w, b.regionId) !== k.id || !paysWage(b, s)) continue;
-        emp += b.employed[s]; cap += slots(b, s); paid += b.employed[s] * b.wages[s];
+        emp += b.employed[s]; cap += slots(b, s); paid += b.employed[s] * b.wages[s] * paidShare(b);
       }
       const idle = pops.filter((p) => p.prof === s && p.work === 0).reduce((a, p) => a + workforce(p), 0);
       labor[s] = { wage: emp > 0 ? round2(paid / emp) : 0, employed: r0(emp), slots: r0(cap), jobless: r0(idle) };

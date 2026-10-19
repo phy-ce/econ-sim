@@ -14,3 +14,6 @@ export function clamp(x: number, lo: number, hi: number): number {
 
 /** 숫자는 소수 둘째 자리까지 */
 export const round2 = (x: number) => Math.round(x * 100) / 100;
+
+/** 소수 둘째 자리 아래로 내림 (0 미만은 0). 가진 돈에서 떼어 줄 금액에 쓴다: 반올림하면 가진 돈보다 많아질 수 있다 */
+export const floorCents = (x: number) => (x > 0 ? Math.floor(x * 100 + 1e-7) / 100 : 0);

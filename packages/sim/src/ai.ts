@@ -1,6 +1,6 @@
 import { BUILDING_BY_ID, BUILDING_TYPES, GOOD_IDS, GOODS, TECH_BY_ID, TICKS_PER_WEEK, TICKS_PER_YEAR, TUNE, getMethod, regionPerk } from './data';
 import { withEstimateCache, regionPopulation,
-  availableMethods, builderOf, canBuildType, paysDividend, companyById, constructionEstimate, depositFree, efficiency, estimateMethod, hasBuilder, isGovFunded, isGovernment, regionById, regionWages, researchableTechs, roomFor,
+  availableMethods, builderOf, canBuildType, paysDividend, companyById, constructionEstimate, depositFree, efficiency, estimateMethod, hasBuilder, hasOwnCash, isGovFunded, isGovernment, regionById, regionWages, researchableTechs, roomFor,
 } from './economy';
 import { MAX_CONCURRENT_CONSTRUCTIONS, MAX_LEVELS_PER_PROJECT, applyCommand } from './commands';
 import { committedCost, lawRevenue } from './finance';
@@ -446,6 +446,15 @@ function swapLand(w: World, c: Company, o: Outlook, cand: Pick) {
 interface Pick { regionId: number; typeId: string; methodId: string; levels: number; score: number; fallback?: boolean }
 
 /**
+ * 멈춘 건물 (자기 현금 건물만): 현금이 바닥(1 미만)이고 지난주 매출이 없다. 원료를 살 돈이 없어 생산도 매출도 없는 상태라
+ * 혼자 다시 일어서지 못한다. 전망(valueMethod)이 이익이라 해도 이런 건물에는 레벨을 더하지 않는다.
+ * (임금 미지급·적자 건물까지 막는 넓은 조건은 20년 × 시드 1~4에서 10년차 건물 레벨과 노동자 생활수준을 더 떨어뜨렸다)
+ */
+function stalled(b: Building): boolean {
+  return hasOwnCash(b) && b.cash < 1 && b.lastWeek.revenue <= 0;
+}
+
+/**
  * 모든 후보를 같은 기준으로: 장기 손익 / 공사비. 수익률이 기준의 1.25배를 넘는 가장 큰 덩어리를 고른다.
  * allowLoss: 이익이 나는 후보가 없으면 수익률이 가장 높은(가장 덜 손해 보는) 후보를 가장 작은 덩어리로 고른다
  */
@@ -462,6 +471,7 @@ export function pickProject(w: World, c: Company, o: Outlook, free: number, allo
       if (!Number.isFinite(perLevel) || free < perLevel) continue;
       const existing = w.buildings.find((b) => b.companyId === c.id && b.regionId === r.id && b.typeId === t.id);
       if (existing?.shrinking) continue;
+      if (existing && stalled(existing)) continue;
       // 땅이 없으면 1레벨 기준 수익률만 재 둔다 (땅 바꾸기 후보). 매장량이 없는 것은 땅을 비워도 못 지으므로 뺀다
       if (room < 1) {
         if (!blocked || (t.deposit && depositFree(w, r.id, t.deposit) < 1)) continue;

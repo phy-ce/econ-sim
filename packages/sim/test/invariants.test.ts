@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import {
   BUILDING_BY_ID, DEPOSITS, GOOD_IDS, GOODS, LAND_TYPES, REGIONS, SKILLS, TECHS, TECH_BY_ID, WEALTH_MAX, WORKFORCE_RATIO,
-  applyCommand, colonyPopulation, createWorld, depositFree, hasOwnCash, landFree, migrateWorld, moneyIdentity, playerCompany, regionById, splitKingdoms, step,
+  applyCommand, colonyPopulation, createWorld, creditLimit, depositFree, hasOwnCash, landFree, migrateWorld, moneyIdentity, playerCompany, regionById, splitKingdoms, step,
 } from '../src/index';
 import type { World } from '../src/index';
+import { payWages } from '../src/labor';
 
+const round2 = (x: number) => Math.round(x * 100) / 100;
 const run = (w: World, ticks: number) => { for (let i = 0; i < ticks; i++) step(w); };
 
 /** 노동자의 식량 충족률 (인구 가중). 기아는 부가 아니라 이것으로 판정한다 */
@@ -18,7 +20,16 @@ describe('경제 불변식', () => {
   it('화폐 총량이 장부와 맞는다 (대륙 + 해외 계정 = 시작 + 주조 + 국채 − 상환 − 이자 − 소멸)', () => {
     const w = createWorld(7);
     const m0 = moneyIdentity(w);
-    run(w, 360 * 3);
+    // 보조금 경로도 지나가게: 매달 왕국마다 현금 건물 몇 곳의 보조금을 주 중간에 켜고 끈다
+    for (let d = 0; d < 360 * 3; d++) {
+      if (d % 30 === 11) {
+        for (const k of w.kingdoms) {
+          const own = w.buildings.filter((b) => hasOwnCash(b) && regionById(w, b.regionId).kingdomId === k.id);
+          own.forEach((b, i) => applyCommand(w, k.governmentId, { type: 'setSubsidy', buildingId: b.id, on: (i + d) % 3 === 0 }));
+        }
+      }
+      step(w);
+    }
     expect(w.mint.minted).toBeGreaterThan(0);
     expect(Math.abs(moneyIdentity(w) - m0) / m0).toBeLessThan(1e-9);
   });
@@ -118,6 +129,34 @@ describe('건물 현금·보조금', () => {
   });
 });
 
+describe('국고', () => {
+  it('국채 한도에서 보조금이 있어도 정부 건물 임금을 먼저 내므로 국고가 마이너스가 되지 않는다', () => {
+    const w = createWorld(1, { withPlayer: false });
+    run(w, 60);
+    w.config.ai = false;
+    const k = w.kingdoms[0];
+    const gov = w.companies.find((c) => c.id === k.governmentId)!;
+    const mine = (b: (typeof w.buildings)[number]) => regionById(w, b.regionId).kingdomId === k.id;
+    // 정부 자금 건물을 목록 끝으로, 크게 적자인 보조금 건물을 앞으로 둔다 (보조금이 먼저 정산되는 순서)
+    const govB = w.buildings.filter((b) => mine(b) && !hasOwnCash(b) && !BUILDING_BY_ID[b.typeId].auto);
+    expect(govB.length).toBeGreaterThan(0);
+    w.buildings = [...w.buildings.filter((b) => !govB.includes(b)), ...govB];
+    const loser = w.buildings.find((b) => mine(b) && hasOwnCash(b) && b.employed.unskilled > 0)!;
+    for (const s of SKILLS) loser.wages[s] *= 20;
+    expect(applyCommand(w, gov.id, { type: 'setSubsidy', buildingId: loser.id, on: true })).toBeNull();
+    // 빌릴 수 없고(빚 = 한도), 정부 건물 하루 임금의 30%만 있는 국고로 임금을 낸다
+    const bill = govB.reduce((a, b) => a + SKILLS.reduce((x, s) => x + b.employed[s] * b.wages[s], 0), 0);
+    expect(bill).toBeGreaterThan(0);
+    gov.debt = creditLimit(w, gov);
+    gov.cash = round2(bill * 0.3);
+    const before = loser.week.subsidy;
+    payWages(w);
+    expect(gov.cash).toBeGreaterThanOrEqual(-1e-6);
+    // 국고가 정부 건물에 다 썼으므로 보조금은 더 나가지 않았다
+    expect(loser.week.subsidy).toBeCloseTo(before, 6);
+  });
+});
+
 describe('저장 변환', () => {
   it('4판 저장을 5판으로 바꾸고 돈이 보존된다', () => {
     const w = createWorld(6);
@@ -136,7 +175,15 @@ describe('저장 변환', () => {
     const mig = migrateWorld(old)!;
     expect(mig.version).toBe(5);
     expect(Math.abs(moneyIdentity(mig) - m) / m).toBeLessThan(1e-9);
-    for (const b of mig.buildings) { expect(b.cash).toBe(0); expect(b.wages.unskilled).toBeGreaterThan(0); }
+    // 건물 현금은 주인 회사 현금에서 옮긴 시작 현금 (소수 2자리, 빌리지 않는다)
+    for (const b of mig.buildings) {
+      expect(b.wages.unskilled).toBeGreaterThan(0);
+      expect(b.cash).toBeGreaterThanOrEqual(0);
+      expect(Math.abs(b.cash * 100 - Math.round(b.cash * 100))).toBeLessThan(1e-6);
+      if (!hasOwnCash(b)) expect(b.cash).toBe(0);
+    }
+    expect(mig.buildings.some((b) => b.cash > 0)).toBe(true);
+    for (const c of mig.companies) expect(c.cash).toBeGreaterThanOrEqual(-1e-6);
     expect(mig.kingdoms[0].budget).toEqual({ tax: w.kingdoms[0].budget.tax, research: w.kingdoms[0].budget.research });
     run(mig, 30);
     expect(Math.abs(moneyIdentity(mig) - m) / m).toBeLessThan(1e-9);

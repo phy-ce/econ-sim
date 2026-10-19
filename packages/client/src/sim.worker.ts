@@ -1,7 +1,7 @@
 /// <reference lib="webworker" />
 // 시뮬레이션은 워커에서 돈다. UI는 명령만 보내고 상태 스냅샷을 받는다.
 // 나중에 서버 권위형으로 옮길 때 이 파일의 역할을 서버가 맡는다.
-import { applyCommandMsg, createWorld, playerCompany, recordHistory, step } from '@econ/sim';
+import { applyCommandMsg, createWorld, migrateWorld, playerCompany, recordHistory, step } from '@econ/sim';
 import type { Command, QueuedCommand, World } from '@econ/sim';
 import type { FromWorker, ToWorker, WorkerError } from './protocol';
 
@@ -66,10 +66,14 @@ self.onmessage = (e: MessageEvent<ToWorker>) => {
       recordHistory(world);
       sentHistory = 0; resetHistory = true; queue = []; budget = 0; activity = null;
       break;
-    case 'load':
-      world = msg.world;
+    case 'load': {
+      // 옛 저장은 지금 형식으로 바꾼다 (sim compat.ts). 바꿀 수 없는 저장이면 지금 게임을 그대로 둔다
+      const loaded = migrateWorld(msg.world);
+      if (!loaded) break;
+      world = loaded;
       sentHistory = 0; resetHistory = true; queue = []; budget = 0; activity = null;
       break;
+    }
     case 'speed':
       ticksPerSecond = msg.ticksPerSecond;
       break;

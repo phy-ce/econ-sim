@@ -4,7 +4,7 @@ import { roundCash, settleSubsidy, treasuryOf } from './finance';
 import { workforce } from './pops';
 import { addToPool, kingdomById } from './kingdoms';
 import { buildingNameEn, regionNameEn } from './i18n';
-import { clamp, round2 } from './rng';
+import { clamp, floorCents, round2 } from './rng';
 import type { Building, Company, GoodBag, World } from './types';
 
 /** 숙련도가 하루에 오르는 양 (약 한 달이면 최대) */
@@ -129,10 +129,13 @@ export function produce(w: World) {
       spent.goods += b.last.inputCost;
     }
   }
-  // 하루 끝: 보조금을 그날 실제 수지로 맞추고(더 받은 몫은 돌려준다), 건물 현금을 소수 2자리로
+  // 하루 끝: 주간 장부를 소수 2자리로(저장되는 값), 보조금을 그날 실제 수지로 맞추고(더 받은 몫은 돌려준다), 건물 현금을 소수 2자리로
   for (const b of w.buildings) {
+    const wk = b.week;
+    wk.revenue = round2(wk.revenue); wk.wages = round2(wk.wages); wk.inputs = round2(wk.inputs);
     if (!hasOwnCash(b)) continue;
     settleSubsidy(w, b);
+    wk.subsidy = round2(wk.subsidy);
     roundCash(w, b);
   }
   allocateConstruction(w);
@@ -223,15 +226,21 @@ export function startingWages(w: World, regionId: number): Building['wages'] {
   return Object.fromEntries(Object.entries(src).map(([s, v]) => [s, round2(v)])) as Building['wages'];
 }
 
+/** 시작 현금 = 만원 가동 주간 임금 × TUNE.seedWeeks (그 건물 임금) */
+export function seedAmount(b: Building): number {
+  return round2(fullWageBill(b) * TICKS_PER_WEEK * TUNE.seedWeeks);
+}
+
 /**
  * 새 건물의 시작 현금: 만원 가동 주간 임금 × TUNE.seedWeeks 를 주인(민간 투자 자금 / 국고)이 넣는다.
  * 민간 투자 자금은 있는 만큼만 내고, 국고는 모자라면 국채로 낸다. 정부 자금 건물은 현금이 없다
  */
 export function seedCash(w: World, b: Building, owner: Company) {
   if (!hasOwnCash(b)) return;
-  const want = round2(fullWageBill(b) * TICKS_PER_WEEK * TUNE.seedWeeks);
+  const want = seedAmount(b);
   if (owner.state && owner.cash < want) borrow(w, owner, want - owner.cash);
-  const amt = round2(Math.min(want, Math.max(0, owner.cash)));
+  // 주인 현금은 센트 아래로 내린다 (올리면 주인 현금이 마이너스가 될 수 있다)
+  const amt = Math.min(want, floorCents(owner.cash));
   if (amt <= 0) return;
   owner.cash -= amt;
   owner.ledger.buildPaid += amt;

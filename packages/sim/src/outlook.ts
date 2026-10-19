@@ -213,7 +213,7 @@ export function techValue(w: World, o: Outlook, c: Company, techId: string): num
 
 /**
  * 화면의 건설 후보 미리보기: AI가 짓기 전에 보는 것과 같은 계산(valueMethod)을 1레벨 기준으로 돌려준다.
- * ownerId 는 지을 회사다 (없으면 그 지역 왕국 왕실). 임금은 AI와 같이 그 지역 임금(새 건물의 시작 임금)으로 본다.
+ * ownerId 는 지을 회사다 (없으면 그 지역 왕국 왕실). 임금은 AI와 같이: 증설이면 그 건물 임금, 새 건물이면 그 지역 임금(시작 임금).
  * outputPriceChange 는 들어간 뒤 첫 산출물의 장기 가격 변화율이다
  */
 export function estimateAfterEntry(
@@ -223,7 +223,9 @@ export function estimateAfterEntry(
   const owner = companyById(w, ownerId) ?? w.companies.find((c) => c.state && c.kingdomId === r.kingdomId)!;
   const m = getMethod(typeId, methodId);
   const o = marketOutlook(w);
-  const v = valueMethod(w, o, r, owner, typeId, m, regionWages(w, regionId), levels);
+  // 그 회사가 이 지역에 같은 종류 건물을 이미 가졌으면 증설이다: AI(pickProject)처럼 그 건물 임금으로 본다
+  const existing = w.buildings.find((b) => b.companyId === owner.id && b.regionId === regionId && b.typeId === typeId);
+  const v = valueMethod(w, o, r, owner, typeId, m, existing?.wages ?? regionWages(w, regionId), levels);
   const g = GOOD_IDS.find((x) => (m.outputs[x] ?? 0) > 0);
   const before = g ? o.price(g, 0, 0, true) : 0;
   const after = g ? o.price(g, (m.outputs[g] ?? 0) * levels, 0, true) : 0;
