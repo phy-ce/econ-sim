@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { GOODS, applyCommandMsg, createWorld, migrateWorld, moneyIdentity, playerCompany, recordHistory, roundWorld, step } from '../../src/index';
+import { GOODS, applyCommandMsg, createWorld, migrateWorld, moneyIdentity, playerCompany, recordHistory, roundWorld, roundingDrift, step } from '../../src/index';
 import type { World } from '../../src/index';
 import { PRICE_MAX, PRICE_MIN, updatePrices } from '../../src/market';
 
@@ -65,9 +65,12 @@ describe('저장값 소수 둘째 자리', () => {
 
   // round.ts 는 수가 많은 객체의 필드를 직접 적어 맞춘다. 새 필드를 빠뜨리지 않았는지: 정수가 아닌 모든 숫자에 끝수를 더한 뒤 한 번에 다 맞춰지는지 본다.
   // (기록, 알림 상태, 쓸 때 반올림하는 출처별 수요·공급은 roundWorld 가 훑지 않으므로 건드리지 않는다)
-  it('roundWorld 가 저장값의 모든 숫자를 맞춘다 (빠진 필드가 없다)', () => {
+  // 돈 계정은 모두 센트 맞춤 길(economy.ts mapMoney)로 맞춰야 한다: 다른 길로 반올림한 돈 계정은 그 끝수가 주인 없는 돈에 가지 않아 장부가 어긋나거나
+  // 마지막 반올림이 그 끝수를 지운다 (roundingDrift)
+  it('roundWorld 가 저장값의 모든 숫자를 맞춘다 (빠진 필드가 없고, 돈 계정은 모두 장부를 지킨다)', () => {
     const w = createWorld(3);
     runTo(w, 300);
+    const clean = moneyIdentity(w);
     const skip = new Set(['history', 'metrics', 'events', 'alertState', 'demandBy', 'supplyBy', 'demandByEma', 'supplyByEma']);
     let n = 0;
     const dirty = (o: Record<string, unknown> | unknown[]) => {
@@ -81,8 +84,12 @@ describe('저장값 소수 둘째 자리', () => {
     dirty(w as unknown as Record<string, unknown>);
     expect(n).toBeGreaterThan(1000);
     expect(violations(save(w)).length).toBeGreaterThan(0);
+    // 끝수는 없던 돈을 만든다: 그만큼 주인 없는 돈에서 빼서 장부를 맞춰 둔다. 그러면 반올림이 찌꺼기 말고는 지울 것이 없어야 한다
+    w.fund -= moneyIdentity(w) - clean;
     roundWorld(w);
     expect(violations(save(w))).toEqual([]);
+    expect(Math.abs(moneyIdentity(w) - clean)).toBeLessThan(1e-5);
+    expect(roundingDrift(w)).toBeLessThan(1e-5);
   });
 
   it('옛 저장(4판)을 바꾸면 모든 숫자가 소수 둘째 자리이고 화폐 장부가 센트 안에서 그대로다', () => {
@@ -104,15 +111,39 @@ describe('저장값 소수 둘째 자리', () => {
     old.traders.shipments.push(...old.traders.shipments.map((s: { q: number }) => ({ ...s, q: s.q / 3 + 1e-4 })));
     const before = moneyIdentity(old as World);
     const got = migrateWorld(old)!;
-    expect(got.version).toBe(5);
+    expect(got.version).toBe(6);
     expect(violations(save(got))).toEqual([]);
+    // 옛 저장의 끝수는 장부의 센트 아래이므로 마지막 반올림이 그만큼(반 센트 아래)만 지운다
     expect(Math.abs(moneyIdentity(got) - before)).toBeLessThan(0.01);
+    expect(got.fund).toBeGreaterThanOrEqual(0);
     expect(got.pops[0].wealth100).toBeGreaterThanOrEqual(100);
     expect(got.buildings.every((b) => b.exp100 >= 0 && b.exp100 <= 100 && !('exp' in b) && !('crew' in b))).toBe(true);
     expect(got.buildings.some((b) => (b.crew100 ?? 0) > 1)).toBe(true);
     // 바꾼 세계도 계속 돈다
     runTo(got, 90);
     expect(violations(save(got))).toEqual([]);
+  });
+
+  // 5판은 이 변경의 중간 판이다: 건물 숙련도·작업 인원이 규칙 단위(exp, crew)인 것과 지금처럼 100배 값인 것이 있다. 둘 다 지금 세계와 같아진다
+  it('5판 저장(두 모양)을 바꾸면 지금 세계와 같다', () => {
+    const w = createWorld(7);
+    runTo(w, 30);
+    const want = JSON.parse(save(w));
+    const same = JSON.parse(save(w));
+    same.version = 5;
+    expect(save(migrateWorld(same)!)).toBe(save(w));
+    const older = JSON.parse(save(w));
+    older.version = 5;
+    for (const b of older.buildings) {
+      b.exp = b.exp100 / 100; delete b.exp100;
+      if (b.crew100 !== undefined) { b.crew = b.crew100 / 100; delete b.crew100; }
+    }
+    const got = migrateWorld(older)!;
+    expect(got.version).toBe(6);
+    // 필드 순서만 다를 수 있다 (바꾼 필드가 끝으로 간다)
+    expect(got).toEqual(want);
+    expect(violations(save(got))).toEqual([]);
+    expect(migrateWorld({ ...want, version: 3 })).toBeNull();
   });
 
   // 반올림 찌꺼기(0.05 이하 이동평균)는 0이 되고, 사고파는 사람이 없는 시장은 기본가에서 벗어난 쪽 끝으로 간다 (market.ts updatePrices)

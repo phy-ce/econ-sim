@@ -516,8 +516,11 @@ export interface MintLedger {
 }
 
 export interface World {
-  /** 저장 형식 버전: 저장되는 모양이 바뀌면 올린다 (5: 부·문해력·교육 접근도를 100배 값으로, 모든 숫자 소수 둘째 자리. 옛 저장은 compat.ts migrateWorld) */
-  version: 5;
+  /**
+   * 저장 형식 버전: 저장되는 모양이 바뀌면 올린다. 옛 저장은 compat.ts migrateWorld
+   * (6: 부·문해력·교육 접근도·숙련도·작업 인원을 100배 값으로, 모든 숫자 소수 둘째 자리. 5는 그 작업 중간 판이었다)
+   */
+  version: 6;
   config: WorldConfig;
   tick: number;
   seed: number;

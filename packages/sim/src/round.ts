@@ -1,11 +1,14 @@
 import { GOOD_IDS } from './data';
+import { mapMoney } from './economy';
 import { round2 } from './rng';
 import { POP_CLASSES } from './types';
 import type { Building, Household, MarketGood, Pop, World } from './types';
 
-// 저장되는 값은 소수 둘째 자리까지 (CLAUDE.md). 하루가 끝날 때(step 끝), 세계를 만들 때, 화면이 틱 사이에 명령을 넣은 뒤에 맞춘다.
-// - 돈: 계정을 센트로 반올림하고, 그 차액은 주인 없는 돈(fund)이 받는다. 국가가 만든 돈 장부도 센트로 맞춘다.
-//   그래서 (화폐 총량 − 만든 돈)은 시작 값과 센트까지 같다. 계산 중에 생긴 부동소수점 찌꺼기도 매일 지워진다
+// 저장되는 값은 소수 둘째 자리까지 (CLAUDE.md). 하루가 끝날 때(step 끝), 세계를 만들 때, 명령을 넣은 뒤(틱 사이든 step 의 명령 목록이든)에 맞춘다.
+// - 돈: 계정은 센트 아래를 버리고, 버린 몫은 주인 없는 돈(fund)이 받는다 (그래서 주인 없는 돈은 음수가 되지 않는다).
+//   국가가 만든 돈 장부도 센트로 맞추고 그 차액도 주인 없는 돈이 받는다.
+//   그래서 (화폐 총량 − 만든 돈)은 시작 값과 센트까지 같다. 계산 중에 생긴 부동소수점 찌꺼기도 매일 지워진다.
+//   마지막에 주인 없는 돈을 센트로 맞출 때 지운 양은 roundingDrift 로 본다: 누수가 없으면 찌꺼기(1e-6 아래)뿐이다
 // - 나머지 숫자는 그냥 반올림한다. 기록(history·metrics·events)은 쓸 때 반올림하므로 여기서 다시 훑지 않는다
 // - 반올림하면 멈추거나 빨라지는 느린 값은 규칙을 따로 두었다 (docs/DESIGN.md 2장 끝):
 //   부·문해력·교육 접근도·숙련도·작업 인원은 100배 값으로 저장하고(문해력·교육은 주 1회 7일치),
@@ -17,6 +20,21 @@ import type { Building, Household, MarketGood, Pop, World } from './types';
 
 /** 소수 둘째 자리 (−0 은 0) */
 const r = (x: number) => round2(x) + 0;
+
+/** 센트로 끝나는 값이 계산 중에 이만큼 덜 되거나 더 된 것은 부동소수점 찌꺼기로 본다 */
+const NOISE = 1e-6;
+/** 센트 아래를 버린다 (센트에 찌꺼기만큼 모자란 값은 그 센트로 본다) */
+const down = (x: number) => { const y = r(x); return y - x > NOISE ? r(y - 0.01) : y; };
+/** 센트 아래를 올린다 (센트를 찌꺼기만큼 넘는 값은 그 센트로 본다) */
+const up = (x: number) => { const y = r(x); return x - y > NOISE ? r(y + 0.01) : y; };
+
+/** 세계마다 마지막 반올림(주인 없는 돈)이 지운 양 중 가장 큰 것. 검증용으로만 쓰고 저장하지 않는다 */
+const dropped = new WeakMap<World, number>();
+/**
+ * 이 세계에서 roundWorld 가 주인 없는 돈을 센트로 맞추며 지운 양 중 가장 큰 것 (불러온 세계는 0부터).
+ * 다른 계정이 모두 센트이므로 누수가 없으면 부동소수점 찌꺼기뿐이다. 하루 0.005 미만의 누수는 장부(moneyIdentity)에는 안 보이고 여기에 보인다
+ */
+export const roundingDrift = (w: World): number => dropped.get(w) ?? 0;
 
 /** 훑지 않는 것: 기록(로그)은 쓸 때 반올림하고, 알림 상태는 틱(정수)만 담는다 */
 const SKIP = new Set(['history', 'metrics', 'events', 'alertState']);
@@ -120,33 +138,26 @@ function roundHousehold(h: Household): void {
 
 /**
  * 세계의 저장값을 소수 둘째 자리로 맞춘다 (이미 맞춘 값은 그대로라 몇 번 불러도 같다).
- * 돈 계정은 정해진 순서(pop, 회사, 투자 풀, 은행, 상인)로 센트에 맞추고, 늘거나 준 돈을 주인 없는 돈에 반대로 더한다.
- * 국가가 만든 돈 장부를 센트로 맞추면 장부가 늘어난 만큼 주인 없는 돈도 늘린다 (화폐 장부 = 화폐 총량 − 만든 돈이 그대로다)
+ * 돈 계정(economy.ts mapMoney)은 센트 아래를 버리고, 버린 돈을 주인 없는 돈에 더한다.
+ * 국가가 만든 돈 장부는 만든 돈(주조·국채 발행)을 올리고 거둔 돈(상환·이자)을 버린다: 장부가 늘어난 만큼 주인 없는 돈도 늘린다.
+ * 그래서 화폐 장부(화폐 총량 − 만든 돈)가 그대로이고 주인 없는 돈은 줄지 않는다
  */
 export function roundWorld(w: World): void {
   let rest = 0;
-  const cents = (x: number) => {
-    const y = r(x);
-    rest += x - y;
-    return y;
-  };
-  for (const p of w.pops) p.savings = cents(p.savings);
-  for (const c of w.companies) c.cash = cents(c.cash);
-  for (const k of w.kingdoms) k.investmentPool = cents(k.investmentPool);
-  w.bank.cash = cents(w.bank.cash);
-  w.traders.cash = cents(w.traders.cash);
+  // 계정·거둔 돈 장부는 버리고 만든 돈 장부는 올린다: 어느 쪽이든 그 차액만큼 주인 없는 돈이 받는다 (0 이상)
+  const cut = (x: number) => { const y = down(x); rest += x - y; return y; };
+  const made = (x: number) => { const y = up(x); rest += y - x; return y; };
+  mapMoney(w, cut);
   const m = w.mint;
-  const ledger = (x: number, sign: 1 | -1) => {
-    const y = r(x);
-    rest += sign * (y - x);
-    return y;
-  };
-  m.minted = ledger(m.minted, 1);
-  m.issued = ledger(m.issued, 1);
-  m.retired = ledger(m.retired, -1);
-  m.interest = ledger(m.interest, -1);
-  // 다른 계정이 모두 센트라 이 값도 센트다 (반올림은 부동소수점 찌꺼기만 지운다)
-  w.fund = r(w.fund + rest);
+  m.minted = made(m.minted);
+  m.issued = made(m.issued);
+  m.retired = cut(m.retired);
+  m.interest = cut(m.interest);
+  // 다른 계정이 모두 센트라 이 값도 센트다 (반올림은 부동소수점 찌꺼기만 지운다. 지운 양이 크면 어딘가에서 돈이 새거나 생긴 것이다)
+  const fund = w.fund + rest;
+  w.fund = r(fund);
+  const d = Math.abs(fund - w.fund);
+  if (d > (dropped.get(w) ?? 0)) dropped.set(w, d);
 
   for (const p of w.pops) roundPop(p);
   for (const b of w.buildings) roundBuilding(b);

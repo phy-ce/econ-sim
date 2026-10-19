@@ -468,11 +468,21 @@ export function colonySol(w: World, prof: PopClass): number {
 
 // ---------------------------------------------------------------- 돈
 
+/**
+ * 주인 없는 돈(fund)을 뺀 돈 계정 전부를 정해진 순서로 f 에 넘기고 돌려받은 값으로 바꾼다.
+ * 화폐 총량(totalMoney)과 센트 맞춤(round.ts roundWorld)이 이 목록 하나를 쓴다: 돈을 가진 계정을 새로 두면 여기에만 넣는다
+ */
+export function mapMoney(w: World, f: (x: number) => number): void {
+  w.bank.cash = f(w.bank.cash);
+  w.traders.cash = f(w.traders.cash);
+  for (const c of w.companies) c.cash = f(c.cash);
+  for (const p of w.pops) p.savings = f(p.savings);
+  for (const k of w.kingdoms) k.investmentPool = f(k.investmentPool);
+}
+
 export function totalMoney(w: World): number {
-  let t = w.fund + w.bank.cash + w.traders.cash;
-  for (const c of w.companies) t += c.cash;
-  for (const p of w.pops) t += p.savings;
-  for (const k of w.kingdoms) t += k.investmentPool;
+  let t = w.fund;
+  mapMoney(w, (x) => { t += x; return x; });
   return t;
 }
 

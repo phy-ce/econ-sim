@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { TICKS_PER_WEEK, createWorld, step } from '../../src/index';
-import type { World } from '../../src/index';
+import { BUILDING_BY_ID, TICKS_PER_WEEK, applyCommandMsg, createWorld, isGovernment, step } from '../../src/index';
+import type { QueuedCommand, World } from '../../src/index';
 import { firstDiff } from '../helpers';
 
 /** 저장/불러오기 (게임이 쓰는 것과 같은 JSON 왕복) */
@@ -38,5 +38,26 @@ describe('결정성', () => {
     b = reload(b);
     runTo(b, 200);
     expectSame(b, a200, '200일 (147일 주 경계 저장 후)');
+  });
+
+  // 같은 명령은 틱 사이(applyCommandMsg, 지금 화면)로 넣든 step 의 명령 목록(나중의 서버·재생)으로 넣든 같은 세계가 된다.
+  // 명령이 소수 셋째 자리 이상의 값을 써도 두 길 모두 명령마다 저장값을 맞춘다
+  it('명령은 틱 사이로 넣든 step 의 명령 목록으로 넣든 결과가 같다', () => {
+    const w = createWorld(2);
+    runTo(w, 3);
+    const firm = w.companies.find((c) => !c.state)!;
+    const b = w.buildings.find((x) => x.companyId === firm.id && x.active && !BUILDING_BY_ID[x.typeId].auto && !isGovernment(x.typeId))!;
+    const cmds: QueuedCommand[] = [
+      { actor: firm.id, cmd: { type: 'setWageOffset', skill: 'unskilled', offset: 0.123456 } },
+      { actor: firm.id, cmd: { type: 'setUtilization', buildingId: b.id, utilization: 0.3333333 } },
+    ];
+    const a = reload(w), q = reload(w);
+    for (const c of cmds) expect(applyCommandMsg(a, c.actor, c.cmd)).toBeNull();
+    step(a);
+    expect(step(q, cmds)).toEqual([]);
+    expectSame(q, JSON.stringify(a), '명령 다음 날');
+    runTo(a, 40);
+    runTo(q, 40);
+    expectSame(q, JSON.stringify(a), '40일');
   });
 });

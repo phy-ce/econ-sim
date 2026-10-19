@@ -5,7 +5,7 @@ import { colonyPopulation, colonySol, marketWage, totalMoney, unemploymentRate }
 import { runAi } from './ai';
 import { weeklyAlerts } from './alerts';
 import { recordMetrics } from './metrics';
-import { applyCommand } from './commands';
+import { applyCommandMsg } from './commands';
 import { chargeInterest, collectIncomeTax, distributeInvestment, doResearch, mintMoney, payDividends, spendBudget, weeklyBanking } from './finance';
 import { laborMarket, migrate, payWages, syncEmployment } from './labor';
 import { clearMarkets, collectOrders, harvest, newBook, resetMarkets, updatePrices } from './market';
@@ -19,12 +19,15 @@ export { birthRateAt, growthAt, mortalityAt, STARVATION_LINE } from './pops';
 
 const HISTORY_CAP = 1500;
 
-/** 하루를 진행한다. 명령은 틱 시작 시점에 적용된다 */
+/**
+ * 하루를 진행한다. 명령은 틱 시작 시점에 적용된다: 화면이 틱 사이에 넣는 명령(applyCommandMsg)과 같은 길이라
+ * (명령마다 저장값을 소수 둘째 자리로 맞춘다) 명령을 어느 쪽으로 넣어도 결과가 같다
+ */
 export function step(w: World, commands: QueuedCommand[] = []): string[] {
   const errors: string[] = [];
   for (const q of commands) {
-    const err = applyCommand(w, q.actor, q.cmd);
-    if (err) errors.push(err);
+    const err = applyCommandMsg(w, q.actor, q.cmd);
+    if (err) errors.push(err.text);
   }
 
   updateSubsistence(w);
