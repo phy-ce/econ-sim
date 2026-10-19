@@ -10,6 +10,8 @@
     "dev": "npm run dev -w @econ/client",
     "build": "npm run build -w @econ/client",
     "test": "npm test -w @econ/sim",
+    "test:core": "npm run test:core -w @econ/sim",
+    "test:long": "npm run test:long -w @econ/sim",
     "sim:run": "npm run run -w @econ/sim --",
     "typecheck": "npm run typecheck -w @econ/sim && npm run typecheck -w @econ/client"
   },

@@ -43,7 +43,7 @@ export function applyCommandMsg(w: World, actor: number, cmd: Command): CommandE
     if (w.constructions.filter((k) => k.companyId === actor).length >= MAX_CONCURRENT_CONSTRUCTIONS) {
       return fail(`동시 공사는 최대 ${MAX_CONCURRENT_CONSTRUCTIONS}건입니다.`, `At most ${MAX_CONCURRENT_CONSTRUCTIONS} projects can run at once.`);
     }
-    if (landFree(w, regionId, def.land) < levels) {
+    if (def.land && landFree(w, regionId, def.land) < levels) {
       return fail(`${region.name}에 남은 ${LAND_NAMES[def.land]}가 ${levels === 1 ? '없습니다' : `${levels}칸이 안 됩니다`}.`, `${levels === 1 ? 'No' : `Fewer than ${levels} cells of`} free ${landNameEn(def.land).toLowerCase()} left in ${regionNameEn(regionId)}.`);
     }
     if (def.deposit && depositFree(w, regionId, def.deposit) < levels) {

@@ -64,13 +64,14 @@ export function updateOwnership(w: World) {
   }
 }
 
-/** 맡은 공사(왕실 것과 그 왕국 민간 것)가 없는 건축사무소는 인부를 해산한다 */
+/** 맡은 공사(왕실 것과 그 왕국 민간 것)가 없는 건축사무소는 쉰다 (포인트·자재 없음). TUNE.officeIdleDays 일을 넘게 쉬면 인부를 해산한다 (economy.ts slots) */
 export function updateIdleOffices(w: World) {
   const busy = new Set<number>();
   for (const k of w.constructions) { const o = companyById(w, k.companyId); if (o) busy.add(builderOf(w, o).id); }
   for (const b of w.buildings) {
     if (!getMethod(b.typeId, b.methodId).construction) continue;
     b.idle = !busy.has(b.companyId);
+    if (b.idle) b.idleDays = (b.idleDays ?? 0) + 1; else if (b.idleDays) b.idleDays = 0;
   }
 }
 

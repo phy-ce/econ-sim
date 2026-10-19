@@ -42,7 +42,7 @@ packages/client   React + Vite. The simulation runs in a Web Worker; the UI only
 
 ## World
 
-- **Seven regions**, each with a fixed number of land cells (arable, forest, ore, building plots). Each building level occupies one cell; regions have hundreds to thousands of cells. Each region has its own market. Each region also has a perk, for example +10% output for mines in the northern mining district.
+- **Seven regions**, each with a fixed number of land cells (arable, forest, ore, building plots). Each building level occupies one cell, except government administration and schools, which use no land (as government buildings do in Victoria 3); construction offices use building plots. Regions have hundreds to thousands of cells. Each region has its own market. Each region also has a perk, for example +10% output for mines in the northern mining district.
 - **About 2.9 million people** at the start, almost all of them tenant farmers.
 - **Twelve goods** in a production chain: raw goods (grain, fibre, timber, ore), processed goods (food, fuel, clothing, metal), finished goods (tools, furniture, precision instruments), plus **transport**, a service produced by railways.
 - **Trade and transport.** Moving goods out of a region (traders, buying inputs from a neighbour, port imports and exports) requires transport bought in the origin market. Rail transport costs about 6% of the cargo value. Whatever cannot go by rail is carried by porters and carts at 30%, paid to local labourers. Only the port city trades abroad, and foreign buyers only pay low prices, so exporting is a loss-making outlet for surplus.
@@ -70,7 +70,7 @@ Some better methods need no tech at all: iron tools raise the output of farms, l
 
 | Class | Stratum | Income |
 |---|---|---|
-| Tenant farmers | lower | farm a landlord's empty land, keep part of the harvest in kind, half of what they sell goes to rent |
+| Tenant farmers | lower | farm a landlord's empty land; after rent and land tax they keep what they use that day and sell the rest |
 | Labourers | lower | wages |
 | Skilled workers, experts | middle | wages and research spending |
 | Capitalists | upper | dividends from plot buildings |
@@ -81,7 +81,7 @@ Some better methods need no tech at all: iron tools raise the output of farms, l
 - **Tenants become labourers** when factories have vacancies, but slowly: new factories take weeks to months to staff. Education also caps how far this goes: labourers can be at most 25% + 2 × education (up to 95%) of the lower class. Laid-off labourers return to the land if there is room.
 - **Promotion** to skilled worker or expert needs wealth, savings and vacancies, and is limited by the region's education level, which schools raise.
 - **Upper classes are the hardest to enter.** Owner seats are filled first by conversion between capitalists and aristocrats, then by rich experts and skilled workers in well-educated regions only.
-- **Wage migration.** Labourers and skilled workers drift to a neighbouring region whose average paid wage is more than 30% higher, if it has vacancies or lower unemployment.
+- **Migration.** A region's pull is the daily income an unemployed person can expect there, times its food fulfilment. Open jobs (and, for tenants and labourers, free tenant land) are shared out best-paid first among the region's unemployed; whoever gets no seat counts as earning nothing. People start moving when a neighbour pulls more than 30% harder, fastest at twice as hard.
 
 ### Population movement
 
@@ -101,9 +101,7 @@ All rates are per day and per region.
 | Surplus owners → skilled | 0.05% of the surplus | more owners than seats |
 | Hiring | ≤ 2% of a building's slots | unemployed people of that skill in the region |
 | Job switching | ≤ 1% of the lower-paying building's staff | wage ≥ 15% higher |
-| Unemployment migration | 0.3% × unemployment gap | neighbour unemployment at least 5 points lower |
-| Famine migration | ≤ 0.1% (0.2% × food gap) | food below 90%, neighbour better fed |
-| Wage migration (labourers, skilled) | ≤ 0.05% (full at a 2× wage gap) | neighbour average paid wage > 1.3×, vacancies or lower unemployment |
+| Migration | ≤ 0.1% of the unemployed, ≤ 0.025% of the employed (full at a 2× gap) | neighbour pull > 1.3× here (the unemployed compare pulls, the employed their own pay × food); employed upper classes stay |
 
 People carry their savings with them in every move. Migration notifications appear only when at least 0.5% of the source population has left within four weeks.
 - Goods are substitutable within a need (food or grain, fuel or timber, clothing or fibre). Processed goods are preferred at equal price.

@@ -7,7 +7,7 @@ import { useMemo, useState } from 'react';
 import {
   BUILDING_BY_ID, BUILDING_TYPES, GOOD_IDS, MAX_CONCURRENT_CONSTRUCTIONS, TUNE,
   SKILLS, POP_CLASSES, TECHS, companyById, paysDividend, peasantSlots, availableMethods, canBuildType, constructionEstimate, creditLimit, estimateAfterEntry,
-  estimateMethod, getMethod, hasBuilder, knowsTech, landFree, marketWage, regionById, researchableTechs, unemploymentRate,
+  estimateMethod, getMethod, hasBuilder, knowsTech, landFree, slots, marketWage, regionById, researchableTechs, unemploymentRate,
 } from '@econ/sim';
 import type { Building, Company, GoodBag, GoodId, Region, Skill, PopClass, World } from '@econ/sim';
 import { ChevronDown, X, Coins, Crown, ArrowUp, ArrowDown, Pause, Play } from 'lucide-react';
@@ -44,7 +44,7 @@ function rowOf(world: World, b: Building): Row {
   const run = b.level * b.utilization;
   const crew = b.crew ?? b.last.staffing;
   const staff: StaffPart[] = SKILLS.filter((s) => (method.workers[s] ?? 0) > 0).map((s) => {
-    const jobs = b.idle ? 0 : (method.workers[s] ?? 0) * run;
+    const jobs = b.active ? slots(b, s) : (method.workers[s] ?? 0) * run;
     return { s, jobs, emp: Math.min(jobs, b.employed[s]) };
   });
   if (b.typeId === 'subsistence') staff.splice(0, staff.length, { s: 'peasant', emp: b.tenants ?? 0, jobs: peasantSlots(b) });
@@ -404,7 +404,7 @@ function Controls({ r, game, world, owner }: { r: Row; game: Game; world: World;
   const { b } = r;
   const type = BUILDING_BY_ID[b.typeId];
   const rname = regionName(r.region);
-  const free = landFree(world, b.regionId, type.land);
+  const free = type.land ? landFree(world, b.regionId, type.land) : Infinity;
   return (
     <div className="hctrl">
       <span className="stepper" role="group" aria-label={T.countOf(r.name)}>
@@ -474,7 +474,7 @@ function buildBlockers(world: World, me: Company, region: Region, b: (typeof BUI
   const T = t();
   const out: string[] = [];
   if(region.kingdomId!==me.kingdomId) out.push(T.foreignTerritory);
-  if (region.land[b.land] === 0 || landFree(world, region.id, b.land) < 1) out.push(T.noLandOf(landName(b.land)));
+  if (b.land && (region.land[b.land] === 0 || landFree(world, region.id, b.land) < 1)) out.push(T.noLandOf(landName(b.land)));
   if (!canBuildType(me, b)) out.push(T.needsTechTag([...new Set(b.methods.map((m) => m.tech).filter(Boolean))].map((x) => techName(x!)).join(' / ')));
   if (projects >= MAX_CONCURRENT_CONSTRUCTIONS) out.push(T.projectLimit(projects, MAX_CONCURRENT_CONSTRUCTIONS));
   if (b.id !== 'builder' && !hasBuilder(world, me)) out.push(T.noOffice);
@@ -487,7 +487,7 @@ export function BuildList({ game, world, me, region, projects }: { game: Game; w
   return (
     <div className="cat-grid">
       {BUILDING_TYPES.filter(bt=>!bt.auto && (!bt.stateOnly || me.state)).map((bt) => {
-        const free = landFree(world, region.id, bt.land);
+        const free = bt.land ? landFree(world, region.id, bt.land) : Infinity;
         const locked = !canBuildType(me, bt);
         const est = constructionEstimate(world, me, bt.id);
         const usable = availableMethods(me, bt.id);
@@ -500,7 +500,7 @@ export function BuildList({ game, world, me, region, projects }: { game: Game; w
           <div key={bt.id} className={`cat ${isOpen ? 'open' : ''} ${blockers.length ? 'blocked' : ''}`}>
             <button className="cat-head" aria-expanded={isOpen} onClick={() => setOpen(isOpen ? null : bt.id)}>
               <span className="tile md"><Sprite64 id={bt.id} size={40} /></span>
-              <span className="cat-name">{buildingName(bt.id)}<small className="muted">{landName(bt.land)} <span className="pxnum">{free}</span></small></span>
+              <span className="cat-name">{buildingName(bt.id)}{bt.land && <small className="muted">{landName(bt.land)} <span className="pxnum">{free}</span></small>}</span>
               <span className="cat-figure">
                 {locked ? <span className="muted">{T.techNeeded}</span>
                   : free < 1 ? <span className="neg">{T.noLand}</span>

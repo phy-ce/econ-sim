@@ -1,5 +1,6 @@
 // 조정값 비교: npx tsx cli/sweep.ts '<TUNE JSON>' [seed] [years]
-// 주요 지표(w.metrics)에서 5년마다 대륙 합계를 뽑아 한 줄 JSON으로 출력한다
+// 주요 지표(w.metrics)에서 5년마다(와 마지막 해) 대륙 합계를 뽑아 한 줄 JSON으로 출력한다.
+// TIMING=1 이면 time: { ms 시뮬레이션 시간, msPerDay 하루 평균 } 을 덧붙인다 (sweepsum.py 가 따로 요약한다)
 import { TUNE } from '../src/data';
 import { createWorld, hasOwnCash, step } from '../src/index';
 import type { MetricPoint } from '../src/index';
@@ -15,6 +16,7 @@ const trace = w.kingdoms.map(() => [] as { tax: number; sub: number; weeks: numb
 const wageCv: Record<number, number> = {};
 const lastW = new Map<number, { wage: number; dir: number }>();
 let wMoves = 0, wFlips = 0;
+const t0 = performance.now();
 for (let d = 0; d < years * 360; d++) {
   step(w);
   if (w.tick % 7 === 0 && w.tick > 360) {
@@ -44,6 +46,7 @@ for (let d = 0; d < years * 360; d++) {
     trace[i].push({ tax: k.budget.tax, sub: lv > 0 ? sub / lv : 0, weeks: (k.expenseEma ?? 0) > 0 ? g.cash / k.expenseEma! : Infinity, debt: g.debt > 0 });
   });
 }
+const simMs = performance.now() - t0;
 
 // 플레이어 왕국은 연구를 고르지 않으므로 기술 수에서 뺀다
 const playerKingdom = w.companies.find((c) => c.isPlayer)?.kingdomId;
@@ -51,7 +54,7 @@ const sum = (m: MetricPoint, f: (k: MetricPoint['kingdoms'][number]) => number) 
 const out: Record<string, unknown> = { tune: over, seed };
 for (const m of w.metrics) {
   const y = m.tick / 360;
-  if (!Number.isInteger(y) || y % 5 !== 0) continue;
+  if (!Number.isInteger(y) || (y % 5 !== 0 && y !== years)) continue;
   const pop = sum(m, (k) => k.pop);
   out[`y${y}`] = {
     pop: +(pop / 1e6).toFixed(2),
@@ -114,4 +117,5 @@ for (const tr of trace) {
 }
 const f2 = (x: number) => +x.toFixed(2);
 out.pol = { t5: f2(t5 / n), t1: f2(t1 / n), run5: f2((run5 * 28) / 360), run1: f2((run1 * 28) / 360), chg: f2(chg / nk / yrs), flip: f2(chg ? flips / chg : 0), sub: f2(sub / n), debt: f2(debt / n), hoard: f2(hoard / n) };
+if (process.env.TIMING) out.time = { ms: Math.round(simMs), msPerDay: +(simMs / (years * 360)).toFixed(2) };
 console.log(JSON.stringify(out));
