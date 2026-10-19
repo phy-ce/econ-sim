@@ -336,6 +336,9 @@ export function scaleBonus(level: number): number {
  * - harvestIntensity: 강도 범위 [최소, 최대]. 강도 1당 산출 −5% (HARVEST_STEP)
  *   확률 0.03·0.05·0.1 × 강도 [2,6]·[4,8] 비교 (20년 × 시드 1·2): 0.03이 장기 생활수준 손실이 가장 작았고, 둥근 값 0.05를 쓴다.
  *   강도 [4,8]은 지역 최저 식량이 기아선 0.4 근처까지 간다. 숫자는 DECISIONS 7-6
+ * - prospectStart: 시작할 때 알려진 광맥 = 잠재량(REGIONS veins) × 이 비율 (10 단위로 반올림)
+ * - prospectChance: 탐광. 계절(90일)마다 지역·자원마다 남은 잠재량이 있으면 이 확률로 광맥을 찾는다
+ * - prospectFind: 한 번 찾을 때 늘어나는 광맥 = 잠재량 × 이 비율 (10 단위로 반올림, 최소 10, 남은 잠재량까지)
  */
 export const TUNE = {
   rentShare: 0.15,
@@ -392,6 +395,9 @@ export const TUNE = {
   wageLossCut: true,
   harvestChance: 0.05, // 계절마다 지역마다 5% (측정에서 가장 나았던 0.03에 가장 가까운 둥근 값, DECISIONS 7-6)
   harvestIntensity: [2, 6] as [number, number], // 빅토리아3 가뭄과 같은 범위 (−10~−30%)
+  prospectStart: 0.3,
+  prospectChance: 0.1, // 0.05·0.1·0.2 비교 (20년 × 시드 1~4, DECISIONS 7-8): 0.1과 0.2는 결과가 거의 같고 0.2는 10년차에 광맥이 거의 다 찾아진다
+  prospectFind: 0.1,
 };
 
 // ---------------------------------------------------------------- 기상 조건
@@ -430,6 +436,9 @@ export const LAND_NAMES: Record<LandType, string> = { arable: '농지', forest: 
 export const LAND_NAMES_EN: Record<LandType, string> = { arable: 'Farmland', forest: 'Forest', ore: 'Ore veins', plot: 'Building plots' };
 export const DEPOSIT_NAMES: Record<DepositId, string> = { iron: '철', coal: '석탄' };
 export const DEPOSIT_NAMES_EN: Record<DepositId, string> = { iron: 'Iron', coal: 'Coal' };
+/** 탐광 알림에 쓰는 광맥 이름 */
+export const VEIN_NAMES: Record<DepositId, string> = { iron: '철광맥', coal: '탄맥' };
+export const VEIN_NAMES_EN: Record<DepositId, string> = { iron: 'iron veins', coal: 'coal seams' };
 
 export function regionPerk(regionId: number, typeId: string): number {
   return REGIONS.find((r) => r.id === regionId)?.perks[typeId] ?? 0;
@@ -439,7 +448,7 @@ export function regionPerk(regionId: number, typeId: string): number {
 
 /**
  * 지역 티어 (발전 단계). 시작 인구·계층 구성·교육·부지·경작지·시작 농장은 티어와 시드로 정한다 (world.ts regionStart).
- * 산림과 매장량은 지역마다 고정(지형)이다. 비율은 총인구 대비, 땅은 인구 10만 명당 칸 수다.
+ * 산림과 광맥 잠재량(veins)은 지역마다 고정(지형)이다. 광맥은 처음에 잠재량 × TUNE.prospectStart 만 알려져 있고 나머지는 탐광으로 찾는다 (economy.ts prospect). 비율은 총인구 대비, 땅은 인구 10만 명당 칸 수다.
  * - pop: 인구 범위 / aristocrat·gentry·skilled·expert: 계층 비율 (나머지는 소작농) / education: 교육 접근도
  * - plot: 부지 칸 / arableSlack: 소작농 노동 인구를 다 앉힐 칸 × 이 배율이 경작지 / farms: 시작 민간 곡물 농장 레벨
  */
@@ -459,37 +468,37 @@ export const REGIONS: RegionDef[] = [
   {
     id: 1, name: '벨마르 항', nameEn: 'Port Belmar', spaceport: true, neighbors: [2, 3], perks: { foodplant: 0.1, textile: 0.1, workshop: 0.1 },
     description: '',
-    forest: cells(20), deposits: { iron: 0, coal: 0 },
+    forest: cells(30), veins: { iron: 0, coal: 0 },
   },
   {
     id: 2, name: '강변 평야', nameEn: 'River Plain', spaceport: false, neighbors: [1, 3, 4], perks: { farm: 0.1, fiber_farm: 0.1 },
     description: '',
-    forest: cells(20), deposits: { iron: 0, coal: 0 },
+    forest: cells(30), veins: { iron: 0, coal: 0 },
   },
   {
     id: 3, name: '중앙 고원', nameEn: 'Central Highlands', spaceport: false, neighbors: [1, 2, 5, 6], perks: { farm: 0.05, railway: 0.1 },
     description: '',
-    forest: cells(40), deposits: { iron: cells(20), coal: cells(10) },
+    forest: cells(60), veins: { iron: cells(60), coal: cells(30) },
   },
   {
     id: 4, name: '남부 습지', nameEn: 'Southern Marshes', spaceport: false, neighbors: [2, 5], perks: { fiber_farm: 0.15 },
     description: '',
-    forest: cells(70), deposits: { iron: 0, coal: 0 },
+    forest: cells(100), veins: { iron: 0, coal: 0 },
   },
   {
     id: 5, name: '동부 삼림', nameEn: 'Eastern Forest', spaceport: false, neighbors: [3, 4, 7], perks: { lumber: 0.1, furniture: 0.1 },
     description: '',
-    forest: cells(160), deposits: { iron: 0, coal: cells(20) },
+    forest: cells(200), veins: { iron: 0, coal: cells(60) },
   },
   {
     id: 6, name: '북부 광산지대', nameEn: 'Northern Mining District', spaceport: false, neighbors: [3, 7], perks: { mine: 0.1, coal_mine: 0.1, smelter: 0.1 },
     description: '',
-    forest: cells(20), deposits: { iron: cells(60), coal: cells(40) },
+    forest: cells(30), veins: { iron: cells(200), coal: cells(150) },
   },
   {
     id: 7, name: '회색 협곡', nameEn: 'Grey Gorge', spaceport: false, neighbors: [5, 6], perks: { mine: 0.1 },
     description: '',
-    forest: cells(30), deposits: { iron: cells(40), coal: cells(30) },
+    forest: cells(50), veins: { iron: cells(150), coal: cells(100) },
   },
 ];
 

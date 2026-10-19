@@ -1,6 +1,6 @@
 import { EDUCATION_FLOOR, EDUCATION_RANGE, GOOD_IDS, SKILL_DEFS, TICKS_PER_WEEK, getMethod } from './data';
 import { round2 } from './rng';
-import { colonyPopulation, colonySol, marketWage, totalMoney, unemploymentRate } from './economy';
+import { colonyPopulation, colonySol, marketWage, prospect, totalMoney, unemploymentRate } from './economy';
 import { runAi } from './ai';
 import { weeklyAlerts } from './alerts';
 import { recordMetrics } from './metrics';
@@ -26,6 +26,7 @@ export function step(w: World, commands: QueuedCommand[] = []): string[] {
     if (err) errors.push(err);
   }
 
+  prospect(w);
   updateSubsistence(w);
   updateIdleOffices(w);
   applyWagePolicy(w);
