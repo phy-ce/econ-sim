@@ -327,11 +327,9 @@ export function scaleBonus(level: number): number {
  * - rawFullWealth, rawCapWealth: 원자재로 의복·생활용품을 다 채울 수 있는 부 상한, 원래 상한(max)이 되는 부 (rawMax)
  * - harvestChance: 기상 조건이 한 지역에서 한 계절(90일)에 새로 시작할 확률 (0이면 기상 조건이 없다)
  * - harvestIntensity: 강도 범위 [최소, 최대]. 강도 1당 산출 −5% (HARVEST_STEP)
- * - harvestSeasons: 조건이 이어지는 계절 수의 최대 (1~이 값 중 고르게)
- * - harvestSpread: 진원지의 이웃 지역마다 같은 조건이 번질 확률
- *   확률 0.03·0.04·0.05·0.1, 강도 [2,5]·[2,6]·[4,8], 계절 2·3·4, 번짐 0·0.25·0.5·1 비교 (20년 × 시드 1·2, 일부 시드 3·4):
- *   0.03·[2,6]·2·0.5 는 20년에 조건 28~38번(지역-시간의 7~11%), 걸린 지역 소작농 식량 0.70~0.79 (평소 0.92~0.97), 지역 최저 0.47~0.63
- *   (기아선 0.4 아래 0번). 0.05는 20년 소작농 생활수준이 조건 없을 때보다 0.3~0.4 낮고, 0.03은 0.1~0.25 낮다. 번짐 1은 0.4 아래가 나왔다
+ *   확률 0.03·0.05·0.1 × 강도 [2,6]·[4,8] 비교 (20년 × 시드 1·2, 0.03·0.05는 시드 3·4도). 3~20년 평균 소작농 생활수준은 조건이 없을 때보다
+ *   0.03이 −0.08, 0.05가 −0.21, 0.1이 −0.26 (시드 3·4: 0.03 −0.13, 0.05 −0.31), 노동자는 모두 −0.1 이내.
+ *   걸린 지역 소작농 식량은 [2,6]이 0.73~0.79, [4,8]이 0.66~0.69이고, [4,8]은 지역 최저가 기아선 0.4까지 간다 (0.05·[4,8]은 0.32)
  */
 export const TUNE = {
   peasantMarketShare: 0.1,
@@ -383,10 +381,8 @@ export const TUNE = {
   swapMult: 3,
   employedMigrate: 0.25,
   wageLossCut: true,
-  harvestChance: 0.03,
-  harvestIntensity: [2, 6] as [number, number],
-  harvestSeasons: 2,
-  harvestSpread: 0.5,
+  harvestChance: 0.03, // 20년에 조건 28~38번, 걸린 지역 소작농 식량 0.73~0.79, 지역 최저 0.57 이상, 장기 생활수준 손실이 가장 작다
+  harvestIntensity: [2, 6] as [number, number], // 빅토리아3 가뭄과 같은 범위 (−10~−30%)
 };
 
 // ---------------------------------------------------------------- 기상 조건
@@ -395,6 +391,10 @@ export const TUNE = {
 export const HARVEST_SEASON_DAYS = 90;
 /** 강도 1당 산출 감소 (빅토리아3와 같은 −5%) */
 export const HARVEST_STEP = 0.05;
+/** 조건 길이는 1~이 값 계절 중 고르게. 2·4 비교: 걸린 지역-시간이 같으면 결과가 같아 조정값으로 두지 않는다 (확률이 같은 일을 한다) */
+export const HARVEST_MAX_SEASONS = 2;
+/** 진원지의 이웃 지역마다 같은 조건이 번질 확률. 0·0.5 비교: 걸린 지역-시간이 같으면 결과가 같아 조정값으로 두지 않는다 */
+export const HARVEST_SPREAD = 0.5;
 /** 기상 조건 종류와 산출이 깎이는 땅. 셋 다 농지(소작지·농장·목장)를 친다 */
 export const HARVEST_KINDS: HarvestDef[] = [
   { id: 'drought', name: '가뭄', nameEn: 'Drought', lands: ['arable'] },

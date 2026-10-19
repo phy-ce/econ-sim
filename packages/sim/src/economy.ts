@@ -1,6 +1,6 @@
 import {
-  BUILDING_BY_ID, GOOD_IDS, GOODS, HARVEST_KINDS, HARVEST_SEASON_DAYS, HARVEST_STEP, LAND_NAMES, LAND_NAMES_EN, MAX_POINTS_PER_LEVEL_DAY, POINT_VALUE,
-  SKILL_DEFS, SUBSISTENCE, TECH_BY_ID, getMethod, regionPerk, scaleBonus, TUNE,
+  BUILDING_BY_ID, GOOD_IDS, GOODS, HARVEST_KINDS, HARVEST_MAX_SEASONS, HARVEST_SEASON_DAYS, HARVEST_SPREAD, HARVEST_STEP, LAND_NAMES, LAND_NAMES_EN,
+  MAX_POINTS_PER_LEVEL_DAY, POINT_VALUE, SKILL_DEFS, SUBSISTENCE, TECH_BY_ID, getMethod, regionPerk, scaleBonus, TUNE,
 } from './data';
 import { borderCost } from './kingdoms';
 import { clamp } from './rng';
@@ -84,8 +84,8 @@ export function roomFor(w: World, regionId: number, typeId: string): number {
 // 저장하는 상태가 없다. 지역 r 에서 계절 s(90일)에 조건이 시작하는지, 그 종류·강도·길이는 (시드, r, s) 의 해시로 정한다.
 // 그래서 어느 날이든 그날의 조건을 다시 계산할 수 있고, 저장·불러오기와 무작위 수열(rand)에 영향이 없다.
 // - 진원지: 계절마다 TUNE.harvestChance 확률. 종류는 셋 중 고르게, 강도는 TUNE.harvestIntensity 안에서 고르게,
-//   길이는 1~TUNE.harvestSeasons 계절. 첫 계절(0)에는 없다
-// - 번짐: 진원지의 이웃마다 TUNE.harvestSpread 확률로 같은 조건(종류·강도·기간)이 걸린다 (빅토리아3 range 1)
+//   길이는 1~HARVEST_MAX_SEASONS 계절. 첫 계절(0)에는 없다
+// - 번짐: 진원지의 이웃마다 HARVEST_SPREAD 확률로 같은 조건(종류·강도·기간)이 걸린다 (빅토리아3 range 1)
 // - 한 지역에는 한 번에 하나: 겹치면 먼저 시작한 조건이 이어지고, 같은 계절이면 자기 진원지가 이웃보다 먼저다
 
 /** 정수 4개 → 0..1 (같은 입력이면 늘 같은 값) */
@@ -101,7 +101,7 @@ function originAt(seed: number, regionId: number, s: number): HarvestCondition |
   const def = HARVEST_KINDS[Math.floor(hash01(seed, regionId, s, 2) * HARVEST_KINDS.length)];
   const [lo, hi] = TUNE.harvestIntensity;
   const intensity = lo + Math.floor(hash01(seed, regionId, s, 3) * (hi - lo + 1));
-  const seasons = 1 + Math.floor(hash01(seed, regionId, s, 4) * TUNE.harvestSeasons);
+  const seasons = 1 + Math.floor(hash01(seed, regionId, s, 4) * HARVEST_MAX_SEASONS);
   return {
     kind: def.id, lands: def.lands, intensity, cut: Math.min(1, intensity * HARVEST_STEP), origin: regionId,
     start: s * HARVEST_SEASON_DAYS, end: (s + seasons) * HARVEST_SEASON_DAYS,
@@ -113,13 +113,12 @@ function conditionsIn(w: World, s: number): (HarvestCondition | null)[] {
   return w.regions.map((r) => {
     const t = s * HARVEST_SEASON_DAYS;
     // 먼저 시작한 것부터 본다
-    for (let s0 = s - Math.max(1, TUNE.harvestSeasons) + 1; s0 <= s; s0++) {
+    for (let s0 = s - HARVEST_MAX_SEASONS + 1; s0 <= s; s0++) {
       const own = originAt(w.seed, r.id, s0);
       if (own && t < own.end) return own;
-      if (!(TUNE.harvestSpread > 0)) continue;
       for (const n of r.neighbors) {
         const o = originAt(w.seed, n, s0);
-        if (o && t < o.end && hash01(w.seed, r.id, s0, 100 + n) < TUNE.harvestSpread) return o;
+        if (o && t < o.end && hash01(w.seed, r.id, s0, 100 + n) < HARVEST_SPREAD) return o;
       }
     }
     return null;
@@ -133,7 +132,7 @@ const harvestCache = { key: [] as unknown[], list: [] as (HarvestCondition | nul
 export function harvestCondition(w: World, regionId: number, tick = w.tick): HarvestCondition | null {
   if (!(TUNE.harvestChance > 0) || tick < 0) return null;
   const s = Math.floor(tick / HARVEST_SEASON_DAYS);
-  const key = [w.seed, s, w.regions, TUNE.harvestChance, TUNE.harvestIntensity[0], TUNE.harvestIntensity[1], TUNE.harvestSeasons, TUNE.harvestSpread];
+  const key = [w.seed, s, w.regions, TUNE.harvestChance, TUNE.harvestIntensity[0], TUNE.harvestIntensity[1]];
   if (key.some((v, i) => v !== harvestCache.key[i])) { harvestCache.key = key; harvestCache.list = conditionsIn(w, s); }
   const i = w.regions.findIndex((r) => r.id === regionId);
   return i >= 0 ? harvestCache.list[i] : null;
