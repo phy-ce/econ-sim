@@ -61,7 +61,33 @@
   - 종교: 레벨당 +10%
 - 대학은 정부 건물이다. 기본 방식은 사무원 250 + 노동자 250, 혁신 1, 자격 +10%다.
 
-## 소작농 소득 (일부만 확인)
-- 소작농은 필요의 5%만 시장에서 산다. 나머지는 "자급 산출" 묶음으로 받고, 이것은 시장과 상호작용하지 않는다 (https://vic3.paradoxwikis.com/Needs).
-- 자급 농장 기본 방식: 레벨당 소작농 5,000명이다.
-- **확인 못 함:** 산출이 돈으로 바뀌는 정확한 공식, 시장가로 매기는지 여부.
+## 소작농 소득
+게임 스크립트 원본은 GitHub 미러에서 확인했다.
+- G = https://github.com/jink47787/Historical_MP_Series_Vic3/blob/main/basegame-ver/common/ (커밋 "base latest 1.13.11")
+- T = https://github.com/tjysdsg/Victoria-3-files/blob/master/game/ (1.9.0)
+
+**산출은 두 갈래다**
+- 시장에 파는 소량의 상품과, 소작농이 직접 쓰는 현물 소득(Subsistence Output)으로 나뉜다 (T localization/english/concepts_l_english.yml `concept_subsistence_building_desc`).
+- Subsistence Output은 건물 수입에서 나가지 않고 소득세도 붙지 않는다 (같은 파일 `concept_subsistence_output_desc`). 위키도 "시장과 상호작용하지 않는다"고 쓴다 (https://vic3.paradoxwikis.com/Needs).
+
+**시장 판매분은 생산 방식이 정한 고정 수량이다** (G production_methods/12_subsistence.txt)
+- 자급 농장 기본: 노동자 규모에 비례해 grain 1.0, fabric 0.5, wood 0.5, services 0.5. 레벨당 소작농 5,000명.
+- 가내수공업 방식: clothes, furniture, liquor 각 0.25.
+- 판매 몫은 가격에 반응하지 않는다. 금액만 시장가로 변한다. 비율을 가격으로 정하는 규칙은 못 찾았다.
+
+**현물 몫은 토지법이 정한다** (같은 파일)
+- 소작·상업농·집단농 등 (`pm_serfdom_no`): `building_subsistence_output_add = 4`.
+- 농노제: 3, 대신 시장용 grain +0.5. 부역(장원제): 3, grain +0.25. 자영농지: 4, grain +0.25.
+- 농노제·장원제는 현물 몫을 시장 판매로 옮긴다.
+
+**시장 구매** (G pop_types/peasants.txt)
+- `consumption_mult = 0.05`: 소작농 구매 묶음의 5%만 주(州) 시장 수요로 들어간다 (https://vic3.paradoxwikis.com/Needs 와 같다).
+- `subsistence_income = yes`, `pays_land_tax = yes`, `wage_weight = 0.2`.
+
+**토지세는 1인당이다** (https://vic3.paradoxwikis.com/Treasury, https://vic3.paradoxwikis.com/Vickypedia)
+- 소작농은 인두세 대신 토지세를 낸다.
+- 토지 기반 과세의 토지세: 1인당 연 0.4 / 0.55 / 0.7 / 0.85 / 1.0 (세금 단계별). 위키 예시(5천 명, 중간 단계 → 주 £67.3)로 검산한 값이다. 수확 비율로 걷는 것이 아니다.
+
+**확인 못 함:** 현물 소득이 돈 가치로 바뀌는 정확한 공식, 그것을 시장가로 매기는지 여부.
+
+**이 게임과 다른 점**: 빅토리아3는 판매량이 방식마다 고정이다. 이 게임은 지대·세금을 낸 뒤 쓰고 남는 것을 판다 (DESIGN 4장). 두 방식 모두 판매량이 가격에 반응하지 않는다.

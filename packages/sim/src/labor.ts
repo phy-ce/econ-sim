@@ -4,7 +4,7 @@ import { harvestShares } from './market';
 import { findPop, getPop, movePeople, popsIn, workforce } from './pops';
 import { clamp } from './rng';
 import { POP_CLASSES, SKILLS } from './types';
-import type { Building, GoodBag, Pop, PopClass, Region, Skill, World } from './types';
+import type { Building, Pop, PopClass, Region, Skill, World } from './types';
 
 // 노동시장 (빅토리아3 방식): 직종 이동은 따로 정한 비율이 아니라 건물의 채용으로만 일어난다.
 // 빈자리가 있는 건물은 같은 직종 실업자 → 임금이 더 낮은 곳에서 일하는 같은 직종 → 그 직종 자격을 가진 다른 직종 순으로 뽑는다.
@@ -22,20 +22,12 @@ const PROF_INDEX = Object.fromEntries(POP_CLASSES.map((s, i) => [s, i])) as Reco
 /** (일터, 직종) 의 숫자 키 */
 const seatKey = (work: number, prof: PopClass) => work * POP_CLASSES.length + PROF_INDEX[prof];
 
-/** 소작농 1인당 하루 소득 가치 (현물 + 판매분에서 수확과 같은 지대·토지세 몫을 뺀 것). 노동자 일자리와 비교하는 기준 */
+/** 소작농 1인당 하루 소득 가치 (현물 + 판매분에서 수확과 같은 지대·토지세 몫을 뺀 것). 노동자 일자리와 비교하는 기준, 시작 부 */
 export function subsistenceWage(w: World, r: Region): number {
   const m = r.market;
   const gross = SUBSISTENCE.grainPerWorker * m.grain.price + SUBSISTENCE.fiberPerWorker * m.fiber.price + SUBSISTENCE.timberPerWorker * m.timber.price;
   const { rent, tax } = harvestShares(w, r);
   return gross * (1 - rent - tax);
-}
-
-/** 소작지 노동 인구 wf 의 하루 현물 (수확 중 시장에 팔지 않는 몫) */
-export function subsistenceKind(wf: number): GoodBag {
-  const k = wf * (1 - TUNE.peasantMarketShare);
-  return {
-    grain: k * SUBSISTENCE.grainPerWorker, fiber: k * SUBSISTENCE.fiberPerWorker, timber: k * SUBSISTENCE.timberPerWorker,
-  };
 }
 
 /** 소유 건물 자리 하나가 기대하는 하루 배당·지대 (채용 순서용 추정) */
@@ -97,8 +89,8 @@ export function laborMarket(w: World) {
     seats.sort((a, b) => b.wage - a.wage || a.b.id - b.b.id);
     for (const seat of seats) {
       const { b, prof } = seat;
-      let room = Math.min(seat.slots - emp(b, prof), Math.max(3, seat.slots * HIRE_RATE));
-      if (prof === 'unskilled') room = Math.min(room, seat.slots * ratioGate(b) - emp(b, prof));
+      const cap = prof === 'peasant' ? seat.slots : fillable(b, prof as Skill);
+      let room = Math.min(cap - emp(b, prof), Math.max(3, seat.slots * HIRE_RATE));
       if (room <= 0.01) continue;
       const dest = getPop(w, r.id, prof, b.id);
       const take = (src: Pop, n: number, qualified?: PopClass) => {
@@ -135,6 +127,12 @@ export function laborMarket(w: World) {
     }
   }
   syncEmployment(w);
+}
+
+/** 건물이 실제로 채울 수 있는 그 직종 자리: 노동자는 직종 비율 상한(ratioGate)까지만 뽑는다 (채용과 이주 매력도가 같이 쓴다) */
+function fillable(b: Building, s: Skill): number {
+  const n = slots(b, s);
+  return s === 'unskilled' ? n * ratioGate(b) : n;
 }
 
 /** 노동자 충원 상한 비율: 다른 직종(기술자·전문가) 중 가장 덜 찬 쪽 / 0.9 */
@@ -204,24 +202,41 @@ const MIGRATE_FULL = 2;
 const MIGRATE_MAX = 0.001;
 
 /**
- * 지역 매력도: 그 직종이 이 지역에서 기대할 수 있는 1인당 소득 × 식량 충족률.
- * 하층은 노동자 빈자리 임금과 소작지 여유 중 나은 쪽, 중층은 그 직종 빈자리 임금.
+ * 지역 매력도: 그 직종 실업자 한 사람이 이 지역에서 기대할 수 있는 하루 소득 × 식량 충족률.
+ * 빈자리를 임금이 높은 순으로 그 지역 실업자(하층은 소작농 + 노동자, 그 밖은 같은 직종)에게 나눠 준 1인당 소득이다.
+ * 실업자가 빈자리보다 많으면 자리를 못 얻는 사람은 0으로 센다. 실업자가 없으면 가장 좋은 빈자리 임금이다.
+ * 빈자리: 하층은 노동자 자리와 소작지 여유, 그 밖은 그 직종 자리. 실제로 뽑을 수 있는 자리만 센다 (fillable, 채용과 같은 규칙).
  */
 function attraction(w: World, r: Region, prof: PopClass): number {
-  let best = 0;
   const lower = prof === 'peasant' || prof === 'unskilled';
+  const s: Skill = lower ? 'unskilled' : (prof as Skill);
+  const open: { wage: number; n: number }[] = [];
   for (const b of w.buildings) {
     if (b.regionId !== r.id) continue;
     if (isSubsistence(b.typeId)) {
-      if (lower && peasantSlots(b) - (b.tenants ?? 0) > 1) best = Math.max(best, subsistenceWage(w, r));
+      const n = lower ? peasantSlots(b) - (b.tenants ?? 0) : 0;
+      if (n > 0) open.push({ wage: subsistenceWage(w, r), n });
       continue;
     }
-    const s: Skill = lower ? 'unskilled' : (prof as Skill);
-    if (slots(b, s) - b.employed[s] > 1) best = Math.max(best, paysDividend(b.stateOwned, s) ? dividendWage(b, s) : companyById(w, b.companyId)?.wages[s] ?? 0);
+    const n = fillable(b, s) - b.employed[s];
+    if (n > 0) open.push({ wage: paysDividend(b.stateOwned, s) ? dividendWage(b, s) : companyById(w, b.companyId)?.wages[s] ?? 0, n });
   }
-  let food = 0, n = 0;
-  for (const p of w.pops) if (p.regionId === r.id) { food += p.food * p.size; n += p.size; }
-  return best * (n > 0 ? food / n : 1);
+  let food = 0, size = 0, seekers = 0;
+  for (const p of w.pops) {
+    if (p.regionId !== r.id) continue;
+    food += p.food * p.size; size += p.size;
+    if (p.work === 0 && (lower ? p.prof === 'peasant' || p.prof === 'unskilled' : p.prof === prof)) seekers += workforce(p);
+  }
+  open.sort((a, b) => b.wage - a.wage);
+  const want = Math.max(1, seekers);
+  let left = want, income = 0;
+  for (const o of open) {
+    if (left <= 0) break;
+    const t = Math.min(left, o.n);
+    income += t * o.wage;
+    left -= t;
+  }
+  return (income / want) * (size > 0 ? food / size : 1);
 }
 
 /** 일하는 pop 이 지금 자리에서 받는 1인당 하루 소득 (소작지는 수확 가치, 소유 자리는 배당 추정) */
@@ -239,7 +254,8 @@ function seatWage(w: World, r: Region, p: Pop, b: Building | undefined): number 
 export function migrate(w: World) {
   const cache = new Map<string, number>();
   const attr = (r: Region, prof: PopClass) => {
-    const k = `${r.id}|${prof}`;
+    // 소작농과 노동자는 같은 빈자리를 두고 다투므로 매력도가 같다
+    const k = `${r.id}|${prof === 'peasant' ? 'unskilled' : prof}`;
     if (!cache.has(k)) cache.set(k, attraction(w, r, prof));
     return cache.get(k)!;
   };
