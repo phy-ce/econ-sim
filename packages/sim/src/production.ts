@@ -86,7 +86,8 @@ export function produce(w: World) {
     b.last.points = 0;
     b.last.output = {};
     if (st > 1e-4) {
-      const run = b.level * b.utilization * st;
+      // 기상 조건은 농지·산림·광맥 건물의 투입과 산출을 함께 줄인다 (빅토리아3 throughput, 일자리는 그대로). 효율은 행정청·사무소도 쓰므로 따로
+      const run = b.level * b.utilization * st * harvestFactor(w, b.regionId, BUILDING_BY_ID[b.typeId].land);
       let fill = 1;
       for (const g of GOOD_IDS) {
         const per = method.inputs[g];
@@ -98,8 +99,7 @@ export function produce(w: World) {
         if (per) b.stock[g] = Math.max(0, (b.stock[g] ?? 0) - per * run * fill);
       }
       b.last.inputFill = b.idle ? 1 : fill;
-      // 기상 조건은 농지·산림·광맥 건물의 산출에만 곱한다 (효율은 행정청·사무소도 쓰므로 따로)
-      const scale = run * fill * efficiency(b) * harvestFactor(w, b.regionId, BUILDING_BY_ID[b.typeId].land);
+      const scale = run * fill * efficiency(b);
       for (const g of GOOD_IDS) {
         const per = method.outputs[g];
         if (!per) continue;

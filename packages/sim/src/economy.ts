@@ -86,8 +86,9 @@ export function roomFor(w: World, regionId: number, typeId: string): number {
 // 그래서 어느 날이든 그날의 조건을 다시 계산할 수 있고, 저장·불러오기와 무작위 수열(rand)에 영향이 없다.
 // - 진원지: 계절마다 TUNE.harvestChance 확률. 종류는 셋 중 고르게, 강도는 TUNE.harvestIntensity 안에서 고르게,
 //   길이는 1~HARVEST_MAX_SEASONS 계절. 첫 계절(0)에는 없다
-// - 번짐: 진원지의 이웃마다 HARVEST_SPREAD 확률로 같은 조건(종류·강도·기간)이 걸린다 (빅토리아3 range 1)
-// - 한 지역에는 한 번에 하나: 겹치면 먼저 시작한 조건이 이어지고, 같은 계절이면 자기 진원지가 이웃보다 먼저다
+// - 번짐: 그 계절에 진원지가 된 지역의 이웃마다 HARVEST_SPREAD 확률로 같은 조건(종류·강도·기간)이 걸린다 (빅토리아3 range 1)
+// - 한 지역에는 한 번에 하나: 조건이 걸린 지역은 새로 진원지가 되지도, 번져 오는 것을 받지도 않는다.
+//   같은 계절이면 자기 진원지가 이웃보다 먼저다
 
 /** 정수 4개 → 0..1 (같은 입력이면 늘 같은 값) */
 function hash01(a: number, b: number, c: number, d: number): number {
@@ -96,7 +97,7 @@ function hash01(a: number, b: number, c: number, d: number): number {
   return (h >>> 0) / 4294967296;
 }
 
-/** 지역 regionId 가 계절 s 에 진원지가 되는가: 그 조건 (start·end 는 틱) */
+/** 지역 regionId 가 계절 s 에 진원지가 될 패인가: 그 조건 (start·end 는 틱). 그 지역이 비어 있어야 실제로 시작한다 */
 function originAt(seed: number, regionId: number, s: number): HarvestCondition | null {
   if (s < 1 || !(hash01(seed, regionId, s, 1) < TUNE.harvestChance)) return null;
   const def = HARVEST_KINDS[Math.floor(hash01(seed, regionId, s, 2) * HARVEST_KINDS.length)];
@@ -109,44 +110,66 @@ function originAt(seed: number, regionId: number, s: number): HarvestCondition |
   };
 }
 
-/** 계절 s 에 각 지역에 걸린 조건 (w.regions 순서) */
-function conditionsIn(w: World, s: number): (HarvestCondition | null)[] {
-  return w.regions.map((r) => {
-    const t = s * HARVEST_SEASON_DAYS;
-    // 먼저 시작한 것부터 본다
-    for (let s0 = s - HARVEST_MAX_SEASONS + 1; s0 <= s; s0++) {
-      const own = originAt(w.seed, r.id, s0);
-      if (own && t < own.end) return own;
-      for (const n of r.neighbors) {
-        const o = originAt(w.seed, n, s0);
-        if (o && t < o.end && hash01(w.seed, r.id, s0, 100 + n) < HARVEST_SPREAD) return o;
-      }
-    }
-    return null;
-  });
-}
+/**
+ * 계절마다 각 지역(w.regions 순서)에 걸린 조건. 앞 계절에서 이어진 것을 알아야 새로 시작하는지 정할 수 있어서 계절 1부터 차례로 센다.
+ * 값은 시드·지역·조정값만으로 정해지므로 캐시는 결과를 바꾸지 않는다 (불러온 세계는 처음부터 다시 센다)
+ */
+const harvestCache = {
+  seed: NaN, regions: null as Region[] | null, chance: NaN, lo: NaN, hi: NaN,
+  index: new Map<number, number>(), seasons: [] as (HarvestCondition | null)[][],
+};
 
-/** 같은 계절 안에서는 한 번만 센다 (값은 시드·계절·조정값만으로 정해지므로 캐시는 결과를 바꾸지 않는다) */
-const harvestCache = { key: [] as unknown[], list: [] as (HarvestCondition | null)[] };
+function seasonList(w: World, s: number): (HarvestCondition | null)[] {
+  const h = harvestCache, [lo, hi] = TUNE.harvestIntensity;
+  if (h.seed !== w.seed || h.regions !== w.regions || h.chance !== TUNE.harvestChance || h.lo !== lo || h.hi !== hi) {
+    Object.assign(h, { seed: w.seed, regions: w.regions, chance: TUNE.harvestChance, lo, hi });
+    h.index = new Map(w.regions.map((r, i) => [r.id, i]));
+    h.seasons = [w.regions.map(() => null)];
+  }
+  const list = h.seasons;
+  while (list.length <= s) {
+    const s1 = list.length, t = s1 * HARVEST_SEASON_DAYS, prev = list[s1 - 1];
+    // 지난 계절의 조건이 아직 이어지는 지역은 비어 있지 않다
+    const busy = prev.map((c) => (c && t < c.end ? c : null));
+    const own = w.regions.map((r, i) => (busy[i] ? null : originAt(w.seed, r.id, s1)));
+    list.push(w.regions.map((r, i) => {
+      if (busy[i] || own[i]) return busy[i] ?? own[i];
+      for (const n of r.neighbors) {
+        const o = own[h.index.get(n) ?? -1];
+        if (o && hash01(w.seed, r.id, s1, 100 + n) < HARVEST_SPREAD) return o;
+      }
+      return null;
+    }));
+  }
+  return list[s];
+}
 
 /** 이 지역에 tick 날 걸린 기상 조건 (없으면 null) */
 export function harvestCondition(w: World, regionId: number, tick = w.tick): HarvestCondition | null {
   if (!(TUNE.harvestChance > 0) || tick < 0) return null;
-  const s = Math.floor(tick / HARVEST_SEASON_DAYS);
-  const key = [w.seed, s, w.regions, TUNE.harvestChance, TUNE.harvestIntensity[0], TUNE.harvestIntensity[1]];
-  if (key.some((v, i) => v !== harvestCache.key[i])) { harvestCache.key = key; harvestCache.list = conditionsIn(w, s); }
-  const i = w.regions.findIndex((r) => r.id === regionId);
-  return i >= 0 ? harvestCache.list[i] : null;
+  const list = seasonList(w, Math.floor(tick / HARVEST_SEASON_DAYS));
+  return list[harvestCache.index.get(regionId) ?? -1] ?? null;
 }
 
-/** 이 지역 이 땅의 오늘 산출 배율 (1 = 평년). 소작 수확과 농지·산림·광맥 건물의 산출에만 곱한다 (효율과 따로) */
-export function harvestFactor(w: World, regionId: number, land: LandType | undefined): number {
+/** 이 지역 이 땅의 tick 날 산출 배율 (1 = 평년). 소작 수확과 농지·산림·광맥 건물의 투입·산출에 곱한다 (효율과 따로) */
+export function harvestFactor(w: World, regionId: number, land: LandType | undefined, tick = w.tick): number {
   if (!(TUNE.harvestChance > 0) || !land || land === 'plot') return 1;
-  const c = harvestCondition(w, regionId);
+  const c = harvestCondition(w, regionId, tick);
   return c && c.lands.includes(land) ? 1 - c.cut : 1;
 }
 
-/** 화면용 라벨: "가뭄 농지 −20% · 45일" / "Drought farmland −20% · 45 d" (조건이 없으면 null) */
+/**
+ * 하루 rate 로 움직이는 이동평균(시장 공급 EMA)에 남아 있는 배율: lag 일 전부터 거꾸로 90일 동안의 배율을 그 이동평균과 같은 가중치로 더한다.
+ * 조건이 시작한 직후에는 1에 가깝고, 끝난 뒤 몇 주 동안은 1보다 작다 (outlook.ts 가 줄어든 공급을 평년 양으로 되돌릴 때 쓴다)
+ */
+export function harvestFactorEma(w: World, regionId: number, land: LandType | undefined, rate: number, lag: number): number {
+  if (!(TUNE.harvestChance > 0) || !land || land === 'plot') return 1;
+  let f = 0, wt = rate;
+  for (let k = 0; k < HARVEST_SEASON_DAYS; k++, wt *= 1 - rate) f += wt * harvestFactor(w, regionId, land, w.tick - lag - k);
+  return f + wt / rate; // 그보다 오래된 날은 평년으로 본다 (남은 가중치 (1 − rate)^90)
+}
+
+/** 라벨: "가뭄 농지 −20% · 45일" / "Drought farmland −20% · 45 d" (조건이 없으면 null). 화면과 알림이 같이 쓴다 */
 export function harvestLabel(w: World, regionId: number, en = false): string | null {
   const c = harvestCondition(w, regionId);
   if (!c) return null;

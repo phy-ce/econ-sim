@@ -1,5 +1,6 @@
 import { BUILDING_BY_ID, GOOD_IDS, GOODS, NEEDS, SKILL_DEFS, TUNE, getMethod, regionPerk } from './data';
-import { availableMethods, collectionRatio, harvestCondition, harvestFactor, regionById, shippingRate, wageCostOf } from './economy';
+import { availableMethods, collectionRatio, harvestFactorEma, regionById, shippingRate, wageCostOf } from './economy';
+import { BY_EMA } from './market';
 import { clamp } from './rng';
 import { SKILLS } from './types';
 import type { Company, GoodId, Kingdom, MethodDef, Region, Skill, World } from './types';
@@ -40,12 +41,18 @@ export function marketOutlook(w: World): Outlook {
     for (const r of w.regions) { d += r.market[g].demandEma; s += r.market[g].supplyEma; }
     demand[g] = d; latent[g] = 0; supply[g] = Math.max(0, s);
   }
-  // 기상 조건으로 줄어든 공급은 일시적이다: 조건이 걸린 땅의 생산자(소작지·건물) 공급을 평년 양으로 되돌려 센다
-  for (const r of w.regions) {
-    if (!harvestCondition(w, r.id)) continue;
+  // 기상 조건으로 줄어든 공급은 일시적이다: 조건이 걸렸던 땅의 생산자(소작지·건물) 공급을 평년 양으로 되돌려 센다.
+  // 공급 EMA 에 남아 있는 배율로 나눈다 (조건이 막 시작했으면 덜, 막 끝났으면 아직 조금). 소작지는 그날 수확을 팔고(1일 전),
+  // 건물은 전날 만든 것을 판다(2일 전)
+  if (TUNE.harvestChance > 0) for (const r of w.regions) {
+    const ema = new Map<string, number>();
     for (const g of GOOD_IDS) for (const [src, q] of Object.entries(r.market[g].supplyByEma ?? {})) {
       const typeId = src === 'subsistence' ? src : src.startsWith('bld:') ? src.slice(4) : null;
-      const f = typeId ? harvestFactor(w, r.id, BUILDING_BY_ID[typeId].land) : 1;
+      const land = typeId ? BUILDING_BY_ID[typeId].land : undefined;
+      if (!land || land === 'plot') continue;
+      const lag = src === 'subsistence' ? 1 : 2, key = `${land}:${lag}`;
+      let f = ema.get(key);
+      if (f === undefined) ema.set(key, (f = harvestFactorEma(w, r.id, land, BY_EMA, lag)));
       if (f < 1 && f > 0) supply[g] += q * (1 / f - 1);
     }
   }

@@ -135,8 +135,7 @@ function adjustWages(w: World, c: Company) {
       if (n <= 0) continue;
       cap += n; emp += b.employed[s];
       const r = regionById(w, b.regionId);
-      // 기상 조건은 일시적이라 노동자 임금 바닥은 평년 소작 소득으로 본다 (조건 동안 내린 임금이 끝난 뒤에도 남지 않게)
-      outside += (s === 'unskilled' ? subsistenceWage(w, r, true) : s === 'skilled' ? c.wages.unskilled : c.wages.skilled) * n;
+      outside += (s === 'unskilled' ? subsistenceWage(w, r) : s === 'skilled' ? c.wages.unskilled : c.wages.skilled) * n;
       people += n;
     }
     c.lastEmployed[s] = emp;

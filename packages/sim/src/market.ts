@@ -609,7 +609,8 @@ export const PRICE_MAX = 1.75;
 const PRICE_SPEED = 0.03;
 /** 수요·공급 평균이 하루에 따라가는 비율 */
 const FLOW_EMA = 0.1;
-const BY_EMA = 0.1;
+/** 출처별 수요·공급 이동평균의 하루 비율 (outlook.ts 가 기상 조건 되돌리기에 쓴다) */
+export const BY_EMA = 0.1;
 
 function emaBy(prev: Record<string, number> | undefined, cur: Record<string, number> | undefined): Record<string, number> {
   const out: Record<string, number> = {};

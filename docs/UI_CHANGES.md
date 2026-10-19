@@ -402,7 +402,7 @@ sim이 아래 제도를 없앴다. 화면이 계속 컴파일되도록 `packages
   - 새 필드 `Building.staffPeak`(사무소만, AI 철거 판단용)는 화면에 쓰지 않는다.
 
 ### 2-25. 기상 조건 (가뭄·홍수·산불, 새 표시)
-- 지역에 기상 조건이 걸리면 그 땅의 산출이 강도 × 5% 줄어든다 (계절 90일 단위로 1~2계절, 기본 확률이면 한 지역에 20년에 4~5번). 저장 형식은 그대로다 (조건은 시드와 날짜로 다시 계산한다).
+- 지역에 기상 조건이 걸리면 그 땅의 산출이 강도 × 5% 줄어든다 (계절 90일 단위로 1~2계절, 진원지 확률은 계절마다 지역마다 5%). 건물은 투입도 같은 비율로 준다. 저장 형식은 그대로다 (조건은 시드와 날짜로 다시 계산한다).
 
 | 조건 | 영어 | 깎이는 땅 |
 |---|---|---|
@@ -413,11 +413,11 @@ sim이 아래 제도를 없앴다. 화면이 계속 컴파일되도록 `packages
 - 읽는 함수 (index에서 export):
   - `harvestCondition(world, regionId)` → `HarvestCondition | null` = `{ kind, lands, intensity, cut, origin, start, end }`. `cut`은 감소율(0.2 = −20%), 남은 날 = `end − world.tick`.
   - `harvestLabel(world, regionId, en?)` → `"가뭄 농지 −20% · 45일"` / `"Drought farmland −20% · 45 d"`, 조건이 없으면 `null`.
-  - 이름: `HARVEST_KINDS`(이름·영어 이름·땅), `harvestNameKo(kind)`, `harvestNameEn(kind)`. 땅 이름은 `LAND_NAMES`·`landNameEn`.
+  - 이름: `HARVEST_KINDS`(이름·영어 이름·땅). 땅 이름은 `LAND_NAMES`·`landNameEn`. 글은 직접 만들지 말고 `harvestLabel`을 쓴다 (알림도 같은 함수를 쓴다).
 - 넣을 곳
   - 지역 목록(`views/RegionMap.tsx`)의 지역 이름 옆과 지역 패널(`views/RegionPanel.tsx`) 머리에 `harvestLabel` 칩 하나. 종류별 색: 가뭄 갈색·주황, 홍수 파랑, 산불 빨강 (다크 모드에서도 구분되게).
   - 지역 건물 목록에서 깎이는 땅의 건물(`BUILDING_BY_ID[typeId].land`가 `lands`에 있음)의 산출 옆에 `−20%`.
-- 알림: 조건이 새로 걸리면 그 지역 왕국의 왕실에 `warn` 알림이 한 번 온다 (`regionId` 있음). 글은 `"강변 평야 가뭄: 농지 −20% · 180일"` / `"River Plain drought: farmland −20% · 180 d"`. 플레이어 왕실(id 100) 것은 지금 규칙대로 토스트가 뜬다.
+- 알림: 조건이 새로 걸리면 그 지역 왕국의 왕실에 `warn` 알림이 한 번 온다 (`regionId` 있음). 글은 지역 이름 + `harvestLabel`: `"강변 평야 가뭄 농지 −20% · 180일"` / `"River Plain Drought farmland −20% · 180 d"`. 플레이어 왕실(id 100) 것은 지금 규칙대로 토스트가 뜬다.
 - 지표: `MetricPoint.harvestRegions` = 조건이 걸린 지역 수 (없으면 필드가 없다 → `?? 0`). 통계 그래프에 선 하나로 넣으면 좋다.
 
 ---

@@ -1,6 +1,6 @@
-import { BUILDING_BY_ID, GOOD_IDS, GOODS, LAND_NAMES, TICKS_PER_WEEK, getMethod } from './data';
-import { alertOnce, harvestCondition, logEvent, regionById } from './economy';
-import { buildingNameEn, goodNameEn, harvestNameEn, harvestNameKo, landNameEn, regionNameEn } from './i18n';
+import { BUILDING_BY_ID, GOOD_IDS, GOODS, TICKS_PER_WEEK, getMethod } from './data';
+import { alertOnce, harvestCondition, harvestLabel, logEvent, regionById } from './economy';
+import { buildingNameEn, goodNameEn, regionNameEn } from './i18n';
 import type { Region, World } from './types';
 
 const COOLDOWN = TICKS_PER_WEEK * 4;
@@ -90,9 +90,7 @@ export function weeklyAlerts(w: World) {
     if (!now) continue;
     const before = harvestCondition(w, r.id, w.tick - TICKS_PER_WEEK);
     if (before && before.origin === now.origin && before.start === now.start) continue;
-    const pct = Math.round(now.cut * 100), days = now.end - w.tick;
-    logEvent(w, crownOf(r), `${r.name} ${harvestNameKo(now.kind)}: ${now.lands.map((l) => LAND_NAMES[l]).join('·')} −${pct}% · ${days}일`,
-      { kind: 'warn', regionId: r.id, en: `${regionNameEn(r.id)} ${harvestNameEn(now.kind).toLowerCase()}: ${now.lands.map((l) => landNameEn(l).toLowerCase()).join(', ')} −${pct}% · ${days} d` });
+    logEvent(w, crownOf(r), `${r.name} ${harvestLabel(w, r.id)}`, { kind: 'warn', regionId: r.id, en: `${regionNameEn(r.id)} ${harvestLabel(w, r.id, true)}` });
   }
   // 지역 기아
   for (const r of w.regions) {
