@@ -42,7 +42,7 @@ packages/client   React + Vite. The simulation runs in a Web Worker; the UI only
 
 ## World
 
-- **Seven regions**, each with a fixed number of land cells (arable, forest, ore, building plots). Each building level occupies one cell; regions have hundreds to thousands of cells. Each region has its own market. Each region also has a perk, for example +10% output for mines in the northern mining district.
+- **Seven regions**, each with a fixed number of land cells (arable, forest, ore, building plots). Each building level occupies one cell, except government administration and schools, which use no land (as government buildings do in Victoria 3); construction offices use building plots. Regions have hundreds to thousands of cells. Each region has its own market. Each region also has a perk, for example +10% output for mines in the northern mining district.
 - **About 2.9 million people** at the start, almost all of them tenant farmers.
 - **Twelve goods** in a production chain: raw goods (grain, fibre, timber, ore), processed goods (food, fuel, clothing, metal), finished goods (tools, furniture, precision instruments), plus **transport**, a service produced by railways.
 - **Trade and transport.** Moving goods out of a region (traders, buying inputs from a neighbour, port imports and exports) requires transport bought in the origin market. Rail transport costs about 6% of the cargo value. Whatever cannot go by rail is carried by porters and carts at 30%, paid to local labourers. Only the port city trades abroad, and foreign buyers only pay low prices, so exporting is a loss-making outlet for surplus.

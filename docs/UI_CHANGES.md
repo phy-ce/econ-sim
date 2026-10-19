@@ -387,6 +387,20 @@ sim이 아래 제도를 없앴다. 화면이 계속 컴파일되도록 `packages
 - 건축사무소: `Company.buildUsed`(왕실) = 사무소 포인트 중 공사에 실제로 쓰인 하루 양의 이동평균. AI는 이것으로 사무소를 늘리고 줄인다. 건설 탭에서 하루 능력(`constructionEstimate(...).pointsPerDay`) 옆에 막대로 보여 주면 좋다.
 - 지표(`KingdomMetrics`): `education`·`welfare`가 없어지고 `feesWeek`, `govSpendWeek`(정부 건물 임금 + 원료), `interest`, `policy`(세 단계), `wageIndex`, `debt`가 생겼다. 화면은 아직 이 지표를 쓰지 않는다.
 
+### 2-24. 행정청·학교는 땅을 쓰지 않는다 (건축사무소는 그대로 공장 부지)
+- `BuildingTypeDef.land`가 선택 값이 됐다(`land?: LandType`). 행정청(`admin`)과 학교(`school`)는 `land`가 없다. 땅 칸도 매장량도 보지 않고 어느 자기 지역에나 몇 레벨이든 지을 수 있다.
+- `roomFor(w, regionId, 'admin')`는 `Infinity`를 돌려준다. `landFree`에 `undefined`를 넘기지 않는다.
+- 컴파일을 위해 `CompanyPanel.tsx`에 최소한만 고쳐 두었다:
+  - 짓기 목록(`BuildList`): 땅이 없는 건물은 땅 이름과 남은 칸 수(`<small>`)를 그리지 않는다. 남은 칸은 `Infinity`로 보고 "땅 없음" 표시가 뜨지 않는다.
+  - 짓기 막힘 꼬리표(`buildBlockers`): 땅이 없는 건물에는 "○○ 없음"을 붙이지 않는다.
+  - 내 건물 조작(`Controls`): 땅이 없는 건물은 +, +10 버튼이 땅 때문에 막히지 않는다.
+- 화면 작업자에게: 짓기 카드에서 땅 칸 대신 무엇을 보여 줄지 정한다 (예: 비워 두거나 "—"). 지역 패널의 땅 막대(`RegionPanel.tsx` 132~138행)는 그대로 맞다. 행정청·학교는 공장 부지 사용량에서 빠진다.
+- 건축사무소: 맡은 공사가 없는 날은 쉰다(포인트·자재 없음, `b.idle`). 7일(`TUNE.officeIdleDays`)을 넘게 쉬어야 인부를 해산한다(`disbanded(b)`). 그 전까지는 일자리와 일꾼이 남고 임금이 나간다. 새 필드 `Building.idleDays`(쉰 날 수, 사무소만).
+  - 일자리 수는 `b.idle`이 아니라 `slots(b, s)`(또는 `disbanded(b)`)로 센다. `CompanyPanel.tsx` `rowOf`(47행, 켜진 건물)와 `Workforce.tsx`(14행)의 일자리 계산은 `slots(b, s)`로 바꿔 두었다. 쉬는 7일 동안 "고용 8k / 일자리 0"과 빈 막대가 나오던 것이 없어진다.
+    - `slots`를 쓴 것은 worktree의 클라이언트 typecheck가 저장소 루트의 main sim을 보기 때문이다 (새 이름 `disbanded`는 합친 뒤에 쓸 수 있다).
+  - "쉼" 꼬리표(`CompanyPanel.tsx` 319행)와 원료 막대 숨김(328~329행)은 `b.idle` 그대로 맞다 (쉬는 날은 자재를 쓰지 않는다). `ResourceInspector.tsx`·`RegionPanel.tsx`의 가동률 표시도 `b.idle`이면 0%로 두어도 된다.
+  - 새 필드 `Building.staffPeak`(사무소만, AI 철거 판단용)는 화면에 쓰지 않는다.
+
 ---
 
 ## 3. sim 쪽 필요 사항 (Claude가 처리할 것, UI 작업자는 요청만)
