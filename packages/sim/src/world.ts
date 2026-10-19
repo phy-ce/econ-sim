@@ -1,10 +1,10 @@
 import { BUILDING_BY_ID, GOOD_IDS, GOODS, REGIONS, SKILL_DEFS, SUBSISTENCE, TICKS_PER_WEEK, TIER_COUNTS, TIER_JITTER, TIERS, TUNE, WORKFORCE_RATIO, getMethod } from './data';
-import { emptyJobs, isGovernment, newBuilding, paysDividend, slots, wageCostOf } from './economy';
+import { collectionRatio, emptyJobs, isGovernment, newBuilding, paysDividend, slots, wageCostOf } from './economy';
 import { aggregateHouseholds, findPop, getPop, movePeople, workforce } from './pops';
 import { updateOwnership, updateSubsistence } from './production';
 import { subsistenceWage, syncEmployment } from './labor';
 import { affordableWealth } from './market';
-import { applyStateWages, updateWageIndex } from './finance';
+import { applyStateWages, taxCapacity, updateWageIndex } from './finance';
 import { round2 } from './rng';
 import type { Company, GoodId, Kingdom, MarketGood, PopClass, Region, Skill, World } from './types';
 import { SKILLS, emptyLedger } from './types';
@@ -243,6 +243,12 @@ export function createWorld(seed = 1, opts: CreateWorldOptions = {}): World {
     b.exp = 1;
   }
   syncEmployment(w);
+  // 시작 징수율: 매일 징수(finance.ts collectIncomeTax)와 같은 규칙. 행정청은 아직 사람이 없어 한도가 0이라 0이다
+  for (const k of kingdoms) {
+    let people = 0;
+    for (const p of w.pops) if (regions.find((r) => r.id === p.regionId)?.kingdomId === k.id) people += p.size;
+    k.taxRatio = round2(collectionRatio(taxCapacity(w, k.id), people));
+  }
   // 시작 부: 하루 소득으로 감당할 수 있는 단계 (모든 pop 같은 규칙, 부 이동(updateWealth)과 같은 소득). 처음에는 아무도 현금 소득이 없다.
   // 소작농의 소득은 지대·토지세를 내고 남은 수확의 시장가다 (직접 쓰는 현물 + 파는 남는 것, subsistenceWage)
   for (const r of regions) {

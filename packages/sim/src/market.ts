@@ -133,8 +133,7 @@ export function harvestShares(w: World, r: Region): { rent: number; tax: number 
   const rent = hasLandlords(w, r.id) ? TUNE.rentShare : 0;
   const kd = kingdomById(w, r.kingdomId);
   const land = taxRates(kd).land;
-  // 첫 징수 전(징수율이 아직 없음)에는 걷힌 것이 없으므로 0
-  const tax = land > 0 ? Math.min(1 - rent, land * (kd.taxRatio ?? 0)) : 0;
+  const tax = land > 0 ? Math.min(1 - rent, land * (kd.taxRatio ?? 1)) : 0;
   return { rent, tax };
 }
 
@@ -457,12 +456,13 @@ export function clearMarkets(w: World, book: Book) {
             // 판매 대금 중 지대 몫은 저택 귀족에게. 소작농 부가 TUNE.patronWealth 아래면 귀족이 지대의 TUNE.patronShare 를 돌려준다
             const fr = lot.rentFrac ?? 0, tf = lot.taxFrac ?? 0;
             let rentAmt = amt * fr;
-            const taxAmt = amt * tf;
+            // 남는 게 없는 상품은 지대 + 토지세가 판매량 전부라 부동소수점으로 합이 대금을 넘을 수 있다: 대금 안으로 묶는다
+            const taxAmt = Math.min(amt - rentAmt, amt * tf);
             if (rentAmt > 0 && lot.pop.wealth < TUNE.patronWealth) rentAmt *= 1 - TUNE.patronShare;
             if (rentAmt > 0 && !payRent(w, lot.pop.regionId, rentAmt)) rentAmt = 0;
             if (taxAmt > 0) payLandTax(w, lot.pop.regionId, taxAmt);
             paySubsistence(w, lot.pop, amt - rentAmt - taxAmt);
-            lot.pop.unsoldKind = (lot.pop.unsoldKind ?? 0) + (lot.q - q) * p * (1 - fr - tf);
+            lot.pop.unsoldKind = (lot.pop.unsoldKind ?? 0) + (lot.q - q) * p * Math.max(0, 1 - fr - tf);
             break;
           }
           case 'salvage':

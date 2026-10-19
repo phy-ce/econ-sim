@@ -202,25 +202,41 @@ const MIGRATE_FULL = 2;
 const MIGRATE_MAX = 0.001;
 
 /**
- * 지역 매력도: 그 직종이 이 지역에서 기대할 수 있는 1인당 소득 × 식량 충족률.
- * 하층은 노동자 빈자리 임금과 소작지 여유 중 나은 쪽, 중층은 그 직종 빈자리 임금.
- * 빈자리는 실제로 뽑을 수 있는 자리만 센다 (노동자는 채용과 같은 직종 비율 상한).
+ * 지역 매력도: 그 직종 실업자 한 사람이 이 지역에서 기대할 수 있는 하루 소득 × 식량 충족률.
+ * 빈자리를 임금이 높은 순으로 그 지역 실업자(하층은 소작농 + 노동자, 그 밖은 같은 직종)에게 나눠 준 1인당 소득이다.
+ * 실업자가 빈자리보다 많으면 자리를 못 얻는 사람은 0으로 센다. 실업자가 없으면 가장 좋은 빈자리 임금이다.
+ * 빈자리: 하층은 노동자 자리와 소작지 여유, 그 밖은 그 직종 자리. 실제로 뽑을 수 있는 자리만 센다 (fillable, 채용과 같은 규칙).
  */
 function attraction(w: World, r: Region, prof: PopClass): number {
-  let best = 0;
   const lower = prof === 'peasant' || prof === 'unskilled';
+  const s: Skill = lower ? 'unskilled' : (prof as Skill);
+  const open: { wage: number; n: number }[] = [];
   for (const b of w.buildings) {
     if (b.regionId !== r.id) continue;
     if (isSubsistence(b.typeId)) {
-      if (lower && peasantSlots(b) - (b.tenants ?? 0) > 1) best = Math.max(best, subsistenceWage(w, r));
+      const n = lower ? peasantSlots(b) - (b.tenants ?? 0) : 0;
+      if (n > 0) open.push({ wage: subsistenceWage(w, r), n });
       continue;
     }
-    const s: Skill = lower ? 'unskilled' : (prof as Skill);
-    if (fillable(b, s) - b.employed[s] > 1) best = Math.max(best, paysDividend(b.stateOwned, s) ? dividendWage(b, s) : companyById(w, b.companyId)?.wages[s] ?? 0);
+    const n = fillable(b, s) - b.employed[s];
+    if (n > 0) open.push({ wage: paysDividend(b.stateOwned, s) ? dividendWage(b, s) : companyById(w, b.companyId)?.wages[s] ?? 0, n });
   }
-  let food = 0, n = 0;
-  for (const p of w.pops) if (p.regionId === r.id) { food += p.food * p.size; n += p.size; }
-  return best * (n > 0 ? food / n : 1);
+  let food = 0, size = 0, seekers = 0;
+  for (const p of w.pops) {
+    if (p.regionId !== r.id) continue;
+    food += p.food * p.size; size += p.size;
+    if (p.work === 0 && (lower ? p.prof === 'peasant' || p.prof === 'unskilled' : p.prof === prof)) seekers += workforce(p);
+  }
+  open.sort((a, b) => b.wage - a.wage);
+  const want = Math.max(1, seekers);
+  let left = want, income = 0;
+  for (const o of open) {
+    if (left <= 0) break;
+    const t = Math.min(left, o.n);
+    income += t * o.wage;
+    left -= t;
+  }
+  return (income / want) * (size > 0 ? food / size : 1);
 }
 
 /** 일하는 pop 이 지금 자리에서 받는 1인당 하루 소득 (소작지는 수확 가치, 소유 자리는 배당 추정) */
@@ -238,7 +254,8 @@ function seatWage(w: World, r: Region, p: Pop, b: Building | undefined): number 
 export function migrate(w: World) {
   const cache = new Map<string, number>();
   const attr = (r: Region, prof: PopClass) => {
-    const k = `${r.id}|${prof}`;
+    // 소작농과 노동자는 같은 빈자리를 두고 다투므로 매력도가 같다
+    const k = `${r.id}|${prof === 'peasant' ? 'unskilled' : prof}`;
     if (!cache.has(k)) cache.set(k, attraction(w, r, prof));
     return cache.get(k)!;
   };
