@@ -238,15 +238,15 @@ export const BUILDING_TYPES: BuildingTypeDef[] = [
     ],
   },
   {
-    // 정부 건물: 왕실만 짓고 국고가 임금을 낸다. 1인당 하루 인건비: 가정교사 3,000 ÷ 2만 = 0.15, 공립 15,000 ÷ 10만 = 0.15
-    id: 'school', name: '학교', nameEn: 'School', land: 'plot', buildPoints: 800, stateOnly: true,
+    // 정부 건물: 왕실만 짓고 국고가 임금을 낸다. 땅을 쓰지 않는다 (행정청도 같다). 1인당 하루 인건비: 가정교사 3,000 ÷ 2만 = 0.15, 공립 15,000 ÷ 10만 = 0.15
+    id: 'school', name: '학교', nameEn: 'School', buildPoints: 800, stateOnly: true,
     methods: [
       m({ id: 'school_tutor', name: '귀족 가정교사', nameEn: 'Noble tutors', workers: { gentry: 100 }, inputs: {}, outputs: {}, seats: 20_000 }),
       m({ id: 'school_basic', name: '공립 학교', nameEn: 'Public school', tech: 'printing', workers: jobs(500, 500), inputs: {}, outputs: {}, seats: 100_000 }),
     ],
   },
   {
-    // 목조: 임금 12,000 + 목재·섬유 7,000 → 4포인트 (포인트당 약 4,750)
+    // 목조: 임금 12,000 + 목재·섬유 7,000 → 4포인트 (포인트당 약 4,750). 정부 건물 중 이것만 공장 부지를 쓴다 (빅토리아3 건설 부문만 주마다 레벨 상한이 있다)
     id: 'builder', name: '건축사무소', nameEn: 'Construction office', land: 'plot', buildPoints: 400,
     methods: [
       m({ id: 'build_manual', name: '목조 건설', nameEn: 'Timber building', workers: jobs(800, 200), inputs: { timber: 3000, fiber: 500 }, outputs: {}, construction: 4 }),
@@ -256,7 +256,7 @@ export const BUILDING_TYPES: BuildingTypeDef[] = [
   },
   {
     // 세금은 행정청이 감당하는 인구만큼만 걷힌다 (1레벨 50만 명, 전문 관료제는 3배)
-    id: 'admin', name: '행정청', nameEn: 'Government administration', land: 'plot', buildPoints: 400, stateOnly: true,
+    id: 'admin', name: '행정청', nameEn: 'Government administration', buildPoints: 400, stateOnly: true,
     methods: [
       m({ id: 'admin_hereditary', name: '세습 관료제', nameEn: 'Hereditary bureaucrats', workers: { skilled: 400, gentry: 100 }, inputs: {}, outputs: {}, taxCapacity: TAX_PEOPLE_PER_LEVEL }),
       m({ id: 'admin_professional', name: '전문 관료제', nameEn: 'Professional bureaucrats', tech: 'printing', workers: { skilled: 500 }, inputs: { furniture: 100 }, outputs: {}, taxCapacity: TAX_PEOPLE_PER_LEVEL * 3 }),
@@ -283,7 +283,6 @@ export function scaleBonus(level: number): number {
 
 /**
  * 조정값 (테스트로 여러 값을 비교하는 손잡이). 시작 전에 바꾸면 그 판 전체에 적용된다.
- * - peasantMarketShare: 소작지 수확 중 시장에 파는 비율 (나머지는 현물로 먹는다)
  * - rentShare: 소작지 수확 중 현금 지대로 저택 귀족에게 가는 비율 (그만큼 더 팔아 낸다)
  * - patronWealth, patronShare: 소작농 부가 patronWealth 아래면 귀족이 지대의 patronShare 를 돌려준다
  * - growthEq: 신분별로 출생과 사망이 같아지는 생활수준 (이보다 높으면 인구가 는다)
@@ -309,6 +308,11 @@ export function scaleBonus(level: number): number {
  * - meatLinear, meatQuad: 고기 필요 = linear × (부 − 8) + quad × (부 − 8)²
  * - privateShare: 왕실이 짓는 건물(행정청·건축사무소 제외) 공사비 중 민간 상회가 내는 비율 (그만큼 지분)
  * - shrinkWeeks: 마지막 레벨의 손익이 이 주 수 동안 계속 마이너스면 AI가 철거를 시작한다
+ * - officeShrinkWeeks: 건축사무소에 빈 레벨이나 남는 포인트가 이 주 수 동안 이어지면 AI가 그만큼 헌다 (빈 레벨은 그동안 한 번도 사람이 차지 않은 것만)
+ * - officeIdleDays: 맡은 공사가 없는 날이 이 일수를 넘으면 사무소가 인부를 해산한다 (그동안은 임금을 주며 붙잡아 둔다)
+ *   두 값은 20년 × 시드 1·2로 비교했다 (하나씩 바꿈, DECISIONS.md 7-4의 표). 철거 26주는 10~20년차 하루 사용 포인트가 69로 52주(98)보다 크게 적고,
+ *   78주는 3~10년차 정부 건물 부지 몫이 26.5%(52주 24%)이고 한 지역 40% 이상 표본이 76(52주 51)이다.
+ *   유예 3·7·10·14·21·28일 중 10일이 레벨을 지키면서(10~20년차 평균 858, 시드 1~4) 40% 이상 표본이 거의 없고(2) 헐린 사무소 레벨이 가장 적다
  * - salvageShare, salvageDays: 철거한 레벨 자재 중 회수하는 비율, 회수 자재를 나눠 파는 날 수
  * - swapMult: 땅이 꽉 찼을 때 새 후보 수익률이 자기 건물 마지막 레벨 수익률의 이 배수를 넘으면 그 레벨을 헌다
  * - employedMigrate: 일하는 pop 의 이주 속도 (실업 pop 대비 비율)
@@ -332,7 +336,6 @@ export function scaleBonus(level: number): number {
  *   걸린 지역 소작농 식량은 [2,6]이 0.73~0.79, [4,8]이 0.66~0.69이고, [4,8]은 지역 최저가 기아선 0.4까지 간다 (0.05·[4,8]은 0.32)
  */
 export const TUNE = {
-  peasantMarketShare: 0.1,
   rentShare: 0.15,
   patronWealth: 2,
   patronShare: 0.5,
@@ -376,6 +379,8 @@ export const TUNE = {
   treasuryHighWeeks: 52, // 1년치
   startTreasuryWeeks: 26,
   shrinkWeeks: 26,
+  officeShrinkWeeks: 52, // 26주는 공사가 크게 줄고(10~20년차 하루 사용 포인트 69), 78주는 부지 몫과 40% 이상 지역이 늘어난다
+  officeIdleDays: 10, // 사무소 새 규칙에서 3·7·10·14·21·28일 비교 (DECISIONS.md 7-4). 10일이 레벨을 지키며 한 지역 40% 이상이 거의 없고 철거가 가장 적다
   salvageShare: 0.5,
   salvageDays: 28,
   swapMult: 3,
@@ -404,7 +409,8 @@ export const HARVEST_KINDS: HarvestDef[] = [
 
 /**
  * 소작: 소작지 1칸(레벨)에서 일할 수 있는 소작농(노동 인구)과 1인당 하루 산출.
- * 수확의 TUNE.peasantMarketShare 만 시장에 팔고 나머지는 소작농이 먹는다. 먹고 남은 것은 시장에 나오지 않는다 (빅토리아3 자급 산출).
+ * 소작농은 지대·토지세를 내고 그날 쓸 만큼 남긴 뒤 나머지를 판다 (market.ts harvest).
+ *   고정 판매 10%, 세금 모자라면 더 파는 규칙과 비교해 골랐다 (수치는 docs/DECISIONS.md 7-2). 조정값은 없다.
  * 곡물은 식구(소비 단위 2.5)가 부 5로 먹을 만큼이다. 의복·가구는 만들지 않는다 (공장에서만 나온다)
  */
 export const SUBSISTENCE = {

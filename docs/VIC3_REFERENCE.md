@@ -47,6 +47,19 @@
   - 민간 공사는 투자 풀이 물자만 내고, 부문 임금은 국가가 낸다.
 - 생산 방식은 레벨당 2/5/10/15 포인트다. 레벨당 노동자 약 800→600명, 사무원 100명, 관료 100명이다 (Building 문서, 1.12 확인).
 
+## 정부 건물과 땅, 건설 부문 레벨 상한 (2026-10-19 확인)
+- "Most urban buildings have no limit on their total levels and can be built in any state." (https://vic3.paradoxwikis.com/Buildings, 직접 확인)
+  - 같은 문서에서 농지(arable land) 상한은 농촌 건물에만 나온다. 행정청·대학에는 땅이나 도시화 상한이 없다.
+- 건설 부문: "Wages must be paid regardless of whether the construction is used or not." (같은 문서, 직접 확인)
+- 아래는 게임 스크립트 원본을 옮긴 GitHub 미러에서 확인했다 (조사 보고, 1.13.11):
+  - `bg_government`(행정청, 대학)와 `bg_urban_facilities`는 `always_possible = yes`이고 `land_usage`가 없다. 땅도 도시화 자원도 쓰지 않는다 (https://github.com/jink47787/Historical_MP_Series_Vic3/blob/main/basegame-ver/common/building_groups/00_building_groups.txt).
+  - 레벨 상한(`has_max_level = yes`)이 있는 도시 건물은 건설 부문뿐이다 (같은 저장소 `common/buildings/13_construction.txt`).
+  - 주(state)당 건설 부문 상한은 기술로 늘어난다: urbanization +10, urban_planning·modern_sewerage·steel_frame_buildings·elevator 각 +5, 최대 30 (같은 저장소 `common/technology/technologies/30_society.txt`).
+  - `bg_government`는 `urbanization = 20`(레벨당 도시화 +20)이다. `land_usage = urban`은 `bg_service`에만 있다 (같은 저장소 `00_building_groups.txt`, 2026-10-19 직접 확인).
+  - 위키 Building 문서는 "Most buildings contribute between +5 and +20 urbanization per level."라고만 쓴다. 정부 건물의 값이나 `land_usage`는 위키에 없다 (https://vic3.paradoxwikis.com/Building, 직접 확인).
+- 이 게임에 옮긴 것: 행정청·학교는 땅을 쓰지 않는다. 건축사무소는 공장 부지를 쓴다 (빅토리아3의 주당 레벨 상한 대신 지역 부지가 상한이다).
+- **확인 못 함:** 건설 부문이 쓰지 않은 용량의 자재를 사는지 (위 "건설"의 "쓰지 않은 용량은 물자를 쓰지 않는다"는 Construction 문서 기준).
+
 ## 국고 (Budget 문서)
 - 금 보유고 소프트 상한은 GDP의 20%다. 넘으면 효과가 줄어든다.
 - 보유고가 비고 적자면 자동으로 빚을 낸다. 흑자로 원금을 갚는다.
@@ -61,10 +74,36 @@
   - 종교: 레벨당 +10%
 - 대학은 정부 건물이다. 기본 방식은 사무원 250 + 노동자 250, 혁신 1, 자격 +10%다.
 
-## 소작농 소득 (일부만 확인)
-- 소작농은 필요의 5%만 시장에서 산다. 나머지는 "자급 산출" 묶음으로 받고, 이것은 시장과 상호작용하지 않는다 (https://vic3.paradoxwikis.com/Needs).
-- 자급 농장 기본 방식: 레벨당 소작농 5,000명이다.
-- **확인 못 함:** 산출이 돈으로 바뀌는 정확한 공식, 시장가로 매기는지 여부.
+## 소작농 소득
+게임 스크립트 원본은 GitHub 미러에서 확인했다.
+- G = https://github.com/jink47787/Historical_MP_Series_Vic3/blob/main/basegame-ver/common/ (커밋 "base latest 1.13.11")
+- T = https://github.com/tjysdsg/Victoria-3-files/blob/master/game/ (1.9.0)
+
+**산출은 두 갈래다**
+- 시장에 파는 소량의 상품과, 소작농이 직접 쓰는 현물 소득(Subsistence Output)으로 나뉜다 (T localization/english/concepts_l_english.yml `concept_subsistence_building_desc`).
+- Subsistence Output은 건물 수입에서 나가지 않고 소득세도 붙지 않는다 (같은 파일 `concept_subsistence_output_desc`). 위키도 "시장과 상호작용하지 않는다"고 쓴다 (https://vic3.paradoxwikis.com/Needs).
+
+**시장 판매분은 생산 방식이 정한 고정 수량이다** (G production_methods/12_subsistence.txt)
+- 자급 농장 기본: 노동자 규모에 비례해 grain 1.0, fabric 0.5, wood 0.5, services 0.5. 레벨당 소작농 5,000명.
+- 가내수공업 방식: clothes, furniture, liquor 각 0.25.
+- 판매 몫은 가격에 반응하지 않는다. 금액만 시장가로 변한다. 비율을 가격으로 정하는 규칙은 못 찾았다.
+
+**현물 몫은 토지법이 정한다** (같은 파일)
+- 소작·상업농·집단농 등 (`pm_serfdom_no`): `building_subsistence_output_add = 4`.
+- 농노제: 3, 대신 시장용 grain +0.5. 부역(장원제): 3, grain +0.25. 자영농지: 4, grain +0.25.
+- 농노제·장원제는 현물 몫을 시장 판매로 옮긴다.
+
+**시장 구매** (G pop_types/peasants.txt)
+- `consumption_mult = 0.05`: 소작농 구매 묶음의 5%만 주(州) 시장 수요로 들어간다 (https://vic3.paradoxwikis.com/Needs 와 같다).
+- `subsistence_income = yes`, `pays_land_tax = yes`, `wage_weight = 0.2`.
+
+**토지세는 1인당이다** (https://vic3.paradoxwikis.com/Treasury, https://vic3.paradoxwikis.com/Vickypedia)
+- 소작농은 인두세 대신 토지세를 낸다.
+- 토지 기반 과세의 토지세: 1인당 연 0.4 / 0.55 / 0.7 / 0.85 / 1.0 (세금 단계별). 위키 예시(5천 명, 중간 단계 → 주 £67.3)로 검산한 값이다. 수확 비율로 걷는 것이 아니다.
+
+**확인 못 함:** 현물 소득이 돈 가치로 바뀌는 정확한 공식, 그것을 시장가로 매기는지 여부.
+
+**이 게임과 다른 점**: 빅토리아3는 판매량이 방식마다 고정이다. 이 게임은 지대·세금을 낸 뒤 쓰고 남는 것을 판다 (DESIGN 4장). 두 방식 모두 판매량이 가격에 반응하지 않는다.
 
 ## 기상 조건 (harvest conditions, 1.8 도입)
 - 1.8 패치 노트: "Added 13 harvest conditions that can trigger around the world affecting rural buildings and infrastructure" (https://vic3.paradoxwikis.com/Patch_1.8).

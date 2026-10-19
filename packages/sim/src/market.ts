@@ -84,11 +84,16 @@ export function resetMarkets(w: World) {
 
 // ---------------------------------------------------------------- 소작
 
+/** 소작지 노동 인구 wf 의 하루 수확 */
+function harvestOutput(wf: number): GoodBag {
+  return { grain: wf * SUBSISTENCE.grainPerWorker, fiber: wf * SUBSISTENCE.fiberPerWorker, timber: wf * SUBSISTENCE.timberPerWorker };
+}
+
 /**
  * 소작지 수확 (빅토리아3 자급 산출): 소작농 노동 인구 × 1인당 산출.
- * 수확의 TUNE.peasantMarketShare 만 시장에 팔아 현금(세금과 구매용)을 얻고, 나머지는 소작농이 현물로 먹는다.
- * 먹고 남은 현물은 시장에 나오지 않는다 (collectOrders 에서 버리고, 그 가치는 부 계산의 소득에만 넣는다).
- * 그 지역 저택에 귀족이 있으면 수확의 TUNE.rentShare 도 함께 팔아 그 판매 대금을 현금 지대로 귀족에게 낸다.
+ * 상품마다 지대(TUNE.rentShare, 그 지역 저택에 귀족이 있을 때)와 토지세 몫을 내놓고, 남은 것 중 오늘 지금 부 단계로 쓸 만큼
+ * (collectOrders 와 같은 현물 사용 순서·상한) 남기고 나머지를 판다. 판매 대금은 지대 → 귀족, 토지세 → 국고, 나머지 → 소작농.
+ * 그래서 소작농이 내놓는 양은 자기 필요와 부로만 정해진다 (가격·수요와는 상관없다).
  */
 export function harvest(w: World, book: Book) {
   for (const b of w.buildings) {
@@ -97,39 +102,39 @@ export function harvest(w: World, book: Book) {
     b.last.output = {};
     if (!pop || pop.size <= 0) continue;
     const r = regionById(w, b.regionId);
-    // 기상 조건이 걸리면 수확이 그만큼 줄어든다 (economy.ts harvestFactor)
-    const k = workforce(pop) * harvestFactor(w, r.id, 'arable');
     const { rent, tax } = harvestShares(w, r);
-    const out: GoodBag = { grain: k * SUBSISTENCE.grainPerWorker, fiber: k * SUBSISTENCE.fiberPerWorker, timber: k * SUBSISTENCE.timberPerWorker };
+    // 기상 조건이 걸리면 수확이 그만큼 줄어든다 (economy.ts harvestFactor)
+    const out = harvestOutput(workforce(pop) * harvestFactor(w, r.id, 'arable'));
     // 토지 기반 과세: 걷어야 할 토지세 (팔리는 몫만, 징수율 전). 1인당 과세면 토지세율 0
     const kd = kingdomById(w, r.kingdomId);
     const land = taxRates(kd).land;
     if (land > 0) kd.landOwed = (kd.landOwed ?? 0) + landTaxValue(r, out, land);
-    const total = TUNE.peasantMarketShare + rent + tax;
-    const rentFrac = rent / (total || 1), taxFrac = tax / (total || 1);
+    // 지대·토지세를 뺀 몫에서 그날 쓸 만큼 쓰고 남는 것 (GOOD_IDS 순서). 쓰는 만큼만 현물로 남는다
+    const keep = 1 - rent - tax;
+    const surplus = useOwnKind(pop.size, pop.wealth, GOOD_IDS.map((g) => (out[g] ?? 0) * keep));
     for (const g of GOOD_IDS) {
       const q = out[g];
       if (!q) continue;
       b.last.output[g] = q;
-      const sell = q * total;
-      pop.inKind[g] = q - sell;
-      if (sell <= 0) continue;
+      const sell = q * (rent + tax) + surplus[GOOD_INDEX[g]];
+      pop.inKind[g] = Math.max(0, q - sell);
+      if (sell <= 1e-9) continue;
       r.market[g].supply += sell;
       addBy(r.market[g].supplyBy, 'subsistence', sell);
-      addLot(book, r.id, g, { kind: 'sub', pop, q: sell, rentFrac, taxFrac });
+      addLot(book, r.id, g, { kind: 'sub', pop, q: sell, rentFrac: (q * rent) / sell, taxFrac: (q * tax) / sell });
     }
   }
 }
 
 /**
- * 소작 수확 중 시장 판매분과 함께 팔아 남에게 가는 몫: 지대(그 지역 저택에 귀족이 있을 때만)와
- * 토지세(토지 기반 세법일 때, 수확의 토지세율(taxRates)을 징수율만큼 국고 몫으로. 상한 1 − 시장 판매 − 지대)
+ * 소작 수확 중 남에게 가는 몫: 지대(그 지역 저택에 귀족이 있을 때만)와
+ * 토지세(토지 기반 세법일 때, 수확의 토지세율(taxRates)을 징수율만큼 국고 몫으로. 상한 1 − 지대)
  */
 export function harvestShares(w: World, r: Region): { rent: number; tax: number } {
   const rent = hasLandlords(w, r.id) ? TUNE.rentShare : 0;
   const kd = kingdomById(w, r.kingdomId);
   const land = taxRates(kd).land;
-  const tax = land > 0 ? Math.min(1 - TUNE.peasantMarketShare - rent, land * (kd.taxRatio ?? 1)) : 0;
+  const tax = land > 0 ? Math.min(1 - rent, land * (kd.taxRatio ?? 1)) : 0;
   return { rent, tax };
 }
 
@@ -195,45 +200,32 @@ export function collectOrders(w: World, book: Book) {
     // 상품별 수량은 GOOD_IDS 순서 배열로 센다
     const goods = GOOD_IDS.map(() => 0);
     const inKind = GOOD_IDS.map((g) => p.inKind[g] ?? 0);
-    let basketCost = 0, inKindValue = 0, foodNeed = 0, foodInKind = 0;
+    let cashCost = 0, foodNeed = 0, foodInKind = 0;
     const foodBuy: PopPlan['foodBuy'] = [];
     for (const n of NEEDS) {
       const per = need[n.id];
       if (!per) continue;
-      let units = per * units0;
-      const total = units;
+      // 현물을 먼저 쓰고 (useKind), 남은 필요를 산다
+      const total = per * units0;
+      const units = useKind(n, total, p.wealth, inKind);
       const isFood = n.id === 'nourishment';
-      if (isFood) foodNeed = units;
-      // 현물도 그 상품이 채울 수 있는 최대 비중(max)까지만 쓴다
-      for (const opt of n.options) {
-        const i = GOOD_INDEX[opt.good];
-        const avail = inKind[i];
-        if (avail <= 0 || units <= 0) continue;
-        const use = Math.min(units, avail / opt.units, rawMax(opt.max, p.wealth) * total);
-        inKind[i] = avail - use * opt.units;
-        units -= use;
-        if (isFood) foodInKind += use;
-        const value = use * opt.units * r.market[opt.good].price;
-        inKindValue += value;
-        basketCost += value;
-      }
+      if (isFood) { foodNeed = total; foodInKind = total - units; }
       for (const opt of (memo[n.id] ??= needSplit(r, n.id, p.wealth))) {
         const qty = units * opt.units * opt.share;
         if (qty <= 0) continue;
-        basketCost += qty * r.market[opt.good].price;
+        cashCost += qty * r.market[opt.good].price;
         if (isFood) foodBuy.push({ good: opt.good, qty, units: opt.units });
         goods[GOOD_INDEX[opt.good]] += qty;
       }
     }
-    // 쓰고 남은 현물은 시장에 내놓지 않는다. 그 가치는 부 계산의 소득에만 넣는다
+    // 쓴 현물의 시장가 (소작농은 수확에서 그날 쓸 만큼만 현물로 남기므로 남는 현물은 없다)
+    let inKindValue = 0;
     for (let i = 0; i < GOOD_IDS.length; i++) {
-      const left = inKind[i];
-      if (left <= 1e-9) continue;
       const g = GOOD_IDS[i];
-      p.inKind[g] = (p.inKind[g] ?? 0) - left;
-      p.unsoldKind = (p.unsoldKind ?? 0) + left * r.market[g].price;
+      const had = p.inKind[g] ?? 0;
+      if (had > 0) inKindValue += (had - inKind[i]) * r.market[g].price;
     }
-    const cashCost = basketCost - inKindValue;
+    const basketCost = cashCost + inKindValue;
     const budget = Math.max(0, Math.min(p.savings, p.incomeEma + p.savings * SAVINGS_DRAW));
     // 돈이 모자라면 식량부터 산다: 식량 몫을 먼저 채우고 남는 돈으로 나머지를 같은 비율로 산다
     const foodCost = foodBuy.reduce((a, f) => a + f.qty * r.market[f.good].price, 0);
@@ -465,12 +457,13 @@ export function clearMarkets(w: World, book: Book) {
             // 판매 대금 중 지대 몫은 저택 귀족에게. 소작농 부가 TUNE.patronWealth 아래면 귀족이 지대의 TUNE.patronShare 를 돌려준다
             const fr = lot.rentFrac ?? 0, tf = lot.taxFrac ?? 0;
             let rentAmt = amt * fr;
-            const taxAmt = amt * tf;
+            // 남는 게 없는 상품은 지대 + 토지세가 판매량 전부라 부동소수점으로 합이 대금을 넘을 수 있다: 대금 안으로 묶는다
+            const taxAmt = Math.min(amt - rentAmt, amt * tf);
             if (rentAmt > 0 && lot.pop.wealth < TUNE.patronWealth) rentAmt *= 1 - TUNE.patronShare;
             if (rentAmt > 0 && !payRent(w, lot.pop.regionId, rentAmt)) rentAmt = 0;
             if (taxAmt > 0) payLandTax(w, lot.pop.regionId, taxAmt);
             paySubsistence(w, lot.pop, amt - rentAmt - taxAmt);
-            lot.pop.unsoldKind = (lot.pop.unsoldKind ?? 0) + (lot.q - q) * p * (1 - fr - tf);
+            lot.pop.unsoldKind = (lot.pop.unsoldKind ?? 0) + (lot.q - q) * p * Math.max(0, 1 - fr - tf);
             break;
           }
           case 'salvage':
@@ -555,32 +548,39 @@ export function basketCostAt(r: Region, size: number, wealth: number): number {
   return v;
 }
 
-/** 이 부 단계 묶음 중 가진 현물로 채우고 남아 돈으로 사야 하는 몫 (collectOrders 와 같은 순서로 현물을 쓴다) */
-export function cashCostAt(r: Region, size: number, wealth: number, inKind: GoodBag): number {
-  const units0 = size * CONSUMPTION_PER_CAPITA;
-  const need = needsAt(wealth);
-  const left: GoodBag = { ...inKind };
-  let v = 0;
-  for (const n of NEEDS) {
-    let units = need[n.id] * units0;
-    if (!units) continue;
-    const total = units;
-    for (const opt of n.options) {
-      const avail = left[opt.good] ?? 0;
-      if (avail <= 0 || units <= 0) continue;
-      const use = Math.min(units, avail / opt.units, rawMax(opt.max, wealth) * total);
-      left[opt.good] = avail - use * opt.units;
-      units -= use;
-    }
-    for (const opt of needSplit(r, n.id, wealth)) v += units * opt.units * opt.share * r.market[opt.good].price;
+/**
+ * 필요 하나(units 단위)를 가진 현물로 채운다. 가계 주문(collectOrders)과 소작농 판매(useOwnKind)가 같이 쓰는 규칙:
+ * 선택지 순서로, 상품마다 그 상품이 채울 수 있는 최대 비중(rawMax)까지만 쓴다.
+ * left(GOOD_IDS 순서 수량)에서 쓴 만큼 빼고, 현물로 못 채운 필요 단위를 돌려준다
+ */
+function useKind(n: NeedDef, units: number, wealth: number, left: number[]): number {
+  const total = units;
+  for (const opt of n.options) {
+    const i = GOOD_INDEX[opt.good];
+    const a = left[i];
+    if (a <= 0 || units <= 0) continue;
+    const use = Math.min(units, a / opt.units, rawMax(opt.max, wealth) * total);
+    left[i] = a - use * opt.units;
+    units -= use;
   }
-  return v;
+  return units;
 }
 
-/** 직접 쓰는 현물과 하루 현금 소득으로 감당할 수 있는 가장 높은 부 단계 */
-export function affordableWealth(r: Region, size: number, income: number, inKind: GoodBag = {}): number {
+/** size 명, 부 wealth 인 pop 이 현물 left(GOOD_IDS 순서) 로 오늘 필요를 채우고 남는 양 (left 를 그 양으로 바꿔 돌려준다) */
+function useOwnKind(size: number, wealth: number, left: number[]): number[] {
+  const units0 = size * CONSUMPTION_PER_CAPITA;
+  const need = needsAt(wealth);
+  for (const n of NEEDS) {
+    const per = need[n.id];
+    if (per) useKind(n, per * units0, wealth, left);
+  }
+  return left;
+}
+
+/** 하루 소득으로 감당할 수 있는 가장 높은 부 단계 (시작 부) */
+export function affordableWealth(r: Region, size: number, income: number): number {
   let L = WEALTH_MIN;
-  while (L < WEALTH_MAX && cashCostAt(r, size, L + 1, inKind) <= income) L++;
+  while (L < WEALTH_MAX && basketCostAt(r, size, L + 1) <= income) L++;
   return L;
 }
 
