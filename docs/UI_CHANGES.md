@@ -11,6 +11,17 @@
   - 루트에서 `npm run typecheck`가 통과해야 한다.
   - 개발 서버는 `cd packages/client && npx vite --port 5199`로 띄운다.
 
+## 0. 지금 할 일 (2026-10-19 기준, 위에서부터)
+1. **재정 탭 정책 단계 (2-23). 지금 재정 조작이 전부 막혀 있다.** `FinancePanel.tsx` 22행 슬라이더가 0~1 비율을 보내는데 sim의 `setBudget`은 정수 1~5만 받는다. 세 손잡이(`tax`·`wages`·`research`)를 1~5단계 선택으로 바꾼다.
+2. **행정청·학교는 땅이 없다 (2-24).** 짓기 카드에서 땅 칸 대신 무엇을 보일지 정한다. 건축사무소 일자리 표시는 컴파일용으로 `slots(b, s)`를 쓰게 고쳐 두었다 (`CompanyPanel.tsx` 47행, `Workforce.tsx` 14행). 이제 `disbanded(b)`도 export된다.
+3. **기상 조건 (2-25).** 지역 목록·지역 패널에 `harvestLabel` 칩, 깎이는 건물의 산출 옆 `−20%`, 통계에 `harvestRegions` 선.
+4. **항구 표시 정리.** sim에서 항구·해외 무역 코드를 없앴다 (`PORTS_OPEN`은 sim에 없다). 클라이언트 `systemMetrics.ts`의 `PORTS_OPEN = false`와 `RegionMap.tsx`·`RegionPanel.tsx`의 항구 배지는 지우거나 장식으로만 둔다. `Region.spaceport`(항구 지역 표시)는 데이터에 남아 있다.
+5. **행정청 세금 역량.** `taxCapacity(world, kingdomId)`를 index에서 export했다. 필드 `Kingdom.taxCapacity`·`taxDue`로 읽어도 된다.
+- 바뀌지 않는 것: 소작농 판매 규칙(먹고 남는 것만 판다)과 왕실 학교 AI는 화면 변경이 없다. 현물 값의 뜻도 그대로다.
+- **아직 sim에 없음 (만들지 말 것, 들어오면 이 목록에 올린다):**
+  - 건물별 임금·현금·보조금 (브랜치 wt-wage). 들어오면 국영 임금 손잡이(`budget.wages`)가 없어지고, 건물 패널에 임금·현금·보조금 켜기가 생기고, 저장 형식이 5로 바뀐다(옛 저장은 `migrateWorld`로 변환). 그래서 1번에서 국영 임금 손잡이는 작게 두어도 된다.
+  - 저장값 소수 둘째 자리 규칙 (브랜치 wt-dec). 저장 형식과 일부 값의 단위가 바뀔 수 있다.
+
 ---
 
 ## 1. 바뀐 시스템 요약
@@ -423,8 +434,6 @@ sim이 아래 제도를 없앴다. 화면이 계속 컴파일되도록 `packages
 ---
 
 ## 3. sim 쪽 필요 사항 (Claude가 처리할 것, UI 작업자는 요청만)
-- 지금 `packages/sim/src/index.ts`가 export하지 않아서 UI가 쓰려면 추가가 필요한 것
-  - `PORTS_OPEN` (market.ts)
-  - `taxCapacity` (finance.ts). `Kingdom.taxCapacity`와 `taxDue` 필드는 이미 매주 채워지므로 필드만 읽어도 된다.
-  - `peasantSlots` (economy.ts 쪽 export 여부 확인)
-- 이미 export되는 것: `paysDividend`, `landlordJobs`, `kingdomGdp`, `kingdomById`, `builderOf`, `companyById`
+- 남은 요청 없음 (2026-10-19).
+  - 처리함: `taxCapacity` export, `peasantSlots`(economy.ts, 이미 export됨). `PORTS_OPEN`은 sim에서 항구 코드를 없애 export할 것이 없다 (0장 4번).
+- 이미 export되는 것: `paysDividend`, `landlordJobs`, `kingdomGdp`, `kingdomById`, `builderOf`, `companyById`, `peasantSlots`, `disbanded`, `slots`, `harvestCondition`, `harvestLabel`, `HARVEST_KINDS`, `taxRates`, `taxCapacity`

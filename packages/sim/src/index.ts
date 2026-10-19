@@ -11,6 +11,6 @@ export { borderCost, kingdomById, kingdomOf, DEFAULT_TARIFF } from './kingdoms';
 export { workforce, QUAL_RATE } from './pops';
 export * from './i18n';
 export { estimateAfterEntry } from './outlook';
-export { taxRates } from './finance';
+export { taxRates, taxCapacity } from './finance';
 export { recordMetrics, METRICS_EVERY } from './metrics';
 export type { MetricPoint, KingdomMetrics, GoodMetrics } from './metrics';
