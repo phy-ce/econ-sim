@@ -1,4 +1,4 @@
-import { GOOD_IDS, SKILL_DEFS, TICKS_PER_WEEK, getMethod } from './data';
+import { EDUCATION_FLOOR, EDUCATION_RANGE, GOOD_IDS, SKILL_DEFS, TICKS_PER_WEEK, getMethod } from './data';
 import { round2 } from './rng';
 import { colonyPopulation, colonySol, marketWage, totalMoney, unemploymentRate } from './economy';
 import { runAi } from './ai';
@@ -71,10 +71,6 @@ function applyWagePolicy(w: World) {
     }
   }
 }
-
-/** 교육 접근도의 바닥값과 학교가 모든 인구를 감당할 때의 최대 상승폭 */
-const EDUCATION_FLOOR = 0.1;
-const EDUCATION_RANGE = 0.8;
 
 /** 교육 접근도는 학교가 감당하는 인구 비율을 향해 천천히 움직인다 */
 function updateEducation(w: World) {

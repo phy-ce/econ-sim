@@ -319,7 +319,10 @@ export function scaleBonus(level: number): number {
  * - wageLossCut: 회사가 지난주 적자면 임금을 2% 깎는다
  * - qualSkilledL, qualExpertL: 기술자·전문가 자격이 쌓이기 시작하는 문해력
  * - qualRate: 자격이 쌓이는 속도 배율
- * - schoolValue: 왕실이 학교를 지을 때 학교가 새로 감당하는 1인당 하루 가치 (학교 1레벨 인건비 15,000 ÷ 10만 명 = 0.15)
+ * - schoolValue: AI 왕실이 보는 학교 자리 1개의 기본 하루 가치 (학교 1레벨 인건비 15,000 ÷ 10만 명 = 0.15).
+ *   실제 가치는 × (1 + 지역 문해력 부족 + 왕국 숙련 일자리 부족)이고, 목표(schoolTarget)까지의 자리만 센다 (ai.ts seatValue)
+ * - schoolTarget: AI 왕실의 지역 문해력 목표. 학교 자리를 이 문해력에 닿을 만큼까지 짓는다 (기술자 자격 문턱 qualSkilledL 위여야 자격자가 나온다)
+ * - schoolTaxMax: AI 왕실은 세금 수준이 이 단계 이하일 때만 새 학교를 짓는다 (운영비를 낼 세금 칸을 남긴다)
  * - govWageLevels: 국영 임금 수준 1~5단계의 배율. 국영 임금 = 기본 임금 × 왕국 임금 지수 × 이 배율
  * - researchShare, researchLevels: 주간 연구비 = 주간 경제 규모 × researchShare × 연구비 수준 배율
  * - treasuryLowWeeks, treasuryHighWeeks: AI 왕실은 국고가 주간 국정 지출의 low 주치보다 적으면 조이고 high 주치를 넘으면 푼다.
@@ -361,6 +364,8 @@ export const TUNE = {
   qualExpertL: 0.6,
   qualRate: 0.25,
   schoolValue: 0.3,
+  schoolTarget: 0.6, // 0.45·0.5·0.6 비교 (DECISIONS.md 7-4): 0.6이 20년차 소작농·건물 레벨·자격자가 가장 낫다
+  schoolTaxMax: 4,
   taxLaw: 'land' as 'land' | 'capita',
   landTax: 0.2, // 토지세: 소작지 수확의 20% (지대 rentShare 와 따로)
   peasantPoll: 0.25,
@@ -516,3 +521,7 @@ export function needsAt(wealth: number): Record<NeedId, number> {
 
 export const TICKS_PER_YEAR = 360;
 export const TICKS_PER_WEEK = 7;
+
+/** 교육 접근도의 바닥값과 학교가 모든 인구를 감당할 때의 최대 상승폭 (tick.ts updateEducation, AI 학교 목표 ai.ts schoolWanted) */
+export const EDUCATION_FLOOR = 0.1;
+export const EDUCATION_RANGE = 0.8;
