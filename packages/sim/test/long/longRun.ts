@@ -4,10 +4,9 @@ import { laborerFood } from '../helpers';
 
 export const LONG_TIMEOUT = 600_000;
 
-// 장기: 20년이면 경제가 다 발전한다. 시드마다 파일을 나눠 병렬로 돈다.
-// 소작농 비중 5년차 70% 이상, 10년차 50~70%, 20년차 35% 이하.
-// 기술 17개는 앞선 왕국 기준 15~20년차에 다 열리고, 4단계 기술은 8년차 전에는 열리지 않는다.
-// 그동안 노동자는 대체로 먹고 산다 (식량 충족 최저 40%, 평균 80%).
+// 장기 20년: 시드마다 파일을 나눠 병렬로 돈다.
+// 화폐 보존, 4단계 기술은 8년차 전에는 열리지 않음, 소작농이 노동자로 옮겨 감, 노동자는 대체로 먹고 삶 (식량 충족 최저 40%, 평균 80%).
+// 소작농 비중과 기술 완료 연도는 목표로 두지 않는다 (개발 초기라 기술을 더 넣는다, 2026-10-19 사용자). 값은 출력만 한다.
 // 기준은 expect.soft 로 판정해서, 하나가 어긋나도 나머지 기준의 결과까지 한 번에 보인다.
 export function longRun(seed: number) {
   const w = createWorld(seed, { withPlayer: false });
@@ -34,12 +33,6 @@ export function longRun(seed: number) {
   expect.soft(worstDrift, `가장 큰 어긋남: ${worstYear}년차`).toBeLessThan(1e-9);
   expect.soft(Math.abs(moneyIdentity(w) - m0) / m0).toBeLessThan(1e-9);
   console.log(`seed ${seed}: 소작농 5년 ${(share[5] * 100).toFixed(0)}% 10년 ${(share[10] * 100).toFixed(0)}% 20년 ${(share[20] * 100).toFixed(0)}% | 기술 완료 ${allTechs}년 4단계 ${tier4}년 | 노동자 식량 최저 ${(minFood * 100).toFixed(0)}% 평균 ${((sumFood / n) * 100).toFixed(0)}%`);
-  expect.soft(share[5], '소작농 5년차').toBeGreaterThanOrEqual(0.7);
-  expect.soft(share[10], '소작농 10년차').toBeGreaterThanOrEqual(0.5);
-  expect.soft(share[10], '소작농 10년차').toBeLessThanOrEqual(0.7);
-  expect.soft(share[20], '소작농 20년차').toBeLessThanOrEqual(0.35);
-  expect.soft(allTechs, '기술 완료 연도').not.toBeNull();
-  expect.soft(allTechs ?? 0, '기술 완료 연도').toBeGreaterThanOrEqual(15);
   expect.soft(tier4 ?? 0, '4단계 기술 연도').toBeGreaterThanOrEqual(8);
   expect.soft(w.mobility?.['peasant>unskilled'] ?? 0, '소작농→노동자 이동').toBeGreaterThan(0);
   expect.soft(minFood, '노동자 식량 최저').toBeGreaterThan(0.4);
