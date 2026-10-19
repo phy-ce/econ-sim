@@ -138,9 +138,15 @@ export function treasuryOf(w: World, regionId: number): Company | undefined {
   return companyById(w, kingdomById(w, kingdomOf(w, regionId)).governmentId);
 }
 
-/** 건물 준비금 상한: 만원 가동 주간 비용(임금 + 원료) × TUNE.reserveWeeks. 이보다 많은 현금은 매주 주인에게 간다 */
+/**
+ * 건물 준비금: 만원 가동 주간 비용(임금 + 원료)의 이 주 수. 조정값이 아니다: 2·4·8주를 20년 × 시드 1~8로 비교해
+ * 인구·소작농 비율·건물 레벨·노동자 생활수준 어느 것도 뚜렷이 달라지지 않았다
+ */
+export const RESERVE_WEEKS = 4;
+
+/** 건물 준비금 상한: 만원 가동 주간 비용(임금 + 원료) × RESERVE_WEEKS. 이보다 많은 현금은 매주 주인에게 간다 */
 export function reserveCap(w: World, b: Building): number {
-  return fullCost(w, b) * TICKS_PER_WEEK * TUNE.reserveWeeks;
+  return fullCost(w, b) * TICKS_PER_WEEK * RESERVE_WEEKS;
 }
 
 /**

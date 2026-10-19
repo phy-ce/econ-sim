@@ -18,6 +18,14 @@ if any('wUnsk' in r.get('y5', {}) for v in g.values() for r in v):
     print('tune | ' + ' | '.join(f'{k} y5/y10/y20' for k in wk))
     for t, v in g.items():
         print(t + ' | ' + ' | '.join('/'.join(f"{sum(r[y].get(k, 0) for r in v) / len(v):.2f}".rstrip('0').rstrip('.') for y in ('y5', 'y10', 'y20')) for k in wk))
+# 보조금/국고 수입, 노동자 임금 흩어짐(변동계수), 왕실 건물 충원율 (있을 때만)
+ek = ['subRev', 'wCv', 'fill_admin', 'fill_school', 'fill_builder']
+if any('wCv' in r.get('y5', {}) for v in g.values() for r in v):
+    print()
+    print('tune | ' + ' | '.join(f'{k} y5/y10/y20' for k in ek) + ' | flipW | foodMin')
+    for t, v in g.items():
+        print(t + ' | ' + ' | '.join('/'.join(f"{sum(r[y].get(k, 0) for r in v) / len(v):.3f}".rstrip('0').rstrip('.') for y in ('y5', 'y10', 'y20')) for k in ek)
+              + f" | {sum(r.get('flipW', 0) for r in v) / len(v):.3f} | {sum(float(r.get('foodMin', 0)) for r in v) / len(v):.2f}")
 # 왕실 정책 요약 (sweep.ts 의 pol, 시드 평균)
 pk = ['t5', 't1', 'run5', 'run1', 'chg', 'flip', 'sub', 'debt', 'hoard']
 if any('pol' in r for v in g.values() for r in v):

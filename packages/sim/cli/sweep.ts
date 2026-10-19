@@ -1,7 +1,7 @@
 // 조정값 비교: npx tsx cli/sweep.ts '<TUNE JSON>' [seed] [years]
 // 주요 지표(w.metrics)에서 5년마다 대륙 합계를 뽑아 한 줄 JSON으로 출력한다
 import { TUNE } from '../src/data';
-import { createWorld, step } from '../src/index';
+import { createWorld, hasOwnCash, step } from '../src/index';
 import type { MetricPoint } from '../src/index';
 
 const over = JSON.parse(process.argv[2] ?? '{}');
@@ -11,8 +11,31 @@ Object.assign(TUNE, over);
 const w = createWorld(seed, { withPlayer: false });
 // 왕실 정책 단계 (4주 점검마다 왕국별): 세금 수준·국고(지출 몇 주치)·빚·보조금 건물 레벨 비율
 const trace = w.kingdoms.map(() => [] as { tax: number; sub: number; weeks: number; debt: boolean }[]);
+// 건물 임금: 5년마다 노동자 임금의 건물 간 흩어짐(고용 가중 변동계수), 1년 뒤부터 주간 노동자 임금 방향이 바로 뒤집힌 비율(flipW)
+const wageCv: Record<number, number> = {};
+const lastW = new Map<number, { wage: number; dir: number }>();
+let wMoves = 0, wFlips = 0;
 for (let d = 0; d < years * 360; d++) {
   step(w);
+  if (w.tick % 7 === 0 && w.tick > 360) {
+    for (const b of w.buildings) {
+      if (!hasOwnCash(b) || !(b.employed.unskilled > 0)) continue;
+      const prev = lastW.get(b.id), wage = b.wages.unskilled;
+      const dir = prev ? Math.sign(wage - prev.wage) : 0;
+      if (dir !== 0) { wMoves++; if (prev && prev.dir === -dir) wFlips++; }
+      lastW.set(b.id, { wage, dir: dir !== 0 ? dir : prev?.dir ?? 0 });
+    }
+  }
+  if (w.tick % 1800 === 0) {
+    let n = 0, s = 0, s2 = 0;
+    for (const b of w.buildings) {
+      const e = b.employed.unskilled;
+      if (!hasOwnCash(b) || !(e > 0)) continue;
+      n += e; s += e * b.wages.unskilled; s2 += e * b.wages.unskilled ** 2;
+    }
+    const mean = n > 0 ? s / n : 0;
+    wageCv[w.tick / 360] = mean > 0 ? +(Math.sqrt(Math.max(0, s2 / n - mean * mean)) / mean).toFixed(2) : 0;
+  }
   if (w.tick % 28 !== 0) continue;
   w.kingdoms.forEach((k, i) => {
     const g = w.companies.find((c) => c.id === k.governmentId)!;
@@ -51,8 +74,13 @@ for (const m of w.metrics) {
     pcash: +(sum(m, (k) => k.privateCash) / 1e6).toFixed(1),
     subWk: Math.round(sum(m, (k) => k.subsidyWeek) / 1e3),
     lossLv: sum(m, (k) => Object.entries(k.typeBy).reduce((a, [id, t]) => a + (['builder', 'admin', 'school'].includes(id) ? 0 : t.lossLevels), 0)),
+    // 보조금 / 국고 수입, 노동자 임금 흩어짐, 왕실 건물 충원율 (행정청·학교·건축사무소: 고용 / 자리)
+    subRev: +(sum(m, (k) => k.subsidyWeek) / Math.max(1, sum(m, (k) => k.revenueWeek))).toFixed(3),
+    wCv: wageCv[y] ?? 0,
+    ...Object.fromEntries((['admin', 'school', 'builder'] as const).map((t) => [`fill_${t}`, +(sum(m, (k) => k.typeBy[t]?.employed ?? 0) / Math.max(1, sum(m, (k) => k.typeBy[t]?.slots ?? 0))).toFixed(2)])),
   };
 }
+out.flipW = +(wMoves ? wFlips / wMoves : 0).toFixed(3);
 const after1 = w.metrics.filter((m) => m.tick > 360);
 out.foodMin = Math.min(...after1.map((m) => {
   const n = sum(m, (k) => k.popBy.unskilled);
