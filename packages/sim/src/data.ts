@@ -409,6 +409,7 @@ export const TUNE = {
   officeSelfPay: 0,
   laborPoach: 0,
   officeSchoolFirst: 0,
+  needMul: {} as Partial<Record<NeedId, number>>,
 };
 
 // ---------------------------------------------------------------- 기상 조건
@@ -548,7 +549,7 @@ export function rawMax(max: number | undefined, wealth: number): number {
  */
 export function needsAt(wealth: number): Record<NeedId, number> {
   const L = wealth, up = Math.max(0, L - 5), rich = Math.max(0, L - 10), fed = Math.max(0, L - 8);
-  return {
+  const out: Record<NeedId, number> = {
     nourishment: 1.5 + 0.1 * Math.min(L, 30),
     heating: 0.1 * Math.min(L, 10),
     clothing: 0.1 * Math.min(L, 10),
@@ -558,6 +559,9 @@ export function needsAt(wealth: number): Record<NeedId, number> {
     luxury: TUNE.luxuryLinear * rich + TUNE.luxuryQuad * rich * rich,
     meat: TUNE.meatLinear * fed + TUNE.meatQuad * fed * fed,
   };
+  // 비교 실행용 필요량 배율 (기본은 비어 있다)
+  for (const k in TUNE.needMul) out[k as NeedId] *= TUNE.needMul[k as NeedId]!;
+  return out;
 }
 
 /** 신분별 기대 생활수준 (정치 시스템용) */

@@ -7,6 +7,7 @@ import { committedCost } from '../src/finance';
 import { createWorld, literacyOf, step } from '../src/index';
 import type { MetricPoint } from '../src/index';
 import { workforce } from '../src/pops';
+import { applyWorld } from './worldtune';
 import { SKILLS } from '../src/types';
 import type { World } from '../src/types';
 
@@ -54,9 +55,11 @@ function investInterval(ms: MetricPoint[], from: number, to: number) {
 const over = JSON.parse(process.argv[2] ?? '{}');
 const seed = Number(process.argv[3] ?? 1), years = Number(process.argv[4] ?? 10);
 // "subsistence": { grainPerWorker 등 } 은 소작지 1인당 산출(SUBSISTENCE)을 바꾼다
-const { subsistence, ...tune } = over;
+// "world": 상품 가격·임금·일자리·원료 배율 (cli/worldtune.ts)
+const { subsistence, world, ...tune } = over;
 Object.assign(TUNE, tune);
 if (subsistence) Object.assign(SUBSISTENCE, subsistence);
+applyWorld(world);
 // 비교 실행에서는 플레이어 왕국도 AI가 맡는다
 const w = createWorld(seed, { withPlayer: false });
 // 왕실 정책 단계 (4주 점검마다 왕국별): 세금 수준·국영 임금 수준·국고(지출 몇 주치)·빚
