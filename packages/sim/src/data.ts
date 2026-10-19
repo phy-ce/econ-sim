@@ -283,7 +283,8 @@ export function scaleBonus(level: number): number {
 
 /**
  * 조정값 (테스트로 여러 값을 비교하는 손잡이). 시작 전에 바꾸면 그 판 전체에 적용된다.
- * - rentShare: 소작지 판매 대금 중 저택 귀족에게 가는 지대 비율 (peasantSale 'old' 이면 수확 중 비율)
+ * - peasantSellShare: 소작지가 상품마다 시장에 파는 수확의 몫. 나머지에서 먹고 쓰고, 남는 것은 사라진다 (DECISIONS 7-11)
+ * - rentShare: 소작지 판매 대금 중 저택 귀족에게 가는 지대 비율 (토지세는 대금 × 토지세율 × 징수율, 나머지는 소작농)
  * - patronWealth, patronShare: 소작농 부가 patronWealth 아래면 귀족이 지대의 patronShare 를 돌려준다
  * - growthEq: 신분별로 출생과 사망이 같아지는 생활수준 (이보다 높으면 인구가 는다)
  * - wageOutside: AI 임금 바닥 = 그 자리로 옮겨 올 사람들의 지금 소득 × 이 배율
@@ -297,7 +298,7 @@ export function scaleBonus(level: number): number {
  * - taxCurve: 징수율 곡선. 'exp' = 1 − e^(−x), 'hyp' = x / (1 + x) (x = 행정청 한도 / 인구)
  * - switchRate, switchPremium: 일하는 사람이 하루에 옮기는 상한 비율, 옮기는 데 필요한 소득(또는 생활수준) 배율
  * - cashBufferDays: 팝이 투자 풀로 보내지 않고 들고 있는 돈 (생활비 + 세금의 며칠분)
- * - landTax, pollTax, incomeTax: 세금 수준 3단계(보통)의 토지세율(소작지 수확 중 국고 몫), 인두세(1인당 하루), 소득세율.
+ * - landTax, pollTax, incomeTax: 세금 수준 3단계(보통)의 토지세율(소작지 판매 대금 중 국고 몫), 인두세(1인당 하루), 소득세율.
  *   세 세율을 같은 배율로 비교했다 (빅토리아3 보통 단계 기준 ×1·×1.5·×2·×2.5, 20년 × 시드 1~4). ×2는 ×1보다 건물 레벨이
  *   10년차 약 50%, 20년차 약 13% 많고 실업이 낮다 (×1은 세금 단계를 1~5 모두 쓰지만 건물이 가장 적다). ×2.5는 노동자 생활수준이 가장 낮다
  * - taxLevels: 세금 수준 1~5단계가 세법의 모든 세율에 곱하는 배율
@@ -341,12 +342,8 @@ export function scaleBonus(level: number): number {
  * - prospectFind: 한 번 찾을 때 늘어나는 광맥 = 잠재량 × 이 비율 (10 단위로 반올림, 최소 10, 남은 잠재량까지)
  */
 export const TUNE = {
+  peasantSellShare: 0.2,
   rentShare: 0.5,
-  // 소작지 판매 (DECISIONS 7-11): 'share' 수확의 peasantSellMin ~ peasantSellCap 몫만 판다 (그 안에서는 쓰고 남는 양),
-  // 지대(rentShare)·토지세는 판매 대금의 몫. 'old' 쓰고 남는 것을 다 팔고 지대·토지세는 수확 몫 (그때 rentShare 0.15로 쟀다)
-  peasantSale: 'share' as 'old' | 'share',
-  peasantSellMin: 0.2,
-  peasantSellCap: 0.2,
   patronWealth: 2,
   patronShare: 0.5,
   growthEq: { lower: 2.5, middle: 5, upper: 5 },
@@ -379,7 +376,7 @@ export const TUNE = {
   schoolTarget: 0.6, // 0.45·0.5·0.6 비교 (DECISIONS.md 7-4): 0.6이 20년차 소작농·건물 레벨·자격자가 가장 낫다
   schoolTaxMax: 4,
   taxLaw: 'land' as 'land' | 'capita',
-  landTax: 0.2, // 토지세: 소작지 수확의 20% (지대 rentShare 와 따로)
+  landTax: 0.2, // 토지세: 소작지 판매 대금의 20% (지대 rentShare 와 따로)
   peasantPoll: 0.25,
   rawFullWealth: 5,
   rawCapWealth: 10,

@@ -2,7 +2,7 @@ import { BUILDING_BY_ID, SKILL_DEFS, TECH_BY_ID, TICKS_PER_WEEK, TUNE, getMethod
 import { collectionRatio, companyById, regionById, constructionEstimate, efficiency, kingdomGdp, logEvent, ownerBuildingOf, paysDividend, repay, sellThrough } from './economy';
 import { techNameEn } from './i18n';
 import { addToPool, kingdomById, kingdomOf } from './kingdoms';
-import { saleRule, tenantSaleBag } from './market';
+import { tenantSaleBag } from './market';
 import { payPops } from './pops';
 import { round2 } from './rng';
 import { SKILLS, crewOf } from './types';
@@ -179,7 +179,7 @@ export function taxDue(w: World, p: Pop, law?: TaxLaw): number {
 }
 
 /**
- * 그 세법으로 지금 하루에 걷힐 세금 (징수율 전). 토지 기반 = 소작지 수확 × 토지세율의 판매 대금 (landTaxValue),
+ * 그 세법으로 지금 하루에 걷힐 세금 (징수율 전). 토지 기반 = 소작지 판매분 대금 × 토지세율 (landTaxValue),
  * 1인당 = pop 마다 min(저축, 낼 세금)
  */
 export function lawRevenue(w: World, k: Kingdom, law: TaxLaw): number {
@@ -187,8 +187,7 @@ export function lawRevenue(w: World, k: Kingdom, law: TaxLaw): number {
     let v = 0;
     for (const b of w.buildings) {
       if (b.typeId !== 'subsistence' || kingdomOf(w, b.regionId) !== k.id) continue;
-      // 새 판매 규칙이면 토지세는 판매 대금에서 낸다
-      v += landTaxValue(regionById(w, b.regionId), saleRule() ? tenantSaleBag(w, b) : b.last.output, taxRates(k, 'land').land);
+      v += landTaxValue(regionById(w, b.regionId), tenantSaleBag(w, b), taxRates(k, 'land').land);
     }
     return v;
   }
