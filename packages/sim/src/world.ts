@@ -6,6 +6,7 @@ import { subsistenceWage, syncEmployment } from './labor';
 import { affordableWealth } from './market';
 import { applyStateWages, taxCapacity, updateWageIndex } from './finance';
 import { round2 } from './rng';
+import { roundWorld } from './round';
 import type { Company, GoodId, Kingdom, MarketGood, PopClass, Region, Skill, World } from './types';
 import { SKILLS, emptyLedger } from './types';
 
@@ -155,7 +156,7 @@ export function createWorld(seed = 1, opts: CreateWorldOptions = {}): World {
       id: def.id, name: def.name, description: def.description, spaceport: def.spaceport, neighbors: [...def.neighbors],
       kingdomId: owner[def.id], tier: st.tier,
       land: { arable: st.arable, forest: def.forest, plot: st.plot, ore: deposits.iron + deposits.coal }, deposits,
-      education: st.education, households: {} as Region['households'], market: newMarket(),
+      education100: Math.round(st.education * 100), education: Math.round(st.education * 100) / 100, households: {} as Region['households'], market: newMarket(),
     };
   });
 
@@ -170,7 +171,7 @@ export function createWorld(seed = 1, opts: CreateWorldOptions = {}): World {
   }
 
   const w: World = {
-    version: 4, config: { ai }, tick: 0, seed, rngState: seed | 0, nextId: 1000,
+    version: 6, config: { ai }, tick: 0, seed, rngState: seed | 0, nextId: 1000,
     regions, kingdoms, pops: [], fund: 0, metrics: [],
     bank: { cash: BANK_CAPITAL, capital: BANK_CAPITAL },
     traders: { cash: TRADER_CAPITAL, capital: TRADER_CAPITAL, shipments: [] },
@@ -211,14 +212,14 @@ export function createWorld(seed = 1, opts: CreateWorldOptions = {}): World {
       if (size <= 0) continue;
       const p = getPop(w, r.id, 'peasant', work);
       const share = size / peasants;
-      p.size = size; p.savings = savings * share; p.literacy = r.education;
+      p.size = size; p.savings = savings * share; p.literacy100 = r.education100;
       p.quals = { skilled: def.population.skilled * WORKFORCE_RATIO * share, expert: def.population.expert * WORKFORCE_RATIO * share };
     }
     for (const cls of ['gentry', 'capitalist', 'aristocrat'] as const) {
       const size = def.population[cls];
       if (size <= 0) continue;
       const p = getPop(w, r.id, cls, 0);
-      p.size = size; p.savings = size * START_SAVINGS[cls]; p.literacy = UPPER_LITERACY;
+      p.size = size; p.savings = size * START_SAVINGS[cls]; p.literacy100 = UPPER_LITERACY * 100;
     }
   }
   // 귀족은 저택, 자본가는 금융가에서 일하며 시작한다
@@ -241,7 +242,7 @@ export function createWorld(seed = 1, opts: CreateWorldOptions = {}): World {
       if (own && fromOwn > 0) movePeople(w, own, getPop(w, b.regionId, s, b.id), fromOwn);
       if (n - fromOwn > 0) movePeople(w, src, getPop(w, b.regionId, s, b.id), n - fromOwn, s === 'unskilled' ? undefined : s);
     }
-    b.exp = 1;
+    b.exp100 = 100;
   }
   syncEmployment(w);
   // 시작 징수율: 매일 징수(finance.ts collectIncomeTax)와 같은 규칙. 행정청은 아직 사람이 없어 한도가 0이라 0이다
@@ -256,7 +257,7 @@ export function createWorld(seed = 1, opts: CreateWorldOptions = {}): World {
     const subs = w.buildings.find((x) => x.regionId === r.id && x.typeId === 'subsistence');
     const tenants = subs ? findPop(w, r.id, 'peasant', subs.id) : undefined;
     for (const p of w.pops.filter((x) => x.regionId === r.id)) {
-      p.wealth = affordableWealth(r, p.size, p === tenants ? subsistenceWage(w, r) * workforce(p) : p.incomeEma);
+      p.wealth100 = 100 * affordableWealth(r, p.size, p === tenants ? subsistenceWage(w, r) * workforce(p) : p.incomeEma);
     }
   }
   // 국영 임금: 시작 민간 임금에서 임금 지수를 잡고 그 임금으로 시작한다. 그다음 그 임금으로 왕실 시작 국고를 정한다
@@ -267,6 +268,8 @@ export function createWorld(seed = 1, opts: CreateWorldOptions = {}): World {
     gov.cash = gov.weekStartCash = gov.isPlayer && playerCash != null ? playerCash : startTreasury(w, gov);
   }
   aggregateHouseholds(w);
+  // 저장값은 소수 둘째 자리까지 (round.ts): 시작 저축의 센트 아래는 주인 없는 돈으로
+  roundWorld(w);
   return w;
 }
 

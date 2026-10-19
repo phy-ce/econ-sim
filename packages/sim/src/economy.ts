@@ -5,7 +5,7 @@ import {
 import { regionNameEn } from './i18n';
 import { borderCost } from './kingdoms';
 import { clamp } from './rng';
-import { DEPOSITS, OWNERS, SKILLS, WEALTH_MIN } from './types';
+import { DEPOSITS, OWNERS, SKILLS, WEALTH_MIN, crewOf, expOf, wealthOf } from './types';
 import type {
   Building, BuildingTypeDef, Company, DepositId, EventKind, GoodBag, GoodId, HarvestCondition, LandType, MethodDef, Pop, PopClass, Region, Skill, World,
 } from './types';
@@ -303,10 +303,10 @@ export interface EfficiencyParts {
 }
 
 export function efficiencyParts(b: Building): EfficiencyParts {
-  const experience = 0.4 + 0.6 * b.exp;
+  const experience = 0.4 + 0.6 * expOf(b);
   const scale = scaleBonus(b.level);
   const perk = 1 + regionPerk(b.regionId, b.typeId);
-  return { experience, scale, perk, crew: b.crew ?? b.last.staffing, total: experience * scale * perk };
+  return { experience, scale, perk, crew: crewOf(b), total: experience * scale * perk };
 }
 
 export function efficiency(b: Building): number {
@@ -497,7 +497,7 @@ export function colonyPopulation(w: World, prof: PopClass): number {
 /** 대륙 전체 직종 생활수준 (인구 가중 평균) */
 /** 생활수준 (빅토리아3): 부를 바탕으로, 필요를 못 채운 만큼 깎인다 */
 export function popSol(p: Pop): number {
-  return Math.max(WEALTH_MIN, p.wealth * p.fulfillment);
+  return Math.max(WEALTH_MIN, wealthOf(p) * p.fulfillment);
 }
 
 export function colonySol(w: World, prof: PopClass): number {
@@ -508,11 +508,21 @@ export function colonySol(w: World, prof: PopClass): number {
 
 // ---------------------------------------------------------------- 돈
 
+/**
+ * 주인 없는 돈(fund)을 뺀 돈 계정 전부를 정해진 순서로 f 에 넘기고 돌려받은 값으로 바꾼다.
+ * 화폐 총량(totalMoney)과 센트 맞춤(round.ts roundWorld)이 이 목록 하나를 쓴다: 돈을 가진 계정을 새로 두면 여기에만 넣는다
+ */
+export function mapMoney(w: World, f: (x: number) => number): void {
+  w.bank.cash = f(w.bank.cash);
+  w.traders.cash = f(w.traders.cash);
+  for (const c of w.companies) c.cash = f(c.cash);
+  for (const p of w.pops) p.savings = f(p.savings);
+  for (const k of w.kingdoms) k.investmentPool = f(k.investmentPool);
+}
+
 export function totalMoney(w: World): number {
-  let t = w.fund + w.bank.cash + w.traders.cash;
-  for (const c of w.companies) t += c.cash;
-  for (const p of w.pops) t += p.savings;
-  for (const k of w.kingdoms) t += k.investmentPool;
+  let t = w.fund;
+  mapMoney(w, (x) => { t += x; return x; });
   return t;
 }
 
@@ -584,7 +594,7 @@ export function goodName(g: GoodId): string {
 
 export function newBuilding(id: number, typeId: string, regionId: number, companyId: number, methodId: string, level: number, stateOwned = false): Building {
   return {
-    id, typeId, regionId, companyId, level, methodId, stateOwned, active: true, utilization: 1, lastSwitchTick: -1e9, exp: 0, crew: 0, idle: false,
+    id, typeId, regionId, companyId, level, methodId, stateOwned, active: true, utilization: 1, lastSwitchTick: -1e9, exp100: 0, crew100: 0, crew: 0, idle: false,
     employed: emptyJobs(), stock: {}, outStock: {}, unpaid: false,
     last: emptyStats(), profitEma: 0, lossWeeks: 0, pausedWeeks: 0,
   };

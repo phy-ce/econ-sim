@@ -6,9 +6,9 @@ import { buildingNameEn, regionNameEn } from './i18n';
 import { clamp, round2 } from './rng';
 import type { Building, Company, GoodBag, World } from './types';
 
-/** 숙련도가 하루에 오르는 양 (약 한 달이면 최대) */
-const EXP_GAIN = 0.035;
-/** 작업 인원이 실제 충원율을 따라가는 하루 비율 */
+/** 숙련도가 하루에 오르는 양 (%, 약 한 달이면 최대) */
+const EXP_GAIN = 3.5;
+/** 작업 인원이 실제 충원율을 따라가는 하루 비율 (작업 인원은 % 단위 소수 둘째 자리라 충원율과 0.06%p 안까지 따라간다) */
 const CREW_RATE = 0.08;
 
 /**
@@ -22,7 +22,7 @@ export function updateSubsistence(w: World) {
     const owner = kingdomById(w, r.kingdomId).privateIds[0];
     if (!b) {
       b = newBuilding(w.nextId++, 'subsistence', r.id, owner, 'subsistence', level, false);
-      b.exp = 1; b.crew = 1;
+      b.exp100 = 100; b.crew100 = 100;
       w.buildings.push(b);
     }
     b.companyId = owner; b.stateOwned = false;
@@ -52,7 +52,7 @@ export function updateOwnership(w: World) {
       let b = w.buildings.find((x) => x.regionId === r.id && x.typeId === typeId);
       if (!b) {
         b = newBuilding(w.nextId++, typeId, r.id, owner, typeId, 0, false);
-        b.exp = 1; b.crew = 1;
+        b.exp100 = 100; b.crew100 = 100;
         w.buildings.push(b);
       }
       b.companyId = owner; b.stateOwned = false;
@@ -81,8 +81,9 @@ export function produce(w: World) {
     const c = companyById(w, b.companyId);
     if (!c) continue;
     const method = getMethod(b.typeId, b.methodId);
-    b.crew = (b.crew ?? b.last.staffing) + (b.last.staffing - (b.crew ?? b.last.staffing)) * CREW_RATE;
-    const st = b.crew;
+    const crew = b.crew100 ?? b.last.staffing * 100;
+    b.crew100 = round2(crew + (b.last.staffing * 100 - crew) * CREW_RATE);
+    const st = b.crew100 / 100;
     b.last.points = 0;
     b.last.output = {};
     if (st > 1e-4) {
@@ -112,7 +113,7 @@ export function produce(w: World) {
         c.buildPoints += b.last.points;
         c.buildCost += b.last.wageCost + b.last.inputCost;
       }
-      b.exp = Math.min(1, b.exp + EXP_GAIN);
+      b.exp100 = Math.min(100, b.exp100 + EXP_GAIN);
     } else {
       b.last.inputFill = 0;
     }
@@ -194,7 +195,7 @@ export function advanceConstruction(w: World) {
       const old = target.materials ?? materialsPerLevel(w, undefined, k.typeId);
       target.materials = Object.fromEntries(GOOD_IDS.filter((g) => (old[g] ?? 0) + (mats[g] ?? 0) > 0)
         .map((g) => [g, round2(((old[g] ?? 0) * target.level + (mats[g] ?? 0) * add) / (target.level + add))]));
-      target.exp *= target.level / (target.level + add);
+      target.exp100 *= target.level / (target.level + add);
       if (target.privateShare || k.privateShare) target.privateShare = round2(((target.privateShare ?? 0) * target.level + (k.privateShare ?? 0) * add) / (target.level + add));
       target.level += add;
       logEvent(w, k.companyId, `${rname} ${def.name} 증설 완료 → ${target.level}레벨`,

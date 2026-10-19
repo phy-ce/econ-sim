@@ -50,10 +50,12 @@ describe('인구', () => {
   it('고용된 사람은 노동 인구 비율만큼만 센다', () => {
     const w = createWorld(2, { withPlayer: false });
     run(w, 200);
-    let emp = 0, wf = 0;
-    for (const b of w.buildings) for (const s of SKILLS) emp += b.employed[s];
+    let emp = 0, wf = 0, n = 0;
+    for (const b of w.buildings) for (const s of SKILLS) { emp += b.employed[s]; if (b.employed[s] > 0) n++; }
     for (const p of w.pops) if (p.work !== 0 && SKILLS.includes(p.prof as never)) wf += p.size * WORKFORCE_RATIO;
-    expect(emp).toBeCloseTo(wf, 3);
+    // 건물 고용은 저장값이라 소수 둘째 자리로 반올림된다 (칸마다 0.005 안)
+    expect(Math.abs(emp - wf)).toBeLessThanOrEqual(n * 0.005 + 1e-6);
+    expect(emp).toBeGreaterThan(0);
   });
 });
 

@@ -6,7 +6,8 @@ import { basketCostAt } from './market';
 import { workforce } from './pops';
 import { kingdomOf } from './kingdoms';
 import { round2 } from './rng';
-import { POP_CLASSES } from './types';
+import { roundAll } from './round';
+import { POP_CLASSES, wealthOf } from './types';
 import type { BudgetItem, GoodId, PopClass, World } from './types';
 
 // 주요 지표: 매달(30일) 한 번 왕국별·상품별 숫자를 기록한다. 화면, CLI, 비교 실행이 모두 이 기록을 읽는다.
@@ -125,7 +126,7 @@ export function recordMetrics(w: World) {
     for (const p of pops) {
       pop += p.size; savings += p.savings; n[p.prof] += p.size;
       if (p.work === 0) jobless += p.size;
-      wealth[p.prof] += p.wealth * p.size; sol[p.prof] += p.sol * p.size; food[p.prof] += p.food * p.size; growth[p.prof] += p.growth * p.size;
+      wealth[p.prof] += wealthOf(p) * p.size; sol[p.prof] += p.sol * p.size; food[p.prof] += p.food * p.size; growth[p.prof] += p.growth * p.size;
     }
     const avg = (m: Record<PopClass, number>) => byClass((s) => (n[s] > 0 ? round2(m[s] / n[s]) : 0));
     const firms = k.privateIds.map((id) => companyById(w, id)).filter((c) => !!c);
@@ -211,6 +212,9 @@ export function recordMetrics(w: World) {
   const classGap = upN > 0 && lowN > 0 && low > 0 ? round2((up / upN) / (low / lowN)) : 0;
   const regionGap = regionSol.length && Math.min(...regionSol) > 0 ? round2(Math.max(...regionSol) / Math.min(...regionSol)) : 0;
   const harvestRegions = w.regions.filter((r) => harvestCondition(w, r.id)).length;
-  (w.metrics ??= []).push({ tick: w.tick, kingdoms, goods, classGap, regionGap, bank: r0(w.bank.cash), traders: r0(w.traders.cash), ...(harvestRegions ? { harvestRegions } : {}) });
+  const point: MetricPoint = { tick: w.tick, kingdoms, goods, classGap, regionGap, bank: r0(w.bank.cash), traders: r0(w.traders.cash), ...(harvestRegions ? { harvestRegions } : {}) };
+  // 지표는 이미 소수 둘째 자리로 쓰지만, 기록이라 한 번 더 맞춘다 (저장값 규칙)
+  roundAll(point);
+  (w.metrics ??= []).push(point);
   if (w.metrics.length > METRICS_CAP) w.metrics.splice(0, w.metrics.length - METRICS_CAP);
 }

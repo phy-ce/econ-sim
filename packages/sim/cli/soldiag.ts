@@ -1,7 +1,7 @@
 // 하층 생활수준 진단: npx tsx cli/soldiag.ts '<TUNE JSON>' [seed] [years]
 // 직종 × 고용/실업별 1인당 하루: 현금 소득, 현물 가치, 인두세·소득세, 지금 부 단계 생활비, 부 5 생활비, 그리고 부·충족률·생활수준
 import { GOODS, TUNE } from '../src/data';
-import { createWorld, step } from '../src/index';
+import { createWorld, step, wealthOf } from '../src/index';
 import { basketCostAt } from '../src/market';
 import { kingdomOf, kingdomById } from '../src/kingdoms';
 import { companyById } from '../src/economy';
@@ -24,11 +24,11 @@ const report = () => {
     for (const p of ps) {
       const r = w.regions.find((x) => x.id === p.regionId)!;
       const k = kingdomById(w, kingdomOf(w, p.regionId));
-      wealth += p.wealth * p.size; ful += p.fulfillment * p.size; sol += p.sol * p.size; food += p.food * p.size;
+      wealth += wealthOf(p) * p.size; ful += p.fulfillment * p.size; sol += p.sol * p.size; food += p.food * p.size;
       cash += p.incomeEma; sav += p.savings;
       for (const [g, q] of Object.entries(p.inKind)) kind += (q ?? 0) * r.market[g as keyof typeof r.market].price;
       tax += taxDue(w, p) * (k.taxRatio ?? 1);
-      cCur += basketCostAt(r, p.size, p.wealth); c3 += basketCostAt(r, p.size, 3); c5 += basketCostAt(r, p.size, 5);
+      cCur += basketCostAt(r, p.size, wealthOf(p)); c3 += basketCostAt(r, p.size, 3); c5 += basketCostAt(r, p.size, 5);
       const b = w.buildings.find((x) => x.id === p.work);
       const c = b ? companyById(w, b.companyId) : undefined;
       if (c && prof !== 'peasant') wage += (c.wages[prof] ?? 0) * p.size;

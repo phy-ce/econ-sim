@@ -4,7 +4,7 @@
 import { BUILDING_BY_ID, SKILL_DEFS, TUNE } from '../src/data';
 import { isGovernment, paysDividend, slots } from '../src/economy';
 import { committedCost } from '../src/finance';
-import { createWorld, step } from '../src/index';
+import { createWorld, literacyOf, step } from '../src/index';
 import type { MetricPoint } from '../src/index';
 import { workforce } from '../src/pops';
 import { SKILLS } from '../src/types';
@@ -76,7 +76,7 @@ for (let d = 0; d < years * 360; d++) {
   }
   if (w.tick % 1800 === 0 || w.tick === years * 360) {
     let n = 0, lit = 0, qs = 0;
-    for (const p of w.pops) { n += p.size; lit += p.size * p.literacy; qs += p.prof === 'skilled' ? workforce(p) : (p.quals.skilled ?? 0); }
+    for (const p of w.pops) { n += p.size; lit += p.size * literacyOf(p); qs += p.prof === 'skilled' ? workforce(p) : (p.quals.skilled ?? 0); }
     const sch = w.buildings.filter((b) => b.typeId === 'school').reduce((a, b) => a + b.level, 0);
     // veins: 찾은 광맥 레벨 합 (모든 지역·자원)
     const veins = w.regions.reduce((a, r) => a + Object.values(r.deposits).reduce((b, x) => b + x, 0), 0);

@@ -177,9 +177,13 @@ export interface Pop {
   /** 부양가족 포함 인구 */
   size: number;
   savings: number;
-  /** 부 단계 1..99 */
+  /** 부 단계 × 100 (100..9900). 소수 둘째 자리로 저장해도 하루 0.0001 단계씩 움직일 수 있게 100배로 둔다. 규칙 단위(1..99)는 wealthOf(p) */
+  wealth100: number;
+  /** 문해력 % (0..100, 100배 값). 규칙 단위(0..1)는 literacyOf(p) */
+  literacy100: number;
+  /** 화면 표시용 사본 (소수 둘째 자리). sim은 읽지 않는다 — wealthOf(p)를 쓴다. 부 단계 (wealth100 / 100), 하루 끝 반올림(round.ts)에서 다시 쓴다 */
   wealth: number;
-  /** 문해력 0..1 */
+  /** 화면 표시용 사본 (소수 둘째 자리). sim은 읽지 않는다 — literacyOf(p)를 쓴다. 문해력 0..1 (literacy100 / 100) */
   literacy: number;
   /** 다른 직종의 자격을 갖춘 노동 인구 수 */
   quals: Partial<Record<PopClass, number>>;
@@ -199,6 +203,14 @@ export interface Pop {
   inKind: GoodBag;
 }
 
+/** 100배로 저장한 값을 규칙 단위로 읽는다: 부 단계 1..99, 문해력 0..1, 교육 접근도 0..1 */
+export const wealthOf = (p: Pop) => p.wealth100 / 100;
+export const literacyOf = (p: Pop) => p.literacy100 / 100;
+export const educationOf = (r: { education100: number }) => r.education100 / 100;
+/** 건물 숙련도 0..1, 작업 인원 0..1 (작업 인원이 아직 없으면 충원율) */
+export const expOf = (b: { exp100: number }) => b.exp100 / 100;
+export const crewOf = (b: { crew100?: number; last: { staffing: number } }) => (b.crew100 !== undefined ? b.crew100 / 100 : b.last.staffing);
+
 export interface Building {
   id: number;
   typeId: string;
@@ -216,9 +228,11 @@ export interface Building {
   /** 소작지: 일하는 소작농 (노동 인구) */
   tenants?: number;
   lastSwitchTick: number;
-  /** 숙련도 0..1 */
-  exp: number;
-  /** 실제로 손이 맞는 작업 인원 비율: 충원율을 서서히 따라간다 */
+  /** 숙련도 % (0..100, 100배 값. 하루 3.5씩 오른다). 규칙 단위(0..1)는 expOf(b) */
+  exp100: number;
+  /** 실제로 손이 맞는 작업 인원 % (0..100, 100배 값): 충원율을 하루 8%씩 따라간다. 규칙 단위(0..1)는 crewOf(b) */
+  crew100?: number;
+  /** 화면 표시용 사본 (소수 둘째 자리). sim은 읽지 않는다 — crewOf(b)를 쓴다. 작업 인원 0..1 (crew100 / 100, crew100 이 없으면 없다) */
   crew?: number;
   /** 건축사무소가 할 일이 없어 인부를 해산한 상태 */
   idle: boolean;
@@ -388,7 +402,9 @@ export interface Region {
   land: Record<LandType, number>;
   /** 찾은 광맥 레벨 수 (자원별). 잠재량(RegionDef.veins)까지 탐광으로 늘어난다 */
   deposits: Record<DepositId, number>;
-  /** 교육 접근도 0..1 (학교 정원 비율). pop 의 문해력이 이것을 따라간다 */
+  /** 교육 접근도 % (0..100, 100배 값, 학교 정원 비율). pop 의 문해력이 이것을 따라간다. 규칙 단위(0..1)는 educationOf(r) */
+  education100: number;
+  /** 화면 표시용 사본 (소수 둘째 자리). sim은 읽지 않는다 — educationOf(r)를 쓴다. 교육 접근도 0..1 (education100 / 100) */
   education: number;
   /** pop 합산 (화면용). 매 틱 다시 채운다 */
   households: Record<PopClass, Household>;
@@ -510,8 +526,11 @@ export interface MintLedger {
 }
 
 export interface World {
-  /** 저장 형식 버전: 저장되는 모양이 바뀌면 올린다 (4: 정책 단계 tax·wages·research, 계층별 세율 없음) */
-  version: 4;
+  /**
+   * 저장 형식 버전: 저장되는 모양이 바뀌면 올린다. 옛 저장은 compat.ts migrateWorld
+   * (6: 부·문해력·교육 접근도·숙련도·작업 인원을 100배 값으로, 모든 숫자 소수 둘째 자리. 5는 그 작업 중간 판이었다)
+   */
+  version: 6;
   config: WorldConfig;
   tick: number;
   seed: number;

@@ -49,8 +49,8 @@ function basketLabour(W: number, rawFrom: 'farm' | 'tenant') {
     else if (capped.length) {
       const raw = capped[0], rest = opts.filter((o: any) => o !== raw);
       const share = rawMax(raw.max, W);
-      l = v * share / GOODS[raw.good].basePrice * lab1(raw.good, rawFrom) + rest.reduce((a: number, o: any) => a + v * (1 - share) / rest.length / GOODS[o.good].basePrice * lab1(o.good, rawFrom), 0);
-    } else l = opts.reduce((a: number, o: any) => a + v / opts.length / GOODS[o.good].basePrice * lab1(o.good, rawFrom), 0);
+      l = v * share / GOODS[raw.good].basePrice * lab1(raw.good, rawFrom) + rest.reduce((a: number, o: (typeof opts)[number]) => a + v * (1 - share) / rest.length / GOODS[o.good].basePrice * lab1(o.good, rawFrom), 0);
+    } else l = opts.reduce((a: number, o: (typeof opts)[number]) => a + v / opts.length / GOODS[o.good].basePrice * lab1(o.good, rawFrom), 0);
     by[n.id] = l; lab += l;
   }
   return { lab, by };
