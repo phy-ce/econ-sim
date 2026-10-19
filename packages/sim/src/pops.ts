@@ -241,11 +241,14 @@ export function updateQualifications(w: World) {
 
 // ---------------------------------------------------------------- 문해력
 
+/** 문해력 목표에 더하는 부 1단계의 몫 */
+export const LITERACY_PER_WEALTH = 0.005;
+
 /** 문해력은 지역 교육 접근도 + 부 단계 × 0.5% 를 향해 천천히 움직인다 (오를 땐 빠르고 내릴 땐 느리다) */
 export function updateLiteracy(w: World) {
   const edu = new Map(w.regions.map((r) => [r.id, r.education]));
   for (const p of w.pops) {
-    const target = clamp((edu.get(p.regionId) ?? 0) + 0.005 * p.wealth, 0, 1);
+    const target = clamp((edu.get(p.regionId) ?? 0) + LITERACY_PER_WEALTH * p.wealth, 0, 1);
     p.literacy += (target - p.literacy) * (target > p.literacy ? 0.002 : 0.0005);
   }
 }

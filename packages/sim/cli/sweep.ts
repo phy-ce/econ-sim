@@ -4,6 +4,7 @@
 import { TUNE } from '../src/data';
 import { createWorld, step } from '../src/index';
 import type { MetricPoint } from '../src/index';
+import { workforce } from '../src/pops';
 
 const over = JSON.parse(process.argv[2] ?? '{}');
 const seed = Number(process.argv[3] ?? 1), years = Number(process.argv[4] ?? 10);
@@ -12,9 +13,27 @@ Object.assign(TUNE, over);
 const w = createWorld(seed, { withPlayer: false });
 // 왕실 정책 단계 (4주 점검마다 왕국별): 세금 수준·국영 임금 수준·국고(지출 몇 주치)·빚
 const trace = w.kingdoms.map(() => [] as { tax: number; wages: number; weeks: number; debt: boolean }[]);
+// 교육 (5년마다): lit 인구 가중 문해력, sch 왕실 학교 레벨, qs 기술자 자격자(기술자 + 다른 직종의 기술자 자격, 천 명), schDem 학교 철거 레벨 누계
+const edu: Record<number, { lit: number; sch: number; qs: number; schDem: number }> = {};
+let schDem = 0;
+const schoolLevels = new Map<number, number>();
 const t0 = performance.now();
 for (let d = 0; d < years * 360; d++) {
   step(w);
+  if (w.tick % 7 === 0) {
+    // 줄어든 학교 레벨 (철거) 을 센다
+    const now = new Map<number, number>();
+    for (const b of w.buildings) if (b.typeId === 'school') now.set(b.id, b.level);
+    for (const [id, lv] of schoolLevels) schDem += Math.max(0, lv - (now.get(id) ?? 0));
+    schoolLevels.clear();
+    for (const [id, lv] of now) schoolLevels.set(id, lv);
+  }
+  if (w.tick % 1800 === 0 || w.tick === years * 360) {
+    let n = 0, lit = 0, qs = 0;
+    for (const p of w.pops) { n += p.size; lit += p.size * p.literacy; qs += p.prof === 'skilled' ? workforce(p) : (p.quals.skilled ?? 0); }
+    const sch = w.buildings.filter((b) => b.typeId === 'school').reduce((a, b) => a + b.level, 0);
+    edu[w.tick / 360] = { lit: +(lit / n).toFixed(3), sch, qs: Math.round(qs / 1e3), schDem };
+  }
   if (w.tick % 28 !== 0) continue;
   w.kingdoms.forEach((k, i) => {
     const g = w.companies.find((c) => c.id === k.governmentId)!;
@@ -46,6 +65,7 @@ for (const m of w.metrics) {
     solPeas: +(sum(m, (k) => k.solBy.peasant * k.popBy.peasant) / Math.max(1, sum(m, (k) => k.popBy.peasant))).toFixed(2),
     foodPeas: +(sum(m, (k) => k.foodBy.peasant * k.popBy.peasant) / Math.max(1, sum(m, (k) => k.popBy.peasant))).toFixed(2),
     solUnsk: +(sum(m, (k) => k.solBy.unskilled * k.popBy.unskilled) / Math.max(1, sum(m, (k) => k.popBy.unskilled))).toFixed(2),
+    ...(edu[y] ?? {}),
   };
 }
 const after1 = w.metrics.filter((m) => m.tick > 360);

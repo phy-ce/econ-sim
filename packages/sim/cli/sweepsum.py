@@ -10,6 +10,8 @@ ys = [y for y in ('y5', 'y10', 'y20') if rows and all(y in r for r in rows)]
 if not ys:
     ys = sorted({k for r in rows for k in r if re.fullmatch(r'y\d+', k) and all(k in x for x in rows)}, key=lambda k: int(k[1:]))
 keys = ['classGap', 'regionGap', 'taxRatio', 'pop', 'peas', 'jobless', 'levels', 'techs', 'grain', 'solPeas', 'foodPeas', 'solUnsk']
+# 교육 지표 (sweep.ts 가 새로 넣은 것, 옛 결과에는 없다)
+keys += [k for k in ('lit', 'sch', 'qs', 'schDem') if rows and all(k in r[y] for r in rows for y in ys)]
 print('tune | ' + ' | '.join(f'{k} {"/".join(ys)}' for k in keys))
 for t, v in g.items():
     cells = []
