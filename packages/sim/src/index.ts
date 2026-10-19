@@ -12,5 +12,6 @@ export { workforce, QUAL_RATE } from './pops';
 export * from './i18n';
 export { estimateAfterEntry } from './outlook';
 export { taxRates, taxCapacity } from './finance';
+export { fillMissingMarkets } from './market';
 export { recordMetrics, METRICS_EVERY } from './metrics';
 export type { MetricPoint, KingdomMetrics, GoodMetrics } from './metrics';

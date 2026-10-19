@@ -1,5 +1,5 @@
 import type {
-  BuildingTypeDef, ClassDef, DepositId, GoodDef, GoodId, HarvestDef, LandType, MethodDef, NeedDef, NeedId, PopClass, RegionDef, Skill, SkillDef, TechDef,
+  BuildingTypeDef, ClassDef, DepositId, GoodBag, GoodDef, GoodId, HarvestDef, LandType, MethodDef, NeedDef, NeedId, PopClass, RegionDef, Skill, SkillDef, TechDef,
 } from './types';
 
 // 세계관: 근세에서 산업화로 넘어가는 가상의 대륙. 세 왕국이 땅을 나눠 갖는다. 화폐 단위는 플로린(ƒ).
@@ -29,6 +29,7 @@ export const GOOD_IDS: GoodId[] = [
   'transport',
   'luxury_furniture', 'luxury_cloth',
   'meat',
+  'liquor',
 ];
 
 export const GOODS: Record<GoodId, GoodDef> = {
@@ -47,6 +48,7 @@ export const GOODS: Record<GoodId, GoodDef> = {
   luxury_furniture: { id: 'luxury_furniture', name: '고급 가구', nameEn: 'Luxury furniture', basePrice: 40 },
   luxury_cloth: { id: 'luxury_cloth', name: '고급 의복', nameEn: 'Fine clothes', basePrice: 30 },
   meat: { id: 'meat', name: '고기', nameEn: 'Meat', basePrice: 16 },
+  liquor: { id: 'liquor', name: '술', nameEn: 'Liquor', basePrice: 3 },
 };
 
 /**
@@ -190,6 +192,13 @@ export const BUILDING_TYPES: BuildingTypeDef[] = [
     methods: [
       m({ id: 'food_manual', name: '수작업 가공', nameEn: 'Manual processing', tech: 'milling', workers: jobs(800, 200), inputs: { grain: 3500 }, outputs: { food: 6000 } }),
       m({ id: 'food_machine', name: '기계 가공', nameEn: 'Machine processing', tech: 'food_machinery', workers: jobs(500, 200), inputs: { grain: 3500, tools: 100 }, outputs: { food: 6000 } }),
+    ],
+  },
+  {
+    id: 'distillery', name: '양조장', nameEn: 'Distillery', land: 'plot', buildPoints: 1000,
+    methods: [
+      m({ id: 'liquor_pot', name: '단식 증류', nameEn: 'Pot stills', tech: 'milling', workers: jobs(800, 200), inputs: { grain: 3500 }, outputs: { liquor: 8000 } }),
+      m({ id: 'liquor_column', name: '연속식 증류', nameEn: 'Column stills', tech: 'food_machinery', workers: jobs(500, 200), inputs: { grain: 3500, tools: 100 }, outputs: { liquor: 8000 } }),
     ],
   },
   {
@@ -421,14 +430,13 @@ export const HARVEST_KINDS: HarvestDef[] = [
  * 소작: 소작지 1칸(레벨)에서 일할 수 있는 소작농(노동 인구)과 1인당 하루 산출.
  * 소작농은 지대·토지세를 내고 그날 쓸 만큼 남긴 뒤 나머지를 판다 (market.ts harvest).
  *   고정 판매 10%, 세금 모자라면 더 파는 규칙과 비교해 골랐다 (수치는 docs/DECISIONS.md 7-2). 조정값은 없다.
- * 곡물은 식구(소비 단위 2.5)가 부 5로 먹을 만큼이다. 의복·가구는 만들지 않는다 (공장에서만 나온다)
+ * 곡물·술·목재를 거둔다. 섬유·의복·가구는 만들지 않는다 (농장·공장에서만 나온다). 수확 가치는 기본가로 1인당 약 9.6
  */
-export const SUBSISTENCE = {
+export const SUBSISTENCE: { workersPerCell: number; harvest: GoodBag } = {
   /** 소작지 1칸 = 소작농 1,000명. 다른 건물 1레벨(일꾼 1,000명)과 같아서 경작지 1칸을 농장으로 바꿔도 일자리 수는 그대로다 */
   workersPerCell: 1000,
-  grainPerWorker: 2.85,
-  fiberPerWorker: 0.6,
-  timberPerWorker: 1.3,
+  /** 소작농(노동 인구) 1인당 하루 수확 */
+  harvest: { grain: 2.0, liquor: 1.0, timber: 1.3 },
 };
 
 
@@ -450,7 +458,7 @@ export function regionPerk(regionId: number, typeId: string): number {
  * 지역 티어 (발전 단계). 시작 인구·계층 구성·교육·부지·경작지·시작 농장은 티어와 시드로 정한다 (world.ts regionStart).
  * 산림과 광맥 잠재량(veins)은 지역마다 고정(지형)이다. 광맥은 처음에 잠재량 × TUNE.prospectStart 만 알려져 있고 나머지는 탐광으로 찾는다 (economy.ts prospect). 비율은 총인구 대비, 땅은 인구 10만 명당 칸 수다.
  * - pop: 인구 범위 / aristocrat·gentry·skilled·expert: 계층 비율 (나머지는 소작농) / education: 교육 접근도
- * - plot: 부지 칸 / arableSlack: 소작농 노동 인구를 다 앉힐 칸 × 이 배율이 경작지 / farms: 시작 민간 곡물 농장 레벨
+ * - plot: 부지 칸 / arableSlack: 소작농 노동 인구를 다 앉힐 칸 × 이 배율이 경작지 / farms: 시작 민간 섬유 농장 레벨
  */
 export interface TierDef { pop: [number, number]; aristocrat: number; gentry: number; skilled: number; expert: number; education: number; plot: number; arableSlack: number; farms: number }
 export const TIERS: TierDef[] = [
@@ -518,6 +526,7 @@ export const NEEDS: NeedDef[] = [
   { id: 'household', name: '가정용품', nameEn: 'Household items', options: [opt('furniture')] },
   { id: 'luxury', name: '사치품', nameEn: 'Luxury goods', options: [opt('luxury_furniture'), opt('luxury_cloth')] },
   { id: 'meat', name: '고기', nameEn: 'Meat', options: [opt('meat')] },
+  { id: 'intoxicants', name: '기호품', nameEn: 'Intoxicants', options: [opt('liquor')] },
 ];
 
 /**
@@ -532,13 +541,15 @@ export function rawMax(max: number | undefined, wealth: number): number {
 
 /**
  * 부 단계별 필요 묶음 (소비 단위 1의 하루 금액). 묶음 값은 대략 부 × 0.75.
- * 식량은 부 1에서 1.6, 부 5에서 2(곡물 1), 부 30까지 늘고 멈춘다. 난방·의복·생활용품은 부 10까지 늘고 멈춘다.
+ * 식량은 1.5로 시작해 부 10부터 30까지 늘고 멈춘다. 기호품(술)·난방·의복·생활용품은 부 10까지 늘고 멈춘다
+ * (식량 + 기호품은 예전 식량 1.5 + 0.1 × min(부, 30) 과 같다: 묶음 값은 그대로이고 그중 부 10까지 늘던 몫이 술이 됐다).
  * 표준 의복과 가정용품은 부 5부터 생기고, 가정용품은 부가 오를수록 더 빨리 는다. 고기는 부 8부터, 사치품(고급 가구·고급 의복)은 부 10부터 생긴다
  */
 export function needsAt(wealth: number): Record<NeedId, number> {
   const L = wealth, up = Math.max(0, L - 5), rich = Math.max(0, L - 10), fed = Math.max(0, L - 8);
   return {
-    nourishment: 1.5 + 0.1 * Math.min(L, 30),
+    nourishment: 1.5 + 0.1 * Math.min(Math.max(L - 10, 0), 20),
+    intoxicants: 0.1 * Math.min(L, 10),
     heating: 0.1 * Math.min(L, 10),
     clothing: 0.1 * Math.min(L, 10),
     standard_clothing: 0.2 * up,

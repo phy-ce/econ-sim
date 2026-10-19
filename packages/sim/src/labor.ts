@@ -1,4 +1,4 @@
-import { BUILDING_BY_ID, CLASS_DEFS, SKILL_DEFS, SUBSISTENCE, TUNE, getMethod } from './data';
+import { BUILDING_BY_ID, CLASS_DEFS, GOOD_IDS, SKILL_DEFS, SUBSISTENCE, TUNE, getMethod } from './data';
 import { borrow, disbanded, emptyJobs, emptyStats, harvestFactor, isSubsistence, paysDividend, peasantSlots } from './economy';
 import { harvestShares } from './market';
 import { findPop, getPop, movePeople, workforce } from './pops';
@@ -90,7 +90,8 @@ function slotsWith(b: Building, m: MethodDef | null, s: Skill): number {
 /** 소작농 1인당 하루 소득 가치 (현물 + 판매분에서 수확과 같은 지대·토지세 몫을 뺀 것, 기상 조건 포함). 노동자 일자리와 비교하는 기준, 시작 부 */
 export function subsistenceWage(w: World, r: Region): number {
   const m = r.market;
-  const gross = SUBSISTENCE.grainPerWorker * m.grain.price + SUBSISTENCE.fiberPerWorker * m.fiber.price + SUBSISTENCE.timberPerWorker * m.timber.price;
+  let gross = 0;
+  for (const g of GOOD_IDS) { const per = SUBSISTENCE.harvest[g]; if (per) gross += per * m[g].price; }
   const { rent, tax } = harvestShares(w, r);
   return gross * (1 - rent - tax) * harvestFactor(w, r.id, 'arable');
 }

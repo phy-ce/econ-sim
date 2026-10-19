@@ -3,7 +3,7 @@ import { collectionRatio, emptyJobs, knownVeins, isGovernment, newBuilding, pays
 import { aggregateHouseholds, findPop, getPop, movePeople, workforce } from './pops';
 import { updateOwnership, updateSubsistence } from './production';
 import { subsistenceWage, syncEmployment } from './labor';
-import { affordableWealth } from './market';
+import { affordableWealth, newMarketGood } from './market';
 import { applyStateWages, taxCapacity, updateWageIndex } from './finance';
 import { round2 } from './rng';
 import type { Company, GoodId, Kingdom, MarketGood, PopClass, Region, Skill, World } from './types';
@@ -95,12 +95,7 @@ function newCompany(id: number, name: string, color: string, kingdomId: number, 
 
 function newMarket(): Record<GoodId, MarketGood> {
   const market = {} as Record<GoodId, MarketGood>;
-  for (const g of GOOD_IDS) {
-    market[g] = {
-      price: GOODS[g].basePrice, inventory: 0, demand: 0, supply: 0, demandEma: 0, supplyEma: 0,
-      sold: 0, volumeEma: 0, shippedIn: 0, shippedOut: 0, demandBy: {}, supplyBy: {}, demandByEma: {}, supplyByEma: {},
-    };
-  }
+  for (const g of GOOD_IDS) market[g] = newMarketGood(g);
   return market;
 }
 
@@ -189,11 +184,12 @@ export function createWorld(seed = 1, opts: CreateWorldOptions = {}): World {
     const admin = getMethod('admin', 'admin_hereditary');
     w.buildings.push(newBuilding(w.nextId++, 'admin', home.id, c.id, admin.id, Math.max(1, Math.ceil((people * TUNE.adminStart) / (admin.taxCapacity! * TUNE.adminScale))), true));
   }
-  // 티어에 따른 시작 민간 곡물 농장 (일꾼은 첫날부터 소작농에서 뽑는다)
+  // 티어에 따른 시작 민간 섬유 농장 (일꾼은 첫날부터 소작농에서 뽑는다). 소작지는 섬유를 거두지 않으므로
+  // 건축사무소(목조 건설: 섬유 500)와 방직·가구가 첫날부터 쓸 섬유는 여기서 나온다
   for (const r of regions) {
     const firm = companies.find((c) => !c.state && c.kingdomId === r.kingdomId);
     const levels = Math.min(starts.get(r.id)!.farms, r.land.arable);
-    if (firm && levels > 0) w.buildings.push(newBuilding(w.nextId++, 'farm', r.id, firm.id, 'farm_basic', levels, false));
+    if (firm && levels > 0) w.buildings.push(newBuilding(w.nextId++, 'fiber_farm', r.id, firm.id, 'fiber_basic', levels, false));
   }
   updateSubsistence(w);
 

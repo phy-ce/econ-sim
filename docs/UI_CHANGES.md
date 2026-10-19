@@ -18,6 +18,7 @@
 4. **항구 표시 정리.** sim에서 항구·해외 무역 코드를 없앴다 (`PORTS_OPEN`은 sim에 없다). 클라이언트 `systemMetrics.ts`의 `PORTS_OPEN = false`와 `RegionMap.tsx`·`RegionPanel.tsx`의 항구 배지는 지우거나 장식으로만 둔다. `Region.spaceport`(항구 지역 표시)는 데이터에 남아 있다.
 5. **행정청 세금 역량.** `taxCapacity(world, kingdomId)`를 index에서 export했다. 필드 `Kingdom.taxCapacity`·`taxDue`로 읽어도 된다.
 6. **광맥은 자원별, 탐광으로 늘어난다 (2-26).** 지역 패널의 광맥 칸을 철·석탄 두 줄(`r.deposits.iron`·`r.deposits.coal`, 남은 칸 `depositFree`)로 나눈다. 탐광 알림은 그대로 보이면 된다.
+7. **술·기호품·양조장 (2-27).** 새 상품 `liquor`(술)과 새 건물 `distillery`(양조장)에 임시 그림·별칭, 새 필요 `intoxicants`(기호품)를 필요 목록에. 소작지 산출에서 섬유가 빠지고 술이 들어간다.
 - 바뀌지 않는 것: 소작농 판매 규칙(먹고 남는 것만 판다)과 왕실 학교 AI는 화면 변경이 없다. 현물 값의 뜻도 그대로다.
 - **아직 sim에 없음 (만들지 말 것, 들어오면 이 목록에 올린다):**
   - 건물별 임금·현금·보조금 (브랜치 wt-wage). 들어오면 국영 임금 손잡이(`budget.wages`)가 없어지고, 건물 패널에 임금·현금·보조금 켜기가 생기고, 저장 형식이 5로 바뀐다(옛 저장은 `migrateWorld`로 변환). 그래서 1번에서 국영 임금 손잡이는 작게 두어도 된다.
@@ -439,6 +440,17 @@ sim이 아래 제도를 없앴다. 화면이 계속 컴파일되도록 `packages
 - 넣을 곳: 지역 패널의 땅 표에서 광맥 한 줄을 철·석탄 두 줄로 (이름 `DEPOSIT_NAMES`/`DEPOSIT_NAMES_EN`, 쓴 칸/찾은 칸). 잠재량(`veins`)은 보이지 않는다 (탐광의 의미가 없어진다).
 - 알림: 광맥을 찾으면 그 지역 왕국 왕실에 `info` 알림 (`regionId` 있음): `"북부 광산지대 철광맥 +20"` / `"Northern Mining District iron veins +20"` (석탄은 `탄맥` / `coal seams`, `VEIN_NAMES`·`VEIN_NAMES_EN`).
 - 저장 형식 그대로. 옛 저장은 찾은 광맥이 적은 채로 이어서 탐광한다.
+
+### 2-27. 술과 기호품, 양조장 (소작지는 섬유를 거두지 않는다)
+- 새 상품 `liquor`: 술 / Liquor, 기본가 3. `GOOD_IDS`의 맨 끝에 붙였다.
+- 새 필요 `intoxicants`: 기호품 / Intoxicants (선택지 술 하나). `NEEDS`의 맨 끝. 부 0부터 생기고 부 10까지 는다. 식량 필요는 그만큼 줄었다 (식량 + 기호품 = 예전 식량).
+- 새 건물 `distillery`: 양조장 / Distillery (공장 부지, 1,000포인트). 방식 `liquor_pot`(단식 증류 / Pot stills, 기술 `milling`): 곡물 3,500 → 술 8,000. `liquor_column`(연속식 증류 / Column stills, 기술 `food_machinery`): 곡물 3,500 + 공구 100 → 술 8,000.
+- 소작지 산출(`b.last.output`)은 곡물·술·목재다. 섬유는 없다. 소작지 산출을 상품을 나열해 그린다면 섬유를 빼고 술을 넣는다.
+- 시작 민간 농장은 곡물 농장이 아니라 섬유 농장(`fiber_farm`)이다.
+- 고칠 것
+  - `spriteAtlas.ts`의 상품·건물 목록과 `sprites.tsx`의 `ALIAS`에 임시 그림을 연결한다 (예: 술 → `food`, 양조장 → `foodplant`). 그림이 생기면 교체한다.
+  - 상품 표, 건설 메뉴, 필요 표시가 `GOOD_IDS`, `BUILDING_TYPES`, `NEEDS`를 돌며 그린다면 따로 할 일은 없다. id를 직접 나열한 곳이 있으면 추가한다. 이름은 `GOODS.liquor.name`/`nameEn`, `NEEDS`의 `name`/`nameEn`.
+- 저장 형식 그대로 (version 4). 옛 저장에는 `region.market.liquor`가 없는데, sim의 `step`이 맨 먼저 채운다(`fillMissingMarkets`). 불러온 직후 한 번도 진행하지 않은 상태에서 그 시장을 읽는 화면은 없는 키를 견뎌야 한다. 옛 저장의 통계 기록(`metrics[].goods`)에도 `liquor`가 없다.
 
 ---
 

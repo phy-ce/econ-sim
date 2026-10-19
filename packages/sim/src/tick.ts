@@ -7,7 +7,7 @@ import { recordMetrics } from './metrics';
 import { applyCommand } from './commands';
 import { chargeInterest, collectIncomeTax, distributeInvestment, doResearch, mintMoney, payDividends, spendBudget, weeklyBanking } from './finance';
 import { laborMarket, migrate, payWages, syncEmployment } from './labor';
-import { clearMarkets, collectOrders, harvest, newBook, resetMarkets, updatePrices } from './market';
+import { clearMarkets, collectOrders, fillMissingMarkets, harvest, newBook, resetMarkets, updatePrices } from './market';
 import { aggregateHouseholds, prunePops, updateGrowth, updateLiteracy, updateQualifications } from './pops';
 import { advanceConstruction, produce, progressDemolition, updateIdleOffices, updateSubsistence } from './production';
 import { POP_CLASSES, SKILLS, emptyLedger } from './types';
@@ -21,6 +21,7 @@ const HISTORY_CAP = 1500;
 /** 하루를 진행한다. 명령은 틱 시작 시점에 적용된다 */
 export function step(w: World, commands: QueuedCommand[] = []): string[] {
   const errors: string[] = [];
+  fillMissingMarkets(w);
   for (const q of commands) {
     const err = applyCommand(w, q.actor, q.cmd);
     if (err) errors.push(err);

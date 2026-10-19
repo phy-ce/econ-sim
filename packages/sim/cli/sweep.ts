@@ -1,7 +1,7 @@
 // 조정값 비교: npx tsx cli/sweep.ts '<TUNE JSON>' [seed] [years]
 // 주요 지표(w.metrics)에서 5년마다(와 마지막 해) 대륙 합계를 뽑아 한 줄 JSON으로 출력한다.
 // TIMING=1 이면 time: { ms 시뮬레이션 시간, msPerDay 하루 평균 } 을 덧붙인다 (sweepsum.py 가 따로 요약한다)
-import { BUILDING_BY_ID, SKILL_DEFS, TUNE } from '../src/data';
+import { BUILDING_BY_ID, SKILL_DEFS, SUBSISTENCE, TUNE } from '../src/data';
 import { isGovernment, paysDividend, slots } from '../src/economy';
 import { committedCost } from '../src/finance';
 import { createWorld, step } from '../src/index';
@@ -53,13 +53,17 @@ function investInterval(ms: MetricPoint[], from: number, to: number) {
 
 const over = JSON.parse(process.argv[2] ?? '{}');
 const seed = Number(process.argv[3] ?? 1), years = Number(process.argv[4] ?? 10);
-Object.assign(TUNE, over);
+// SUBSISTENCE 키는 TUNE 이 아니라 소작 수확(1인당)을 바꾼다: {"SUBSISTENCE":{"grain":2,"liquor":1,"timber":1.3}}
+const { SUBSISTENCE: harvestOver, ...tuneOver } = over;
+Object.assign(TUNE, tuneOver);
+if (harvestOver) SUBSISTENCE.harvest = harvestOver;
 // 비교 실행에서는 플레이어 왕국도 AI가 맡는다
 const w = createWorld(seed, { withPlayer: false });
 // 왕실 정책 단계 (4주 점검마다 왕국별): 세금 수준·국영 임금 수준·국고(지출 몇 주치)·빚
 const trace = w.kingdoms.map(() => [] as { tax: number; wages: number; weeks: number; debt: boolean }[]);
 // 교육 (5년마다): lit 인구 가중 문해력, sch 왕실 학교 레벨, qs 기술자 자격자(기술자 + 다른 직종의 기술자 자격, 천 명), schDem 학교 철거 레벨 누계
-const edu: Record<number, { lit: number; sch: number; qs: number; schDem: number; veins: number }> = {};
+// incPeas: 소작농 1인당(부양가족 포함) 하루 현금 소득 이동평균
+const edu: Record<number, { lit: number; sch: number; qs: number; schDem: number; veins: number; incPeas: number }> = {};
 const inv: Record<number, ReturnType<typeof investSnapshot>> = {};
 let schDem = 0;
 const schoolLevels = new Map<number, number>();
@@ -75,12 +79,15 @@ for (let d = 0; d < years * 360; d++) {
     for (const [id, lv] of now) schoolLevels.set(id, lv);
   }
   if (w.tick % 1800 === 0 || w.tick === years * 360) {
-    let n = 0, lit = 0, qs = 0;
-    for (const p of w.pops) { n += p.size; lit += p.size * p.literacy; qs += p.prof === 'skilled' ? workforce(p) : (p.quals.skilled ?? 0); }
+    let n = 0, lit = 0, qs = 0, pn = 0, pinc = 0;
+    for (const p of w.pops) {
+      n += p.size; lit += p.size * p.literacy; qs += p.prof === 'skilled' ? workforce(p) : (p.quals.skilled ?? 0);
+      if (p.prof === 'peasant') { pn += p.size; pinc += Math.max(0, p.incomeEma); }
+    }
     const sch = w.buildings.filter((b) => b.typeId === 'school').reduce((a, b) => a + b.level, 0);
     // veins: 찾은 광맥 레벨 합 (모든 지역·자원)
     const veins = w.regions.reduce((a, r) => a + Object.values(r.deposits).reduce((b, x) => b + x, 0), 0);
-    edu[w.tick / 360] = { lit: +(lit / n).toFixed(3), sch, qs: Math.round(qs / 1e3), schDem, veins };
+    edu[w.tick / 360] = { lit: +(lit / n).toFixed(3), sch, qs: Math.round(qs / 1e3), schDem, veins, incPeas: +(pn > 0 ? pinc / pn : 0).toFixed(2) };
     inv[w.tick / 360] = investSnapshot(w);
   }
   if (w.tick % 28 !== 0) continue;
@@ -109,6 +116,8 @@ for (const m of w.metrics) {
     gdp: Math.round(sum(m, (k) => k.gdp) / 1e6),
     pts: Math.round(sum(m, (k) => k.pointsPerDay)),
     grain: m.goods.grain.ratio,
+    fiber: m.goods.fiber.ratio,
+    liquor: m.goods.liquor.ratio,
     timber: m.goods.timber.ratio,
     ore: m.goods.ore.ratio,
     fuel: m.goods.fuel.ratio,

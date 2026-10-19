@@ -160,6 +160,19 @@ const bldSrc = (typeId: string) => {
   return s;
 };
 
+/** 상품 하나의 새 시장 (기본가에서 시작) */
+export function newMarketGood(g: GoodId): MarketGood {
+  return {
+    price: GOODS[g].basePrice, inventory: 0, demand: 0, supply: 0, demandEma: 0, supplyEma: 0,
+    sold: 0, volumeEma: 0, shippedIn: 0, shippedOut: 0, demandBy: {}, supplyBy: {}, demandByEma: {}, supplyByEma: {},
+  };
+}
+
+/** 예전 저장에 없는 상품(나중에 더한 상품)의 시장을 채운다. 새 세계에서는 아무것도 바꾸지 않는다 (step 이 맨 먼저 부른다) */
+export function fillMissingMarkets(w: World) {
+  for (const r of w.regions) for (const g of GOOD_IDS) if (!r.market[g]) r.market[g] = newMarketGood(g);
+}
+
 export function resetMarkets(w: World) {
   for (const r of w.regions) {
     for (const g of GOOD_IDS) {
@@ -176,7 +189,9 @@ export function resetMarkets(w: World) {
 
 /** 소작지 노동 인구 wf 의 하루 수확 */
 function harvestOutput(wf: number): GoodBag {
-  return { grain: wf * SUBSISTENCE.grainPerWorker, fiber: wf * SUBSISTENCE.fiberPerWorker, timber: wf * SUBSISTENCE.timberPerWorker };
+  const out: GoodBag = {};
+  for (const g of GOOD_IDS) { const per = SUBSISTENCE.harvest[g]; if (per) out[g] = wf * per; }
+  return out;
 }
 
 /**
