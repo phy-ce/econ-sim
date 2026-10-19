@@ -13,7 +13,15 @@ const PROF_INDEX = Object.fromEntries(POP_CLASSES.map((s, i) => [s, i])) as Reco
 const key = (regionId: number, prof: PopClass) => regionId * POP_CLASSES.length + PROF_INDEX[prof];
 /** 일터 → (지역, 직종) → pop 색인. 직렬화하지 않고 필요할 때 다시 만든다 */
 type PopIndex = Map<number, Map<number, Pop>>;
-const indexes = new WeakMap<World, { map: PopIndex; n: number }>();
+interface Indexed { map: PopIndex; n: number }
+const indexes = new WeakMap<World, Indexed>();
+/** 마지막으로 쓴 세계와 그 색인 (매번 WeakMap 을 찾지 않게). 늘 indexes.get(lastWorld) 와 같다 */
+let lastWorld: World | null = null, lastIndexed: Indexed | undefined;
+
+function indexed(w: World): Indexed | undefined {
+  if (w !== lastWorld) { lastWorld = w; lastIndexed = indexes.get(w); }
+  return lastIndexed;
+}
 
 function put(map: PopIndex, p: Pop) {
   let byWork = map.get(p.work);
@@ -22,12 +30,13 @@ function put(map: PopIndex, p: Pop) {
 }
 
 function index(w: World): PopIndex {
-  let ix = indexes.get(w);
+  let ix = indexed(w);
   if (!ix || ix.n !== w.pops.length) {
     const map: PopIndex = new Map();
     for (const p of w.pops) put(map, p);
     ix = { map, n: w.pops.length };
     indexes.set(w, ix);
+    lastIndexed = ix;
   }
   return ix.map;
 }
@@ -45,7 +54,7 @@ export function getPop(w: World, regionId: number, prof: PopClass, work: number)
     incomeEma: 0, lastIncome: 0, lastSpend: 0, fulfillment: 1, food: 1, inKind: {},
   };
   w.pops.push(p);
-  const ix = indexes.get(w);
+  const ix = indexed(w);
   if (ix) { put(ix.map, p); ix.n = w.pops.length; }
   return p;
 }
@@ -54,11 +63,16 @@ export function popsIn(w: World, regionId: number): Pop[] {
   return w.pops.filter((p) => p.regionId === regionId);
 }
 
+/** 계층 이동 기록의 키 `출발>도착` (미리 만들어 둔다) */
+const MOBILITY_KEY = Object.fromEntries(
+  POP_CLASSES.map((a) => [a, Object.fromEntries(POP_CLASSES.map((b) => [b, `${a}>${b}`]))]),
+) as Record<PopClass, Record<PopClass, string>>;
+
 /** 계층 이동 누적 기록 (분석·화면용) */
 function track(w: World, from: PopClass, to: PopClass, people: number) {
   if (from === to || !(people > 0)) return;
   const m = (w.mobility ??= {});
-  const k = `${from}>${to}`;
+  const k = MOBILITY_KEY[from][to];
   m[k] = (m[k] ?? 0) + people;
 }
 
@@ -73,48 +87,71 @@ export function movePeople(w: World, from: Pop, to: Pop, workers: number, qualif
   const frac = Math.min(1, workers / WORKFORCE_RATIO / from.size);
   const people = from.size * frac;
   const moved = people * WORKFORCE_RATIO;
-  const carried: Partial<Record<PopClass, number>> = {};
-  for (const q of Object.keys(from.quals) as PopClass[]) {
-    const have = from.quals[q] ?? 0;
-    const amt = q === qualified ? Math.min(have, moved) : have * frac;
-    from.quals[q] = have - amt;
-    carried[q] = amt;
-  }
-  // 직종이 바뀌면 원래 직종 자격을 들고 가고, 도착 직종의 자격은 들고 가지 않는다
-  const drop = to.prof !== from.prof ? to.prof : null;
-  if (drop) carried[from.prof] = (carried[from.prof] ?? 0) + moved;
+  const fromProf = from.prof, toProf = to.prof;
   const total = to.size + people;
-  const avg = (a: number, b: number) => (total > 0 ? (a * to.size + b * people) / total : b);
-  to.wealth = avg(to.wealth, from.wealth);
-  to.literacy = avg(to.literacy, from.literacy);
-  to.food = avg(to.food, from.food);
-  to.fulfillment = avg(to.fulfillment, from.fulfillment);
+  const cap = total * WORKFORCE_RATIO;
+  // 자격: 출발 pop 에서 덜어 도착 pop 에 더한다 (도착 pop 에 새 키는 출발 pop 의 키 순서대로, 원래 직종 키는 맨 뒤에 생긴다).
+  // 직종이 바뀌면 원래 직종 자격을 들고 가고, 도착 직종의 자격은 들고 가지 않는다
+  const fq = from.quals, tq = to.quals;
+  const change = toProf !== fromProf;
+  let ownCarried = false;
+  for (const k in fq) {
+    const q = k as PopClass;
+    const have = fq[q] ?? 0;
+    const amt = q === qualified ? Math.min(have, moved) : have * frac;
+    fq[q] = have - amt;
+    if (!change) tq[q] = Math.min(cap, (tq[q] ?? 0) + amt);
+    else if (q === fromProf) { ownCarried = true; tq[q] = Math.min(cap, (tq[q] ?? 0) + (amt + moved)); }
+    else if (q !== toProf) tq[q] = Math.min(cap, (tq[q] ?? 0) + amt);
+  }
+  if (change && !ownCarried) tq[fromProf] = Math.min(cap, (tq[fromProf] ?? 0) + moved);
+  // 부·문해력·충족률은 인구 가중 평균
+  const before = to.size;
+  if (total > 0) {
+    to.wealth = (to.wealth * before + from.wealth * people) / total;
+    to.literacy = (to.literacy * before + from.literacy * people) / total;
+    to.food = (to.food * before + from.food * people) / total;
+    to.fulfillment = (to.fulfillment * before + from.fulfillment * people) / total;
+  } else {
+    to.wealth = from.wealth;
+    to.literacy = from.literacy;
+    to.food = from.food;
+    to.fulfillment = from.fulfillment;
+  }
   const money = from.savings * frac, inc = from.incomeEma * frac;
   from.savings -= money; to.savings += money;
   from.incomeEma -= inc; to.incomeEma += inc;
   from.size -= people;
   to.size = total;
-  const cap = to.size * WORKFORCE_RATIO;
-  for (const q of Object.keys(carried) as PopClass[]) if (q !== drop) to.quals[q] = Math.min(cap, (to.quals[q] ?? 0) + (carried[q] ?? 0));
-  track(w, from.prof, to.prof, people);
+  track(w, fromProf, toProf, people);
   return moved;
 }
 
 /** 다 빠져나간 pop 을 지운다. 남은 저축은 같은 지역·직종의 실업 pop 으로 (그 pop 도 이번에 지워지면 안 된다), 그것도 없으면 주인 없는 돈으로 */
 export function prunePops(w: World) {
-  const keep: Pop[] = [];
-  for (const p of w.pops) {
-    if (p.size >= 1e-3) { keep.push(p); continue; }
+  const pops = w.pops;
+  // 남길 목록은 지울 pop 이 처음 나올 때 만든다
+  let keep: Pop[] | null = null;
+  for (let i = 0; i < pops.length; i++) {
+    const p = pops[i];
+    if (p.size >= 1e-3) { if (keep) keep.push(p); continue; }
+    if (!keep) keep = pops.slice(0, i);
     if (p.savings !== 0 || p.incomeEma !== 0) {
       const heir = p.work !== 0 ? findPop(w, p.regionId, p.prof, 0) : undefined;
       if (heir && heir !== p && heir.size >= 1e-3) { heir.savings += p.savings; heir.incomeEma += p.incomeEma; } else w.fund += p.savings;
     }
   }
-  if (keep.length !== w.pops.length) { w.pops = keep; indexes.delete(w); }
+  if (keep) {
+    w.pops = keep;
+    indexes.delete(w);
+    if (lastWorld === w) lastIndexed = undefined;
+  }
 }
 
+const bySize = (p: Pop) => p.size;
+
 /** 조건에 맞는 pop 들에게 노동 인구 비례로 돈을 준다. 받을 pop 이 없으면 false */
-export function payPops(w: World, pops: Pop[], amount: number, weight: (p: Pop) => number = (p) => p.size): boolean {
+export function payPops(w: World, pops: Pop[], amount: number, weight: (p: Pop) => number = bySize): boolean {
   if (amount <= 0) return true;
   let total = 0;
   for (const p of pops) total += weight(p);
@@ -130,8 +167,28 @@ export function payPops(w: World, pops: Pop[], amount: number, weight: (p: Pop) 
 /** 지역의 그 직종에게 돈을 준다. 그 직종이 없으면 지역 전체, 그것도 없으면 주인 없는 돈 */
 export function payProf(w: World, regionId: number, prof: PopClass, amount: number) {
   if (amount <= 0) return;
-  const here = w.pops.filter((p) => p.regionId === regionId);
-  if (!payPops(w, here.filter((p) => p.prof === prof), amount) && !payPops(w, here, amount)) w.fund += amount;
+  // payPops 와 같은 계산을 목록 없이 한다
+  let mine = 0, all = 0;
+  for (const p of w.pops) {
+    if (p.regionId !== regionId) continue;
+    if (p.prof === prof) mine += p.size;
+    all += p.size;
+  }
+  if (!(mine <= 0)) {
+    for (const p of w.pops) {
+      if (p.regionId !== regionId || p.prof !== prof) continue;
+      const amt = (amount * p.size) / mine;
+      p.savings += amt;
+      p.lastIncome += amt;
+    }
+  } else if (!(all <= 0)) {
+    for (const p of w.pops) {
+      if (p.regionId !== regionId) continue;
+      const amt = (amount * p.size) / all;
+      p.savings += amt;
+      p.lastIncome += amt;
+    }
+  } else w.fund += amount;
 }
 
 // ---------------------------------------------------------------- 자격 (빅토리아3 Qualifications)
@@ -157,19 +214,28 @@ const QUAL_FROM: Partial<Record<PopClass, Partial<Record<PopClass, number>>>> = 
   capitalist: { aristocrat: 5, skilled: 5, expert: 5 },
   aristocrat: { capitalist: 5, gentry: 5 },
 };
+const QUAL_TARGETS = Object.keys(QUAL_FACTOR) as PopClass[];
+const QUAL_FNS = QUAL_TARGETS.map((t) => QUAL_FACTOR[t]!);
+/** [대상 순번][출신 직종 순번] 의 출신 직종 배율 */
+const QUAL_FROM_BY = QUAL_TARGETS.map((t) => POP_CLASSES.map((s) => QUAL_FROM[t]?.[s] ?? 1));
 
 export function updateQualifications(w: World) {
   for (const p of w.pops) {
     const wf = workforce(p);
     if (wf <= 0) continue;
-    for (const target of Object.keys(QUAL_FACTOR) as PopClass[]) {
-      if (target === p.prof) continue;
-      const f = QUAL_FACTOR[target]!(p.literacy, p.wealth) * (QUAL_FROM[target]?.[p.prof] ?? 1);
-      const have = p.quals[target] ?? 0;
-      if (f > 0) p.quals[target] = Math.min(wf, have + wf * QUAL_RATE * TUNE.qualRate * f);
-      else if (have > 0) p.quals[target] = have * (1 - QUAL_DECAY);
+    const quals = p.quals, prof = p.prof, from = PROF_INDEX[prof];
+    for (let i = 0; i < QUAL_TARGETS.length; i++) {
+      const target = QUAL_TARGETS[i];
+      if (target === prof) continue;
+      const f = QUAL_FNS[i](p.literacy, p.wealth) * QUAL_FROM_BY[i][from];
+      const have = quals[target] ?? 0;
+      if (f > 0) quals[target] = Math.min(wf, have + wf * QUAL_RATE * TUNE.qualRate * f);
+      else if (have > 0) quals[target] = have * (1 - QUAL_DECAY);
     }
-    for (const q of Object.keys(p.quals) as PopClass[]) if ((p.quals[q] ?? 0) > wf) p.quals[q] = wf;
+    for (const k in quals) {
+      const q = k as PopClass;
+      if ((quals[q] ?? 0) > wf) quals[q] = wf;
+    }
   }
 }
 
@@ -212,10 +278,14 @@ export function mortalityAt(sol: number): number {
 /** 식량 부족 (빅토리아3): 식량 충족 40% 아래부터 출생 −35%·사망 +30% 까지, 20% 아래로 출생 −90%·사망 +100% 까지 */
 export const STARVATION_LINE = 0.4;
 const SEVERE_STARVATION = 0.2;
-function starvation(food: number) {
-  const mild = clamp((STARVATION_LINE - food) / (STARVATION_LINE - SEVERE_STARVATION), 0, 1);
-  const severe = clamp((SEVERE_STARVATION - food) / SEVERE_STARVATION, 0, 1);
-  return { birth: 1 - 0.35 * mild - 0.55 * severe, mortality: 1 + 0.3 * mild + 0.7 * severe };
+
+/** 생활수준이 sol0 (popSol) 인 pop 의 하루 순증가율 */
+function growthWith(p: Pop, sol0: number): number {
+  const sol = sol0 * (SOL_EQUILIBRIUM / TUNE.growthEq[CLASS_DEFS[p.prof].stratum]);
+  const mild = clamp((STARVATION_LINE - p.food) / (STARVATION_LINE - SEVERE_STARVATION), 0, 1);
+  const severe = clamp((SEVERE_STARVATION - p.food) / SEVERE_STARVATION, 0, 1);
+  const birth = 1 - 0.35 * mild - 0.55 * severe, mortality = 1 + 0.3 * mild + 0.7 * severe;
+  return (birthRateAt(sol, p.literacy) * birth - mortalityAt(sol) * mortality) / DAYS_PER_MONTH;
 }
 
 /**
@@ -223,14 +293,14 @@ function starvation(food: number) {
  * 생활수준을 그 신분의 평형점이 5가 되도록 늘이거나 줄여 빅토리아3 곡선에 넣는다
  */
 export function growthAt(p: Pop): number {
-  const sol = popSol(p) * (SOL_EQUILIBRIUM / TUNE.growthEq[CLASS_DEFS[p.prof].stratum]), st = starvation(p.food);
-  return (birthRateAt(sol, p.literacy) * st.birth - mortalityAt(sol) * st.mortality) / DAYS_PER_MONTH;
+  return growthWith(p, popSol(p));
 }
 
 export function updateGrowth(w: World) {
   for (const p of w.pops) {
-    const g = growthAt(p);
-    p.sol = round2(popSol(p));
+    const sol = popSol(p);
+    const g = growthWith(p, sol);
+    p.sol = round2(sol);
     p.growth = round2(((1 + g) ** DAYS_PER_YEAR - 1) * 100);
     p.size = Math.max(0, p.size * (1 + g));
   }
@@ -244,8 +314,9 @@ const emptyHousehold = (s: PopClass): Household => ({
 
 /** pop 을 지역·직종별로 합쳐 region.households 를 채운다 (화면과 기존 함수용) */
 export function aggregateHouseholds(w: World) {
-  const byRegion = new Map<number, Region>(w.regions.map((r) => [r.id, r]));
   const sums = new Map<Region, Record<PopClass, Household>>();
+  /** 지역 id → 그 지역 합계 (id 가 겹치면 뒤의 지역) */
+  const byId = new Map<number, Record<PopClass, Household>>();
   for (const r of w.regions) {
     const hh = {} as Record<PopClass, Household>;
     for (const s of POP_CLASSES) {
@@ -254,11 +325,12 @@ export function aggregateHouseholds(w: World) {
       hh[s].consumed = r.households?.[s]?.consumed ?? {};
     }
     sums.set(r, hh);
+    byId.set(r.id, hh);
   }
   for (const p of w.pops) {
-    const r = byRegion.get(p.regionId);
-    if (!r) continue;
-    const h = sums.get(r)![p.prof];
+    const hh = byId.get(p.regionId);
+    if (!hh) continue;
+    const h = hh[p.prof];
     const n = h.population + p.size;
     if (n > 0) {
       h.wealth = (h.wealth * h.population + p.wealth * p.size) / n;
@@ -271,7 +343,11 @@ export function aggregateHouseholds(w: World) {
     h.incomeEma += p.incomeEma;
     h.lastIncome += p.lastIncome;
     h.lastSpend += p.lastSpend;
-    for (const [g, q] of Object.entries(p.inKind)) h.inKind[g as keyof GoodBag] = (h.inKind[g as keyof GoodBag] ?? 0) + (q ?? 0);
+    const kind = p.inKind, sum = h.inKind;
+    for (const k in kind) {
+      const g = k as keyof GoodBag;
+      sum[g] = (sum[g] ?? 0) + (kind[g] ?? 0);
+    }
   }
   for (const r of w.regions) {
     const hh = sums.get(r)!;
