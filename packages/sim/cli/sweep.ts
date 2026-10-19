@@ -1,7 +1,7 @@
 // 조정값 비교: npx tsx cli/sweep.ts '<TUNE JSON>' [seed] [years]
 // 주요 지표(w.metrics)에서 5년마다(와 2년차, 마지막 해) 대륙 합계를 뽑아 한 줄 JSON으로 출력한다.
 // TIMING=1 이면 time: { ms 시뮬레이션 시간, msPerDay 하루 평균 } 을 덧붙인다 (sweepsum.py 가 따로 요약한다)
-import { BUILDING_BY_ID, SKILL_DEFS, SUBSISTENCE, TUNE } from '../src/data';
+import { BUILDING_BY_ID, GOODS, NEEDS, SKILL_DEFS, SUBSISTENCE, TUNE } from '../src/data';
 import { isGovernment, paysDividend, slots } from '../src/economy';
 import { committedCost } from '../src/finance';
 import { createWorld, step } from '../src/index';
@@ -54,9 +54,15 @@ function investInterval(ms: MetricPoint[], from: number, to: number) {
 const over = JSON.parse(process.argv[2] ?? '{}');
 const seed = Number(process.argv[3] ?? 1), years = Number(process.argv[4] ?? 10);
 // SUBSISTENCE 키는 TUNE 이 아니라 소작 수확(1인당)을 바꾼다: {"SUBSISTENCE":{"grain":2,"liquor":1,"timber":1.3}}
-const { SUBSISTENCE: harvestOver, ...tuneOver } = over;
+// LIQUOR 키는 술 기본가와 식품 공장 술 방식 산출을 바꾼다: {"LIQUOR":{"base":8,"out":3000}}
+const { SUBSISTENCE: harvestOver, LIQUOR: liquorOver, ...tuneOver } = over;
 Object.assign(TUNE, tuneOver);
 if (harvestOver) SUBSISTENCE.harvest = harvestOver;
+if (liquorOver) {
+  GOODS.liquor.basePrice = liquorOver.base;
+  for (const n of NEEDS) for (const o of n.options) if (o.good === 'liquor') o.units = 1 / liquorOver.base;
+  for (const m of BUILDING_BY_ID.foodplant.methods) if (m.outputs.liquor) m.outputs.liquor = liquorOver.out;
+}
 // 비교 실행에서는 플레이어 왕국도 AI가 맡는다
 const w = createWorld(seed, { withPlayer: false });
 // 왕실 정책 단계 (4주 점검마다 왕국별): 세금 수준·국영 임금 수준·국고(지출 몇 주치)·빚
@@ -118,6 +124,8 @@ for (const m of w.metrics) {
     grain: m.goods.grain.ratio,
     fiber: m.goods.fiber.ratio,
     liquor: m.goods.liquor.ratio,
+    liqS: Math.round(m.goods.liquor.supply / 1e3),
+    liqD: Math.round(m.goods.liquor.demand / 1e3),
     timber: m.goods.timber.ratio,
     ore: m.goods.ore.ratio,
     fuel: m.goods.fuel.ratio,
