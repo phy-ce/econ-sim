@@ -156,7 +156,7 @@ export function createWorld(seed = 1, opts: CreateWorldOptions = {}): World {
       id: def.id, name: def.name, description: def.description, spaceport: def.spaceport, neighbors: [...def.neighbors],
       kingdomId: owner[def.id], tier: st.tier,
       land: { arable: st.arable, forest: def.forest, plot: st.plot, ore: deposits.iron + deposits.coal }, deposits,
-      education100: Math.round(st.education * 100), households: {} as Region['households'], market: newMarket(),
+      education100: Math.round(st.education * 100), education: Math.round(st.education * 100) / 100, households: {} as Region['households'], market: newMarket(),
     };
   });
 

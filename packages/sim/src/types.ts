@@ -181,6 +181,10 @@ export interface Pop {
   wealth100: number;
   /** 문해력 % (0..100, 100배 값). 규칙 단위(0..1)는 literacyOf(p) */
   literacy100: number;
+  /** 화면 표시용 사본 (소수 둘째 자리). sim은 읽지 않는다 — wealthOf(p)를 쓴다. 부 단계 (wealth100 / 100), 하루 끝 반올림(round.ts)에서 다시 쓴다 */
+  wealth: number;
+  /** 화면 표시용 사본 (소수 둘째 자리). sim은 읽지 않는다 — literacyOf(p)를 쓴다. 문해력 0..1 (literacy100 / 100) */
+  literacy: number;
   /** 다른 직종의 자격을 갖춘 노동 인구 수 */
   quals: Partial<Record<PopClass, number>>;
   incomeEma: number;
@@ -228,6 +232,8 @@ export interface Building {
   exp100: number;
   /** 실제로 손이 맞는 작업 인원 % (0..100, 100배 값): 충원율을 하루 8%씩 따라간다. 규칙 단위(0..1)는 crewOf(b) */
   crew100?: number;
+  /** 화면 표시용 사본 (소수 둘째 자리). sim은 읽지 않는다 — crewOf(b)를 쓴다. 작업 인원 0..1 (crew100 / 100, crew100 이 없으면 없다) */
+  crew?: number;
   /** 건축사무소가 할 일이 없어 인부를 해산한 상태 */
   idle: boolean;
   /** 건축사무소: 맡은 공사 없이 이어진 날 수 (TUNE.officeIdleDays 를 넘으면 인부를 해산한다) */
@@ -398,6 +404,8 @@ export interface Region {
   deposits: Record<DepositId, number>;
   /** 교육 접근도 % (0..100, 100배 값, 학교 정원 비율). pop 의 문해력이 이것을 따라간다. 규칙 단위(0..1)는 educationOf(r) */
   education100: number;
+  /** 화면 표시용 사본 (소수 둘째 자리). sim은 읽지 않는다 — educationOf(r)를 쓴다. 교육 접근도 0..1 (education100 / 100) */
+  education: number;
   /** pop 합산 (화면용). 매 틱 다시 채운다 */
   households: Record<PopClass, Household>;
   market: Record<GoodId, MarketGood>;

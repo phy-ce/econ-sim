@@ -41,6 +41,16 @@ const SKIP = new Set(['history', 'metrics', 'events', 'alertState']);
 /** 아래에서 필드를 직접 적어 맞추는 것 */
 const LISTED = new Set(['regions', 'pops', 'buildings', 'constructions', 'salvage', 'traders', 'bank', 'mint']);
 
+/**
+ * 화면 표시용 사본(Pop.wealth·literacy, Region.education, Building.crew)을 100배 값에서 다시 쓴다 (roundWorld 가 하루 끝마다 같은 일을 한다).
+ * 사본이 없는 6판 저장을 불러올 때 쓴다. sim 은 사본을 읽지 않는다
+ */
+export function writeMirrors(w: World): void {
+  for (const p of w.pops) { p.wealth = r(p.wealth100 / 100); p.literacy = r(p.literacy100 / 100); }
+  for (const reg of w.regions) reg.education = r(reg.education100 / 100);
+  for (const b of w.buildings) { if (b.crew100 !== undefined) b.crew = r(b.crew100 / 100); else if (b.crew !== undefined) delete b.crew; }
+}
+
 /** 객체·배열 안의 모든 숫자를 소수 둘째 자리로 (제자리에서, −0 은 0) */
 export function roundAll(o: object): void {
   if (Array.isArray(o)) {
@@ -72,6 +82,8 @@ function roundPop(p: Pop): void {
   p.size = r(p.size);
   p.wealth100 = r(p.wealth100);
   p.literacy100 = r(p.literacy100);
+  p.wealth = r(p.wealth100 / 100);
+  p.literacy = r(p.literacy100 / 100);
   p.incomeEma = r(p.incomeEma);
   p.lastIncome = r(p.lastIncome);
   p.lastSpend = r(p.lastSpend);
@@ -90,7 +102,7 @@ function roundBuilding(b: Building): void {
   b.profitEma = r(b.profitEma);
   if (b.privateShare !== undefined) b.privateShare = r(b.privateShare);
   if (b.tenants !== undefined) b.tenants = r(b.tenants);
-  if (b.crew100 !== undefined) b.crew100 = r(b.crew100);
+  if (b.crew100 !== undefined) { b.crew100 = r(b.crew100); b.crew = r(b.crew100 / 100); } else if (b.crew !== undefined) delete b.crew;
   if (b.staffPeak !== undefined) b.staffPeak = r(b.staffPeak);
   const e = b.employed;
   e.unskilled = r(e.unskilled); e.skilled = r(e.skilled); e.expert = r(e.expert);
@@ -163,6 +175,7 @@ export function roundWorld(w: World): void {
   for (const b of w.buildings) roundBuilding(b);
   for (const reg of w.regions) {
     reg.education100 = r(reg.education100);
+    reg.education = r(reg.education100 / 100);
     for (const g of GOOD_IDS) roundMarket(reg.market[g]);
     const hh = reg.households;
     if (hh) for (const s of POP_CLASSES) if (hh[s]) roundHousehold(hh[s]);

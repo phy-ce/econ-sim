@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { GOODS, applyCommandMsg, createWorld, migrateWorld, moneyIdentity, playerCompany, recordHistory, roundWorld, roundingDrift, step } from '../../src/index';
 import type { World } from '../../src/index';
 import { PRICE_MAX, PRICE_MIN, updatePrices } from '../../src/market';
+import { round2 } from '../../src/rng';
 
 // 저장되는 값은 소수 둘째 자리까지 (CLAUDE.md). 화면이 저장하는 글(JSON.stringify(world))의 모든 숫자를 본다.
 
@@ -117,11 +118,37 @@ describe('저장값 소수 둘째 자리', () => {
     expect(Math.abs(moneyIdentity(got) - before)).toBeLessThan(0.01);
     expect(got.fund).toBeGreaterThanOrEqual(0);
     expect(got.pops[0].wealth100).toBeGreaterThanOrEqual(100);
-    expect(got.buildings.every((b) => b.exp100 >= 0 && b.exp100 <= 100 && !('exp' in b) && !('crew' in b))).toBe(true);
+    expect(got.buildings.every((b) => b.exp100 >= 0 && b.exp100 <= 100 && !('exp' in b) && b.crew === (b.crew100 === undefined ? undefined : round2(b.crew100 / 100)))).toBe(true);
+    expect(got.pops.every((p) => p.wealth === round2(p.wealth100 / 100) && p.literacy === round2(p.literacy100 / 100))).toBe(true);
     expect(got.buildings.some((b) => (b.crew100 ?? 0) > 1)).toBe(true);
     // 바꾼 세계도 계속 돈다
     runTo(got, 90);
     expect(violations(save(got))).toEqual([]);
+  });
+
+  // 화면 표시용 사본(Pop.wealth·literacy, Region.education, Building.crew)은 sim 이 읽지 않는다: 사본을 엉뚱한 값으로 바꿔도 다음 날 세계가 같고,
+  // 하루가 끝나면 사본이 100배 값과 맞는다. 사본이 없는 6판 저장도 불러오면 사본이 생긴다
+  it('화면 표시용 사본은 sim 이 읽지 않고, 하루 끝과 불러오기 뒤에 100배 값과 맞는다', () => {
+    const a = createWorld(5);
+    runTo(a, 60);
+    const b = migrateWorld(JSON.parse(save(a)))!;
+    for (const p of b.pops) { p.wealth = -77; p.literacy = -77; }
+    for (const r of b.regions) r.education = -77;
+    for (const x of b.buildings) x.crew = -77;
+    runTo(a, 75); runTo(b, 75);
+    expect(save(b)).toBe(save(a));
+    const synced = (w: World) =>
+      w.pops.every((p) => p.wealth === round2(p.wealth100 / 100) && p.literacy === round2(p.literacy100 / 100)) &&
+      w.regions.every((r) => r.education === round2(r.education100 / 100)) &&
+      w.buildings.every((x) => x.crew === (x.crew100 === undefined ? undefined : round2(x.crew100 / 100)));
+    expect(synced(a)).toBe(true);
+    const bare = JSON.parse(save(a));
+    for (const p of bare.pops) { delete p.wealth; delete p.literacy; }
+    for (const r of bare.regions) delete r.education;
+    for (const x of bare.buildings) delete x.crew;
+    const loaded = migrateWorld(bare)!;
+    expect(synced(loaded)).toBe(true);
+    expect(loaded).toEqual(JSON.parse(save(a)));
   });
 
   // 5판은 이 변경의 중간 판이다: 건물 숙련도·작업 인원이 규칙 단위(exp, crew)인 것과 지금처럼 100배 값인 것이 있다. 둘 다 지금 세계와 같아진다

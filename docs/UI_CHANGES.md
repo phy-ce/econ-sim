@@ -12,7 +12,7 @@
   - 개발 서버는 `cd packages/client && npx vite --port 5199`로 띄운다.
 
 ## 0. 지금 할 일 (2026-10-19 기준, 위에서부터)
-1. **저장값 소수 둘째 자리, 100배 값 필드 (2-27). 지금 클라이언트가 컴파일되지 않는다.** 필드 이름이 바뀌었다: `b.crew` → `crewOf(b)`, `p.wealth` → `wealthOf(p)`, `p.literacy` → `literacyOf(p)`, `r.education` → `educationOf(r)` (`CompanyPanel.tsx` 45, `PopTable.tsx` 22·23·27, `RegionPanel.tsx` 116, main 커밋 기준). 100배 값(`wealth100`·`literacy100`·`education100`·`crew100`·`exp100`)을 그대로 보이면 100배로 보인다. 불러오기는 `sim.worker.ts`가 `migrateWorld`로 바꿔 둔다.
+1. **저장값 소수 둘째 자리, 100배 값 필드 (2-27). 클라이언트는 지금 그대로 컴파일되고 맞는 값을 보인다 (화면 표시용 사본).** 옛 이름 `p.wealth`·`p.literacy`·`r.education`·`b.crew`는 sim이 하루 끝에 100배 값에서 다시 쓰는 사본이다 (소수 둘째 자리, sim은 읽지 않는다). 편할 때 읽는 함수로 바꾼다: `b.crew` → `crewOf(b)`, `p.wealth` → `wealthOf(p)`, `p.literacy` → `literacyOf(p)`, `r.education` → `educationOf(r)`. 7곳: `CompanyPanel.tsx` 45, `PopTable.tsx` 22·23·27, `RegionPanel.tsx` 116 (main 커밋 기준. 작업 폴더의 커밋 전 판은 46, 22·23·27, 117). 다 바꾸면 알려 달라. 그때 사본을 없앤다. 불러오기는 `sim.worker.ts`가 `migrateWorld`로 바꿔 둔다.
 2. **재정 탭 정책 단계 (2-23). 지금 재정 조작이 전부 막혀 있다.** `FinancePanel.tsx` 22행 슬라이더가 0~1 비율을 보내는데 sim의 `setBudget`은 정수 1~5만 받는다. 세 손잡이(`tax`·`wages`·`research`)를 1~5단계 선택으로 바꾼다.
 3. **행정청·학교는 땅이 없다 (2-24).** 짓기 카드에서 땅 칸 대신 무엇을 보일지 정한다. 건축사무소 일자리 표시는 컴파일용으로 `slots(b, s)`를 쓰게 고쳐 두었다 (`CompanyPanel.tsx` 47행, `Workforce.tsx` 14행). 이제 `disbanded(b)`도 export된다.
 4. **기상 조건 (2-25).** 지역 목록·지역 패널에 `harvestLabel` 칩, 깎이는 건물의 산출 옆 `−20%`, 통계에 `harvestRegions` 선.
@@ -449,12 +449,12 @@ sim이 아래 제도를 없앴다. 화면이 계속 컴파일되도록 `packages
   - `Pop.literacy` → `Pop.literacy100` (문해력 %, 0~100). 표시는 `literacyOf(p)` (0~1, `pct` 그대로).
   - `Region.education` → `Region.education100` (교육 접근도 %, 0~100). 표시는 `educationOf(r)` (0~1).
   - 셋 다 index에서 export한다. `Household.wealth`와 `HistoryPoint.regionEducation`은 그대로 규칙 단위다.
-  - **화면에서 고칠 곳 (이 브랜치는 화면 작업 중인 세 파일을 건드리지 않았다. 고치기 전에는 클라이언트가 컴파일되지 않는다):** `b.crew` → `crewOf(b)`, `p.wealth` → `wealthOf(p)`, `p.literacy` → `literacyOf(p)`, `r.education` → `educationOf(r)`. main 커밋 기준 7곳: `CompanyPanel.tsx` 45(`b.crew`), `PopTable.tsx` 22·23(정렬 키 `wealth`·`literacy`를 `wealthOf`·`literacyOf` 값으로), 27(부·문해력 칸), `RegionPanel.tsx` 116(교육 접근도 숫자와 막대 두 곳). 작업 폴더의 커밋 전 판에서는 `CompanyPanel.tsx` 46, `PopTable.tsx` 22·23·27, `RegionPanel.tsx` 117. 다른 곳은 바꿀 것이 없다.
+  - **화면 표시용 사본 (옮겨 갈 때까지):** 옛 이름 `Pop.wealth`(1~99)·`Pop.literacy`(0~1)·`Region.education`(0~1)·`Building.crew`(0~1, 작업 인원이 없으면 없다)도 남아 있다. sim이 하루 끝 반올림(과 `createWorld`·`migrateWorld`·틱 사이 명령 뒤)에 100배 값에서 다시 쓰는 소수 둘째 자리 사본이고 sim은 읽지 않는다. 그래서 지금 화면은 그대로 컴파일되고 맞는 값을 보인다. 편할 때 `b.crew` → `crewOf(b)`, `p.wealth` → `wealthOf(p)`, `p.literacy` → `literacyOf(p)`, `r.education` → `educationOf(r)`로 바꾼다. main 커밋 기준 7곳: `CompanyPanel.tsx` 45(`b.crew`), `PopTable.tsx` 22·23(정렬 키 `wealth`·`literacy`), 27(부·문해력 칸), `RegionPanel.tsx` 116(교육 접근도 숫자와 막대 두 곳). 작업 폴더의 커밋 전 판에서는 `CompanyPanel.tsx` 46, `PopTable.tsx` 22·23·27, `RegionPanel.tsx` 117. 다 바꾸면 사본을 없앤다.
 - 모든 숫자가 소수 둘째 자리다. 0~1 비율(충족률, 식량, 충원율, 가동률 등)은 1% 단위로 움직이므로, 소수 셋째 자리 이상을 보여 주지 않는다.
 - 문해력·교육 접근도는 주 1회(주간 처리 때) 7일치씩 바뀐다. 그래프가 주 단위 계단으로 보일 수 있다.
 - 상인 화물(`traders.shipments`)은 시장(도착 지역·상품)마다 새 화물 하나, 묵은 화물(`stale`) 하나로 합쳐진다. 출발 지역은 원래 없다.
 - 틱 사이 명령: `applyCommandMsg`는 적용한 뒤 저장값을 반올림한다 (틱 사이에 저장해도 규칙을 지킨다). 화면은 지금처럼 `applyCommandMsg`를 쓰면 된다. `step(world, queue)`의 명령 목록도 같은 길이라 어느 쪽으로 넣어도 결과가 같다.
-- 건물도 두 필드가 100배 값이 되었다: `Building.exp` → `Building.exp100` (숙련도 %, 0~100), `Building.crew` → `Building.crew100` (작업 인원 %, 0~100, 없을 수 있다). 표시는 `expOf(b)`·`crewOf(b)` (0~1, `crewOf`는 작업 인원이 없으면 충원율). index에서 export한다. `CompanyPanel.tsx`의 투입재 계산(`b.crew`)을 `crewOf(b)`로 바꾼다 (위 7곳 중 하나).
+- 건물도 두 필드가 100배 값이 되었다: `Building.exp` → `Building.exp100` (숙련도 %, 0~100), `Building.crew` → `Building.crew100` (작업 인원 %, 0~100, 없을 수 있다). 표시는 `expOf(b)`·`crewOf(b)` (0~1, `crewOf`는 작업 인원이 없으면 충원율). index에서 export한다. `CompanyPanel.tsx`의 투입재 계산(`b.crew`)은 사본으로 지금도 맞고, 편할 때 `crewOf(b)`로 바꾼다 (위 7곳 중 하나).
 - 시장: 사고파는 사람이 없는 시장(`demandEma`·`supplyEma`가 둘 다 0)은 가격이 기본가에서 벗어난 쪽 끝(0.25배 또는 1.75배)으로 간다. 0.05 이하 이동평균은 0이 된다. 화면에서 바꿀 것은 없다.
 
 ---

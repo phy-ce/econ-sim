@@ -1,4 +1,4 @@
-import { roundAll, roundWorld } from './round';
+import { roundAll, roundWorld, writeMirrors } from './round';
 import type { Building, Company, Shipment, World } from './types';
 
 // 화면 호환용 껍데기와 옛 저장 변환. 껍데기는 sim 에서 없앤 제도들이다. 화면이 UI_CHANGES 2-17 을 반영하면 껍데기는 지운다.
@@ -22,7 +22,8 @@ export const MAX_RESEARCH_BUDGET = 100_000;
 function to100(o: object, from: string, to: string): void {
   const rec = o as Record<string, unknown>;
   const v = rec[from];
-  if (typeof v !== 'number') return;
+  // 100배 값이 이미 있으면 옛 이름의 값은 화면 표시용 사본이다 (round.ts 가 다시 쓴다)
+  if (typeof v !== 'number' || typeof rec[to] === 'number') return;
   rec[to] = v * 100;
   delete rec[from];
 }
@@ -39,7 +40,7 @@ function to100(o: object, from: string, to: string): void {
 export function migrateWorld(input: unknown): World | null {
   const w = input as World & { version: number };
   if (!w || typeof w !== 'object') return null;
-  if (w.version === 6) return w;
+  if (w.version === 6) { writeMirrors(w); return w; }
   if (w.version !== 4 && w.version !== 5) return null;
   for (const p of w.pops) { to100(p, 'wealth', 'wealth100'); to100(p, 'literacy', 'literacy100'); }
   for (const r of w.regions) to100(r, 'education', 'education100');

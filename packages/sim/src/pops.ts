@@ -50,7 +50,7 @@ export function getPop(w: World, regionId: number, prof: PopClass, work: number)
   const found = findPop(w, regionId, prof, work);
   if (found) return found;
   const p: Pop = {
-    id: w.nextId++, regionId, prof, work, size: 0, savings: 0, wealth100: 500, literacy100: 0, quals: {}, sol: 0, growth: 0,
+    id: w.nextId++, regionId, prof, work, size: 0, savings: 0, wealth100: 500, literacy100: 0, wealth: 5, literacy: 0, quals: {}, sol: 0, growth: 0,
     incomeEma: 0, lastIncome: 0, lastSpend: 0, fulfillment: 1, food: 1, inKind: {},
   };
   w.pops.push(p);
