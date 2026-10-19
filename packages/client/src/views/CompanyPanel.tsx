@@ -7,7 +7,7 @@ import { useMemo, useState } from 'react';
 import {
   BUILDING_BY_ID, BUILDING_TYPES, GOOD_IDS, MAX_CONCURRENT_CONSTRUCTIONS, TUNE,
   SKILLS, POP_CLASSES, TECHS, companyById, paysDividend, peasantSlots, availableMethods, canBuildType, constructionEstimate, creditLimit, estimateAfterEntry,
-  estimateMethod, getMethod, hasBuilder, knowsTech, landFree, marketWage, regionById, researchableTechs, unemploymentRate,
+  estimateMethod, getMethod, hasBuilder, knowsTech, landFree, slots, marketWage, regionById, researchableTechs, unemploymentRate,
 } from '@econ/sim';
 import type { Building, Company, GoodBag, GoodId, Region, Skill, PopClass, World } from '@econ/sim';
 import { ChevronDown, X, Coins, Crown, ArrowUp, ArrowDown, Pause, Play } from 'lucide-react';
@@ -44,7 +44,7 @@ function rowOf(world: World, b: Building): Row {
   const run = b.level * b.utilization;
   const crew = b.crew ?? b.last.staffing;
   const staff: StaffPart[] = SKILLS.filter((s) => (method.workers[s] ?? 0) > 0).map((s) => {
-    const jobs = b.idle ? 0 : (method.workers[s] ?? 0) * run;
+    const jobs = b.active ? slots(b, s) : (method.workers[s] ?? 0) * run;
     return { s, jobs, emp: Math.min(jobs, b.employed[s]) };
   });
   if (b.typeId === 'subsistence') staff.splice(0, staff.length, { s: 'peasant', emp: b.tenants ?? 0, jobs: peasantSlots(b) });

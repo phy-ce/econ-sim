@@ -99,8 +99,13 @@ export function researchableTechs(c: Company): string[] {
 
 // ---------------------------------------------------------------- 건물
 
+/** 건축사무소가 TUNE.officeIdleDays 일을 넘게 쉬어 인부를 해산한 상태 (그 전에는 쉬어도 일자리와 임금이 그대로다) */
+export function disbanded(b: Building): boolean {
+  return b.idle && (b.idleDays ?? 0) > TUNE.officeIdleDays;
+}
+
 export function slots(b: Building, skill: Skill): number {
-  if (!b.active || (b.idle && (b.idleDays ?? 0) > TUNE.officeIdleDays)) return 0;
+  if (!b.active || disbanded(b)) return 0;
   return (getMethod(b.typeId, b.methodId).workers[skill] ?? 0) * b.level * b.utilization;
 }
 

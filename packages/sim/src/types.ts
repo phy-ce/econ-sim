@@ -218,6 +218,8 @@ export interface Building {
   swap?: boolean;
   /** 마지막 레벨의 손익이 마이너스였던 연속 주 수 (철거 판단) */
   negWeeks?: number;
+  /** 건축사무소: 그 연속 주 동안 일하던 주의 가장 높은 충원율 (한 번도 사람이 차지 않은 레벨을 센다) */
+  staffPeak?: number;
   /** 1레벨을 지을 때 들어간 자재 (철거하면 TUNE.salvageShare 만큼 돌려받는다) */
   materials?: GoodBag;
 }

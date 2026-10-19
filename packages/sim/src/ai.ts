@@ -25,7 +25,7 @@ const OFFICE_BLOCK = 2;
 const OFFICE_GROWTH = 0.25;
 /** 공사 기간 동안 채울 수 있는 사람을 셀 때 보는 날 수 */
 const STAFFING_HORIZON = 60;
-/** 짓기 기준: 공사 기간 안에 일자리의 이 비율 이상을 채울 사람이 있어야 한다 (건축사무소는 대신 지금 사무소의 충원율 TUNE.officeStaffed 를 본다) */
+/** 짓기 기준: 공사 기간 안에 일자리의 이 비율 이상을 채울 사람이 있어야 한다 (건축사무소는 대신 채울 수 있는 레벨 수 officeStaffable 을 본다) */
 const MIN_STAFFING = 0.5;
 
 export function runAi(w: World) {
@@ -78,6 +78,33 @@ export function laborAvailability(w: World, r: Region, m: MethodDef, levels: num
     ok = Math.min(ok, pool / need);
   }
   return ok;
+}
+
+/**
+ * 이 지역에 건축사무소(방식 m)를 몇 레벨 더 채울 수 있는가 (직종별로 가장 작은 값, 소수).
+ * 사람 = labourPool + 지금 자리보다 왕실 임금이 TUNE.switchPremium 배 넘게 높은 같은 직종 재직자 중 공사 기간 안에 옮겨 오는 몫
+ * (노동시장 laborMarket 의 이직 규칙과 같다). 여기서 그 지역 왕실 사무소의 빈자리(쉬며 해산한 사무소도 다시 뽑을 자리)를 뺀다
+ */
+function officeStaffable(w: World, c: Company, r: Region, m: MethodDef, byId: Map<number, Building>): number {
+  const reach = Math.min(1, TUNE.switchRate * STAFFING_HORIZON);
+  let best = Infinity;
+  for (const s of SKILLS) {
+    const per = m.workers[s] ?? 0;
+    if (!(per > 0) || paysDividend(true, s)) continue;
+    let n = labourPool(w, r, s);
+    for (const p of w.pops) {
+      if (p.regionId !== r.id || p.prof !== s || p.work === 0) continue;
+      const b = byId.get(p.work);
+      const o = b && !paysDividend(b.stateOwned, s) ? companyById(w, b.companyId) : undefined;
+      if (o && o.wages[s] * TUNE.switchPremium < c.wages[s]) n += workforce(p) * reach;
+    }
+    for (const b of w.buildings) {
+      if (b.companyId !== c.id || b.regionId !== r.id || !getMethod(b.typeId, b.methodId).construction) continue;
+      n -= Math.max(0, (getMethod(b.typeId, b.methodId).workers[s] ?? 0) * b.level * b.utilization - b.employed[s]);
+    }
+    best = Math.min(best, n / per);
+  }
+  return best;
 }
 
 /**
@@ -330,8 +357,8 @@ function planConstruction(w: World, c: Company, o: Outlook) {
   const builder = builderOf(w, c);
   const backlog = () => w.constructions.filter((k) => { const o = companyById(w, k.companyId); return !!o && builderOf(w, o) === builder; }).reduce((s, k) => s + (k.required - k.points), 0) / Math.max(1, est.pointsPerDay);
   // 사무소는 왕실만 늘린다. 사무소는 실제로 쓰인 포인트(buildUsed)로 크기를 정한다: 포인트를 거의 다 쓰고(TUNE.officeUseFull 이상)
-  // 공사가 한 달 넘게 밀려 있고, 지금 사무소 자리가 TUNE.officeStaffed 이상 찼으면 늘린다 (못 채우는 레벨을 더 짓지 않는다).
-  // 남는 포인트와 빈 레벨은 reviewLevels 가 줄인다.
+  // 공사가 한 달 넘게 밀려 있으면, 그 지역에서 채울 수 있는 레벨만큼만 늘린다 (officeStaffable: 사무소의 지금 빈자리를 먼저 뺀다).
+  // 남는 포인트와 한 해 내내 빈 레벨은 reviewLevels 가 줄인다.
   // 늘 다 가동해 운영비가 국고에서 나가므로 국고가 넉넉할 때(지출 TUNE.treasuryHighWeeks 주치 초과, 빚 없음)만 늘린다
   if (builder === c) {
     const offices = w.buildings.filter((b) => b.companyId === c.id && b.typeId === 'builder');
@@ -340,10 +367,7 @@ function planConstruction(w: World, c: Company, o: Outlook) {
     const officeCost = constructionEstimate(w, c, 'builder').cost * block;
     const full = (c.buildUsed ?? 0) >= est.pointsPerDay * TUNE.officeUseFull;
     const rich = c.debt <= 0 && treasuryWeeks(c, kingdomById(w, c.kingdomId)) > TUNE.treasuryHighWeeks;
-    // 충원율: 일하는(맡은 공사가 있는) 사무소의 레벨 가중 평균
-    const busy = offices.filter((b) => !b.idle), busyLevel = busy.reduce((s, b) => s + b.level, 0);
-    const staffed = busyLevel === 0 || busy.reduce((s, b) => s + b.level * b.last.staffing, 0) / busyLevel >= TUNE.officeStaffed;
-    if (offices.length && staffed && full && rich && backlog() > TUNE.officeTargetDays && c.cash > officeCost * 1.5 && !w.constructions.some((k) => k.companyId === c.id && k.typeId === 'builder')) {
+    if (offices.length && full && rich && backlog() > TUNE.officeTargetDays && c.cash > officeCost * 1.5 && !w.constructions.some((k) => k.companyId === c.id && k.typeId === 'builder')) {
       const office = offices[0];
       // 대기가 TUNE.officeTargetDays 안으로 들어올 만큼 한 번에 늘린다
       const perLevel = est.pointsPerDay / Math.max(1, officeLevel);
@@ -351,20 +375,22 @@ function planConstruction(w: World, c: Company, o: Outlook) {
       // 한 번에 늘리는 양은 지금 사무소가 목표 일수 안에 지을 수 있는 만큼까지 (증설 공사가 너무 길어지지 않게)
       const byTime = Math.floor((est.pointsPerDay * TUNE.officeTargetDays) / BUILDING_BY_ID.builder.buildPoints);
       const levels = Math.min(Math.max(block, want), Math.max(block, byTime), MAX_LEVELS_PER_PROJECT);
-      // 어디에: 일손(laborAvailability)이 가장 많이 모이는 자기 지역. 같으면 사무소가 이미 있는 지역, 그다음 부지가 넓은 지역. 부지가 남은 만큼만
+      // 어디에: 늘릴 수 있는 레벨(위 levels, 남은 부지, 채울 수 있는 사람 officeStaffable 중 가장 작은 값)이 가장 큰 자기 지역.
+      // 같으면 사무소가 이미 있는 지역, 그다음 부지가 넓은 지역. 어디서도 1레벨을 못 채우면 늘리지 않는다
       const m = getMethod('builder', office.methodId);
-      const pools = new Map<string, number>();
-      let spot: { regionId: number; fit: number; room: number; labor: number; has: boolean } | null = null;
+      const byId = new Map(w.buildings.map((b) => [b.id, b] as const));
+      let spot: { regionId: number; fit: number; room: number; has: boolean } | null = null;
       for (const r of ownRegions(w, c)) {
         const room = roomFor(w, r.id, 'builder');
-        const fit = Math.min(levels, room);
+        if (room < 1) continue;
+        const fit = Math.floor(Math.min(levels, room, officeStaffable(w, c, r, m, byId)));
         if (fit < 1) continue;
-        const labor = laborAvailability(w, r, m, fit, true, pools), has = offices.some((b) => b.regionId === r.id);
-        const better = !spot || labor > spot.labor || (labor === spot.labor && (has !== spot.has ? has : room > spot.room));
-        if (better) spot = { regionId: r.id, fit, room, labor, has };
+        const has = offices.some((b) => b.regionId === r.id);
+        const better = !spot || fit > spot.fit || (fit === spot.fit && (has !== spot.has ? has : room > spot.room));
+        if (better) spot = { regionId: r.id, fit, room, has };
       }
       const here = spot && offices.find((b) => b.regionId === spot.regionId);
-      const err = !spot ? 'no room'
+      const err = !spot ? 'no room or staff'
         : here ? applyCommand(w, c.id, { type: 'expand', buildingId: here.id, levels: spot.fit })
         : applyCommand(w, c.id, { type: 'build', typeId: 'builder', regionId: spot.regionId, methodId: m.id, levels: spot.fit });
       if (!err) toFront(w, c);
@@ -452,30 +478,40 @@ function levelValue(w: World, c: Company, o: Outlook, b: Building, pointsPerDay:
 
 /**
  * 철거 판단 (짓기와 같은 주, 같은 전망): 마지막 레벨 손익이 TUNE.shrinkWeeks 주 연속 마이너스면 레벨의 1/4(최소 1)을 철거 대기에 올린다.
- * 건축사무소는 TUNE.officeShrinkWeeks 주를 보고, 빈 레벨 전부와 남는 포인트 몫(많아야 1/4) 중 큰 쪽을 헌다 (왕국의 마지막 사무소 레벨은 남긴다).
+ * 건축사무소는 TUNE.officeShrinkWeeks 주를 보고, 그동안 한 번도 사람이 차지 않은 레벨(일하던 주의 최고 충원율 staffPeak 로 센다)과
+ * 남는 포인트 몫(많아야 1/4) 중 큰 쪽을 헌다. 쉬다가 다시 뽑는 중이라 비어 있는 레벨은 헐지 않는다. 왕국의 마지막 사무소 레벨은 남긴다.
  * 손실 때문에 헐리는 중인 건물이 다시 이익을 내면 철거를 취소한다. 증설 공사 중인 건물은 보지 않는다
  */
 function reviewLevels(w: World, c: Company, o: Outlook, pointsPerDay: number) {
   for (const b of w.buildings) {
     if (b.companyId !== c.id || BUILDING_BY_ID[b.typeId].auto) continue;
-    if (w.constructions.some((k) => k.targetBuildingId === b.id)) { b.negWeeks = 0; continue; }
+    if (w.constructions.some((k) => k.targetBuildingId === b.id)) { b.negWeeks = 0; delete b.staffPeak; continue; }
     const v = levelValue(w, c, o, b, pointsPerDay);
     if (b.shrinking) {
       if (v > 0 && !b.swap) b.shrinking = 0;
+      delete b.staffPeak;
       continue;
     }
     b.swap = false;
     b.negWeeks = v < 0 ? (b.negWeeks ?? 0) + 1 : 0;
     const m = getMethod(b.typeId, b.methodId);
-    if (b.negWeeks >= (m.construction ? TUNE.officeShrinkWeeks : TUNE.shrinkWeeks)) {
-      const quarter = Math.max(1, Math.round(b.level * 0.25));
-      let n = quarter;
-      if (m.construction) {
-        const spare = Math.min(quarter, Math.floor(officeSpare(w, c, pointsPerDay) / (m.construction * b.utilization * efficiency(b))));
-        n = Math.min(Math.max(1, officeEmpty(b), spare), officeLevels(w, c) - 1);
+    if (!m.construction) {
+      if (b.negWeeks >= TUNE.shrinkWeeks) {
+        applyCommand(w, c.id, { type: 'demolish', buildingId: b.id, levels: Math.max(1, Math.round(b.level * 0.25)) });
+        b.negWeeks = 0;
       }
+      continue;
+    }
+    if (b.negWeeks === 0) delete b.staffPeak;
+    else if (!b.idle) b.staffPeak = Math.max(b.staffPeak ?? 0, round2(b.last.staffing));
+    if (b.negWeeks >= TUNE.officeShrinkWeeks) {
+      const quarter = Math.max(1, Math.round(b.level * 0.25));
+      const spare = Math.min(quarter, Math.floor(officeSpare(w, c, pointsPerDay) / (m.construction * b.utilization * efficiency(b))));
+      const empty = b.staffPeak == null ? 0 : Math.floor(b.level * (1 - b.staffPeak) + 1e-9);
+      const n = Math.min(Math.max(empty, spare), officeLevels(w, c) - 1);
       if (n >= 1) applyCommand(w, c.id, { type: 'demolish', buildingId: b.id, levels: n });
       b.negWeeks = 0;
+      delete b.staffPeak;
     }
   }
 }
