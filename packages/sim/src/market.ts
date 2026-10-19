@@ -1,5 +1,5 @@
 import { CONSUMPTION_PER_CAPITA, GOOD_IDS, GOODS, NEEDS, SUBSISTENCE, TUNE, getMethod, needsAt, rawMax } from './data';
-import { CARTAGE_RATE, RAIL_RATE, borrow, companyById, freightRate, priceFormula, regionById, shippingRate, isSubsistence } from './economy';
+import { CARTAGE_RATE, RAIL_RATE, borrow, companyById, freightRate, harvestFactor, priceFormula, regionById, shippingRate, isSubsistence } from './economy';
 import { landTaxValue, payLandTax, payRent, paySalvage, taxDue, taxRates } from './finance';
 import { addToPool, borderCost, kingdomById, kingdomOf, payTariff } from './kingdoms';
 import { findPop, payPops, payProf, workforce } from './pops';
@@ -97,7 +97,8 @@ export function harvest(w: World, book: Book) {
     b.last.output = {};
     if (!pop || pop.size <= 0) continue;
     const r = regionById(w, b.regionId);
-    const k = workforce(pop);
+    // 기상 조건이 걸리면 수확이 그만큼 줄어든다 (economy.ts harvestFactor)
+    const k = workforce(pop) * harvestFactor(w, r.id, 'arable');
     const { rent, tax } = harvestShares(w, r);
     const out: GoodBag = { grain: k * SUBSISTENCE.grainPerWorker, fiber: k * SUBSISTENCE.fiberPerWorker, timber: k * SUBSISTENCE.timberPerWorker };
     // 토지 기반 과세: 걷어야 할 토지세 (팔리는 몫만, 징수율 전). 1인당 과세면 토지세율 0

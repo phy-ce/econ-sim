@@ -1,6 +1,6 @@
 import { BUILDING_BY_ID, BUILDING_TYPES, GOOD_IDS, GOODS, SKILL_DEFS, TECH_BY_ID, TICKS_PER_WEEK, TICKS_PER_YEAR, TUNE, getMethod, regionPerk } from './data';
 import { withEstimateCache, regionPopulation,
-  availableMethods, builderOf, canBuildType, paysDividend, companyById, constructionEstimate, creditLimit, depositFree, efficiency, estimateMethod, hasBuilder, isGovernment, regionById, researchableTechs, roomFor, slots,
+  availableMethods, builderOf, canBuildType, paysDividend, companyById, constructionEstimate, creditLimit, depositFree, efficiency, estimateMethod, harvestFactor, hasBuilder, isGovernment, regionById, researchableTechs, roomFor, slots,
 } from './economy';
 import { MAX_CONCURRENT_CONSTRUCTIONS, MAX_LEVELS_PER_PROJECT, applyCommand } from './commands';
 import { committedCost, lawRevenue, reserveOf } from './finance';
@@ -261,10 +261,11 @@ function manageBuildings(w: World, c: Company) {
       }
       continue;
     }
-    // 적자면 끄지 않고 가동률부터 줄인다 (4주마다 10%씩). 철거는 planConstruction 이 짓기와 같은 계산으로 정한다
+    // 적자면 끄지 않고 가동률부터 줄인다 (4주마다 10%씩). 철거는 planConstruction 이 짓기와 같은 계산으로 정한다.
+    // 기상 조건이 걸린 동안의 적자는 일시적이라 세지 않는다
     const cost = b.last.inputCost + b.last.wageCost;
     const actualMargin = cost > 0 ? (b.last.revenue - cost) / cost : 0;
-    const bleeding = b.profitEma < 0 && (current.margin < -0.2 || actualMargin < -0.2);
+    const bleeding = harvestFactor(w, b.regionId, BUILDING_BY_ID[b.typeId].land) >= 1 && b.profitEma < 0 && (current.margin < -0.2 || actualMargin < -0.2);
     b.lossWeeks = bleeding ? b.lossWeeks + 1 : 0;
     if (b.lossWeeks >= 4 && b.utilization > 0.1 + 1e-9) {
       applyCommand(w, c.id, { type: 'setUtilization', buildingId: b.id, utilization: Math.max(0.1, b.utilization - 0.1) });
@@ -484,6 +485,8 @@ export function pickProject(w: World, c: Company, o: Outlook, free: number, allo
   for (const r of ownRegions(w, c)) {
     for (const t of BUILDING_TYPES) {
       if (t.id === 'builder' || !canBuildType(c, t)) continue;
+      // 기상 조건이 걸린 땅에는 짓지 않는다 (줄어든 산출과 오른 값은 일시적이다)
+      if (harvestFactor(w, r.id, t.land) < 1) continue;
       const room = roomFor(w, r.id, t.id);
       const perLevel = constructionEstimate(w, c, t.id).cost;
       if (!Number.isFinite(perLevel) || free < perLevel) continue;

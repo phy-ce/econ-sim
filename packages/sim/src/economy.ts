@@ -1,10 +1,13 @@
 import {
-  BUILDING_BY_ID, GOOD_IDS, GOODS, MAX_POINTS_PER_LEVEL_DAY, POINT_VALUE, SKILL_DEFS, SUBSISTENCE, TECH_BY_ID, getMethod, regionPerk, scaleBonus, TUNE,
+  BUILDING_BY_ID, GOOD_IDS, GOODS, HARVEST_KINDS, HARVEST_SEASON_DAYS, HARVEST_STEP, LAND_NAMES, LAND_NAMES_EN, MAX_POINTS_PER_LEVEL_DAY, POINT_VALUE,
+  SKILL_DEFS, SUBSISTENCE, TECH_BY_ID, getMethod, regionPerk, scaleBonus, TUNE,
 } from './data';
 import { borderCost } from './kingdoms';
 import { clamp } from './rng';
 import { OWNERS, SKILLS, WEALTH_MIN } from './types';
-import type { Building, BuildingTypeDef, Company, DepositId, EventKind, GoodBag, GoodId, LandType, MethodDef, Pop, PopClass, Region, Skill, World } from './types';
+import type {
+  Building, BuildingTypeDef, Company, DepositId, EventKind, GoodBag, GoodId, HarvestCondition, LandType, MethodDef, Pop, PopClass, Region, Skill, World,
+} from './types';
 
 // ---------------------------------------------------------------- 지역·시장
 
@@ -74,6 +77,84 @@ export function depositFree(w: World, regionId: number, dep: DepositId): number 
 export function roomFor(w: World, regionId: number, typeId: string): number {
   const t = BUILDING_BY_ID[typeId];
   return t.deposit ? Math.min(depositFree(w, regionId, t.deposit), landFree(w, regionId, t.land)) : landFree(w, regionId, t.land);
+}
+
+// ---------------------------------------------------------------- 기상 조건 (빅토리아3 harvest conditions)
+//
+// 저장하는 상태가 없다. 지역 r 에서 계절 s(90일)에 조건이 시작하는지, 그 종류·강도·길이는 (시드, r, s) 의 해시로 정한다.
+// 그래서 어느 날이든 그날의 조건을 다시 계산할 수 있고, 저장·불러오기와 무작위 수열(rand)에 영향이 없다.
+// - 진원지: 계절마다 TUNE.harvestChance 확률. 종류는 셋 중 고르게, 강도는 TUNE.harvestIntensity 안에서 고르게,
+//   길이는 1~TUNE.harvestSeasons 계절. 첫 계절(0)에는 없다
+// - 번짐: 진원지의 이웃마다 TUNE.harvestSpread 확률로 같은 조건(종류·강도·기간)이 걸린다 (빅토리아3 range 1)
+// - 한 지역에는 한 번에 하나: 겹치면 먼저 시작한 조건이 이어지고, 같은 계절이면 자기 진원지가 이웃보다 먼저다
+
+/** 정수 4개 → 0..1 (같은 입력이면 늘 같은 값) */
+function hash01(a: number, b: number, c: number, d: number): number {
+  let h = Math.imul(a ^ 0x9e3779b9, 0x85ebca6b) ^ Math.imul(b + 0x632be59b, 0xc2b2ae35) ^ Math.imul(c + 0x27d4eb2f, 0x165667b1) ^ Math.imul(d + 0x7f4a7c15, 0x9e3779b1);
+  h ^= h >>> 16; h = Math.imul(h, 0x85ebca6b); h ^= h >>> 13; h = Math.imul(h, 0xc2b2ae35); h ^= h >>> 16;
+  return (h >>> 0) / 4294967296;
+}
+
+/** 지역 regionId 가 계절 s 에 진원지가 되는가: 그 조건 (start·end 는 틱) */
+function originAt(seed: number, regionId: number, s: number): HarvestCondition | null {
+  if (s < 1 || !(hash01(seed, regionId, s, 1) < TUNE.harvestChance)) return null;
+  const def = HARVEST_KINDS[Math.floor(hash01(seed, regionId, s, 2) * HARVEST_KINDS.length)];
+  const [lo, hi] = TUNE.harvestIntensity;
+  const intensity = lo + Math.floor(hash01(seed, regionId, s, 3) * (hi - lo + 1));
+  const seasons = 1 + Math.floor(hash01(seed, regionId, s, 4) * TUNE.harvestSeasons);
+  return {
+    kind: def.id, lands: def.lands, intensity, cut: Math.min(1, intensity * HARVEST_STEP), origin: regionId,
+    start: s * HARVEST_SEASON_DAYS, end: (s + seasons) * HARVEST_SEASON_DAYS,
+  };
+}
+
+/** 계절 s 에 각 지역에 걸린 조건 (w.regions 순서) */
+function conditionsIn(w: World, s: number): (HarvestCondition | null)[] {
+  return w.regions.map((r) => {
+    const t = s * HARVEST_SEASON_DAYS;
+    // 먼저 시작한 것부터 본다
+    for (let s0 = s - Math.max(1, TUNE.harvestSeasons) + 1; s0 <= s; s0++) {
+      const own = originAt(w.seed, r.id, s0);
+      if (own && t < own.end) return own;
+      if (!(TUNE.harvestSpread > 0)) continue;
+      for (const n of r.neighbors) {
+        const o = originAt(w.seed, n, s0);
+        if (o && t < o.end && hash01(w.seed, r.id, s0, 100 + n) < TUNE.harvestSpread) return o;
+      }
+    }
+    return null;
+  });
+}
+
+/** 같은 계절 안에서는 한 번만 센다 (값은 시드·계절·조정값만으로 정해지므로 캐시는 결과를 바꾸지 않는다) */
+const harvestCache = { key: [] as unknown[], list: [] as (HarvestCondition | null)[] };
+
+/** 이 지역에 tick 날 걸린 기상 조건 (없으면 null) */
+export function harvestCondition(w: World, regionId: number, tick = w.tick): HarvestCondition | null {
+  if (!(TUNE.harvestChance > 0) || tick < 0) return null;
+  const s = Math.floor(tick / HARVEST_SEASON_DAYS);
+  const key = [w.seed, s, w.regions, TUNE.harvestChance, TUNE.harvestIntensity[0], TUNE.harvestIntensity[1], TUNE.harvestSeasons, TUNE.harvestSpread];
+  if (key.some((v, i) => v !== harvestCache.key[i])) { harvestCache.key = key; harvestCache.list = conditionsIn(w, s); }
+  const i = w.regions.findIndex((r) => r.id === regionId);
+  return i >= 0 ? harvestCache.list[i] : null;
+}
+
+/** 이 지역 이 땅의 오늘 산출 배율 (1 = 평년). 소작 수확과 농지·산림·광맥 건물의 산출에만 곱한다 (효율과 따로) */
+export function harvestFactor(w: World, regionId: number, land: LandType): number {
+  if (!(TUNE.harvestChance > 0) || land === 'plot') return 1;
+  const c = harvestCondition(w, regionId);
+  return c && c.lands.includes(land) ? 1 - c.cut : 1;
+}
+
+/** 화면용 라벨: "가뭄 농지 −20% · 45일" / "Drought farmland −20% · 45 d" (조건이 없으면 null) */
+export function harvestLabel(w: World, regionId: number, en = false): string | null {
+  const c = harvestCondition(w, regionId);
+  if (!c) return null;
+  const def = HARVEST_KINDS.find((d) => d.id === c.kind)!;
+  const pct = Math.round(c.cut * 100), days = c.end - w.tick;
+  return en
+    ? `${def.nameEn} ${c.lands.map((l) => LAND_NAMES_EN[l].toLowerCase()).join(', ')} −${pct}% · ${days} d`
+    : `${def.name} ${c.lands.map((l) => LAND_NAMES[l]).join('·')} −${pct}% · ${days}일`;
 }
 
 // ---------------------------------------------------------------- 기술

@@ -1,5 +1,5 @@
 import { BUILDING_BY_ID, GOOD_IDS, GOODS, NEEDS, SKILL_DEFS, TUNE, getMethod, regionPerk } from './data';
-import { availableMethods, collectionRatio, regionById, shippingRate, wageCostOf } from './economy';
+import { availableMethods, collectionRatio, harvestCondition, harvestFactor, regionById, shippingRate, wageCostOf } from './economy';
 import { clamp } from './rng';
 import { SKILLS } from './types';
 import type { Company, GoodId, Kingdom, MethodDef, Region, Skill, World } from './types';
@@ -39,6 +39,15 @@ export function marketOutlook(w: World): Outlook {
     let d = 0, s = 0;
     for (const r of w.regions) { d += r.market[g].demandEma; s += r.market[g].supplyEma; }
     demand[g] = d; latent[g] = 0; supply[g] = Math.max(0, s);
+  }
+  // 기상 조건으로 줄어든 공급은 일시적이다: 조건이 걸린 땅의 생산자(소작지·건물) 공급을 평년 양으로 되돌려 센다
+  for (const r of w.regions) {
+    if (!harvestCondition(w, r.id)) continue;
+    for (const g of GOOD_IDS) for (const [src, q] of Object.entries(r.market[g].supplyByEma ?? {})) {
+      const typeId = src === 'subsistence' ? src : src.startsWith('bld:') ? src.slice(4) : null;
+      const f = typeId ? harvestFactor(w, r.id, BUILDING_BY_ID[typeId].land) : 1;
+      if (f < 1 && f > 0) supply[g] += q * (1 / f - 1);
+    }
   }
   for (const k of w.constructions) {
     const m = getMethod(k.typeId, k.methodId);
