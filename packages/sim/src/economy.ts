@@ -4,7 +4,7 @@ import {
 } from './data';
 import { borderCost } from './kingdoms';
 import { clamp } from './rng';
-import { OWNERS, SKILLS, WEALTH_MIN, wealthOf } from './types';
+import { OWNERS, SKILLS, WEALTH_MIN, crewOf, expOf, wealthOf } from './types';
 import type {
   Building, BuildingTypeDef, Company, DepositId, EventKind, GoodBag, GoodId, HarvestCondition, LandType, MethodDef, Pop, PopClass, Region, Skill, World,
 } from './types';
@@ -263,10 +263,10 @@ export interface EfficiencyParts {
 }
 
 export function efficiencyParts(b: Building): EfficiencyParts {
-  const experience = 0.4 + 0.6 * b.exp;
+  const experience = 0.4 + 0.6 * expOf(b);
   const scale = scaleBonus(b.level);
   const perk = 1 + regionPerk(b.regionId, b.typeId);
-  return { experience, scale, perk, crew: b.crew ?? b.last.staffing, total: experience * scale * perk };
+  return { experience, scale, perk, crew: crewOf(b), total: experience * scale * perk };
 }
 
 export function efficiency(b: Building): number {
@@ -544,7 +544,7 @@ export function goodName(g: GoodId): string {
 
 export function newBuilding(id: number, typeId: string, regionId: number, companyId: number, methodId: string, level: number, stateOwned = false): Building {
   return {
-    id, typeId, regionId, companyId, level, methodId, stateOwned, active: true, utilization: 1, lastSwitchTick: -1e9, exp: 0, crew: 0, idle: false,
+    id, typeId, regionId, companyId, level, methodId, stateOwned, active: true, utilization: 1, lastSwitchTick: -1e9, exp100: 0, crew100: 0, idle: false,
     employed: emptyJobs(), stock: {}, outStock: {}, unpaid: false,
     last: emptyStats(), profitEma: 0, lossWeeks: 0, pausedWeeks: 0,
   };

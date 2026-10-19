@@ -119,7 +119,7 @@ function runCommand(w: World, actor: number, cmd: Command): CommandError | null 
       if (!knowsTech(company, method.tech)) return fail(`'${TECH_BY_ID[method.tech!].name}' 기술이 필요합니다.`, `Requires the '${techNameEn(method.tech!)}' technology.`);
       if (b.methodId !== cmd.methodId) {
         b.methodId = cmd.methodId;
-        b.exp *= 0.5;
+        b.exp100 *= 0.5;
         b.lastSwitchTick = w.tick;
       }
       return null;

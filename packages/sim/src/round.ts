@@ -7,9 +7,10 @@ import type { Building, Household, MarketGood, Pop, World } from './types';
 // - 돈: 계정을 센트로 반올림하고, 그 차액은 주인 없는 돈(fund)이 받는다. 국가가 만든 돈 장부도 센트로 맞춘다.
 //   그래서 (화폐 총량 − 만든 돈)은 시작 값과 센트까지 같다. 계산 중에 생긴 부동소수점 찌꺼기도 매일 지워진다
 // - 나머지 숫자는 그냥 반올림한다. 기록(history·metrics·events)은 쓸 때 반올림하므로 여기서 다시 훑지 않는다
-// - 반올림하면 멈추는 느린 값은 규칙을 따로 두었다 (docs/DESIGN.md 2장 끝):
-//   부·문해력·교육 접근도는 100배 값으로 저장하고(문해력·교육은 주 1회 7일치), 작업 인원(crew)은 하루 최소 0.01씩 움직이고,
-//   상인 화물은 시장마다 하나로 합치고 상한 몫의 센트 아래를 버린다
+// - 반올림하면 멈추거나 빨라지는 느린 값은 규칙을 따로 두었다 (docs/DESIGN.md 2장 끝):
+//   부·문해력·교육 접근도·숙련도·작업 인원은 100배 값으로 저장하고(문해력·교육은 주 1회 7일치),
+//   상인 화물은 시장마다 하나로 합치고 상한 몫의 센트 아래를 버리고,
+//   수요·공급 이동평균은 0.05 이하 찌꺼기를 0으로 둔다 (사고파는 사람이 없는 시장의 가격 규칙과 함께, market.ts updatePrices)
 // 수가 많은 pop·건물·시장 상품·계층 합계·공사·화물은 필드를 직접 적어 맞춘다 (모든 숫자를 훑는 roundAll 보다 몇 배 빠르다).
 // 거기에 새 숫자 필드를 넣으면 여기에도 넣는다: 빠뜨리면 test/core/decimals.test.ts 가 그 경로를 알려 준다.
 // 출처별 수요·공급(demandBy 등)은 매일 updatePrices 가 이동평균을 만들면서 반올림한다 (market.ts emaBy)
@@ -67,11 +68,11 @@ function roundPop(p: Pop): void {
 
 function roundBuilding(b: Building): void {
   b.utilization = r(b.utilization);
-  b.exp = r(b.exp);
+  b.exp100 = r(b.exp100);
   b.profitEma = r(b.profitEma);
   if (b.privateShare !== undefined) b.privateShare = r(b.privateShare);
   if (b.tenants !== undefined) b.tenants = r(b.tenants);
-  if (b.crew !== undefined) b.crew = r(b.crew);
+  if (b.crew100 !== undefined) b.crew100 = r(b.crew100);
   if (b.staffPeak !== undefined) b.staffPeak = r(b.staffPeak);
   const e = b.employed;
   e.unskilled = r(e.unskilled); e.skilled = r(e.skilled); e.expert = r(e.expert);

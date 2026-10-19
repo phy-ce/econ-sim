@@ -430,10 +430,12 @@ sim이 아래 제도를 없앴다. 화면이 계속 컴파일되도록 `packages
   - `Region.education` → `Region.education100` (교육 접근도 %, 0~100). 표시는 `educationOf(r)` (0~1).
   - 셋 다 index에서 export한다. `Household.wealth`와 `HistoryPoint.regionEducation`은 그대로 규칙 단위다.
   - 컴파일을 위해 고쳐 둔 곳: `PopTable.tsx`(부·문해력 칸과 그 열 정렬), `RegionPanel.tsx`(교육 접근도 숫자와 막대). 다른 곳은 바꿀 것이 없다.
-- 모든 숫자가 소수 둘째 자리다. 0~1 비율(충족률, 식량, 충원율, 가동률, 작업 인원 등)은 1% 단위로 움직이므로, 소수 셋째 자리 이상을 보여 주지 않는다.
+- 모든 숫자가 소수 둘째 자리다. 0~1 비율(충족률, 식량, 충원율, 가동률 등)은 1% 단위로 움직이므로, 소수 셋째 자리 이상을 보여 주지 않는다.
 - 문해력·교육 접근도는 주 1회(주간 처리 때) 7일치씩 바뀐다. 그래프가 주 단위 계단으로 보일 수 있다.
 - 상인 화물(`traders.shipments`)은 시장(도착 지역·상품)마다 새 화물 하나, 묵은 화물(`stale`) 하나로 합쳐진다. 출발 지역은 원래 없다.
 - 틱 사이 명령: `applyCommandMsg`는 적용한 뒤 저장값을 반올림한다 (틱 사이에 저장해도 규칙을 지킨다). 화면은 지금처럼 `applyCommandMsg`를 쓰면 된다.
+- 건물도 두 필드가 100배 값이 되었다: `Building.exp` → `Building.exp100` (숙련도 %, 0~100), `Building.crew` → `Building.crew100` (작업 인원 %, 0~100, 없을 수 있다). 표시는 `expOf(b)`·`crewOf(b)` (0~1, `crewOf`는 작업 인원이 없으면 충원율). index에서 export한다. 컴파일을 위해 `CompanyPanel.tsx`의 투입재 계산을 `crewOf(b)`로 고쳐 두었다.
+- 시장: 사고파는 사람이 없는 시장(`demandEma`·`supplyEma`가 둘 다 0)은 가격이 기본가에서 벗어난 쪽 끝(0.25배 또는 1.75배)으로 간다. 0.05 이하 이동평균은 0이 된다. 화면에서 바꿀 것은 없다.
 
 ---
 

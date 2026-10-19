@@ -241,7 +241,7 @@ export function createWorld(seed = 1, opts: CreateWorldOptions = {}): World {
       if (own && fromOwn > 0) movePeople(w, own, getPop(w, b.regionId, s, b.id), fromOwn);
       if (n - fromOwn > 0) movePeople(w, src, getPop(w, b.regionId, s, b.id), n - fromOwn, s === 'unskilled' ? undefined : s);
     }
-    b.exp = 1;
+    b.exp100 = 100;
   }
   syncEmployment(w);
   // 시작 징수율: 매일 징수(finance.ts collectIncomeTax)와 같은 규칙. 행정청은 아직 사람이 없어 한도가 0이라 0이다

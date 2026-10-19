@@ -4,7 +4,7 @@ import { techNameEn } from './i18n';
 import { addToPool, kingdomById, kingdomOf } from './kingdoms';
 import { payPops } from './pops';
 import { round2 } from './rng';
-import { SKILLS } from './types';
+import { SKILLS, crewOf } from './types';
 import type { BudgetItem, Building, Company, GoodBag, GoodId, Kingdom, Pop, PopClass, Region, SalvageLot, TaxLaw, World } from './types';
 
 // ---------------------------------------------------------------- 은행
@@ -161,7 +161,7 @@ export function taxCapacity(w: World, kingdomId: number): number {
   for (const b of w.buildings) {
     if (!b.active || kingdomOf(w, b.regionId) !== kingdomId) continue;
     const m = getMethod(b.typeId, b.methodId);
-    if (m.taxCapacity) cap += m.taxCapacity * TUNE.adminScale * b.level * b.utilization * (b.crew ?? b.last.staffing) * efficiency(b);
+    if (m.taxCapacity) cap += m.taxCapacity * TUNE.adminScale * b.level * b.utilization * crewOf(b) * efficiency(b);
   }
   return cap;
 }
@@ -235,7 +235,7 @@ export function collectIncomeTax(w: World) {
     const m = getMethod(b.typeId, b.methodId);
     const k = w.kingdoms.find((x) => x.id === kingdomOf(w, b.regionId));
     if (!m.taxCapacity || !b.active || !k || !(k.taxCapacity ?? 0)) continue;
-    const share = (m.taxCapacity * TUNE.adminScale * b.level * b.utilization * (b.crew ?? b.last.staffing) * efficiency(b)) / k.taxCapacity!;
+    const share = (m.taxCapacity * TUNE.adminScale * b.level * b.utilization * crewOf(b) * efficiency(b)) / k.taxCapacity!;
     const amt = (got.get(k.id) ?? 0) * share;
     b.last.revenue += amt;
     b.last.tax = (b.last.tax ?? 0) + amt;

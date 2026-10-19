@@ -258,7 +258,7 @@ export function collectOrders(w: World, book: Book) {
     for (const b of w.buildings) {
       if (b.companyId !== c.id || !b.active) continue;
       const method = getMethod(b.typeId, b.methodId);
-      const st = Math.max(b.last.staffing, b.crew ?? 0);
+      const st = Math.max(b.last.staffing, (b.crew100 ?? 0) / 100);
       for (const g of GOOD_IDS) {
         const per = method.inputs[g];
         if (!per) continue;
@@ -789,6 +789,17 @@ export const PRICE_MAX = 1.75;
 const PRICE_SPEED = 0.03;
 /** 수요·공급 평균이 하루에 따라가는 비율 */
 const FLOW_EMA = 0.1;
+/**
+ * 수요·공급 이동평균은 소수 둘째 자리로 저장해서, 흐름이 끊겨도 0.05 언저리에서 줄지 않고 남는다 (0.05 × 10% 가 반올림에 묻힌다).
+ * 그런 찌꺼기는 없는 수요·공급을 있는 것처럼 보이게 한다 (가격이 기본가로 돌아가고 상인이 헛물을 나른다). 그날 흐름도 이만큼 작으면 0으로 둔다
+ */
+const FLOW_EMA_MIN = 0.05;
+
+/** 수요·공급 이동평균 하루치 (소수 둘째 자리, 0.05 이하 찌꺼기는 0) */
+function flowEma(ema: number, cur: number): number {
+  const v = round2(ema * (1 - FLOW_EMA) + cur * FLOW_EMA) + 0;
+  return v <= FLOW_EMA_MIN && cur <= FLOW_EMA_MIN ? 0 : v;
+}
 /** 출처별 수요·공급 이동평균의 하루 비율 (outlook.ts 가 기상 조건 되돌리기에 쓴다) */
 export const BY_EMA = 0.1;
 /** 출처별 이동평균이 이 값 이하로 내려가면 지운다. 소수 둘째 자리로 저장하므로 더 작은 값은 하루 10%씩 줄지 않고 그대로 남는다 */
@@ -824,12 +835,17 @@ export function updatePrices(w: World) {
       const mg: MarketGood = r.market[g];
       const base = GOODS[g].basePrice;
       mg.volumeEma = mg.volumeEma * 0.98 + mg.sold * 0.02;
-      mg.demandEma = mg.demandEma * (1 - FLOW_EMA) + mg.demand * FLOW_EMA;
-      mg.supplyEma = mg.supplyEma * (1 - FLOW_EMA) + mg.supply * FLOW_EMA;
+      mg.demandEma = flowEma(mg.demandEma, mg.demand);
+      mg.supplyEma = flowEma(mg.supplyEma, mg.supply);
       mg.demandByEma = emaBy(mg.demandByEma, mg.demandBy);
       mg.supplyByEma = emaBy(mg.supplyByEma, mg.supplyBy);
       mg.inventory = stockOf[mkey(r.id, g)] ?? 0;
-      const target = priceFormula(g, mg.demandEma, mg.supplyEma);
+      // 사고파는 사람이 없는 시장(수요·공급 이동평균이 모두 0)은 마지막으로 쏠린 쪽 끝으로 간다: 기본가보다 싸면 바닥, 비싸면 천장, 기본가면 그대로
+      // (소수점 끝없이 계산하면 아주 작게 남은 이동평균이 마지막 쏠림을 지켜서 그렇게 된다. 반올림하면 그 몫이 사라지므로 규칙으로 적었다)
+      const side = round2(mg.price - base);
+      const target = mg.demandEma === 0 && mg.supplyEma === 0
+        ? (side < 0 ? base * PRICE_MIN : side > 0 ? base * PRICE_MAX : base)
+        : priceFormula(g, mg.demandEma, mg.supplyEma);
       // 소수 2자리라 작은 차이가 0으로 반올림되지 않게, 차이가 있으면 최소 0.01은 움직인다
       const gap = target - mg.price;
       const move = Math.sign(gap) * Math.min(Math.abs(gap), Math.max(0.01, Math.abs(gap) * PRICE_SPEED));

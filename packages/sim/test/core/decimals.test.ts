@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { applyCommandMsg, createWorld, migrateWorld, moneyIdentity, playerCompany, recordHistory, roundWorld, step } from '../../src/index';
+import { GOODS, applyCommandMsg, createWorld, migrateWorld, moneyIdentity, playerCompany, recordHistory, roundWorld, step } from '../../src/index';
 import type { World } from '../../src/index';
+import { PRICE_MAX, PRICE_MIN, updatePrices } from '../../src/market';
 
 // 저장되는 값은 소수 둘째 자리까지 (CLAUDE.md). 화면이 저장하는 글(JSON.stringify(world))의 모든 숫자를 본다.
 
@@ -87,7 +88,7 @@ describe('저장값 소수 둘째 자리', () => {
   it('옛 저장(4판)을 바꾸면 모든 숫자가 소수 둘째 자리이고 화폐 장부가 센트 안에서 그대로다', () => {
     const w = createWorld(7);
     runTo(w, 60);
-    // 4판 모양으로 되돌린다: 부·문해력·교육 접근도는 규칙 단위, 돈과 수량에는 센트 아래 끝수
+    // 4판 모양으로 되돌린다: 부·문해력·교육 접근도·숙련도·작업 인원은 규칙 단위, 돈과 수량에는 센트 아래 끝수
     const old = JSON.parse(save(w));
     old.version = 4;
     for (const p of old.pops) {
@@ -95,6 +96,10 @@ describe('저장값 소수 둘째 자리', () => {
       p.savings += 0.001234; p.size += 0.000321;
     }
     for (const r of old.regions) { r.education = r.education100 / 100 + 1e-5; delete r.education100; }
+    for (const b of old.buildings) {
+      b.exp = b.exp100 / 100 + 1e-5; delete b.exp100;
+      if (b.crew100 !== undefined) { b.crew = b.crew100 / 100 + 1e-5; delete b.crew100; }
+    }
     for (const c of old.companies) c.cash += 0.004321;
     old.traders.shipments.push(...old.traders.shipments.map((s: { q: number }) => ({ ...s, q: s.q / 3 + 1e-4 })));
     const before = moneyIdentity(old as World);
@@ -103,8 +108,29 @@ describe('저장값 소수 둘째 자리', () => {
     expect(violations(save(got))).toEqual([]);
     expect(Math.abs(moneyIdentity(got) - before)).toBeLessThan(0.01);
     expect(got.pops[0].wealth100).toBeGreaterThanOrEqual(100);
+    expect(got.buildings.every((b) => b.exp100 >= 0 && b.exp100 <= 100 && !('exp' in b) && !('crew' in b))).toBe(true);
+    expect(got.buildings.some((b) => (b.crew100 ?? 0) > 1)).toBe(true);
     // 바꾼 세계도 계속 돈다
     runTo(got, 90);
     expect(violations(save(got))).toEqual([]);
+  });
+
+  // 반올림 찌꺼기(0.05 이하 이동평균)는 0이 되고, 사고파는 사람이 없는 시장은 기본가에서 벗어난 쪽 끝으로 간다 (market.ts updatePrices)
+  it('흐름이 끊긴 시장: 이동평균 찌꺼기는 0, 가격은 쏠린 쪽 끝으로', () => {
+    const w = createWorld(5);
+    const [a, b] = w.regions;
+    const base = GOODS.luxury_cloth.basePrice;
+    const cheap = a.market.luxury_cloth, dear = b.market.luxury_cloth, idle = b.market.electronics;
+    Object.assign(cheap, { demand: 0, supply: 0, demandEma: 0.05, supplyEma: 0.04, price: base * 0.5 });
+    Object.assign(dear, { demand: 0, supply: 0, demandEma: 0.03, supplyEma: 0, price: base * 1.5 });
+    Object.assign(idle, { demand: 0, supply: 0, demandEma: 0, supplyEma: 0, price: GOODS.electronics.basePrice });
+    for (let d = 0; d < 400; d++) {
+      updatePrices(w);
+      for (const m of [cheap, dear, idle]) { m.demand = 0; m.supply = 0; }
+    }
+    expect([cheap.demandEma, cheap.supplyEma, dear.demandEma, dear.supplyEma]).toEqual([0, 0, 0, 0]);
+    expect(cheap.price).toBe(base * PRICE_MIN);
+    expect(dear.price).toBe(base * PRICE_MAX);
+    expect(idle.price).toBe(GOODS.electronics.basePrice);
   });
 });

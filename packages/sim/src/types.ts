@@ -203,6 +203,9 @@ export interface Pop {
 export const wealthOf = (p: Pop) => p.wealth100 / 100;
 export const literacyOf = (p: Pop) => p.literacy100 / 100;
 export const educationOf = (r: { education100: number }) => r.education100 / 100;
+/** 건물 숙련도 0..1, 작업 인원 0..1 (작업 인원이 아직 없으면 충원율) */
+export const expOf = (b: { exp100: number }) => b.exp100 / 100;
+export const crewOf = (b: { crew100?: number; last: { staffing: number } }) => (b.crew100 !== undefined ? b.crew100 / 100 : b.last.staffing);
 
 export interface Building {
   id: number;
@@ -221,10 +224,10 @@ export interface Building {
   /** 소작지: 일하는 소작농 (노동 인구) */
   tenants?: number;
   lastSwitchTick: number;
-  /** 숙련도 0..1 */
-  exp: number;
-  /** 실제로 손이 맞는 작업 인원 비율: 충원율을 서서히 따라간다 */
-  crew?: number;
+  /** 숙련도 % (0..100, 100배 값. 하루 3.5씩 오른다). 규칙 단위(0..1)는 expOf(b) */
+  exp100: number;
+  /** 실제로 손이 맞는 작업 인원 % (0..100, 100배 값): 충원율을 하루 8%씩 따라간다. 규칙 단위(0..1)는 crewOf(b) */
+  crew100?: number;
   /** 건축사무소가 할 일이 없어 인부를 해산한 상태 */
   idle: boolean;
   /** 건축사무소: 맡은 공사 없이 이어진 날 수 (TUNE.officeIdleDays 를 넘으면 인부를 해산한다) */
