@@ -445,10 +445,10 @@ export function regionPerk(regionId: number, typeId: string): number {
  */
 export interface TierDef { pop: [number, number]; aristocrat: number; gentry: number; skilled: number; expert: number; education: number; plot: number; arableSlack: number; farms: number }
 export const TIERS: TierDef[] = [
-  { pop: [1_000_000, 1_300_000], aristocrat: 0.007, gentry: 0.01, skilled: 0.12, expert: 0.01, education: 0.35, plot: 15, arableSlack: 1, farms: 0.3 },
-  { pop: [700_000, 1_000_000], aristocrat: 0.015, gentry: 0.015, skilled: 0.06, expert: 0.004, education: 0.25, plot: 8, arableSlack: 1.1, farms: 0.2 },
-  { pop: [400_000, 700_000], aristocrat: 0.02, gentry: 0.02, skilled: 0.03, expert: 0.001, education: 0.15, plot: 5, arableSlack: 1.2, farms: 0.1 },
-  { pop: [200_000, 400_000], aristocrat: 0.015, gentry: 0.015, skilled: 0.02, expert: 0, education: 0.1, plot: 4, arableSlack: 1.2, farms: 0 },
+  { pop: [1_000_000, 1_300_000], aristocrat: 0.007, gentry: 0.01, skilled: 0.12, expert: 0.01, education: 0.35, plot: 150, arableSlack: 1, farms: 0.3 },
+  { pop: [700_000, 1_000_000], aristocrat: 0.015, gentry: 0.015, skilled: 0.06, expert: 0.004, education: 0.25, plot: 80, arableSlack: 1.1, farms: 0.2 },
+  { pop: [400_000, 700_000], aristocrat: 0.02, gentry: 0.02, skilled: 0.03, expert: 0.001, education: 0.15, plot: 50, arableSlack: 1.2, farms: 0.1 },
+  { pop: [200_000, 400_000], aristocrat: 0.015, gentry: 0.015, skilled: 0.02, expert: 0, education: 0.1, plot: 40, arableSlack: 1.2, farms: 0 },
 ];
 /** 티어별 지역 수 (합 = 지역 수). 각 왕국은 티어 2 이상 지역을 하나 이상 갖는다 */
 export const TIER_COUNTS = [1, 2, 3, 1];
