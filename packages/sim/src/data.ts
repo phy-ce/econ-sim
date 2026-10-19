@@ -283,7 +283,6 @@ export function scaleBonus(level: number): number {
 
 /**
  * 조정값 (테스트로 여러 값을 비교하는 손잡이). 시작 전에 바꾸면 그 판 전체에 적용된다.
- * - peasantMarketShare: 소작지 수확 중 시장에 파는 비율 (나머지는 현물로 먹는다)
  * - rentShare: 소작지 수확 중 현금 지대로 저택 귀족에게 가는 비율 (그만큼 더 팔아 낸다)
  * - patronWealth, patronShare: 소작농 부가 patronWealth 아래면 귀족이 지대의 patronShare 를 돌려준다
  * - growthEq: 신분별로 출생과 사망이 같아지는 생활수준 (이보다 높으면 인구가 는다)
@@ -327,7 +326,6 @@ export function scaleBonus(level: number): number {
  * - rawFullWealth, rawCapWealth: 원자재로 의복·생활용품을 다 채울 수 있는 부 상한, 원래 상한(max)이 되는 부 (rawMax)
  */
 export const TUNE = {
-  peasantMarketShare: 0.1,
   rentShare: 0.15,
   patronWealth: 2,
   patronShare: 0.5,
@@ -380,7 +378,7 @@ export const TUNE = {
 
 /**
  * 소작: 소작지 1칸(레벨)에서 일할 수 있는 소작농(노동 인구)과 1인당 하루 산출.
- * 수확의 TUNE.peasantMarketShare 만 시장에 팔고 나머지는 소작농이 먹는다. 먹고 남은 것은 시장에 나오지 않는다 (빅토리아3 자급 산출).
+ * 소작농은 지대·토지세를 내고 그날 쓸 만큼 남긴 뒤 나머지를 판다 (market.ts harvest).
  * 곡물은 식구(소비 단위 2.5)가 부 5로 먹을 만큼이다. 의복·가구는 만들지 않는다 (공장에서만 나온다)
  */
 export const SUBSISTENCE = {

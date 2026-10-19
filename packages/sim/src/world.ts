@@ -2,7 +2,7 @@ import { BUILDING_BY_ID, GOOD_IDS, GOODS, REGIONS, SKILL_DEFS, SUBSISTENCE, TICK
 import { emptyJobs, isGovernment, newBuilding, paysDividend, slots, wageCostOf } from './economy';
 import { aggregateHouseholds, findPop, getPop, movePeople, workforce } from './pops';
 import { updateOwnership, updateSubsistence } from './production';
-import { subsistenceKind, syncEmployment } from './labor';
+import { subsistenceWage, syncEmployment } from './labor';
 import { affordableWealth } from './market';
 import { applyStateWages, updateWageIndex } from './finance';
 import { round2 } from './rng';
@@ -243,14 +243,13 @@ export function createWorld(seed = 1, opts: CreateWorldOptions = {}): World {
     b.exp = 1;
   }
   syncEmployment(w);
-  // 시작 부: 직접 쓰는 현물과 현금 소득으로 감당할 수 있는 단계 (모든 pop 같은 규칙). 처음에는 아무도 현금 소득이 없다.
-  // 소작농의 현물은 수확 중 시장에 팔지 않는 몫이다
+  // 시작 부: 하루 소득으로 감당할 수 있는 단계 (모든 pop 같은 규칙, 부 이동(updateWealth)과 같은 소득). 처음에는 아무도 현금 소득이 없다.
+  // 소작농의 소득은 지대·토지세를 내고 남은 수확의 시장가다 (직접 쓰는 현물 + 파는 남는 것, subsistenceWage)
   for (const r of regions) {
     const subs = w.buildings.find((x) => x.regionId === r.id && x.typeId === 'subsistence');
     const tenants = subs ? findPop(w, r.id, 'peasant', subs.id) : undefined;
     for (const p of w.pops.filter((x) => x.regionId === r.id)) {
-      const kind = p === tenants ? subsistenceKind(workforce(p)) : {};
-      p.wealth = affordableWealth(r, p.size, p.incomeEma, kind);
+      p.wealth = affordableWealth(r, p.size, p === tenants ? subsistenceWage(w, r) * workforce(p) : p.incomeEma);
     }
   }
   // 국영 임금: 시작 민간 임금에서 임금 지수를 잡고 그 임금으로 시작한다. 그다음 그 임금으로 왕실 시작 국고를 정한다
