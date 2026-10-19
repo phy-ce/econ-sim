@@ -6,7 +6,7 @@ import { ListTools } from './ListTools';
 import { useMemo, useState } from 'react';
 import {
   BUILDING_BY_ID, BUILDING_TYPES, GOOD_IDS, MAX_CONCURRENT_CONSTRUCTIONS, TUNE,
-  SKILLS, POP_CLASSES, TECHS, companyById, crewOf, paysDividend, peasantSlots, availableMethods, canBuildType, constructionEstimate, creditLimit, estimateAfterEntry,
+  SKILLS, POP_CLASSES, TECHS, companyById, paysDividend, peasantSlots, availableMethods, canBuildType, constructionEstimate, creditLimit, estimateAfterEntry,
   estimateMethod, getMethod, hasBuilder, knowsTech, landFree, slots, marketWage, regionById, researchableTechs, unemploymentRate,
 } from '@econ/sim';
 import type { Building, Company, GoodBag, GoodId, Region, Skill, PopClass, World } from '@econ/sim';
@@ -42,7 +42,7 @@ function rowOf(world: World, b: Building): Row {
   const method = getMethod(b.typeId, b.methodId);
   const region = regionById(world, b.regionId);
   const run = b.level * b.utilization;
-  const crew = crewOf(b);
+  const crew = b.crew ?? b.last.staffing;
   const staff: StaffPart[] = SKILLS.filter((s) => (method.workers[s] ?? 0) > 0).map((s) => {
     const jobs = b.active ? slots(b, s) : (method.workers[s] ?? 0) * run;
     return { s, jobs, emp: Math.min(jobs, b.employed[s]) };

@@ -11,6 +11,18 @@
   - 루트에서 `npm run typecheck`가 통과해야 한다.
   - 개발 서버는 `cd packages/client && npx vite --port 5199`로 띄운다.
 
+## 0. 지금 할 일 (2026-10-19 기준, 위에서부터)
+1. **저장값 소수 둘째 자리, 100배 값 필드 (2-27). 지금 클라이언트가 컴파일되지 않는다.** 필드 이름이 바뀌었다: `b.crew` → `crewOf(b)`, `p.wealth` → `wealthOf(p)`, `p.literacy` → `literacyOf(p)`, `r.education` → `educationOf(r)` (`CompanyPanel.tsx` 45, `PopTable.tsx` 22·23·27, `RegionPanel.tsx` 116, main 커밋 기준). 100배 값(`wealth100`·`literacy100`·`education100`·`crew100`·`exp100`)을 그대로 보이면 100배로 보인다. 불러오기는 `sim.worker.ts`가 `migrateWorld`로 바꿔 둔다.
+2. **재정 탭 정책 단계 (2-23). 지금 재정 조작이 전부 막혀 있다.** `FinancePanel.tsx` 22행 슬라이더가 0~1 비율을 보내는데 sim의 `setBudget`은 정수 1~5만 받는다. 세 손잡이(`tax`·`wages`·`research`)를 1~5단계 선택으로 바꾼다.
+3. **행정청·학교는 땅이 없다 (2-24).** 짓기 카드에서 땅 칸 대신 무엇을 보일지 정한다. 건축사무소 일자리 표시는 컴파일용으로 `slots(b, s)`를 쓰게 고쳐 두었다 (`CompanyPanel.tsx` 47행, `Workforce.tsx` 14행). 이제 `disbanded(b)`도 export된다.
+4. **기상 조건 (2-25).** 지역 목록·지역 패널에 `harvestLabel` 칩, 깎이는 건물의 산출 옆 `−20%`, 통계에 `harvestRegions` 선.
+5. **항구 표시 정리.** sim에서 항구·해외 무역 코드를 없앴다 (`PORTS_OPEN`은 sim에 없다). 클라이언트 `systemMetrics.ts`의 `PORTS_OPEN = false`와 `RegionMap.tsx`·`RegionPanel.tsx`의 항구 배지는 지우거나 장식으로만 둔다. `Region.spaceport`(항구 지역 표시)는 데이터에 남아 있다.
+6. **행정청 세금 역량.** `taxCapacity(world, kingdomId)`를 index에서 export했다. 필드 `Kingdom.taxCapacity`·`taxDue`로 읽어도 된다.
+7. **광맥은 자원별, 탐광으로 늘어난다 (2-26).** 지역 패널의 광맥 칸을 철·석탄 두 줄(`r.deposits.iron`·`r.deposits.coal`, 남은 칸 `depositFree`)로 나눈다. 탐광 알림은 그대로 보이면 된다.
+- 바뀌지 않는 것: 소작농 판매 규칙(먹고 남는 것만 판다)과 왕실 학교 AI는 화면 변경이 없다. 현물 값의 뜻도 그대로다.
+- **아직 sim에 없음 (만들지 말 것, 들어오면 이 목록에 올린다):**
+  - 건물별 임금·현금·보조금 (브랜치 wt-wage). 들어오면 국영 임금 손잡이(`budget.wages`)가 없어지고, 건물 패널에 임금·현금·보조금 켜기가 생기고, 저장 형식이 5로 바뀐다(옛 저장은 `migrateWorld`로 변환). 그래서 2번에서 국영 임금 손잡이는 작게 두어도 된다.
+
 ---
 
 ## 1. 바뀐 시스템 요약
@@ -420,7 +432,15 @@ sim이 아래 제도를 없앴다. 화면이 계속 컴파일되도록 `packages
 - 알림: 조건이 새로 걸리면 그 지역 왕국의 왕실에 `warn` 알림이 한 번 온다 (`regionId` 있음). 글은 지역 이름 + `harvestLabel`: `"강변 평야 가뭄 농지 −20% · 180일"` / `"River Plain Drought farmland −20% · 180 d"`. 플레이어 왕실(id 100) 것은 지금 규칙대로 토스트가 뜬다.
 - 지표: `MetricPoint.harvestRegions` = 조건이 걸린 지역 수 (없으면 필드가 없다 → `?? 0`). 통계 그래프에 선 하나로 넣으면 좋다.
 
-### 2-26. 저장값은 소수 둘째 자리, 부·문해력·교육 접근도·숙련도·작업 인원은 100배 값 (저장 v6)
+### 2-26. 광맥은 자원별, 탐광으로 늘어난다 (산림·광맥 늘림)
+- 산림: 지역 1~7 = 30/30/60/100/200/30/50칸. 광맥 잠재량(못 찾은 것 포함, `REGIONS[i].veins`): 철 0/0/60/0/0/200/150, 석탄 0/0/30/0/60/150/100.
+- 찾은 광맥 = `region.deposits.iron`·`region.deposits.coal` (레벨 수). 시작은 잠재량의 30%이고, 계절(90일)마다 지역·자원마다 일정 확률로 잠재량의 10%씩 늘어난다 (탐광).
+- 남은 칸: `depositFree(world, regionId, 'iron' | 'coal')`. 철광산·석탄광산은 자기 자원 광맥으로만 막힌다. `region.land.ore`는 두 자원 `deposits`의 합이라 지금 화면의 광맥 칸은 그대로 맞는다 (광맥 `landFree(…, 'ore')`는 두 광산을 합친 값).
+- 넣을 곳: 지역 패널의 땅 표에서 광맥 한 줄을 철·석탄 두 줄로 (이름 `DEPOSIT_NAMES`/`DEPOSIT_NAMES_EN`, 쓴 칸/찾은 칸). 잠재량(`veins`)은 보이지 않는다 (탐광의 의미가 없어진다).
+- 알림: 광맥을 찾으면 그 지역 왕국 왕실에 `info` 알림 (`regionId` 있음): `"북부 광산지대 철광맥 +20"` / `"Northern Mining District iron veins +20"` (석탄은 `탄맥` / `coal seams`, `VEIN_NAMES`·`VEIN_NAMES_EN`).
+- 저장 형식 그대로. 옛 저장은 찾은 광맥이 적은 채로 이어서 탐광한다.
+
+### 2-27. 저장값은 소수 둘째 자리, 부·문해력·교육 접근도·숙련도·작업 인원은 100배 값 (저장 v6)
 - **저장 호환 (가장 먼저):** 저장 형식이 바뀌었다 (`World.version` 6. 5는 이 변경의 중간 판이었다).
   - `sim.worker.ts`의 `'load'`는 `migrateWorld(msg.world)`를 부르게 고쳐 두었다 (index에서 export). 4판·5판 저장을 6판으로 바꾸고(돈 보존), 그보다 옛 저장이면 `null`이다. `null`이면 지금 게임을 그대로 둔다.
   - 그래서 `useGame.ts`의 `SAVE_KEY`는 `'estera-save-v7'` 그대로다. 불러오기에 실패했을 때 토스트를 보이려면 워커가 결과를 돌려주게 프로토콜을 늘려야 한다 (선택).
@@ -429,20 +449,17 @@ sim이 아래 제도를 없앴다. 화면이 계속 컴파일되도록 `packages
   - `Pop.literacy` → `Pop.literacy100` (문해력 %, 0~100). 표시는 `literacyOf(p)` (0~1, `pct` 그대로).
   - `Region.education` → `Region.education100` (교육 접근도 %, 0~100). 표시는 `educationOf(r)` (0~1).
   - 셋 다 index에서 export한다. `Household.wealth`와 `HistoryPoint.regionEducation`은 그대로 규칙 단위다.
-  - 컴파일을 위해 고쳐 둔 곳: `PopTable.tsx`(부·문해력 칸과 그 열 정렬), `RegionPanel.tsx`(교육 접근도 숫자와 막대). 다른 곳은 바꿀 것이 없다.
-  - 이 세 파일(`CompanyPanel.tsx` 포함)을 따로 고치고 있었다면, 고친 판에서도 옛 필드를 읽는 곳을 바꿔야 컴파일된다: `b.crew` → `crewOf(b)`, `p.wealth` → `wealthOf(p)`, `p.literacy` → `literacyOf(p)`, `r.education` → `educationOf(r)` (2026-10-19 main 작업 폴더의 커밋 전 수정 기준 7곳: `CompanyPanel.tsx` 46, `PopTable.tsx` 22·23·27, `RegionPanel.tsx` 117).
+  - **화면에서 고칠 곳 (이 브랜치는 화면 작업 중인 세 파일을 건드리지 않았다. 고치기 전에는 클라이언트가 컴파일되지 않는다):** `b.crew` → `crewOf(b)`, `p.wealth` → `wealthOf(p)`, `p.literacy` → `literacyOf(p)`, `r.education` → `educationOf(r)`. main 커밋 기준 7곳: `CompanyPanel.tsx` 45(`b.crew`), `PopTable.tsx` 22·23(정렬 키 `wealth`·`literacy`를 `wealthOf`·`literacyOf` 값으로), 27(부·문해력 칸), `RegionPanel.tsx` 116(교육 접근도 숫자와 막대 두 곳). 작업 폴더의 커밋 전 판에서는 `CompanyPanel.tsx` 46, `PopTable.tsx` 22·23·27, `RegionPanel.tsx` 117. 다른 곳은 바꿀 것이 없다.
 - 모든 숫자가 소수 둘째 자리다. 0~1 비율(충족률, 식량, 충원율, 가동률 등)은 1% 단위로 움직이므로, 소수 셋째 자리 이상을 보여 주지 않는다.
 - 문해력·교육 접근도는 주 1회(주간 처리 때) 7일치씩 바뀐다. 그래프가 주 단위 계단으로 보일 수 있다.
 - 상인 화물(`traders.shipments`)은 시장(도착 지역·상품)마다 새 화물 하나, 묵은 화물(`stale`) 하나로 합쳐진다. 출발 지역은 원래 없다.
 - 틱 사이 명령: `applyCommandMsg`는 적용한 뒤 저장값을 반올림한다 (틱 사이에 저장해도 규칙을 지킨다). 화면은 지금처럼 `applyCommandMsg`를 쓰면 된다. `step(world, queue)`의 명령 목록도 같은 길이라 어느 쪽으로 넣어도 결과가 같다.
-- 건물도 두 필드가 100배 값이 되었다: `Building.exp` → `Building.exp100` (숙련도 %, 0~100), `Building.crew` → `Building.crew100` (작업 인원 %, 0~100, 없을 수 있다). 표시는 `expOf(b)`·`crewOf(b)` (0~1, `crewOf`는 작업 인원이 없으면 충원율). index에서 export한다. 컴파일을 위해 `CompanyPanel.tsx`의 투입재 계산을 `crewOf(b)`로 고쳐 두었다.
+- 건물도 두 필드가 100배 값이 되었다: `Building.exp` → `Building.exp100` (숙련도 %, 0~100), `Building.crew` → `Building.crew100` (작업 인원 %, 0~100, 없을 수 있다). 표시는 `expOf(b)`·`crewOf(b)` (0~1, `crewOf`는 작업 인원이 없으면 충원율). index에서 export한다. `CompanyPanel.tsx`의 투입재 계산(`b.crew`)을 `crewOf(b)`로 바꾼다 (위 7곳 중 하나).
 - 시장: 사고파는 사람이 없는 시장(`demandEma`·`supplyEma`가 둘 다 0)은 가격이 기본가에서 벗어난 쪽 끝(0.25배 또는 1.75배)으로 간다. 0.05 이하 이동평균은 0이 된다. 화면에서 바꿀 것은 없다.
 
 ---
 
 ## 3. sim 쪽 필요 사항 (Claude가 처리할 것, UI 작업자는 요청만)
-- 지금 `packages/sim/src/index.ts`가 export하지 않아서 UI가 쓰려면 추가가 필요한 것
-  - `PORTS_OPEN` (market.ts)
-  - `taxCapacity` (finance.ts). `Kingdom.taxCapacity`와 `taxDue` 필드는 이미 매주 채워지므로 필드만 읽어도 된다.
-  - `peasantSlots` (economy.ts 쪽 export 여부 확인)
-- 이미 export되는 것: `paysDividend`, `landlordJobs`, `kingdomGdp`, `kingdomById`, `builderOf`, `companyById`
+- 남은 요청 없음 (2026-10-19).
+  - 처리함: `taxCapacity` export, `peasantSlots`(economy.ts, 이미 export됨). `PORTS_OPEN`은 sim에서 항구 코드를 없애 export할 것이 없다 (0장 4번).
+- 이미 export되는 것: `paysDividend`, `landlordJobs`, `kingdomGdp`, `kingdomById`, `builderOf`, `companyById`, `peasantSlots`, `disbanded`, `slots`, `harvestCondition`, `harvestLabel`, `HARVEST_KINDS`, `taxRates`, `taxCapacity`

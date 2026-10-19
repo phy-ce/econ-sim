@@ -1,5 +1,5 @@
 import { BUILDING_BY_ID, GOOD_IDS, GOODS, REGIONS, SKILL_DEFS, SUBSISTENCE, TICKS_PER_WEEK, TIER_COUNTS, TIER_JITTER, TIERS, TUNE, WORKFORCE_RATIO, getMethod } from './data';
-import { collectionRatio, emptyJobs, isGovernment, newBuilding, paysDividend, slots, wageCostOf } from './economy';
+import { collectionRatio, emptyJobs, knownVeins, isGovernment, newBuilding, paysDividend, slots, wageCostOf } from './economy';
 import { aggregateHouseholds, findPop, getPop, movePeople, workforce } from './pops';
 import { updateOwnership, updateSubsistence } from './production';
 import { subsistenceWage, syncEmployment } from './labor';
@@ -151,10 +151,11 @@ export function createWorld(seed = 1, opts: CreateWorldOptions = {}): World {
 
   const regions: Region[] = REGIONS.map((def) => {
     const st = starts.get(def.id)!;
+    const deposits = knownVeins(def.veins);
     return {
       id: def.id, name: def.name, description: def.description, spaceport: def.spaceport, neighbors: [...def.neighbors],
       kingdomId: owner[def.id], tier: st.tier,
-      land: { arable: st.arable, forest: def.forest, plot: st.plot, ore: def.deposits.iron + def.deposits.coal }, deposits: { ...def.deposits },
+      land: { arable: st.arable, forest: def.forest, plot: st.plot, ore: deposits.iron + deposits.coal }, deposits,
       education100: Math.round(st.education * 100), households: {} as Region['households'], market: newMarket(),
     };
   });

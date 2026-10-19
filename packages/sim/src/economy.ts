@@ -1,10 +1,11 @@
 import {
   BUILDING_BY_ID, GOOD_IDS, GOODS, HARVEST_KINDS, HARVEST_MAX_SEASONS, HARVEST_SEASON_DAYS, HARVEST_SPREAD, HARVEST_STEP, LAND_NAMES, LAND_NAMES_EN,
-  MAX_POINTS_PER_LEVEL_DAY, POINT_VALUE, SKILL_DEFS, SUBSISTENCE, TECH_BY_ID, getMethod, regionPerk, scaleBonus, TUNE,
+  MAX_POINTS_PER_LEVEL_DAY, POINT_VALUE, REGIONS, SKILL_DEFS, SUBSISTENCE, TECH_BY_ID, VEIN_NAMES, VEIN_NAMES_EN, getMethod, regionPerk, scaleBonus, TUNE,
 } from './data';
+import { regionNameEn } from './i18n';
 import { borderCost } from './kingdoms';
 import { clamp } from './rng';
-import { OWNERS, SKILLS, WEALTH_MIN, crewOf, expOf, wealthOf } from './types';
+import { DEPOSITS, OWNERS, SKILLS, WEALTH_MIN, crewOf, expOf, wealthOf } from './types';
 import type {
   Building, BuildingTypeDef, Company, DepositId, EventKind, GoodBag, GoodId, HarvestCondition, LandType, MethodDef, Pop, PopClass, Region, Skill, World,
 } from './types';
@@ -178,6 +179,45 @@ export function harvestLabel(w: World, regionId: number, en = false): string | n
   return en
     ? `${def.nameEn} ${c.lands.map((l) => LAND_NAMES_EN[l].toLowerCase()).join(', ')} −${pct}% · ${days} d`
     : `${def.name} ${c.lands.map((l) => LAND_NAMES[l]).join('·')} −${pct}% · ${days}일`;
+}
+
+// ---------------------------------------------------------------- 탐광
+//
+// 광맥 잠재량(REGIONS veins)은 지형으로 고정이고, 그중 찾은 만큼이 Region.deposits 다 (광산은 찾은 광맥에만 짓는다).
+// 시작할 때 잠재량 × TUNE.prospectStart 를 안다. 계절(90일)이 바뀌는 날마다 지역·자원마다 남은 잠재량이 있으면
+// (시드, 지역, 계절, 자원) 해시로 TUNE.prospectChance 확률에 잠재량 × TUNE.prospectFind 를 찾는다.
+// 무작위 수열(rand)을 쓰지 않고, 찾은 양은 deposits 에 저장되므로 저장·불러오기에도 같다.
+
+const round10 = (x: number) => Math.max(0, Math.round(x / 10) * 10);
+
+/** 시작할 때 알려진 광맥 */
+export function knownVeins(veins: Record<DepositId, number>): Record<DepositId, number> {
+  return Object.fromEntries(DEPOSITS.map((d) => [d, Math.min(veins[d], round10(veins[d] * TUNE.prospectStart))])) as Record<DepositId, number>;
+}
+
+/** 남은 (아직 못 찾은) 광맥 잠재량 */
+export function veinsLeft(w: World, regionId: number, dep: DepositId): number {
+  const def = REGIONS.find((d) => d.id === regionId);
+  return Math.max(0, (def?.veins[dep] ?? 0) - regionById(w, regionId).deposits[dep]);
+}
+
+/** 계절이 바뀌는 날(w.tick 이 계절 첫날) 탐광: 찾은 광맥을 deposits 와 land.ore 에 더하고 그 지역 왕실에 알린다 */
+export function prospect(w: World) {
+  if (w.tick <= 0 || w.tick % HARVEST_SEASON_DAYS !== 0 || !(TUNE.prospectChance > 0)) return;
+  const s = w.tick / HARVEST_SEASON_DAYS;
+  for (const r of w.regions) {
+    const def = REGIONS.find((d) => d.id === r.id);
+    if (!def) continue;
+    DEPOSITS.forEach((dep, i) => {
+      const left = veinsLeft(w, r.id, dep);
+      if (left <= 0 || !(hash01(w.seed, r.id, s, 300 + i) < TUNE.prospectChance)) return;
+      const found = Math.min(left, Math.max(10, round10(def.veins[dep] * TUNE.prospectFind)));
+      r.deposits[dep] += found;
+      r.land.ore = DEPOSITS.reduce((a, d) => a + r.deposits[d], 0);
+      const crown = w.kingdoms.find((k) => k.id === r.kingdomId)?.governmentId ?? null;
+      logEvent(w, crown, `${r.name} ${VEIN_NAMES[dep]} +${found}`, { kind: 'info', regionId: r.id, en: `${regionNameEn(r.id)} ${VEIN_NAMES_EN[dep]} +${found}` });
+    });
+  }
 }
 
 // ---------------------------------------------------------------- 기술

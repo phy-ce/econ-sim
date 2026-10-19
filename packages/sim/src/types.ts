@@ -156,9 +156,9 @@ export interface RegionDef {
   /** 해외 무역(수입·수출)이 가능한 개항장 */
   spaceport: boolean;
   neighbors: number[];
-  /** 산림 칸 수와 매장량 (지형, 고정). 농지·부지·인구·교육은 티어로 정한다 (data.ts TIERS) */
+  /** 산림 칸 수와 자원별 광맥 잠재량 (지형, 고정. 아직 못 찾은 것 포함). 농지·부지·인구·교육은 티어로 정한다 (data.ts TIERS) */
   forest: number;
-  deposits: Record<DepositId, number>;
+  veins: Record<DepositId, number>;
   perks: Partial<Record<string, number>>;
 }
 
@@ -392,7 +392,9 @@ export interface Region {
   spaceport: boolean;
   neighbors: number[];
   kingdomId: number;
+  /** ore 는 찾은 광맥(deposits)의 합이다 (화면용. 광산은 자원별 deposits 로 막힌다) */
   land: Record<LandType, number>;
+  /** 찾은 광맥 레벨 수 (자원별). 잠재량(RegionDef.veins)까지 탐광으로 늘어난다 */
   deposits: Record<DepositId, number>;
   /** 교육 접근도 % (0..100, 100배 값, 학교 정원 비율). pop 의 문해력이 이것을 따라간다. 규칙 단위(0..1)는 educationOf(r) */
   education100: number;
