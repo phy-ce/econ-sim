@@ -17,6 +17,7 @@
 3. **기상 조건 (2-25).** 지역 목록·지역 패널에 `harvestLabel` 칩, 깎이는 건물의 산출 옆 `−20%`, 통계에 `harvestRegions` 선.
 4. **항구 표시 정리.** sim에서 항구·해외 무역 코드를 없앴다 (`PORTS_OPEN`은 sim에 없다). 클라이언트 `systemMetrics.ts`의 `PORTS_OPEN = false`와 `RegionMap.tsx`·`RegionPanel.tsx`의 항구 배지는 지우거나 장식으로만 둔다. `Region.spaceport`(항구 지역 표시)는 데이터에 남아 있다.
 5. **행정청 세금 역량.** `taxCapacity(world, kingdomId)`를 index에서 export했다. 필드 `Kingdom.taxCapacity`·`taxDue`로 읽어도 된다.
+6. **광맥은 자원별, 탐광으로 늘어난다 (2-26).** 지역 패널의 광맥 칸을 철·석탄 두 줄(`r.deposits.iron`·`r.deposits.coal`, 남은 칸 `depositFree`)로 나눈다. 탐광 알림은 그대로 보이면 된다.
 - 바뀌지 않는 것: 소작농 판매 규칙(먹고 남는 것만 판다)과 왕실 학교 AI는 화면 변경이 없다. 현물 값의 뜻도 그대로다.
 - **아직 sim에 없음 (만들지 말 것, 들어오면 이 목록에 올린다):**
   - 건물별 임금·현금·보조금 (브랜치 wt-wage). 들어오면 국영 임금 손잡이(`budget.wages`)가 없어지고, 건물 패널에 임금·현금·보조금 켜기가 생기고, 저장 형식이 5로 바뀐다(옛 저장은 `migrateWorld`로 변환). 그래서 1번에서 국영 임금 손잡이는 작게 두어도 된다.
@@ -430,6 +431,14 @@ sim이 아래 제도를 없앴다. 화면이 계속 컴파일되도록 `packages
   - 지역 건물 목록에서 깎이는 땅의 건물(`BUILDING_BY_ID[typeId].land`가 `lands`에 있음)의 산출 옆에 `−20%`.
 - 알림: 조건이 새로 걸리면 그 지역 왕국의 왕실에 `warn` 알림이 한 번 온다 (`regionId` 있음). 글은 지역 이름 + `harvestLabel`: `"강변 평야 가뭄 농지 −20% · 180일"` / `"River Plain Drought farmland −20% · 180 d"`. 플레이어 왕실(id 100) 것은 지금 규칙대로 토스트가 뜬다.
 - 지표: `MetricPoint.harvestRegions` = 조건이 걸린 지역 수 (없으면 필드가 없다 → `?? 0`). 통계 그래프에 선 하나로 넣으면 좋다.
+
+### 2-26. 광맥은 자원별, 탐광으로 늘어난다 (산림·광맥 늘림)
+- 산림: 지역 1~7 = 30/30/60/100/200/30/50칸. 광맥 잠재량(못 찾은 것 포함, `REGIONS[i].veins`): 철 0/0/60/0/0/200/150, 석탄 0/0/30/0/60/150/100.
+- 찾은 광맥 = `region.deposits.iron`·`region.deposits.coal` (레벨 수). 시작은 잠재량의 30%이고, 계절(90일)마다 지역·자원마다 일정 확률로 잠재량의 10%씩 늘어난다 (탐광).
+- 남은 칸: `depositFree(world, regionId, 'iron' | 'coal')`. 철광산·석탄광산은 자기 자원 광맥으로만 막힌다. `region.land.ore`는 두 자원 `deposits`의 합이라 지금 화면의 광맥 칸은 그대로 맞는다 (광맥 `landFree(…, 'ore')`는 두 광산을 합친 값).
+- 넣을 곳: 지역 패널의 땅 표에서 광맥 한 줄을 철·석탄 두 줄로 (이름 `DEPOSIT_NAMES`/`DEPOSIT_NAMES_EN`, 쓴 칸/찾은 칸). 잠재량(`veins`)은 보이지 않는다 (탐광의 의미가 없어진다).
+- 알림: 광맥을 찾으면 그 지역 왕국 왕실에 `info` 알림 (`regionId` 있음): `"북부 광산지대 철광맥 +20"` / `"Northern Mining District iron veins +20"` (석탄은 `탄맥` / `coal seams`, `VEIN_NAMES`·`VEIN_NAMES_EN`).
+- 저장 형식 그대로. 옛 저장은 찾은 광맥이 적은 채로 이어서 탐광한다.
 
 ---
 

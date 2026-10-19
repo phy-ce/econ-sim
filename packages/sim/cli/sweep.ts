@@ -59,7 +59,7 @@ const w = createWorld(seed, { withPlayer: false });
 // 왕실 정책 단계 (4주 점검마다 왕국별): 세금 수준·국영 임금 수준·국고(지출 몇 주치)·빚
 const trace = w.kingdoms.map(() => [] as { tax: number; wages: number; weeks: number; debt: boolean }[]);
 // 교육 (5년마다): lit 인구 가중 문해력, sch 왕실 학교 레벨, qs 기술자 자격자(기술자 + 다른 직종의 기술자 자격, 천 명), schDem 학교 철거 레벨 누계
-const edu: Record<number, { lit: number; sch: number; qs: number; schDem: number }> = {};
+const edu: Record<number, { lit: number; sch: number; qs: number; schDem: number; veins: number }> = {};
 const inv: Record<number, ReturnType<typeof investSnapshot>> = {};
 let schDem = 0;
 const schoolLevels = new Map<number, number>();
@@ -78,7 +78,9 @@ for (let d = 0; d < years * 360; d++) {
     let n = 0, lit = 0, qs = 0;
     for (const p of w.pops) { n += p.size; lit += p.size * p.literacy; qs += p.prof === 'skilled' ? workforce(p) : (p.quals.skilled ?? 0); }
     const sch = w.buildings.filter((b) => b.typeId === 'school').reduce((a, b) => a + b.level, 0);
-    edu[w.tick / 360] = { lit: +(lit / n).toFixed(3), sch, qs: Math.round(qs / 1e3), schDem };
+    // veins: 찾은 광맥 레벨 합 (모든 지역·자원)
+    const veins = w.regions.reduce((a, r) => a + Object.values(r.deposits).reduce((b, x) => b + x, 0), 0);
+    edu[w.tick / 360] = { lit: +(lit / n).toFixed(3), sch, qs: Math.round(qs / 1e3), schDem, veins };
     inv[w.tick / 360] = investSnapshot(w);
   }
   if (w.tick % 28 !== 0) continue;
@@ -107,6 +109,9 @@ for (const m of w.metrics) {
     gdp: Math.round(sum(m, (k) => k.gdp) / 1e6),
     pts: Math.round(sum(m, (k) => k.pointsPerDay)),
     grain: m.goods.grain.ratio,
+    timber: m.goods.timber.ratio,
+    ore: m.goods.ore.ratio,
+    fuel: m.goods.fuel.ratio,
     classGap: m.classGap,
     regionGap: m.regionGap,
     taxRatio: +(sum(m, (k) => k.taxRatio * k.pop) / pop).toFixed(2),
