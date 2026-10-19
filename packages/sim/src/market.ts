@@ -714,7 +714,6 @@ export function clearMarkets(w: World, book: Book) {
             if (rentAmt > 0 && !payRent(w, lot.pop.regionId, rentAmt)) rentAmt = 0;
             if (taxAmt > 0) payLandTax(w, lot.pop.regionId, taxAmt);
             paySubsistence(w, lot.pop, amt - rentAmt - taxAmt);
-            if (!saleRule()) lot.pop.unsoldKind = (lot.pop.unsoldKind ?? 0) + (lot.q - q) * p * Math.max(0, 1 - fr - tf);
             break;
           }
           case 'salvage':
@@ -836,14 +835,13 @@ export function affordableWealth(r: Region, size: number, income: number): numbe
 }
 
 /**
- * 부 단계 이동: 실제 소득(현금 소득 + 직접 쓴 현물 + 안 팔린 현물)과 생활비로만 정한다. 저축을 꺼내 쓰는 돈은 소득이 아니다.
+ * 부 단계 이동: 실제 소득(현금 소득 + 직접 쓴 현물)과 생활비로만 정한다. 저축을 꺼내 쓰는 돈과, 내놓았지만 안 팔리고 사라진 물건은 소득이 아니다.
  * 소득이 다음 단계 묶음 비용의 102%를 넘으면 오르고, 지금 단계의 98%에 못 미치면 내린다.
  * 물건이 없어 필요를 못 채운 것은 생활수준(popSol)에만 나타난다
  */
 function updateWealth(p: Pop, rd: RegionDay, plan: PopPlan) {
-  // 수확 전체가 소득이다 (빅토리아3): 먹은 현물 + 판 돈(현금 소득에 들어 있다) + 내놓았지만 안 팔린 현물의 시장가
-  const income = Math.max(0, p.incomeEma) + plan.inKindValue + (p.unsoldKind ?? 0);
-  p.unsoldKind = 0;
+  // 소득 = 판 돈(현금 소득에 들어 있다) + 먹고 쓴 현물
+  const income = Math.max(0, p.incomeEma) + plan.inKindValue;
   const L = wealthOf(p);
   const costCur = basketCostDay(rd, p.size, L);
   const costNext = basketCostDay(rd, p.size, Math.min(WEALTH_MAX, L + 1));

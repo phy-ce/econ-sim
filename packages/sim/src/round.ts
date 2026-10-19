@@ -91,7 +91,6 @@ function roundPop(p: Pop): void {
   p.food = r(p.food);
   p.sol = r(p.sol);
   p.growth = r(p.growth);
-  if (p.unsoldKind !== undefined) p.unsoldKind = r(p.unsoldKind);
   roundBag(p.quals);
   roundBag(p.inKind);
 }

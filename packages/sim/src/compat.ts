@@ -40,6 +40,8 @@ function to100(o: object, from: string, to: string): void {
 export function migrateWorld(input: unknown): World | null {
   const w = input as World & { version: number };
   if (!w || typeof w !== 'object') return null;
+  // 옛 저장의 '안 팔린 현물' 소득 칸은 더 쓰지 않는다 (안 팔리고 사라진 물건은 소득이 아니다)
+  for (const p of w.pops ?? []) delete (p as { unsoldKind?: number }).unsoldKind;
   if (w.version === 6) { writeMirrors(w); return w; }
   if (w.version !== 4 && w.version !== 5) return null;
   for (const p of w.pops) { to100(p, 'wealth', 'wealth100'); to100(p, 'literacy', 'literacy100'); }
