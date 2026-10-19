@@ -10,7 +10,7 @@ import type { Outlook } from './outlook';
 import { kingdomById } from './kingdoms';
 import { LITERACY_PER_WEALTH, workforce } from './pops';
 import { rand, round2 } from './rng';
-import { BUDGET_STEPS, SKILLS } from './types';
+import { BUDGET_STEPS, SKILLS, literacyOf } from './types';
 import type { BudgetItem, Building, Company, Kingdom, MethodDef, Region, Skill, World } from './types';
 
 // AI: 국영과 민간이 같은 판단을 쓴다. 다른 점은 자금원(국고 / 투자 풀)과 자기 왕국 땅에만 짓는다는 것뿐이다.
@@ -342,7 +342,7 @@ function schoolNeed(w: World): SchoolNeed {
   const size = new Map<number, number>(), lit = new Map<number, number>();
   for (const p of w.pops) {
     size.set(p.regionId, (size.get(p.regionId) ?? 0) + p.size);
-    lit.set(p.regionId, (lit.get(p.regionId) ?? 0) + p.size * p.literacy);
+    lit.set(p.regionId, (lit.get(p.regionId) ?? 0) + p.size * literacyOf(p));
   }
   const literacy = new Map<number, number>();
   for (const r of w.regions) { const n = size.get(r.id) ?? 0; literacy.set(r.id, n > 0 ? (lit.get(r.id) ?? 0) / n : 0); }

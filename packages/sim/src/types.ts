@@ -177,10 +177,10 @@ export interface Pop {
   /** 부양가족 포함 인구 */
   size: number;
   savings: number;
-  /** 부 단계 1..99 */
-  wealth: number;
-  /** 문해력 0..1 */
-  literacy: number;
+  /** 부 단계 × 100 (100..9900). 소수 둘째 자리로 저장해도 하루 0.0001 단계씩 움직일 수 있게 100배로 둔다. 규칙 단위(1..99)는 wealthOf(p) */
+  wealth100: number;
+  /** 문해력 % (0..100, 100배 값). 규칙 단위(0..1)는 literacyOf(p) */
+  literacy100: number;
   /** 다른 직종의 자격을 갖춘 노동 인구 수 */
   quals: Partial<Record<PopClass, number>>;
   incomeEma: number;
@@ -198,6 +198,11 @@ export interface Pop {
   /** 소작으로 직접 얻어 먹는 현물 */
   inKind: GoodBag;
 }
+
+/** 100배로 저장한 값을 규칙 단위로 읽는다: 부 단계 1..99, 문해력 0..1, 교육 접근도 0..1 */
+export const wealthOf = (p: Pop) => p.wealth100 / 100;
+export const literacyOf = (p: Pop) => p.literacy100 / 100;
+export const educationOf = (r: { education100: number }) => r.education100 / 100;
 
 export interface Building {
   id: number;
@@ -386,8 +391,8 @@ export interface Region {
   kingdomId: number;
   land: Record<LandType, number>;
   deposits: Record<DepositId, number>;
-  /** 교육 접근도 0..1 (학교 정원 비율). pop 의 문해력이 이것을 따라간다 */
-  education: number;
+  /** 교육 접근도 % (0..100, 100배 값, 학교 정원 비율). pop 의 문해력이 이것을 따라간다. 규칙 단위(0..1)는 educationOf(r) */
+  education100: number;
   /** pop 합산 (화면용). 매 틱 다시 채운다 */
   households: Record<PopClass, Household>;
   market: Record<GoodId, MarketGood>;
@@ -508,8 +513,8 @@ export interface MintLedger {
 }
 
 export interface World {
-  /** 저장 형식 버전: 저장되는 모양이 바뀌면 올린다 (4: 정책 단계 tax·wages·research, 계층별 세율 없음) */
-  version: 4;
+  /** 저장 형식 버전: 저장되는 모양이 바뀌면 올린다 (5: 부·문해력·교육 접근도를 100배 값으로, 모든 숫자 소수 둘째 자리. 옛 저장은 compat.ts migrateWorld) */
+  version: 5;
   config: WorldConfig;
   tick: number;
   seed: number;

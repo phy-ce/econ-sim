@@ -1,7 +1,7 @@
 // 학교 진단: npx tsx cli/schooldiag.ts [seed] [years]
 // 해마다 왕국별: 학교 레벨, 자리 / 인구, 문해력, 기술자 자격자(기술자 + 다른 직종의 기술자 자격)와 한 해 늘어난 수, 세금 수준, 국고(지출 몇 주치), 빚.
 // 5년마다 지역별 학교 상세
-import { createWorld, step } from '../src/index';
+import { createWorld, educationOf, literacyOf, step } from '../src/index';
 import { companyById } from '../src/economy';
 import { getMethod } from '../src/data';
 import { workforce } from '../src/pops';
@@ -28,7 +28,7 @@ for (let d = 1; d <= years * 360; d++) {
   for (const k of w.kingdoms) {
     const regs = new Set(w.regions.filter((r) => r.kingdomId === k.id).map((r) => r.id));
     let n = 0, lit = 0, qs = 0, seats = 0, lv = 0;
-    for (const p of w.pops) if (regs.has(p.regionId)) { n += p.size; lit += p.size * p.literacy; qs += p.prof === 'skilled' ? workforce(p) : (p.quals.skilled ?? 0); }
+    for (const p of w.pops) if (regs.has(p.regionId)) { n += p.size; lit += p.size * literacyOf(p); qs += p.prof === 'skilled' ? workforce(p) : (p.quals.skilled ?? 0); }
     for (const b of w.buildings) if (regs.has(b.regionId) && b.typeId === 'school') { lv += b.level; seats += b.level * (getMethod(b.typeId, b.methodId).seats ?? 0) * b.last.staffing; }
     const g = companyById(w, k.governmentId)!;
     const weeks = (k.expenseEma ?? 0) > 0 ? g.cash / k.expenseEma! : Infinity;
@@ -41,8 +41,8 @@ for (let d = 1; d <= years * 360; d++) {
   for (const r of w.regions) {
     const sc = w.buildings.filter((b) => b.regionId === r.id && b.typeId === 'school');
     const pop = w.pops.filter((p) => p.regionId === r.id).reduce((a, p) => a + p.size, 0);
-    const lit = w.pops.filter((p) => p.regionId === r.id).reduce((a, p) => a + p.size * p.literacy, 0) / pop;
-    console.log(`  지역${r.id} 왕국${r.kingdomId} 인구 ${(pop / 1e4).toFixed(0)}만 교육 ${r.education.toFixed(2)} 문해 ${lit.toFixed(2)} | 학교 ` +
+    const lit = w.pops.filter((p) => p.regionId === r.id).reduce((a, p) => a + p.size * literacyOf(p), 0) / pop;
+    console.log(`  지역${r.id} 왕국${r.kingdomId} 인구 ${(pop / 1e4).toFixed(0)}만 교육 ${educationOf(r).toFixed(2)} 문해 ${lit.toFixed(2)} | 학교 ` +
       sc.map((b) => `${b.methodId}:${b.level}레벨 충원${b.last.staffing.toFixed(2)} 손익${Math.round(b.profitEma)}`).join(', '));
   }
 }

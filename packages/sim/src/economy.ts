@@ -4,7 +4,7 @@ import {
 } from './data';
 import { borderCost } from './kingdoms';
 import { clamp } from './rng';
-import { OWNERS, SKILLS, WEALTH_MIN } from './types';
+import { OWNERS, SKILLS, WEALTH_MIN, wealthOf } from './types';
 import type {
   Building, BuildingTypeDef, Company, DepositId, EventKind, GoodBag, GoodId, HarvestCondition, LandType, MethodDef, Pop, PopClass, Region, Skill, World,
 } from './types';
@@ -457,7 +457,7 @@ export function colonyPopulation(w: World, prof: PopClass): number {
 /** 대륙 전체 직종 생활수준 (인구 가중 평균) */
 /** 생활수준 (빅토리아3): 부를 바탕으로, 필요를 못 채운 만큼 깎인다 */
 export function popSol(p: Pop): number {
-  return Math.max(WEALTH_MIN, p.wealth * p.fulfillment);
+  return Math.max(WEALTH_MIN, wealthOf(p) * p.fulfillment);
 }
 
 export function colonySol(w: World, prof: PopClass): number {

@@ -4,6 +4,7 @@ import { applyStateWages, committedCost, reserveOf } from './finance';
 import { kingdomById } from './kingdoms';
 import { buildingNameEn, landNameEn, regionNameEn, techNameEn } from './i18n';
 import { round2 } from './rng';
+import { roundWorld } from './round';
 import { BUDGET_ITEMS, BUDGET_STEPS } from './types';
 import type { Command, World } from './types';
 
@@ -17,12 +18,22 @@ export const MAX_CONCURRENT_CONSTRUCTIONS = 40;
 export const MAX_LEVELS_PER_PROJECT = 50;
 
 
-/** 명령을 검증하고 적용한다. 플레이어와 AI 모두 이 함수만 거친다 */
+/** 명령을 검증하고 적용한다. 플레이어와 AI 모두 이 경로만 거친다. 틱 안에서 쓴다 (저장값은 틱 끝에 소수 둘째 자리로 맞춘다) */
 export function applyCommand(w: World, actor: number, cmd: Command): string | null {
-  return applyCommandMsg(w, actor, cmd)?.text ?? null;
+  return runCommand(w, actor, cmd)?.text ?? null;
 }
 
+/**
+ * 화면이 틱 사이에 바로 넣는 명령 (applyCommand 와 같은 검증·적용). 적용하면 저장값을 소수 둘째 자리로 맞춘다:
+ * 틱 사이에 저장해도 규칙을 지킨다 (round.ts roundWorld, 이미 맞춘 값은 그대로다)
+ */
 export function applyCommandMsg(w: World, actor: number, cmd: Command): CommandError | null {
+  const err = runCommand(w, actor, cmd);
+  if (!err) roundWorld(w);
+  return err;
+}
+
+function runCommand(w: World, actor: number, cmd: Command): CommandError | null {
   const company = companyById(w, actor);
   if (!company) return fail('존재하지 않는 회사입니다.', 'No such company.');
 

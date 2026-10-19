@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { GOOD_IDS, GOODS, WEALTH_MAX, createWorld, moneyIdentity, step } from '../../src/index';
+import { GOOD_IDS, GOODS, WEALTH_MAX, createWorld, moneyIdentity, step, wealthOf } from '../../src/index';
 
 describe('경제 불변식: 범위', () => {
   // 매일 모든 값을 본다. expect 를 값마다 부르면 그 비용이 시뮬레이션보다 커서, 어긋난 값을 모아 그날 끝에 한 번에 판정한다.
@@ -18,8 +18,8 @@ describe('경제 불변식: 범위', () => {
       }
       for (const p of w.pops) {
         if (!(p.savings >= -1e-6)) flag(`pop ${p.id} 저축 ${p.savings}`);
-        if (!(p.wealth >= 1)) flag(`pop ${p.id} 부 ${p.wealth} < 1`);
-        if (!(p.wealth <= WEALTH_MAX)) flag(`pop ${p.id} 부 ${p.wealth} > ${WEALTH_MAX}`);
+        if (!(wealthOf(p) >= 1)) flag(`pop ${p.id} 부 ${wealthOf(p)} < 1`);
+        if (!(wealthOf(p) <= WEALTH_MAX)) flag(`pop ${p.id} 부 ${wealthOf(p)} > ${WEALTH_MAX}`);
         if (!Number.isFinite(p.size)) flag(`pop ${p.id} 인구 ${p.size}`);
       }
       for (const c of w.companies) if (!(c.cash >= -1e-6)) flag(`회사 ${c.id} 현금 ${c.cash}`);

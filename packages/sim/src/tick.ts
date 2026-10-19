@@ -1,5 +1,6 @@
 import { EDUCATION_FLOOR, EDUCATION_RANGE, GOOD_IDS, SKILL_DEFS, TICKS_PER_WEEK, getMethod } from './data';
 import { round2 } from './rng';
+import { roundAll, roundWorld } from './round';
 import { colonyPopulation, colonySol, marketWage, totalMoney, unemploymentRate } from './economy';
 import { runAi } from './ai';
 import { weeklyAlerts } from './alerts';
@@ -8,9 +9,9 @@ import { applyCommand } from './commands';
 import { chargeInterest, collectIncomeTax, distributeInvestment, doResearch, mintMoney, payDividends, spendBudget, weeklyBanking } from './finance';
 import { laborMarket, migrate, payWages, syncEmployment } from './labor';
 import { clearMarkets, collectOrders, harvest, newBook, resetMarkets, updatePrices } from './market';
-import { aggregateHouseholds, prunePops, updateGrowth, updateLiteracy, updateQualifications } from './pops';
+import { aggregateHouseholds, prunePops, updateGrowth, updateLiteracy, updateQualifications, weekToward } from './pops';
 import { advanceConstruction, produce, progressDemolition, updateIdleOffices, updateSubsistence } from './production';
-import { POP_CLASSES, SKILLS, emptyLedger } from './types';
+import { POP_CLASSES, SKILLS, educationOf, emptyLedger } from './types';
 import type { GoodId, HistoryPoint, PopClass, QueuedCommand, Skill, World } from './types';
 
 export { needSplit } from './market';
@@ -44,8 +45,6 @@ export function step(w: World, commands: QueuedCommand[] = []): string[] {
   advanceConstruction(w);
   updatePrices(w);
 
-  updateEducation(w);
-  updateLiteracy(w);
   updateQualifications(w);
   updateGrowth(w);
   migrate(w);
@@ -58,6 +57,8 @@ export function step(w: World, commands: QueuedCommand[] = []): string[] {
   // 하루 소득 평균은 주간 지급(배당·지대 배당·복지·연구비)까지 받은 뒤에 갱신한다
   for (const p of w.pops) p.incomeEma = p.incomeEma * 0.9 + p.lastIncome * 0.1;
   recordMetrics(w);
+  // 저장값은 소수 둘째 자리까지 (round.ts)
+  roundWorld(w);
   return errors;
 }
 
@@ -72,7 +73,7 @@ function applyWagePolicy(w: World) {
   }
 }
 
-/** 교육 접근도는 학교가 감당하는 인구 비율을 향해 천천히 움직인다 */
+/** 교육 접근도(%)는 학교가 감당하는 인구 비율을 향해 천천히 움직인다 (문해력과 같은 속도, 주 1회 7일치) */
 function updateEducation(w: World) {
   const seats = new Map<number, number>();
   for (const b of w.buildings) {
@@ -85,13 +86,14 @@ function updateEducation(w: World) {
   for (const r of w.regions) {
     const n = pop.get(r.id) ?? 0;
     const coverage = n > 0 ? Math.min(1, (seats.get(r.id) ?? 0) / n) : 0;
-    const target = EDUCATION_FLOOR + EDUCATION_RANGE * coverage;
-    r.education += (target - r.education) * (target > r.education ? 0.002 : 0.0005);
+    r.education100 = weekToward(r.education100, 100 * (EDUCATION_FLOOR + EDUCATION_RANGE * coverage));
   }
 }
 
 function weekly(w: World) {
-
+  // 교육 접근도와 문해력은 주 1회 7일치씩 움직인다 (% 단위 소수 둘째 자리에서 멈추지 않게)
+  updateEducation(w);
+  updateLiteracy(w);
   mintMoney(w);
   spendBudget(w);
   for (const c of w.companies) payDividends(w, c);
@@ -120,7 +122,7 @@ export function recordHistory(w: World) {
     inventory[r.id] = {} as Record<GoodId, number>;
     for (const g of GOOD_IDS) { prices[r.id][g] = r.market[g].price; inventory[r.id][g] = r.market[g].inventory; }
     regionSol[r.id] = r.households.unskilled.population > 0 ? r.households.unskilled.wealth : r.households.peasant.wealth;
-    regionEducation[r.id] = r.education;
+    regionEducation[r.id] = educationOf(r);
   }
   const sol = {} as Record<PopClass, number>;
   const population = {} as Record<PopClass, number>;
@@ -130,6 +132,8 @@ export function recordHistory(w: World) {
   const companyCash: Record<number, number> = {};
   const companyDebt: Record<number, number> = {};
   for (const c of w.companies) { companyCash[c.id] = c.cash; companyDebt[c.id] = c.debt; }
-  w.history.push({ tick: w.tick, prices, inventory, sol, unemployment, population, regionSol, regionEducation, companyCash, companyDebt, totalMoney: totalMoney(w) });
+  const point: HistoryPoint = { tick: w.tick, prices, inventory, sol, unemployment, population, regionSol, regionEducation, companyCash, companyDebt, totalMoney: totalMoney(w) };
+  roundAll(point);
+  w.history.push(point);
   if (w.history.length > HISTORY_CAP) w.history.splice(0, w.history.length - HISTORY_CAP);
 }

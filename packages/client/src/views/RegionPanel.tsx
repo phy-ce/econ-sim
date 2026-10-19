@@ -1,7 +1,7 @@
 import { NumericValue } from '../NumericValue';
 import type { Game } from '../useGame';
 import { BuildList, Projects } from './CompanyPanel';
-import { playerCompany } from '@econ/sim';
+import { educationOf, playerCompany } from '@econ/sim';
 import { OwnerBadge } from './OwnerBadge';
 import { PORTS_OPEN, regionLivingStandard } from '../systemMetrics';
 import { LockKeyhole } from 'lucide-react';
@@ -113,7 +113,7 @@ export function RegionPanel({ world, region, history, selectedGood, onSelectGood
             <span className="stat-value">{pct(unemp)}</span>
             <Bar value={unemp} tone="neg" size="sm" label={T.unemployment} />
           </div>
-          <div className="stat"><span className="stat-label">{T.education}</span><span className="stat-value">{pct(r.education)}</span><Bar value={r.education} tone="pos" size="sm" label={T.education} /></div>
+          <div className="stat"><span className="stat-label">{T.education}</span><span className="stat-value">{pct(educationOf(r))}</span><Bar value={educationOf(r)} tone="pos" size="sm" label={T.education} /></div>
           <div className="stat"><span className="stat-label">{T.tenants}</span><span className="stat-value accent">{pct(tenantShare)}</span><Bar value={tenantShare} tone="accent" size="sm" label={T.tenants} /></div>
         </div>
         {tab !== 'industry' && <button className="region-buildings-link" onClick={() => { if (onViewBuildings) onViewBuildings(); else setTab('industry'); }}><Factory size={15}/>{lang === 'ko' ? '지역 건물 전체 보기' : 'All regional buildings'} <b>{allBuildings.length}</b></button>}

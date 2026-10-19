@@ -420,6 +420,21 @@ sim이 아래 제도를 없앴다. 화면이 계속 컴파일되도록 `packages
 - 알림: 조건이 새로 걸리면 그 지역 왕국의 왕실에 `warn` 알림이 한 번 온다 (`regionId` 있음). 글은 지역 이름 + `harvestLabel`: `"강변 평야 가뭄 농지 −20% · 180일"` / `"River Plain Drought farmland −20% · 180 d"`. 플레이어 왕실(id 100) 것은 지금 규칙대로 토스트가 뜬다.
 - 지표: `MetricPoint.harvestRegions` = 조건이 걸린 지역 수 (없으면 필드가 없다 → `?? 0`). 통계 그래프에 선 하나로 넣으면 좋다.
 
+### 2-26. 저장값은 소수 둘째 자리, 부·문해력·교육 접근도는 100배 값 (저장 v5)
+- **저장 호환 (가장 먼저):** 저장 형식이 바뀌었다 (`World.version` 5).
+  - `sim.worker.ts`의 `'load'`는 `migrateWorld(msg.world)`를 부르게 고쳐 두었다 (index에서 export). 4판 저장을 5판으로 바꾸고(돈 보존), 그보다 옛 저장이면 `null`이다. `null`이면 지금 게임을 그대로 둔다.
+  - 그래서 `useGame.ts`의 `SAVE_KEY`는 `'estera-save-v7'` 그대로다. 불러오기에 실패했을 때 토스트를 보이려면 워커가 결과를 돌려주게 프로토콜을 늘려야 한다 (선택).
+- **이름이 바뀐 필드** (100배 값을 소수 둘째 자리로 저장한다. 화면에는 규칙 단위로 보인다):
+  - `Pop.wealth` → `Pop.wealth100` (부 단계 × 100, 100~9900). 표시는 `wealthOf(p)` (1~99).
+  - `Pop.literacy` → `Pop.literacy100` (문해력 %, 0~100). 표시는 `literacyOf(p)` (0~1, `pct` 그대로).
+  - `Region.education` → `Region.education100` (교육 접근도 %, 0~100). 표시는 `educationOf(r)` (0~1).
+  - 셋 다 index에서 export한다. `Household.wealth`와 `HistoryPoint.regionEducation`은 그대로 규칙 단위다.
+  - 컴파일을 위해 고쳐 둔 곳: `PopTable.tsx`(부·문해력 칸과 그 열 정렬), `RegionPanel.tsx`(교육 접근도 숫자와 막대). 다른 곳은 바꿀 것이 없다.
+- 모든 숫자가 소수 둘째 자리다. 0~1 비율(충족률, 식량, 충원율, 가동률, 작업 인원 등)은 1% 단위로 움직이므로, 소수 셋째 자리 이상을 보여 주지 않는다.
+- 문해력·교육 접근도는 주 1회(주간 처리 때) 7일치씩 바뀐다. 그래프가 주 단위 계단으로 보일 수 있다.
+- 상인 화물(`traders.shipments`)은 시장(도착 지역·상품)마다 새 화물 하나, 묵은 화물(`stale`) 하나로 합쳐진다. 출발 지역은 원래 없다.
+- 틱 사이 명령: `applyCommandMsg`는 적용한 뒤 저장값을 반올림한다 (틱 사이에 저장해도 규칙을 지킨다). 화면은 지금처럼 `applyCommandMsg`를 쓰면 된다.
+
 ---
 
 ## 3. sim 쪽 필요 사항 (Claude가 처리할 것, UI 작업자는 요청만)

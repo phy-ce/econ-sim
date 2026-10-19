@@ -8,8 +8,9 @@ import type { Building, Company, GoodBag, World } from './types';
 
 /** 숙련도가 하루에 오르는 양 (약 한 달이면 최대) */
 const EXP_GAIN = 0.035;
-/** 작업 인원이 실제 충원율을 따라가는 하루 비율 */
+/** 작업 인원이 실제 충원율을 따라가는 하루 비율. 차이가 있으면 하루에 적어도 0.01은 움직인다 (가격과 같은 규칙: 소수 둘째 자리에서 멈추지 않게) */
 const CREW_RATE = 0.08;
+const CREW_MIN_STEP = 0.01;
 
 /**
  * 소작지는 지역의 빈 농지 전부다. 농장이 들어서면 줄고, 헐리면 다시 늘어난다.
@@ -81,7 +82,8 @@ export function produce(w: World) {
     const c = companyById(w, b.companyId);
     if (!c) continue;
     const method = getMethod(b.typeId, b.methodId);
-    b.crew = (b.crew ?? b.last.staffing) + (b.last.staffing - (b.crew ?? b.last.staffing)) * CREW_RATE;
+    const crew = b.crew ?? b.last.staffing, gap = b.last.staffing - crew;
+    b.crew = round2(crew + Math.sign(gap) * Math.min(Math.abs(gap), Math.max(CREW_MIN_STEP, Math.abs(gap) * CREW_RATE)));
     const st = b.crew;
     b.last.points = 0;
     b.last.output = {};

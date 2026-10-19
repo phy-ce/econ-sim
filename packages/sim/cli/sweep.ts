@@ -2,7 +2,7 @@
 // 주요 지표(w.metrics)에서 5년마다(와 마지막 해) 대륙 합계를 뽑아 한 줄 JSON으로 출력한다.
 // TIMING=1 이면 time: { ms 시뮬레이션 시간, msPerDay 하루 평균 } 을 덧붙인다 (sweepsum.py 가 따로 요약한다)
 import { TUNE } from '../src/data';
-import { createWorld, step } from '../src/index';
+import { createWorld, literacyOf, step } from '../src/index';
 import type { MetricPoint } from '../src/index';
 import { workforce } from '../src/pops';
 
@@ -30,7 +30,7 @@ for (let d = 0; d < years * 360; d++) {
   }
   if (w.tick % 1800 === 0 || w.tick === years * 360) {
     let n = 0, lit = 0, qs = 0;
-    for (const p of w.pops) { n += p.size; lit += p.size * p.literacy; qs += p.prof === 'skilled' ? workforce(p) : (p.quals.skilled ?? 0); }
+    for (const p of w.pops) { n += p.size; lit += p.size * literacyOf(p); qs += p.prof === 'skilled' ? workforce(p) : (p.quals.skilled ?? 0); }
     const sch = w.buildings.filter((b) => b.typeId === 'school').reduce((a, b) => a + b.level, 0);
     edu[w.tick / 360] = { lit: +(lit / n).toFixed(3), sch, qs: Math.round(qs / 1e3), schDem };
   }
