@@ -37,11 +37,13 @@
 
 ## 실행과 검증
 - `npm run typecheck`: sim + 클라이언트 (변경할 때마다)
-- `cd packages/sim && npx vitest run`: 테스트 (20년 기준, 약 2분)
+- `npm run test:core`: 화폐 보존·결정성(저장/불러오기)·범위만 (약 10초, 변경할 때마다)
+- `cd packages/sim && npx vitest run`: 전체 테스트 (파일 병렬, 약 1분: 20년 시드 하나 길이). `npm run test:long`: 20년만
 - `bash packages/sim/cli/sweep.sh out.jsonl '<TUNE JSON>' ...` → `python packages/sim/cli/sweepsum.py out.jsonl`:
-  20년 × 시드 2개 비교 (packages/sim 에서 실행)
+  20년 × 시드 2개 비교 (packages/sim 에서 실행). `SEEDS="1 2 3"`, `YEARS=10`, `TIMING=1`(실행 시간) 로 바꾼다
+- `bash packages/sim/cli/fast.sh <cli 파일> 인자`: tsx 대신 esbuild 로 묶어 실행 (같은 결과, 시작 2초·계산 10% 빠름)
 - 진단 CLI (`packages/sim/cli/`): popdiag(인구·착공), soldiag(하층 생활수준), treasury(국고 장부),
-  skilldiag(직종별 일자리·자격자), schooldiag(학교·교육), jobdiag(지역별 실업), perf(단계별 시간)
+  skilldiag(직종별 일자리·자격자), schooldiag(학교·교육), jobdiag(지역별 실업), perf(단계별 시간, `fast.sh perf.ts 2`)
 - 개발 서버 포트 5199.
 
 ## 구조 (packages/sim/src)
