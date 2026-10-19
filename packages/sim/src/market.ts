@@ -426,6 +426,12 @@ export function needSplit(r: Region, needId: NeedId, wealth = Infinity): Split {
   return split;
 }
 
+/** 선택지 가격(need.options 순서)이 prices 일 때 부 wealth 인 pop 의 선택지별 비중 (AI 전망용, 캐시 없음) */
+export function needSharesAt(needId: NeedId, prices: number[], wealth: number): number[] {
+  const need = NEED_BY_ID.get(needId)!;
+  return splitShares(splitWeights(need, prices), need.options.map((o) => rawMax(o.max, wealth)));
+}
+
 function samePrices(prices: number[], need: NeedDef, r: Region): boolean {
   for (let i = 0; i < prices.length; i++) if (prices[i] !== r.market[need.options[i].good].price) return false;
   return true;

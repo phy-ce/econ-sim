@@ -400,6 +400,15 @@ export const TUNE = {
   prospectStart: 0.3,
   prospectChance: 0.1, // 0.05·0.1·0.2 비교 (20년 × 시드 1~4, DECISIONS 7-8): 0.1과 0.2는 결과가 거의 같고 0.2는 10년차에 광맥이 거의 다 찾아진다
   prospectFind: 0.1,
+  subReturn: 0,
+  sellThrough: 0,
+  laborNet: 0,
+  minRoi: 0.2,
+  minStaffing: 0.5,
+  officeRichWeeks: 52,
+  officeSelfPay: 0,
+  laborPoach: 0,
+  officeSchoolFirst: 0,
 };
 
 // ---------------------------------------------------------------- 기상 조건

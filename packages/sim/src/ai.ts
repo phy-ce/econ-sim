@@ -16,7 +16,7 @@ import type { BudgetItem, Building, Company, Kingdom, MethodDef, Region, Skill, 
 // AI: 국영과 민간이 같은 판단을 쓴다. 다른 점은 자금원(국고 / 투자 풀)과 자기 왕국 땅에만 짓는다는 것뿐이다.
 
 /** 건설 판단 기준: 연간 이윤 / 공사비 (5년 안에 회수) */
-const MIN_ROI = 0.2;
+const MIN_ROI = () => TUNE.minRoi;
 const SWITCH_COOLDOWN = TICKS_PER_WEEK * 3;
 /** 공사 하나의 레벨 수 후보 (큰 것부터) */
 const CHUNKS = [5, 2, 1];
@@ -26,7 +26,7 @@ const OFFICE_GROWTH = 0.25;
 /** 공사 기간 동안 채울 수 있는 사람을 셀 때 보는 날 수 */
 const STAFFING_HORIZON = 60;
 /** 짓기 기준: 공사 기간 안에 일자리의 이 비율 이상을 채울 사람이 있어야 한다 (건축사무소는 대신 채울 수 있는 레벨 수 officeStaffable 을 본다) */
-const MIN_STAFFING = 0.5;
+const MIN_STAFFING = () => TUNE.minStaffing;
 
 export function runAi(w: World) {
   if (!w.config.ai) return;
@@ -62,10 +62,40 @@ function labourPool(w: World, r: Region, s: Skill): number {
 }
 
 /**
+ * 다른 주인의 건물에서 공사 기간 안에 옮겨 올 같은 직종 재직자 (TUNE.laborPoach): 그 주인 임금 × TUNE.switchPremium 이
+ * 회사 c 의 임금보다 낮은 자리 (노동시장 laborMarket 의 이직 규칙과 같다. officeStaffable 과 같은 셈)
+ */
+function poachable(w: World, r: Region, s: Skill, c: Company): number {
+  const reach = Math.min(1, TUNE.switchRate * STAFFING_HORIZON);
+  let n = 0;
+  for (const b of w.buildings) {
+    if (b.regionId !== r.id || b.companyId === c.id || paysDividend(b.stateOwned, s) || !(b.employed[s] > 0)) continue;
+    const o = companyById(w, b.companyId);
+    if (o && o.wages[s] * TUNE.switchPremium < c.wages[s]) n += b.employed[s] * reach;
+  }
+  return n;
+}
+
+/**
+ * 그 지역에서 이 직종 사람을 먼저 기다리는 자리 (TUNE.laborNet): 건물의 빈자리 + 공사 중인 건물의 자리 (민간 건물의 배당 자리는 빼고).
+ * 새 건물은 이 자리들과 같은 사람을 두고 다툰다
+ */
+function openJobs(w: World, r: Region, s: Skill): number {
+  let n = 0;
+  for (const b of w.buildings) if (b.regionId === r.id && !paysDividend(b.stateOwned, s)) n += Math.max(0, slots(b, s) - b.employed[s]);
+  for (const k of w.constructions) {
+    if (k.regionId !== r.id) continue;
+    const owner = companyById(w, k.companyId);
+    if (!paysDividend(owner?.state, s)) n += (getMethod(k.typeId, k.methodId).workers[s] ?? 0) * (k.levels ?? 1);
+  }
+  return n;
+}
+
+/**
  * 이 방식을 levels 레벨 돌릴 일손이 공사 기간 안에 모이는가 0..1 (민간 건물의 배당 자리는 승진으로 천천히 차므로 세지 않는다).
  * pools: pop 이 바뀌지 않는 동안 (지역, 직종) 별 labourPool 을 한 번만 센다
  */
-export function laborAvailability(w: World, r: Region, m: MethodDef, levels: number, stateOwned = true, pools?: Map<string, number>): number {
+export function laborAvailability(w: World, r: Region, m: MethodDef, levels: number, stateOwned = true, pools?: Map<string, number>, c?: Company): number {
   let ok = 1;
   // 민간 건물의 소유주 자리(1%)는 공사 판단을 막지 않는다
   for (const s of SKILLS) {
@@ -74,7 +104,10 @@ export function laborAvailability(w: World, r: Region, m: MethodDef, levels: num
     if (!(need > 0)) continue;
     const k = `${r.id}|${s}`;
     let pool = pools?.get(k);
-    if (pool === undefined) { pool = labourPool(w, r, s); pools?.set(k, pool); }
+    if (pool === undefined) {
+      pool = labourPool(w, r, s) - (TUNE.laborNet ? TUNE.laborNet * openJobs(w, r, s) : 0) + (TUNE.laborPoach && c ? poachable(w, r, s, c) : 0);
+      pools?.set(k, pool);
+    }
     ok = Math.min(ok, pool / need);
   }
   return ok;
@@ -263,7 +296,7 @@ function manageBuildings(w: World, c: Company) {
       const r = regionById(w, b.regionId);
       const others = schoolSeats(w, r.id) - b.level * cur.seats;
       const net = (m: MethodDef) => schoolValuation(w, c, r, m, b.level, others).profit;
-      const ok = usable.filter((m) => m.seats && (m.id === cur.id || laborAvailability(w, r, m, b.level, c.state) >= MIN_STAFFING));
+      const ok = usable.filter((m) => m.seats && (m.id === cur.id || laborAvailability(w, r, m, b.level, c.state) >= MIN_STAFFING()));
       const best = ok.reduce((x, m) => (net(m) > net(x) ? m : x), cur);
       if (best.id !== cur.id && w.tick - b.lastSwitchTick >= SWITCH_COOLDOWN) applyCommand(w, c.id, { type: 'setMethod', buildingId: b.id, methodId: best.id });
       continue;
@@ -433,7 +466,14 @@ function planConstruction(w: World, c: Company, o: Outlook) {
     const block = Math.max(OFFICE_BLOCK, Math.round(officeLevel * OFFICE_GROWTH));
     const officeCost = constructionEstimate(w, c, 'builder').cost * block;
     const full = (c.buildUsed ?? 0) >= est.pointsPerDay * TUNE.officeUseFull;
-    const rich = c.debt <= 0 && treasuryWeeks(c, kingdomById(w, c.kingdomId)) > TUNE.treasuryHighWeeks;
+    // TUNE.officeSelfPay: 민간 공사가 목표 일수 넘게 밀려 있으면 늘린 포인트를 민간이 사 가므로(공사비) 조이지 않는 국고면 늘린다
+    const weeks = treasuryWeeks(c, kingdomById(w, c.kingdomId));
+    const privBacklog = w.constructions.filter((k) => { const o = companyById(w, k.companyId); return !!o && !o.state && builderOf(w, o) === builder; }).reduce((s, k) => s + (k.required - k.points), 0) / Math.max(1, est.pointsPerDay);
+    // TUNE.officeSchoolFirst: 이 길은 학교 자리가 목표(schoolWanted)의 그 비율 이상일 때만 (사무소와 학교는 같은 국고·기술자를 쓴다)
+    let seats = 0, wanted = 0;
+    if (TUNE.officeSchoolFirst > 0) for (const r of ownRegions(w, c)) { seats += schoolSeats(w, r.id); wanted += schoolWanted(r); }
+    const schooled = seats >= wanted * TUNE.officeSchoolFirst;
+    const rich = c.debt <= 0 && (weeks > TUNE.officeRichWeeks || (TUNE.officeSelfPay > 0 && schooled && weeks > TUNE.treasuryLowWeeks && privBacklog > TUNE.officeTargetDays));
     if (offices.length && full && rich && backlog() > TUNE.officeTargetDays && c.cash > officeCost * 1.5 && !w.constructions.some((k) => k.companyId === c.id && k.typeId === 'builder')) {
       const office = offices[0];
       // 대기가 TUNE.officeTargetDays 안으로 들어올 만큼 한 번에 늘린다
@@ -621,7 +661,7 @@ function swapLand(w: World, c: Company, o: Outlook, cand: Pick) {
     const roi = (levelValue(w, c, o, b, est.pointsPerDay) * TICKS_PER_YEAR) / cost;
     if (!worst || roi < worst.roi) worst = { b, roi };
   }
-  if (!worst || cand.score <= Math.max(MIN_ROI, worst.roi) * TUNE.swapMult) return;
+  if (!worst || cand.score <= Math.max(MIN_ROI(), worst.roi) * TUNE.swapMult) return;
   const n = Math.min(worst.b.level, cand.levels);
   if (!applyCommand(w, c.id, { type: 'demolish', buildingId: worst.b.id, levels: n })) worst.b.swap = true;
 }
@@ -652,10 +692,10 @@ export function pickProject(w: World, c: Company, o: Outlook, free: number, allo
         if (!blocked || (t.deposit && depositFree(w, r.id, t.deposit) < 1)) continue;
         for (const m of availableMethods(c, t.id)) {
           if (existing && existing.methodId !== m.id) continue;
-          if (laborAvailability(w, r, m, 1, c.state, pools) < MIN_STAFFING) continue;
+          if (laborAvailability(w, r, m, 1, c.state, pools, c) < MIN_STAFFING()) continue;
           const e = m.seats ? schoolValuation(w, c, r, m, 1, schoolSeats(w, r.id)) : valueMethod(w, o, r, c, t.id, m, 1);
           const roi = (e.profit * TICKS_PER_YEAR) / perLevel;
-          if (e.profit > 0 && roi > MIN_ROI && (!blocked.best || roi > blocked.best.score)) blocked.best = { regionId: r.id, typeId: t.id, methodId: m.id, levels: 1, score: roi };
+          if (e.profit > 0 && roi > MIN_ROI() && (!blocked.best || roi > blocked.best.score)) blocked.best = { regionId: r.id, typeId: t.id, methodId: m.id, levels: 1, score: roi };
         }
         continue;
       }
@@ -666,16 +706,16 @@ export function pickProject(w: World, c: Company, o: Outlook, free: number, allo
           if (levels > room || budget < perLevel * levels) continue;
           if (m.seats && budget < (perLevel + wageCostOf(m, c.wages, c.state) * TICKS_PER_WEEK * TUNE.treasuryLowWeeks) * levels) continue;
           const e = m.seats ? schoolValuation(w, c, r, m, levels, schoolSeats(w, r.id)) : valueMethod(w, o, r, c, t.id, m, levels);
-          if (laborAvailability(w, r, m, levels, c.state, pools) < MIN_STAFFING) continue;
+          if (laborAvailability(w, r, m, levels, c.state, pools, c) < MIN_STAFFING()) continue;
           const roi = (e.profit * TICKS_PER_YEAR) / (perLevel * levels);
           if (allowLoss && levels === CHUNKS[CHUNKS.length - 1] && e.profit >= -TUNE.lossTolerance * e.wageCost) {
             const s = roi + Math.abs(roi) * (rand(w) - 0.5) * 0.3;
             if (!least || s > least.score) least = { regionId: r.id, typeId: t.id, methodId: m.id, levels, score: s, fallback: true };
           }
           if (e.profit <= 0) continue;
-          if (roi <= MIN_ROI) continue;
+          if (roi <= MIN_ROI()) continue;
           if (!top || roi > top.roi) top = { levels, roi };
-          if (!choice && roi > MIN_ROI * 1.25) choice = { levels, roi };
+          if (!choice && roi > MIN_ROI() * 1.25) choice = { levels, roi };
         }
         const pick = choice ?? top;
         if (!pick) continue;

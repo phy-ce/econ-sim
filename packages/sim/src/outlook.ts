@@ -1,9 +1,9 @@
-import { BUILDING_BY_ID, GOOD_IDS, GOODS, NEEDS, SKILL_DEFS, TUNE, getMethod, regionPerk } from './data';
-import { availableMethods, collectionRatio, harvestFactorEma, regionById, shippingRate, wageCostOf } from './economy';
-import { BY_EMA } from './market';
+import { BUILDING_BY_ID, GOOD_IDS, GOODS, NEEDS, SKILL_DEFS, TUNE, getMethod, needsAt, regionPerk } from './data';
+import { availableMethods, collectionRatio, harvestFactorEma, regionAvgWealth, regionById, shippingRate, wageCostOf } from './economy';
+import { BY_EMA, needSharesAt } from './market';
 import { clamp } from './rng';
 import { SKILLS } from './types';
-import type { Company, GoodId, Kingdom, MethodDef, Region, Skill, World } from './types';
+import type { Company, GoodId, Kingdom, MethodDef, NeedDef, Region, Skill, World } from './types';
 
 /**
  * 시장 전망: AI 투자 판단의 공통 바탕. 상품마다 대륙 전체의 앞으로의 수요와 공급을 세고 그 비율로 장기 가격을 본다.
@@ -17,6 +17,8 @@ export interface Outlook {
   supply: Record<GoodId, number>;
   /** withLatent: 잠재 수요까지 센 가격 (파는 쪽). 사는 쪽(원료비)은 false */
   price(g: GoodId, dS?: number, dD?: number, withLatent?: boolean): number;
+  /** 공급 dS 를 더했을 때 대륙 공급 중 팔리는 비율 0..1 (수요 = 지금 + 잠재 + 그 값에서 돌아오는 수요) */
+  sellRate(g: GoodId, dS?: number): number;
   add(m: MethodDef, levels: number, perk: number): void;
 }
 
@@ -83,7 +85,8 @@ export function marketOutlook(w: World): Outlook {
   }
   // 대체 수요: 가공품이 비싸서 원자재로 버티는 가계 수요의 절반은 값이 내려가면 돌아온다 (공장의 원료 수요는 대체하지 않는다)
   const household = (g: GoodId) => w.regions.reduce((a, r) => a + Object.entries(r.market[g].demandByEma ?? {}).reduce((x, [k, v]) => x + (k.startsWith('pop:') ? v : 0), 0), 0);
-  for (const n of NEEDS) for (const opt of n.options) {
+  const sub = TUNE.subReturn ? returnableDemand(w) : null;
+  if (!sub) for (const n of NEEDS) for (const opt of n.options) {
     if (!opt.appeal || opt.appeal <= 1) continue;
     for (const other of n.options) if (other !== opt) demand[opt.good] += (household(other.good) / other.units) * opt.units * 0.5;
   }
@@ -92,7 +95,34 @@ export function marketOutlook(w: World): Outlook {
     price(g, dS = 0, dD = 0, withLatent = true) {
       const S = supply[g] + dS, D = demand[g] + dD + (withLatent ? latent[g] : 0);
       if (S < 1 && dD > 0) return GOODS[g].basePrice * UNSUPPLIED_INPUT;
-      return longRunPrice(g, D, S);
+      const back = sub?.get(g);
+      if (!back) return longRunPrice(g, D, S);
+      // 돌아오는 수요는 값이 낮을수록 크다: 장기 가격 = 그 값에서 돌아오는 수요까지 센 가격이 되는 값 (격자에서 찾아 선형 보간)
+      const base = GOODS[g].basePrice;
+      let prev = 0;
+      for (let i = 0; i < SUB_GRID.length; i++) {
+        const p = base * SUB_GRID[i], gap = longRunPrice(g, D + back[i], S) - p;
+        if (gap <= 0) {
+          if (i === 0) return p;
+          const p0 = base * SUB_GRID[i - 1];
+          return p0 + ((p - p0) * prev) / (prev - gap);
+        }
+        prev = gap;
+      }
+      return base * SUB_GRID[SUB_GRID.length - 1];
+    },
+    sellRate(g, dS = 0) {
+      const S = supply[g] + dS;
+      if (S < 1e-6) return 1;
+      let D = demand[g] + latent[g];
+      const back = sub?.get(g);
+      if (back) {
+        const x = this.price(g, dS) / GOODS[g].basePrice;
+        const i = Math.min(SUB_GRID.length - 2, Math.max(0, Math.floor((x - SUB_GRID[0]) / 0.05)));
+        const t = clamp((x - SUB_GRID[i]) / 0.05, 0, 1);
+        D += back[i] * (1 - t) + back[i + 1] * t;
+      }
+      return Math.min(1, D / S);
     },
     add(m, levels, perk) {
       for (const g of GOOD_IDS) {
@@ -101,6 +131,53 @@ export function marketOutlook(w: World): Outlook {
       }
     },
   };
+}
+
+/** 돌아오는 수요를 셀 가공품 값 격자 (기본가 배율, 장기 가격의 범위 0.25~1.75) */
+const SUB_GRID = Array.from({ length: 31 }, (_, i) => 0.25 + 0.05 * i);
+
+/**
+ * 돌아오는 수요 (TUNE.subReturn): 가공품 값이 격자의 값일 때, 지금 원자재로 그 필요를 채우는 가계 수요 중 가공품으로 옮겨 올 양.
+ * 가계가 실제로 고르는 규칙(needSharesAt: 지역 값과 부의 상한)으로 센다. 원자재 가계 수요는 필요별로 나눈다
+ * (목재는 난방과 생활용품: 지역 평균 부의 필요량 × 지금 비중으로). 이미 가공품을 사는 수요는 지금 수요에 들어 있으므로 더하지 않는다
+ */
+function returnableDemand(w: World): Map<GoodId, number[]> {
+  const out = new Map<GoodId, number[]>();
+  for (const r of w.regions) {
+    const L = regionAvgWealth(r), amount = needsAt(L);
+    const local = (n: NeedDef) => n.options.map((o) => r.market[o.good].price);
+    const hh = (g: GoodId) => { let x = 0; for (const [k, v] of Object.entries(r.market[g].demandByEma ?? {})) if (k.startsWith('pop:')) x += v; return x; };
+    // 원자재 g 의 가계 수요 중 필요 n 의 몫
+    const rawShare = (g: GoodId, n: NeedDef) => {
+      let mine = 0, all = 0;
+      for (const m of NEEDS) {
+        const i = m.options.findIndex((o) => o.good === g);
+        if (i < 0) continue;
+        const x = amount[m.id] * needSharesAt(m.id, local(m), L)[i] * m.options[i].units;
+        all += x;
+        if (m === n) mine = x;
+      }
+      return all > 0 ? mine / all : 0;
+    };
+    for (const n of NEEDS) n.options.forEach((opt, pi) => {
+      if (!opt.appeal || opt.appeal <= 1) return;
+      const prices = local(n), now = needSharesAt(n.id, prices, L);
+      const arr = out.get(opt.good) ?? new Array(SUB_GRID.length).fill(0);
+      n.options.forEach((raw, ri) => {
+        if (ri === pi || now[ri] < 1e-6) return;
+        const units = (hh(raw.good) * rawShare(raw.good, n)) / raw.units;
+        if (!(units > 0)) return;
+        for (let i = 0; i < SUB_GRID.length; i++) {
+          const p = prices.slice();
+          p[pi] = GOODS[opt.good].basePrice * SUB_GRID[i];
+          const moved = units * Math.max(0, 1 - needSharesAt(n.id, p, L)[ri] / now[ri]);
+          arr[i] += moved * opt.units;
+        }
+      });
+      out.set(opt.good, arr);
+    });
+  }
+  return out;
 }
 
 /** 기본가 기준 하루 이윤 (방식끼리 비교용) */
@@ -188,7 +265,8 @@ function valueAt(o: Outlook, r: Region, c: Company, m: MethodDef, levels: number
       const p = o.price(g, existing ? 0 : out, 0);
       const outside = GOODS[g].perishable ? 0 : clamp(1 - r.market[g].demandEma / out, 0, 1);
       const unit = (1 - outside) * (p + r.market[g].price) / 2 + outside * p * (1 - ship);
-      revenue += out * unit;
+      // TUNE.sellThrough: 대륙 수요를 넘는 산출은 팔리지 않는다고 본다
+      revenue += out * unit * (TUNE.sellThrough ? o.sellRate(g, existing ? 0 : out) : 1);
     }
     const inp = (m.inputs[g] ?? 0) * levels;
     if (inp > 0) {
