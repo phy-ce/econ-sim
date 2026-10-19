@@ -1,11 +1,11 @@
 // 비교 실행용 세계 숫자 바꾸기 (sweep.ts 의 "world" 키). createWorld 전에 한 번 부른다. 기본 실행에는 쓰지 않는다.
-// { price: { 상품: 배율 }, wage: { 직종: 배율 }, workMul: 일자리 배율, inputMul: 원료 배율 }
+// { price: { 상품: 배율 }, wage: { 직종: 배율 }, workMul: 일자리 배율, inputMul: 원료 배율, buildMul: 공사 포인트 배율 }
 // 값을 바꾼 뒤 산출 있는 방식마다 지금 이익률(기본가·기본 임금 기준)이 그대로 남도록 산출을 다시 맞춘다 (규칙: 이익률 20/30/40%).
 // 필요량 배율은 TUNE.needMul 로 준다
 import { BUILDING_TYPES, GOODS, NEEDS, SKILL_DEFS } from '../src/data';
 import type { GoodId, MethodDef, Skill } from '../src/types';
 
-export interface WorldSpec { price?: Partial<Record<GoodId, number>>; wage?: Partial<Record<Skill, number>>; workMul?: number; inputMul?: number }
+export interface WorldSpec { price?: Partial<Record<GoodId, number>>; wage?: Partial<Record<Skill, number>>; workMul?: number; inputMul?: number; buildMul?: number }
 
 const cost = (m: MethodDef) =>
   (Object.entries(m.workers) as [Skill, number][]).reduce((a, [s, n]) => a + (n ?? 0) * SKILL_DEFS[s].baseWage, 0) +
@@ -19,6 +19,7 @@ export function applyWorld(spec: WorldSpec | undefined) {
   const ratio = new Map(methods.map((m) => [m, cost(m) > 0 ? revenue(m) / cost(m) : 0] as const));
   for (const [g, k] of Object.entries(spec.price ?? {}) as [GoodId, number][]) GOODS[g].basePrice *= k;
   for (const [s, k] of Object.entries(spec.wage ?? {}) as [Skill, number][]) SKILL_DEFS[s].baseWage *= k;
+  if (spec.buildMul) for (const t of BUILDING_TYPES) if (!t.auto) t.buildPoints *= spec.buildMul;
   for (const n of NEEDS) for (const o of n.options) o.units = 1 / GOODS[o.good].basePrice;
   for (const m of methods) {
     if (spec.workMul) for (const s of Object.keys(m.workers) as Skill[]) m.workers[s] = (m.workers[s] ?? 0) * spec.workMul;
