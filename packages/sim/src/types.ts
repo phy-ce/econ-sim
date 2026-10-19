@@ -82,7 +82,8 @@ export interface BuildingTypeDef {
   id: string;
   name: string;
   nameEn?: string;
-  land: LandType;
+  /** 쓰는 땅 (1레벨 = 1칸). 없으면 땅을 쓰지 않아 어느 지역에나 레벨 제한 없이 지을 수 있다 (행정청·학교, 빅토리아3 정부 건물) */
+  land?: LandType;
   /** 광산: 이 매장량 안에서만 지을 수 있다 */
   deposit?: DepositId;
   methods: MethodDef[];
@@ -198,6 +199,8 @@ export interface Building {
   crew?: number;
   /** 건축사무소가 할 일이 없어 인부를 해산한 상태 */
   idle: boolean;
+  /** 건축사무소: 맡은 공사 없이 이어진 날 수 (TUNE.officeIdleDays 를 넘으면 인부를 해산한다) */
+  idleDays?: number;
   /** 직종별 고용 (노동 인구 기준, pop 에서 합산) */
   employed: Record<Skill, number>;
   /** 투입재 보관분 */

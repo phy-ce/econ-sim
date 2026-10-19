@@ -50,7 +50,7 @@ export function regionAvgWealth(r: Region): number {
 
 const landOf = (typeId: string) => BUILDING_BY_ID[typeId].land;
 
-/** 지역에서 그 땅을 쓰고 있는 레벨 수 (공사 중 포함). 소작지는 빈 땅에 자동으로 생기므로 세지 않는다 */
+/** 지역에서 그 땅을 쓰고 있는 레벨 수 (공사 중 포함). 소작지는 빈 땅에 자동으로 생기므로 세지 않는다. 땅을 쓰지 않는 건물(행정청·학교)은 어느 땅에도 세지 않는다 */
 export function landUsed(w: World, regionId: number, land: LandType): number {
   let n = 0;
   for (const b of w.buildings) if (b.regionId === regionId && landOf(b.typeId) === land && !BUILDING_BY_ID[b.typeId].auto) n += b.level;
@@ -70,10 +70,11 @@ export function depositFree(w: World, regionId: number, dep: DepositId): number 
   return regionById(w, regionId).deposits[dep] - used;
 }
 
-/** 이 건물 종류를 몇 레벨 더 지을 수 있는가 (땅 또는 매장량) */
+/** 이 건물 종류를 몇 레벨 더 지을 수 있는가 (땅 또는 매장량). 땅을 쓰지 않는 건물은 제한이 없다 (Infinity) */
 export function roomFor(w: World, regionId: number, typeId: string): number {
   const t = BUILDING_BY_ID[typeId];
-  return t.deposit ? Math.min(depositFree(w, regionId, t.deposit), landFree(w, regionId, t.land)) : landFree(w, regionId, t.land);
+  const land = t.land ? landFree(w, regionId, t.land) : Infinity;
+  return t.deposit ? Math.min(depositFree(w, regionId, t.deposit), land) : land;
 }
 
 // ---------------------------------------------------------------- 기술
@@ -99,7 +100,7 @@ export function researchableTechs(c: Company): string[] {
 // ---------------------------------------------------------------- 건물
 
 export function slots(b: Building, skill: Skill): number {
-  if (!b.active || b.idle) return 0;
+  if (!b.active || (b.idle && (b.idleDays ?? 0) > TUNE.officeIdleDays)) return 0;
   return (getMethod(b.typeId, b.methodId).workers[skill] ?? 0) * b.level * b.utilization;
 }
 
@@ -126,13 +127,13 @@ export function peasantSlots(b: Building): number {
 }
 
 /**
- * 이 건물을 소유하는 지역의 소유 건물: 농지·산림·광산 건물은 저택, 공장 부지 건물은 금융가.
+ * 이 건물을 소유하는 지역의 소유 건물: 농지·산림·광산 건물은 저택, 공장 부지 건물(과 땅을 쓰지 않는 건물)은 금융가.
  * 국영 건물은 소유 건물이 없다. share 면 국영 건물의 민간 지분 몫이 갈 곳을 찾는다 (배당·철거 대금)
  */
 export function ownerBuildingOf(w: World, b: Building, share = false): Building | undefined {
   const t = BUILDING_BY_ID[b.typeId];
   if (t.auto || (b.stateOwned && !share)) return undefined;
-  const typeId = t.land === 'plot' ? 'finance' : 'manor';
+  const typeId = !t.land || t.land === 'plot' ? 'finance' : 'manor';
   return w.buildings.find((x) => x.regionId === b.regionId && x.typeId === typeId);
 }
 

@@ -238,15 +238,15 @@ export const BUILDING_TYPES: BuildingTypeDef[] = [
     ],
   },
   {
-    // 정부 건물: 왕실만 짓고 국고가 임금을 낸다. 1인당 하루 인건비: 가정교사 3,000 ÷ 2만 = 0.15, 공립 15,000 ÷ 10만 = 0.15
-    id: 'school', name: '학교', nameEn: 'School', land: 'plot', buildPoints: 800, stateOnly: true,
+    // 정부 건물: 왕실만 짓고 국고가 임금을 낸다. 땅을 쓰지 않는다 (행정청도 같다). 1인당 하루 인건비: 가정교사 3,000 ÷ 2만 = 0.15, 공립 15,000 ÷ 10만 = 0.15
+    id: 'school', name: '학교', nameEn: 'School', buildPoints: 800, stateOnly: true,
     methods: [
       m({ id: 'school_tutor', name: '귀족 가정교사', nameEn: 'Noble tutors', workers: { gentry: 100 }, inputs: {}, outputs: {}, seats: 20_000 }),
       m({ id: 'school_basic', name: '공립 학교', nameEn: 'Public school', tech: 'printing', workers: jobs(500, 500), inputs: {}, outputs: {}, seats: 100_000 }),
     ],
   },
   {
-    // 목조: 임금 12,000 + 목재·섬유 7,000 → 4포인트 (포인트당 약 4,750)
+    // 목조: 임금 12,000 + 목재·섬유 7,000 → 4포인트 (포인트당 약 4,750). 정부 건물 중 이것만 공장 부지를 쓴다 (빅토리아3 건설 부문만 주마다 레벨 상한이 있다)
     id: 'builder', name: '건축사무소', nameEn: 'Construction office', land: 'plot', buildPoints: 400,
     methods: [
       m({ id: 'build_manual', name: '목조 건설', nameEn: 'Timber building', workers: jobs(800, 200), inputs: { timber: 3000, fiber: 500 }, outputs: {}, construction: 4 }),
@@ -256,7 +256,7 @@ export const BUILDING_TYPES: BuildingTypeDef[] = [
   },
   {
     // 세금은 행정청이 감당하는 인구만큼만 걷힌다 (1레벨 50만 명, 전문 관료제는 3배)
-    id: 'admin', name: '행정청', nameEn: 'Government administration', land: 'plot', buildPoints: 400, stateOnly: true,
+    id: 'admin', name: '행정청', nameEn: 'Government administration', buildPoints: 400, stateOnly: true,
     methods: [
       m({ id: 'admin_hereditary', name: '세습 관료제', nameEn: 'Hereditary bureaucrats', workers: { skilled: 400, gentry: 100 }, inputs: {}, outputs: {}, taxCapacity: TAX_PEOPLE_PER_LEVEL }),
       m({ id: 'admin_professional', name: '전문 관료제', nameEn: 'Professional bureaucrats', tech: 'printing', workers: { skilled: 500 }, inputs: { furniture: 100 }, outputs: {}, taxCapacity: TAX_PEOPLE_PER_LEVEL * 3 }),
@@ -309,6 +309,12 @@ export function scaleBonus(level: number): number {
  * - meatLinear, meatQuad: 고기 필요 = linear × (부 − 8) + quad × (부 − 8)²
  * - privateShare: 왕실이 짓는 건물(행정청·건축사무소 제외) 공사비 중 민간 상회가 내는 비율 (그만큼 지분)
  * - shrinkWeeks: 마지막 레벨의 손익이 이 주 수 동안 계속 마이너스면 AI가 철거를 시작한다
+ * - officeShrinkWeeks: 건축사무소에 빈 레벨이나 남는 포인트가 이 주 수 동안 이어지면 AI가 그만큼 헌다
+ * - officeStaffed: 일하는 사무소 자리가 이 비율 이상 찼을 때만 AI가 사무소를 늘린다
+ * - officeIdleDays: 맡은 공사가 없는 날이 이 일수를 넘으면 사무소가 인부를 해산한다 (그동안은 임금을 주며 붙잡아 둔다)
+ *   세 값은 20년 × 시드 1·2로 비교했다 (52주·0.7·7일에서 하나씩 바꿈). 20년차 건물 레벨(시드 평균, 이전 규칙 728):
+ *   철거 39주 612 / 52주 786 / 78주 795 (26주는 충원 0.5에서 472), 충원 0.5 760 / 0.6 705 / 0.8 730, 해산 유예 0일 600 / 14일 815 / 28일 660.
+ *   52주·0.7·7일은 정부 건물 부지 몫이 가장 낮은 쪽이면서 레벨이 줄지 않았다
  * - salvageShare, salvageDays: 철거한 레벨 자재 중 회수하는 비율, 회수 자재를 나눠 파는 날 수
  * - swapMult: 땅이 꽉 찼을 때 새 후보 수익률이 자기 건물 마지막 레벨 수익률의 이 배수를 넘으면 그 레벨을 헌다
  * - employedMigrate: 일하는 pop 의 이주 속도 (실업 pop 대비 비율)
@@ -371,6 +377,9 @@ export const TUNE = {
   treasuryHighWeeks: 52, // 1년치
   startTreasuryWeeks: 26,
   shrinkWeeks: 26,
+  officeShrinkWeeks: 52,
+  officeStaffed: 0.7,
+  officeIdleDays: 7,
   salvageShare: 0.5,
   salvageDays: 28,
   swapMult: 3,
