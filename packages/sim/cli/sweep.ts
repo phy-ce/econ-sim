@@ -1,7 +1,7 @@
-// 조정값 비교: npx tsx cli/sweep.ts '<TUNE JSON>' [seed] [years]
+// 조정값 비교: npx tsx cli/sweep.ts '<TUNE JSON>' [seed] [years]  (JSON 의 "subsistence" 는 SUBSISTENCE 를 바꾼다)
 // 주요 지표(w.metrics)에서 5년마다(와 마지막 해) 대륙 합계를 뽑아 한 줄 JSON으로 출력한다.
 // TIMING=1 이면 time: { ms 시뮬레이션 시간, msPerDay 하루 평균 } 을 덧붙인다 (sweepsum.py 가 따로 요약한다)
-import { BUILDING_BY_ID, SKILL_DEFS, TUNE } from '../src/data';
+import { BUILDING_BY_ID, SKILL_DEFS, SUBSISTENCE, TUNE } from '../src/data';
 import { isGovernment, paysDividend, slots } from '../src/economy';
 import { committedCost } from '../src/finance';
 import { createWorld, literacyOf, step } from '../src/index';
@@ -53,7 +53,10 @@ function investInterval(ms: MetricPoint[], from: number, to: number) {
 
 const over = JSON.parse(process.argv[2] ?? '{}');
 const seed = Number(process.argv[3] ?? 1), years = Number(process.argv[4] ?? 10);
-Object.assign(TUNE, over);
+// "subsistence": { grainPerWorker 등 } 은 소작지 1인당 산출(SUBSISTENCE)을 바꾼다
+const { subsistence, ...tune } = over;
+Object.assign(TUNE, tune);
+if (subsistence) Object.assign(SUBSISTENCE, subsistence);
 // 비교 실행에서는 플레이어 왕국도 AI가 맡는다
 const w = createWorld(seed, { withPlayer: false });
 // 왕실 정책 단계 (4주 점검마다 왕국별): 세금 수준·국영 임금 수준·국고(지출 몇 주치)·빚
