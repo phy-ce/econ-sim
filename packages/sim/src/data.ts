@@ -188,15 +188,11 @@ export const BUILDING_TYPES: BuildingTypeDef[] = [
     ],
   },
   {
-    id: 'foodplant', name: '식료품 공장', nameEn: 'Grocery plant', land: 'plot', buildPoints: 1000,
+    // 식품 공장: 식료품에 집중하는 방식과 술에 집중하는 방식 중 하나를 고른다 (양조장은 따로 없다)
+    id: 'foodplant', name: '식품 공장', nameEn: 'Food plant', land: 'plot', buildPoints: 1000,
     methods: [
-      m({ id: 'food_manual', name: '수작업 가공', nameEn: 'Manual processing', tech: 'milling', workers: jobs(800, 200), inputs: { grain: 3500 }, outputs: { food: 6000 } }),
-      m({ id: 'food_machine', name: '기계 가공', nameEn: 'Machine processing', tech: 'food_machinery', workers: jobs(500, 200), inputs: { grain: 3500, tools: 100 }, outputs: { food: 6000 } }),
-    ],
-  },
-  {
-    id: 'distillery', name: '양조장', nameEn: 'Distillery', land: 'plot', buildPoints: 1000,
-    methods: [
+      m({ id: 'food_manual', name: '식료품 수작업', nameEn: 'Manual groceries', tech: 'milling', workers: jobs(800, 200), inputs: { grain: 3500 }, outputs: { food: 6000 } }),
+      m({ id: 'food_machine', name: '식료품 기계 가공', nameEn: 'Machine groceries', tech: 'food_machinery', workers: jobs(500, 200), inputs: { grain: 3500, tools: 100 }, outputs: { food: 6000 } }),
       m({ id: 'liquor_pot', name: '단식 증류', nameEn: 'Pot stills', tech: 'milling', workers: jobs(800, 200), inputs: { grain: 3500 }, outputs: { liquor: 8000 } }),
       m({ id: 'liquor_column', name: '연속식 증류', nameEn: 'Column stills', tech: 'food_machinery', workers: jobs(500, 200), inputs: { grain: 3500, tools: 100 }, outputs: { liquor: 8000 } }),
     ],
