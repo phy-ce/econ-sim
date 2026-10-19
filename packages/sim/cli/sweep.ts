@@ -1,5 +1,5 @@
 // 조정값 비교: npx tsx cli/sweep.ts '<TUNE JSON>' [seed] [years]
-// 주요 지표(w.metrics)에서 5년마다(와 마지막 해) 대륙 합계를 뽑아 한 줄 JSON으로 출력한다.
+// 주요 지표(w.metrics)에서 5년마다(와 2년차, 마지막 해) 대륙 합계를 뽑아 한 줄 JSON으로 출력한다.
 // TIMING=1 이면 time: { ms 시뮬레이션 시간, msPerDay 하루 평균 } 을 덧붙인다 (sweepsum.py 가 따로 요약한다)
 import { BUILDING_BY_ID, SKILL_DEFS, SUBSISTENCE, TUNE } from '../src/data';
 import { isGovernment, paysDividend, slots } from '../src/economy';
@@ -78,7 +78,7 @@ for (let d = 0; d < years * 360; d++) {
     schoolLevels.clear();
     for (const [id, lv] of now) schoolLevels.set(id, lv);
   }
-  if (w.tick % 1800 === 0 || w.tick === years * 360) {
+  if (w.tick % 1800 === 0 || w.tick === 720 || w.tick === years * 360) {
     let n = 0, lit = 0, qs = 0, pn = 0, pinc = 0;
     for (const p of w.pops) {
       n += p.size; lit += p.size * p.literacy; qs += p.prof === 'skilled' ? workforce(p) : (p.quals.skilled ?? 0);
@@ -104,7 +104,7 @@ const sum = (m: MetricPoint, f: (k: MetricPoint['kingdoms'][number]) => number) 
 const out: Record<string, unknown> = { tune: over, seed };
 for (const m of w.metrics) {
   const y = m.tick / 360;
-  if (!Number.isInteger(y) || (y % 5 !== 0 && y !== years)) continue;
+  if (!Number.isInteger(y) || (y % 5 !== 0 && y !== years && y !== 2)) continue;
   const pop = sum(m, (k) => k.pop);
   out[`y${y}`] = {
     pop: +(pop / 1e6).toFixed(2),

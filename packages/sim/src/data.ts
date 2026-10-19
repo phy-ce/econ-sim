@@ -430,13 +430,13 @@ export const HARVEST_KINDS: HarvestDef[] = [
  * 소작: 소작지 1칸(레벨)에서 일할 수 있는 소작농(노동 인구)과 1인당 하루 산출.
  * 소작농은 지대·토지세를 내고 그날 쓸 만큼 남긴 뒤 나머지를 판다 (market.ts harvest).
  *   고정 판매 10%, 세금 모자라면 더 파는 규칙과 비교해 골랐다 (수치는 docs/DECISIONS.md 7-2). 조정값은 없다.
- * 곡물·술·목재를 거둔다. 섬유·의복·가구는 만들지 않는다 (농장·공장에서만 나온다). 수확 가치는 기본가로 1인당 약 9.6
+ * 곡물과 술만 거둔다. 섬유·목재는 농장·벌목장에서만 나온다. 수확 가치는 기본가로 1인당 8.7
  */
 export const SUBSISTENCE: { workersPerCell: number; harvest: GoodBag } = {
   /** 소작지 1칸 = 소작농 1,000명. 다른 건물 1레벨(일꾼 1,000명)과 같아서 경작지 1칸을 농장으로 바꿔도 일자리 수는 그대로다 */
   workersPerCell: 1000,
   /** 소작농(노동 인구) 1인당 하루 수확 */
-  harvest: { grain: 2.0, liquor: 1.0, timber: 1.3 },
+  harvest: { grain: 2.85, liquor: 1.0 },
 };
 
 
@@ -458,7 +458,7 @@ export function regionPerk(regionId: number, typeId: string): number {
  * 지역 티어 (발전 단계). 시작 인구·계층 구성·교육·부지·경작지·시작 농장은 티어와 시드로 정한다 (world.ts regionStart).
  * 산림과 광맥 잠재량(veins)은 지역마다 고정(지형)이다. 광맥은 처음에 잠재량 × TUNE.prospectStart 만 알려져 있고 나머지는 탐광으로 찾는다 (economy.ts prospect). 비율은 총인구 대비, 땅은 인구 10만 명당 칸 수다.
  * - pop: 인구 범위 / aristocrat·gentry·skilled·expert: 계층 비율 (나머지는 소작농) / education: 교육 접근도
- * - plot: 부지 칸 / arableSlack: 소작농 노동 인구를 다 앉힐 칸 × 이 배율이 경작지 / farms: 시작 민간 섬유 농장 레벨
+ * - plot: 부지 칸 / arableSlack: 소작농 노동 인구를 다 앉힐 칸 × 이 배율이 경작지 / farms: 시작 민간 섬유 농장 레벨 (벌목장은 그 두 배)
  */
 export interface TierDef { pop: [number, number]; aristocrat: number; gentry: number; skilled: number; expert: number; education: number; plot: number; arableSlack: number; farms: number }
 export const TIERS: TierDef[] = [

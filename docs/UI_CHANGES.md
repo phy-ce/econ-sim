@@ -18,7 +18,7 @@
 4. **항구 표시 정리.** sim에서 항구·해외 무역 코드를 없앴다 (`PORTS_OPEN`은 sim에 없다). 클라이언트 `systemMetrics.ts`의 `PORTS_OPEN = false`와 `RegionMap.tsx`·`RegionPanel.tsx`의 항구 배지는 지우거나 장식으로만 둔다. `Region.spaceport`(항구 지역 표시)는 데이터에 남아 있다.
 5. **행정청 세금 역량.** `taxCapacity(world, kingdomId)`를 index에서 export했다. 필드 `Kingdom.taxCapacity`·`taxDue`로 읽어도 된다.
 6. **광맥은 자원별, 탐광으로 늘어난다 (2-26).** 지역 패널의 광맥 칸을 철·석탄 두 줄(`r.deposits.iron`·`r.deposits.coal`, 남은 칸 `depositFree`)로 나눈다. 탐광 알림은 그대로 보이면 된다.
-7. **술·기호품·양조장 (2-27).** 새 상품 `liquor`(술)과 새 건물 `distillery`(양조장)에 임시 그림·별칭, 새 필요 `intoxicants`(기호품)를 필요 목록에. 소작지 산출에서 섬유가 빠지고 술이 들어간다.
+7. **술·기호품·양조장 (2-27).** 새 상품 `liquor`(술)과 새 건물 `distillery`(양조장)에 임시 그림·별칭, 새 필요 `intoxicants`(기호품)를 필요 목록에. 소작지 산출은 곡물과 술뿐이다 (섬유·목재가 빠졌다). 시작 민간 섬유 농장과 벌목장이 생긴다.
 - 바뀌지 않는 것: 소작농 판매 규칙(먹고 남는 것만 판다)과 왕실 학교 AI는 화면 변경이 없다. 현물 값의 뜻도 그대로다.
 - **아직 sim에 없음 (만들지 말 것, 들어오면 이 목록에 올린다):**
   - 건물별 임금·현금·보조금 (브랜치 wt-wage). 들어오면 국영 임금 손잡이(`budget.wages`)가 없어지고, 건물 패널에 임금·현금·보조금 켜기가 생기고, 저장 형식이 5로 바뀐다(옛 저장은 `migrateWorld`로 변환). 그래서 1번에서 국영 임금 손잡이는 작게 두어도 된다.
@@ -445,8 +445,8 @@ sim이 아래 제도를 없앴다. 화면이 계속 컴파일되도록 `packages
 - 새 상품 `liquor`: 술 / Liquor, 기본가 3. `GOOD_IDS`의 맨 끝에 붙였다.
 - 새 필요 `intoxicants`: 기호품 / Intoxicants (선택지 술 하나). `NEEDS`의 맨 끝. 부 0부터 생기고 부 10까지 는다. 식량 필요는 그만큼 줄었다 (식량 + 기호품 = 예전 식량).
 - 새 건물 `distillery`: 양조장 / Distillery (공장 부지, 1,000포인트). 방식 `liquor_pot`(단식 증류 / Pot stills, 기술 `milling`): 곡물 3,500 → 술 8,000. `liquor_column`(연속식 증류 / Column stills, 기술 `food_machinery`): 곡물 3,500 + 공구 100 → 술 8,000.
-- 소작지 산출(`b.last.output`)은 곡물·술·목재다. 섬유는 없다. 소작지 산출을 상품을 나열해 그린다면 섬유를 빼고 술을 넣는다.
-- 시작 민간 농장은 곡물 농장이 아니라 섬유 농장(`fiber_farm`)이다.
+- 소작지 산출(`b.last.output`)은 곡물과 술뿐이다. 섬유·목재는 없다. 소작지 산출을 상품을 나열해 그린다면 섬유·목재를 빼고 술을 넣는다.
+- 시작 민간 건물: 곡물 농장 대신 섬유 농장(`fiber_farm`), 그리고 같은 지역에 그 두 배 레벨의 벌목장(`lumber`).
 - 고칠 것
   - `spriteAtlas.ts`의 상품·건물 목록과 `sprites.tsx`의 `ALIAS`에 임시 그림을 연결한다 (예: 술 → `food`, 양조장 → `foodplant`). 그림이 생기면 교체한다.
   - 상품 표, 건설 메뉴, 필요 표시가 `GOOD_IDS`, `BUILDING_TYPES`, `NEEDS`를 돌며 그린다면 따로 할 일은 없다. id를 직접 나열한 곳이 있으면 추가한다. 이름은 `GOODS.liquor.name`/`nameEn`, `NEEDS`의 `name`/`nameEn`.

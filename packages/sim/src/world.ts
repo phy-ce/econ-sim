@@ -30,6 +30,8 @@ const START_SAVINGS: Record<PopClass, number> = { peasant: 5, unskilled: 20, ski
 const START_TECHS = ['spinning', 'guilds'];
 /** 왕실이 갖고 시작하는 건축사무소 레벨 (목조 4 × 10레벨 = 하루 약 40포인트. 공사 하나는 레벨당 하루 10포인트까지라 농장 1레벨은 약 60일) */
 const START_OFFICE_LEVELS = 10;
+/** 시작 벌목장 레벨 = 시작 농장 레벨 × 이 값 */
+export const START_LUMBER_PER_FARM = 2;
 /** 상층의 시작 문해력 */
 const UPPER_LITERACY = 0.6;
 
@@ -184,12 +186,15 @@ export function createWorld(seed = 1, opts: CreateWorldOptions = {}): World {
     const admin = getMethod('admin', 'admin_hereditary');
     w.buildings.push(newBuilding(w.nextId++, 'admin', home.id, c.id, admin.id, Math.max(1, Math.ceil((people * TUNE.adminStart) / (admin.taxCapacity! * TUNE.adminScale))), true));
   }
-  // 티어에 따른 시작 민간 섬유 농장 (일꾼은 첫날부터 소작농에서 뽑는다). 소작지는 섬유를 거두지 않으므로
-  // 건축사무소(목조 건설: 섬유 500)와 방직·가구가 첫날부터 쓸 섬유는 여기서 나온다
+  // 티어에 따른 시작 민간 섬유 농장과 벌목장 (일꾼은 첫날부터 소작농에서 뽑는다). 소작지는 곡물과 술만 거두므로
+  // 건축사무소(목조 건설: 목재 3,000, 섬유 500)와 가계·방직·가구가 첫날부터 쓸 섬유·목재는 여기서 나온다
   for (const r of regions) {
     const firm = companies.find((c) => !c.state && c.kingdomId === r.kingdomId);
-    const levels = Math.min(starts.get(r.id)!.farms, r.land.arable);
-    if (firm && levels > 0) w.buildings.push(newBuilding(w.nextId++, 'fiber_farm', r.id, firm.id, 'fiber_basic', levels, false));
+    if (!firm) continue;
+    const farms = starts.get(r.id)!.farms;
+    const fiber = Math.min(farms, r.land.arable), lumber = Math.min(farms * START_LUMBER_PER_FARM, r.land.forest);
+    if (fiber > 0) w.buildings.push(newBuilding(w.nextId++, 'fiber_farm', r.id, firm.id, 'fiber_basic', fiber, false));
+    if (lumber > 0) w.buildings.push(newBuilding(w.nextId++, 'lumber', r.id, firm.id, 'lumber_manual', lumber, false));
   }
   updateSubsistence(w);
 
