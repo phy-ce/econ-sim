@@ -183,9 +183,9 @@ function harvestOutput(wf: number): GoodBag {
 
 /**
  * 소작지 수확 (빅토리아3 자급 산출): 소작농 노동 인구 × 1인당 산출.
- * 상품마다 지대(TUNE.rentShare, 그 지역 저택에 귀족이 있을 때)와 토지세 몫을 내놓고, 남은 것 중 오늘 지금 부 단계로 쓸 만큼
- * (collectOrders 와 같은 현물 사용 순서·상한) 남기고 나머지를 판다. 판매 대금은 지대 → 귀족, 토지세 → 국고, 나머지 → 소작농.
- * 그래서 소작농이 내놓는 양은 자기 필요와 부로만 정해진다 (가격·수요와는 상관없다).
+ * 상품마다 수확의 정해진 몫(splitHarvest, 기본 20%)을 팔고, 나머지에서 그날 지금 부 단계로 쓸 만큼 현물로 쓴다. 남는 것은 버린다.
+ * 판매 대금은 지대(TUNE.rentShare, 그 지역 저택에 귀족이 있을 때) → 귀족, 토지세 → 국고, 나머지 → 소작농.
+ * TUNE.peasantSale 'old' 이면 옛 규칙: 지대·토지세를 수확 몫으로 내놓고, 남은 것 중 쓰고 남는 것을 다 판다.
  */
 export function harvest(w: World, book: Book) {
   for (const b of w.buildings) {
@@ -197,28 +197,27 @@ export function harvest(w: World, book: Book) {
     const { rent, tax } = harvestShares(w, r);
     // 기상 조건이 걸리면 수확이 그만큼 줄어든다 (economy.ts harvestFactor)
     const out = harvestOutput(workforce(pop) * harvestFactor(w, r.id, 'arable'));
-    // 토지 기반 과세: 걷어야 할 토지세 (팔리는 몫만, 징수율 전). 1인당 과세면 토지세율 0
     const kd = kingdomById(w, r.kingdomId);
     const land = taxRates(kd).land;
-    if (land > 0) kd.landOwed = (kd.landOwed ?? 0) + landTaxValue(r, out, land);
-    // 실험 (TUNE.peasantSellShare > 0, 빅토리아3 자급 산출): 수확의 정해진 몫 s 만 판다. 지대·토지세는 그 판매 대금의 몫이다.
-    // 나머지에서 그날 쓸 만큼 현물로 쓰고, 남는 것은 시장에 나오지 않고 소득도 아니다
-    const s = TUNE.peasantSellShare;
-    if (s > 0) {
-      const sale = saleShares(w, r);
-      const left = useOwnKind(pop.size, wealthOf(pop), GOOD_IDS.map((g) => (out[g] ?? 0) * (1 - s)));
-      for (const g of GOOD_IDS) {
-        const q = out[g];
+    // 빅토리아3 자급 산출: 수확의 정해진 몫만 판다 (splitHarvest). 지대·토지세는 판매 대금의 몫이고, 쓰고 남는 것은 버린다
+    if (saleRule()) {
+      const { own, sell } = splitHarvest(pop.size, wealthOf(pop), GOOD_IDS.map((g) => out[g] ?? 0));
+      // 걷어야 할 토지세 (판매 대금 × 토지세율, 징수율 전). 1인당 과세면 토지세율 0
+      if (land > 0) kd.landOwed = (kd.landOwed ?? 0) + landTaxValue(r, bagOf(sell), land);
+      for (let i = 0; i < NG; i++) {
+        const g = GOOD_IDS[i], q = out[g];
         if (!q) continue;
         b.last.output[g] = q;
-        pop.inKind[g] = Math.max(0, q * (1 - s) - left[GOOD_INDEX[g]]);
-        const sell = q * s;
-        r.market[g].supply += sell;
-        addBy(r.market[g].supplyBy, 'subsistence', sell);
-        addLot(book, r.id, g, { kind: 'sub', pop, q: sell, rentFrac: sale.rent, taxFrac: sale.tax });
+        pop.inKind[g] = own[i];
+        if (sell[i] <= 1e-9) continue;
+        r.market[g].supply += sell[i];
+        addBy(r.market[g].supplyBy, 'subsistence', sell[i]);
+        addLot(book, r.id, g, { kind: 'sub', pop, q: sell[i], rentFrac: rent, taxFrac: tax });
       }
       continue;
     }
+    // 토지 기반 과세: 걷어야 할 토지세 (팔리는 몫만, 징수율 전). 1인당 과세면 토지세율 0
+    if (land > 0) kd.landOwed = (kd.landOwed ?? 0) + landTaxValue(r, out, land);
     // 지대·토지세를 뺀 몫에서 그날 쓸 만큼 쓰고 남는 것 (GOOD_IDS 순서). 쓰는 만큼만 현물로 남는다
     const keep = 1 - rent - tax;
     const surplus = useOwnKind(pop.size, wealthOf(pop), GOOD_IDS.map((g) => (out[g] ?? 0) * keep));
@@ -248,39 +247,56 @@ export function harvestShares(w: World, r: Region): { rent: number; tax: number 
   return { rent, tax };
 }
 
+/** 소작지 판매 규칙 (TUNE.peasantSale 'share'). 'old' 는 옛 규칙 (쓰고 남는 것을 다 팔고, 지대·토지세는 수확 몫) */
+export const saleRule = () => TUNE.peasantSale !== 'old';
+
 /**
- * 실험 규칙(TUNE.peasantSellShare > 0)에서 소작농 노동 인구 1인당 하루 소득: 판매 몫 s 의 대금(시장 판매율만큼) 중 지대·토지세(후원 포함)를
- * 뺀 것 + 나머지에서 부 wealth 로 그날 쓰는 현물의 시장가. 쓰고 남아 버려지는 현물은 소득이 아니다
+ * 소작지 수확 out(GOOD_IDS 순서)을 size 명, 부 wealth 인 소작농이 나누는 법 (현물 사용 순서·상한은 collectOrders 와 같다).
+ * 상품마다 그날 쓰고 남을 양을 팔되 수확의 TUNE.peasantSellMin ~ peasantSellCap 사이로 묶는다 (기본 둘 다 0.2: 늘 수확의 20%).
+ * 판 나머지에서 그날 쓸 만큼 쓴다 (own). 그 밖에 남는 것은 시장에 나오지 않고 소득도 아니다
+ */
+function splitHarvest(size: number, wealth: number, out: number[]): { own: number[]; sell: number[] } {
+  const lo = TUNE.peasantSellMin, hi = TUNE.peasantSellCap;
+  // 하한과 상한이 같으면 쓰고 남을 양을 셀 필요가 없다
+  const spare = lo < hi ? useOwnKind(size, wealth, out.slice()) : out;
+  const sell = out.map((q, i) => Math.min(q * hi, Math.max(q * lo, spare[i])));
+  // 하한 = 상한이면 q × (1 − 몫)으로 센다 (q − q × 몫과 끝자리가 달라 결과가 갈린다. DECISIONS 7-11 표가 이 계산으로 쟀다)
+  const avail = out.map((q, i) => (lo < hi ? q - sell[i] : q * (1 - lo)));
+  const left = useOwnKind(size, wealth, avail.slice());
+  return { own: avail.map((x, i) => Math.max(0, x - left[i])), sell };
+}
+
+function bagOf(q: number[]): GoodBag {
+  const bag: GoodBag = {};
+  for (let i = 0; i < NG; i++) if (q[i] > 0) bag[GOOD_IDS[i]] = q[i];
+  return bag;
+}
+
+/** 소작지 b 가 어제 수확(b.last.output)으로 내놓는 양 (세법 비교용 토지세 추정) */
+export function tenantSaleBag(w: World, b: Building): GoodBag {
+  const pop = findPop(w, b.regionId, 'peasant', b.id);
+  if (!pop || pop.size <= 0) return {};
+  return bagOf(splitHarvest(pop.size, wealthOf(pop), GOOD_IDS.map((g) => b.last.output[g] ?? 0)).sell);
+}
+
+/**
+ * 소작농 노동 인구 1인당 하루 소득: 판매 대금(시장 판매율만큼) 중 지대·토지세(후원 포함)를 뺀 것 + 그날 쓴 현물의 시장가.
+ * 쓰고 남아 버려지는 현물은 소득이 아니다
  */
 export function tenantIncomePerWorker(w: World, r: Region, wealth: number): number {
-  const s = TUNE.peasantSellShare;
   const out = harvestOutput(harvestFactor(w, r.id, 'arable'));
-  const sh = saleShares(w, r);
+  const sh = harvestShares(w, r);
   const rent = wealth < TUNE.patronWealth ? sh.rent * (1 - TUNE.patronShare) : sh.rent;
-  const own = GOOD_IDS.map((g) => (out[g] ?? 0) * (1 - s));
-  const left = useOwnKind(1 / WORKFORCE_RATIO, wealth, own.slice());
+  const { own, sell } = splitHarvest(1 / WORKFORCE_RATIO, wealth, GOOD_IDS.map((g) => out[g] ?? 0));
   let v = 0;
   for (let i = 0; i < NG; i++) {
-    const g = GOOD_IDS[i], q = out[g] ?? 0;
-    if (!q) continue;
-    const mg = r.market[g];
-    v += q * s * mg.price * sellThrough(mg) * Math.max(0, 1 - rent - sh.tax) + (own[i] - left[i]) * mg.price;
+    const mg = r.market[GOOD_IDS[i]];
+    v += sell[i] * mg.price * sellThrough(mg) * Math.max(0, 1 - rent - sh.tax) + own[i] * mg.price;
   }
   return v;
 }
 
-/**
- * 실험 규칙에서 판매 대금 중 지대·토지세 몫. TUNE.peasantRentBase 'sale' = 대금의 rentShare·토지세율(징수율 곱),
- * 'harvest' = 옛 수확 몫(지대 rent, 토지세 tax)을 대금에서 낸다 (대금 몫 rent/s, tax/s, 합 상한 1, 지대 먼저)
- */
-export function saleShares(w: World, r: Region): { rent: number; tax: number } {
-  const { rent, tax } = harvestShares(w, r);
-  if (TUNE.peasantRentBase !== 'harvest') return { rent, tax };
-  const rf = Math.min(1, rent / TUNE.peasantSellShare);
-  return { rent: rf, tax: Math.min(1 - rf, tax / TUNE.peasantSellShare) };
-}
-
-/** 실험 규칙에서 소작농 시작 부: 그 부의 소득(tenantIncomePerWorker × 노동 인구)으로 묶음 비용을 감당하는 가장 높은 단계 */
+/** 소작농 시작 부: 그 부의 소득(tenantIncomePerWorker × 노동 인구)으로 묶음 비용을 감당하는 가장 높은 단계 */
 export function affordableTenantWealth(w: World, r: Region, size: number, wf: number): number {
   let L = WEALTH_MIN;
   while (L < WEALTH_MAX && basketCostAt(r, size, L + 1) <= tenantIncomePerWorker(w, r, L + 1) * wf) L++;
@@ -698,7 +714,7 @@ export function clearMarkets(w: World, book: Book) {
             if (rentAmt > 0 && !payRent(w, lot.pop.regionId, rentAmt)) rentAmt = 0;
             if (taxAmt > 0) payLandTax(w, lot.pop.regionId, taxAmt);
             paySubsistence(w, lot.pop, amt - rentAmt - taxAmt);
-            if (!(TUNE.peasantSellShare > 0)) lot.pop.unsoldKind = (lot.pop.unsoldKind ?? 0) + (lot.q - q) * p * Math.max(0, 1 - fr - tf);
+            if (!saleRule()) lot.pop.unsoldKind = (lot.pop.unsoldKind ?? 0) + (lot.q - q) * p * Math.max(0, 1 - fr - tf);
             break;
           }
           case 'salvage':

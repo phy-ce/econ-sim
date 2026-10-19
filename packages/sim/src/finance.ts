@@ -2,6 +2,7 @@ import { BUILDING_BY_ID, SKILL_DEFS, TECH_BY_ID, TICKS_PER_WEEK, TUNE, getMethod
 import { collectionRatio, companyById, regionById, constructionEstimate, efficiency, kingdomGdp, logEvent, ownerBuildingOf, paysDividend, repay, sellThrough } from './economy';
 import { techNameEn } from './i18n';
 import { addToPool, kingdomById, kingdomOf } from './kingdoms';
+import { saleRule, tenantSaleBag } from './market';
 import { payPops } from './pops';
 import { round2 } from './rng';
 import { SKILLS, crewOf } from './types';
@@ -186,7 +187,8 @@ export function lawRevenue(w: World, k: Kingdom, law: TaxLaw): number {
     let v = 0;
     for (const b of w.buildings) {
       if (b.typeId !== 'subsistence' || kingdomOf(w, b.regionId) !== k.id) continue;
-      v += landTaxValue(regionById(w, b.regionId), b.last.output, taxRates(k, 'land').land);
+      // 새 판매 규칙이면 토지세는 판매 대금에서 낸다
+      v += landTaxValue(regionById(w, b.regionId), saleRule() ? tenantSaleBag(w, b) : b.last.output, taxRates(k, 'land').land);
     }
     return v;
   }
@@ -333,11 +335,7 @@ export function paySalvage(w: World, lot: SalvageLot, amt: number) {
 export function landTaxValue(r: Region, out: GoodBag, rate: number): number {
   let v = 0;
   for (const g of Object.keys(out) as GoodId[]) v += (out[g] ?? 0) * r.market[g].price * sellThrough(r.market[g]);
-  // 실험 규칙 (TUNE.peasantSellShare > 0): 토지세는 판매 몫 s 의 대금에서 낸다
-  // 'harvest' 이면 토지세는 수확의 rate 몫이되 판매 몫에서 지대(rentShare)를 낸 나머지까지 (지주가 없는 지역·징수율은 무시한 추정)
-  const sv = TUNE.peasantSellShare;
-  if (!(sv > 0)) return v * rate;
-  return TUNE.peasantRentBase === 'harvest' ? v * Math.min(rate, Math.max(0, sv - TUNE.rentShare)) : v * rate * sv;
+  return v * rate;
 }
 
 /** 토지세 판매 대금은 국고로 (행정청 손익용으로 걷힌 몫을 센다) */

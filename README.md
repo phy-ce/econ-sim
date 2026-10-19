@@ -72,7 +72,7 @@ Some better methods need no tech at all: iron tools raise the output of farms, l
 
 | Class | Stratum | Income |
 |---|---|---|
-| Tenant farmers | lower | farm a landlord's empty land; after rent and land tax they keep what they use that day and sell the rest |
+| Tenant farmers | lower | farm a landlord's empty land; they sell a fixed 20% of the harvest and pay rent and land tax out of that money; they eat and use what they need from the rest, and the leftover never reaches the market |
 | Labourers | lower | wages |
 | Skilled workers, experts | middle | wages and research spending |
 | Capitalists | upper | dividends from plot buildings |

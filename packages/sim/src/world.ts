@@ -3,7 +3,7 @@ import { collectionRatio, emptyJobs, knownVeins, isGovernment, newBuilding, pays
 import { aggregateHouseholds, findPop, getPop, movePeople, workforce } from './pops';
 import { updateOwnership, updateSubsistence } from './production';
 import { subsistenceWage, syncEmployment } from './labor';
-import { affordableTenantWealth, affordableWealth } from './market';
+import { affordableTenantWealth, affordableWealth, saleRule } from './market';
 import { applyStateWages, taxCapacity, updateWageIndex } from './finance';
 import { round2 } from './rng';
 import { roundWorld } from './round';
@@ -257,7 +257,7 @@ export function createWorld(seed = 1, opts: CreateWorldOptions = {}): World {
     const subs = w.buildings.find((x) => x.regionId === r.id && x.typeId === 'subsistence');
     const tenants = subs ? findPop(w, r.id, 'peasant', subs.id) : undefined;
     for (const p of w.pops.filter((x) => x.regionId === r.id)) {
-      p.wealth100 = 100 * (p === tenants && TUNE.peasantSellShare > 0 ? affordableTenantWealth(w, r, p.size, workforce(p))
+      p.wealth100 = 100 * (p === tenants && saleRule() ? affordableTenantWealth(w, r, p.size, workforce(p))
         : affordableWealth(r, p.size, p === tenants ? subsistenceWage(w, r) * workforce(p) : p.incomeEma));
     }
   }

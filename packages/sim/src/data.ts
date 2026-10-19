@@ -283,7 +283,7 @@ export function scaleBonus(level: number): number {
 
 /**
  * 조정값 (테스트로 여러 값을 비교하는 손잡이). 시작 전에 바꾸면 그 판 전체에 적용된다.
- * - rentShare: 소작지 수확 중 현금 지대로 저택 귀족에게 가는 비율 (그만큼 더 팔아 낸다)
+ * - rentShare: 소작지 판매 대금 중 저택 귀족에게 가는 지대 비율 (peasantSale 'old' 이면 수확 중 비율)
  * - patronWealth, patronShare: 소작농 부가 patronWealth 아래면 귀족이 지대의 patronShare 를 돌려준다
  * - growthEq: 신분별로 출생과 사망이 같아지는 생활수준 (이보다 높으면 인구가 는다)
  * - wageOutside: AI 임금 바닥 = 그 자리로 옮겨 올 사람들의 지금 소득 × 이 배율
@@ -341,11 +341,12 @@ export function scaleBonus(level: number): number {
  * - prospectFind: 한 번 찾을 때 늘어나는 광맥 = 잠재량 × 이 비율 (10 단위로 반올림, 최소 10, 남은 잠재량까지)
  */
 export const TUNE = {
-  rentShare: 0.15,
-  // 실험 (wt-vsub, DECISIONS 7-11): 0보다 크면 소작지는 수확의 이 몫만 팔고 지대·토지세는 그 대금의 몫이다. 0 = 지금 규칙
-  peasantSellShare: 0,
-  // 그때 지대·토지세: 'sale' = 판매 대금의 몫, 'harvest' = 옛 수확 몫을 판매 대금에서 낸다 (상한 대금 전부)
-  peasantRentBase: 'sale' as 'sale' | 'harvest',
+  rentShare: 0.5,
+  // 소작지 판매 (DECISIONS 7-11): 'share' 수확의 peasantSellMin ~ peasantSellCap 몫만 판다 (그 안에서는 쓰고 남는 양),
+  // 지대(rentShare)·토지세는 판매 대금의 몫. 'old' 쓰고 남는 것을 다 팔고 지대·토지세는 수확 몫 (그때 rentShare 0.15로 쟀다)
+  peasantSale: 'share' as 'old' | 'share',
+  peasantSellMin: 0.2,
+  peasantSellCap: 0.2,
   patronWealth: 2,
   patronShare: 0.5,
   growthEq: { lower: 2.5, middle: 5, upper: 5 },
