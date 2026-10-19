@@ -1,9 +1,9 @@
 import { BUILDING_BY_ID, CLASS_DEFS, SKILL_DEFS, SUBSISTENCE, TUNE, getMethod } from './data';
 import { borrow, disbanded, emptyJobs, emptyStats, harvestFactor, isSubsistence, paysDividend, peasantSlots } from './economy';
-import { harvestShares } from './market';
+import { harvestShares, tenantIncomePerWorker } from './market';
 import { findPop, getPop, movePeople, workforce } from './pops';
 import { clamp } from './rng';
-import { POP_CLASSES, SKILLS } from './types';
+import { POP_CLASSES, SKILLS, WEALTH_MIN, wealthOf } from './types';
 import type { Building, Company, MethodDef, Pop, PopClass, Region, Skill, World } from './types';
 
 // 노동시장 (빅토리아3 방식): 직종 이동은 따로 정한 비율이 아니라 건물의 채용으로만 일어난다.
@@ -89,6 +89,11 @@ function slotsWith(b: Building, m: MethodDef | null, s: Skill): number {
 
 /** 소작농 1인당 하루 소득 가치 (현물 + 판매분에서 수확과 같은 지대·토지세 몫을 뺀 것, 기상 조건 포함). 노동자 일자리와 비교하는 기준, 시작 부 */
 export function subsistenceWage(w: World, r: Region): number {
+  if (TUNE.peasantSellShare > 0) {
+    const b = w.buildings.find((x) => x.regionId === r.id && isSubsistence(x.typeId));
+    const pop = b ? findPop(w, r.id, 'peasant', b.id) : undefined;
+    return tenantIncomePerWorker(w, r, pop ? wealthOf(pop) : WEALTH_MIN);
+  }
   const m = r.market;
   const gross = SUBSISTENCE.grainPerWorker * m.grain.price + SUBSISTENCE.fiberPerWorker * m.fiber.price + SUBSISTENCE.timberPerWorker * m.timber.price;
   const { rent, tax } = harvestShares(w, r);

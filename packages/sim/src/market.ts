@@ -1,5 +1,5 @@
-import { CONSUMPTION_PER_CAPITA, GOOD_IDS, GOODS, NEEDS, SUBSISTENCE, TUNE, getMethod, needsAt, rawMax } from './data';
-import { CARTAGE_RATE, RAIL_RATE, borrow, harvestFactor, priceFormula, regionById, shippingRate, isSubsistence } from './economy';
+import { CONSUMPTION_PER_CAPITA, GOOD_IDS, GOODS, NEEDS, SUBSISTENCE, TUNE, WORKFORCE_RATIO, getMethod, needsAt, rawMax } from './data';
+import { CARTAGE_RATE, RAIL_RATE, borrow, harvestFactor, priceFormula, regionById, sellThrough, shippingRate, isSubsistence } from './economy';
 import { landTaxValue, payLandTax, payRent, paySalvage, taxDue, taxRates } from './finance';
 import { addToPool, borderCost, kingdomById, kingdomOf, payTariff } from './kingdoms';
 import { findPop, payPops, payProf, workforce } from './pops';
@@ -201,6 +201,24 @@ export function harvest(w: World, book: Book) {
     const kd = kingdomById(w, r.kingdomId);
     const land = taxRates(kd).land;
     if (land > 0) kd.landOwed = (kd.landOwed ?? 0) + landTaxValue(r, out, land);
+    // 실험 (TUNE.peasantSellShare > 0, 빅토리아3 자급 산출): 수확의 정해진 몫 s 만 판다. 지대·토지세는 그 판매 대금의 몫이다.
+    // 나머지에서 그날 쓸 만큼 현물로 쓰고, 남는 것은 시장에 나오지 않고 소득도 아니다
+    const s = TUNE.peasantSellShare;
+    if (s > 0) {
+      const sale = saleShares(w, r);
+      const left = useOwnKind(pop.size, wealthOf(pop), GOOD_IDS.map((g) => (out[g] ?? 0) * (1 - s)));
+      for (const g of GOOD_IDS) {
+        const q = out[g];
+        if (!q) continue;
+        b.last.output[g] = q;
+        pop.inKind[g] = Math.max(0, q * (1 - s) - left[GOOD_INDEX[g]]);
+        const sell = q * s;
+        r.market[g].supply += sell;
+        addBy(r.market[g].supplyBy, 'subsistence', sell);
+        addLot(book, r.id, g, { kind: 'sub', pop, q: sell, rentFrac: sale.rent, taxFrac: sale.tax });
+      }
+      continue;
+    }
     // 지대·토지세를 뺀 몫에서 그날 쓸 만큼 쓰고 남는 것 (GOOD_IDS 순서). 쓰는 만큼만 현물로 남는다
     const keep = 1 - rent - tax;
     const surplus = useOwnKind(pop.size, wealthOf(pop), GOOD_IDS.map((g) => (out[g] ?? 0) * keep));
@@ -228,6 +246,45 @@ export function harvestShares(w: World, r: Region): { rent: number; tax: number 
   const land = taxRates(kd).land;
   const tax = land > 0 ? Math.min(1 - rent, land * (kd.taxRatio ?? 1)) : 0;
   return { rent, tax };
+}
+
+/**
+ * 실험 규칙(TUNE.peasantSellShare > 0)에서 소작농 노동 인구 1인당 하루 소득: 판매 몫 s 의 대금(시장 판매율만큼) 중 지대·토지세(후원 포함)를
+ * 뺀 것 + 나머지에서 부 wealth 로 그날 쓰는 현물의 시장가. 쓰고 남아 버려지는 현물은 소득이 아니다
+ */
+export function tenantIncomePerWorker(w: World, r: Region, wealth: number): number {
+  const s = TUNE.peasantSellShare;
+  const out = harvestOutput(harvestFactor(w, r.id, 'arable'));
+  const sh = saleShares(w, r);
+  const rent = wealth < TUNE.patronWealth ? sh.rent * (1 - TUNE.patronShare) : sh.rent;
+  const own = GOOD_IDS.map((g) => (out[g] ?? 0) * (1 - s));
+  const left = useOwnKind(1 / WORKFORCE_RATIO, wealth, own.slice());
+  let v = 0;
+  for (let i = 0; i < NG; i++) {
+    const g = GOOD_IDS[i], q = out[g] ?? 0;
+    if (!q) continue;
+    const mg = r.market[g];
+    v += q * s * mg.price * sellThrough(mg) * Math.max(0, 1 - rent - sh.tax) + (own[i] - left[i]) * mg.price;
+  }
+  return v;
+}
+
+/**
+ * 실험 규칙에서 판매 대금 중 지대·토지세 몫. TUNE.peasantRentBase 'sale' = 대금의 rentShare·토지세율(징수율 곱),
+ * 'harvest' = 옛 수확 몫(지대 rent, 토지세 tax)을 대금에서 낸다 (대금 몫 rent/s, tax/s, 합 상한 1, 지대 먼저)
+ */
+export function saleShares(w: World, r: Region): { rent: number; tax: number } {
+  const { rent, tax } = harvestShares(w, r);
+  if (TUNE.peasantRentBase !== 'harvest') return { rent, tax };
+  const rf = Math.min(1, rent / TUNE.peasantSellShare);
+  return { rent: rf, tax: Math.min(1 - rf, tax / TUNE.peasantSellShare) };
+}
+
+/** 실험 규칙에서 소작농 시작 부: 그 부의 소득(tenantIncomePerWorker × 노동 인구)으로 묶음 비용을 감당하는 가장 높은 단계 */
+export function affordableTenantWealth(w: World, r: Region, size: number, wf: number): number {
+  let L = WEALTH_MIN;
+  while (L < WEALTH_MAX && basketCostAt(r, size, L + 1) <= tenantIncomePerWorker(w, r, L + 1) * wf) L++;
+  return L;
 }
 
 /** 그 지역 저택에 귀족이 앉아 있는가 (소작지 지대를 받을 사람) */
@@ -641,7 +698,7 @@ export function clearMarkets(w: World, book: Book) {
             if (rentAmt > 0 && !payRent(w, lot.pop.regionId, rentAmt)) rentAmt = 0;
             if (taxAmt > 0) payLandTax(w, lot.pop.regionId, taxAmt);
             paySubsistence(w, lot.pop, amt - rentAmt - taxAmt);
-            lot.pop.unsoldKind = (lot.pop.unsoldKind ?? 0) + (lot.q - q) * p * Math.max(0, 1 - fr - tf);
+            if (!(TUNE.peasantSellShare > 0)) lot.pop.unsoldKind = (lot.pop.unsoldKind ?? 0) + (lot.q - q) * p * Math.max(0, 1 - fr - tf);
             break;
           }
           case 'salvage':

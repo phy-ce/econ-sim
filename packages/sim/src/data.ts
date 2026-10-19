@@ -342,6 +342,10 @@ export function scaleBonus(level: number): number {
  */
 export const TUNE = {
   rentShare: 0.15,
+  // 실험 (wt-vsub, DECISIONS 7-11): 0보다 크면 소작지는 수확의 이 몫만 팔고 지대·토지세는 그 대금의 몫이다. 0 = 지금 규칙
+  peasantSellShare: 0,
+  // 그때 지대·토지세: 'sale' = 판매 대금의 몫, 'harvest' = 옛 수확 몫을 판매 대금에서 낸다 (상한 대금 전부)
+  peasantRentBase: 'sale' as 'sale' | 'harvest',
   patronWealth: 2,
   patronShare: 0.5,
   growthEq: { lower: 2.5, middle: 5, upper: 5 },

@@ -63,9 +63,28 @@ const edu: Record<number, { lit: number; sch: number; qs: number; schDem: number
 const inv: Record<number, ReturnType<typeof investSnapshot>> = {};
 let schDem = 0;
 const schoolLevels = new Map<number, number>();
+// 소작 시장 (해마다 하루 평균): subG·subT 소작지가 내놓은 곡물·목재, demG·demT 곡물·목재 수요 (만), landTax 걷힌 토지세 (천/일)
+const yearAcc = { subG: 0, demG: 0, subT: 0, demT: 0, landTax: 0 };
+const yearly: Record<number, Record<string, number>> = {};
 const t0 = performance.now();
 for (let d = 0; d < years * 360; d++) {
   step(w);
+  for (const r of w.regions) {
+    yearAcc.subG += r.market.grain.supplyBy?.subsistence ?? 0; yearAcc.demG += r.market.grain.demand;
+    yearAcc.subT += r.market.timber.supplyBy?.subsistence ?? 0; yearAcc.demT += r.market.timber.demand;
+  }
+  for (const k of w.kingdoms) yearAcc.landTax += k.landGot ?? 0;
+  if (w.tick % 360 === 0) {
+    const y = w.tick / 360;
+    let cash = 0, n = 0;
+    for (const p of w.pops) if (p.prof === 'peasant' && p.work !== 0) { cash += Math.max(0, p.incomeEma); n += p.size; }
+    yearly[y] = {
+      subG: +(yearAcc.subG / 360 / 1e4).toFixed(1), demG: +(yearAcc.demG / 360 / 1e4).toFixed(1),
+      subT: +(yearAcc.subT / 360 / 1e4).toFixed(1), demT: +(yearAcc.demT / 360 / 1e4).toFixed(1),
+      landTax: +(yearAcc.landTax / 360 / 1e3).toFixed(1), cashPeas: +(n > 0 ? cash / n : 0).toFixed(3),
+    };
+    yearAcc.subG = yearAcc.demG = yearAcc.subT = yearAcc.demT = yearAcc.landTax = 0;
+  }
   if (w.tick % 7 === 0) {
     // 줄어든 학교 레벨 (철거) 을 센다
     const now = new Map<number, number>();
@@ -97,7 +116,7 @@ const sum = (m: MetricPoint, f: (k: MetricPoint['kingdoms'][number]) => number) 
 const out: Record<string, unknown> = { tune: over, seed };
 for (const m of w.metrics) {
   const y = m.tick / 360;
-  if (!Number.isInteger(y) || (y % 5 !== 0 && y !== years)) continue;
+  if (!Number.isInteger(y) || (y % 5 !== 0 && y !== years && y !== 2)) continue;
   const pop = sum(m, (k) => k.pop);
   out[`y${y}`] = {
     pop: +(pop / 1e6).toFixed(2),
@@ -110,6 +129,9 @@ for (const m of w.metrics) {
     pts: Math.round(sum(m, (k) => k.pointsPerDay)),
     grain: m.goods.grain.ratio,
     timber: m.goods.timber.ratio,
+    fiber: m.goods.fiber.ratio,
+    solArist: +(sum(m, (k) => k.solBy.aristocrat * k.popBy.aristocrat) / Math.max(1, sum(m, (k) => k.popBy.aristocrat))).toFixed(2),
+    ...(yearly[y] ?? {}),
     ore: m.goods.ore.ratio,
     fuel: m.goods.fuel.ratio,
     classGap: m.classGap,
