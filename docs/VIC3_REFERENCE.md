@@ -47,6 +47,12 @@
   - 민간 공사는 투자 풀이 물자만 내고, 부문 임금은 국가가 낸다.
 - 생산 방식은 레벨당 2/5/10/15 포인트다. 레벨당 노동자 약 800→600명, 사무원 100명, 관료 100명이다 (Building 문서, 1.12 확인).
 
+## 투자 풀 (https://vic3.paradoxwikis.com/Treasury, 1.13, 2026-10-19 직접 확인)
+- 재원: "The investment pool gains funds from pop contributions. These contributions are based on dividends paid to certain professions with ownership shares". 임금은 들어가지 않는다.
+- 남으면 쌓인다: "If investment pool contributions exceed expenses, the contributions accumulate and can be spent later."
+- 민간 공사: "Buildings constructed from the investment pool use a separate, private construction queue." 건설 부문 임금은 국고가 낸다: "the wages of construction sector employees are always paid by the national treasury."
+- 이 게임과 다른 점: 이 게임은 모든 pop의 남는 현금(생활비·세금 10일치 초과분의 하루 5%)도 투자 풀로 간다 (`DESIGN.md` 9.3). 측정한 유입의 61~93%가 이것이다 (`DECISIONS.md` 7-7).
+
 ## 정부 건물과 땅, 건설 부문 레벨 상한 (2026-10-19 확인)
 - "Most urban buildings have no limit on their total levels and can be built in any state." (https://vic3.paradoxwikis.com/Buildings, 직접 확인)
   - 같은 문서에서 농지(arable land) 상한은 농촌 건물에만 나온다. 행정청·대학에는 땅이나 도시화 상한이 없다.
