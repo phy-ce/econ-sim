@@ -197,8 +197,6 @@ export interface Pop {
   sol: number;
   /** 직전 틱 인구 증감률 (연 %, 소수 2자리) */
   growth: number;
-  /** 전날 내놓았지만 팔리지 않은 현물의 시장가 (부 계산에 수확 전체를 소득으로 넣기 위해) */
-  unsoldKind?: number;
   /** 소작으로 직접 얻어 먹는 현물 */
   inKind: GoodBag;
 }
