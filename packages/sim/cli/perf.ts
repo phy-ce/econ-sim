@@ -1,8 +1,8 @@
 // 단계별 실행 시간: npx tsx cli/perf.ts [years]
 import { createWorld, step } from '../src/index';
 import { TICKS_PER_WEEK } from '../src/data';
-import { chargeInterest, collectIncomeTax, distributeInvestment, doResearch, mintMoney, payDividends, spendBudget, weeklyBanking } from '../src/finance';
-import { laborMarket, migrate, payWages, syncEmployment } from '../src/labor';
+import { chargeInterest, collectIncomeTax, distributeInvestment, doResearch, mintMoney, payBuildings, spendBudget, weeklyBanking } from '../src/finance';
+import { adjustWages, laborMarket, migrate, payWages, syncEmployment } from '../src/labor';
 import { clearMarkets, collectOrders, harvest, newBook, resetMarkets, updatePrices } from '../src/market';
 import { advanceConstruction, produce, updateIdleOffices, updateSubsistence } from '../src/production';
 import { aggregateHouseholds, prunePops, updateGrowth, updateLiteracy, updateQualifications } from '../src/pops';
@@ -25,7 +25,7 @@ for (let d = 0; d < days; d++) {
   run('prices', () => updatePrices(w));
   run('pops', () => { updateLiteracy(w); updateQualifications(w); updateGrowth(w); migrate(w); for (const p of w.pops) p.incomeEma = p.incomeEma * 0.9 + p.lastIncome * 0.1; prunePops(w); syncEmployment(w); aggregateHouseholds(w); });
   w.tick++;
-  if (w.tick % TICKS_PER_WEEK === 0) run('weekly(ai 등)', () => { mintMoney(w); spendBudget(w); for (const c of w.companies) payDividends(w, c); distributeInvestment(w); runAi(w); weeklyBanking(w); });
+  if (w.tick % TICKS_PER_WEEK === 0) run('weekly(ai 등)', () => { mintMoney(w); payBuildings(w); spendBudget(w); distributeInvestment(w); runAi(w); adjustWages(w); weeklyBanking(w); });
   run('metrics', () => recordMetrics(w));
 }
 const total = performance.now() - t0;

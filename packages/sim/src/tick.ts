@@ -1,16 +1,16 @@
-import { GOOD_IDS, SKILL_DEFS, TICKS_PER_WEEK, getMethod } from './data';
+import { GOOD_IDS, TICKS_PER_WEEK, getMethod } from './data';
 import { round2 } from './rng';
-import { colonyPopulation, colonySol, marketWage, totalMoney, unemploymentRate } from './economy';
+import { colonyPopulation, colonySol, totalMoney, unemploymentRate } from './economy';
 import { runAi } from './ai';
 import { weeklyAlerts } from './alerts';
 import { recordMetrics } from './metrics';
 import { applyCommand } from './commands';
-import { chargeInterest, collectIncomeTax, distributeInvestment, doResearch, mintMoney, payDividends, spendBudget, weeklyBanking } from './finance';
-import { laborMarket, migrate, payWages, syncEmployment } from './labor';
+import { chargeInterest, collectIncomeTax, distributeInvestment, doResearch, mintMoney, payBuildings, spendBudget, weeklyBanking } from './finance';
+import { adjustWages, laborMarket, migrate, payWages, syncEmployment } from './labor';
 import { clearMarkets, collectOrders, harvest, newBook, resetMarkets, updatePrices } from './market';
 import { aggregateHouseholds, prunePops, updateGrowth, updateLiteracy, updateQualifications } from './pops';
 import { advanceConstruction, produce, progressDemolition, updateIdleOffices, updateSubsistence } from './production';
-import { POP_CLASSES, SKILLS, emptyLedger } from './types';
+import { POP_CLASSES, SKILLS, emptyLedger, emptyWeek } from './types';
 import type { GoodId, HistoryPoint, PopClass, QueuedCommand, Skill, World } from './types';
 
 export { needSplit } from './market';
@@ -28,7 +28,6 @@ export function step(w: World, commands: QueuedCommand[] = []): string[] {
 
   updateSubsistence(w);
   updateIdleOffices(w);
-  applyWagePolicy(w);
   chargeInterest(w);
   doResearch(w);
   laborMarket(w);
@@ -61,17 +60,6 @@ export function step(w: World, commands: QueuedCommand[] = []): string[] {
   return errors;
 }
 
-/** 시장임금 정책을 쓰는 회사(플레이어)의 임금을 매일 시장에 맞춘다 */
-function applyWagePolicy(w: World) {
-  for (const c of w.companies) {
-    if (!c.wageOffset) continue;
-    for (const s of SKILLS) {
-      const base = SKILL_DEFS[s].baseWage;
-      c.wages[s] = round2(Math.min(base * 10, Math.max(base * 0.1, marketWage(w, s, c.id) * (1 + c.wageOffset[s]))));
-    }
-  }
-}
-
 /** 교육 접근도의 바닥값과 학교가 모든 인구를 감당할 때의 최대 상승폭 */
 const EDUCATION_FLOOR = 0.1;
 const EDUCATION_RANGE = 0.8;
@@ -94,14 +82,23 @@ function updateEducation(w: World) {
   }
 }
 
+/**
+ * 주간: 건물 주간 장부를 넘긴다(그 뒤의 판단은 막 끝난 주 lastWeek 를 읽는다) → 주조 → 건물 배당 → 국정 예산 → 투자 풀 → 철거 →
+ * AI(보조금·방식·공사) → 건물 임금 → 국채 상환·남는 돈 → 알림 → 회사 장부 넘김
+ */
 function weekly(w: World) {
-
+  for (const b of w.buildings) {
+    const x = b.week;
+    b.lastWeek = { revenue: round2(x.revenue), wages: round2(x.wages), inputs: round2(x.inputs), subsidy: round2(x.subsidy) };
+    b.week = emptyWeek();
+  }
   mintMoney(w);
+  payBuildings(w);
   spendBudget(w);
-  for (const c of w.companies) payDividends(w, c);
   distributeInvestment(w);
   progressDemolition(w);
   runAi(w);
+  adjustWages(w);
   weeklyBanking(w);
   weeklyAlerts(w);
   for (const c of w.companies) {
@@ -109,7 +106,6 @@ function weekly(w: World) {
     c.weekProfit = 0;
     c.lastLedger = c.ledger;
     c.ledger = emptyLedger();
-    c.weekStartCash = c.cash;
   }
   recordHistory(w);
 }

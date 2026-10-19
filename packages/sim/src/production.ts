@@ -1,7 +1,8 @@
-import { BUILDING_BY_ID, GOOD_IDS, MAX_POINTS_PER_LEVEL_DAY, OWNER_SEATS_PER_LEVEL, OWNERSHIP_SEATS, TUNE, getMethod } from './data';
-import { builderOf, companyById, efficiency, isGovernment, landFree, logEvent, newBuilding, ownerBuildingOf, regionById } from './economy';
+import { BUILDING_BY_ID, GOOD_IDS, MAX_POINTS_PER_LEVEL_DAY, OWNER_SEATS_PER_LEVEL, OWNERSHIP_SEATS, TICKS_PER_WEEK, TUNE, getMethod } from './data';
+import { borrow, builderOf, companyById, efficiency, fullWageBill, hasOwnCash, isGovFunded, isGovernment, landFree, logEvent, newBuilding, ownerBuildingOf, regionById, regionWages } from './economy';
+import { roundCash, settleSubsidy, treasuryOf } from './finance';
 import { workforce } from './pops';
-import { kingdomById } from './kingdoms';
+import { addToPool, kingdomById } from './kingdoms';
 import { buildingNameEn, regionNameEn } from './i18n';
 import { clamp, round2 } from './rng';
 import type { Building, Company, GoodBag, World } from './types';
@@ -114,7 +115,6 @@ export function produce(w: World) {
     } else {
       b.last.inputFill = 0;
     }
-    c.revenueEma = c.revenueEma * 0.98 + b.last.revenue * 0.02;
     const profit = b.last.revenue - b.last.inputCost - b.last.wageCost;
     b.profitEma = b.profitEma * 0.95 + profit * 0.05;
     c.weekProfit += profit;
@@ -123,11 +123,17 @@ export function produce(w: World) {
     c.ledger.inputs += b.last.inputCost;
     c.ledger.wages += b.last.wageCost;
     // 왕실 정부 건물의 운영비는 국정 지출로 따로 센다 (spendBudget 이 매주 lastBudget 에 적는다)
-    if (c.state && isGovernment(b.typeId)) {
-      const spent = (kingdomById(w, c.kingdomId).spentWeek ??= { wages: 0, goods: 0 });
+    if (isGovFunded(b)) {
+      const spent = (kingdomById(w, c.kingdomId).spentWeek ??= { wages: 0, goods: 0, subsidies: 0, dividends: 0 });
       spent.wages += b.last.wageCost;
       spent.goods += b.last.inputCost;
     }
+  }
+  // 하루 끝: 보조금을 그날 실제 수지로 맞추고(더 받은 몫은 돌려준다), 건물 현금을 소수 2자리로
+  for (const b of w.buildings) {
+    if (!hasOwnCash(b)) continue;
+    settleSubsidy(w, b);
+    roundCash(w, b);
   }
   allocateConstruction(w);
 }
@@ -198,15 +204,38 @@ export function advanceConstruction(w: World) {
       logEvent(w, k.companyId, `${rname} ${def.name} 증설 완료 → ${target.level}레벨`,
         { regionId: k.regionId, buildingId: target.id, en: `${regionNameEn(k.regionId)} ${buildingNameEn(k.typeId)} expanded to ${target.level} levels` });
     } else {
-      const state = !!companyById(w, k.companyId)?.state;
-      const b = newBuilding(w.nextId++, k.typeId, k.regionId, k.companyId, k.methodId, add, state);
+      const owner = companyById(w, k.companyId);
+      const b = newBuilding(w.nextId++, k.typeId, k.regionId, k.companyId, k.methodId, add, !!owner?.state);
       if (k.privateShare) b.privateShare = k.privateShare;
       b.materials = mats;
+      b.wages = startingWages(w, k.regionId);
       w.buildings.push(b);
+      if (owner) seedCash(w, b, owner);
       logEvent(w, k.companyId, `${rname} ${def.name} 신규 건설 완료. 사람을 뽑기 시작합니다.`,
         { regionId: k.regionId, buildingId: b.id, en: `New ${buildingNameEn(k.typeId).toLowerCase()} completed in ${regionNameEn(k.regionId)}. Hiring has begun.` });
     }
   }
+}
+
+/** 새 건물의 시작 임금: 그 지역 직종별 평균 임금 (없으면 왕국 평균, 그것도 없으면 기본 임금 × 0.8) */
+export function startingWages(w: World, regionId: number): Building['wages'] {
+  const src = regionWages(w, regionId);
+  return Object.fromEntries(Object.entries(src).map(([s, v]) => [s, round2(v)])) as Building['wages'];
+}
+
+/**
+ * 새 건물의 시작 현금: 만원 가동 주간 임금 × TUNE.seedWeeks 를 주인(민간 투자 자금 / 국고)이 넣는다.
+ * 민간 투자 자금은 있는 만큼만 내고, 국고는 모자라면 국채로 낸다. 정부 자금 건물은 현금이 없다
+ */
+export function seedCash(w: World, b: Building, owner: Company) {
+  if (!hasOwnCash(b)) return;
+  const want = round2(fullWageBill(b) * TICKS_PER_WEEK * TUNE.seedWeeks);
+  if (owner.state && owner.cash < want) borrow(w, owner, want - owner.cash);
+  const amt = round2(Math.min(want, Math.max(0, owner.cash)));
+  if (amt <= 0) return;
+  owner.cash -= amt;
+  owner.ledger.buildPaid += amt;
+  b.cash += amt;
 }
 
 /**
@@ -245,8 +274,17 @@ export function progressDemolition(w: World) {
   }
 }
 
+/** 건물이 없어지면 남은 현금은 주인에게: 민간 몫은 그 왕국 투자 풀로, 왕실 몫은 국고로 (국영 건물의 민간 지분 몫은 투자 풀로) */
 function removeBuilding(w: World, b: Building) {
   w.buildings = w.buildings.filter((x) => x.id !== b.id);
+  if (b.cash > 0) {
+    const kid = kingdomById(w, regionById(w, b.regionId).kingdomId).id;
+    const priv = b.stateOwned ? round2(b.cash * (b.privateShare ?? 0)) : b.cash;
+    addToPool(w, kid, b.regionId, priv);
+    const gov = b.cash - priv > 0 ? treasuryOf(w, b.regionId) : undefined;
+    if (gov) gov.cash += b.cash - priv; else w.fund += b.cash - priv;
+    b.cash = 0;
+  }
   logEvent(w, b.companyId, `${regionById(w, b.regionId).name} ${BUILDING_BY_ID[b.typeId].name}(#${b.id}) 철거 완료`,
     { regionId: b.regionId, en: `Demolished: ${regionNameEn(b.regionId)} ${buildingNameEn(b.typeId)} (#${b.id})` });
 }

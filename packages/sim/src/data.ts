@@ -287,8 +287,18 @@ export function scaleBonus(level: number): number {
  * - rentShare: 소작지 수확 중 현금 지대로 저택 귀족에게 가는 비율 (그만큼 더 팔아 낸다)
  * - patronWealth, patronShare: 소작농 부가 patronWealth 아래면 귀족이 지대의 patronShare 를 돌려준다
  * - growthEq: 신분별로 출생과 사망이 같아지는 생활수준 (이보다 높으면 인구가 는다)
- * - wageOutside: AI 임금 바닥 = 그 자리로 옮겨 올 사람들의 지금 소득 × 이 배율
- * - wageCeil: AI 임금 천장 = 회사 부가가치 중 임금으로 줄 수 있는 비율
+ * - wageRaise, wageCut, wageDrift: 건물 임금의 주간 변화율. 적자(보조금·정부 자금 건물 제외)면 −wageCut, 빈자리가 5% 넘고
+ *   사람이 안 차는데 그 지역 실업 자격자가 빈자리보다 적으면 +wageRaise, 빈자리가 2% 미만이고 실업 자격자가 남으면 −wageDrift.
+ *   wageCut 0.01·0.02·0.05·0.1 비교 (20년 × 시드 1·2): 0.05가 5·10년차 건물 레벨·기술·노동자 생활수준이 가장 높다 (빅토리아3 주간 최대 변화 0.1).
+ *   wageDrift 0.02는 0.01보다 건물 레벨이 적다
+ * - wageOutside: 임금 바닥 = 그 자리로 옮겨 올 사람의 지금 소득 × 이 배율 (바깥 선택지, 최저임금이 아니다).
+ *   0·1·1.2·1.5 비교 (20년 × 시드 1·2): 0이면 적자 → 임금 삭감 → 수요 감소의 고리로 노동자 임금이 20년차 1.1(기본의 0.11배),
+ *   노동자 생활수준이 10년차 1.03까지 떨어진다. 1.5는 10년차 노동자 생활수준이 가장 높고 건물 레벨이 가장 적다. 1.2는 main 값 그대로
+ * - (없앰) wageCeil 임금 천장: 0.85를 켜도 20년차 노동자 생활수준·건물 레벨 차이가 없다 (적자 삭감이 같은 일을 한다)
+ * - reserveWeeks: 건물 준비금 상한 = 만원 가동 주간 비용(임금 + 원료) × 이 주 수. 넘는 현금은 매주 주인에게 간다. 2·4·8 비교: 뚜렷한 차이가 없다
+ * - seedWeeks: 새 건물이 완공될 때 주인(민간 투자 자금 / 국고)이 넣는 시작 현금 = 만원 주간 임금 × 이 주 수. 4는 2보다 나은 점이 없다
+ * - aiSubsidy: AI 왕실이 보조금 규칙(적자이고 산출물이 귀한 건물을 국고가 넉넉할 때 보조)을 쓰는가. 쓰지 않을 때(false)가
+ *   5·10년차 건물 레벨(450/809 대 398/686)과 노동자 생활수준(3.13/2.38 대 2.89/2.24)이 높고, 20년차 노동자 생활수준은 낮다(1.23 대 1.52)
  * - lossBuildsPerWeek: 이익이 나는 후보가 없을 때 AI가 가장 덜 손해 보는 후보를 짓는 주간 횟수
  * - lossTolerance: 그 후보의 예상 손실이 인건비의 이 비율 이하일 때만 짓는다 (Infinity = 제한 없음)
  * - adminScale: 행정청 1레벨이 감당하는 인구 배율 (기본 50만 명 × 이 값)
@@ -312,11 +322,9 @@ export function scaleBonus(level: number): number {
  * - salvageShare, salvageDays: 철거한 레벨 자재 중 회수하는 비율, 회수 자재를 나눠 파는 날 수
  * - swapMult: 땅이 꽉 찼을 때 새 후보 수익률이 자기 건물 마지막 레벨 수익률의 이 배수를 넘으면 그 레벨을 헌다
  * - employedMigrate: 일하는 pop 의 이주 속도 (실업 pop 대비 비율)
- * - wageLossCut: 회사가 지난주 적자면 임금을 2% 깎는다
  * - qualSkilledL, qualExpertL: 기술자·전문가 자격이 쌓이기 시작하는 문해력
  * - qualRate: 자격이 쌓이는 속도 배율
  * - schoolValue: 왕실이 학교를 지을 때 학교가 새로 감당하는 1인당 하루 가치 (학교 1레벨 인건비 15,000 ÷ 10만 명 = 0.15)
- * - govWageLevels: 국영 임금 수준 1~5단계의 배율. 국영 임금 = 기본 임금 × 왕국 임금 지수 × 이 배율
  * - researchShare, researchLevels: 주간 연구비 = 주간 경제 규모 × researchShare × 연구비 수준 배율
  * - treasuryLowWeeks, treasuryHighWeeks: AI 왕실은 국고가 주간 국정 지출의 low 주치보다 적으면 조이고 high 주치를 넘으면 푼다.
  *   왕실 공사(사무소 증설 포함)도 high 주치를 넘는 돈으로만 한다. high 39·52·78·104 비교 (세율 ×2, 20년 × 시드 1~4): 52는 78보다
@@ -332,8 +340,17 @@ export const TUNE = {
   patronWealth: 2,
   patronShare: 0.5,
   growthEq: { lower: 2.5, middle: 5, upper: 5 },
+  // 건물 임금 (주간, labor.ts adjustWages): 적자면 −wageCut, 사람이 모자라면 +wageRaise, 남으면 −wageDrift
+  wageRaise: 0.03,
+  wageCut: 0.05,
+  wageDrift: 0.01,
+  // 임금 바닥 (바깥 선택지, 0 = 끔) = 옮겨 올 사람의 지금 소득 × wageOutside
   wageOutside: 1.2,
-  wageCeil: 0.85,
+  // 건물 현금: 준비금 상한 = 만원 가동 주간 비용 × reserveWeeks (넘는 돈은 매주 주인에게), 새 건물 시작 현금 = 만원 주간 임금 × seedWeeks
+  reserveWeeks: 4,
+  seedWeeks: 2,
+  // AI 왕실 보조금: 적자이고 산출물이 귀한(지역 가격 > 기본가) 건물을 국고가 넉넉할 때(빚 없고 지출 treasuryLowWeeks 주치 이상) 보조한다
+  aiSubsidy: false,
   switchRate: 0.005,
   switchPremium: 1.1,
   adminScale: 0.3,
@@ -364,7 +381,6 @@ export const TUNE = {
   rawFullWealth: 5,
   rawCapWealth: 10,
   taxLevels: [0.6, 0.8, 1, 1.2, 1.4],
-  govWageLevels: [0.7, 0.85, 1, 1.15, 1.3],
   researchShare: 0.045,
   researchLevels: [0.5, 0.75, 1, 1.5, 2],
   treasuryLowWeeks: 26,
@@ -375,7 +391,6 @@ export const TUNE = {
   salvageDays: 28,
   swapMult: 3,
   employedMigrate: 0.25,
-  wageLossCut: true,
 };
 
 /**

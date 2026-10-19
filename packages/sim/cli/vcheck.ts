@@ -11,7 +11,7 @@ for (const b of [...w.buildings].sort((a, b2) => b2.level - a.level)) {
   const c = companyById(w, b.companyId)!, r = regionById(w, b.regionId), m = getMethod(b.typeId, b.methodId);
   const run = b.level * b.utilization * (b.crew ?? 1);
   const L = b.level;
-  const v = valueMethod(w, o, r, c, b.typeId, m, 1);
+  const v = valueMethod(w, o, r, c, b.typeId, m, b.wages, 1);
   const goods = GOOD_IDS.filter((g) => m.outputs[g] || m.inputs[g]).map((g) => `${g}${m.outputs[g] ? '+' : '-'} p${r.market[g].price.toFixed(1)} oP${o.price(g).toFixed(1)} D${Math.round(o.demand[g])} S${Math.round(o.supply[g])} lD${Math.round(r.market[g].demandEma)}`).join(' ; ');
   console.log(`${b.methodId}@${r.id} ${c.state ? 'S' : 'P'} lv${L} run${run.toFixed(0)} eff${efficiency(b).toFixed(2)} | 실제/lv rev ${(b.last.revenue / L).toFixed(1)} in ${(b.last.inputCost / L).toFixed(1)} wage ${(b.last.wageCost / L).toFixed(1)} pEma ${(b.profitEma / L).toFixed(1)} | 예측 rev ${v.revenue.toFixed(1)} in ${v.inputCost.toFixed(1)} wage ${v.wageCost.toFixed(1)} u${v.utilization}`);
   console.log('    ' + goods);

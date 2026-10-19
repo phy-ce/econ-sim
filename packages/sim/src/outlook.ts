@@ -1,5 +1,5 @@
 import { BUILDING_BY_ID, GOOD_IDS, GOODS, NEEDS, SKILL_DEFS, TUNE, getMethod, regionPerk } from './data';
-import { availableMethods, collectionRatio, regionById, shippingRate, wageCostOf } from './economy';
+import { availableMethods, collectionRatio, companyById, regionById, regionWages, shippingRate, wageCostOf } from './economy';
 import { clamp } from './rng';
 import { SKILLS } from './types';
 import type { Company, GoodId, Kingdom, MethodDef, Region, Skill, World } from './types';
@@ -54,10 +54,10 @@ export function marketOutlook(w: World): Outlook {
     if (!c || !b.active || BUILDING_BY_ID[b.typeId].auto) continue;
     const cur = getMethod(b.typeId, b.methodId);
     if (cur.construction || cur.seats) continue;
-    let best: MethodDef | null = null, bestV = baseValue(cur, c);
+    let best: MethodDef | null = null, bestV = baseValue(cur, b.wages, c.state);
     for (const m of availableMethods(c, b.typeId)) {
       if (m.id === cur.id) continue;
-      const v = baseValue(m, c);
+      const v = baseValue(m, b.wages, c.state);
       if (v > bestV * 1.05) { best = m; bestV = v; }
     }
     if (best) for (const g of GOOD_IDS) {
@@ -87,34 +87,31 @@ export function marketOutlook(w: World): Outlook {
   };
 }
 
-/** 기본가 기준 하루 이윤 (방식끼리 비교용) */
-function baseValue(m: MethodDef, c: Company): number {
+/** 기본가 기준 하루 이윤 (방식끼리 비교용, 그 건물 임금) */
+function baseValue(m: MethodDef, wages: Record<Skill, number>, stateOwned: boolean): number {
   let v = 0;
   for (const g of GOOD_IDS) v += ((m.outputs[g] ?? 0) - (m.inputs[g] ?? 0)) * GOODS[g].basePrice;
-  return v - wageCostOf(m, c.wages, c.state);
+  return v - wageCostOf(m, wages, stateOwned);
 }
 
 export interface Valuation { revenue: number; inputCost: number; wageCost: number; profit: number; utilization: number }
 
-/**
- * 새로 지을지 판단할 때 쓰는 장기 임금: 민간은 지금 임금과 기본 임금 × TUNE.investWage 중 큰 값.
- * 왕실 임금은 정책(국영 임금 수준)이 정하므로 지금 임금 그대로 본다
- */
-function longRunWages(c: Company): Record<Skill, number> {
-  if (c.state) return c.wages;
+/** 장기 임금: 주어진 임금과 기본 임금 × TUNE.investWage 중 큰 값 (지금 임금이 아주 낮아도 오래 그렇다고 보지 않는다) */
+function longRunWages(wages: Record<Skill, number>): Record<Skill, number> {
   const out = {} as Record<Skill, number>;
-  for (const s of SKILLS) out[s] = Math.max(c.wages[s], SKILL_DEFS[s].baseWage * TUNE.investWage);
+  for (const s of SKILLS) out[s] = Math.max(wages[s], SKILL_DEFS[s].baseWage * TUNE.investWage);
   return out;
 }
 
 /**
  * 한 지역에 이 방식으로 levels 개를 새로 돌릴 때의 장기 하루 손익 (가장 이익이 나는 가동률로).
+ * wages: 있는 건물이면 그 건물 임금, 아직 없는 건물이면 그 지역 임금 (regionWages). 장기 임금(longRunWages)으로 본다.
  * existing: 이미 돌고 있는 레벨의 손익 (그 산출과 투입은 이미 전망에 들어 있으므로 더하지 않는다). 짓기와 철거를 같은 계산으로 비교한다.
  * 산출물은 전량 팔린다고 본다 (남는 공급은 가격으로 나타난다). 값은 들어간 뒤의 장기 가격과 현지 가격의 평균이고,
  * 지역 밖으로 나가는 몫은 운송비를 뺀다. 투입재도 같은 규칙: 사들인 뒤의 장기 가격(잠재 수요 제외)과 현지 가격의 평균.
  */
-export function valueMethod(w: World, o: Outlook, r: Region, c: Company, typeId: string, m: MethodDef, levels = 1, existing = false): Valuation {
-  const fixed = valueFixed(w, r, c, typeId, m);
+export function valueMethod(w: World, o: Outlook, r: Region, c: Company, typeId: string, m: MethodDef, wages: Record<Skill, number>, levels = 1, existing = false): Valuation {
+  const fixed = valueFixed(w, r, c, typeId, m, wages);
   let best: Valuation | null = null;
   for (const u of [1, 0.75, 0.5, 0.25]) {
     const v = valueAt(o, r, c, m, levels * u, existing, fixed);
@@ -143,7 +140,7 @@ function goodsOf(m: MethodDef): GoodId[] {
   return gs;
 }
 
-function valueFixed(w: World, r: Region, c: Company, typeId: string, m: MethodDef): ValueFixed {
+function valueFixed(w: World, r: Region, c: Company, typeId: string, m: MethodDef, wages: Record<Skill, number>): ValueFixed {
   const perk = 1 + regionPerk(r.id, typeId);
   const ship = shippingRate(w, r.id);
   let kingdom: Kingdom | undefined, cap = 0;
@@ -157,8 +154,8 @@ function valueFixed(w: World, r: Region, c: Company, typeId: string, m: MethodDe
     }
     if (kingdom) cap = (kingdom.taxCapacity ?? 0) + pending * TUNE.adminScale;
   }
-  // 새로 지을지 판단할 때는 장기 임금으로 본다 (longRunWages)
-  const wage = wageCostOf(m, longRunWages(c), c.state);
+  // 장기 임금으로 본다 (longRunWages)
+  const wage = wageCostOf(m, longRunWages(wages), c.state);
   return { perk, ship, kingdom, cap, wage, goods: goodsOf(m) };
 }
 
@@ -206,9 +203,9 @@ export function techValue(w: World, o: Outlook, c: Company, techId: string): num
       for (const b of w.buildings) {
         if (b.companyId !== c.id || b.typeId !== t.id) continue;
         const r = regionById(w, b.regionId);
-        value += Math.max(0, valueMethod(w, o, r, c, t.id, m, b.level).profit - valueMethod(w, o, r, c, t.id, getMethod(b.typeId, b.methodId), b.level).profit);
+        value += Math.max(0, valueMethod(w, o, r, c, t.id, m, b.wages, b.level).profit - valueMethod(w, o, r, c, t.id, getMethod(b.typeId, b.methodId), b.wages, b.level).profit);
       }
-      value += Math.max(0, valueMethod(w, o, home, c, t.id, m, 1).profit);
+      value += Math.max(0, valueMethod(w, o, home, c, t.id, m, regionWages(w, home.id), 1).profit);
     }
   }
   return value;
@@ -216,16 +213,17 @@ export function techValue(w: World, o: Outlook, c: Company, techId: string): num
 
 /**
  * 화면의 건설 후보 미리보기: AI가 짓기 전에 보는 것과 같은 계산(valueMethod)을 1레벨 기준으로 돌려준다.
- * wages 는 보는 회사의 임금이다. outputPriceChange 는 들어간 뒤 첫 산출물의 장기 가격 변화율이다
+ * ownerId 는 지을 회사다 (없으면 그 지역 왕국 왕실). 임금은 AI와 같이 그 지역 임금(새 건물의 시작 임금)으로 본다.
+ * outputPriceChange 는 들어간 뒤 첫 산출물의 장기 가격 변화율이다
  */
 export function estimateAfterEntry(
-  w: World, regionId: number, typeId: string, methodId: string, wages: Record<Skill, number>, levels = 1,
+  w: World, regionId: number, typeId: string, methodId: string, ownerId: number, levels = 1,
 ): Valuation & { margin: number; outputPriceChange: number } {
   const r = regionById(w, regionId);
-  const owner = w.companies.find((c) => c.wages === wages) ?? w.companies.find((c) => c.state && c.kingdomId === r.kingdomId)!;
+  const owner = companyById(w, ownerId) ?? w.companies.find((c) => c.state && c.kingdomId === r.kingdomId)!;
   const m = getMethod(typeId, methodId);
   const o = marketOutlook(w);
-  const v = valueMethod(w, o, r, { ...owner, wages }, typeId, m, levels);
+  const v = valueMethod(w, o, r, owner, typeId, m, regionWages(w, regionId), levels);
   const g = GOOD_IDS.find((x) => (m.outputs[x] ?? 0) > 0);
   const before = g ? o.price(g, 0, 0, true) : 0;
   const after = g ? o.price(g, (m.outputs[g] ?? 0) * levels, 0, true) : 0;

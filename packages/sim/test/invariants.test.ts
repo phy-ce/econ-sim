@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   BUILDING_BY_ID, DEPOSITS, GOOD_IDS, GOODS, LAND_TYPES, REGIONS, SKILLS, TECHS, TECH_BY_ID, WEALTH_MAX, WORKFORCE_RATIO,
-  applyCommand, colonyPopulation, createWorld, depositFree, landFree, moneyIdentity, playerCompany, regionById, splitKingdoms, step,
+  applyCommand, colonyPopulation, createWorld, depositFree, hasOwnCash, landFree, migrateWorld, moneyIdentity, playerCompany, regionById, splitKingdoms, step,
 } from '../src/index';
 import type { World } from '../src/index';
 
@@ -38,6 +38,11 @@ describe('경제 불변식', () => {
         expect(Number.isFinite(p.size)).toBe(true);
       }
       for (const c of w.companies) expect(c.cash).toBeGreaterThanOrEqual(-1e-6);
+      // 건물 현금은 빌리지 않으므로 마이너스가 되지 않고, 소수 2자리다
+      for (const b of w.buildings) {
+        expect(b.cash).toBeGreaterThanOrEqual(-1e-6);
+        expect(Math.abs(b.cash * 100 - Math.round(b.cash * 100))).toBeLessThan(1e-6);
+      }
       expect(w.bank.cash).toBeGreaterThanOrEqual(-1e-6);
       expect(w.traders.cash).toBeGreaterThanOrEqual(-1e-6);
     }
@@ -66,6 +71,76 @@ describe('경제 불변식', () => {
     const restored: World = JSON.parse(JSON.stringify(b));
     run(restored, 100);
     expect(JSON.stringify(restored)).toEqual(JSON.stringify(a));
+  });
+});
+
+describe('건물 현금·보조금', () => {
+  it('화폐 총량에 건물 현금이 들어간다', () => {
+    const w = createWorld(4, { withPlayer: false });
+    run(w, 60);
+    const b = w.buildings.find((x) => x.cash > 0)!;
+    expect(b).toBeDefined();
+    const before = moneyIdentity(w);
+    b.cash += 1000;
+    expect(moneyIdentity(w) - before).toBeCloseTo(1000, 6);
+  });
+
+  it('보조금은 그 주 건물 수지 적자를 정확히 메우고, 국고가 낸 만큼이 건물이 받은 만큼이다', () => {
+    const w = createWorld(1, { withPlayer: false });
+    run(w, 35);
+    // 적자를 만들려고 임금을 크게 올린 현금 건물 하나와, 그대로 둔 건물 하나를 보조한다
+    const own = w.buildings.filter((b) => hasOwnCash(b) && b.level > 0);
+    const loser = own[0], other = own[1];
+    for (const s of SKILLS) loser.wages[s] *= 3;
+    const crownOf = (b: typeof loser) => w.kingdoms.find((k) => k.id === regionById(w, b.regionId).kingdomId)!.governmentId;
+    expect(applyCommand(w, crownOf(loser), { type: 'setSubsidy', buildingId: loser.id, on: true })).toBeNull();
+    expect(applyCommand(w, crownOf(other), { type: 'setSubsidy', buildingId: other.id, on: true })).toBeNull();
+    // 다른 왕국 왕실은 못 켠다
+    const foreign = w.kingdoms.find((k) => k.id !== regionById(w, loser.regionId).kingdomId)!.governmentId;
+    expect(applyCommand(w, foreign, { type: 'setSubsidy', buildingId: loser.id, on: true })).not.toBeNull();
+    // AI가 보조금을 끄지 않게 AI를 멈추고, 주가 두 번 넘어가게 돌린다
+    w.config.ai = false;
+    while (w.tick % 7 !== 0) step(w);
+    run(w, 14);
+    for (const b of [loser, other]) {
+      const wk = b.lastWeek;
+      const bal = wk.revenue - wk.wages - wk.inputs;
+      expect(wk.subsidy).toBeGreaterThanOrEqual(0);
+      if (bal < 0) expect(Math.abs(bal + wk.subsidy)).toBeLessThan(0.02);
+      else expect(wk.subsidy).toBeLessThan(0.02);
+    }
+    expect(loser.lastWeek.subsidy).toBeGreaterThan(0);
+    // 국고가 지난주 낸 보조금 = 그 왕국 건물들이 지난주 받은 보조금
+    for (const k of w.kingdoms) {
+      const got = w.buildings.filter((b) => regionById(w, b.regionId).kingdomId === k.id).reduce((a, b) => a + b.lastWeek.subsidy, 0);
+      expect(Math.abs((k.lastBudget?.subsidies ?? 0) - got)).toBeLessThan(0.05);
+    }
+  });
+});
+
+describe('저장 변환', () => {
+  it('4판 저장을 5판으로 바꾸고 돈이 보존된다', () => {
+    const w = createWorld(6);
+    run(w, 40);
+    // 4판 모양으로 되돌린다: 건물 현금을 주인 회사 현금으로 옮기고 새 필드를 지운다
+    const old = JSON.parse(JSON.stringify(w)) as Record<string, any>;
+    for (const b of old.buildings) {
+      const c = old.companies.find((x: any) => x.id === b.companyId);
+      c.cash += b.cash;
+      delete b.cash; delete b.wages; delete b.week; delete b.lastWeek; delete b.lastEmployed; delete b.subsidized;
+    }
+    for (const c of old.companies) { c.wageOffset = null; c.weekStartCash = c.cash; c.revenueEma = 0; delete c.ledger.subsidies; delete c.lastLedger.subsidies; }
+    for (const k of old.kingdoms) { k.budget.wages = 3; k.wageIndex = 0.8; }
+    old.version = 4;
+    const m = moneyIdentity(w);
+    const mig = migrateWorld(old)!;
+    expect(mig.version).toBe(5);
+    expect(Math.abs(moneyIdentity(mig) - m) / m).toBeLessThan(1e-9);
+    for (const b of mig.buildings) { expect(b.cash).toBe(0); expect(b.wages.unskilled).toBeGreaterThan(0); }
+    expect(mig.kingdoms[0].budget).toEqual({ tax: w.kingdoms[0].budget.tax, research: w.kingdoms[0].budget.research });
+    run(mig, 30);
+    expect(Math.abs(moneyIdentity(mig) - m) / m).toBeLessThan(1e-9);
+    expect(migrateWorld({ version: 3 })).toBeNull();
   });
 });
 

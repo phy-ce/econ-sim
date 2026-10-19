@@ -11,8 +11,15 @@ for t, v in g.items():
     for k in keys:
         cells.append('/'.join(f"{sum(r[y][k] for r in v) / len(v):.2f}".rstrip('0').rstrip('.') for y in ('y5', 'y10', 'y20')))
     print(t + ' | ' + ' | '.join(cells))
+# 임금·건물 현금 (있을 때만): 노동자·기술자 평균 임금, 건물 현금 합(M), 민간 투자 자금(M), 주간 보조금(k), 적자 건물 레벨
+wk = ['wUnsk', 'wSk', 'bcash', 'pcash', 'subWk', 'lossLv']
+if any('wUnsk' in r.get('y5', {}) for v in g.values() for r in v):
+    print()
+    print('tune | ' + ' | '.join(f'{k} y5/y10/y20' for k in wk))
+    for t, v in g.items():
+        print(t + ' | ' + ' | '.join('/'.join(f"{sum(r[y].get(k, 0) for r in v) / len(v):.2f}".rstrip('0').rstrip('.') for y in ('y5', 'y10', 'y20')) for k in wk))
 # 왕실 정책 요약 (sweep.ts 의 pol, 시드 평균)
-pk = ['t5', 't1', 'run5', 'run1', 'chg', 'flip', 'wchg', 'debt', 'hoard']
+pk = ['t5', 't1', 'run5', 'run1', 'chg', 'flip', 'sub', 'debt', 'hoard']
 if any('pol' in r for v in g.values() for r in v):
     print()
     print('tune | ' + ' | '.join(pk))

@@ -1,5 +1,5 @@
 import { BUILDING_TYPES, TICKS_PER_YEAR } from '../src/data';
-import { availableMethods, canBuildType, companyById, constructionEstimate, createWorld, roomFor, step } from '../src/index';
+import { availableMethods, canBuildType, companyById, constructionEstimate, createWorld, regionWages, roomFor, step } from '../src/index';
 import { marketOutlook, valueMethod } from '../src/outlook';
 import { laborAvailability } from '../src/ai';
 const w = createWorld(1, { withPlayer: false });
@@ -12,7 +12,7 @@ for (const id of [100, 3]) {
     if (t.id === 'builder' || !canBuildType(c, t) || roomFor(w, r.id, t.id) < 1) continue;
     const cost = constructionEstimate(w, c, t.id).cost;
     for (const m of availableMethods(c, t.id)) {
-      const e = valueMethod(w, o, r, c, t.id, m, 1);
+      const e = valueMethod(w, o, r, c, t.id, m, regionWages(w, r.id), 1);
       console.log(' ', r.name, t.id, 'cost', (cost / 1e6).toFixed(2) + 'M', 'profit/d', e.profit.toFixed(0), 'roi', ((e.profit * TICKS_PER_YEAR) / cost).toFixed(2), 'labor', laborAvailability(w, r, m, 1, c.state).toFixed(2));
     }
   }

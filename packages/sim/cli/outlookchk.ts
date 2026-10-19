@@ -3,6 +3,7 @@ import { createWorld, step } from '../src/index';
 import { GOODS } from '../src/data';
 import { marketOutlook, valueMethod } from '../src/outlook';
 import { getMethod } from '../src/data';
+import { regionWages } from '../src/economy';
 const w = createWorld(Number(process.argv[2] ?? 1), { withPlayer: false });
 for (let d = 1; d <= Number(process.argv[3] ?? 15) * 360; d++) {
   step(w);
@@ -14,6 +15,6 @@ for (let d = 1; d <= Number(process.argv[3] ?? 15) * 360; d++) {
   }
   const c = w.companies.find((x) => x.state)!;
   const r = w.regions.find((x) => x.kingdomId === c.kingdomId)!;
-  const v = valueMethod(w, o, r, c, 'farm', getMethod('farm', 'farm_basic'), 5);
+  const v = valueMethod(w, o, r, c, 'farm', getMethod('farm', 'farm_basic'), regionWages(w, r.id), 5);
   console.log(`  farm 5lv valuation`, JSON.stringify(v));
 }

@@ -363,7 +363,7 @@ sim이 아래 제도를 없앴다. 화면이 계속 컴파일되도록 `packages
   - 이름: 세금 수준 / Tax level, 국영 임금 / Government wages, 연구비 / Research
   - 단계 이름: 매우 낮음 / 낮음 / 보통 / 높음 / 매우 높음 (Very low / Low / Normal / High / Very high)
   - 세금 수준: 지금 세법의 모든 세율 × 0.6 / 0.8 / 1 / 1.2 / 1.4 (`TUNE.taxLevels`)
-  - 국영 임금: 기본 임금 × 임금 지수(`Kingdom.wageIndex`) × 0.7 / 0.85 / 1 / 1.15 / 1.3 (`TUNE.govWageLevels`). 바꾸면 왕실 임금(`me.wages`)이 바로 바뀐다.
+  - (2-24에서 없앰) 국영 임금 단계. `budget.wages`·`govWageLevels`·`wageIndex`는 없다.
     - 임금 지수 = 그 왕국 민간 노동자 평균 임금 ÷ 노동자 기본 임금 10 (빅토리아3의 '보통 임금'). 직종별 국영 임금은 이 지수 × 기본 임금(노동자 10, 기술자 20, 전문가 40 …)이다.
   - 연구비: 주간 경제 규모(`Kingdom.output`) × `TUNE.researchShare` × 0.5 / 0.75 / 1 / 1.5 / 2 (`TUNE.researchLevels`). `research.budget`은 지난주 연구비의 하루 평균 그대로다.
 - `FinancePanel.tsx`에서 고칠 것
@@ -386,6 +386,43 @@ sim이 아래 제도를 없앴다. 화면이 계속 컴파일되도록 `packages
   - `ResourceInspector.tsx`의 "교육 서비스" 표시는 `method.seats` 기준으로 바꿔 두었다.
 - 건축사무소: `Company.buildUsed`(왕실) = 사무소 포인트 중 공사에 실제로 쓰인 하루 양의 이동평균. AI는 이것으로 사무소를 늘리고 줄인다. 건설 탭에서 하루 능력(`constructionEstimate(...).pointsPerDay`) 옆에 막대로 보여 주면 좋다.
 - 지표(`KingdomMetrics`): `education`·`welfare`가 없어지고 `feesWeek`, `govSpendWeek`(정부 건물 임금 + 원료), `interest`, `policy`(세 단계), `wageIndex`, `debt`가 생겼다. 화면은 아직 이 지표를 쓰지 않는다.
+
+### 2-24. 건물마다 임금·현금·보조금 (민간 상회는 묶어 보이는 이름일 뿐)
+임금은 이제 회사가 아니라 건물마다 있고, 누구도 손으로 정하지 않는다 (규칙: `docs/DESIGN.md` 7.3, 7.4, 9.2, 9.3). 화면에는 라벨·숫자·막대만 쓴다.
+- **저장 호환 (가장 먼저):** 저장 형식이 바뀌었다 (`World.version` 5).
+  - `sim.worker.ts`의 `'load'`에서 `world = migrateWorld(msg.world) ?? createWorld(Date.now() % 100000)`로 바꾼다. `migrateWorld`는 index에서 export한다. 4판 저장을 5판으로 바꾸고(돈 보존), 그보다 옛 저장이면 `null`이다.
+  - 변환을 넣으면 `useGame.ts`의 `SAVE_KEY`는 `'estera-save-v7'` 그대로 둬도 된다. 변환을 넣기 전에는 `'estera-save-v8'`로 올린다 (옛 저장을 그대로 넣으면 화면이 멈춘다).
+- **건물 새 필드** (`Building`):
+  - `cash`: 건물 현금 (소수 2자리). 자동 건물(소작지·저택·금융가)과 왕실 정부 건물(행정청·건축사무소·학교)은 늘 0이다.
+  - `wages`: 직종별 하루 임금 (`Record<Skill, number>`). 배당 자리(민간 건물의 귀족·자본가)는 쓰지 않는다 (`paysDividend`).
+  - `subsidized?`: 보조금을 받는 중이면 `true`.
+  - `week`, `lastWeek`: 이번 주·지난주 `{ revenue, wages, inputs, subsidy }`. 수지 = revenue − wages − inputs (보조금 전).
+  - 준비금 상한: `reserveCap(world, b)` (index에서 export). 이보다 많은 현금은 매주 주인에게 배당된다.
+  - 자기 현금이 있는 건물인지: `hasOwnCash(b)`, 정부 자금 건물인지: `isGovFunded(b)` (economy, index에서 export).
+- **건물 행 (`CompanyPanel.tsx` 건물 목록, 다른 회사 보기 포함)에 넣을 것:**
+  - 직종별 임금 숫자 (`b.wages[s]`), 그 옆에 왕국 평균 대비 ± (`marketWage(world, s)`와 비교).
+  - 현금 숫자와 준비금 막대 (`b.cash / reserveCap(world, b)`).
+  - 지난주 수지 막대 (매출 대 임금 + 원료), 받은 보조금 숫자 (`b.lastWeek.subsidy`).
+  - 보조금 표시(아이콘)와 켜기·끄기 토글. 미지급(`b.unpaid`)은 지금처럼.
+  - 방식 선택의 손익 추정은 `estimateMethod(world, b.regionId, b.typeId, m.id, b.wages, !!b.stateOwned)`로 바꾼다 (지금은 회사 평균 `owner.wages`).
+- **보조금 명령:** `{ type: 'setSubsidy', buildingId, on: boolean }`.
+  - 플레이어 왕실이 자기 왕국 안의 건물에 쓴다. 민간 건물에도 쓸 수 있다 (그래서 민간 상회 보기에서도 토글이 보여야 한다).
+  - 자동 건물, 왕실 정부 건물, 다른 왕국 건물은 오류를 돌려준다.
+  - 이름: 보조금 / Subsidy.
+- **재정 탭 (`FinancePanel.tsx`):**
+  - 국고가 낸 보조금은 `Kingdom.lastBudget.subsidies`, 왕실 생산 건물이 국고로 보낸 배당은 `Kingdom.lastBudget.dividends`다. `lastBudget` = `{ revenue, fees, dividends, wages, goods, research, interest, subsidies }`.
+  - 회사 장부 키 `subsidies`가 생겼다 (`LEDGER_KEYS`). 회사 장부에서는 그 회사 건물이 받은 보조금(수입)이다. `ledgerLabels.subsidies`(보조금 / Subsidies)는 넣어 두었다.
+  - 정책 단계는 둘이다: `BUDGET_ITEMS` = `['tax', 'research']`, `Kingdom.budget` = `{ tax, research }`. 국영 임금 단계(`budget.wages`, `TUNE.govWageLevels`)와 `Kingdom.wageIndex`는 없어졌다. 2-23의 국영 임금 손잡이는 만들지 않는다.
+- **임금 섹션 (`CompanyPanel.tsx` `Wages`, 재정 탭 `wages` 섹션):** 임금을 정하는 명령이 없다 (`setWage`·`setWageOffset`·`Company.wageOffset` 삭제, 보내면 "알 수 없는 명령"). 컴파일되도록 슬라이더를 `readOnly disabled`로만 바꿔 두었다.
+  - 슬라이더를 지우고 직종별 평균 임금(`Company.wages`, 그 회사 건물 임금의 고용 가중 평균)과 시장 임금(`marketWage`), 실업률 막대만 읽기 전용으로 보인다.
+- **회사 보기 (`CompanyView`, `BottomPanel.tsx` 순위):**
+  - 민간 상회의 `cash`는 이제 "투자 자금" / "Investment fund"다 (새 공사와 새 건물 시작 현금에만 쓰는 돈). 왕실의 `cash`는 그대로 국고.
+  - 민간은 빌리지 않는다: `debt`는 늘 0, `creditLimit`은 0이다. 민간 상회의 대출 막대를 숨긴다.
+  - 회사 합계로 "건물 현금 합"(그 회사 건물 `cash`의 합)을 숫자로 보여 주면 좋다.
+  - `lastWeekProfit`은 화면용 묶음 손익(건물 수지 합 + 받은 보조금 + 회사 단위 수입·지출)이다. 판단에는 쓰이지 않는다.
+- **건설 후보 미리보기:** `estimateAfterEntry(world, regionId, typeId, methodId, ownerId, levels?)`. 다섯째 인자가 임금표에서 지을 회사 id로 바뀌었다 (임금은 그 지역 임금으로 본다). 두 곳(`CompanyPanel.tsx` 495, 526행)은 `me.id`로 고쳐 두었다.
+- **지표 (`KingdomMetrics`):** 새 필드 `subsidyWeek`, `dividendWeek`, `buildingCash`, `subsidizedLevels`. `policy`는 `{ tax, research }`. `wageIndex`는 왕국 노동자 평균 임금 ÷ 10이다. `wageUnskilled`·`wageSkilled`는 왕실 건물 평균 임금이다.
+- **알림 문구:** 미지급 알림은 "건물 현금이 모자라 임금을 다 주지 못해 노동자가 떠나고 있습니다."로, 인력 부족 알림은 숫자만 남겼다 (임금을 올리라는 안내를 뺐다).
 
 ---
 

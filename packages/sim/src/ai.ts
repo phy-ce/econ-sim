@@ -1,19 +1,20 @@
-import { BUILDING_BY_ID, BUILDING_TYPES, GOOD_IDS, GOODS, SKILL_DEFS, TECH_BY_ID, TICKS_PER_WEEK, TICKS_PER_YEAR, TUNE, getMethod, regionPerk } from './data';
+import { BUILDING_BY_ID, BUILDING_TYPES, GOOD_IDS, GOODS, TECH_BY_ID, TICKS_PER_WEEK, TICKS_PER_YEAR, TUNE, getMethod, regionPerk } from './data';
 import { withEstimateCache, regionPopulation,
-  availableMethods, builderOf, canBuildType, paysDividend, companyById, constructionEstimate, creditLimit, depositFree, efficiency, estimateMethod, hasBuilder, isGovernment, regionById, researchableTechs, roomFor, slots,
+  availableMethods, builderOf, canBuildType, paysDividend, companyById, constructionEstimate, depositFree, efficiency, estimateMethod, hasBuilder, isGovFunded, isGovernment, regionById, regionWages, researchableTechs, roomFor,
 } from './economy';
 import { MAX_CONCURRENT_CONSTRUCTIONS, MAX_LEVELS_PER_PROJECT, applyCommand } from './commands';
-import { committedCost, lawRevenue, reserveOf } from './finance';
-import { subsistenceWage } from './labor';
+import { committedCost, lawRevenue } from './finance';
 import { marketOutlook, techValue, valueMethod } from './outlook';
 import type { Outlook } from './outlook';
-import { kingdomById } from './kingdoms';
+import { kingdomById, kingdomOf } from './kingdoms';
 import { workforce } from './pops';
 import { rand, round2 } from './rng';
 import { BUDGET_STEPS, SKILLS } from './types';
 import type { BudgetItem, Building, Company, Kingdom, MethodDef, Region, Skill, World } from './types';
 
-// AI: 국영과 민간이 같은 판단을 쓴다. 다른 점은 자금원(국고 / 투자 풀)과 자기 왕국 땅에만 짓는다는 것뿐이다.
+// AI: 국영과 민간이 같은 판단을 쓴다. 다른 점은 자금원(국고 / 민간 투자 자금)과 자기 왕국 땅에만 짓는다는 것뿐이다.
+// 민간 상회는 한 덩어리로 예산을 짜지 않는다: 건물마다 자기 현금과 임금으로 돌고 (finance.ts payBuildings, labor.ts adjustWages),
+// 민간 상회 현금은 투자 풀에서 들어온 투자 자금으로 새 공사에만 쓴다.
 
 /** 건설 판단 기준: 연간 이윤 / 공사비 (5년 안에 회수) */
 const MIN_ROI = 0.2;
@@ -31,8 +32,8 @@ export function runAi(w: World) {
   const outlook = marketOutlook(w);
   for (const c of w.companies) {
     if (c.isPlayer) continue;
-    // 왕실은 세법과 정책 단계를, 민간은 임금을 정한다 (왕실 임금은 국영 임금 수준이 정한다)
-    if (c.state) { chooseTaxLaw(w, c); adjustBudget(w, c); } else adjustWages(w, c);
+    // 왕실은 세법·정책 단계·보조금을 정한다. 임금은 AI가 정하지 않는다 (건물마다 labor.ts adjustWages)
+    if (c.state) { chooseTaxLaw(w, c); adjustBudget(w, c); adjustSubsidies(w, c); }
     manageBuildings(w, c);
     if (c.state) planResearch(w, c, outlook);
     withEstimateCache(() => planConstruction(w, c, outlook));
@@ -79,49 +80,22 @@ export function laborAvailability(w: World, r: Region, m: MethodDef, levels: num
 }
 
 /**
- * 민간 임금 (데이터 기준): 바닥과 천장 사이에서, 지난주 실제로 사람이 찼는지를 보고 움직인다.
- * - 바닥: 그 자리로 옮겨 올 사람들의 지금 소득 × TUNE.wageOutside (노동자 ← 소작 수확 가치, 기술자 ← 노동자 임금, 전문가 ← 기술자 임금)
- * - 천장: 회사 생산 건물이 사람을 다 채웠을 때의 부가가치(지금 가격의 매출 − 원료) × TUNE.wageCeil 를 기본 임금 비율대로 나눈 값.
- *   실제 부가가치로 재면 사람이 없을 때 천장이 0이 되어 임금을 못 올리고 사람도 못 뽑는다. 산출이 없는 정부 건물은 천장 계산에서 뺀다
- * - 빈자리가 5% 넘는데 지난주 고용이 빈자리의 10%도 못 늘었으면 +3%, 빈자리가 2% 미만이면 −1%, 적자면 −2%
+ * 보조금 (AI 왕실, 매주): 왕실은 자기 왕국 건물 중 지난주 적자이고 산출물이 귀한(지역 가격 > 기본가) 건물을, 국고가 넉넉할 때
+ * (빚이 없고 국정 지출 TUNE.treasuryLowWeeks 주치 이상) 보조한다. 흑자로 돌아서거나, 산출물이 흔해지거나, 국고가 그 밑이면 끊는다.
+ * 민간 건물도 같다. 정부 자금 건물은 늘 국고가 내므로 대상이 아니다
  */
-function adjustWages(w: World, c: Company) {
-  const mine = w.buildings.filter((b) => b.companyId === c.id && !BUILDING_BY_ID[b.typeId].auto);
-  let va = 0, baseBill = 0;
-  for (const b of mine) {
+function adjustSubsidies(w: World, c: Company) {
+  if (!TUNE.aiSubsidy) return;
+  const k = kingdomById(w, c.kingdomId);
+  const ok = c.debt <= 0 && treasuryWeeks(c, k) >= TUNE.treasuryLowWeeks;
+  for (const b of w.buildings) {
+    if (BUILDING_BY_ID[b.typeId].auto || isGovFunded(b) || kingdomOf(w, b.regionId) !== k.id) continue;
     const m = getMethod(b.typeId, b.methodId);
-    if (!b.active || !Object.keys(m.outputs).length) continue;
-    const e = estimateMethod(w, b.regionId, b.typeId, b.methodId, c.wages, c.state);
-    va += (e.revenue - e.inputCost) * b.level * b.utilization;
-    for (const s of SKILLS) if (!paysDividend(c.state, s)) baseBill += slots(b, s) * SKILL_DEFS[s].baseWage;
-  }
-  const ceilMult = baseBill > 0 ? Math.max(0, va) * TUNE.wageCeil / baseBill : Infinity;
-  const last = c.lastEmployed ?? {};
-  c.lastEmployed = {};
-  for (const s of SKILLS) {
-    if (paysDividend(c.state, s)) continue;
-    let cap = 0, emp = 0, outside = 0, people = 0;
-    for (const b of mine) {
-      const n = slots(b, s);
-      if (n <= 0) continue;
-      cap += n; emp += b.employed[s];
-      const r = regionById(w, b.regionId);
-      outside += (s === 'unskilled' ? subsistenceWage(w, r) : s === 'skilled' ? c.wages.unskilled : c.wages.skilled) * n;
-      people += n;
-    }
-    c.lastEmployed[s] = emp;
-    if (cap <= 0) continue;
-    const floor = (people > 0 ? outside / people : 0) * TUNE.wageOutside;
-    const ceiling = SKILL_DEFS[s].baseWage * ceilMult;
-    const vacancy = cap - emp, grew = emp - (last[s] ?? emp);
-    let wage = c.wages[s];
-    // runAi 는 주간 장부를 넘기기 전에 돈다: weekProfit 이 막 끝난 주다 (lastWeekProfit 은 그 전 주)
-    if (TUNE.wageLossCut && c.weekProfit < 0) wage *= 0.98;
-    else if (vacancy > cap * 0.05 && grew < vacancy * 0.1) wage *= 1.03;
-    else if (vacancy < cap * 0.02) wage *= 0.99;
-    wage = Math.max(floor, Math.min(ceiling, wage));
-    wage = Math.min(SKILL_DEFS[s].baseWage * 3, Math.max(SKILL_DEFS[s].baseWage * 0.1, wage));
-    if (Math.abs(wage - c.wages[s]) > 1e-9) applyCommand(w, c.id, { type: 'setWage', skill: s, wage });
+    const g = GOOD_IDS.find((x) => (m.outputs[x] ?? 0) > 0);
+    const scarce = !!g && regionById(w, b.regionId).market[g].price > GOODS[g].basePrice;
+    const wk = b.lastWeek;
+    const want = ok && b.active && scarce && wk.revenue - wk.wages - wk.inputs < 0;
+    if (want !== !!b.subsidized) applyCommand(w, c.id, { type: 'setSubsidy', buildingId: b.id, on: want });
   }
 }
 
@@ -138,12 +112,11 @@ function treasuryTight(c: Company, k: Kingdom): boolean {
 
 /**
  * 정책 단계 (AI 왕국, 4주마다 한 칸). 기준은 국고가 주간 국정 지출의 몇 주치인가와, 지난 점검보다 늘었는가다.
- * 단계는 한 줄 사다리로 움직인다 (후함 → 긴축): 연구비 5·4 → 세금 1~5 → 연구비 2·1 → 연구 멈춤 → 국영 임금 2·1.
+ * 단계는 한 줄 사다리로 움직인다 (후함 → 긴축): 연구비 5·4 → 세금 1~5 → 연구비 2·1 → 연구 멈춤.
  * - 조임 (빚이 있거나 TUNE.treasuryLowWeeks 주치 미만이고, 지난 점검보다 줄었다): 긴축 쪽으로 한 칸.
  *   조이는 동안 새 연구를 고르지 않는다 (planResearch). 세금 5단계에서도 줄면 구조적 적자다: 돈을 벌지 않는 학교를 줄인다
- * - 회복 (빚 없고 low 주치 이상, 줄지 않았다): 보통(3) 아래로 내린 국영 임금, 연구비를 한 칸씩 되돌린다
- * - 풂 (TUNE.treasuryHighWeeks 주치 초과, 줄지 않았다): 세금을 내리고, 세금이 1단계면 연구비를 보통 위로 올린다.
- * AI는 국영 임금을 보통 위로 올리지 않는다
+ * - 회복 (빚 없고 low 주치 이상, 줄지 않았다): 보통(3) 아래로 내린 연구비를 한 칸씩 되돌린다
+ * - 풂 (TUNE.treasuryHighWeeks 주치 초과, 줄지 않았다): 세금을 내리고, 세금이 1단계면 연구비를 보통 위로 올린다
  */
 function adjustBudget(w: World, c: Company) {
   const k = w.kingdoms.find((x) => x.governmentId === c.id);
@@ -160,12 +133,10 @@ function adjustBudget(w: World, c: Company) {
       else if (b.tax < BUDGET_STEPS) step = ['tax', b.tax + 1];
       else if (b.research > 1) step = ['research', b.research - 1];
       else if (c.research.current) applyCommand(w, c.id, { type: 'setResearch', techId: null });
-      else if (b.wages > 1) step = ['wages', b.wages - 1];
     }
   } else if (!losing) {
     const rich = treasuryWeeks(c, k) > TUNE.treasuryHighWeeks;
-    if (b.wages < 3) step = ['wages', b.wages + 1];
-    else if (b.research < 3) step = ['research', b.research + 1];
+    if (b.research < 3) step = ['research', b.research + 1];
     else if (rich && b.tax > 1) step = ['tax', b.tax - 1];
     else if (rich && b.research < BUDGET_STEPS) step = ['research', b.research + 1];
   }
@@ -216,7 +187,7 @@ function manageBuildings(w: World, c: Company) {
   for (const b of w.buildings.filter((x) => x.companyId === c.id && !BUILDING_BY_ID[x.typeId].auto)) {
     const usable = availableMethods(c, b.typeId);
     const cur = getMethod(b.typeId, b.methodId);
-    const current = estimateMethod(w, b.regionId, b.typeId, b.methodId, c.wages, c.state);
+    const current = estimateMethod(w, b.regionId, b.typeId, b.methodId, b.wages, c.state);
 
     // 건축사무소: 자재를 구할 수 있는 방식 중 하루 포인트가 가장 많은 것 (가동률은 늘 100%)
     if (cur.construction) {
@@ -229,7 +200,7 @@ function manageBuildings(w: World, c: Company) {
 
     // 학교 (왕실 건물, 가동률은 늘 100%): 일손을 구할 수 있는 방식 중 1인당 인건비가 가장 싼 것
     if (cur.seats) {
-      const perSeat = (m: MethodDef) => estimateMethod(w, b.regionId, b.typeId, m.id, c.wages, c.state).wageCost / m.seats!;
+      const perSeat = (m: MethodDef) => estimateMethod(w, b.regionId, b.typeId, m.id, b.wages, c.state).wageCost / m.seats!;
       const r = regionById(w, b.regionId);
       const ok = usable.filter((m) => m.seats && (m.id === cur.id || laborAvailability(w, r, m, b.level, c.state) >= 0.5));
       const best = ok.reduce((x, m) => (perSeat(m) < perSeat(x) ? m : x), cur);
@@ -244,7 +215,7 @@ function manageBuildings(w: World, c: Company) {
       let best = { m: cur, v: starved ? -Infinity : unitProfit(current.profit, cur) };
       for (const m of usable) {
         if (m.id === cur.id || !inputsAvailable(w, m, b.level)) continue;
-        const v = unitProfit(estimateMethod(w, b.regionId, b.typeId, m.id, c.wages, c.state).profit, m);
+        const v = unitProfit(estimateMethod(w, b.regionId, b.typeId, m.id, b.wages, c.state).profit, m);
         if (v > best.v * 1.05 + 0.01) best = { m, v };
       }
       if (best.m !== cur) applyCommand(w, c.id, { type: 'setMethod', buildingId: b.id, methodId: best.m.id });
@@ -362,7 +333,6 @@ function planConstruction(w: World, c: Company, o: Outlook) {
   for (let started = 0; started < TUNE.startsPerWeek; started++) {
     const own = w.constructions.filter((k) => k.companyId === c.id).length;
     if (own >= MAX_CONCURRENT_CONSTRUCTIONS) break;
-    if (c.debt > creditLimit(w, c) * 0.3) break;
     const free = freeCash(w, c, est.costPerDay);
     if (free <= 0) break;
     const out = { best: null as Pick | null };
@@ -389,11 +359,12 @@ function planConstruction(w: World, c: Company, o: Outlook) {
 
 /**
  * 새 공사에 쓸 수 있는 돈: 현금 − 남길 돈 − 진행 중 공사에 더 들 돈 − 한 달 공사비.
- * 왕실은 국정 지출 TUNE.treasuryHighWeeks 주치를 남긴다 (학교·행정청·생산 건물 모두 그 위의 여윳돈으로만 짓는다)
+ * 왕실은 국정 지출 TUNE.treasuryHighWeeks 주치를 남긴다 (학교·행정청·생산 건물 모두 그 위의 여윳돈으로만 짓는다).
+ * 민간 투자 자금은 남길 돈이 없다 (건물 운영 돈은 건물 현금에 있다)
  */
 function freeCash(w: World, c: Company, costPerDay: number): number {
   const keep = c.state ? TUNE.treasuryHighWeeks * (kingdomById(w, c.kingdomId).expenseEma ?? 0) : 0;
-  return c.cash - Math.max(reserveOf(w, c), keep) - committedCost(w, c) - costPerDay * 30;
+  return c.cash - keep - committedCost(w, c) - costPerDay * 30;
 }
 
 /** 건축사무소가 남기는 하루 포인트: 지금 능력 − 공사에 실제로 쓰인 양(buildUsed) − 이미 철거 대기에 오른 레벨의 몫 */
@@ -418,7 +389,7 @@ function levelValue(w: World, c: Company, o: Outlook, b: Building, pointsPerDay:
     return officeSpare(w, c, pointsPerDay) > perLevel ? -1 : 1;
   }
   const r = regionById(w, b.regionId);
-  const e = valueMethod(w, o, r, c, b.typeId, m, 1, true);
+  const e = valueMethod(w, o, r, c, b.typeId, m, b.wages, 1, true);
   if (m.seats) e.profit += schoolBenefit(w, r, m, 1, true);
   return e.profit;
 }
@@ -482,6 +453,8 @@ export function pickProject(w: World, c: Company, o: Outlook, free: number, allo
   let best: Pick | null = null, least: Pick | null = null;
   const pools = new Map<string, number>();
   for (const r of ownRegions(w, c)) {
+    // 아직 없는 건물은 그 지역 임금으로 따진다 (새 건물의 시작 임금)
+    const wages = regionWages(w, r.id);
     for (const t of BUILDING_TYPES) {
       if (t.id === 'builder' || !canBuildType(c, t)) continue;
       const room = roomFor(w, r.id, t.id);
@@ -495,7 +468,7 @@ export function pickProject(w: World, c: Company, o: Outlook, free: number, allo
         for (const m of availableMethods(c, t.id)) {
           if (existing && existing.methodId !== m.id) continue;
           if (laborAvailability(w, r, m, 1, c.state, pools) < 0.5) continue;
-          const e = valueMethod(w, o, r, c, t.id, m, 1);
+          const e = valueMethod(w, o, r, c, t.id, m, existing?.wages ?? wages, 1);
           if (m.seats) e.profit += schoolBenefit(w, r, m, 1, false);
           const roi = (e.profit * TICKS_PER_YEAR) / perLevel;
           if (e.profit > 0 && roi > MIN_ROI && (!blocked.best || roi > blocked.best.score)) blocked.best = { regionId: r.id, typeId: t.id, methodId: m.id, levels: 1, score: roi };
@@ -507,7 +480,7 @@ export function pickProject(w: World, c: Company, o: Outlook, free: number, allo
         let choice: { levels: number; roi: number } | null = null, top: { levels: number; roi: number } | null = null;
         for (const levels of CHUNKS) {
           if (levels > room || free < perLevel * levels) continue;
-          const e = valueMethod(w, o, r, c, t.id, m, levels);
+          const e = valueMethod(w, o, r, c, t.id, m, existing?.wages ?? wages, levels);
           if (m.seats) e.profit += schoolBenefit(w, r, m, levels, false);
           if (laborAvailability(w, r, m, levels, c.state, pools) < 0.5) continue;
           const roi = (e.profit * TICKS_PER_YEAR) / (perLevel * levels);

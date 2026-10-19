@@ -1,8 +1,8 @@
 // 단계별로 회사 현금 변화와 손익(weekProfit) 변화를 비교해 어긋나는 단계를 찾는다: npx tsx cli/phasecheck.ts [companyName]
 import { createWorld, step } from '../src/index';
 import { TICKS_PER_WEEK } from '../src/data';
-import { chargeInterest, collectIncomeTax, distributeInvestment, doResearch, mintMoney, payDividends, spendBudget, weeklyBanking } from '../src/finance';
-import { laborMarket, payWages } from '../src/labor';
+import { chargeInterest, collectIncomeTax, distributeInvestment, doResearch, mintMoney, payBuildings, spendBudget, weeklyBanking } from '../src/finance';
+import { adjustWages, laborMarket, payWages } from '../src/labor';
 import { clearMarkets, collectOrders, harvest, newBook, resetMarkets, updatePrices } from '../src/market';
 import { advanceConstruction, produce, updateIdleOffices, updateSubsistence } from '../src/production';
 import { runAi } from '../src/ai';
@@ -30,10 +30,11 @@ for (let d = 0; d < TICKS_PER_WEEK; d++) {
   w.tick += 1;
   if (w.tick % TICKS_PER_WEEK === 0) {
     run('mint', () => mintMoney(w));
+    run('dividends', () => payBuildings(w));
     run('budget', () => spendBudget(w));
-    run('dividends', () => { for (const x of w.companies) payDividends(w, x); });
     run('invest', () => distributeInvestment(w));
     run('ai', () => runAi(w as World));
+    run('wagesWeekly', () => adjustWages(w));
     run('banking', () => weeklyBanking(w));
   }
 }

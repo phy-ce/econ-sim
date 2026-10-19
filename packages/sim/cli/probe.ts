@@ -25,4 +25,4 @@ console.log('price×base: ' + GOOD_IDS.map((g) => `${g} ${(w.regions.reduce((a, 
 console.log('pools', w.kingdoms.map((k) => Math.round(k.investmentPool)).join(','), 'fund', Math.round(w.fund), 'bank', Math.round(w.bank.cash / 1000) + 'k', 'traders', Math.round(w.traders.cash / 1000) + 'k');
 const ev = w.events.filter((e) => /파산|압류|은행 관리/.test(e.text));
 console.log('distress events (last 300):', ev.length, ev.slice(-5).map((e) => `t${e.tick} ${e.text.slice(0, 40)}`).join(' / '));
-console.log('policy', w.kingdoms.map((k) => `${k.name} ${k.taxLaw} 세금${k.budget.tax} 임금${k.budget.wages} 연구${k.budget.research} 지수${k.wageIndex ?? '-'}`).join(' | '));
+console.log('policy', w.kingdoms.map((k) => `${k.name} ${k.taxLaw} 세금${k.budget.tax} 연구${k.budget.research} 보조 ${w.buildings.filter((b) => b.subsidized && w.regions.find((r) => r.id === b.regionId)?.kingdomId === k.id).length}건`).join(' | '));

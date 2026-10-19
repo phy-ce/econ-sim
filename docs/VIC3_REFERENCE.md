@@ -65,3 +65,38 @@
 - 소작농은 필요의 5%만 시장에서 산다. 나머지는 "자급 산출" 묶음으로 받고, 이것은 시장과 상호작용하지 않는다 (https://vic3.paradoxwikis.com/Needs).
 - 자급 농장 기본 방식: 레벨당 소작농 5,000명이다.
 - **확인 못 함:** 산출이 돈으로 바뀌는 정확한 공식, 시장가로 매기는지 여부.
+
+## 건물 임금 (https://vic3.paradoxwikis.com/Profession, https://vic3.paradoxwikis.com/Vickypedia, https://vic3.paradoxwikis.com/Defines)
+- 건물마다 기본 임금이 있고 직종 배수를 곱한다. 직종 사이 비율은 고정이다.
+- 올리는 신호는 빈자리다: "Buildings raise their base wage primarily to attract employees when it cannot otherwise fill empty positions."
+- 고용이 임금에 막히면 "it will increase Wages for as long as its Balance remains positive" (Vickypedia, Occupancy).
+- 내리는 신호는 적자다: "If a Building's Balance is negative, it will consider lowering Wages" (Vickypedia, Wage).
+  - "unprofitable and moderately profitable buildings decrease wages to restore profitability" (Profession).
+- 1.1 패치부터 경쟁 중이거나 기대 생활수준 기반 목표보다 낮을 때만 올린다 (https://vic3.paradoxwikis.com/Patch_1.1).
+- 1.13 defines:
+  - MAX_WAGE_STEP_CHANGE 0.1 (주마다 최대 변화)
+  - BUILDING_INITIAL_WAGE_WEEKS 2 (새 건물은 2주 동안 임금 고정)
+  - BUILDING_PREFER_LAYOFFS_TARGET_WEALTH_MULT 0.66 (직원 재산이 목표의 0.66 이하면 임금 삭감 대신 해고)
+  - MINIMUM_WAGE_RATE 10 (100명 묶음당 주간 £, 기술적 하한)
+- 정상 임금(normal wage) = 편입 주 기본 임금의 나라 평균. 정부 자금 건물의 기본 임금이다 (Profession, Vickypedia "Normal Wage").
+- **확인 못 함:** MAX_WAGE_STEP_CHANGE가 비율인지 절대값인지.
+
+## 건물 현금 보유고 (https://vic3.paradoxwikis.com/Treasury, https://vic3.paradoxwikis.com/Building)
+- 최대치는 레벨당 £25k다 (소유 건물 £10k, 교역소 £5k).
+- 흑자 건물은 보유고가 최대치로, 적자 건물은 0으로 간다.
+- 흑자일 때 이익의 25~50%를 쌓고 나머지를 배당한다. "Buildings with full cash reserves pay their entire weekly profit as dividends."
+- 보유고가 최대치의 50%를 넘으면 적자라도 비용을 줄이지 않는다 (BUILDING_HIGH_CASH_RESERVES_THRESHOLD 0.5, Defines).
+- **확인 못 함:** 건물이 빌릴 수 있는지(찾은 자료에 건물 대출은 없다), 보유고 0인 적자 건물이 투입재를 덜 사는지.
+
+## 보조금 (https://vic3.paradoxwikis.com/Vickypedia, https://vic3.paradoxwikis.com/Defines)
+- 보조금 건물이 임금을 못 주거나 투입재 비용이 매출을 넘으면 "the Treasury will cover the difference" (Vickypedia, Subsidies).
+- SUBSIDIES_MIN_GAIN 0: 보조금 건물은 주간 보유고 증가가 적어도 0이 될 만큼 보조금을 받는다 (1.13 defines). 국고가 적자를 딱 메운다는 뜻이다.
+- 보조금은 "can be expensive and does not solve the underlying issue" (Profession).
+- 국고 지출 항목 "Subsidies" (Treasury).
+- 정부 자금 건물(is_government_funded: 정부 건물, 항구)은 비용 전부를 정부가 낸다. 보조금과 따로다 (https://vic3.paradoxwikis.com/Building_modding).
+- **확인 못 함:** AI가 보조금을 고르는 비용 한도.
+
+## 투자 풀과 정부 배당 (https://vic3.paradoxwikis.com/Building, https://paradoxinteractive.com/games/victoria-3/news/dev-diary-71-autonomous-investment-in-1-2)
+- 민간 건설은 단일 주체가 아니다: "anything the Pops themselves are building". 투자하는 pop 직종에 좋은 일자리를 만드는 수익 건물을 고른다 (DD71).
+- 다른 건물이 소유한 레벨의 배당은 소유 건물(장원, 금융가)로 가고, 거기서 pop에게 나눈다 (Building).
+- 국고 수입 "Government Dividends": 정부 소유 건물의 이익 (Treasury).

@@ -1,6 +1,6 @@
 import { BUILDING_BY_ID, GOOD_IDS, GOODS } from './data';
 import { CLASS_DEFS, WORKFORCE_RATIO } from './data';
-import { builderOf, companyById, constructionEstimate, isGovernment, kingdomGdp, slots } from './economy';
+import { builderOf, companyById, constructionEstimate, isGovernment, kingdomGdp, paysWage, slots } from './economy';
 import { subsistenceWage } from './labor';
 import { basketCostAt } from './market';
 import { workforce } from './pops';
@@ -27,24 +27,29 @@ export interface KingdomMetrics {
   solBy: Record<PopClass, number>;
   foodBy: Record<PopClass, number>;
   growthBy: Record<PopClass, number>;
-  /** 연 GDP, 지난주 국정 수지: 세입, 민간 공사 수수료, 정부 건물 운영비(임금 + 원료), 연구비, 국채 이자 */
+  /** 연 GDP, 지난주 국정 수지: 세입, 민간 공사 수수료, 정부 건물 운영비(임금 + 원료), 연구비, 국채 이자, 보조금, 왕실 건물 배당 */
   gdp: number;
   revenueWeek: number;
   feesWeek: number;
   govSpendWeek: number;
   research: number;
   interest: number;
+  subsidyWeek: number;
+  dividendWeek: number;
   /** 징수율 */
   taxRatio: number;
-  /** 정책 단계 (세금·국영 임금·연구비 수준), 임금 지수 */
+  /** 정책 단계 (세금·연구비 수준), 임금 지수 (왕국 노동자 평균 임금 ÷ 기본 임금 10) */
   policy: Record<BudgetItem, number>;
   wageIndex: number;
-  /** 돈: 국고, 국채, 민간 상회 현금, 투자 풀, 가계 저축 */
+  /** 돈: 국고, 국채, 민간 투자 자금(민간 상회 현금), 건물 현금 합, 투자 풀, 가계 저축 */
   treasury: number;
   debt: number;
   privateCash: number;
+  buildingCash: number;
   pool: number;
   savings: number;
+  /** 보조금을 받는 건물 레벨 */
+  subsidizedLevels: number;
   /** 건설: 사무소 레벨, 하루 포인트, 대기 포인트, 대기 일수, 공사 수 */
   officeLevels: number;
   pointsPerDay: number;
@@ -59,7 +64,7 @@ export interface KingdomMetrics {
   typeBy: Record<string, TypeMetrics>;
   /** 이번 달 착공 레벨: '건물|s'(왕실) '건물|p'(민간) '건물|loss'(AI 손해 짓기) '건물|d'(철거) */
   starts: Record<string, number>;
-  /** 왕실 임금 (노동자, 기술자), 아는 기술 수 */
+  /** 왕실 건물 평균 임금 (노동자, 기술자), 아는 기술 수 */
   wageUnskilled: number;
   wageSkilled: number;
   techs: number;
@@ -133,10 +138,12 @@ export function recordMetrics(w: World) {
     const queuePoints = queue.reduce((a, x) => a + x.required - x.points, 0);
     const levelsBy: Record<string, number> = {};
     const typeBy: Record<string, TypeMetrics> = {};
-    let levelsState = 0, levelsPrivate = 0;
+    let levelsState = 0, levelsPrivate = 0, buildingCash = 0, subsidizedLevels = 0;
     for (const b of w.buildings) {
       const t = BUILDING_BY_ID[b.typeId];
       if (t.auto || kingdomOf(w, b.regionId) !== k.id) continue;
+      buildingCash += b.cash;
+      if (b.subsidized) subsidizedLevels += b.level;
       levelsBy[b.typeId] = (levelsBy[b.typeId] ?? 0) + b.level;
       const tm = (typeBy[b.typeId] ??= { employed: 0, slots: 0, profit: 0, lossLevels: 0 });
       for (const sk of ['unskilled', 'skilled', 'expert'] as const) { tm.employed += b.employed[sk]; tm.slots += slots(b, sk); }
@@ -149,9 +156,8 @@ export function recordMetrics(w: World) {
     for (const s of ['unskilled', 'skilled', 'expert'] as const) {
       let paid = 0, emp = 0, cap = 0;
       for (const b of w.buildings) {
-        if (kingdomOf(w, b.regionId) !== k.id || BUILDING_BY_ID[b.typeId].auto) continue;
-        const c = companyById(w, b.companyId);
-        emp += b.employed[s]; cap += slots(b, s); paid += b.employed[s] * (c?.wages[s] ?? 0);
+        if (kingdomOf(w, b.regionId) !== k.id || !paysWage(b, s)) continue;
+        emp += b.employed[s]; cap += slots(b, s); paid += b.employed[s] * b.wages[s];
       }
       const idle = pops.filter((p) => p.prof === s && p.work === 0).reduce((a, p) => a + workforce(p), 0);
       labor[s] = { wage: emp > 0 ? round2(paid / emp) : 0, employed: r0(emp), slots: r0(cap), jobless: r0(idle) };
@@ -176,8 +182,10 @@ export function recordMetrics(w: World) {
       wealthBy: avg(wealth), solBy: avg(sol), foodBy: avg(food), growthBy: avg(growth),
       gdp: r0(kingdomGdp(w, k.id)), revenueWeek: r0(k.lastBudget?.revenue ?? 0), feesWeek: r0(k.lastBudget?.fees ?? 0),
       govSpendWeek: r0((k.lastBudget?.wages ?? 0) + (k.lastBudget?.goods ?? 0)), research: r0(k.lastBudget?.research ?? 0), interest: r0(k.lastBudget?.interest ?? 0),
-      taxRatio: k.taxRatio ?? 0, policy: { ...k.budget }, wageIndex: k.wageIndex ?? 0,
-      treasury: r0(gov?.cash ?? 0), debt: r0(gov?.debt ?? 0), privateCash: r0(firms.reduce((a, c) => a + c!.cash, 0)), pool: r0(k.investmentPool), savings: r0(savings),
+      subsidyWeek: r0(k.lastBudget?.subsidies ?? 0), dividendWeek: r0(k.lastBudget?.dividends ?? 0),
+      taxRatio: k.taxRatio ?? 0, policy: { ...k.budget }, wageIndex: round2(labor.unskilled.wage / 10),
+      treasury: r0(gov?.cash ?? 0), debt: r0(gov?.debt ?? 0), privateCash: r0(firms.reduce((a, c) => a + c!.cash, 0)), buildingCash: r0(buildingCash), pool: r0(k.investmentPool), savings: r0(savings),
+      subsidizedLevels,
       officeLevels: w.buildings.filter((b) => b.companyId === builder?.id && b.typeId === 'builder').reduce((a, b) => a + b.level, 0),
       pointsPerDay: round2(est?.pointsPerDay ?? 0), queuePoints: r0(queuePoints),
       backlogDays: est && est.pointsPerDay > 0 ? r0(queuePoints / est.pointsPerDay) : 0, projects: queue.length,

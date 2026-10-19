@@ -3,7 +3,7 @@ import {
 } from './data';
 import { borderCost } from './kingdoms';
 import { clamp } from './rng';
-import { OWNERS, SKILLS, WEALTH_MIN } from './types';
+import { OWNERS, SKILLS, WEALTH_MIN, emptyWeek } from './types';
 import type { Building, BuildingTypeDef, Company, DepositId, EventKind, GoodBag, GoodId, LandType, MethodDef, Pop, PopClass, Region, Skill, World } from './types';
 
 // ---------------------------------------------------------------- 지역·시장
@@ -107,6 +107,16 @@ export function slots(b: Building, skill: Skill): number {
 export function isGovernment(typeId: string): boolean {
   const t = BUILDING_BY_ID[typeId];
   return !!t.stateOnly || t.methods.some((m) => m.construction);
+}
+
+/** 정부 자금 건물 (빅토리아3 is_government_funded): 왕실 정부 건물. 현금이 없고 국고가 임금과 원료를 바로 낸다 */
+export function isGovFunded(b: Building): boolean {
+  return !!b.stateOwned && isGovernment(b.typeId);
+}
+
+/** 자기 현금으로 도는 건물: 자동 건물(소작지·저택·금융가)과 정부 자금 건물을 뺀 모두 */
+export function hasOwnCash(b: Building): boolean {
+  return !BUILDING_BY_ID[b.typeId].auto && !isGovFunded(b);
 }
 
 /** 왕실이 지어도 민간이 지분을 살 수 있는 건물: 정부 건물을 뺀 모두 */
@@ -269,7 +279,8 @@ export function builderOf(w: World, c: Company): Company {
 let officeCache: Map<number, { pointsPerDay: number; costPerDay: number }> | null = null;
 export function withEstimateCache<T>(fn: () => T): T {
   officeCache = new Map();
-  try { return fn(); } finally { officeCache = null; }
+  wageCache = new Map();
+  try { return fn(); } finally { officeCache = null; wageCache = null; }
 }
 
 function officeTotals(w: World, builder: Company) {
@@ -282,7 +293,7 @@ function officeTotals(w: World, builder: Company) {
     if (!m.construction) continue;
     const st = b.idle ? 1 : Math.max(0.3, b.last.staffing);
     pointsPerDay += m.construction * b.level * b.utilization * st * efficiency(b);
-    const e = estimateMethod(w, b.regionId, b.typeId, b.methodId, builder.wages);
+    const e = estimateMethod(w, b.regionId, b.typeId, b.methodId, b.wages);
     costPerDay += (e.wageCost + e.inputCost) * b.level * b.utilization * st;
   }
   const t = { pointsPerDay, costPerDay };
@@ -305,17 +316,58 @@ export function hasBuilder(w: World, c: Company): boolean {
 
 // ---------------------------------------------------------------- 임금·고용
 
-/** 시장임금: 고용 가중 평균 임금 (자기 회사 제외). 고용이 없으면 기본 임금 */
+/** 이 자리가 임금을 받는가: 자동 건물(소작지·저택·금융가)과 민간 건물의 배당 자리를 뺀 모두 */
+export function paysWage(b: Building, s: Skill): boolean {
+  return !BUILDING_BY_ID[b.typeId].auto && !paysDividend(b.stateOwned, s);
+}
+
+/** 시장임금: 건물 임금의 고용 가중 평균 (그 회사 건물 제외). 고용이 없으면 기본 임금 */
 export function marketWage(w: World, skill: Skill, excludeCompanyId?: number): number {
   let paid = 0, n = 0;
   for (const b of w.buildings) {
-    if (b.companyId === excludeCompanyId || b.employed[skill] <= 0) continue;
-    const c = companyById(w, b.companyId);
-    if (!c) continue;
-    paid += b.employed[skill] * c.wages[skill];
+    if (b.companyId === excludeCompanyId || b.employed[skill] <= 0 || !paysWage(b, skill)) continue;
+    paid += b.employed[skill] * b.wages[skill];
     n += b.employed[skill];
   }
   return n > 0 ? paid / n : SKILL_DEFS[skill].baseWage;
+}
+
+/** 아무도 그 직종을 쓰지 않을 때의 임금: 기본 임금 × 이 값 (시작 임금과 같다) */
+export const FALLBACK_WAGE = 0.8;
+
+/** withEstimateCache 안에서는 지역 임금을 지역마다 한 번만 센다 (그동안 임금이 안 바뀌는 구간에서만 쓴다) */
+let wageCache: Map<number, Record<Skill, number>> | null = null;
+
+/**
+ * 지역 임금: 그 지역 건물이 주는 직종별 임금의 고용 가중 평균. 그 직종 고용이 없으면 그 왕국 평균, 그것도 없으면 기본 임금 × 0.8.
+ * 새 건물의 시작 임금이고, AI가 아직 없는 건물을 따질 때 쓰는 임금이다
+ */
+export function regionWages(w: World, regionId: number): Record<Skill, number> {
+  const hit = wageCache?.get(regionId);
+  if (hit) return hit;
+  const kid = regionById(w, regionId).kingdomId;
+  const here = emptyJobs(), hereN = emptyJobs(), king = emptyJobs(), kingN = emptyJobs();
+  const kingdomOfRegion = new Map(w.regions.map((r) => [r.id, r.kingdomId]));
+  for (const b of w.buildings) {
+    if (kingdomOfRegion.get(b.regionId) !== kid) continue;
+    for (const s of SKILLS) {
+      const n = b.employed[s];
+      if (!(n > 0) || !paysWage(b, s)) continue;
+      king[s] += n * b.wages[s]; kingN[s] += n;
+      if (b.regionId === regionId) { here[s] += n * b.wages[s]; hereN[s] += n; }
+    }
+  }
+  const out = emptyJobs();
+  for (const s of SKILLS) out[s] = hereN[s] > 0 ? here[s] / hereN[s] : kingN[s] > 0 ? king[s] / kingN[s] : SKILL_DEFS[s].baseWage * FALLBACK_WAGE;
+  wageCache?.set(regionId, out);
+  return out;
+}
+
+/** 시작 임금표: 기본 임금 × 0.8 */
+export function fallbackWages(): Record<Skill, number> {
+  const out = emptyJobs();
+  for (const s of SKILLS) out[s] = SKILL_DEFS[s].baseWage * FALLBACK_WAGE;
+  return out;
 }
 
 /** 지역의 이 직종 실업률 (노동 인구 기준) */
@@ -362,6 +414,7 @@ export function colonySol(w: World, prof: PopClass): number {
 export function totalMoney(w: World): number {
   let t = w.fund + w.bank.cash + w.traders.cash;
   for (const c of w.companies) t += c.cash;
+  for (const b of w.buildings) t += b.cash;
   for (const p of w.pops) t += p.savings;
   for (const k of w.kingdoms) t += k.investmentPool;
   return t;
@@ -389,33 +442,30 @@ export function bookValue(b: Building): number {
   return BUILDING_BY_ID[b.typeId].buildPoints * POINT_VALUE * b.level;
 }
 
-/** 신용 한도: 보유 건물 장부가의 절반 + 기본 한도. 왕국 정부는 국채 한도(연간 총생산 비례) */
+/** 국채 한도 = 기본 한도 + 연간 총생산 × STATE_CREDIT_GDP. 빌리는 것은 왕실(국채)뿐이다: 민간 상회와 건물은 빌리지 않는다 (한도 0) */
 export const BASE_CREDIT = 300_000;
-/** 국채 한도 = 연간 총생산 × 이 비율 */
 export const STATE_CREDIT_GDP = 0.25;
 export function creditLimit(w: World, c: Company): number {
-  if (c.state) return BASE_CREDIT + kingdomGdp(w, c.kingdomId) * STATE_CREDIT_GDP;
-  let book = 0;
-  for (const b of w.buildings) if (b.companyId === c.id) book += bookValue(b);
-  return BASE_CREDIT + book * 0.5;
+  return c.state ? BASE_CREDIT + kingdomGdp(w, c.kingdomId) * STATE_CREDIT_GDP : 0;
 }
 
+/** 왕실이 국채를 찍어 빌린다 (새 돈). 민간은 빌리지 않는다 */
 export function borrow(w: World, c: Company, amount: number): number {
-  const room = Math.max(0, creditLimit(w, c) - c.debt);
-  // 왕국 정부는 은행이 아니라 국채를 찍어 빌린다 (새 돈)
-  const take = Math.max(0, Math.min(amount, room, c.state ? Infinity : w.bank.cash));
+  if (!c.state) return 0;
+  const take = Math.max(0, Math.min(amount, creditLimit(w, c) - c.debt));
   if (take <= 0) return 0;
-  if (c.state) w.mint.issued += take; else w.bank.cash -= take;
+  w.mint.issued += take;
   c.cash += take;
   c.debt += take;
   return take;
 }
 
+/** 국채 상환 (상환금은 사라지는 돈이다) */
 export function repay(w: World, c: Company, amount: number): number {
   const pay = Math.max(0, Math.min(amount, c.debt, c.cash));
   c.cash -= pay;
   c.debt -= pay;
-  if (c.state) w.mint.retired += pay; else w.bank.cash += pay;
+  w.mint.retired += pay;
   return pay;
 }
 
@@ -433,12 +483,30 @@ export function goodName(g: GoodId): string {
   return GOODS[g].name;
 }
 
+/** 새 건물: 현금 0, 임금은 기본 임금 × 0.8 (완공 때 advanceConstruction 이 지역 임금과 시작 현금을 넣는다) */
 export function newBuilding(id: number, typeId: string, regionId: number, companyId: number, methodId: string, level: number, stateOwned = false): Building {
   return {
     id, typeId, regionId, companyId, level, methodId, stateOwned, active: true, utilization: 1, lastSwitchTick: -1e9, exp: 0, crew: 0, idle: false,
-    employed: emptyJobs(), stock: {}, outStock: {}, unpaid: false,
+    employed: emptyJobs(), stock: {}, outStock: {}, unpaid: false, cash: 0, wages: fallbackWages(), week: emptyWeek(), lastWeek: emptyWeek(),
     last: emptyStats(), profitEma: 0, lossWeeks: 0, pausedWeeks: 0,
   };
+}
+
+/** 만원 가동 하루 임금 (그 건물 임금, 임금 자리만) */
+export function fullWageBill(b: Building): number {
+  const m = getMethod(b.typeId, b.methodId);
+  let v = 0;
+  for (const s of SKILLS) if (paysWage(b, s)) v += (m.workers[s] ?? 0) * b.level * b.utilization * b.wages[s];
+  return v;
+}
+
+/** 만원 가동 하루 비용: 임금 + 원료 (지역 가격). 건물 준비금 상한의 기준 */
+export function fullCost(w: World, b: Building): number {
+  const m = getMethod(b.typeId, b.methodId);
+  const mk = regionById(w, b.regionId).market;
+  let v = fullWageBill(b);
+  for (const g of GOOD_IDS) v += (m.inputs[g] ?? 0) * b.level * b.utilization * mk[g].price;
+  return v;
 }
 
 export function emptyStats() {

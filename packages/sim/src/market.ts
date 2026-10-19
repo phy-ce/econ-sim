@@ -1,6 +1,6 @@
 import { CONSUMPTION_PER_CAPITA, GOOD_IDS, GOODS, NEEDS, SUBSISTENCE, TUNE, getMethod, needsAt, rawMax } from './data';
-import { CARTAGE_RATE, RAIL_RATE, borrow, companyById, freightRate, priceFormula, regionById, shippingRate, isSubsistence } from './economy';
-import { landTaxValue, payLandTax, payRent, paySalvage, taxDue, taxRates } from './finance';
+import { CARTAGE_RATE, RAIL_RATE, borrow, companyById, freightRate, isGovFunded, priceFormula, regionById, shippingRate, isSubsistence } from './economy';
+import { landTaxValue, payLandTax, payRent, paySalvage, settleSubsidy, taxDue, taxRates } from './finance';
 import { addToPool, borderCost, kingdomById, kingdomOf, payTariff } from './kingdoms';
 import { findPop, payPops, payProf, workforce } from './pops';
 import { clamp, round2 } from './rng';
@@ -11,7 +11,7 @@ import type { Building, Company, GoodBag, GoodId, MarketGood, NeedDef, NeedId, P
 // 건물 산출은 그날 못 팔면 사라진다 (재고 없음). 상인 화물만 남겨 두었다가 다음 날 다시 내놓는다 (하루 2% 상함).
 // 지역 밖으로 나가는 화물은 운송비를, 국경을 넘으면 관세를 더 낸다.
 
-type Payer = { kind: 'company'; c: Company } | { kind: 'trader' };
+type Payer = { kind: 'company'; c: Company } | { kind: 'building'; b: Building } | { kind: 'trader' };
 
 interface Order {
   src: string;
@@ -150,24 +150,34 @@ function paySubsistence(w: World, pop: Pop, amount: number) {
 export const SAVINGS_DRAW = 0.02;
 
 export function collectOrders(w: World, book: Book) {
-  // 기업: 투입재 (2일분 보유 목표). 모자라면 자동 대출
-  for (const c of w.companies) {
-    const operating: Order[] = [];
-    for (const b of w.buildings) {
-      if (b.companyId !== c.id || !b.active) continue;
-      const method = getMethod(b.typeId, b.methodId);
-      const st = Math.max(b.last.staffing, b.crew ?? 0);
-      for (const g of GOOD_IDS) {
-        const per = method.inputs[g];
-        if (!per) continue;
-        const want = Math.max(0, per * b.level * b.utilization * st * 2 - (b.stock[g] ?? 0));
-        if (want <= 1e-9) continue;
-        operating.push({
-          src: `bld:${b.typeId}`, regionId: b.regionId, good: g, qty: want, payer: { kind: 'company', c },
-          fill: (q, cost) => { b.stock[g] = (b.stock[g] ?? 0) + q; b.last.inputCost += cost; },
-        });
-      }
+  // 건물 투입재 (2일분 보유 목표): 건물이 임금을 내고 남은 자기 현금으로 산다 (모자라면 비례로 줄인다. 빌리지 않는다).
+  // 보조금 건물은 국고가 먼저 채운다. 정부 자금 건물은 왕국마다 합쳐서 국고가 낸다 (모자라면 국채)
+  const govOrders = new Map<Company, Order[]>();
+  for (const b of w.buildings) {
+    if (!b.active) continue;
+    const method = getMethod(b.typeId, b.methodId);
+    const st = Math.max(b.last.staffing, b.crew ?? 0);
+    const gov = isGovFunded(b) ? companyById(w, b.companyId) : undefined;
+    const payer: Payer = gov ? { kind: 'company', c: gov } : { kind: 'building', b };
+    const mine: Order[] = [];
+    for (const g of GOOD_IDS) {
+      const per = method.inputs[g];
+      if (!per) continue;
+      const want = Math.max(0, per * b.level * b.utilization * st * 2 - (b.stock[g] ?? 0));
+      if (want <= 1e-9) continue;
+      mine.push({
+        src: `bld:${b.typeId}`, regionId: b.regionId, good: g, qty: want, payer,
+        fill: (q, cost) => { b.stock[g] = (b.stock[g] ?? 0) + q; b.last.inputCost += cost; b.week.inputs += cost; },
+      });
     }
+    if (mine.length === 0) continue;
+    if (gov) { const list = govOrders.get(gov); if (list) list.push(...mine); else govOrders.set(gov, mine); continue; }
+    const cost = mine.reduce((a, o) => a + o.qty * regionById(w, o.regionId).market[o.good].price, 0);
+    settleSubsidy(w, b, cost);
+    const scale = cost > 0 ? clamp(b.cash / cost, 0, 1) : 1;
+    for (const o of mine) { o.qty *= scale; if (o.qty > 1e-9) book.orders.push(o); }
+  }
+  for (const [c, operating] of govOrders) {
     const cost = operating.reduce((a, o) => a + o.qty * regionById(w, o.regionId).market[o.good].price, 0);
     if (c.cash < cost) borrow(w, c, cost - c.cash);
     const scale = cost > 0 ? clamp(c.cash / cost, 0, 1) : 1;
@@ -323,6 +333,7 @@ function computeSplit(need: NeedDef, prices: number[], caps: number[]): Split {
 function charge(w: World, payer: Payer, amount: number) {
   switch (payer.kind) {
     case 'company': payer.c.cash -= amount; break;
+    case 'building': payer.b.cash -= amount; break;
     case 'trader': w.traders.cash -= amount; break;
   }
 }
@@ -453,11 +464,11 @@ export function clearMarkets(w: World, book: Book) {
         const q = lot.q * sellFrac, amt = q * p;
         switch (lot.kind) {
           case 'bld': {
-            // 그날 못 판 것은 사라진다
+            // 판매 대금은 건물 현금으로. 그날 못 판 것은 사라진다
             lot.b.outStock[g] = 0;
-            const c = companyById(w, lot.b.companyId);
-            if (c) c.cash += amt; else w.fund += amt;
+            lot.b.cash += amt;
             lot.b.last.revenue += amt;
+            lot.b.week.revenue += amt;
             break;
           }
           case 'sub': {

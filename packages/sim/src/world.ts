@@ -1,20 +1,19 @@
 import { BUILDING_BY_ID, GOOD_IDS, GOODS, REGIONS, SKILL_DEFS, SUBSISTENCE, TICKS_PER_WEEK, TIER_COUNTS, TIER_JITTER, TIERS, TUNE, WORKFORCE_RATIO, getMethod } from './data';
-import { emptyJobs, isGovernment, newBuilding, paysDividend, slots, wageCostOf } from './economy';
+import { fallbackWages, isGovFunded, newBuilding, paysDividend, slots, wageCostOf } from './economy';
 import { aggregateHouseholds, findPop, getPop, movePeople, workforce } from './pops';
-import { updateOwnership, updateSubsistence } from './production';
-import { subsistenceKind, syncEmployment } from './labor';
+import { seedCash, updateOwnership, updateSubsistence } from './production';
+import { subsistenceKind, syncEmployment, updateCompanyWages } from './labor';
 import { affordableWealth } from './market';
-import { applyStateWages, updateWageIndex } from './finance';
 import { round2 } from './rng';
-import type { Company, GoodId, Kingdom, MarketGood, PopClass, Region, Skill, World } from './types';
+import type { Company, GoodId, Kingdom, MarketGood, PopClass, Region, World } from './types';
 import { SKILLS, emptyLedger } from './types';
 
-/** 민간 상회의 시작 자금 (농장 약 다섯 레벨 공사비). 왕실 국고는 startTreasury 가 정한다 */
+/** 민간 투자 자금의 시작 금액 (농장 약 다섯 레벨 공사비. 시작 농장의 시작 현금도 여기서 나간다). 왕실 국고는 startTreasury 가 정한다 */
 export const START_CASH = 30_000_000;
 const BANK_CAPITAL = 300_000_000;
 const TRADER_CAPITAL = 100_000_000;
-/** 시작 정책 단계: 세금 수준, 국영 임금 수준, 연구비 수준 모두 보통(3) */
-const DEFAULT_BUDGET = { tax: 3, wages: 3, research: 3 };
+/** 시작 정책 단계: 세금 수준, 연구비 수준 모두 보통(3) */
+const DEFAULT_BUDGET = { tax: 3, research: 3 };
 /** 플레이어 회사 id (화면이 이 값을 쓴다) */
 export const PLAYER_ID = 100;
 
@@ -82,12 +81,9 @@ export function splitKingdoms(seed: number, count = KINGDOMS.length): Record<num
 }
 
 function newCompany(id: number, name: string, color: string, kingdomId: number, state: boolean, isPlayer: boolean, cash: number): Company {
-  const wages = Object.fromEntries(SKILLS.map((s) => [s, SKILL_DEFS[s].baseWage * (isPlayer ? 1 : 0.8)])) as Record<Skill, number>;
   return {
-    id, name, color, isPlayer, kingdomId, state, cash, wages,
-    // 왕실 임금은 정책(국영 임금 수준)이 정한다. 시장임금 정책은 민간 플레이어만 쓴다
-    wageOffset: isPlayer && !state ? emptyJobs() : null,
-    weekProfit: 0, lastWeekProfit: 0, weekStartCash: cash, debt: 0, revenueEma: 0, ledger: emptyLedger(), lastLedger: emptyLedger(),
+    id, name, color, isPlayer, kingdomId, state, cash, wages: fallbackWages(),
+    weekProfit: 0, lastWeekProfit: 0, debt: 0, ledger: emptyLedger(), lastLedger: emptyLedger(),
     distressWeeks: 0, buildPoints: 0, buildCost: 0,
     research: { budget: 0, current: null, progress: {}, known: [...START_TECHS] },
   };
@@ -169,7 +165,7 @@ export function createWorld(seed = 1, opts: CreateWorldOptions = {}): World {
   }
 
   const w: World = {
-    version: 4, config: { ai }, tick: 0, seed, rngState: seed | 0, nextId: 1000,
+    version: 5, config: { ai }, tick: 0, seed, rngState: seed | 0, nextId: 1000,
     regions, kingdoms, pops: [], fund: 0, metrics: [],
     bank: { cash: BANK_CAPITAL, capital: BANK_CAPITAL },
     traders: { cash: TRADER_CAPITAL, capital: TRADER_CAPITAL, shipments: [] },
@@ -240,7 +236,8 @@ export function createWorld(seed = 1, opts: CreateWorldOptions = {}): World {
       if (own && fromOwn > 0) movePeople(w, own, getPop(w, b.regionId, s, b.id), fromOwn);
       if (n - fromOwn > 0) movePeople(w, src, getPop(w, b.regionId, s, b.id), n - fromOwn, s === 'unskilled' ? undefined : s);
     }
-    b.exp = 1;
+    // 이미 돌던 건물이라 숙련도와 작업 인원도 다 찬 채로 시작한다
+    b.exp = 1; b.crew = 1;
   }
   syncEmployment(w);
   // 시작 부: 직접 쓰는 현물과 현금 소득으로 감당할 수 있는 단계 (모든 pop 같은 규칙). 처음에는 아무도 현금 소득이 없다.
@@ -253,29 +250,33 @@ export function createWorld(seed = 1, opts: CreateWorldOptions = {}): World {
       p.wealth = affordableWealth(r, p.size, p.incomeEma, kind);
     }
   }
-  // 국영 임금: 시작 민간 임금에서 임금 지수를 잡고 그 임금으로 시작한다. 그다음 그 임금으로 왕실 시작 국고를 정한다
-  for (const k of kingdoms) {
-    updateWageIndex(w, k);
-    applyStateWages(w, k);
-    const gov = companies.find((c) => c.id === k.governmentId)!;
-    gov.cash = gov.weekStartCash = gov.isPlayer && playerCash != null ? playerCash : startTreasury(w, gov);
+  // 시작 건물은 모두 기본 임금 × 0.8 로 시작한다 (newBuilding). 시작 민간 농장은 민간 투자 자금에서 시작 현금을 받는다.
+  // 그다음 시작 정부 건물 운영비로 왕실 시작 국고를 정한다
+  for (const b of w.buildings) {
+    const owner = companies.find((c) => c.id === b.companyId);
+    if (owner && !owner.state) seedCash(w, b, owner);
   }
+  for (const k of kingdoms) {
+    const gov = companies.find((c) => c.id === k.governmentId)!;
+    gov.cash = gov.isPlayer && playerCash != null ? playerCash : startTreasury(w, gov);
+  }
+  updateCompanyWages(w);
   aggregateHouseholds(w);
   return w;
 }
 
 /**
  * 왕실 시작 국고 = 시작 정부 건물(행정청·건축사무소)을 다 돌리는 주간 운영비 × TUNE.startTreasuryWeeks.
- * 운영비는 시작 국영 임금과 기본가 원료로 센다 (연구비는 경제 규모가 잡히기 전이라 넣지 않는다)
+ * 운영비는 그 건물의 시작 임금과 기본가 원료로 센다 (연구비는 경제 규모가 잡히기 전이라 넣지 않는다)
  */
 function startTreasury(w: World, gov: Company): number {
   let daily = 0;
   for (const b of w.buildings) {
-    if (b.companyId !== gov.id || !isGovernment(b.typeId)) continue;
+    if (b.companyId !== gov.id || !isGovFunded(b)) continue;
     const m = getMethod(b.typeId, b.methodId);
     let inputs = 0;
     for (const g of GOOD_IDS) inputs += (m.inputs[g] ?? 0) * GOODS[g].basePrice;
-    daily += (wageCostOf(m, gov.wages, true) + inputs) * b.level;
+    daily += (wageCostOf(m, b.wages, true) + inputs) * b.level;
   }
   return round2(daily * TICKS_PER_WEEK * TUNE.startTreasuryWeeks);
 }

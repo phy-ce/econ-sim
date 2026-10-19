@@ -23,8 +23,8 @@ export function weeklyAlerts(w: World) {
     const at = { regionId: b.regionId, buildingId: b.id };
     if (b.unpaid) {
       alertOnce(w, `unpaid:${b.id}`, COOLDOWN, b.companyId,
-        `${name}: 임금을 다 주지 못해 노동자가 떠나고 있습니다. 현금이나 대출 한도를 확인하세요.`,
-        { kind: 'danger', ...at, en: `${nameEn}: wages could not be paid in full and workers are leaving. Check your cash and credit limit.` });
+        `${name}: 건물 현금이 모자라 임금을 다 주지 못해 노동자가 떠나고 있습니다.`,
+        { kind: 'danger', ...at, en: `${nameEn}: the building ran out of cash, wages were not paid in full and workers are leaving.` });
     }
     if (b.active && !b.idle && b.last.staffing > 0 && b.last.inputFill < 0.5) {
       const method = getMethod(b.typeId, b.methodId);
@@ -38,8 +38,8 @@ export function weeklyAlerts(w: World) {
     if (b.active && b.last.staffing < 0.5 && b.last.staffing > 0) {
       const staff = Math.round(b.last.staffing * 100);
       alertOnce(w, `staff:${b.id}`, COOLDOWN, b.companyId,
-        `${name}: 인력이 ${staff}%뿐입니다. 임금을 올리거나 다른 지역을 알아보세요.`,
-        { kind: 'warn', ...at, en: `${nameEn}: only ${staff}% staffed. Raise wages or look at other regions.` });
+        `${name}: 인력이 ${staff}%뿐입니다.`,
+        { kind: 'warn', ...at, en: `${nameEn}: only ${staff}% staffed.` });
     }
   }
   // 건설 포인트가 안 나오는 회사의 공사: 사무소가 없거나, 사람이 없거나, 목재 같은 투입재가 없다

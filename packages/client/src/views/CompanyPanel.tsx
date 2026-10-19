@@ -446,7 +446,7 @@ export function Wages({ game, world, me }: { game: Game; world: World; me: Compa
     <div className="wages">
       {SKILLS.map((s) => {
         const market = marketWage(world, s, me.id);
-        const offset = me.wageOffset ? me.wageOffset[s] : me.wages[s] / market - 1;
+        const offset = me.wages[s] / market - 1;
         const unemp = unemploymentRate(world, s);
         return (
           <div key={s} className="wage">
@@ -455,8 +455,7 @@ export function Wages({ game, world, me }: { game: Game; world: World; me: Compa
               <output className="wage-out">ƒ<NumericValue value={me.wages[s]} format="two"/> <small className={offset >= 0 ? 'pos' : 'neg'}>{spct(offset)}</small></output>
             </div>
             <input type="range" min={-50} max={100} step={5} value={Math.round(offset * 100)}
-              aria-label={T.wageAria(skillName(s))}
-              onChange={(e) => game.command({ type: 'setWageOffset', skill: s, offset: Number(e.target.value) / 100 })} />
+              aria-label={T.wageAria(skillName(s))} readOnly disabled />
             <div className="wage-meta">
               <span className="lbl">{T.marketWage} <span className="pxnum">ƒ<NumericValue value={market} format="two"/></span></span>
               <span className="wage-unemp"><span className="lbl">{T.unemployment}</span><Bar value={unemp} tone="neg" size="sm" label={T.unemployment} /><span className="pxnum small">{pct(unemp)}</span></span>
@@ -492,7 +491,7 @@ export function BuildList({ game, world, me, region, projects }: { game: Game; w
         const locked = !canBuildType(me, bt);
         const est = constructionEstimate(world, me, bt.id);
         const usable = availableMethods(me, bt.id);
-        const best = usable.length ? Math.max(...usable.map((m) => estimateAfterEntry(world, region.id, bt.id, m.id, me.wages).profit)) : null;
+        const best = usable.length ? Math.max(...usable.map((m) => estimateAfterEntry(world, region.id, bt.id, m.id, me.id).profit)) : null;
         const blockers = buildBlockers(world, me, region, bt, projects);
         const isOffice = bt.methods.some((m) => m.construction);
         const payback = best != null && best > 0 && Number.isFinite(est.cost) ? Math.ceil(est.cost / best) : null;
@@ -523,7 +522,7 @@ function BuildCard({ bt, region, est, blockers, payback, game, world, me }: {
 }) {
   const T = useT();
   const already = world.buildings.find((b) => b.companyId === me.id && b.regionId === region.id && b.typeId === bt.id);
-  const rows = bt.methods.map((m) => ({ m, ok: knowsTech(me, m.tech), est: estimateAfterEntry(world, region.id, bt.id, m.id, me.wages) }));
+  const rows = bt.methods.map((m) => ({ m, ok: knowsTech(me, m.tech), est: estimateAfterEntry(world, region.id, bt.id, m.id, me.id) }));
   return (
     <div className="build-card">
       {blockers.length > 0 && <div className="blockers" aria-label={T.blockersAria}>{blockers.map((b) => <span key={b} className="tag-bad">{b}</span>)}</div>}
