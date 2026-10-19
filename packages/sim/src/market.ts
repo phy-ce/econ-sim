@@ -1,5 +1,5 @@
 import { CONSUMPTION_PER_CAPITA, GOOD_IDS, GOODS, NEEDS, SUBSISTENCE, TUNE, getMethod, needsAt, rawMax } from './data';
-import { CARTAGE_RATE, RAIL_RATE, borrow, companyById, freightRate, priceFormula, regionById, shippingRate, isSubsistence } from './economy';
+import { CARTAGE_RATE, RAIL_RATE, borrow, companyById, freightRate, harvestFactor, priceFormula, regionById, shippingRate, isSubsistence } from './economy';
 import { landTaxValue, payLandTax, payRent, paySalvage, taxDue, taxRates } from './finance';
 import { addToPool, borderCost, kingdomById, kingdomOf, payTariff } from './kingdoms';
 import { findPop, payPops, payProf, workforce } from './pops';
@@ -103,7 +103,8 @@ export function harvest(w: World, book: Book) {
     if (!pop || pop.size <= 0) continue;
     const r = regionById(w, b.regionId);
     const { rent, tax } = harvestShares(w, r);
-    const out = harvestOutput(workforce(pop));
+    // 기상 조건이 걸리면 수확이 그만큼 줄어든다 (economy.ts harvestFactor)
+    const out = harvestOutput(workforce(pop) * harvestFactor(w, r.id, 'arable'));
     // 토지 기반 과세: 걷어야 할 토지세 (팔리는 몫만, 징수율 전). 1인당 과세면 토지세율 0
     const kd = kingdomById(w, r.kingdomId);
     const land = taxRates(kd).land;
@@ -608,7 +609,8 @@ export const PRICE_MAX = 1.75;
 const PRICE_SPEED = 0.03;
 /** 수요·공급 평균이 하루에 따라가는 비율 */
 const FLOW_EMA = 0.1;
-const BY_EMA = 0.1;
+/** 출처별 수요·공급 이동평균의 하루 비율 (outlook.ts 가 기상 조건 되돌리기에 쓴다) */
+export const BY_EMA = 0.1;
 
 function emaBy(prev: Record<string, number> | undefined, cur: Record<string, number> | undefined): Record<string, number> {
   const out: Record<string, number> = {};

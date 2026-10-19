@@ -1,5 +1,5 @@
 import { BUILDING_BY_ID, GOOD_IDS, GOODS, TICKS_PER_WEEK, getMethod } from './data';
-import { alertOnce, regionById } from './economy';
+import { alertOnce, harvestCondition, harvestLabel, logEvent, regionById } from './economy';
 import { buildingNameEn, goodNameEn, regionNameEn } from './i18n';
 import type { Region, World } from './types';
 
@@ -84,6 +84,14 @@ export function weeklyAlerts(w: World) {
   }
   // 지역 알림은 그 지역 왕국의 왕실에게만 간다. 다른 왕국에도 알리는 것은 중대한 알림(심한 기아)뿐이다
   const crownOf = (r: Region) => w.kingdoms.find((k) => k.id === r.kingdomId)?.governmentId ?? null;
+  // 기상 조건: 지난 점검 뒤에 새로 걸린 조건마다 한 번 (조건은 날짜로 다시 계산하므로 따로 기억하지 않는다)
+  for (const r of w.regions) {
+    const now = harvestCondition(w, r.id);
+    if (!now) continue;
+    const before = harvestCondition(w, r.id, w.tick - TICKS_PER_WEEK);
+    if (before && before.origin === now.origin && before.start === now.start) continue;
+    logEvent(w, crownOf(r), `${r.name} ${harvestLabel(w, r.id)}`, { kind: 'warn', regionId: r.id, en: `${regionNameEn(r.id)} ${harvestLabel(w, r.id, true)}` });
+  }
   // 지역 기아
   for (const r of w.regions) {
     for (const cls of ['unskilled', 'peasant'] as const) {

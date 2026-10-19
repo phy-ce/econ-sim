@@ -1,5 +1,5 @@
 import { BUILDING_BY_ID, CLASS_DEFS, SUBSISTENCE, TUNE } from './data';
-import { borrow, companyById, emptyJobs, emptyStats, isSubsistence, paysDividend, peasantSlots, regionById, slots, staffing } from './economy';
+import { borrow, companyById, emptyJobs, emptyStats, harvestFactor, isSubsistence, paysDividend, peasantSlots, regionById, slots, staffing } from './economy';
 import { harvestShares } from './market';
 import { findPop, getPop, movePeople, popsIn, workforce } from './pops';
 import { clamp } from './rng';
@@ -22,12 +22,12 @@ const PROF_INDEX = Object.fromEntries(POP_CLASSES.map((s, i) => [s, i])) as Reco
 /** (일터, 직종) 의 숫자 키 */
 const seatKey = (work: number, prof: PopClass) => work * POP_CLASSES.length + PROF_INDEX[prof];
 
-/** 소작농 1인당 하루 소득 가치 (현물 + 판매분에서 수확과 같은 지대·토지세 몫을 뺀 것). 노동자 일자리와 비교하는 기준, 시작 부 */
+/** 소작농 1인당 하루 소득 가치 (현물 + 판매분에서 수확과 같은 지대·토지세 몫을 뺀 것, 기상 조건 포함). 노동자 일자리와 비교하는 기준, 시작 부 */
 export function subsistenceWage(w: World, r: Region): number {
   const m = r.market;
   const gross = SUBSISTENCE.grainPerWorker * m.grain.price + SUBSISTENCE.fiberPerWorker * m.fiber.price + SUBSISTENCE.timberPerWorker * m.timber.price;
   const { rent, tax } = harvestShares(w, r);
-  return gross * (1 - rent - tax);
+  return gross * (1 - rent - tax) * harvestFactor(w, r.id, 'arable');
 }
 
 /** 소유 건물 자리 하나가 기대하는 하루 배당·지대 (채용 순서용 추정) */

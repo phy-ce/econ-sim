@@ -42,6 +42,29 @@ export interface ClassDef {
 export type LandType = 'arable' | 'forest' | 'ore' | 'plot';
 export const LAND_TYPES: LandType[] = ['arable', 'forest', 'ore', 'plot'];
 
+/** 기상 조건 종류 (빅토리아3 harvest conditions 중 셋) */
+export type HarvestKind = 'drought' | 'flood' | 'wildfire';
+export interface HarvestDef {
+  id: HarvestKind;
+  name: string;
+  nameEn: string;
+  /** 산출이 깎이는 땅 (그 땅의 건물과 소작지) */
+  lands: LandType[];
+}
+/** 한 지역에 지금 걸린 기상 조건 (economy.ts harvestCondition). 저장하지 않고 시드·지역·날짜로 다시 계산한다 */
+export interface HarvestCondition {
+  kind: HarvestKind;
+  lands: LandType[];
+  intensity: number;
+  /** 산출 감소율 = 강도 × 5% */
+  cut: number;
+  /** 진원지 지역 (이웃에서 번져 왔으면 그 이웃) */
+  origin: number;
+  /** 진원지에서 시작한 틱, 끝나는 틱 (end 틱부터 평년) */
+  start: number;
+  end: number;
+}
+
 /** 매장량 자원 */
 export type DepositId = 'iron' | 'coal';
 export const DEPOSITS: DepositId[] = ['iron', 'coal'];

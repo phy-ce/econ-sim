@@ -1,5 +1,5 @@
 import type {
-  BuildingTypeDef, ClassDef, DepositId, GoodDef, GoodId, LandType, MethodDef, NeedDef, NeedId, PopClass, RegionDef, Skill, SkillDef, TechDef,
+  BuildingTypeDef, ClassDef, DepositId, GoodDef, GoodId, HarvestDef, LandType, MethodDef, NeedDef, NeedId, PopClass, RegionDef, Skill, SkillDef, TechDef,
 } from './types';
 
 // 세계관: 근세에서 산업화로 넘어가는 가상의 대륙. 세 왕국이 땅을 나눠 갖는다. 화폐 단위는 플로린(ƒ).
@@ -329,6 +329,10 @@ export function scaleBonus(level: number): number {
  * - taxLaw: 시작 세법 ('land' 토지 기반 / 'capita' 1인당)
  * - peasantPoll: 1인당 과세에서 소작농이 내는 인두세 배율
  * - rawFullWealth, rawCapWealth: 원자재로 의복·생활용품을 다 채울 수 있는 부 상한, 원래 상한(max)이 되는 부 (rawMax)
+ * - harvestChance: 기상 조건이 한 지역에서 한 계절(90일)에 새로 시작할 확률 (0이면 기상 조건이 없다)
+ * - harvestIntensity: 강도 범위 [최소, 최대]. 강도 1당 산출 −5% (HARVEST_STEP)
+ *   확률 0.03·0.05·0.1 × 강도 [2,6]·[4,8] 비교 (20년 × 시드 1·2): 0.03이 장기 생활수준 손실이 가장 작았고, 둥근 값 0.05를 쓴다.
+ *   강도 [4,8]은 지역 최저 식량이 기아선 0.4 근처까지 간다. 숫자는 DECISIONS 7-6
  */
 export const TUNE = {
   rentShare: 0.15,
@@ -381,7 +385,26 @@ export const TUNE = {
   swapMult: 3,
   employedMigrate: 0.25,
   wageLossCut: true,
+  harvestChance: 0.05, // 계절마다 지역마다 5% (측정에서 가장 나았던 0.03에 가장 가까운 둥근 값, DECISIONS 7-6)
+  harvestIntensity: [2, 6] as [number, number], // 빅토리아3 가뭄과 같은 범위 (−10~−30%)
 };
+
+// ---------------------------------------------------------------- 기상 조건
+
+/** 기상 조건을 정하는 단위 기간 (빅토리아3는 3개월마다 검사한다) */
+export const HARVEST_SEASON_DAYS = 90;
+/** 강도 1당 산출 감소 (빅토리아3와 같은 −5%) */
+export const HARVEST_STEP = 0.05;
+/** 조건 길이는 1~이 값 계절 중 고르게. 2·4 비교: 걸린 지역-시간이 같으면 결과가 같아 조정값으로 두지 않는다 (확률이 같은 일을 한다) */
+export const HARVEST_MAX_SEASONS = 2;
+/** 진원지의 이웃 지역마다 같은 조건이 번질 확률. 0·0.5 비교: 걸린 지역-시간이 같으면 결과가 같아 조정값으로 두지 않는다 */
+export const HARVEST_SPREAD = 0.5;
+/** 기상 조건 종류와 산출이 깎이는 땅. 셋 다 농지(소작지·농장·목장)를 친다 */
+export const HARVEST_KINDS: HarvestDef[] = [
+  { id: 'drought', name: '가뭄', nameEn: 'Drought', lands: ['arable'] },
+  { id: 'flood', name: '홍수', nameEn: 'Flood', lands: ['arable', 'ore'] },
+  { id: 'wildfire', name: '산불', nameEn: 'Wildfire', lands: ['arable', 'forest'] },
+];
 
 /**
  * 소작: 소작지 1칸(레벨)에서 일할 수 있는 소작농(노동 인구)과 1인당 하루 산출.

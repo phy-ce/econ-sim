@@ -1,5 +1,5 @@
 import { BUILDING_BY_ID, GOOD_IDS, MAX_POINTS_PER_LEVEL_DAY, OWNER_SEATS_PER_LEVEL, OWNERSHIP_SEATS, TUNE, getMethod } from './data';
-import { builderOf, companyById, efficiency, isGovernment, landFree, logEvent, newBuilding, ownerBuildingOf, regionById } from './economy';
+import { builderOf, companyById, efficiency, harvestFactor, isGovernment, landFree, logEvent, newBuilding, ownerBuildingOf, regionById } from './economy';
 import { workforce } from './pops';
 import { kingdomById } from './kingdoms';
 import { buildingNameEn, regionNameEn } from './i18n';
@@ -86,7 +86,8 @@ export function produce(w: World) {
     b.last.points = 0;
     b.last.output = {};
     if (st > 1e-4) {
-      const run = b.level * b.utilization * st;
+      // 기상 조건은 농지·산림·광맥 건물의 투입과 산출을 함께 줄인다 (빅토리아3 throughput, 일자리는 그대로). 효율은 행정청·사무소도 쓰므로 따로
+      const run = b.level * b.utilization * st * harvestFactor(w, b.regionId, BUILDING_BY_ID[b.typeId].land);
       let fill = 1;
       for (const g of GOOD_IDS) {
         const per = method.inputs[g];

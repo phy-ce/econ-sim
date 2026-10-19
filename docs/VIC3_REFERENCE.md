@@ -104,3 +104,26 @@
 **확인 못 함:** 현물 소득이 돈 가치로 바뀌는 정확한 공식, 그것을 시장가로 매기는지 여부.
 
 **이 게임과 다른 점**: 빅토리아3는 판매량이 방식마다 고정이다. 이 게임은 지대·세금을 낸 뒤 쓰고 남는 것을 판다 (DESIGN 4장). 두 방식 모두 판매량이 가격에 반응하지 않는다.
+
+## 기상 조건 (harvest conditions, 1.8 도입)
+- 1.8 패치 노트: "Added 13 harvest conditions that can trigger around the world affecting rural buildings and infrastructure" (https://vic3.paradoxwikis.com/Patch_1.8).
+- 아래는 게임 스크립트 원본(1.13.11 미러)에서 확인했다. G = https://github.com/jink47787/Historical_MP_Series_Vic3/blob/main/basegame-ver/common/
+  - 조건 정의: G `harvest_condition_types/00_harvest_condition_types.txt`, 형식 설명: 같은 폴더의 `harvest_condition_types.md`
+  - 검사 주기: G `defines/00_defines.txt`의 `NHarvestConditions`
+- 작동 방식:
+  - 각 주(state)는 3개월에 한 번 검사한다 (`HARVEST_CONDITION_PERIOD = 3`). 굴린 값이 0.2(`HARVEST_CONDITION_CHANCE_THRESHOLD`)보다 크면 그 검사는 건너뛴다.
+  - `range`: 0은 진원지만, 1은 바로 이웃까지, 2는 그다음까지. `duration`은 주 단위. `intensity`는 modifier 숫자에 곱하는 배수 (`HARVEST_CONDITION_MIN_INTENSITY` 0 ~ `MAX` 9).
+  - `incompatible_with`: 그 조건이 이미 있는 주에는 생기지 않는다. 예: 가뭄은 홍수·서리·우박·폭우·적당한 강우와 함께 오지 않는다.
+  - 다른 조건이 있으면 확률이 오른다. 예: 폭염 중이면 가뭄 확률 ×1.5.
+- 우리 게임과 관련된 세 조건 (강도 1 기준 효과):
+
+| 조건 | 범위 | 기간(주) | 강도 | 확률 | 산출(throughput) | 그 밖의 효과 |
+|---|---|---|---|---|---|---|
+| 가뭄 drought | 1~2 | 36~104 | 2~6 | 0.0025 | 농업·플랜테이션·목축 −5% | 기반시설 사용 +10%, 소작농 소비 +0.025 |
+| 홍수 flood | 1~2 | 36~104 | 3~6 | 0.0025 | 농업·플랜테이션·목축·채취 −5% | 주 기반시설 −5%, 시장 접근 가격 영향 −5%, 소작농 소비 +0.03 |
+| 산불 wildfire | 1~2 | 24~94 | 4~8 | 0.0008 | 농업·플랜테이션·목축·채취 −5% | 기반시설 사용 +10%, 주 기반시설 −5%, 소작농 소비 +0.03 |
+
+- 강도 2~6이면 산출 −10%~−30%다.
+- throughput은 투입과 산출을 함께 바꾸고 일자리는 그대로 둔다: "Both input and output goods are modified by the throughput percentage while required workers remains the same" (https://vic3.paradoxwikis.com/Buildings). 그래서 기상 조건이 걸린 건물은 원료도 덜 쓴다. 이 게임도 같다 (DESIGN 7.1, 7.4).
+- 채취(`bg_extraction`)는 광산(`bg_mining`)과 벌목(`bg_logging`)의 부모 그룹이다 (G `building_groups/00_building_groups.txt`). 자급 농업(`bg_subsistence_agriculture`)은 농업(`bg_agriculture`)의 자식이라 농업 보정이 소작지에도 붙는다고 보았다. 상속 규칙 자체는 문서로 확인 못 함.
+- **확인 못 함:** 확률이 무엇에 대한 확률인지(검사당·종류별), 임계값 0.2와의 결합, 진원지에서 멀어질 때 강도가 얼마나 줄어드는지. 공식 개발 일지 DD#131 (https://admin-forum.paradoxplaza.com/forum/developer-diary/victoria-3-dev-diary-131-famines-starvation-harvest-conditions.1708680)은 열리지 않았다.

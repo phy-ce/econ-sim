@@ -1,6 +1,6 @@
 import { BUILDING_BY_ID, GOOD_IDS, GOODS } from './data';
 import { CLASS_DEFS, WORKFORCE_RATIO } from './data';
-import { builderOf, companyById, constructionEstimate, isGovernment, kingdomGdp, slots } from './economy';
+import { builderOf, companyById, constructionEstimate, harvestCondition, isGovernment, kingdomGdp, slots } from './economy';
 import { subsistenceWage } from './labor';
 import { basketCostAt } from './market';
 import { workforce } from './pops';
@@ -107,6 +107,8 @@ export interface MetricPoint {
   /** 은행·상인 현금, 대륙 전체 돈 */
   bank: number;
   traders: number;
+  /** 기상 조건이 걸린 지역 수 (없으면 기록하지 않는다 = 0) */
+  harvestRegions?: number;
 }
 
 const r0 = (x: number) => Math.round(x);
@@ -208,6 +210,7 @@ export function recordMetrics(w: World) {
   }
   const classGap = upN > 0 && lowN > 0 && low > 0 ? round2((up / upN) / (low / lowN)) : 0;
   const regionGap = regionSol.length && Math.min(...regionSol) > 0 ? round2(Math.max(...regionSol) / Math.min(...regionSol)) : 0;
-  (w.metrics ??= []).push({ tick: w.tick, kingdoms, goods, classGap, regionGap, bank: r0(w.bank.cash), traders: r0(w.traders.cash) });
+  const harvestRegions = w.regions.filter((r) => harvestCondition(w, r.id)).length;
+  (w.metrics ??= []).push({ tick: w.tick, kingdoms, goods, classGap, regionGap, bank: r0(w.bank.cash), traders: r0(w.traders.cash), ...(harvestRegions ? { harvestRegions } : {}) });
   if (w.metrics.length > METRICS_CAP) w.metrics.splice(0, w.metrics.length - METRICS_CAP);
 }
