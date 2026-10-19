@@ -318,6 +318,9 @@ export function scaleBonus(level: number): number {
  * - taxLevels: 세금 수준 1~5단계가 세법의 모든 세율에 곱하는 배율
  * - officeTargetDays: 건축사무소를 늘려 공사 대기를 이 일수 안으로 맞춘다
  * - officeUseFull: 사무소 포인트 중 이 비율 이상을 공사에 실제로 쓰고 있어야 사무소를 늘린다
+ * - officeBacklogDays: 공사 대기가 이 일수를 넘으면 왕실은 국고가 지출 treasuryLowWeeks 주치 이상(빚 없음)이기만 해도 사무소를 늘린다 (보통은 treasuryHighWeeks 주치 초과). Infinity = 끔.
+ *   끔·60·90·180을 20년 × 시드 1~4로 비교했다 (main ca68b75 합친 뒤). 끄면 8~20년차 대기가 이 일수를 넘는 점검의 88~90%를 국고 52주 기준이 막는다.
+ *   180은 끈 것보다 5년차 건물 레벨 +60, 노동자 생활수준 +0.50 (둘 다 2 표준오차 밖)이고 20년차는 차이가 없다. 60은 5년차 기술이 1.75개 늦고, 90은 20년차 노동자 생활수준이 1.59로 가장 낮다
  * - startsPerWeek: AI 회사 하나가 한 주에 새로 넣는 공사 수 상한
  * - luxuryLinear, luxuryQuad: 사치품 필요 = linear × (부 − 10) + quad × (부 − 10)²
  * - meatLinear, meatQuad: 고기 필요 = linear × (부 − 8) + quad × (부 − 8)²
@@ -372,6 +375,7 @@ export const TUNE = {
   incomeTax: 0.2,
   officeTargetDays: 30,
   officeUseFull: 0.9,
+  officeBacklogDays: 180,
   startsPerWeek: 3,
   luxuryLinear: 0.3,
   luxuryQuad: 0.02,

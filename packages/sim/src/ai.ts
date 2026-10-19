@@ -336,7 +336,9 @@ function planConstruction(w: World, c: Company, o: Outlook) {
     const block = Math.max(OFFICE_BLOCK, Math.round(officeLevel * OFFICE_GROWTH));
     const officeCost = constructionEstimate(w, c, 'builder').cost * block;
     const full = (c.buildUsed ?? 0) >= est.pointsPerDay * TUNE.officeUseFull;
-    const rich = c.debt <= 0 && treasuryWeeks(c, kingdomById(w, c.kingdomId)) > TUNE.treasuryHighWeeks;
+    // 대기가 TUNE.officeBacklogDays 를 넘게 밀리면 국고 기준을 지출 TUNE.treasuryLowWeeks 주치로 낮춘다
+    const weeks = treasuryWeeks(c, kingdomById(w, c.kingdomId));
+    const rich = c.debt <= 0 && (weeks > TUNE.treasuryHighWeeks || (weeks >= TUNE.treasuryLowWeeks && backlog() > TUNE.officeBacklogDays));
     if (offices.length && full && rich && backlog() > TUNE.officeTargetDays && c.cash > officeCost * 1.5 && !w.constructions.some((k) => k.companyId === c.id && k.typeId === 'builder')) {
       const office = offices[0];
       // 대기가 TUNE.officeTargetDays 안으로 들어올 만큼 한 번에 늘린다
