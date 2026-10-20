@@ -3,7 +3,7 @@
 # 환경 변수 S="1 2" 로 시드를 고른다
 import json, os, sys
 from collections import defaultdict
-keys = ['pop', 'solPeas', 'solUnsk', 'foodPeas', 'gdp', 'levels', 'grain', 'peas']
+keys = ['pop', 'solPeas', 'solUnsk', 'solSk', 'foodPeas', 'gdp', 'levels', 'grain', 'peas']
 seeds = set(int(x) for x in os.environ['S'].split()) if os.environ.get('S') else None
 g = defaultdict(list)
 for f in sys.argv[1:]:
@@ -17,9 +17,9 @@ for t, runs in g.items():
     cells = []
     for k in keys:
         def avg(lo, hi):
-            v = [p[k] for tr in runs for p in tr if lo <= p['y'] <= hi]
+            v = [p.get(k, float('nan')) for tr in runs for p in tr if lo <= p['y'] <= hi]
             return sum(v) / len(v) if v else float('nan')
         years = sorted({p['y'] for tr in runs for p in tr})
-        per = [sum(p[k] for tr in runs for p in tr if p['y'] == y) / len(runs) for y in years]
+        per = [sum(p.get(k, float('nan')) for tr in runs for p in tr if p['y'] == y) / len(runs) for y in years]
         cells.append('/'.join(fmt(x) for x in (avg(1, 5), avg(6, 10), avg(11, 99), avg(1, 99), min(per))))
     print(f'{t} {len(runs)} | ' + ' | '.join(cells))
