@@ -149,6 +149,13 @@ export function spendBudget(w: World) {
     k.lastBudget = b;
     const net = b.wages + b.goods + b.research + b.interest - b.fees;
     k.expenseEma = round2(k.expenseEma == null ? net : k.expenseEma * 0.75 + net * 0.25);
+    // 예산 미리보기 기준값 (화면 전용)
+    const base = (k.budgetBase ??= {});
+    const ema = (old: number | undefined, x: number) => round2(old == null ? x : old * 0.75 + x * 0.25);
+    base.tariffs = ema(base.tariffs, k.tariffWeek ?? 0);
+    base.fees = ema(base.fees, b.fees);
+    base.goods = ema(base.goods, b.goods);
+    k.tariffWeek = 0;
     updateWageIndex(w, k);
     applyStateWages(w, k);
   }
@@ -229,6 +236,12 @@ export function collectIncomeTax(w: World) {
     gov.cash += tax;
     kingdomById(w, kid).revenueWeek += tax;
     got.set(kid, (got.get(kid) ?? 0) + tax);
+  }
+  // 예산 미리보기 기준: 세금 수준 배율 1로 환산한 하루 세입의 이동평균 (화면 전용, sim 은 읽지 않는다)
+  for (const k of w.kingdoms) {
+    const day = (got.get(k.id) ?? 0) / budgetMult(k, 'tax');
+    const base = (k.budgetBase ??= {});
+    base.tax = round2(base.tax == null ? day : base.tax * 0.9 + day * 0.1);
   }
   // 걷힌 세금은 행정청이 한도에 기여한 비율만큼 그 행정청의 매출로 잡는다 (돈은 이미 국고에 있다).
   // 손익과 장부는 같은 날 produce 에서 다른 매출과 함께 한 번만 적는다
