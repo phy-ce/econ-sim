@@ -208,7 +208,7 @@ const QUAL_FACTOR: Partial<Record<PopClass, (L: number, W: number) => number>> =
 };
 /** 출신 직종 배율: 가까운 직종에서 더 잘 옮겨 간다 */
 const QUAL_FROM: Partial<Record<PopClass, Partial<Record<PopClass, number>>>> = {
-  skilled: { unskilled: 2 },
+  skilled: { unskilled: 2, farmer: 2 },
   expert: { skilled: 5 },
   gentry: { aristocrat: 5, expert: 2 },
   capitalist: { aristocrat: 5, skilled: 5, expert: 5 },

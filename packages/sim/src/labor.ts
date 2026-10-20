@@ -3,7 +3,7 @@ import { borrow, disbanded, emptyJobs, emptyStats, isSubsistence, paysDividend, 
 import { tenantIncomePerWorker } from './market';
 import { findPop, getPop, movePeople, workforce } from './pops';
 import { clamp } from './rng';
-import { POP_CLASSES, SKILLS, WEALTH_MIN, wealthOf } from './types';
+import { LOWER_JOBS, POP_CLASSES, SKILLS, WEALTH_MIN, isLowerJob, wealthOf } from './types';
 import type { Building, Company, MethodDef, Pop, PopClass, Region, Skill, World } from './types';
 
 // 노동시장: 사람은 자격이 되는 자리 중 1인당 소득이 가장 높은 곳으로 옮긴다 (조금 나은 정도로는 안 옮긴다).
@@ -123,8 +123,8 @@ function seatsIn(w: World, r: Region, local: Building[], comp: Map<number, Compa
   return out;
 }
 
-/** 노동자·소작농 자리는 귀족·자본가 말고 누구나 들어갈 수 있다 */
-const OPEN: PopClass[] = ['unskilled', 'peasant'];
+/** 노동자·농부·소작농 자리는 귀족·자본가 말고 누구나 들어갈 수 있다 */
+const OPEN: PopClass[] = ['unskilled', 'farmer', 'peasant'];
 const isOwnerClass = (c: PopClass) => c === 'capitalist' || c === 'aristocrat';
 
 /**
@@ -250,12 +250,12 @@ export function laborMarket(w: World) {
   syncEmployment(w);
 }
 
-/** 건물이 실제로 채울 수 있는 그 직종 자리: 노동자는 직종 비율 상한(ratioGate)까지만 뽑는다 (채용과 이주 매력도가 같이 쓴다). n = slots(b, s) */
+/** 건물이 실제로 채울 수 있는 그 직종 자리: 노동자·농부는 직종 비율 상한(ratioGate)까지만 뽑는다 (채용과 이주 매력도가 같이 쓴다). n = slots(b, s) */
 function fillableWith(b: Building, m: MethodDef | null, s: Skill, n: number): number {
-  return s === 'unskilled' ? n * ratioGate(b, m) : n;
+  return isLowerJob(s) ? n * ratioGate(b, m) : n;
 }
 
-/** 노동자 충원 상한 비율: 다른 직종(기술자·전문가) 중 가장 덜 찬 쪽 / 0.9 */
+/** 노동자·농부 충원 상한 비율: 다른 직종(기술자·전문가) 중 가장 덜 찬 쪽 / 0.9 */
 function ratioGate(b: Building, m: MethodDef | null): number {
   let gate = 1;
   const skilled = slotsWith(b, m, 'skilled');
@@ -373,11 +373,11 @@ export function migrate(w: World) {
    * 지역 매력도: 그 직종 실업자 한 사람이 이 지역에서 기대할 수 있는 하루 소득 × 식량 충족률.
    * 빈자리를 임금이 높은 순으로 그 지역 실업자(하층은 소작농 + 노동자, 그 밖은 같은 직종)에게 나눠 준 1인당 소득이다.
    * 실업자가 빈자리보다 많으면 자리를 못 얻는 사람은 0으로 센다. 실업자가 없으면 가장 좋은 빈자리 임금이다.
-   * 빈자리: 하층은 노동자 자리와 소작지 여유, 그 밖은 그 직종 자리. 실제로 뽑을 수 있는 자리만 센다 (fillable, 채용과 같은 규칙).
+   * 빈자리: 하층은 노동자·농부 자리와 소작지 여유, 그 밖은 그 직종 자리. 실제로 뽑을 수 있는 자리만 센다 (fillable, 채용과 같은 규칙).
    */
   const attraction = (r: Region, prof: PopClass): number => {
-    const lower = prof === 'peasant' || prof === 'unskilled';
-    const s: Skill = lower ? 'unskilled' : (prof as Skill);
+    const lower = prof === 'peasant' || isLowerJob(prof);
+    const kinds: Skill[] = lower ? LOWER_JOBS : [prof as Skill];
     const open: { wage: number; n: number }[] = [];
     for (const b of localOf.get(r.id) ?? NO_BUILDINGS) {
       if (isSubsistence(b.typeId)) {
@@ -386,15 +386,17 @@ export function migrate(w: World) {
         continue;
       }
       const m = methodOf(b);
-      const jobs = slotsWith(b, m, s);
-      const n = fillableWith(b, m, s, jobs) - b.employed[s];
-      if (n > 0) open.push({ wage: paysShare(b, s) ? dividendWage(b, s) : comp.get(b.companyId)?.wages[s] ?? 0, n });
+      for (const s of kinds) {
+        const jobs = slotsWith(b, m, s);
+        const n = fillableWith(b, m, s, jobs) - b.employed[s];
+        if (n > 0) open.push({ wage: paysShare(b, s) ? dividendWage(b, s) : comp.get(b.companyId)?.wages[s] ?? 0, n });
+      }
     }
     regionPops.catchUp();
     let food = 0, size = 0, seekers = 0;
     for (const p of regionPops.of(r.id)) {
       food += p.food * p.size; size += p.size;
-      if (p.work === 0 && (lower ? p.prof === 'peasant' || p.prof === 'unskilled' : p.prof === prof)) seekers += workforce(p);
+      if (p.work === 0 && (lower ? p.prof === 'peasant' || isLowerJob(p.prof) : p.prof === prof)) seekers += workforce(p);
     }
     open.sort((a, b) => b.wage - a.wage);
     const want = Math.max(1, seekers);
@@ -410,8 +412,8 @@ export function migrate(w: World) {
 
   const cache = new Map<number, number>();
   const attr = (r: Region, prof: PopClass) => {
-    // 소작농과 노동자는 같은 빈자리를 두고 다투므로 매력도가 같다
-    const k = r.id * POP_CLASSES.length + PROF_INDEX[prof === 'peasant' ? 'unskilled' : prof];
+    // 소작농·노동자·농부는 같은 빈자리를 두고 다투므로 매력도가 같다
+    const k = r.id * POP_CLASSES.length + PROF_INDEX[prof === 'peasant' || isLowerJob(prof) ? 'unskilled' : prof];
     let v = cache.get(k);
     if (v === undefined) { v = attraction(r, prof); cache.set(k, v); }
     return v;

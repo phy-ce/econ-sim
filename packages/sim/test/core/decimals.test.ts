@@ -112,7 +112,7 @@ describe('저장값 소수 둘째 자리', () => {
     old.traders.shipments.push(...old.traders.shipments.map((s: { q: number }) => ({ ...s, q: s.q / 3 + 1e-4 })));
     const before = moneyIdentity(old as World);
     const got = migrateWorld(old)!;
-    expect(got.version).toBe(6);
+    expect(got.version).toBe(7);
     expect(violations(save(got))).toEqual([]);
     // 옛 저장의 끝수는 장부의 센트 아래이므로 마지막 반올림이 그만큼(반 센트 아래)만 지운다
     expect(Math.abs(moneyIdentity(got) - before)).toBeLessThan(0.01);
@@ -166,11 +166,36 @@ describe('저장값 소수 둘째 자리', () => {
       if (b.crew100 !== undefined) { b.crew = b.crew100 / 100; delete b.crew100; }
     }
     const got = migrateWorld(older)!;
-    expect(got.version).toBe(6);
+    expect(got.version).toBe(7);
     // 필드 순서만 다를 수 있다 (바꾼 필드가 끝으로 간다)
     expect(got).toEqual(want);
     expect(violations(save(got))).toEqual([]);
     expect(migrateWorld({ ...want, version: 3 })).toBeNull();
+  });
+
+  // 6판에는 농부가 없다: 농장·목장의 일꾼은 노동자였다. 바꾸면 그 노동자가 농부가 되고 세계가 지금 규칙으로 계속 돈다
+  it('6판 저장을 바꾸면 농장·목장의 노동자가 농부가 된다', () => {
+    const w = createWorld(7);
+    runTo(w, 30);
+    const want = JSON.parse(save(w)) as World;
+    const old = JSON.parse(save(w));
+    old.version = 6;
+    for (const p of old.pops) if (p.prof === 'farmer' && p.work !== 0) p.prof = 'unskilled';
+    for (const b of old.buildings) { b.employed.unskilled += b.employed.farmer; delete b.employed.farmer; }
+    for (const c of old.companies) { delete c.wages.farmer; if (c.wageOffset) delete c.wageOffset.farmer; }
+    for (const r of old.regions) delete r.households.farmer;
+    for (const h of old.history) { delete h.sol.farmer; delete h.population.farmer; delete h.unemployment.farmer; }
+    const got = migrateWorld(old)!;
+    expect(got.version).toBe(7);
+    const farmers = (x: World) => x.pops.filter((p) => p.prof === 'farmer' && p.work !== 0).map((p) => p.id);
+    expect(farmers(got)).toEqual(farmers(want));
+    expect(farmers(got).length).toBeGreaterThan(0);
+    expect(got.buildings.map((b) => b.employed)).toEqual(want.buildings.map((b) => b.employed));
+    expect(got.companies.every((c) => c.wages.farmer === c.wages.unskilled)).toBe(true);
+    expect(got.regions.every((r) => r.households.farmer.population === 0)).toBe(true);
+    expect(Math.abs(moneyIdentity(got) - moneyIdentity(want))).toBeLessThan(0.01);
+    runTo(got, 60);
+    expect(violations(save(got))).toEqual([]);
   });
 
   // 반올림 찌꺼기(0.05 이하 이동평균)는 0이 되고, 사고파는 사람이 없는 시장은 기본가에서 벗어난 쪽 끝으로 간다 (market.ts updatePrices)

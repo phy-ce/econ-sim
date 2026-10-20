@@ -5,7 +5,7 @@ import { addToPool, kingdomById, kingdomOf } from './kingdoms';
 import { tenantSaleBag } from './market';
 import { payPops } from './pops';
 import { round2 } from './rng';
-import { SKILLS, crewOf } from './types';
+import { LOWER_JOBS, SKILLS, crewOf } from './types';
 import type { BudgetItem, Building, Company, GoodBag, GoodId, Kingdom, Pop, PopClass, Region, SalvageLot, TaxLaw, World } from './types';
 
 // ---------------------------------------------------------------- 은행
@@ -106,7 +106,7 @@ export function taxRates(k: Kingdom, law: TaxLaw = k.taxLaw): { land: number; po
 }
 
 /**
- * 임금 지수 (매주, 빅토리아3의 '보통 임금'): 왕국 민간 건물 노동자의 평균 임금 ÷ 노동자 기본 임금 (고용 가중)의 이동평균.
+ * 임금 지수 (매주, 빅토리아3의 '보통 임금'): 왕국 민간 건물 노동자·농부의 평균 임금 ÷ 기본 임금 (고용 가중)의 이동평균.
  * 국영 임금은 이 지수에 직종별 기본 임금(노동자 10, 기술자 15, 전문가 40 …)을 곱한다. 민간 노동자 고용이 없으면 그대로 둔다
  */
 export function updateWageIndex(w: World, k: Kingdom) {
@@ -115,7 +115,7 @@ export function updateWageIndex(w: World, k: Kingdom) {
     if (b.stateOwned || BUILDING_BY_ID[b.typeId].auto || kingdomOf(w, b.regionId) !== k.id) continue;
     const c = companyById(w, b.companyId);
     if (!c) continue;
-    paid += b.employed.unskilled * c.wages.unskilled; base += b.employed.unskilled * SKILL_DEFS.unskilled.baseWage;
+    for (const s of LOWER_JOBS) { paid += b.employed[s] * c.wages[s]; base += b.employed[s] * SKILL_DEFS[s].baseWage; }
   }
   if (base <= 0) return;
   k.wageIndex = round2(k.wageIndex == null ? paid / base : k.wageIndex * 0.75 + (paid / base) * 0.25);

@@ -105,7 +105,7 @@ function roundBuilding(b: Building): void {
   if (b.crew100 !== undefined) { b.crew100 = r(b.crew100); b.crew = r(b.crew100 / 100); } else if (b.crew !== undefined) delete b.crew;
   if (b.staffPeak !== undefined) b.staffPeak = r(b.staffPeak);
   const e = b.employed;
-  e.unskilled = r(e.unskilled); e.skilled = r(e.skilled); e.expert = r(e.expert);
+  e.unskilled = r(e.unskilled); e.farmer = r(e.farmer); e.skilled = r(e.skilled); e.expert = r(e.expert);
   e.gentry = r(e.gentry); e.capitalist = r(e.capitalist); e.aristocrat = r(e.aristocrat);
   roundBag(b.stock);
   roundBag(b.outStock);

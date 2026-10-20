@@ -10,7 +10,7 @@ const sheets: Record<string, readonly string[]> = {
   'regions-v2': ['region-1','region-2','region-3','region-4','region-5','region-6','region-7','admin','school','builder','railway','private-purse'],
 };
 export function spriteAsset(raw: string, family: 'general' | 'building' | 'goods' = 'general') {
-  const aliases: Record<string,string> = { gentry:'aristocrat', luxury_furniture:'furniture',luxury_cloth:'cloth',meat:'food',ranch:'farm',factory:'foodplant',locomotive:'railway',laborer:'unskilled','m-wheat':'grain','m-mine':'mine',fuelworks:'coal_mine' };
+  const aliases: Record<string,string> = { gentry:'aristocrat', farmer:'peasant', luxury_furniture:'furniture',luxury_cloth:'cloth',meat:'food',ranch:'farm',factory:'foodplant',locomotive:'railway',laborer:'unskilled','m-wheat':'grain','m-mine':'mine',fuelworks:'coal_mine' };
   const clean = raw.replace(/^[bc]-/, '');
   const id = aliases[clean] ?? clean;
   const candidates = family === 'goods' ? ['goods-v2'] : family === 'building' || raw.startsWith('b-')

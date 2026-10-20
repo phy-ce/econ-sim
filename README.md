@@ -95,6 +95,7 @@ Research is paid each week from the research budget (see Money). That money beco
 |---|---|---|---|
 | Tenant farmers | lower | – | the region's free farmland (see below) |
 | Labourers | lower | 10 | wages |
+| Farmers | lower | 10 | wages on grain farms, fibre farms and ranches (open to anyone, like labourer jobs; each company sets its own farmer wage) |
 | Skilled workers | middle | 15 | wages, research funding |
 | Experts | middle | 40 | wages, research funding |
 | Gentry | middle | 30 | wages in hereditary administration and tutor schools, or a 0.25 share in the manor |
