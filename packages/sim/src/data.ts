@@ -270,11 +270,13 @@ export const BUILDING_TYPES: BuildingTypeDef[] = [
     ],
   },
   {
-    // 세금은 행정청이 감당하는 인구만큼만 걷힌다 (1레벨 50만 명, 전문 관료제는 3배)
+    // 세금은 행정청이 감당하는 인구만큼만 걷힌다 (1레벨 50만 명, 전문 관료제는 3배).
+    // 1레벨 임금(기본): 세습 하급 귀족 50 × 30 = 1,500, 전문 기술자 100 × 15 = 1,500 + 종이 200 × 4 = 800 (한도당 비용은 전문이 약 절반).
+    // 종이 200은 종이 공장 1레벨(5,000)을 몇 레벨이 나눠 쓰는 크기라 줄이지 않는다 (줄이면 종이 공급이 끊겨 방식이 오간다, 2026-10-21 비교)
     id: 'admin', name: '행정청', nameEn: 'Government administration', buildPoints: 400, stateOnly: true,
     methods: [
-      m({ id: 'admin_hereditary', name: '세습 관료제', nameEn: 'Hereditary bureaucrats', workers: { skilled: 400, gentry: 100 }, inputs: {}, outputs: {}, taxCapacity: TAX_PEOPLE_PER_LEVEL }),
-      m({ id: 'admin_professional', name: '전문 관료제', nameEn: 'Professional bureaucrats', tech: 'printing', workers: { skilled: 500 }, inputs: { paper: 200 }, outputs: {}, taxCapacity: TAX_PEOPLE_PER_LEVEL * 3 }),
+      m({ id: 'admin_hereditary', name: '세습 관료제', nameEn: 'Hereditary bureaucrats', workers: { gentry: 50 }, inputs: {}, outputs: {}, taxCapacity: TAX_PEOPLE_PER_LEVEL }),
+      m({ id: 'admin_professional', name: '전문 관료제', nameEn: 'Professional bureaucrats', tech: 'printing', workers: { skilled: 100 }, inputs: { paper: 200 }, outputs: {}, taxCapacity: TAX_PEOPLE_PER_LEVEL * 3 }),
     ],
   },
 ];
