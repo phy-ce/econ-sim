@@ -275,6 +275,16 @@ function inputsAvailable(w: World, m: MethodDef, levels: number): boolean {
   return true;
 }
 
+/** 행정청용: 그 왕국 시장들에 남는 투입재(공급 − 수요, 이동평균)가 이 방식 levels 레벨의 하루 필요의 절반 이상인가 */
+function kingdomInputs(w: World, kingdomId: number, m: MethodDef, levels: number): boolean {
+  for (const [g, per] of Object.entries(m.inputs) as [keyof typeof GOODS, number][]) {
+    let spare = 0;
+    for (const x of w.regions) if (x.kingdomId === kingdomId) spare += x.market[g].supplyEma - x.market[g].demandEma;
+    if (spare < per * levels * 0.5) return false;
+  }
+  return true;
+}
+
 function manageBuildings(w: World, c: Company) {
   for (const b of w.buildings.filter((x) => x.companyId === c.id && !BUILDING_BY_ID[x.typeId].auto)) {
     const usable = availableMethods(c, b.typeId);
@@ -309,7 +319,7 @@ function manageBuildings(w: World, c: Company) {
       const ema = b.fillEma ?? 1;
       const value = (m: MethodDef) => m.taxCapacity! * (Object.keys(m.inputs).length ? ema : 1);
       let best = cur;
-      for (const m of usable) if (m.taxCapacity && m.id !== cur.id && inputsAvailable(w, m, b.level) && value(m) > value(best) * 1.1) best = m;
+      for (const m of usable) if (m.taxCapacity && m.id !== cur.id && kingdomInputs(w, regionById(w, b.regionId).kingdomId, m, b.level) && value(m) > value(best) * 1.1) best = m;
       if (best.id !== cur.id && w.tick - b.lastSwitchTick >= SWITCH_COOLDOWN) applyCommand(w, c.id, { type: 'setMethod', buildingId: b.id, methodId: best.id });
       continue;
     }
@@ -516,6 +526,7 @@ function planConstruction(w: World, c: Company, o: Outlook) {
     }
   }
   reviewLevels(w, c, o, est.pointsPerDay);
+  if (c.state) secureGovInputs(w, c, o, est.costPerDay);
   let fallbacks = 0;
   let blocked: { best: Pick | null } | undefined;
   for (let started = 0; started < TUNE.startsPerWeek; started++) {
@@ -545,6 +556,54 @@ function planConstruction(w: World, c: Company, o: Outlook) {
     o.add(getMethod(pick.typeId, pick.methodId), pick.levels, 1 + regionPerk(pick.regionId, pick.typeId));
   }
   if (blocked?.best) swapLand(w, c, o, blocked.best);
+}
+
+/**
+ * 왕실은 행정청 원료(전문 관료제의 종이 등)를 왕국 안에서 댈 만큼 생산 건물을 직접 짓는다.
+ * 필요 = 행정청 레벨 × 원료를 쓰는 가장 나은 방식(아는 것)의 레벨당 원료. 공급 = 왕국 안 그 상품 건물(누구 것이든)과 시작한 공사의 레벨 × 레벨당 산출.
+ * 국고가 조이지 않으면 남길 돈 선을 넘어서도 짓는다. 모자라면 모자란 만큼 1건 짓고 맨 앞에 둔다 (같은 상품 공사가 왕실에 이미 있으면 기다린다). 민간 공사 대기열은 길어서 기다리면 몇 년이 걸린다
+ */
+function secureGovInputs(w: World, c: Company, o: Outlook, costPerDay: number) {
+  if (w.constructions.filter((k) => k.companyId === c.id).length >= MAX_CONCURRENT_CONSTRUCTIONS || c.debt > creditLimit(w, c) * 0.3) return;
+  const mine = (regionId: number) => regionById(w, regionId).kingdomId === c.kingdomId;
+  const need = new Map<keyof typeof GOODS, number>();
+  const where = new Map<number, number>();
+  for (const b of w.buildings) {
+    if (b.companyId !== c.id || !getMethod(b.typeId, b.methodId).taxCapacity) continue;
+    const m = availableMethods(c, b.typeId).filter((x) => x.taxCapacity && Object.keys(x.inputs).length).sort((x, y) => y.taxCapacity! - x.taxCapacity!)[0];
+    if (!m) continue;
+    for (const [g, per] of Object.entries(m.inputs) as [keyof typeof GOODS, number][]) need.set(g, (need.get(g) ?? 0) + per * b.level);
+    where.set(b.regionId, (where.get(b.regionId) ?? 0) + b.level);
+  }
+  for (const [g, n] of need) {
+    let supply = 0, queued = false;
+    for (const b of w.buildings) if (mine(b.regionId)) supply += (getMethod(b.typeId, b.methodId).outputs[g] ?? 0) * b.level;
+    for (const k of w.constructions) {
+      const out = getMethod(k.typeId, k.methodId).outputs[g] ?? 0;
+      // 민간 공사는 대기열이 길어 시작한 것(포인트가 들어간 것)만 센다
+      if (out > 0 && mine(k.regionId) && (k.companyId === c.id || k.points > 0)) { supply += out * (k.levels ?? 1); if (k.companyId === c.id) queued = true; }
+    }
+    if (queued || supply >= n) continue;
+    const t = BUILDING_TYPES.find((x) => canBuildType(c, x) && !x.stateOnly && availableMethods(c, x.id).some((m) => (m.outputs[g] ?? 0) > 0));
+    if (!t) continue;
+    const m = availableMethods(c, t.id).find((x) => (x.outputs[g] ?? 0) > 0)!;
+    const perLevel = constructionEstimate(w, c, t.id).cost;
+    // 국고가 조이지 않으면(빚 없음, 지출 TUNE.treasuryLowWeeks 주치 이상) 진행 중 공사비를 뺀 현금으로 짓는다
+    const afford = treasuryTight(c, kingdomById(w, c.kingdomId)) ? 0 : Math.floor((c.cash - committedCost(w, c)) / perLevel);
+    let levels = Math.min(Math.ceil((n - supply) / m.outputs[g]!), MAX_LEVELS_PER_PROJECT, afford);
+    // 행정청이 큰 지역부터, 땅과 일손이 되는 곳
+    const regions = ownRegions(w, c).sort((x, y) => (where.get(y.id) ?? 0) - (where.get(x.id) ?? 0) || x.id - y.id);
+    for (const r of regions) {
+      const fit = Math.min(levels, Math.floor(roomFor(w, r.id, t.id)));
+      if (fit < 1 || laborAvailability(w, r, m, fit, true) < MIN_STAFFING()) continue;
+      const existing = w.buildings.find((b) => b.companyId === c.id && b.regionId === r.id && b.typeId === t.id);
+      const err = existing
+        ? applyCommand(w, c.id, { type: 'expand', buildingId: existing.id, levels: fit })
+        : applyCommand(w, c.id, { type: 'build', typeId: t.id, regionId: r.id, methodId: m.id, levels: fit });
+      if (!err) { toFront(w, c); o.add(m, fit, 1 + regionPerk(r.id, t.id)); levels = 0; }
+      break;
+    }
+  }
 }
 
 /**
