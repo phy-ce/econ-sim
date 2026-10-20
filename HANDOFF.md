@@ -8,6 +8,12 @@
 - 사용자 결정 대기: 아래 0장 "결정 대기". 화면 작업자에게 넘길 것: `docs/UI_CHANGES.md` 맨 위 "0. 지금 할 일".
 - 클라우드 세션(claude.ai/code)으로 이어서 할 수 있다. 규칙은 CLAUDE.md "클라우드 세션"을 본다.
 
+## 0-encyclopedia. wt-encyclopedia (2026-10-21, 합치기 전)
+- 규칙 사전: 데이터 `packages/sim/src/encyclopedia.ts` (항목 79개, 분류 10개), 단독 앱 `packages/encyclopedia` (`npm run encyclopedia`, 포트 5200, Pages `/econ-sim/encyclopedia/`).
+- 값은 코드 상수를 읽고, 예시는 실제 sim 함수를 부르고, live는 워커에서 도는 세계를 읽는다. sim 변경은 상수·`splitHarvest`에 `export`만 붙였다 (결과 그대로).
+- 시험 `test/core/encyclopedia.test.ts` (약 0.3초): DESIGN.md 번호 절 ↔ `DESIGN_SECTIONS`, 모든 TUNE 키가 어느 항목에 실렸는지, 모든 값·예시·live 함수.
+- 코드와 DESIGN.md가 다른 곳: 기술자 기본 임금은 코드 15, DESIGN 3.2 표와 CLAUDE.md는 20.
+
 ## 0-adminfill. wt-adminfill (2026-10-21, 합치기 전)
 - 행정청 징세 한도 × 원료 충족률(`adminCapacityOf`), 학교 자리도 같다. AI: 행정청 방식은 한도 × `fillEma`, 원료 방식은 왕국 시장에 남는 원료가 있을 때만.
 - 종이(기본가 4)와 종이 공장(목재 2,500 → 종이 5,000). 전문 관료제는 종이 200을 쓴다. 왕실이 행정청 원료를 왕국 안에서 대도록 종이 공장을 직접 짓는다(`secureGovInputs`).

@@ -8,9 +8,9 @@ import { clamp, round2 } from './rng';
 import type { Building, Company, GoodBag, World } from './types';
 
 /** 숙련도가 하루에 오르는 양 (%, 약 한 달이면 최대) */
-const EXP_GAIN = 3.5;
+export const EXP_GAIN = 3.5;
 /** 작업 인원이 실제 충원율을 따라가는 하루 비율 (작업 인원은 % 단위 소수 둘째 자리라 충원율과 0.06%p 안까지 따라간다) */
-const CREW_RATE = 0.08;
+export const CREW_RATE = 0.08;
 
 /**
  * 소작지는 지역의 빈 농지 전부다. 농장이 들어서면 줄고, 헐리면 다시 늘어난다.

@@ -39,6 +39,17 @@ python cli/sweepsum.py out.jsonl          # summarise a sweep
 
 `sweep.sh` reads `SEEDS` (default `"1 2"`), `YEARS` (default 20), `PAR` (parallel runs) and `TIMING=1`.
 
+## Encyclopedia
+
+A standalone rules encyclopedia (every game rule, with live values from the code, worked examples computed by the real simulation functions, and a small live world you can advance) lives in `packages/encyclopedia`. It will later move into the game client.
+
+```bash
+npm run encyclopedia                                   # http://localhost:5200
+npm run build -w @econ/encyclopedia                    # production build (packages/encyclopedia/dist)
+```
+
+Entries are data in `packages/sim/src/encyclopedia.ts`. Values are read from the code (`TUNE`, `data.ts` and other constants), never copied. Deep links use the hash: `/#price-formula`. The test `packages/sim/test/core/encyclopedia.test.ts` fails when a numbered section of `docs/DESIGN.md` or a `TUNE` key has no entry, or when an entry's function throws. On GitHub Pages it is served at `/econ-sim/encyclopedia/`.
+
 Controls: `Space` pauses and resumes, `1`–`4` set the speed (1× = one game hour per real second, then 10×, 100×, 500×).
 
 ## Layout

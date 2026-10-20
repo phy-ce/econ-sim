@@ -17,14 +17,14 @@ import type { BudgetItem, Building, Company, Kingdom, MethodDef, Region, Skill, 
 
 /** 건설 판단 기준: 연간 이윤 / 공사비 (5년 안에 회수) */
 const MIN_ROI = () => TUNE.minRoi;
-const SWITCH_COOLDOWN = TICKS_PER_WEEK * 3;
+export const SWITCH_COOLDOWN = TICKS_PER_WEEK * 3;
 /** 공사 하나의 레벨 수 후보 (큰 것부터) */
-const CHUNKS = [5, 2, 1];
+export const CHUNKS = [5, 2, 1];
 /** 사무소를 한 번에 늘리는 레벨: 지금 사무소의 1/4 (최소 2) */
-const OFFICE_BLOCK = 2;
-const OFFICE_GROWTH = 0.25;
+export const OFFICE_BLOCK = 2;
+export const OFFICE_GROWTH = 0.25;
 /** 공사 기간 동안 채울 수 있는 사람을 셀 때 보는 날 수 */
-const STAFFING_HORIZON = 60;
+export const STAFFING_HORIZON = 60;
 /** 짓기 기준: 공사 기간 안에 일자리의 이 비율 이상을 채울 사람이 있어야 한다 (건축사무소는 대신 채울 수 있는 레벨 수 officeStaffable 을 본다) */
 const MIN_STAFFING = () => TUNE.minStaffing;
 
@@ -250,8 +250,8 @@ function shrinkSchools(w: World, c: Company) {
 }
 
 /** 세법을 바꾸는 기준: 다른 세법의 예상 세입이 지금의 이 배수를 넘을 때, 마지막으로 바꾼 지 LAW_COOLDOWN 틱이 지났을 때 */
-const LAW_SWITCH = 1.2;
-const LAW_COOLDOWN = TICKS_PER_YEAR;
+export const LAW_SWITCH = 1.2;
+export const LAW_COOLDOWN = TICKS_PER_YEAR;
 
 /** 세법 (AI 왕국, 4주마다): 지금 세금 수준으로 두 세법이 걷을 세금(lawRevenue)을 비교해 더 걷히는 쪽으로 바꾼다 */
 function chooseTaxLaw(w: World, c: Company) {

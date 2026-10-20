@@ -26,6 +26,9 @@ jobs:
       - run: npm ci
       - run: npx vite build --base=/econ-sim/
         working-directory: packages/client
+      # 규칙 사전은 /econ-sim/encyclopedia/ 에 함께 올린다
+      - run: npx vite build --base=/econ-sim/encyclopedia/ --outDir ../client/dist/encyclopedia --emptyOutDir
+        working-directory: packages/encyclopedia
       - uses: actions/upload-pages-artifact@v3
         with:
           path: packages/client/dist

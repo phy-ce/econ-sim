@@ -26,6 +26,7 @@
 10. **저택에 하급 귀족 자리 (2-29).** 저택 일자리에 하급 귀족이 보이고 둘 다 임금이 아니라 몫이다. 저택 크기는 다른 일이 없는 하급 귀족만 센다. 소유 건물 자리의 "배당" 표시는 `paysShare(b, s)`로 가린다.
 11. **농부 계층 (2-37).** 새 직종 `farmer`(농부). 색 토큰 `--c-farmer`와 아이콘을 만들고, 계층·직종 목록(인구표·생활수준·실업·일자리 막대)에 노동자 옆으로 넣는다. sim이 임시로 고친 곳: `ui.tsx` 8·11, `spriteAtlas.ts` 13.
 12. **임시 아이콘을 전용 아이콘으로 (2-39).** 다른 아이콘을 빌려 쓰는 8개(종이·종이 공장·농부·하급 귀족·목장·고기·고급 가구·고급 옷감)와 농부 색 토큰. 목록과 위치는 2-39.
+13. **규칙 사전 (2-40, 급하지 않음).** 단독 앱 `packages/encyclopedia`가 있다. 나중에 게임 화면에 옮기거나, 지금은 도움말 버튼에서 `encyclopedia/#<항목 id>`로 잇기만 해도 된다.
 - **아직 sim에 없음 (만들지 말 것, 들어오면 이 목록에 올린다):**
   - 건물별 임금·현금·보조금 (브랜치 wt-wage). 들어오면 국영 임금 손잡이(`budget.wages`)가 없어지고, 건물 패널에 임금·현금·보조금 켜기가 생기고, 저장 형식이 바뀐다(옛 저장은 `migrateWorld`로 변환). 그래서 2-30의 국영 임금 줄은 작게 두어도 된다.
 
@@ -375,6 +376,15 @@
 - 색: 농부 계층 색은 `ui.tsx` 8행 `var(--c-farmer, #8a9a3c)` 임시값이다. `styles.css` 토큰 `--c-farmer`(밝은·어두운 테마 둘 다)를 만든다.
 - 우선순위: 같은 화면에 나란히 나와 헷갈리는 쌍부터 — 농부/소작농(계층 표·도넛), 하급/상급 귀족(저택 직원), 종이/옷감(시세 창).
 - 테스트 `test/uiRefresh.test.ts`는 아이콘이 null이 아닌지만 본다. 전용 그림을 넣은 뒤에는 "서로 다른 칸"인지 확인하게 바꾸는 것을 권한다.
+
+### 2-40. 규칙 사전 (2026-10-21, 급하지 않음)
+- 데이터: `@econ/sim`의 `ENCYCLOPEDIA`(항목 79개), `ENC_CATEGORIES`(10개), `SEEN_IN`(창 이름), `fillText`, `defaultCtx`, `ENC_BUILDINGS`.
+  항목 = `id, category, title{ko,en}, rule{ko,en}, formula?, params[{label, value(), unit}], example?() → {inputs, steps, result}, live?{pick, run(world, ctx)} → {rows, bars}, related, seenIn, source, design`.
+  `rule`·`formula`의 `{0}`, `{1}`은 `params` 값이다 (`fillText(text, entry, format)`). 단위(`unit`): florin, pct(×100 %), x, day, week, people, pt, level, good.
+- 단독 앱 `packages/encyclopedia` (Vite + React, 포트 5200, `npm run encyclopedia`): 왼쪽 분류·검색, 오른쪽 규칙·공식·값·예시·지금 게임(워커에서 도는 세계, 날짜 슬라이더·+30일·+1년·시드)·관련·보이는 곳. 테마는 CSS 변수(`:root[data-theme='dark']`), 언어 ko/en.
+- 게임에 옮길 때: `src/components/*`(Sidebar, EntryView, LivePanel, Bars, Rows, ExampleView)는 작고 `@econ/sim`만 쓴다. 지금 게임 패널은 게임 화면의 `world`를 그대로 넘기면 워커가 필요 없다 (`LivePanel`의 `live.world` 자리).
+- 딥링크: `…/encyclopedia/#price-formula`. 게임 창의 도움말 아이콘이 항목 id로 열면 된다. 항목의 `seenIn` 키(map, region, market, resource, pops, workforce, company, finance, alerts, charts)는 창 이름이다. 창 id와 다르면 `SEEN_IN`을 맞춰 달라고 3장에 적어 달라.
+- GitHub Pages: `/econ-sim/encyclopedia/`에 함께 올린다 (`pages.yml`).
 
 ---
 

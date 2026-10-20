@@ -17,3 +17,4 @@ export { budgetPreview, roundBudget } from './budget';
 export type { BudgetPreview, BudgetLine, BudgetLineKey } from './budget';
 export { recordMetrics, METRICS_EVERY } from './metrics';
 export type { MetricPoint, KingdomMetrics, GoodMetrics } from './metrics';
+export * from './encyclopedia';
