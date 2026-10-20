@@ -311,6 +311,7 @@ export function scaleBonus(level: number): number {
  * - localBias: 저택·금융가가 자기 지역 공사에 돈을 낼 마음과, 민간 상회가 그 돈으로 그 지역에 지을 때 수익률에 곱하는 가산점 (1 + localBias)
  * - ownerTilt: 저택은 땅 건물(농지·산림·광맥), 금융가는 그 밖의 건물을 좋아한다 (AI 성향). 좋아하지 않는 종류에 낼 마음의 배율
  * - privatizeMargin, privatizePayback: 민영화 레벨을 사는 조건 (AI): 금고 ≥ 레벨 값 × privatizeMargin, 레벨 값 ÷ 그 레벨의 1년 이익 ≤ privatizePayback 년
+ * - firmBufferWeeks: 민간 상회가 배당 전에 남기는 운영 자금 = 주간 (임금 + 원료) × 이 주 수 (임금·원료가 판매 대금보다 먼저 나간다)
  * - crownPrivatize: 비교용. 'all' 이면 AI 왕실이 생산 건물 모두에 민영화를 켠다 (기본 'off': 민영화는 플레이어가 켠다)
  * - taxCurve: 징수율 곡선. 'exp' = 1 − e^(−x), 'hyp' = x / (1 + x) (x = 행정청 한도 / 인구)
  * - switchRate, switchPremium, switchMax: 일하는 사람은 소득이 switchPremium 배 넘게 나은 자리로 옮긴다. 하루에 옮기는 비율은
@@ -382,6 +383,7 @@ export const TUNE = {
   investWage: 0.75,
   localBias: 0.5,
   ownerTilt: 0.5,
+  firmBufferWeeks: 2,
   privatizeMargin: 2,
   privatizePayback: 10,
   crownPrivatize: 'off' as 'off' | 'all',

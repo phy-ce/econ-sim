@@ -401,7 +401,14 @@ export function payDividends(w: World, c: Company) {
   const toOwner = new Map<Building, number>();
   const due = new Map<Building, number>();
   for (const b of mine) due.set(b, hasReserve(b) ? settleReserve(b, b.profitEma * TICKS_PER_WEEK) : Math.max(0, b.profitEma) * TICKS_PER_WEEK * (1 - RESERVE_SHARE));
-  let free = fitReserves(w, c);
+  // 민간 상회는 운영 자금(주간 임금 + 원료 × TUNE.firmBufferWeeks)을 남기고 배당한다 (임금과 원료는 판매 대금보다 먼저 나간다).
+  // 운영 자금이 모자라면 레벨 주인(저택·금융가)이 가진 레벨 수대로 금고에서 채운다 (callCapital)
+  let ops = 0;
+  for (const b of mine) ops += b.last.wageCost + b.last.inputCost;
+  const buffer = ops * TICKS_PER_WEEK * TUNE.firmBufferWeeks;
+  const spare = fitReserves(w, c);
+  if (spare < buffer) { callCapital(w, c, mine, byId, buffer - spare); return; }
+  let free = spare - buffer;
   for (const b of mine) {
     const profit = Math.min(free, due.get(b)!);
     if (profit <= 0) continue;
@@ -418,6 +425,22 @@ export function payDividends(w: World, c: Company) {
     }
   }
   for (const [o, amt] of toOwner) payOwners(w, o, amt);
+}
+
+/** 민간 상회의 운영 자금이 need 만큼 모자라면 그 상회 건물의 레벨 주인이 가진 레벨 수대로 금고(약정 뺀 돈)에서 낸다 (낼 수 있는 만큼) */
+function callCapital(w: World, c: Company, mine: Building[], byId: Map<number, Building>, need: number) {
+  const levels = new Map<number, number>();
+  let total = 0;
+  for (const b of mine) for (const [id, n] of Object.entries(b.owners ?? {})) { levels.set(Number(id), (levels.get(Number(id)) ?? 0) + n); total += n; }
+  if (total <= 0) return;
+  for (const id of [...levels.keys()].sort((a, b) => a - b)) {
+    const o = byId.get(id);
+    if (!o) continue;
+    const amt = round2(Math.min((need * levels.get(id)!) / total, Math.max(0, treasuryFree(w, o))));
+    if (amt <= 0) continue;
+    o.cash = (o.cash ?? 0) - amt;
+    c.cash += amt; c.ledger.investment += amt;
+  }
 }
 
 /** 철거 자재 판매 대금: 헐린 레벨의 주인이 받는다. 저택·금융가 레벨이면 그 금고로, 국영 레벨이면 국고(건물 주인 회사)로 */
@@ -514,7 +537,7 @@ export function chooseFunders(w: World, kingdomId: number, regionId: number, typ
     for (const x of cands) {
       if (need <= 0.005) break;
       const give = Math.min(need, x.free);
-      if (give <= 0) continue;
+      if (give < 0.01) continue;
       out[x.o.id] = round2((out[x.o.id] ?? 0) + give);
       need -= give;
     }

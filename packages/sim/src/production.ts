@@ -202,6 +202,7 @@ function allocateConstruction(w: World) {
         let take = Math.min(budget, room, k.required - k.points);
         // 민간 공사는 약정한 저택·금융가 금고가 약정액 비율로 낸다 (가장 모자란 금고만큼만 진행). 약정이 없으면 공사 주인 회사가 낸다
         const funds = k.funders ? funderShares(k, byId) : null;
+        if (funds && funds.length === 0) continue;
         if (owner !== c && costPerPoint > 0) {
           if (funds) for (const [o, sh] of funds) take = Math.min(take, Math.max(0, o.cash ?? 0) / (sh * costPerPoint));
           else take = Math.min(take, Math.max(0, owner.cash) / costPerPoint);
@@ -317,7 +318,7 @@ function funderShares(k: Construction, byId: Map<number, Building>): [Building, 
   let total = 0;
   for (const id of ids) total += k.funders![id];
   const out: [Building, number][] = [];
-  for (const id of ids) { const o = byId.get(id); if (o && total > 0) out.push([o, k.funders![id] / total]); }
+  for (const id of ids) { const o = byId.get(id); if (o && total > 0 && k.funders![id] > 0) out.push([o, k.funders![id] / total]); }
   return out;
 }
 
@@ -376,6 +377,7 @@ export function privatizeLevel(w: World, b: Building, buyer: Building, price: nu
   }
   addOwnerLevels(p, buyer.id, 1);
   b.level -= 1;
+  if (k) { const starts = (k.startsMonth ??= {}); starts[`${b.typeId}|v`] = (starts[`${b.typeId}|v`] ?? 0) + 1; }
   if (b.shrinking) b.shrinking = Math.min(b.shrinking, b.level);
   const rname = regionById(w, b.regionId).name;
   logEvent(w, gov.id, `${rname} ${BUILDING_BY_ID[b.typeId].name} 1레벨 민영화 (ƒ${Math.round(price)})`,

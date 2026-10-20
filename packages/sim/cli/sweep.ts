@@ -36,20 +36,20 @@ function investSnapshot(w: World) {
 
 /**
  * 5년 구간 (월 기록, 대륙 합계): lossSh 생산 건물(정부 건물 제외) 레벨 중 적자(이익 이동평균 < 0) 비율의 월 평균,
- * dem 철거 레벨, bP·bS 민간·왕실 착공 레벨
+ * dem 철거 레벨, bP·bS 민간·왕실 착공 레벨, pv 민영화로 판 레벨
  */
 function investInterval(ms: MetricPoint[], from: number, to: number) {
-  let loss = 0, lv = 0, dem = 0, bP = 0, bS = 0;
+  let loss = 0, lv = 0, dem = 0, bP = 0, bS = 0, pv = 0;
   for (const m of ms) {
     if (m.tick <= from || m.tick > to) continue;
     for (const k of Object.values(m.kingdoms)) {
       for (const [t, x] of Object.entries(k.typeBy)) if (!isGovernment(t)) { loss += x.lossLevels; lv += k.levelsBy[t] ?? 0; }
       for (const [key, n] of Object.entries(k.starts)) {
-        if (key.endsWith('|d')) dem += n; else if (key.endsWith('|p')) bP += n; else if (key.endsWith('|s')) bS += n;
+        if (key.endsWith('|v')) pv += n; else if (key.endsWith('|d')) dem += n; else if (key.endsWith('|p')) bP += n; else if (key.endsWith('|s')) bS += n;
       }
     }
   }
-  return { lossSh: +(lv > 0 ? loss / lv : 0).toFixed(2), dem, bP, bS };
+  return { lossSh: +(lv > 0 ? loss / lv : 0).toFixed(2), dem, bP, bS, pv };
 }
 
 const over = JSON.parse(process.argv[2] ?? '{}');

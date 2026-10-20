@@ -13,7 +13,8 @@
   - 개발 서버는 `cd packages/client && npx vite --port 5199`로 띄운다.
 
 ## 0. 지금 할 일 (2026-10-21 기준, 위에서부터)
-지금 깨진 화면은 없다 (재정 단계 버튼 2-23은 반영됨). 아래는 모두 사용자 요청이거나 정리다.
+지금 깨진 화면은 없다 (재정 단계 버튼 2-23은 반영됨. 2-44 때문에 sim 작업자가 클라이언트 두 줄을 지웠다). 아래는 모두 사용자 요청이거나 정리다.
+0. **레벨 주인·민영화·저택·금융가 금고 (2-44, DECISIONS 7-16 1단계).** `privateShare`·`ownerBuildingOf`·투자 풀이 없어졌다. 소유 막대는 `levelOwnersOf(world, b)`로, 왕실 건물에 민영화 켜기(`setPrivatize`), `Kingdom.investmentPool` 칸 이름은 "저택·금융가 금고"로. 2-35-0 `stake` 몫은 지운다.
 1. **금고와 대출을 한 칸으로 (2-28).** 상단 칩 `App.tsx` 144~145, 재정 탭 `FinancePanel.tsx` 19의 `현금`·`대출` 두 칸을 `금고  순자산 / 한도` 한 칸으로. 2-35의 금고 상자도 같은 모양.
 2. **재정 탭: 단계별 예산 미리보기 (2-30).** 지난주·이번주 열을 없애고 `budgetPreview(world, kingdomId)` 한 표로. 단계 버튼 아래에 `byLevel`. 안 쓰는 재정 문자열도 지운다.
 3. **상회 상세 → 왕국 경제 창, 왕실 요약은 왕국 합계 (2-35, 사용자 요청 2026-10-21).** 왕실·민간 회사로 나눈 통계를 없애고 왕국 하나의 숫자 + 소유 구성 막대(왕실 / 민간 지분 / 저택 / 금융가)로. 통계의 `summary`(`BottomPanel.tsx` 39)도 정부 + 민간 합계로 바꾸고, 금고 상자만 왕실 것으로 둔다 (2-35-1).
@@ -645,12 +646,30 @@ Keep the exact composition, coastline and every border position of the chosen ma
   - 그림 용량 2MB 이하, 첫 표시 지연이 눈에 띄지 않는다.
 - sim 변경 없음.
 
+### 2-44. 레벨 주인·민영화·저택·금융가 금고 (2026-10-21, DECISIONS 7-16 1단계)
+- sim 변경:
+  - 레벨마다 주인이 하나다: 국가, 또는 어느 지역의 저택·금융가. 왕실 건물의 레벨은 모두 국가 것, 민간 건물의 레벨은 `Building.owners` (소유 건물 id → 레벨 수, 합 = `level`). 공사비를 낸 곳이 주인이다. "땅 건물은 저택, 부지 건물은 금융가" 규칙은 없어졌다 (다른 지역 저택이 산 레벨도 있다).
+  - `Building.privateShare`, `Construction.privateShare`·`privatePaid`, `SalvageLot.ownerShare`, `Company.regionFunds`, `Kingdom.poolByRegion`, `ownerBuildingOf`, `TUNE.privateShare` 를 지웠다.
+  - 저택·금융가에 금고 `Building.cash`가 생겼다 (돈 계정). 투자 풀은 없앴다. `Kingdom.investmentPool`은 화면 호환용 사본으로 남겼고 값은 그 왕국 저택·금융가 금고의 합이다.
+  - 민간 공사는 저택·금융가 금고가 낸다: `Construction.funders` (소유 건물 id → 약정액). 완공 레벨은 약정 비율로 나눈다.
+  - 민영화: 명령 `{ type: 'setPrivatize', buildingId, on }` (왕실 건물만, 정부 건물 제외 = `sellsShares(typeId)`), 필드 `Building.privatize?: boolean`. 켜 두면 저택·금융가가 매주 1레벨씩 사 간다. 값은 `privatizePrice(world, gov, b)` → `{ price, yearProfit }`.
+  - 장부 `ledger.investment`: 왕실은 민영화 대금, 민간 상회는 레벨 주인이 채운 운영 자금 (투자 풀 유입은 없다). 라벨은 "자본 유입" / "Capital inflow".
+  - 지표 `KingdomMetrics`에 `levelsManor`·`levelsFinance`(민간 레벨 중 저택·금융가 몫), `manorCash`·`financeCash`(금고 합)를 더했다. `pool` = 두 금고 합.
+  - 새 export: `levelOwnersOf(world, b)` → `{ owner: 'state' | 'manor' | 'finance'; ownerBuildingId?: number; regionId?: number; levels: number }[]` (3장 요청 그대로), `treasuryFree(world, o)` (금고 − 진행 공사 약정), `privatizePrice`, `isOwnerBuilding`, `addOwnerLevels`(sim 내부용).
+  - 저장 형식 8판. 옛 저장은 `migrateWorld`가 null을 돌려준다 (불러오지 않는다).
+- sim 작업자가 고친 클라이언트 (컴파일 맞춤만):
+  - `CompanyPanel.tsx` 299: 공사 카드의 `민간 지분` 칩(`k.privateShare`·`k.privatePaid`)을 지웠다.
+  - `ResourceInspector.tsx` 30: 건물 상세의 `민간 지분` 칩(`b.privateShare`)을 지웠다.
+- 화면 작업자가 할 일:
+  - 2-35-0 소유 몫: `stake`를 없애고 `royal`(= `owner: 'state'`) · `manor` · `finance` 세 몫을 `levelOwnersOf`로 센다. 툴팁에 주인 지역 이름 (`regionId`).
+  - 왕실 건물 상세(2-42)에 민영화 켜기 단추 (`b.privatize`). 문자열 `privatize` (2-42 표). 툴팁에 `privatizePrice` 값.
+  - `strings.ts`: `investmentPool` 라벨을 "저택·금융가 금고" / "Owner treasuries"로, `ledgerLabels.investment`를 "자본 유입" / "Capital inflow"로. 안 쓰는 `privateEquity` 문자열은 지운다.
+  - 저택·금융가 상세에 금고 `b.cash` 숫자.
+  - 1-x·2-32·2-35 본문 중 `privateShare`·`ownerBuildingOf`·투자 풀 설명은 이 절이 대신한다.
+
 ## 3. sim 쪽 필요 사항 (Claude가 처리할 것, UI 작업자는 요청만)
 - **2-35 소유 구성 (2026-10-21, 요청됨):**
   - 순수 함수 export: `ownershipOf(world, kingdomId, regionId?)` → `Record<'royal'|'stake'|'manor'|'finance', { levels, employed, jobs, profitWeek, reserve }>` (2-35-0 규칙 그대로, 지역을 주면 그 지역만). 화면·지표가 같은 계산을 쓰게 한다.
   - 지표 기록: `KingdomMetrics`에 같은 4몫의 `levels`·`employed`·`profitWeek` (30일마다). 지금 있는 `levelsState`·`levelsPrivate`는 두 몫뿐이라 2-35-5 네 층 차트를 그릴 수 없다.
-- **2-42 지역 건물 (2026-10-21, 7-16이 들어올 때 같이):**
-  - 민영화: `Command` `{ type: 'setPrivatize'; buildingId: number; on: boolean }`, 필드 `Building.privatize?: boolean` (DECISIONS 7-16).
-  - 레벨 주인: 순수 함수 `levelOwnersOf(world, b)` → `{ owner: 'state' | 'manor' | 'finance'; ownerBuildingId?: number; regionId?: number; levels: number }[]` (레벨마다 주인 하나, 7-16). 화면은 이것으로 소유 비율 막대를 그린다 (지금은 2-35-0 몫으로 대신). `privateShare`가 없어지면 2-35-0 `stake` 몫도 같이 지운다.
 - **2-17 정리 (UI 반영 끝, 2026-10-21 확인):** 클라이언트가 `isDistressed`·`SEIZURE_WEEKS`·`DISTRESS_DEBT_RATIO`·`landlordJobs`·`setResearchBudget`·`MAX_RESEARCH_BUDGET`·`Company.distressWeeks`를 더 쓰지 않는다 (grep 0건). sim은 `compat.ts`의 이 껍데기를 지워도 된다. 100배 값 사본(2-27)은 아직 지우지 않는다.
-- 이미 export되는 것: `paysDividend`, `kingdomGdp`, `kingdomById`, `builderOf`, `companyById`, `peasantSlots`, `disbanded`, `slots`, `harvestCondition`, `harvestLabel`, `HARVEST_KINDS`, `taxRates`, `taxCapacity`, `holdingsOf`, `ownerBuildingOf`, `budgetPreview`, `reserveCap`, `hasReserve`, `weeklyOutputValue`, `creditLimit`, `isGovernment`, `crewOf`, `wealthOf`, `literacyOf`, `educationOf`
+- 이미 export되는 것: `paysDividend`, `kingdomGdp`, `kingdomById`, `builderOf`, `companyById`, `peasantSlots`, `disbanded`, `slots`, `harvestCondition`, `harvestLabel`, `HARVEST_KINDS`, `taxRates`, `taxCapacity`, `holdingsOf`, `levelOwnersOf`, `budgetPreview`, `reserveCap`, `hasReserve`, `weeklyOutputValue`, `creditLimit`, `isGovernment`, `crewOf`, `wealthOf`, `literacyOf`, `educationOf`

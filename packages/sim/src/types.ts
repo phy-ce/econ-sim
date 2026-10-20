@@ -477,7 +477,7 @@ export interface Kingdom {
   budgetBase?: { taxBy?: number[]; mint?: number; tariffs?: number; feesWage?: number; feesOther?: number; goods?: number };
   /** AI: 지난 정책 점검 때 국고 순자산 (현금 − 빚) */
   netLast?: number;
-  /** 이번 달 착공 레벨 (지표용): '건물|s'(왕실) '건물|p'(민간) '건물|loss'(AI 손해 짓기) '건물|d'(철거) */
+  /** 이번 달 착공 레벨 (지표용): '건물|s'(왕실) '건물|p'(민간) '건물|loss'(AI 손해 짓기) '건물|d'(철거) '건물|v'(민영화로 판 레벨) */
   startsMonth?: Record<string, number>;
 }
 
