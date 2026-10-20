@@ -35,6 +35,7 @@
 19. **규칙 사전 (2-40, 급하지 않음).** 단독 앱 `packages/encyclopedia`. 지금은 도움말 버튼에서 `encyclopedia/#<항목 id>`로 잇기만 해도 된다 (2-48 연구 트리 링크도 같은 방식).
 20. **은행 없앰, 민간은 빌리지 않음 (2-41).** 민간 상회의 대출·한도 줄(`CompanyPanel.tsx` 132~144)은 왕실(`c.state`)일 때만.
 21. **지도 다시 그리기: 생성 이미지 + 지역 경계 벡터 (2-43).** 보로노이 지도(`RegionMap.tsx` 16~98·114~133)를 그림 한 장 + 지역 경로 7개로. 이미지 생성은 사용자, 따기·코드는 화면 작업자.
+22. **철거 진행 보이기 (2-49).** 남는/대기/이번 주 레벨 막대, 다음 철거까지 날 수, 회수 자재, 망치 아이콘.
 - **아직 sim에 없음 (만들지 말 것, 들어오면 이 목록에 올린다):**
   - 건물별 임금·현금·보조금 (브랜치 wt-wage). 들어오면 국영 임금 손잡이(`budget.wages`)가 없어지고, 건물 패널에 임금·현금·보조금 켜기가 생기고, 저장 형식이 바뀐다(옛 저장은 `migrateWorld`로 변환). 그래서 2-30의 국영 임금 줄은 작게 두어도 된다.
   - 세 세법·6개월 전환·투자법·조건 (2-45), 저택·금융가 자산 비율 (2-44): 3장에 요청함.
@@ -778,7 +779,27 @@ Keep the exact composition, coastline and every border position of the chosen ma
 - 문자열: `fitView` 맞춤 / Fit, `newBuilding` 새 건물 / New building, `unlockPolicy` 정책 / Policy. 지울 것: `T.stage` (단계 머리, 569)를 다른 곳에서 안 쓰면.
 - sim 변경 없음 (unlocksOf는 있으면 좋음).
 
+
+### 2-49. 철거 중인 건물이 무엇을 하고 있는지 보이기 (사용자 요청 2026-10-21)
+**문제:** 철거를 걸면 `철거 중 N레벨` 글자 칩(`RegionPanel.tsx` 191, `ResourceInspector.tsx` 31·70)과 정적인 막대(31)만 보인다. 언제 한 레벨이 헐리는지, 몇 레벨이 남는지, 자재가 어디로 가는지 알 수 없다.
+
+**sim 규칙 (지금 코드)**
+- 철거 대기 `b.shrinking`: 주간 처리(`w.tick % 7 === 0`, `tick.ts` 61·106 `progressDemolition`)마다 1레벨씩 헐린다. 다음 철거까지 남은 날 = `7 − (w.tick % 7)` (0이면 7).
+- 헐린 레벨 자재의 `TUNE.salvageShare`(50%)가 `w.salvage`에 들어가 `TUNE.salvageDays`(28일) 동안 그 지역 시장에 매일 같은 양씩 나온다 (`{regionId, good, q, days, companyId, ownerId}`). 못 판 몫은 사라진다.
+- 레벨이 0이 되면 건물이 없어진다 (소식 "철거 완료"). 취소(`cancelDemolish`)는 남은 대기 전부를 없앤다.
+
+**보일 것**
+1. **레벨 막대 (건물 상세, 지역 건물 행):** 비율 막대: 남는 레벨(보통 색) | 철거 대기(빗금, 천천히 흐르는 줄무늬) | 이번 주 헐릴 1레벨(점점 옅어짐). 숫자 `10 → 6`.
+2. **다음 철거까지:** 7일 주기 진행 막대와 `n일`. 한 레벨이 헐리는 순간 막대가 한 칸 줄어드는 짧은 전환(0.3초).
+3. **회수 자재:** `w.salvage` 중 그 건물 몫을 상품 아이콘 + 남은 양 + 남은 날 `목재 1.2만 · 21일`, 옆에 남은 날/28 작은 막대.
+4. **목록 아이콘:** 지역 건물 행(2-42)과 지도 지역 아이콘에 작은 망치 아이콘 + 남은 철거 레벨 수.
+5. **조작:** 막대 옆에 `철거 취소` 버튼(지금 있음). 누르면 빗금 칸이 사라지는 전환.
+6. **소식:** 철거 시작·완료만 소식에 남기고, 한 레벨씩의 진행은 막대로만.
+- 설명 문구 금지 (숫자·막대·아이콘). `prefers-reduced-motion`이면 애니메이션 끔. 다크 모드에서 빗금 대비 확인.
+- sim 쪽 필요(선택): 회수 자재 lot에 `buildingId`, `salvageOf(w, b)` export (지금은 `companyId`·`regionId`로 거르면 되지만 같은 지역 다른 건물 철거와 섞일 수 있다) → 3장.
+
 ## 3. sim 쪽 필요 사항 (Claude가 처리할 것, UI 작업자는 요청만)
+- **2-49 (선택):** 회수 자재 lot에 `buildingId`를 넣고 `salvageOf(w, b)` export.
 - **2-35 소유 구성 (2026-10-21, 요청됨):**
   - 순수 함수 export: `ownershipOf(world, kingdomId, regionId?)` → `Record<'royal'|'stake'|'manor'|'finance', { levels, employed, jobs, profitWeek, reserve }>` (2-35-0 규칙 그대로, 지역을 주면 그 지역만). 화면·지표가 같은 계산을 쓰게 한다.
   - 지표 기록: `KingdomMetrics`에 같은 4몫의 `levels`·`employed`·`profitWeek` (30일마다). 지금 있는 `levelsState`·`levelsPrivate`는 두 몫뿐이라 2-35-5 네 층 차트를 그릴 수 없다.
