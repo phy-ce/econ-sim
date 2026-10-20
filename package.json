@@ -9,10 +9,11 @@
   "scripts": {
     "dev": "npm run dev -w @econ/client",
     "build": "npm run build -w @econ/client",
+    "encyclopedia": "npm run dev -w @econ/encyclopedia",
     "test": "npm test -w @econ/sim",
     "test:core": "npm run test:core -w @econ/sim",
     "test:long": "npm run test:long -w @econ/sim",
-    "typecheck": "npm run typecheck -w @econ/sim && npm run typecheck -w @econ/client"
+    "typecheck": "npm run typecheck -w @econ/sim && npm run typecheck -w @econ/client && npm run typecheck -w @econ/encyclopedia"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",

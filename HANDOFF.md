@@ -8,6 +8,20 @@
 - 사용자 결정 대기: 아래 0장 "결정 대기". 화면 작업자에게 넘길 것: `docs/UI_CHANGES.md` 맨 위 "0. 지금 할 일".
 - 클라우드 세션(claude.ai/code)으로 이어서 할 수 있다. 규칙은 CLAUDE.md "클라우드 세션"을 본다.
 
+## 0-nobank. wt-nobank (2026-10-21, 합치기 전, 사용자 결정 "일단 왕실만 빌리는 걸로")
+- 규칙: 왕실만 빌린다. 국고가 모자라면 자동으로 국채를 찍어 빌리고, 남으면 갚는다. 민간 상회는 빌리지 않는다.
+- `World.bank`·`BANK_CAPITAL`(3억)·`MetricPoint.bank` 없앰. `borrow`는 왕실만, `creditLimit`은 민간 0, `repay`·이자는 국채만. `weeklyBanking`은 국채 상환 + 상인 초과분·주인 없는 돈 → 투자 풀.
+- 옛 저장 (`compat.ts removeBank`): 은행 현금 → `fund`(다음 주 인구 비례로 투자 풀), 민간 빚 탕감 (빚은 장부라 화폐 장부 그대로, decimals 시험에 넣음).
+- 20년 × 시드 1·2 (d207d8b 대비): 결과 파일이 바이트까지 같다. main에서도 민간 상회는 20년 동안 한 번도 빌리지 않았다 (은행 3억은 놀던 돈). 그래프 `.tmp/reports/2026-10-21-nobank.png`.
+- 규칙 사전: `banking` 항목(국채와 이자), `start-state`(은행 자본 뺌), `investment-pool`, 분류 이름 '소유·배당·국채', DESIGN 9.4 제목 '국채·주조'.
+- 화면: 컴파일 수정 없음. UI_CHANGES 2-41 (민간 대출 줄 숨기기).
+
+## 0-encyclopedia. wt-encyclopedia (2026-10-21, 합치기 전)
+- 규칙 사전: 데이터 `packages/sim/src/encyclopedia.ts` (항목 79개, 분류 10개), 단독 앱 `packages/encyclopedia` (`npm run encyclopedia`, 포트 5200, Pages `/econ-sim/encyclopedia/`).
+- 값은 코드 상수를 읽고, 예시는 실제 sim 함수를 부르고, live는 워커에서 도는 세계를 읽는다. sim 변경은 상수·`splitHarvest`에 `export`만 붙였다 (결과 그대로).
+- 시험 `test/core/encyclopedia.test.ts` (약 0.3초): DESIGN.md 번호 절 ↔ `DESIGN_SECTIONS`, 모든 TUNE 키가 어느 항목에 실렸는지, 모든 값·예시·live 함수.
+- 코드와 DESIGN.md가 다른 곳: 기술자 기본 임금은 코드 15, DESIGN 3.2 표와 CLAUDE.md는 20.
+
 ## 0-adminfill. wt-adminfill (2026-10-21, 합치기 전)
 - 행정청 징세 한도 × 원료 충족률(`adminCapacityOf`), 학교 자리도 같다. AI: 행정청 방식은 한도 × `fillEma`, 원료 방식은 왕국 시장에 남는 원료가 있을 때만.
 - 종이(기본가 4)와 종이 공장(목재 2,500 → 종이 5,000). 전문 관료제는 종이 200을 쓴다. 왕실이 행정청 원료를 왕국 안에서 대도록 종이 공장을 직접 짓는다(`secureGovInputs`).
