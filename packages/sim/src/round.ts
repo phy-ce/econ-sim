@@ -111,6 +111,7 @@ function roundBuilding(b: Building): void {
   if (b.fillEma !== undefined) b.fillEma = r(b.fillEma);
   if (b.reserve !== undefined) b.reserve = r(b.reserve);
   if (b.tenants !== undefined) b.tenants = r(b.tenants);
+  if (b.nobleSeats !== undefined) b.nobleSeats = r(b.nobleSeats);
   if (b.crew100 !== undefined) { b.crew100 = r(b.crew100); b.crew = r(b.crew100 / 100); } else if (b.crew !== undefined) delete b.crew;
   if (b.staffPeak !== undefined) b.staffPeak = r(b.staffPeak);
   const e = b.employed;

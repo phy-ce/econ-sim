@@ -26,7 +26,9 @@ interface Order {
 
 type Lot =
   | { kind: 'bld'; b: Building; q: number }
-  | { kind: 'sub'; pop: Pop; q: number; rentFrac?: number; taxFrac?: number }
+  | { kind: 'sub'; pop: Pop; q: number; taxFrac?: number }
+  /** 지대: 수확에서 떼어 바로 파는 몫. 대금은 그 지역 저택으로 */
+  | { kind: 'rent'; regionId: number; q: number }
   /** 한 시장의 상인 화물 전부 (화물 순서대로의 수량). 시장 안에서 상인 화물 제안은 건물 제안 뒤·철거 자재 앞에 이어 붙으므로 한 묶음이어도 순서가 같다 */
   | { kind: 'traders'; qs: number[] }
   | { kind: 'salvage'; lot: SalvageLot; q: number };
@@ -185,8 +187,8 @@ function harvestOutput(wf: number): GoodBag {
 
 /**
  * 소작지 수확 (빅토리아3 자급 산출): 소작농 노동 인구 × 1인당 산출.
- * 식구가 그날 쓸 만큼 남기고 나머지를 판다 (splitHarvest).
- * 판매 대금은 지대(TUNE.rentShare, 그 지역 저택에 귀족이 있을 때) → 귀족, 토지세 → 국고, 나머지 → 소작농.
+ * 지대: 수확의 TUNE.rentShare 를 먼저 떼어 바로 시장에 팔고 대금은 그 지역 저택으로 간다 (그 지역 저택에 귀족이 있을 때. 소작농 부가 patronWealth 아래면 patronShare 만큼 덜 뗀다).
+ * 남은 수확에서 식구가 그날 쓸 만큼 남기고 나머지를 판다 (splitHarvest). 판매 대금은 토지세 → 국고, 나머지 → 소작농.
  */
 export function harvest(w: World, book: Book) {
   for (const b of w.buildings) {
@@ -195,12 +197,12 @@ export function harvest(w: World, book: Book) {
     b.last.output = {};
     if (!pop || pop.size <= 0) continue;
     const r = regionById(w, b.regionId);
-    const { rent, tax } = harvestShares(w, r);
+    const { rent, tax } = harvestShares(w, r, wealthOf(pop));
     // 기상 조건이 걸리면 수확이 그만큼 줄어든다 (economy.ts harvestFactor)
     const out = harvestOutput(workforce(pop) * harvestFactor(w, r.id, 'arable'));
     const kd = kingdomById(w, r.kingdomId);
     const land = taxRates(kd).land;
-    const { own, sell } = splitHarvest(pop.size, wealthOf(pop), GOOD_IDS.map((g) => out[g] ?? 0));
+    const { own, sell } = splitHarvest(pop.size, wealthOf(pop), GOOD_IDS.map((g) => (out[g] ?? 0) * (1 - rent)));
     // 걷어야 할 토지세 (판매 대금 × 토지세율, 징수율 전). 1인당 과세면 토지세율 0
     if (land > 0) kd.landOwed = (kd.landOwed ?? 0) + landTaxValue(r, bagOf(sell), land);
     for (let i = 0; i < NG; i++) {
@@ -208,23 +210,30 @@ export function harvest(w: World, book: Book) {
       if (!q) continue;
       b.last.output[g] = q;
       pop.inKind[g] = own[i];
+      const rq = q * rent;
+      if (rq > 1e-9) {
+        r.market[g].supply += rq;
+        addBy(r.market[g].supplyBy, 'subsistence', rq);
+        addLot(book, r.id, g, { kind: 'rent', regionId: r.id, q: rq });
+      }
       if (sell[i] <= 1e-9) continue;
       r.market[g].supply += sell[i];
       addBy(r.market[g].supplyBy, 'subsistence', sell[i]);
-      addLot(book, r.id, g, { kind: 'sub', pop, q: sell[i], rentFrac: rent, taxFrac: tax });
+      addLot(book, r.id, g, { kind: 'sub', pop, q: sell[i], taxFrac: tax });
     }
   }
 }
 
 /**
- * 소작지 판매 대금 중 남에게 가는 몫: 지대(그 지역 저택에 귀족이 있을 때만)와
- * 토지세(토지 기반 세법일 때, 대금의 토지세율(taxRates)을 징수율만큼 국고 몫으로. 상한 1 − 지대)
+ * 소작지의 남에게 가는 몫: rent = 수확 중 지대로 떼는 비율 (그 지역 저택에 귀족이 있을 때만, 부 wealth 가 patronWealth 아래면 patronShare 만큼 덜),
+ * tax = 소작농 판매 대금 중 토지세 (토지 기반 세법일 때, 토지세율(taxRates)을 징수율만큼)
  */
-export function harvestShares(w: World, r: Region): { rent: number; tax: number } {
-  const rent = hasLandlords(w, r.id) ? TUNE.rentShare : 0;
+export function harvestShares(w: World, r: Region, wealth = WEALTH_MAX): { rent: number; tax: number } {
+  const base = hasLandlords(w, r.id) ? TUNE.rentShare : 0;
+  const rent = wealth < TUNE.patronWealth ? base * (1 - TUNE.patronShare) : base;
   const kd = kingdomById(w, r.kingdomId);
   const land = taxRates(kd).land;
-  const tax = land > 0 ? Math.min(1 - rent, land * (kd.taxRatio ?? 1)) : 0;
+  const tax = land > 0 ? Math.min(1, land * (kd.taxRatio ?? 1)) : 0;
   return { rent, tax };
 }
 
@@ -256,13 +265,12 @@ export function tenantSaleBag(w: World, b: Building): GoodBag {
  */
 export function tenantIncomePerWorker(w: World, r: Region, wealth: number): number {
   const out = harvestOutput(harvestFactor(w, r.id, 'arable'));
-  const sh = harvestShares(w, r);
-  const rent = wealth < TUNE.patronWealth ? sh.rent * (1 - TUNE.patronShare) : sh.rent;
-  const { own, sell } = splitHarvest(1 / WORKFORCE_RATIO, wealth, GOOD_IDS.map((g) => out[g] ?? 0));
+  const sh = harvestShares(w, r, wealth);
+  const { own, sell } = splitHarvest(1 / WORKFORCE_RATIO, wealth, GOOD_IDS.map((g) => (out[g] ?? 0) * (1 - sh.rent)));
   let v = 0;
   for (let i = 0; i < NG; i++) {
     const mg = r.market[GOOD_IDS[i]];
-    v += sell[i] * mg.price * sellThrough(mg) * Math.max(0, 1 - rent - sh.tax) + own[i] * mg.price;
+    v += sell[i] * mg.price * sellThrough(mg) * Math.max(0, 1 - sh.tax) + own[i] * mg.price;
   }
   return v;
 }
@@ -682,17 +690,16 @@ export function clearMarkets(w: World, book: Book) {
             break;
           }
           case 'sub': {
-            // 판매 대금 중 지대 몫은 저택 귀족에게. 소작농 부가 TUNE.patronWealth 아래면 귀족이 지대의 TUNE.patronShare 를 돌려준다
-            const fr = lot.rentFrac ?? 0, tf = lot.taxFrac ?? 0;
-            let rentAmt = amt * fr;
-            // 남는 게 없는 상품은 지대 + 토지세가 판매량 전부라 부동소수점으로 합이 대금을 넘을 수 있다: 대금 안으로 묶는다
-            const taxAmt = Math.min(amt - rentAmt, amt * tf);
-            if (rentAmt > 0 && wealthOf(lot.pop) < TUNE.patronWealth) rentAmt *= 1 - TUNE.patronShare;
-            if (rentAmt > 0 && !payRent(w, lot.pop.regionId, rentAmt)) rentAmt = 0;
+            // 판매 대금 중 토지세 몫은 국고로, 나머지는 소작농에게
+            const taxAmt = Math.min(amt, amt * (lot.taxFrac ?? 0));
             if (taxAmt > 0) payLandTax(w, lot.pop.regionId, taxAmt);
-            paySubsistence(w, lot.pop, amt - rentAmt - taxAmt);
+            paySubsistence(w, lot.pop, amt - taxAmt);
             break;
           }
+          case 'rent':
+            // 지대 판매 대금은 그 지역 저택으로 (받을 귀족이 없으면 주인 없는 돈)
+            if (!payRent(w, lot.regionId, amt)) w.fund += amt;
+            break;
           case 'salvage':
             paySalvage(w, lot.lot, amt);
             break;

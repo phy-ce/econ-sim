@@ -300,7 +300,8 @@ export function scaleBonus(level: number): number {
 
 /**
  * 조정값 (테스트로 여러 값을 비교하는 손잡이). 시작 전에 바꾸면 그 판 전체에 적용된다.
- * - rentShare: 소작지 판매 대금 중 저택 귀족에게 가는 지대 비율 (토지세는 대금 × 토지세율 × 징수율, 나머지는 소작농)
+ * - rentShare: 지대 = 소작지 수확 중 먼저 떼어 바로 파는 비율. 대금은 그 지역 저택으로 (3단계, DECISIONS 7-18)
+ * - nobleEconPer: 저택 상급 귀족 자리 1 (노동 인구)당 저택이 가진 주간 경제 규모 (기본가: 가진 레벨 산출 가치 + 소작지 수확, nobleSeats 'econ')
  * - patronWealth, patronShare: 소작농 부가 patronWealth 아래면 귀족이 지대의 patronShare 를 돌려준다
  * - growthEq: 신분별로 출생과 사망이 같아지는 생활수준 (이보다 높으면 인구가 는다)
  * - wageOutside: AI 임금 바닥 = 그 자리로 옮겨 올 사람들의 지금 소득 × 이 배율
@@ -370,7 +371,7 @@ export function scaleBonus(level: number): number {
 export const TUNE = {
   /** 저택의 하급 귀족 1명 몫 (귀족 1명 = 1). 0.1·0.25·0.5 비교 (10년, 20년 × 시드 1·2, 두 번): 0.1은 하급 귀족 생활수준이 가장 낮고, 0.25와 0.5는 총생산·레벨 순서가 실행마다 바뀐다. 상급 귀족 생활수준을 덜 깎는 0.25 */
   gentryShare: 0.25,
-  rentShare: 0.5,
+  rentShare: 0.05,
   patronWealth: 2,
   patronShare: 0.5,
   growthEq: { lower: 2.5, middle: 5, upper: 5 },
@@ -405,14 +406,15 @@ export const TUNE = {
   qualExpertL: 0.6,
   qualRate: 0.25,
   // 저택 상급 귀족 자리 규칙 (비교 중, DECISIONS 7-17. production.ts nobleSeatsOf, pops.ts matchNobles). 'fit' 이 지금 규칙, aristStart 는 시작 귀족 배율
-  nobleSeats: 'fit' as 'fit' | 'owned' | 'income' | 'land' | 'pop',
+  nobleSeats: 'econ' as 'fit' | 'owned' | 'income' | 'land' | 'pop' | 'econ',
+  nobleEconPer: 16000,
   nobleSeatsPerLevel: 10,
   nobleSeatsPerCell: 2,
   nobleIncome: 100,
   nobleSeatsLand: 2,
   noblePerMille: 2,
   nobleAdjust: 0.01,
-  aristStart: 1,
+  aristStart: 0.2,
   schoolValue: 0.3,
   schoolTarget: 0.6, // 0.45·0.5·0.6 비교 (DECISIONS.md 7-4): 0.6이 20년차 소작농·건물 레벨·자격자가 가장 낫다
   schoolTaxMax: 4,

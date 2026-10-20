@@ -1,11 +1,12 @@
-import { BUILDING_BY_ID, GOOD_IDS, MAX_POINTS_PER_LEVEL_DAY, OWNER_SEATS_PER_LEVEL, OWNERSHIP_SEATS, TUNE, WORKFORCE_RATIO, getMethod } from './data';
+import { BUILDING_BY_ID, GOODS, GOOD_IDS, TICKS_PER_WEEK, MAX_POINTS_PER_LEVEL_DAY, OWNER_SEATS_PER_LEVEL, OWNERSHIP_SEATS, TUNE, WORKFORCE_RATIO, getMethod } from './data';
 import { addOwnerLevels, builderOf, companyById, efficiency, harvestFactor, isGovernment, landFree, logEvent, newBuilding, regionById } from './economy';
 import { SKILLS } from './types';
 import { workforce } from './pops';
 import { flow, kingdomById } from './kingdoms';
 import { buildingNameEn, regionNameEn } from './i18n';
 import { clamp, round2 } from './rng';
-import type { Building, Company, Construction, GoodBag, World } from './types';
+import type { Building, Company, Construction, GoodBag, GoodId, World } from './types';
+import { weeklyOutputValue } from './finance';
 
 /** 숙련도가 하루에 오르는 양 (%, 약 한 달이면 최대) */
 export const EXP_GAIN = 3.5;
@@ -46,6 +47,18 @@ function nobleSeatsOf(w: World, regionId: number, b: Building, own: number): num
   const cells = () => w.buildings.find((x) => x.regionId === regionId && x.typeId === 'subsistence')?.level ?? 0;
   if (rule === 'owned') return Math.round(own * TUNE.nobleSeatsPerLevel + cells() * TUNE.nobleSeatsPerCell);
   if (rule === 'land') return Math.round((own + cells()) * TUNE.nobleSeatsLand);
+  if (rule === 'econ') {
+    // 저택이 가진 경제 규모 (주간, 기본가): 가진 레벨의 산출 가치 + 그 지역 소작지 수확. 자리 목표 = 규모 ÷ nobleEconPer, 하루 1%씩 다가간다
+    let value = 0;
+    for (const x of w.buildings) {
+      const n = x.owners?.[b.id];
+      if (n) value += n * weeklyOutputValue(x.typeId, x.methodId);
+      else if (x.regionId === regionId && x.typeId === 'subsistence') for (const [g, q] of Object.entries(x.last.output)) value += (q ?? 0) * GOODS[g as GoodId].basePrice * TICKS_PER_WEEK;
+    }
+    let prev = b.nobleSeats;
+    if (prev === undefined) { prev = 0; for (const p of w.pops) if (p.regionId === regionId && p.prof === 'aristocrat') prev += workforce(p); }
+    return round2(prev + (value / TUNE.nobleEconPer - prev) * TUNE.nobleAdjust);
+  }
   if (rule === 'pop') {
     let n = 0;
     for (const p of w.pops) if (p.regionId === regionId) n += p.size;

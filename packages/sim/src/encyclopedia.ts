@@ -887,8 +887,8 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   },
   {
     id: 'rent-landtax', category: 'tenants', title: t('지대와 토지세', 'Rent and land tax'),
-    rule: t('판매 대금의 {0}는 지대로 저택 귀족에게, 토지세율 × 징수율은 국고로, 나머지는 소작농에게 간다. 소작농 부가 {1} 아래면 지대의 {2}를 돌려준다.', '{0} of sale proceeds is rent to the manor\'s nobles, land-tax rate × collection goes to the treasury, the rest to tenants. Below wealth {1}, {2} of the rent is returned.'),
-    formula: 'tenant = proceeds × (1 − rent − landTax × collection)',
+    rule: t('지대: 수확의 {0}를 먼저 떼어 바로 시장에 팔고 대금은 그 지역 저택으로 간다. 소작농 부가 {1} 아래면 {2}만큼 덜 뗀다. 남은 수확에서 쓰고 남는 것을 팔면 토지세율 × 징수율은 국고로, 나머지는 소작농에게 간다.', 'Rent: {0} of the harvest is taken first and sold straight away; proceeds go to the regional manor. Below wealth {1}, {2} less is taken. Of what tenants sell from the rest, land-tax rate × collection goes to the treasury and the rest to tenants.'),
+    formula: 'rent = harvest × {0}; tenant = sales of (harvest − rent − own use) × (1 − landTax × collection)',
     params: [tune('rentShare', '지대', 'Rent share', 'pct'), tune('patronWealth', '후원 부 문턱', 'Patronage wealth'), tune('patronShare', '돌려주는 지대', 'Returned rent', 'pct')],
     live: {
       pick: ['region'], run: (w, ctx) => {
@@ -931,8 +931,8 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   // ================================================================ 소유·금융
   {
     id: 'owner-buildings', category: 'ownership', title: t('저택과 금융가', 'Manors and financial districts'),
-    rule: t('지역마다 저택(귀족)과 금융가(자본가)가 저절로 생긴다. 둘 다 금고를 갖고 어떤 민간 건물의 레벨이든 짓거나 사서 갖는다. 소작 지대는 그 지역 저택이 받는다. 1레벨 자리 {0}, 가진 레벨마다 {1}자리.', 'Each region has a manor (nobles) and a financial district (capitalists). Both keep a treasury and can build or buy levels of any private building. Tenant rent goes to the regional manor. {0} seats per level; {1} seats per owned level.'),
-    params: [p('1레벨 자리', 'Seats per level', () => OWNERSHIP_SEATS, 'people'), p('소유 레벨당 자리', 'Seats per owned level', () => OWNER_SEATS_PER_LEVEL, 'people')],
+    rule: t('지역마다 저택(귀족)과 금융가(자본가)가 저절로 생긴다. 둘 다 금고를 갖고 어떤 민간 건물의 레벨이든 짓거나 사서 갖는다. 소작 지대는 그 지역 저택이 받는다. 상급 귀족 자리 = 저택의 주간 경제 규모(가진 레벨 산출 + 소작지 수확, 기본가) ÷ {2}, 하루 1%씩 다가간다. 자리를 넘는 귀족은 하급 귀족이 된다. 1레벨 자리 {0}, 가진 레벨마다 {1}자리.', 'Each region has a manor (nobles) and a financial district (capitalists). Both keep a treasury and can build or buy levels of any private building. Tenant rent goes to the regional manor. High-noble seats = the manor\'s weekly economy (owned levels\' output + tenant harvest, base prices) ÷ {2}, approached 1% a day; nobles beyond the seats become gentry. {0} seats per level; {1} seats per owned level.'),
+    params: [p('1레벨 자리', 'Seats per level', () => OWNERSHIP_SEATS, 'people'), p('소유 레벨당 자리', 'Seats per owned level', () => OWNER_SEATS_PER_LEVEL, 'people'), tune('nobleEconPer', '귀족 자리 1당 경제 규모', 'Economy per noble seat', 'florin')],
     live: {
       pick: ['region'], run: (w, ctx) => {
         const r = regionOf(w, ctx), out: EncRow[] = [];
