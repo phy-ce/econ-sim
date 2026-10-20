@@ -57,6 +57,7 @@ export const GOODS: Record<GoodId, GoodDef> = {
  */
 export const SKILL_DEFS: Record<Skill, SkillDef> = {
   unskilled: { id: 'unskilled', name: '노동자', nameEn: 'Labourers', baseWage: 10 },
+  farmer: { id: 'farmer', name: '농부', nameEn: 'Farmers', baseWage: 10 },
   skilled: { id: 'skilled', name: '기술자', nameEn: 'Skilled workers', baseWage: 15 },
   expert: { id: 'expert', name: '전문가', nameEn: 'Experts', baseWage: 40 },
   gentry: { id: 'gentry', name: '하급 귀족', nameEn: 'Gentry', baseWage: 30 },
@@ -67,6 +68,7 @@ export const SKILL_DEFS: Record<Skill, SkillDef> = {
 export const CLASS_DEFS: Record<PopClass, ClassDef> = {
   peasant: { id: 'peasant', name: '소작농', nameEn: 'Tenant farmers', stratum: 'lower', description: '' },
   unskilled: { id: 'unskilled', name: '노동자', nameEn: 'Labourers', stratum: 'lower', description: '' },
+  farmer: { id: 'farmer', name: '농부', nameEn: 'Farmers', stratum: 'lower', description: '' },
   skilled: { id: 'skilled', name: '기술자', nameEn: 'Skilled workers', stratum: 'middle', description: '' },
   expert: { id: 'expert', name: '전문가', nameEn: 'Experts', stratum: 'middle', description: '' },
   gentry: { id: 'gentry', name: '하급 귀족', nameEn: 'Gentry', stratum: 'middle', description: '' },
@@ -116,6 +118,8 @@ const TAX_PEOPLE_PER_LEVEL = 500_000;
 
 /** 레벨당 일자리 (노동자, 기술자, 전문가). 합이 1,000명이 되게 쓴다 */
 const jobs = (unskilled: number, skilled = 0, expert = 0) => ({ unskilled, skilled, expert });
+/** 농장·목장의 일자리: 노동자 자리 대신 농부 자리 (임금·자격은 노동자와 같다) */
+const farmJobs = (farmer: number, skilled = 0, expert = 0) => ({ farmer, skilled, expert });
 /** 소유 건물(저택·금융가) 1레벨의 소유주 자리 */
 export const OWNERSHIP_SEATS = 100;
 /** 소유한 건물 1레벨마다 소유 건물에 생기는 소유주 자리 */
@@ -133,9 +137,11 @@ export const BUILDING_TYPES: BuildingTypeDef[] = [
   {
     // 소유 건물 (빅토리아3 Manor House / Financial District). 지역마다 자동으로 생긴다.
     // 농지·산림·광산 건물은 저택이, 공장 부지 건물은 금융가가 소유하고, 배당은 거기서 일하는 귀족·자본가의 소득이 된다.
-    // 소작지 지대도 저택이 받는다. 크기는 지역의 그 직종 인원과 소유한 건물 레벨에 맞춰 저절로 바뀐다
+    // 소작지 지대도 저택이 받는다. 크기는 지역의 그 직종 인원과 소유한 건물 레벨에 맞춰 저절로 바뀐다.
+    // 저택에는 하급 귀족 자리도 같은 수만큼 있다. 저택 수입은 몫으로 나눈다: 귀족 1명 1몫, 하급 귀족 1명 TUNE.gentryShare 몫
+    // (빅토리아3 저택의 귀족 10몫·성직자 1몫과 같은 방식)
     id: 'manor', name: '저택', nameEn: 'Manor houses', land: 'plot', buildPoints: 0, auto: true, ownership: 'aristocrat',
-    methods: [m({ id: 'manor', name: '영지 관리', nameEn: 'Estate management', workers: { aristocrat: OWNERSHIP_SEATS }, inputs: {}, outputs: {} })],
+    methods: [m({ id: 'manor', name: '영지 관리', nameEn: 'Estate management', workers: { aristocrat: OWNERSHIP_SEATS, gentry: OWNERSHIP_SEATS }, inputs: {}, outputs: {} })],
   },
   {
     id: 'finance', name: '금융가', nameEn: 'Financial district', land: 'plot', buildPoints: 0, auto: true, ownership: 'capitalist',
@@ -144,24 +150,24 @@ export const BUILDING_TYPES: BuildingTypeDef[] = [
   {
     id: 'farm', name: '곡물 농장', nameEn: 'Grain farm', land: 'arable', buildPoints: 600,
     methods: [
-      m({ id: 'farm_basic', name: '곡물 재배', nameEn: 'Grain farming', workers: jobs(800, 200), inputs: {}, outputs: { grain: 6900 } }),
-      m({ id: 'farm_tools', name: '쇠 농기구', nameEn: 'Iron implements', tech: 'iron_tools', workers: jobs(600, 200), inputs: { tools: 100 }, outputs: { grain: 7300 } }),
-      m({ id: 'farm_mech', name: '농업 기계', nameEn: 'Farm machinery', tech: 'agri_mech', workers: jobs(400, 100), inputs: { fuel: 300, electronics: 100 }, outputs: { grain: 7600 } }),
+      m({ id: 'farm_basic', name: '곡물 재배', nameEn: 'Grain farming', workers: farmJobs(800, 200), inputs: {}, outputs: { grain: 6900 } }),
+      m({ id: 'farm_tools', name: '쇠 농기구', nameEn: 'Iron implements', tech: 'iron_tools', workers: farmJobs(600, 200), inputs: { tools: 100 }, outputs: { grain: 7300 } }),
+      m({ id: 'farm_mech', name: '농업 기계', nameEn: 'Farm machinery', tech: 'agri_mech', workers: farmJobs(400, 100), inputs: { fuel: 300, electronics: 100 }, outputs: { grain: 7600 } }),
     ],
   },
   {
     id: 'fiber_farm', name: '섬유 농장', nameEn: 'Fibre farm', land: 'arable', buildPoints: 600,
     methods: [
-      m({ id: 'fiber_basic', name: '섬유 재배', nameEn: 'Fibre farming', workers: jobs(800, 200), inputs: {}, outputs: { fiber: 6900 } }),
-      m({ id: 'fiber_tools', name: '쇠 농기구', nameEn: 'Iron implements', tech: 'iron_tools', workers: jobs(600, 200), inputs: { tools: 100 }, outputs: { fiber: 7300 } }),
-      m({ id: 'fiber_mech', name: '농업 기계', nameEn: 'Farm machinery', tech: 'agri_mech', workers: jobs(400, 100), inputs: { fuel: 300, electronics: 100 }, outputs: { fiber: 7600 } }),
+      m({ id: 'fiber_basic', name: '섬유 재배', nameEn: 'Fibre farming', workers: farmJobs(800, 200), inputs: {}, outputs: { fiber: 6900 } }),
+      m({ id: 'fiber_tools', name: '쇠 농기구', nameEn: 'Iron implements', tech: 'iron_tools', workers: farmJobs(600, 200), inputs: { tools: 100 }, outputs: { fiber: 7300 } }),
+      m({ id: 'fiber_mech', name: '농업 기계', nameEn: 'Farm machinery', tech: 'agri_mech', workers: farmJobs(400, 100), inputs: { fuel: 300, electronics: 100 }, outputs: { fiber: 7600 } }),
     ],
   },
   {
     // 곡물을 사료로 먹여 고기를 낸다. 곡물이 쌀수록 남는다
     id: 'ranch', name: '목장', nameEn: 'Livestock ranch', land: 'arable', buildPoints: 600,
     methods: [
-      m({ id: 'ranch_basic', name: '가축 사육', nameEn: 'Livestock raising', workers: jobs(800, 200), inputs: { grain: 3000 }, outputs: { meat: 1300 } }),
+      m({ id: 'ranch_basic', name: '가축 사육', nameEn: 'Livestock raising', workers: farmJobs(800, 200), inputs: { grain: 3000 }, outputs: { meat: 1300 } }),
     ],
   },
   {
@@ -305,7 +311,8 @@ export function scaleBonus(level: number): number {
  * - investWage: AI가 새로 지을지 판단할 때 쓰는 임금의 바닥 = 기본 임금 × 이 값 (0이면 지금 임금만 본다)
  * - localBias: 민간 상회가 그 지역 사람들 돈으로 그 지역에 지을 때 수익률에 곱하는 가산점 (1 + localBias)
  * - taxCurve: 징수율 곡선. 'exp' = 1 − e^(−x), 'hyp' = x / (1 + x) (x = 행정청 한도 / 인구)
- * - switchRate, switchPremium: 일하는 사람이 하루에 옮기는 상한 비율, 옮기는 데 필요한 소득(또는 생활수준) 배율
+ * - switchRate, switchPremium, switchMax: 일하는 사람은 소득이 switchPremium 배 넘게 나은 자리로 옮긴다. 하루에 옮기는 비율은
+ *   switchPremium 배일 때 switchRate 이고 소득 배율의 차이에 비례해 늘어 switchMax 에서 멈춘다 (labor.ts switchShare)
  * - cashBufferDays: 팝이 투자 풀로 보내지 않고 들고 있는 돈 (생활비 + 세금의 며칠분)
  * - landTax, pollTax, incomeTax: 세금 수준 3단계(보통)의 토지세율(소작지 판매 대금 중 국고 몫), 인두세(1인당 하루), 소득세율.
  *   세 세율을 같은 배율로 비교했다 (빅토리아3 보통 단계 기준 ×1·×1.5·×2·×2.5, 20년 × 시드 1~4). ×2는 ×1보다 건물 레벨이
@@ -356,6 +363,8 @@ export function scaleBonus(level: number): number {
  */
 export const TUNE = {
   peasantSellShare: 0.2,
+  /** 저택의 하급 귀족 1명 몫 (귀족 1명 = 1). 0.1·0.25·0.5 비교 (10년, 20년 × 시드 1·2, 두 번): 0.1은 하급 귀족 생활수준이 가장 낮고, 0.25와 0.5는 총생산·레벨 순서가 실행마다 바뀐다. 상급 귀족 생활수준을 덜 깎는 0.25 */
+  gentryShare: 0.25,
   rentShare: 0.5,
   patronWealth: 2,
   patronShare: 0.5,
@@ -364,6 +373,7 @@ export const TUNE = {
   wageCeil: 0.85,
   switchRate: 0.005,
   switchPremium: 1.1,
+  switchMax: 0.05,
   adminScale: 0.3,
   lossBuildsPerWeek: 0,
   lossTolerance: Infinity,

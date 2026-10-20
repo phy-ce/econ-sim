@@ -18,12 +18,15 @@ export type Owner = 'capitalist' | 'aristocrat';
 export const OWNERS: Owner[] = ['capitalist', 'aristocrat'];
 
 /** 일자리 직종 (빅토리아3: 소유주도 건물의 일자리다) */
-export type Skill = 'unskilled' | 'skilled' | 'expert' | 'gentry' | Owner;
-export const SKILLS: Skill[] = ['unskilled', 'skilled', 'expert', 'gentry', 'capitalist', 'aristocrat'];
+export type Skill = 'unskilled' | 'farmer' | 'skilled' | 'expert' | 'gentry' | Owner;
+export const SKILLS: Skill[] = ['unskilled', 'farmer', 'skilled', 'expert', 'gentry', 'capitalist', 'aristocrat'];
+/** 하층 일자리 (노동자·농부): 자격 없이 귀족·자본가 말고 누구나 들어갈 수 있다 */
+export const LOWER_JOBS: Skill[] = ['unskilled', 'farmer'];
+export const isLowerJob = (s: PopClass): boolean => s === 'unskilled' || s === 'farmer';
 
 /** 직종 = 일자리 직종 + 소작농 */
 export type PopClass = Skill | 'peasant';
-export const POP_CLASSES: PopClass[] = ['unskilled', 'skilled', 'expert', 'gentry', 'peasant', 'capitalist', 'aristocrat'];
+export const POP_CLASSES: PopClass[] = ['unskilled', 'farmer', 'skilled', 'expert', 'gentry', 'peasant', 'capitalist', 'aristocrat'];
 
 export const WEALTH_MIN = 1;
 export const WEALTH_MAX = 99;
@@ -544,7 +547,7 @@ export interface World {
    * 저장 형식 버전: 저장되는 모양이 바뀌면 올린다. 옛 저장은 compat.ts migrateWorld
    * (6: 부·문해력·교육 접근도·숙련도·작업 인원을 100배 값으로, 모든 숫자 소수 둘째 자리. 5는 그 작업 중간 판이었다)
    */
-  version: 6;
+  version: 7;
   config: WorldConfig;
   tick: number;
   seed: number;

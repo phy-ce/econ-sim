@@ -66,6 +66,8 @@ const w = createWorld(seed, { withPlayer: false });
 const trace = w.kingdoms.map(() => [] as { tax: number; wages: number; weeks: number; debt: boolean }[]);
 // 교육 (5년마다): lit 인구 가중 문해력, sch 왕실 학교 레벨, qs 기술자 자격자(기술자 + 다른 직종의 기술자 자격, 천 명), schDem 학교 철거 레벨 누계
 const edu: Record<number, { lit: number; sch: number; qs: number; schDem: number; veins: number }> = {};
+// 하급 귀족·귀족 (5년마다): gJob·aJob 실업 비율(노동 인구), gSol 하급 귀족 생활수준, gMan 저택에 앉은 하급 귀족 비율
+const gent: Record<number, { gJob: number; aJob: number; gSol: number; gMan: number; gSch: number; gAdm: number; tut: number }> = {};
 const inv: Record<number, ReturnType<typeof investSnapshot>> = {};
 let schDem = 0;
 const schoolLevels = new Map<number, number>();
@@ -109,6 +111,16 @@ for (let d = 0; d < years * 360; d++) {
     const sch = w.buildings.filter((b) => b.typeId === 'school').reduce((a, b) => a + b.level, 0);
     // veins: 찾은 광맥 레벨 합 (모든 지역·자원)
     const veins = w.regions.reduce((a, r) => a + Object.values(r.deposits).reduce((b, x) => b + x, 0), 0);
+    const g = { n: 0, job: 0, sol: 0, man: 0, an: 0, ajob: 0, sch: 0, adm: 0 };
+    const typeOf = new Map(w.buildings.map((b) => [b.id, b.typeId] as const));
+    const manors = new Set(w.buildings.filter((b) => b.typeId === 'manor').map((b) => b.id));
+    for (const p of w.pops) {
+      const wf = workforce(p);
+      if (p.prof === 'gentry') { g.n += wf; g.sol += p.sol * wf; if (p.work === 0) g.job += wf; if (manors.has(p.work)) g.man += wf; const t = typeOf.get(p.work); if (t === 'school') g.sch += wf; if (t === 'admin') g.adm += wf; }
+      if (p.prof === 'aristocrat') { g.an += wf; if (p.work === 0) g.ajob += wf; }
+    }
+    const f3 = (x: number) => +x.toFixed(3);
+    gent[w.tick / 360] = { gJob: f3(g.job / Math.max(1, g.n)), aJob: f3(g.ajob / Math.max(1, g.an)), gSol: +(g.sol / Math.max(1, g.n)).toFixed(2), gMan: f3(g.man / Math.max(1, g.n)), gSch: Math.round(g.sch), gAdm: Math.round(g.adm), tut: w.buildings.filter((b) => b.methodId === 'school_tutor').reduce((a, b) => a + b.level, 0) };
     edu[w.tick / 360] = { lit: +(lit / n).toFixed(3), sch, qs: Math.round(qs / 1e3), schDem, veins };
     inv[w.tick / 360] = investSnapshot(w);
   }
@@ -150,7 +162,16 @@ for (const m of w.metrics) {
     solPeas: +(sum(m, (k) => k.solBy.peasant * k.popBy.peasant) / Math.max(1, sum(m, (k) => k.popBy.peasant))).toFixed(2),
     foodPeas: +(sum(m, (k) => k.foodBy.peasant * k.popBy.peasant) / Math.max(1, sum(m, (k) => k.popBy.peasant))).toFixed(2),
     solUnsk: +(sum(m, (k) => k.solBy.unskilled * k.popBy.unskilled) / Math.max(1, sum(m, (k) => k.popBy.unskilled))).toFixed(2),
+    // 하층 일자리 직종별: 인구 비율, 생활수준, 고용 가중 임금, 실업률 (실업 노동 인구 / (고용 + 실업)). 농부가 없는 판에서는 0
+    ...Object.fromEntries((['unskilled', 'farmer', 'skilled'] as const).flatMap((c) => {
+      const lab = (k: MetricPoint['kingdoms'][number]) => (k.labor as Record<string, { wage: number; employed: number; jobless: number } | undefined>)[c];
+      const n = sum(m, (k) => k.popBy[c] ?? 0), emp = sum(m, (k) => lab(k)?.employed ?? 0), idle = sum(m, (k) => lab(k)?.jobless ?? 0);
+      return [[`${c}Pop`, +(n / pop).toFixed(3)], [`${c}Sol`, +(sum(m, (k) => (k.solBy[c] ?? 0) * (k.popBy[c] ?? 0)) / Math.max(1, n)).toFixed(2)],
+        [`${c}Wage`, +(sum(m, (k) => (lab(k)?.wage ?? 0) * (lab(k)?.employed ?? 0)) / Math.max(1, emp)).toFixed(2)], [`${c}Idle`, +(idle / Math.max(1, emp + idle)).toFixed(3)]];
+    })),
+    farmLv: sum(m, (k) => (k.levelsBy.farm ?? 0) + (k.levelsBy.fiber_farm ?? 0) + (k.levelsBy.ranch ?? 0)),
     ...(edu[y] ?? {}),
+    ...(gent[y] ?? {}),
     ...(inv[y] ?? {}),
     ...investInterval(w.metrics, (y - 5) * 360, y * 360),
   };

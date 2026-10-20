@@ -5,10 +5,10 @@ import { money, signedMoney } from './format';
 
 /** 계층 색: 차트·범례·표·지도 어디서나 같은 색 (styles.css 의 --c-* 토큰) */
 export const CLASS_COLOR: Record<PopClass, string> = {
-  peasant: 'var(--c-peasant)', unskilled: 'var(--c-unskilled)', skilled: 'var(--c-skilled)',
+  peasant: 'var(--c-peasant)', unskilled: 'var(--c-unskilled)', farmer: 'var(--c-farmer, #8a9a3c)', skilled: 'var(--c-skilled)',
   expert: 'var(--c-expert)', gentry: 'var(--c-gentry, #7c6fd6)', capitalist: 'var(--c-capitalist)', aristocrat: 'var(--c-aristocrat)',
 };
-export const SKILL_COLOR: Record<Skill, string> = { unskilled: CLASS_COLOR.unskilled, skilled: CLASS_COLOR.skilled, expert: CLASS_COLOR.expert, gentry: CLASS_COLOR.gentry, capitalist: CLASS_COLOR.capitalist, aristocrat: CLASS_COLOR.aristocrat };
+export const SKILL_COLOR: Record<Skill, string> = { unskilled: CLASS_COLOR.unskilled, farmer: CLASS_COLOR.farmer, skilled: CLASS_COLOR.skilled, expert: CLASS_COLOR.expert, gentry: CLASS_COLOR.gentry, capitalist: CLASS_COLOR.capitalist, aristocrat: CLASS_COLOR.aristocrat };
 
 export type Tone = 'gold' | 'accent' | 'pos' | 'neg' | 'muted' | 'in' | 'out';
 const TONE: Record<Tone, string> = {

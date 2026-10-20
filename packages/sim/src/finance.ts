@@ -1,11 +1,11 @@
 import { BUILDING_BY_ID, GOODS, SKILL_DEFS, TECH_BY_ID, TICKS_PER_WEEK, TUNE, getMethod } from './data';
-import { collectionRatio, companyById, regionById, constructionEstimate, efficiency, isGovernment, kingdomGdp, logEvent, ownerBuildingOf, paysDividend, repay, sellThrough } from './economy';
+import { collectionRatio, companyById, regionById, constructionEstimate, efficiency, isGovernment, kingdomGdp, logEvent, ownerBuildingOf, paysDividend, repay, sellThrough, shareWeight } from './economy';
 import { techNameEn } from './i18n';
 import { addToPool, kingdomById, kingdomOf } from './kingdoms';
 import { tenantSaleBag } from './market';
 import { payPops } from './pops';
 import { round2 } from './rng';
-import { SKILLS, crewOf } from './types';
+import { LOWER_JOBS, SKILLS, crewOf } from './types';
 import type { BudgetItem, Building, Company, GoodBag, GoodId, Kingdom, Pop, PopClass, Region, SalvageLot, TaxLaw, World } from './types';
 
 // ---------------------------------------------------------------- 은행
@@ -106,7 +106,7 @@ export function taxRates(k: Kingdom, law: TaxLaw = k.taxLaw): { land: number; po
 }
 
 /**
- * 임금 지수 (매주, 빅토리아3의 '보통 임금'): 왕국 민간 건물 노동자의 평균 임금 ÷ 노동자 기본 임금 (고용 가중)의 이동평균.
+ * 임금 지수 (매주, 빅토리아3의 '보통 임금'): 왕국 민간 건물 노동자·농부의 평균 임금 ÷ 기본 임금 (고용 가중)의 이동평균.
  * 국영 임금은 이 지수에 직종별 기본 임금(노동자 10, 기술자 15, 전문가 40 …)을 곱한다. 민간 노동자 고용이 없으면 그대로 둔다
  */
 export function updateWageIndex(w: World, k: Kingdom) {
@@ -115,7 +115,7 @@ export function updateWageIndex(w: World, k: Kingdom) {
     if (b.stateOwned || BUILDING_BY_ID[b.typeId].auto || kingdomOf(w, b.regionId) !== k.id) continue;
     const c = companyById(w, b.companyId);
     if (!c) continue;
-    paid += b.employed.unskilled * c.wages.unskilled; base += b.employed.unskilled * SKILL_DEFS.unskilled.baseWage;
+    for (const s of LOWER_JOBS) { paid += b.employed[s] * c.wages[s]; base += b.employed[s] * SKILL_DEFS[s].baseWage; }
   }
   if (base <= 0) return;
   k.wageIndex = round2(k.wageIndex == null ? paid / base : k.wageIndex * 0.75 + (paid / base) * 0.25);
@@ -289,8 +289,8 @@ export function collectIncomeTax(w: World) {
 
 // ---------------------------------------------------------------- 주간: 세금, 배당, 투자 풀
 
-/** 소유 직종이 배당에서 투자 풀로 넣는 비율 (빅토리아3 기본률) */
-const INVEST_SHARE: Record<'capitalist' | 'aristocrat', number> = { capitalist: 0.3, aristocrat: 0.2 };
+/** 소유 건물에서 받은 몫 중 투자 풀로 넣는 비율 (빅토리아3 기본률: 금융가 30%, 저택 20%) */
+const INVEST_SHARE: Partial<Record<PopClass, number>> = { capitalist: 0.3, aristocrat: 0.2, gentry: 0.2 };
 
 export function weeklyWageBill(w: World, c: Company): number {
   let bill = 0;
@@ -367,14 +367,14 @@ function fitReserves(w: World, c: Company): number {
   return cash - total;
 }
 
-/** 소유 직종에게 배당을 준다: 받은 몫의 일부는 그 왕국 투자 풀로 */
+/** 소유 건물에 앉은 pop 에게 배당·지대를 몫(shareWeight × 인원)대로 나눠 준다: 받은 몫의 일부는 그 왕국 투자 풀로 */
 function payOwners(w: World, kingdomId: number, regionId: number, pops: Pop[], amount: number) {
   let total = 0;
-  for (const p of pops) total += p.size;
+  for (const p of pops) total += p.size * shareWeight(p.prof);
   if (total <= 0) { addToPool(w, kingdomId, regionId, amount); return; }
   for (const p of pops) {
-    const amt = (amount * p.size) / total;
-    const invest = amt * INVEST_SHARE[p.prof as 'capitalist' | 'aristocrat'];
+    const amt = (amount * p.size * shareWeight(p.prof)) / total;
+    const invest = amt * (INVEST_SHARE[p.prof] ?? 0);
     addToPool(w, kingdomId, p.regionId, invest);
     payPops(w, [p], amt - invest);
   }

@@ -65,7 +65,7 @@ export interface KingdomMetrics {
   wageSkilled: number;
   techs: number;
   /** 노동 시장 (직종별): 임금 판단의 근거 데이터 */
-  labor: Record<'unskilled' | 'skilled' | 'expert', LaborMetrics>;
+  labor: Record<'unskilled' | 'farmer' | 'skilled' | 'expert', LaborMetrics>;
   /** 소작농 노동 인구 1명의 하루 수확 가치 (시장가, 인구 가중) */
   peasantIncome: number;
   /** 노동 인구 1명이 식구(노동 인구 1 + 부양가족)와 부 5로 사는 하루 생활비 (지역 가격, 인구 가중) */
@@ -142,14 +142,14 @@ export function recordMetrics(w: World) {
       if (t.auto || kingdomOf(w, b.regionId) !== k.id) continue;
       levelsBy[b.typeId] = (levelsBy[b.typeId] ?? 0) + b.level;
       const tm = (typeBy[b.typeId] ??= { employed: 0, slots: 0, profit: 0, lossLevels: 0 });
-      for (const sk of ['unskilled', 'skilled', 'expert'] as const) { tm.employed += b.employed[sk]; tm.slots += slots(b, sk); }
+      for (const sk of ['unskilled', 'farmer', 'skilled', 'expert'] as const) { tm.employed += b.employed[sk]; tm.slots += slots(b, sk); }
       tm.profit += b.profitEma;
       if (b.profitEma < 0) tm.lossLevels += b.level;
       if (b.stateOwned) levelsState += b.level; else levelsPrivate += b.level;
     }
     // 노동 시장
     const labor = {} as KingdomMetrics['labor'];
-    for (const s of ['unskilled', 'skilled', 'expert'] as const) {
+    for (const s of ['unskilled', 'farmer', 'skilled', 'expert'] as const) {
       let paid = 0, emp = 0, cap = 0;
       for (const b of w.buildings) {
         if (kingdomOf(w, b.regionId) !== k.id || BUILDING_BY_ID[b.typeId].auto) continue;
@@ -169,7 +169,7 @@ export function recordMetrics(w: World) {
     for (const b of w.buildings) {
       if (kingdomOf(w, b.regionId) !== k.id || BUILDING_BY_ID[b.typeId].auto || isGovernment(b.typeId)) continue;
       va += b.last.revenue - b.last.inputCost; wages += b.last.wageCost;
-      workers += b.employed.unskilled + b.employed.skilled + b.employed.expert;
+      workers += b.employed.unskilled + b.employed.farmer + b.employed.skilled + b.employed.expert;
     }
     kingdoms[k.id] = {
       labor, peasantIncome: pw > 0 ? round2(pi / pw) : 0, livingCost5: lw > 0 ? round2(lc / lw) : 0,

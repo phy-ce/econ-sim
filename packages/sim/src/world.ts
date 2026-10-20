@@ -8,7 +8,7 @@ import { applyStateWages, taxCapacity, updateWageIndex } from './finance';
 import { round2 } from './rng';
 import { roundWorld } from './round';
 import type { Company, GoodId, Kingdom, MarketGood, PopClass, Region, Skill, World } from './types';
-import { SKILLS, emptyLedger } from './types';
+import { SKILLS, emptyLedger, isLowerJob } from './types';
 
 /** 민간 상회의 시작 자금 (농장 약 다섯 레벨 공사비). 왕실 국고는 startTreasury 가 정한다 */
 export const START_CASH = 30_000_000;
@@ -26,7 +26,7 @@ const KINGDOMS = [
 ];
 
 /** 1인당 시작 저축 (부양가족 포함 1인 기준) */
-const START_SAVINGS: Record<PopClass, number> = { peasant: 5, unskilled: 20, skilled: 100, expert: 300, gentry: 200, capitalist: 500, aristocrat: 500 };
+const START_SAVINGS: Record<PopClass, number> = { peasant: 5, unskilled: 20, farmer: 20, skilled: 100, expert: 300, gentry: 200, capitalist: 500, aristocrat: 500 };
 /** 처음부터 아는 기술: 손베틀·손가구·목공구 등 수공업 방식 */
 const START_TECHS = ['spinning', 'guilds'];
 /** 왕실이 갖고 시작하는 건축사무소 레벨 (목조 4 × 10레벨 = 하루 약 40포인트. 공사 하나는 레벨당 하루 10포인트까지라 농장 1레벨은 약 60일) */
@@ -140,7 +140,7 @@ export function regionStarts(seed: number, owner: Record<number, number>): Map<n
     const arable = Math.ceil(((peasant + skilled + expert) * WORKFORCE_RATIO / SUBSISTENCE.workersPerCell) * t.arableSlack * jit()) + farms;
     out.set(id, {
       tier: tierOf[id] + 1,
-      population: { peasant, unskilled: 0, skilled, expert, gentry, capitalist: 0, aristocrat },
+      population: { peasant, unskilled: 0, farmer: 0, skilled, expert, gentry, capitalist: 0, aristocrat },
       education: Math.round(t.education * jit() * 100) / 100, arable, plot: Math.ceil((total / 100_000) * t.plot * jit()), farms,
     });
   }
@@ -174,7 +174,7 @@ export function createWorld(seed = 1, opts: CreateWorldOptions = {}): World {
   }
 
   const w: World = {
-    version: 6, config: { ai }, tick: 0, seed, rngState: seed | 0, nextId: 1000,
+    version: 7, config: { ai }, tick: 0, seed, rngState: seed | 0, nextId: 1000,
     regions, kingdoms, pops: [], fund: 0, metrics: [],
     bank: { cash: BANK_CAPITAL, capital: BANK_CAPITAL },
     traders: { cash: TRADER_CAPITAL, capital: TRADER_CAPITAL, shipments: [] },
@@ -243,9 +243,15 @@ export function createWorld(seed = 1, opts: CreateWorldOptions = {}): World {
       const own = findPop(w, b.regionId, s, 0);
       const fromOwn = own ? Math.min(n, workforce(own)) : 0;
       if (own && fromOwn > 0) movePeople(w, own, getPop(w, b.regionId, s, b.id), fromOwn);
-      if (n - fromOwn > 0) movePeople(w, src, getPop(w, b.regionId, s, b.id), n - fromOwn, s === 'unskilled' ? undefined : s);
+      if (n - fromOwn > 0) movePeople(w, src, getPop(w, b.regionId, s, b.id), n - fromOwn, isLowerJob(s) ? undefined : s);
     }
     b.exp100 = 100;
+  }
+  // 시작 건물에 앉지 못한 하급 귀족은 저택에서 일하며 시작한다
+  for (const o of w.buildings.filter((x) => x.typeId === 'manor')) {
+    const free = findPop(w, o.regionId, 'gentry', 0);
+    const room = slots(o, 'gentry');
+    if (free && free.size > 0 && room > 0) movePeople(w, free, getPop(w, o.regionId, 'gentry', o.id), Math.min(room, workforce(free)));
   }
   syncEmployment(w);
   // 시작 징수율: 매일 징수(finance.ts collectIncomeTax)와 같은 규칙. 행정청은 아직 사람이 없어 한도가 0이라 0이다

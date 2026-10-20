@@ -142,6 +142,28 @@
 - 채취(`bg_extraction`)는 광산(`bg_mining`)과 벌목(`bg_logging`)의 부모 그룹이다 (G `building_groups/00_building_groups.txt`). 자급 농업(`bg_subsistence_agriculture`)은 농업(`bg_agriculture`)의 자식이라 농업 보정이 소작지에도 붙는다고 보았다. 상속 규칙 자체는 문서로 확인 못 함.
 - **확인 못 함:** 확률이 무엇에 대한 확률인지(검사당·종류별), 임계값 0.2와의 결합, 진원지에서 멀어질 때 강도가 얼마나 줄어드는지. 공식 개발 일지 DD#131 (https://admin-forum.paradoxplaza.com/forum/developer-diary/victoria-3-dev-diary-131-famines-starvation-harvest-conditions.1708680)은 열리지 않았다.
 
+## 저택(Manor House)의 일자리와 몫 (2026-10-21 확인)
+- 출처: https://vic3.paradoxwikis.com/Building (소유 건물 절과 Manor Houses·Financial Districts 표), https://vic3.paradoxwikis.com/Treasury
+- 저택 방식별 레벨당 일자리: Privately Owned 귀족 50 / Clergy Oversight 성직자 100 / Increased Clergy Oversight 귀족 50·성직자 50 / Bureaucrat Oversight 관료 100.
+- 몫(ownership shares): 귀족 +10, 성직자 +1, 관료 +1. 금융가: 자본가 50·상점주 25·서기 25, 자본가 +10, 상점주 +1 (교회 감독이면 성직자 +2).
+- 배당 분배: "Dividends are divided and paid per share.", "Shares are per employee". 즉 한 사람 몫은 직종 몫 비율대로다 (귀족 1명 = 성직자 10명).
+- 투자 풀 기여율 (Treasury): 자본가 30%, 귀족 20%, 성직자 20%, 상점주 20%.
+- 소유 건물에서 몫이 없는 직원(서기 등)이 임금을 따로 받는지: 확인 못 함.
+- 이 게임: 저택에 하급 귀족 자리(귀족과 같은 수)를 두고, 하급 귀족 1명 몫을 귀족 1명의 `gentryShare`로 둔다 (빅토리아3 성직자 1/10에 해당). 투자 풀 기여는 저택 몫 모두 20%.
+- 확인한 개발 일지(https://forum.paradoxplaza.com/forum/developer-diary/victoria-3-dev-diary-110-building-ownership-foreign-investment.1647879/)는 본문을 열지 못했다 (브라우저 확인 페이지). 검색 요약만 봤다: 저택은 소유한 건물의 배당으로 직원에게 준다. 원문 확인 못 함.
+
+## 시장과 시장 접근성 (2026-10-21 확인, 위키는 1.13 기준)
+출처: https://vic3.paradoxwikis.com/Market
+- 시장 가격 = 기본가 × [1 + 0.75 × clamp((구매 − 판매) ÷ min(구매, 판매), ±1)]. 기본가의 25~175%.
+- 주(state) 가격: 같은 공식을 그 주의 주문만으로 계산한다 ("주가 따로 시장인 것처럼").
+- 지역 가격 = MAPI × 시장 가격 + (1 − MAPI) × 주 가격.
+  - MAPI(시장 접근 가격 영향) 기본 75%. 비편입 주 −10%, 전통주의 법 −15%, 증권거래소 기술 +10%, 체펠린 +5%, 거시경제학 +5%, 큰 강 주 특성 +5%.
+  - 실제로 쓰는 MAPI = MAPI × 그 주의 시장 접근성.
+- 시장 접근성: 기반시설 ≥ 기반시설 사용량이면 100%, 모자라면 비례로 줄어든다 (기반시설 45, 사용량 90 → 최대 50%). 수도와 땅으로 이어지지 않은 주는 항구와 수송선이 모자라면 더 줄고, 고립된 주는 0%.
+- 접근성은 그 주가 시장에 내는 구매·판매 주문의 크기도 줄인다. 운송·전기 같은 현지 상품은 늘 주 가격을 쓴다.
+- 예: 철(기본가 40)을 만들기만 하고 쓰지 않는 주는 주 가격 10, MAPI 85%면 지역 가격 35.5.
+- 기반시설 사용량이 건물·pop마다 어떻게 생기는지는 이 문서에 없어 확인 못 함 (Infrastructure 문서).
+
 ## 종이와 종이 공장 (2026-10-21 확인)
 - 종이 기본가 30 (https://vic3.paradoxwikis.com/Paper). 쓰는 곳: pop 소비, 폭약 공장, 예술 학교, 정부 행정청(Government Administration), 대학, 마천루 (같은 문서).
 - 종이 공장(Paper Mills): 필요 기술 Manufacturies, 건설비 600. 방식 이름 Hand Assembly, Pulp Pressing, Sulfite Pulping, Paper Bleaching, Water-tube Boiler, Rotary Valve Engine (https://vic3.paradoxwikis.com/Paper_Mills, 건물 목록으로 넘어간다).
