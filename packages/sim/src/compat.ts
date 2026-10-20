@@ -29,8 +29,8 @@ function to100(o: object, from: string, to: string): void {
 }
 
 /**
- * 저장 파일을 지금 형식(6판)으로 바꾼다 (불러오기 직후에 부른다). 지금 형식이면 그대로 돌려준다. 4판보다 옛 형식은 바꿀 수 없다 (null).
- * 4·5 → 6 (저장값 소수 둘째 자리). 5판은 이 변경의 중간 판이다: 부·문해력·교육 접근도는 이미 100배 값이고,
+ * 저장 파일을 지금 형식(7판)으로 바꾼다 (불러오기 직후에 부른다). 지금 형식이면 그대로 돌려준다. 4판보다 옛 형식은 바꿀 수 없다 (null).
+ * 6 → 7: 농부 직종 (addFarmers). 4·5 → 6 (저장값 소수 둘째 자리), 그다음 6 → 7. 5판은 이 변경의 중간 판이다: 부·문해력·교육 접근도는 이미 100배 값이고,
  * 건물의 숙련도·작업 인원은 규칙 단위이거나(먼저 나온 5판) 이미 100배 값이다. 그래서 판 번호가 아니라 필드마다 옛 이름이 있으면 바꾼다:
  * - pop 의 부·문해력, 지역의 교육 접근도, 건물의 숙련도·작업 인원을 100배 값으로 (wealth100, literacy100, education100, exp100, crew100)
  * - 상인 화물을 시장마다 새 화물·묵은 화물 하나씩으로 합친다 (지금 규칙과 같은 모양. 이미 합친 목록은 그대로다)
@@ -42,7 +42,8 @@ export function migrateWorld(input: unknown): World | null {
   if (!w || typeof w !== 'object') return null;
   // 옛 저장의 '안 팔린 현물' 소득 칸은 더 쓰지 않는다 (안 팔리고 사라진 물건은 소득이 아니다)
   for (const p of w.pops ?? []) delete (p as { unsoldKind?: number }).unsoldKind;
-  if (w.version === 6) { writeMirrors(w); return w; }
+  if (w.version === 7) { writeMirrors(w); return w; }
+  if (w.version === 6) { addFarmers(w); w.version = 7; writeMirrors(w); return w; }
   if (w.version !== 4 && w.version !== 5) return null;
   for (const p of w.pops) { to100(p, 'wealth', 'wealth100'); to100(p, 'literacy', 'literacy100'); }
   for (const r of w.regions) to100(r, 'education', 'education100');
@@ -52,9 +53,43 @@ export function migrateWorld(input: unknown): World | null {
   roundAll(w.regions);
   for (const h of w.history) roundAll(h);
   for (const m of w.metrics ?? []) roundAll(m);
-  w.version = 6;
+  addFarmers(w);
+  w.version = 7;
   roundWorld(w);
   return w;
+}
+
+/** 농부 직종이 생긴 건물 (6판까지는 이 건물의 노동자 자리였다) */
+const FARMER_BUILDINGS = new Set(['farm', 'fiber_farm', 'ranch']);
+
+/**
+ * 6 → 7 (농부 직종): 농장·목장에서 일하던 노동자는 농부가 되고, 직종별 값에 농부 칸을 더한다 (이미 있으면 그대로 둔다).
+ * 농부 임금·시장임금 정책은 노동자 것에서 시작한다. 옛 기록의 농부 칸은 0이다
+ */
+function addFarmers(w: World): void {
+  const farms = new Set(w.buildings.filter((b) => FARMER_BUILDINGS.has(b.typeId)).map((b) => b.id));
+  for (const p of w.pops) if (p.prof === 'unskilled' && farms.has(p.work)) p.prof = 'farmer';
+  for (const b of w.buildings) {
+    const e = b.employed as Building['employed'] & { farmer?: number };
+    if (e.farmer !== undefined) continue;
+    if (farms.has(b.id)) { e.farmer = e.unskilled; e.unskilled = 0; } else e.farmer = 0;
+  }
+  for (const c of w.companies) {
+    c.wages.farmer ??= c.wages.unskilled;
+    if (c.wageOffset) c.wageOffset.farmer ??= c.wageOffset.unskilled;
+  }
+  for (const r of w.regions) {
+    if (r.households && !r.households.farmer) {
+      r.households.farmer = { skill: 'farmer', population: 0, savings: 0, wealth: 0, sol: 0, fulfillment: 1, food: 1, inKind: {}, incomeEma: 0, lastIncome: 0, lastSpend: 0, consumed: {} };
+    }
+  }
+  for (const h of w.history ?? []) { h.sol.farmer ??= 0; h.population.farmer ??= 0; h.unemployment.farmer ??= 0; }
+  for (const m of w.metrics ?? []) {
+    for (const k of Object.values(m.kingdoms)) {
+      for (const rec of [k.popBy, k.wealthBy, k.solBy, k.foodBy, k.growthBy]) rec.farmer ??= 0;
+      k.labor.farmer ??= { wage: 0, employed: 0, slots: 0, jobless: 0 };
+    }
+  }
 }
 
 /** 같은 (도착 지역, 상품, 묵은 화물인가) 의 화물을 하나로 합친다 (처음 나온 순서) */

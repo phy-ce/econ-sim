@@ -1,7 +1,10 @@
-import { BUILDING_BY_ID, GOOD_IDS, GOODS, TICKS_PER_WEEK, getMethod } from './data';
+import { BUILDING_BY_ID, CLASS_DEFS, GOOD_IDS, GOODS, TICKS_PER_WEEK, getMethod } from './data';
 import { alertOnce, harvestCondition, harvestLabel, logEvent, regionById } from './economy';
 import { buildingNameEn, goodNameEn, regionNameEn } from './i18n';
 import type { Region, World } from './types';
+
+/** 기아 알림의 주어 */
+const STARVING_KO = { unskilled: '노동자가', farmer: '농부가', peasant: '소작농이' } as const;
 
 const COOLDOWN = TICKS_PER_WEEK * 4;
 /** 이주 알림: 이 기간(4주) 동안 떠난 사람이 원래 인구의 이 비율 이상일 때만 */
@@ -94,16 +97,16 @@ export function weeklyAlerts(w: World) {
   }
   // 지역 기아
   for (const r of w.regions) {
-    for (const cls of ['unskilled', 'peasant'] as const) {
+    for (const cls of ['unskilled', 'farmer', 'peasant'] as const) {
       const h = r.households[cls];
       // 기아는 부가 아니라 식량 충족률로 판단한다. 소작농은 원래 배를 곯으므로 더 심할 때만 알린다
-      const line = cls === 'unskilled' ? 0.8 : 0.6;
+      const line = cls === 'peasant' ? 0.6 : 0.8;
       if (h.population >= 5000 && h.food < line) {
         const food = Math.round(h.food * 100);
         const severe = h.food < SEVERE_FAMINE;
         alertOnce(w, `famine:${r.id}:${cls}`, TICKS_PER_WEEK * 8, severe ? null : crownOf(r),
-          `${r.name}의 ${cls === 'unskilled' ? '노동자가' : '소작농이'} 굶고 있습니다(식량 충족 ${food}%). 인구가 줄어듭니다.`,
-          { kind: severe ? 'danger' : 'warn', regionId: r.id, en: `${cls === 'unskilled' ? 'Labourers' : 'Tenant farmers'} in ${regionNameEn(r.id)} are starving (food ${food}%). The population is shrinking.` });
+          `${r.name}의 ${STARVING_KO[cls]} 굶고 있습니다(식량 충족 ${food}%). 인구가 줄어듭니다.`,
+          { kind: severe ? 'danger' : 'warn', regionId: r.id, en: `${CLASS_DEFS[cls].nameEn} in ${regionNameEn(r.id)} are starving (food ${food}%). The population is shrinking.` });
       }
     }
   }

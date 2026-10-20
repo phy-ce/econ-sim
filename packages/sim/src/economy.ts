@@ -322,7 +322,7 @@ export function shareWage(b: Building, s: Skill): number {
 }
 
 export function emptyJobs(): Record<Skill, number> {
-  return { unskilled: 0, skilled: 0, expert: 0, gentry: 0, capitalist: 0, aristocrat: 0 };
+  return { unskilled: 0, farmer: 0, skilled: 0, expert: 0, gentry: 0, capitalist: 0, aristocrat: 0 };
 }
 
 export interface EfficiencyParts {

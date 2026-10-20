@@ -74,6 +74,7 @@ Some better methods need no tech at all: iron tools raise the output of farms, l
 |---|---|---|
 | Tenant farmers | lower | farm a landlord's empty land; they sell 20% of the harvest: half the money is rent, the land-tax rate goes to the crown, the rest is theirs; they eat and use what they need from the other 80%, and whatever is left vanishes |
 | Labourers | lower | wages |
+| Farmers | lower | wages on grain farms, fibre farms and ranches (open to anyone like labourer jobs; each company sets its own farmer wage) |
 | Skilled workers, experts | middle | wages and research spending |
 | Capitalists | upper | dividends from plot buildings |
 | Landed aristocrats | upper | dividends from land buildings and tenant rent |
