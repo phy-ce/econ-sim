@@ -82,7 +82,9 @@ function methodOf(b: Building): MethodDef | null {
 
 /** slots(b, s) 와 같은 값 (m = methodOf(b)) */
 function slotsWith(b: Building, m: MethodDef | null, s: Skill): number {
-  return m ? (m.workers[s] ?? 0) * b.level * b.utilization : 0;
+  if (!m) return 0;
+  if (s === 'aristocrat' && b.nobleSeats !== undefined) return b.nobleSeats;
+  return (m.workers[s] ?? 0) * b.level * b.utilization;
 }
 
 // ----------------------------------------------------------------

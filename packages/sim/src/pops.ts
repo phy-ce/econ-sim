@@ -240,6 +240,34 @@ export function updateQualifications(w: World) {
   }
 }
 
+/**
+ * 저택 상급 귀족 자리 규칙(TUNE.nobleSeats)이 있으면 상급 귀족 수는 저택 자리에 맞춰 간다 (부와 상관없이):
+ * 자리가 없는(실업) 상급 귀족은 하루 TUNE.nobleAdjust 씩 하급 귀족이 되고, 빈 자리는 하루 빈 자리 × nobleAdjust 만큼
+ * 그 지역의 저택에 앉은 하급 귀족, 그다음 실업 하급 귀족이 채운다
+ */
+export function matchNobles(w: World) {
+  const rate = TUNE.nobleAdjust;
+  if (TUNE.nobleSeats === 'fit' || !(rate > 0)) return;
+  const n = w.pops.length;
+  for (let i = 0; i < n; i++) {
+    const p = w.pops[i];
+    if (p.prof !== 'aristocrat' || p.work !== 0 || p.size <= 0) continue;
+    movePeople(w, p, getPop(w, p.regionId, 'gentry', 0), workforce(p) * rate);
+  }
+  for (const b of w.buildings) {
+    if (b.typeId !== 'manor' || b.nobleSeats === undefined) continue;
+    const seated = findPop(w, b.regionId, 'aristocrat', b.id);
+    let gap = (b.nobleSeats - (seated ? workforce(seated) : 0)) * rate;
+    if (!(gap > 1e-6)) continue;
+    const dest = seated ?? getPop(w, b.regionId, 'aristocrat', b.id);
+    for (const work of [b.id, 0]) {
+      const src = findPop(w, b.regionId, 'gentry', work);
+      if (!src || src.size <= 0 || gap <= 1e-6) continue;
+      gap -= movePeople(w, src, dest, Math.min(gap, workforce(src)));
+    }
+  }
+}
+
 // ---------------------------------------------------------------- 문해력
 
 /** 문해력 목표에 더하는 부 1단계의 몫 */

@@ -394,6 +394,15 @@ export const TUNE = {
   qualSkilledL: 0.4,
   qualExpertL: 0.6,
   qualRate: 0.25,
+  // 저택 상급 귀족 자리 규칙 (비교 중, DECISIONS 7-17. production.ts nobleSeatsOf, pops.ts matchNobles). 'fit' 이 지금 규칙, aristStart 는 시작 귀족 배율
+  nobleSeats: 'fit' as 'fit' | 'owned' | 'income' | 'land' | 'pop',
+  nobleSeatsPerLevel: 10,
+  nobleSeatsPerCell: 2,
+  nobleIncome: 100,
+  nobleSeatsLand: 2,
+  noblePerMille: 2,
+  nobleAdjust: 0.01,
+  aristStart: 1,
   schoolValue: 0.3,
   schoolTarget: 0.6, // 0.45·0.5·0.6 비교 (DECISIONS.md 7-4): 0.6이 20년차 소작농·건물 레벨·자격자가 가장 낫다
   schoolTaxMax: 4,

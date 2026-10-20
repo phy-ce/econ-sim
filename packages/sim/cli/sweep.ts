@@ -2,7 +2,7 @@
 // 주요 지표(w.metrics)에서 5년마다(와 마지막 해) 대륙 합계를 뽑아 한 줄 JSON으로 출력한다.
 // TIMING=1 이면 time: { ms 시뮬레이션 시간, msPerDay 하루 평균 } 을 덧붙인다 (sweepsum.py 가 따로 요약한다)
 import { BUILDING_BY_ID, GOODS, SKILL_DEFS, SUBSISTENCE, TUNE } from '../src/data';
-import { isGovernment, paysDividend, slots } from '../src/economy';
+import { isGovernment, ownerBuildingOf, paysDividend, slots } from '../src/economy';
 import { committedCost } from '../src/finance';
 import { createWorld, literacyOf, step } from '../src/index';
 import type { MetricPoint } from '../src/index';
@@ -78,6 +78,24 @@ const yearAcc = { subG: 0, demG: 0, subT: 0, demT: 0, subF: 0, hG: 0, hT: 0, hF:
 const urban = (t: number | undefined) => (t ?? 9) <= 2;
 const nU = w.regions.filter((r) => urban(r.tier)).length, nR = w.regions.length - nU;
 const yearly: Record<number, Record<string, number>> = {};
+// 계층 소득 (해마다 마지막 날): incAri·incGen·incSk·incUnsk 상급 귀족·하급 귀족·기술자·노동자 1인당 하루 현금 소득(incomeEma),
+// ariSk 상급 귀족 ÷ 기술자, ariK 상급 귀족 인구(천), genK 하급 귀족 인구(천)
+const classInc: Record<number, Record<string, number>> = {};
+function classIncome(w: World) {
+  const n: Record<string, number> = {}, inc: Record<string, number> = {};
+  for (const p of w.pops) { n[p.prof] = (n[p.prof] ?? 0) + p.size; inc[p.prof] = (inc[p.prof] ?? 0) + p.incomeEma; }
+  const per = (c: string) => (n[c] ?? 0) > 0 ? inc[c] / n[c] : 0;
+  const f2 = (x: number) => +x.toFixed(2);
+  // manOwn 저택이 가진 건물 레벨 합, cells 소작지 칸 합, ariSeat 저택 상급 귀족 자리 합(천)
+  let manOwn = 0, cells = 0, ariSeat = 0;
+  for (const b of w.buildings) {
+    if (b.typeId === 'subsistence') cells += b.level;
+    else if (b.typeId === 'manor') ariSeat += slots(b, 'aristocrat');
+    else if (ownerBuildingOf(w, b)?.typeId === 'manor') manOwn += b.level;
+  }
+  return { manOwn, cells, ariSeat: Math.round(ariSeat / 1e3), incAri: f2(per('aristocrat')), incGen: f2(per('gentry')), incSk: f2(per('skilled')), incUnsk: f2(per('unskilled')),
+    ariSk: f2(per('skilled') > 0 ? per('aristocrat') / per('skilled') : 0), ariK: Math.round((n.aristocrat ?? 0) / 1e3), genK: Math.round((n.gentry ?? 0) / 1e3) };
+}
 const t0 = performance.now();
 for (let d = 0; d < years * 360; d++) {
   step(w);
@@ -99,6 +117,7 @@ for (let d = 0; d < years * 360; d++) {
     if (n > 0) { yearAcc.pFul += f / n; yearAcc.pW += wl / n; } }
   if (w.tick % 360 === 0) {
     const y = w.tick / 360;
+    classInc[y] = classIncome(w);
     let cash = 0, n = 0;
     for (const p of w.pops) if (p.prof === 'peasant' && p.work !== 0) { cash += Math.max(0, p.incomeEma); n += p.size; }
     yearly[y] = {
@@ -212,6 +231,7 @@ out.traj = w.metrics.filter((m) => m.tick % 360 === 0 && m.tick > 0).map((m) => 
       const emp = sum(m, (k) => lab(k)?.employed ?? 0), idle = sum(m, (k) => lab(k)?.jobless ?? 0);
       return +(idle / Math.max(1, emp + idle)).toFixed(3);
     })(),
+    ...(classInc[m.tick / 360] ?? {}),
   };
 });
 const after1 = w.metrics.filter((m) => m.tick > 360);

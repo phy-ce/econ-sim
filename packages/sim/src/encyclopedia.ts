@@ -93,7 +93,9 @@ type TuneKey = keyof typeof TUNE;
 /** 항목에 실린 TUNE 키 (시험이 모든 키가 실렸는지 본다) */
 export const TUNE_DOCUMENTED = new Set<TuneKey>();
 /** 비교 실행용 손잡이: 기본값이 기능을 끄고 있어 규칙이 아니다 */
-export const TUNE_EXPERIMENTAL: TuneKey[] = ['subReturn', 'sellThrough', 'laborNet', 'officeRichWeeks', 'officeSelfPay', 'laborPoach', 'officeSchoolFirst', 'needMul'];
+export const TUNE_EXPERIMENTAL: TuneKey[] = ['subReturn', 'sellThrough', 'laborNet', 'officeRichWeeks', 'officeSelfPay', 'laborPoach', 'officeSchoolFirst', 'needMul',
+  // 저택 상급 귀족 자리 규칙 비교 중 (DECISIONS 7-17, 기본 'fit' = 지금 규칙)
+  'nobleSeats', 'nobleSeatsPerLevel', 'nobleSeatsPerCell', 'nobleIncome', 'nobleSeatsLand', 'noblePerMille', 'nobleAdjust', 'aristStart'];
 
 function showTune(v: unknown): number | string {
   if (typeof v === 'number') return Number.isFinite(v) ? v : '∞';
