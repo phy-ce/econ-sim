@@ -55,6 +55,7 @@ export const GOODS: Record<GoodId, GoodDef> = {
  */
 export const SKILL_DEFS: Record<Skill, SkillDef> = {
   unskilled: { id: 'unskilled', name: '노동자', nameEn: 'Labourers', baseWage: 10 },
+  farmer: { id: 'farmer', name: '농부', nameEn: 'Farmers', baseWage: 10 },
   skilled: { id: 'skilled', name: '기술자', nameEn: 'Skilled workers', baseWage: 15 },
   expert: { id: 'expert', name: '전문가', nameEn: 'Experts', baseWage: 40 },
   gentry: { id: 'gentry', name: '하급 귀족', nameEn: 'Gentry', baseWage: 30 },
@@ -65,6 +66,7 @@ export const SKILL_DEFS: Record<Skill, SkillDef> = {
 export const CLASS_DEFS: Record<PopClass, ClassDef> = {
   peasant: { id: 'peasant', name: '소작농', nameEn: 'Tenant farmers', stratum: 'lower', description: '' },
   unskilled: { id: 'unskilled', name: '노동자', nameEn: 'Labourers', stratum: 'lower', description: '' },
+  farmer: { id: 'farmer', name: '농부', nameEn: 'Farmers', stratum: 'lower', description: '' },
   skilled: { id: 'skilled', name: '기술자', nameEn: 'Skilled workers', stratum: 'middle', description: '' },
   expert: { id: 'expert', name: '전문가', nameEn: 'Experts', stratum: 'middle', description: '' },
   gentry: { id: 'gentry', name: '하급 귀족', nameEn: 'Gentry', stratum: 'middle', description: '' },
@@ -114,6 +116,8 @@ const TAX_PEOPLE_PER_LEVEL = 500_000;
 
 /** 레벨당 일자리 (노동자, 기술자, 전문가). 합이 1,000명이 되게 쓴다 */
 const jobs = (unskilled: number, skilled = 0, expert = 0) => ({ unskilled, skilled, expert });
+/** 농장·목장의 일자리: 노동자 자리 대신 농부 자리 (임금·자격은 노동자와 같다) */
+const farmJobs = (farmer: number, skilled = 0, expert = 0) => ({ farmer, skilled, expert });
 /** 소유 건물(저택·금융가) 1레벨의 소유주 자리 */
 export const OWNERSHIP_SEATS = 100;
 /** 소유한 건물 1레벨마다 소유 건물에 생기는 소유주 자리 */
@@ -144,24 +148,24 @@ export const BUILDING_TYPES: BuildingTypeDef[] = [
   {
     id: 'farm', name: '곡물 농장', nameEn: 'Grain farm', land: 'arable', buildPoints: 600,
     methods: [
-      m({ id: 'farm_basic', name: '곡물 재배', nameEn: 'Grain farming', workers: jobs(800, 200), inputs: {}, outputs: { grain: 6900 } }),
-      m({ id: 'farm_tools', name: '쇠 농기구', nameEn: 'Iron implements', tech: 'iron_tools', workers: jobs(600, 200), inputs: { tools: 100 }, outputs: { grain: 7300 } }),
-      m({ id: 'farm_mech', name: '농업 기계', nameEn: 'Farm machinery', tech: 'agri_mech', workers: jobs(400, 100), inputs: { fuel: 300, electronics: 100 }, outputs: { grain: 7600 } }),
+      m({ id: 'farm_basic', name: '곡물 재배', nameEn: 'Grain farming', workers: farmJobs(800, 200), inputs: {}, outputs: { grain: 6900 } }),
+      m({ id: 'farm_tools', name: '쇠 농기구', nameEn: 'Iron implements', tech: 'iron_tools', workers: farmJobs(600, 200), inputs: { tools: 100 }, outputs: { grain: 7300 } }),
+      m({ id: 'farm_mech', name: '농업 기계', nameEn: 'Farm machinery', tech: 'agri_mech', workers: farmJobs(400, 100), inputs: { fuel: 300, electronics: 100 }, outputs: { grain: 7600 } }),
     ],
   },
   {
     id: 'fiber_farm', name: '섬유 농장', nameEn: 'Fibre farm', land: 'arable', buildPoints: 600,
     methods: [
-      m({ id: 'fiber_basic', name: '섬유 재배', nameEn: 'Fibre farming', workers: jobs(800, 200), inputs: {}, outputs: { fiber: 6900 } }),
-      m({ id: 'fiber_tools', name: '쇠 농기구', nameEn: 'Iron implements', tech: 'iron_tools', workers: jobs(600, 200), inputs: { tools: 100 }, outputs: { fiber: 7300 } }),
-      m({ id: 'fiber_mech', name: '농업 기계', nameEn: 'Farm machinery', tech: 'agri_mech', workers: jobs(400, 100), inputs: { fuel: 300, electronics: 100 }, outputs: { fiber: 7600 } }),
+      m({ id: 'fiber_basic', name: '섬유 재배', nameEn: 'Fibre farming', workers: farmJobs(800, 200), inputs: {}, outputs: { fiber: 6900 } }),
+      m({ id: 'fiber_tools', name: '쇠 농기구', nameEn: 'Iron implements', tech: 'iron_tools', workers: farmJobs(600, 200), inputs: { tools: 100 }, outputs: { fiber: 7300 } }),
+      m({ id: 'fiber_mech', name: '농업 기계', nameEn: 'Farm machinery', tech: 'agri_mech', workers: farmJobs(400, 100), inputs: { fuel: 300, electronics: 100 }, outputs: { fiber: 7600 } }),
     ],
   },
   {
     // 곡물을 사료로 먹여 고기를 낸다. 곡물이 쌀수록 남는다
     id: 'ranch', name: '목장', nameEn: 'Livestock ranch', land: 'arable', buildPoints: 600,
     methods: [
-      m({ id: 'ranch_basic', name: '가축 사육', nameEn: 'Livestock raising', workers: jobs(800, 200), inputs: { grain: 3000 }, outputs: { meat: 1300 } }),
+      m({ id: 'ranch_basic', name: '가축 사육', nameEn: 'Livestock raising', workers: farmJobs(800, 200), inputs: { grain: 3000 }, outputs: { meat: 1300 } }),
     ],
   },
   {

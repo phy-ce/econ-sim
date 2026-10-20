@@ -183,6 +183,14 @@ for (const m of w.metrics) {
     solPeas: +(sum(m, (k) => k.solBy.peasant * k.popBy.peasant) / Math.max(1, sum(m, (k) => k.popBy.peasant))).toFixed(2),
     foodPeas: +(sum(m, (k) => k.foodBy.peasant * k.popBy.peasant) / Math.max(1, sum(m, (k) => k.popBy.peasant))).toFixed(2),
     solUnsk: +(sum(m, (k) => k.solBy.unskilled * k.popBy.unskilled) / Math.max(1, sum(m, (k) => k.popBy.unskilled))).toFixed(2),
+    // 하층 일자리 직종별: 인구 비율, 생활수준, 고용 가중 임금, 실업률 (실업 노동 인구 / (고용 + 실업)). 농부가 없는 판에서는 0
+    ...Object.fromEntries((['unskilled', 'farmer', 'skilled'] as const).flatMap((c) => {
+      const lab = (k: MetricPoint['kingdoms'][number]) => (k.labor as Record<string, { wage: number; employed: number; jobless: number } | undefined>)[c];
+      const n = sum(m, (k) => k.popBy[c] ?? 0), emp = sum(m, (k) => lab(k)?.employed ?? 0), idle = sum(m, (k) => lab(k)?.jobless ?? 0);
+      return [[`${c}Pop`, +(n / pop).toFixed(3)], [`${c}Sol`, +(sum(m, (k) => (k.solBy[c] ?? 0) * (k.popBy[c] ?? 0)) / Math.max(1, n)).toFixed(2)],
+        [`${c}Wage`, +(sum(m, (k) => (lab(k)?.wage ?? 0) * (lab(k)?.employed ?? 0)) / Math.max(1, emp)).toFixed(2)], [`${c}Idle`, +(idle / Math.max(1, emp + idle)).toFixed(3)]];
+    })),
+    farmLv: sum(m, (k) => (k.levelsBy.farm ?? 0) + (k.levelsBy.fiber_farm ?? 0) + (k.levelsBy.ranch ?? 0)),
     ...(edu[y] ?? {}),
     ...(gent[y] ?? {}),
     ...(inv[y] ?? {}),
