@@ -150,7 +150,7 @@ export const BUILDING_TYPES: BuildingTypeDef[] = [
   {
     id: 'farm', name: '곡물 농장', nameEn: 'Grain farm', land: 'arable', buildPoints: 600,
     methods: [
-      m({ id: 'farm_basic', name: '곡물 재배', nameEn: 'Grain farming', workers: farmJobs(800, 200), inputs: {}, outputs: { grain: 6900 } }),
+      m({ id: 'farm_basic', name: '곡물 재배', nameEn: 'Grain farming', workers: farmJobs(1000), inputs: {}, outputs: { grain: 6500 } }),
       m({ id: 'farm_tools', name: '쇠 농기구', nameEn: 'Iron implements', tech: 'iron_tools', workers: farmJobs(600, 200), inputs: { tools: 100 }, outputs: { grain: 7300 } }),
       m({ id: 'farm_mech', name: '농업 기계', nameEn: 'Farm machinery', tech: 'agri_mech', workers: farmJobs(400, 100), inputs: { fuel: 300, electronics: 100 }, outputs: { grain: 7600 } }),
     ],
@@ -158,7 +158,7 @@ export const BUILDING_TYPES: BuildingTypeDef[] = [
   {
     id: 'fiber_farm', name: '섬유 농장', nameEn: 'Fibre farm', land: 'arable', buildPoints: 600,
     methods: [
-      m({ id: 'fiber_basic', name: '섬유 재배', nameEn: 'Fibre farming', workers: farmJobs(800, 200), inputs: {}, outputs: { fiber: 6900 } }),
+      m({ id: 'fiber_basic', name: '섬유 재배', nameEn: 'Fibre farming', workers: farmJobs(1000), inputs: {}, outputs: { fiber: 6500 } }),
       m({ id: 'fiber_tools', name: '쇠 농기구', nameEn: 'Iron implements', tech: 'iron_tools', workers: farmJobs(600, 200), inputs: { tools: 100 }, outputs: { fiber: 7300 } }),
       m({ id: 'fiber_mech', name: '농업 기계', nameEn: 'Farm machinery', tech: 'agri_mech', workers: farmJobs(400, 100), inputs: { fuel: 300, electronics: 100 }, outputs: { fiber: 7600 } }),
     ],
@@ -167,20 +167,20 @@ export const BUILDING_TYPES: BuildingTypeDef[] = [
     // 곡물을 사료로 먹여 고기를 낸다. 곡물이 쌀수록 남는다
     id: 'ranch', name: '목장', nameEn: 'Livestock ranch', land: 'arable', buildPoints: 600,
     methods: [
-      m({ id: 'ranch_basic', name: '가축 사육', nameEn: 'Livestock raising', workers: farmJobs(800, 200), inputs: { grain: 3000 }, outputs: { meat: 1300 } }),
+      m({ id: 'ranch_basic', name: '가축 사육', nameEn: 'Livestock raising', workers: farmJobs(1000), inputs: { grain: 3000 }, outputs: { meat: 1250 } }),
     ],
   },
   {
     id: 'lumber', name: '벌목장', nameEn: 'Lumber camp', land: 'forest', buildPoints: 600,
     methods: [
-      m({ id: 'lumber_manual', name: '수작업 벌목', nameEn: 'Hand felling', workers: jobs(800, 200), inputs: {}, outputs: { timber: 6900 } }),
+      m({ id: 'lumber_manual', name: '수작업 벌목', nameEn: 'Hand felling', workers: jobs(1000), inputs: {}, outputs: { timber: 6500 } }),
       m({ id: 'lumber_axe', name: '쇠도끼와 톱', nameEn: 'Iron axes and saws', tech: 'iron_tools', workers: jobs(700, 300), inputs: { tools: 100 }, outputs: { timber: 8900 } }),
     ],
   },
   {
     id: 'mine', name: '철광산', nameEn: 'Iron mine', land: 'ore', deposit: 'iron', buildPoints: 800,
     methods: [
-      m({ id: 'iron_shaft', name: '갱도 채굴', nameEn: 'Shaft mining', workers: jobs(900, 100), inputs: {}, outputs: { ore: 3300 } }),
+      m({ id: 'iron_shaft', name: '갱도 채굴', nameEn: 'Shaft mining', workers: jobs(1000), inputs: {}, outputs: { ore: 3000 } }),
       m({ id: 'iron_pick', name: '쇠곡괭이', nameEn: 'Iron picks', tech: 'iron_tools', workers: jobs(800, 200), inputs: { tools: 100 }, outputs: { ore: 4200 } }),
       m({ id: 'iron_pump', name: '증기 양수기', nameEn: 'Steam pumps', tech: 'steam_pump', workers: jobs(600, 300, 100), inputs: { tools: 200, fuel: 300 }, outputs: { ore: 7400 } }),
     ],
@@ -188,7 +188,7 @@ export const BUILDING_TYPES: BuildingTypeDef[] = [
   {
     id: 'coal_mine', name: '석탄광산', nameEn: 'Coal mine', land: 'ore', deposit: 'coal', buildPoints: 800,
     methods: [
-      m({ id: 'coal_shaft', name: '갱도 채굴', nameEn: 'Shaft mining', workers: jobs(800, 200), inputs: {}, outputs: { fuel: 4600 } }),
+      m({ id: 'coal_shaft', name: '갱도 채굴', nameEn: 'Shaft mining', workers: jobs(1000), inputs: {}, outputs: { fuel: 4000 } }),
       m({ id: 'coal_pick', name: '쇠곡괭이', nameEn: 'Iron picks', tech: 'iron_tools', workers: jobs(800, 200), inputs: { tools: 100 }, outputs: { fuel: 5500 } }),
       m({ id: 'coal_pump', name: '증기 양수기', nameEn: 'Steam pumps', tech: 'steam_pump', workers: jobs(600, 300, 100), inputs: { tools: 200 }, outputs: { fuel: 9200 } }),
     ],
