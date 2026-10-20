@@ -149,6 +149,17 @@ export function spendBudget(w: World) {
     k.lastBudget = b;
     const net = b.wages + b.goods + b.research + b.interest - b.fees;
     k.expenseEma = round2(k.expenseEma == null ? net : k.expenseEma * 0.75 + net * 0.25);
+    // 예산 미리보기 기준값 (화면 전용). 수수료는 건축사무소 임금 몫(국영 임금 배율 1로 환산)과 나머지로 나눈다
+    const base = (k.budgetBase ??= {});
+    const a = budgetEmaWeight(w, 0.25);
+    const ema = (old: number | undefined, x: number) => round2(old == null ? x : old * (1 - a) + x * a);
+    const fw = k.feeWageWeek ?? 0;
+    base.tariffs = ema(base.tariffs, k.tariffWeek ?? 0);
+    base.feesWage = ema(base.feesWage, fw);
+    base.feesOther = ema(base.feesOther, Math.max(0, b.fees - fw * budgetMult(k, 'wages')));
+    base.goods = ema(base.goods, b.goods);
+    k.tariffWeek = 0;
+    k.feeWageWeek = 0;
     updateWageIndex(w, k);
     applyStateWages(w, k);
   }
@@ -196,14 +207,31 @@ export function lawRevenue(w: World, k: Kingdom, law: TaxLaw): number {
   return v;
 }
 
+/**
+ * 예산 미리보기 기준값의 이동평균 가중치 (화면 전용). 처음 8주는 경제가 빨리 자라므로 빨리 따라간다
+ */
+export function budgetEmaWeight(w: World, late: number): number {
+  return w.tick < 8 * TICKS_PER_WEEK ? Math.min(1, late * 3) : late;
+}
+
 export function collectIncomeTax(w: World) {
   const people = new Map<number, number>(), owed = new Map<number, number>();
-  const taxOf = (p: Pop) => Math.min(p.savings, taxDue(w, p));
+  // 예산 미리보기: 세금 수준 단계 1~5 각각이었다면 오늘 걷었을 pop 세금 (저축 한도 포함, 징수율 전)
+  const byStep = new Map<number, number[]>();
+  const due = (p: Pop) => taxDue(w, p);
   for (const p of w.pops) {
     const kid = kingdomOf(w, p.regionId);
     people.set(kid, (people.get(kid) ?? 0) + p.size);
-    owed.set(kid, (owed.get(kid) ?? 0) + taxOf(p));
+    const d = due(p);
+    owed.set(kid, (owed.get(kid) ?? 0) + Math.min(p.savings, d));
+    if (d <= 0) continue;
+    const k = kingdomById(w, kid), m = budgetMult(k, 'tax');
+    if (m <= 0) continue;
+    let arr = byStep.get(kid);
+    if (!arr) byStep.set(kid, arr = TUNE.taxLevels.map(() => 0));
+    TUNE.taxLevels.forEach((ms, i) => { arr![i] += Math.min(p.savings, (d / m) * ms); });
   }
+  const taxOf = (p: Pop) => Math.min(p.savings, due(p));
   const ratio = new Map<number, number>();
   for (const k of w.kingdoms) {
     const n = people.get(k.id) ?? 0, cap = taxCapacity(w, k.id);
@@ -215,9 +243,9 @@ export function collectIncomeTax(w: World) {
     k.taxRatio = round2(collectionRatio(cap, n));
     ratio.set(k.id, collectionRatio(cap, n));
   }
-  const got = new Map<number, number>();
+  const got = new Map<number, number>(), landGot = new Map<number, number>();
   for (const k of w.kingdoms) {
-    got.set(k.id, k.landGot ?? 0); k.landGot = 0; k.landOwed = 0;
+    got.set(k.id, k.landGot ?? 0); landGot.set(k.id, k.landGot ?? 0); k.landGot = 0; k.landOwed = 0;
   }
   for (const p of w.pops) {
     const kid = kingdomOf(w, p.regionId);
@@ -229,6 +257,19 @@ export function collectIncomeTax(w: World) {
     gov.cash += tax;
     kingdomById(w, kid).revenueWeek += tax;
     got.set(kid, (got.get(kid) ?? 0) + tax);
+  }
+  // 예산 미리보기 기준: 세금 수준 단계마다 하루 세입의 이동평균 (화면 전용, sim 은 읽지 않는다).
+  // pop 세금은 단계별로 저축 한도를 다시 걸고, 토지세는 배율에 비례한다
+  const a = budgetEmaWeight(w, 0.1);
+  for (const k of w.kingdoms) {
+    const m = budgetMult(k, 'tax'), r = ratio.get(k.id) ?? 1, land = landGot.get(k.id) ?? 0;
+    const arr = byStep.get(k.id);
+    const base = (k.budgetBase ??= {});
+    const old = base.taxBy;
+    base.taxBy = TUNE.taxLevels.map((ms, i) => {
+      const day = (arr?.[i] ?? 0) * r + (m > 0 ? land * ms / m : 0);
+      return round2(old?.[i] == null ? day : old[i] * (1 - a) + day * a);
+    });
   }
   // 걷힌 세금은 행정청이 한도에 기여한 비율만큼 그 행정청의 매출로 잡는다 (돈은 이미 국고에 있다).
   // 손익과 장부는 같은 날 produce 에서 다른 매출과 함께 한 번만 적는다
@@ -498,6 +539,8 @@ export function mintMoney(w: World) {
     const gov = companyById(w, k.governmentId);
     if (!gov) continue;
     const amt = MINT_BASE + (kingdomGdp(w, k.id) * TICKS_PER_WEEK / 360) * MINT_RATE;
+    // 예산 미리보기 기준값 (화면 전용): 이번 주 주조액 (주 1회만 바뀐다)
+    (k.budgetBase ??= {}).mint = round2(amt);
     gov.cash += amt;
     gov.weekProfit += amt;
     gov.ledger.mint += amt;

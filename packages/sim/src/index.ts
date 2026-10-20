@@ -13,5 +13,7 @@ export { workforce, QUAL_RATE } from './pops';
 export * from './i18n';
 export { estimateAfterEntry } from './outlook';
 export { taxRates, taxCapacity, reserveCap, hasReserve } from './finance';
+export { budgetPreview, roundBudget } from './budget';
+export type { BudgetPreview, BudgetLine, BudgetLineKey } from './budget';
 export { recordMetrics, METRICS_EVERY } from './metrics';
 export type { MetricPoint, KingdomMetrics, GoodMetrics } from './metrics';
