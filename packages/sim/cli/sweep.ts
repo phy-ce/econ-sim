@@ -71,7 +71,7 @@ let schDem = 0;
 const schoolLevels = new Map<number, number>();
 // 소작 시장 (해마다 하루 평균): subG·subT 소작지가 내놓은 곡물·목재, demG·demT 곡물·목재 수요 (만), landTax 걷힌 토지세 (천/일),
 // shG·shT·shF 소작지가 내놓은 양 / 소작지 수확 (곡물·목재·섬유)
-const yearAcc = { subG: 0, demG: 0, subT: 0, demT: 0, subF: 0, hG: 0, hT: 0, hF: 0, landTax: 0, supU: 0, demU: 0, supR: 0, demR: 0, pU: 0, pR: 0 };
+const yearAcc = { subG: 0, demG: 0, subT: 0, demT: 0, subF: 0, hG: 0, hT: 0, hF: 0, landTax: 0, pG: 0, supU: 0, demU: 0, supR: 0, demR: 0, pU: 0, pR: 0 };
 // 곡물 도시(티어 1·2)·농촌(티어 3·4) 지역: supU·demU·supR·demR 하루 공급·수요 합, pU·pR 값/기본가의 지역 평균 (해마다 하루 평균)
 const urban = (t: number | undefined) => (t ?? 9) <= 2;
 const nU = w.regions.filter((r) => urban(r.tier)).length, nR = w.regions.length - nU;
@@ -83,6 +83,7 @@ for (let d = 0; d < years * 360; d++) {
     yearAcc.subG += r.market.grain.supplyBy?.subsistence ?? 0; yearAcc.demG += r.market.grain.demand;
     yearAcc.subT += r.market.timber.supplyBy?.subsistence ?? 0; yearAcc.demT += r.market.timber.demand;
     yearAcc.subF += r.market.fiber.supplyBy?.subsistence ?? 0;
+    yearAcc.pG += r.market.grain.demandBy?.['pop:peasant'] ?? 0;
     const gm = r.market.grain, pr = gm.price / GOODS.grain.basePrice;
     if (urban(r.tier)) { yearAcc.supU += gm.supply; yearAcc.demU += gm.demand; yearAcc.pU += pr / nU; }
     else { yearAcc.supR += gm.supply; yearAcc.demR += gm.demand; yearAcc.pR += pr / nR; }
@@ -98,6 +99,7 @@ for (let d = 0; d < years * 360; d++) {
       subT: +(yearAcc.subT / 360 / 1e4).toFixed(1), demT: +(yearAcc.demT / 360 / 1e4).toFixed(1),
       shG: +(yearAcc.subG / Math.max(1, yearAcc.hG)).toFixed(3), shT: +(yearAcc.subT / Math.max(1, yearAcc.hT)).toFixed(3), shF: +(yearAcc.subF / Math.max(1, yearAcc.hF)).toFixed(3),
       landTax: +(yearAcc.landTax / 360 / 1e3).toFixed(1),
+      peasBuyG: +(yearAcc.pG / 360 / 1e3).toFixed(1),
       gSD: +((yearAcc.supU + yearAcc.supR) / Math.max(1, yearAcc.demU + yearAcc.demR)).toFixed(2),
       gSDu: +(yearAcc.supU / Math.max(1, yearAcc.demU)).toFixed(2), gSDr: +(yearAcc.supR / Math.max(1, yearAcc.demR)).toFixed(2),
       gPu: +(yearAcc.pU / 360).toFixed(2), gPr: +(yearAcc.pR / 360).toFixed(2), cashPeas: +(n > 0 ? cash / n : 0).toFixed(3),
