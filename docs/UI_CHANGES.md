@@ -13,25 +13,32 @@
   - 개발 서버는 `cd packages/client && npx vite --port 5199`로 띄운다.
 
 ## 0. 지금 할 일 (2026-10-21 기준, 위에서부터)
-지금 깨진 화면은 없다 (재정 단계 버튼 2-23은 반영됨). 아래는 모두 사용자 요청이거나 정리다.
-1. **금고와 대출을 한 칸으로 (2-28).** 상단 칩 `App.tsx` 144~145, 재정 탭 `FinancePanel.tsx` 19의 `현금`·`대출` 두 칸을 `금고  순자산 / 한도` 한 칸으로. 2-35의 금고 상자도 같은 모양.
-2. **재정 탭: 단계별 예산 미리보기 (2-30).** 지난주·이번주 열을 없애고 `budgetPreview(world, kingdomId)` 한 표로. 단계 버튼 아래에 `byLevel`. 안 쓰는 재정 문자열도 지운다.
-3. **상회 상세 → 왕국 경제 창, 왕실 요약은 왕국 합계 (2-35, 사용자 요청 2026-10-21).** 왕실·민간 회사로 나눈 통계를 없애고 왕국 하나의 숫자 + 소유 구성 막대(왕실 / 민간 지분 / 저택 / 금융가)로. 통계의 `summary`(`BottomPanel.tsx` 39)도 정부 + 민간 합계로 바꾸고, 금고 상자만 왕실 것으로 둔다 (2-35-1).
-4. **지역 건물: 종류별 한 줄 + 전체/민영/국영, 건설 통합 (2-42, 사용자 요청 2026-10-21).** `RegionPanel.tsx` 182~196 칩 격자를 종류마다 한 행(합계 레벨·소유 비율 막대·고용·주간 이익)으로. 상세에 `전체`/`민영`/`국영` 버튼, `전체`·`국영`에 왕실 건물 조작(+1/+5, −1, 방식), 공사는 그 행·상세 안에, 새 종류는 `+ 새 건물` 행. 건설 창은 왕국 대기열 보기로.
-5. **건물 유보 자산 (2-31).** 건물 패널에 `reserve / reserveCap(b)` 막대 (`hasReserve(b)`일 때). 2-35 건물 표에도 같은 막대.
-6. **저택·금융가가 무엇을 가졌는지 (2-32).** 소유 건물 창에 `holdingsOf` 표, 지역 패널 세 묶음, 일반 건물 상세에 "→ 저택/금융가" 칩.
-7. **부·생활수준 지도 그라데이션 (2-33).** `RegionMap.tsx` 46~52 `wealthColor`를 OKLab 보간으로, 범례 160~162를 연속 막대로.
-8. **아래 창 버튼은 켜기/끄기 토글 (2-34).** `WindowWorkspace.tsx` 13·59·67~70: 최소화 상태와 왕국 지도 버튼을 없앤다.
-9. **100배 값 필드로 옮기기 (2-27).** 남은 세 파일: `CompanyPanel.tsx` 46 `b.crew`, `PopTable.tsx` 23·24·28 `p.wealth`·`p.literacy`, `RegionPanel.tsx` 119 `r.education`. 끝나면 알려 달라 (sim이 사본을 지운다).
-10. **광맥은 자원별 (2-26).** 지역 땅 표시(`RegionCircles.tsx` 22~29)의 광맥을 철·석탄 두 줄로.
-11. **저택에 하급 귀족 자리 (2-29).** 저택 일자리에 하급 귀족이 보이고 둘 다 임금이 아니라 몫이다. 저택 크기는 다른 일이 없는 하급 귀족만 센다. 소유 건물 자리의 "배당" 표시는 `paysShare(b, s)`로 가린다.
-12. **농부 계층 (2-37).** 새 직종 `farmer`(농부). 색 토큰 `--c-farmer`와 아이콘을 만들고, 계층·직종 목록(인구표·생활수준·실업·일자리 막대)에 노동자 옆으로 넣는다. sim이 임시로 고친 곳: `ui.tsx` 8·11, `spriteAtlas.ts` 13.
-13. **임시 아이콘을 전용 아이콘으로 (2-39).** 다른 아이콘을 빌려 쓰는 8개(종이·종이 공장·농부·하급 귀족·목장·고기·고급 가구·고급 옷감)와 농부 색 토큰. 목록과 위치는 2-39.
-14. **규칙 사전 (2-40, 급하지 않음).** 단독 앱 `packages/encyclopedia`가 있다. 나중에 게임 화면에 옮기거나, 지금은 도움말 버튼에서 `encyclopedia/#<항목 id>`로 잇기만 해도 된다.
-15. **은행 없앰, 민간은 빌리지 않음 (2-41).** 민간 상회의 대출·한도 줄(`CompanyPanel.tsx` 132~144)은 늘 0 / 0이다: 왕실(`c.state`)일 때만 보인다. 컴파일은 깨지지 않았다 (화면 파일은 고치지 않음).
-16. **지도 다시 그리기: 생성 이미지 + 지역 경계 벡터 (2-43, 사용자 요청 2026-10-21).** 보로노이 지도(`RegionMap.tsx` 16~98·114~133)를 버리고, ChatGPT로 만든 그림 한 장(바탕) + 그 위에 딴 지역 경로 7개(클릭·색 레이어)로. 이웃 관계는 sim `REGIONS.neighbors`와 같아야 한다. 이미지 생성은 사용자가 2-43-1 프롬프트로 하고, 따기·코드는 화면 작업자.
+지금 깨진 화면은 없다. 아래는 모두 사용자 요청이거나 정리다.
+1. **아래 창 버튼 토글 + 왕국 지도 버튼 없애기 (2-34, 사용자 재요청).** `WindowWorkspace.tsx` 13·59·67~70: 최소화 상태와 dock의 지도 버튼을 없앤다.
+2. **금고와 대출을 한 칸으로 (2-28).** 상단 칩 `App.tsx` 144~145, 재정 탭 `FinancePanel.tsx` 19의 `현금`·`대출` 두 칸을 `금고  순자산 / 한도` 한 칸으로. 2-35의 금고 상자도 같은 모양.
+3. **재정 탭: 단계별 예산 미리보기 (2-30).** 지난주·이번주 열을 없애고 `budgetPreview(world, kingdomId)` 한 표로. 단계 버튼 아래에 `byLevel`. 안 쓰는 재정 문자열도 지운다.
+4. **지역 창 하나로: 개요·인구·건물 탭 (2-46).** `App.tsx` 200의 `overview`·`industry` 두 창을 `region` 한 창으로, 머리 한 줄 공통, 지표는 개요 탭.
+5. **지역 건물: 종류별 한 줄 + 전체/민영/국영, 건설 통합 (2-42).** 2-46의 건물 탭 내용. `RegionPanel.tsx` 182~196 칩 격자를 종류마다 한 행으로, 상세에 `전체`/`민영`/`국영`, 공사는 행·상세 안에, `+ 새 건물` 행.
+6. **시세 창: 세계 / 왕국 / 지역 칩 (2-47).** 시세 창이 지도 선택을 따라가지 않고 자기 범위를 기억한다. 모으는 셈은 client.
+7. **연구 트리 그래프 (2-48).** `CompanyPanel.tsx` 561~590 단계 열을 선행 관계 그래프로, 올리면 열리는 방식·건물·이익률.
+8. **정책 창 (2-45).** 지금 할 수 있는 것: 창을 만들고 `FinancePanel.tsx` 20의 세법 `select`를 옮긴다 (두 법, 전환 없음). 세 세법·6개월 전환·조건·투자법은 sim이 3장을 넣은 뒤.
+9. **상회 상세 → 왕국 경제 창, 왕실 요약은 왕국 합계 (2-35).** 왕실·민간 회사로 나눈 통계를 없애고 왕국 하나의 숫자 + 소유 구성 막대로. 통계의 `summary`(`BottomPanel.tsx` 39)도 합계로, 금고 상자만 왕실 것 (2-35-1).
+10. **건물 유보 자산 (2-31).** 건물 패널에 `reserve / reserveCap(b)` 막대 (`hasReserve(b)`일 때). 2-35 건물 표에도 같은 막대.
+11. **저택·금융가가 무엇을 가졌는지 (2-32).** 소유 건물 창에 `holdingsOf` 표, 일반 건물 상세에 "→ 저택/금융가" 칩 (지역 패널 묶음은 2-42로 대체).
+12. **부·생활수준 지도 그라데이션 (2-33).** `RegionMap.tsx` 46~52 `wealthColor`를 OKLab 보간으로, 범례 160~162를 연속 막대로.
+13. **저택 대 금융가 자산 비율 (2-44, sim 쪽 필요).** 통계·소식 창에 왕국·지역 비율 막대와 왕국 추이. sim의 `ownershipAssets`가 들어온 뒤.
+14. **100배 값 필드로 옮기기 (2-27).** 남은 세 파일: `CompanyPanel.tsx` 46 `b.crew`, `PopTable.tsx` 23·24·28 `p.wealth`·`p.literacy`, `RegionPanel.tsx` 119 `r.education`. 끝나면 알려 달라 (sim이 사본을 지운다).
+15. **광맥은 자원별 (2-26).** 지역 땅 표시(`RegionCircles.tsx` 22~29)의 광맥을 철·석탄 두 줄로.
+16. **저택에 하급 귀족 자리 (2-29).** 저택 일자리에 하급 귀족이 보이고 둘 다 임금이 아니라 몫이다. 소유 건물 자리의 "배당" 표시는 `paysShare(b, s)`로 가린다.
+17. **농부 계층 (2-37).** 새 직종 `farmer`. 색 토큰 `--c-farmer`와 아이콘, 계층·직종 목록에 노동자 옆으로. sim이 임시로 고친 곳: `ui.tsx` 8·11, `spriteAtlas.ts` 13.
+18. **임시 아이콘을 전용 아이콘으로 (2-39).** 다른 아이콘을 빌려 쓰는 8개와 농부 색 토큰. 목록과 위치는 2-39.
+19. **규칙 사전 (2-40, 급하지 않음).** 단독 앱 `packages/encyclopedia`. 지금은 도움말 버튼에서 `encyclopedia/#<항목 id>`로 잇기만 해도 된다 (2-48 연구 트리 링크도 같은 방식).
+20. **은행 없앰, 민간은 빌리지 않음 (2-41).** 민간 상회의 대출·한도 줄(`CompanyPanel.tsx` 132~144)은 왕실(`c.state`)일 때만.
+21. **지도 다시 그리기: 생성 이미지 + 지역 경계 벡터 (2-43).** 보로노이 지도(`RegionMap.tsx` 16~98·114~133)를 그림 한 장 + 지역 경로 7개로. 이미지 생성은 사용자, 따기·코드는 화면 작업자.
 - **아직 sim에 없음 (만들지 말 것, 들어오면 이 목록에 올린다):**
   - 건물별 임금·현금·보조금 (브랜치 wt-wage). 들어오면 국영 임금 손잡이(`budget.wages`)가 없어지고, 건물 패널에 임금·현금·보조금 켜기가 생기고, 저장 형식이 바뀐다(옛 저장은 `migrateWorld`로 변환). 그래서 2-30의 국영 임금 줄은 작게 두어도 된다.
+  - 세 세법·6개월 전환·투자법·조건 (2-45), 저택·금융가 자산 비율 (2-44): 3장에 요청함.
+  - 자본가 계층 없앰 (DECISIONS 7-19): 금융가는 투자 펀드, 자리는 전문가 직원뿐. 새 화면에 자본가를 넣지 않는다.
 
 ---
 
@@ -57,6 +64,7 @@
 - 별도의 "소유주" 개념은 없다. 자본가(`capitalist`)·귀족(`aristocrat`)·하급 귀족(`gentry`)도 생산 방식마다 정해진 **일자리**다.
 - 받는 돈은 건물 소유에 따라 다르다.
   - **민간 건물**: 자본가와 귀족 자리는 임금 대신 **배당**(건물 이익의 몫)을 받는다. 배당은 지역의 저택·금융가를 거친다 (2-32).
+  - **들어올 변경 (DECISIONS 7-19):** 자본가 계층을 없앤다. 금융가는 투자 펀드가 되고 자리는 전문가 직원(기본 임금 + 성과급)뿐이다. 자본가 자리·자본가 색/아이콘을 새로 만들지 말고, 들어오면 이 줄의 자본가 언급을 지운다.
   - **왕실 건물**: 모든 자리가 임금을 받는다. 민간 지분(`privateShare`)이 있으면 그 몫의 이익만 저택·금융가로 간다.
   - 판정 함수: `paysDividend(building.stateOwned, skill)`
 - **소작지**(`subsistence`)는 그 왕국 **민간 소유**다. 일자리는 소작농뿐이고(`peasantSlots(b)`), 지대는 저택이 받는다.
@@ -154,6 +162,7 @@
   - 지분이 없는 국영 건물 → 소유 건물 없음 (목록에 없다)
   - 소작지(`subsistence`) → 저택이 지대를 받는다 (`'rent'`)
 - 저택·금융가의 돈(배당·지분 배당·지대)은 그 안에 앉은 귀족·자본가(직원 목록)에게 가고, 일부(귀족 20%, 자본가 30%)는 왕국 투자 풀로 간다. 아무도 없으면 전부 투자 풀로 간다.
+  - **들어올 변경 (DECISIONS 7-19):** 자본가 계층을 없앤다. 금융가는 투자 펀드가 되고 자리는 전문가 직원(기본 임금 + 성과급)뿐이다. 자본가 자리·자본가 색/아이콘을 새로 만들지 말고, 들어오면 이 절의 자본가 언급을 지운다.
 - 하루 받은 돈의 이동평균은 소유 건물의 `profitEma`(하루 값)다.
 
 **API**
@@ -183,6 +192,7 @@
 - sim 변경 없음.
 
 ### 2-34. 아래 창 버튼은 켜기/끄기 토글 (사용자 요청 2026-10-21)
+- **사용자 재요청 (2026-10-21): 왕국 지도 버튼을 아래 줄에서 뺀다. 0장 1번.** `WindowWorkspace.tsx` 67 `windows.map`에서 `win.id==='map'`을 거르고, 68행 지도 분기(열린 창 한꺼번에 숨기기)를 지운다. 새 창(정책 2-45, 지역 2-46)의 버튼도 이 규칙을 따른다.
 **문제:** `WindowWorkspace.tsx` 67~70행 `desktop-dock`이 작업표시줄처럼 동작한다. 열린 창을 누르면 최소화, 다른 창 뒤에 있으면 앞으로, 최소화된 창은 점(`is-open`)으로 남는다. 상태가 셋(닫힘/최소화/보임)이라 헷갈린다.
 
 **바꿀 동작 (상태는 둘: 열림/닫힘)**
@@ -227,6 +237,7 @@
 #### 2-35-0. 소유 구성 계산 (모든 화면이 같은 규칙)
 - 왕국 `k`의 건물 = `world.buildings` 중 `regionById(world, b.regionId).kingdomId === k.id` (지표 `recordMetrics`와 같은 기준).
 - 소유 건물 자신(`typeId` `'manor'`·`'finance'`)은 레벨·이익·산출 합계에서 뺀다 (받는 돈이 다른 건물 이익의 이중 계산이다). 그 건물의 자리(귀족·자본가 고용)만 고용 합계에 저택·금융가 몫으로 넣는다.
+  - **들어올 변경 (DECISIONS 7-19):** 자본가 계층을 없앤다. 금융가는 투자 펀드가 되고 자리는 전문가 직원(기본 임금 + 성과급)뿐이다. 자본가 자리·자본가 색/아이콘을 새로 만들지 말고, 들어오면 이 절의 자본가 언급을 지운다.
 - 건물 하나의 소유 몫 (합이 1):
 
 | 몫 | 키 | 값 |
@@ -645,6 +656,128 @@ Keep the exact composition, coastline and every border position of the chosen ma
   - 그림 용량 2MB 이하, 첫 표시 지연이 눈에 띄지 않는다.
 - sim 변경 없음.
 
+### 2-44. 저택 대 금융가 자산 비율 (통계·소식, 사용자 요청 2026-10-21, sim 쪽 필요)
+**사용자 말:** 통계·소식에 저택 대 금융가 자산 비율을 지역별·왕국별로 보인다. 세법 조건선은 그리지 않는다 (DECISIONS 7-19 마지막 줄).
+- **값 (DECISIONS 7-18 "저택 크기"와 같은 셈):** 자산 = 가진 레벨의 주간 산출 가치(기본가, 레벨 × `weeklyOutputValue(typeId, methodId)`, 지분이면 × 지분) + 저택만 그 지역 소작지 수확의 주간 가치(기본가). 비율 = 금융가 ÷ (저택 + 금융가). 주간 값, 100 단위로 둥글게.
+- "지역별"은 **주인(저택·금융가)이 있는 지역** 기준이다. 7-16·7-19가 들어오면 저택·금융가가 다른 지역 레벨도 사므로 건물 위치로 묶지 않는다.
+- **sim 쪽 필요 (3장):** `ownershipAssets(world)` 순수 함수와 `KingdomMetrics.assetsManor`·`assetsFinance` (30일마다). 들어오기 전에는 만들지 않는다 (지금 `holdingsOf`로 흉내 내면 7-16 뒤 숫자가 달라진다).
+- **보여줄 곳:** 통계·소식 창 `BottomPanel.tsx` 38~72 `SectionStack`에 새 섹션 `assets`를 `kingdoms`(42) 바로 뒤에.
+  1. 머리 오른쪽 칩 두 개 `왕국 | 지역` (보기 전환, 고른 것은 localStorage `trends-assets-scope`, try/catch).
+  2. 막대 목록: 한 행 = 왕국(왕국 색 점 + 이름) 또는 지역(지역 이름 + 왕국 색 점). 내 왕국(지역은 내 왕국 지역)이 위. 행마다 가로 비율 막대 하나: 저택 색 | 금융가 색 (2-32-4의 두 고정 색), 너비 ∝ 자산. 오른쪽에 금융가 비율 `NN%` (정수). 툴팁: `저택 ƒ/주 · 금융가 ƒ/주`.
+  3. 추이: `TimeChart`로 왕국별 금융가 비율 선 (0~100%, 왕국 색, 내 왕국 굵게). 데이터 `metrics[].kingdoms[k].assetsFinance / (assetsManor + assetsFinance)`. 지역 보기일 때도 추이는 왕국 선만 (지역 추이는 두지 않는다).
+  - 세법·투자법 조건 값(가로선, 눈금, 색 띠)을 막대·차트에 그리지 않는다. 조건 숫자는 정책 창(2-45)에만 있다.
+- 문자열: `assetsTitle` 저택·금융가 자산 / Manor vs finance assets, `scopeKingdom` 왕국 / Kingdoms, `scopeRegion` 지역 / Regions, `financeShare` 금융가 비율 / Finance share.
+
+### 2-45. 정책 창 (세법·투자법, 사용자 요청 2026-10-21, 일부 sim 쪽 필요)
+**사용자 말:** 정책 탭(창)을 새로 만든다. 세법(토지세/인두세/소득세 중 하나, 시작 토지세)을 고르고, 바꾸면 6개월에 걸쳐 바뀌며 진행 막대가 보인다. 고를 수 있는지는 금융가 자산 비율 조건으로 정해진다. 투자법도 같은 모양 (DECISIONS 7-18 세법, 7-19 투자법).
+
+**지금 화면:** 세법은 재정 창 `FinancePanel.tsx` 20의 `select` (`land`/`capita` 둘, 누르면 바로 바뀜, `setTaxLaw`). 예산 단계 버튼 1~5는 같은 표 24 (2-23·2-30).
+
+#### 2-45-1. 창
+- `WindowWorkspace.tsx` 7 `WindowId`에 `'policy'`, `App.tsx` 201 `finance` 다음에 `{ id:'policy', title:T.policy, icon:<Scale size={18}/> }` (lucide `Scale`). dock 버튼도 생긴다 (2-34 토글 규칙).
+- 내용: `SectionStack storageKey="policy"`, 섹션은 법마다 하나: `taxLaw`, `investLaw`. 나중 정책은 같은 모양의 섹션을 하나씩 더한다 (빈 자리·"준비 중" 칸은 그리지 않는다).
+- 맨 위 한 줄(섹션 밖): `금융가 비율 NN%` + 2-44와 같은 저택|금융가 비율 막대 (내 왕국). 모든 조건이 이 값 하나를 쓴다.
+- 예산 단계(세금·국영 임금·연구비)는 **재정 창에 둔다 (추천).** 단계 버튼은 2-30 미리보기 숫자와 붙어 있어야 효과가 보이고, 빅토리아3도 세금 수준·정부 임금은 예산 화면, 법은 법 화면이다. 정책 창 맨 아래에 한 줄 `예산 단계  세금 3 · 임금 3 · 연구 3  ↗` (읽기 전용 칩, ↗ 누르면 `showWindow('finance')`). 사용자가 옮기기를 원하면 2-30 표째 옮긴다 (사용자 결정, DECISIONS에 올리지 않음: 화면 배치라서).
+
+#### 2-45-2. 법 섹션 하나의 모양 (공통 컴포넌트 `LawPicker`)
+- 행 = 선택지 하나. 칸: 이름 · 조건 숫자 `≥ NN%` (조건 없으면 비움) · 상태.
+- 상태 넷:
+  | 상태 | 모양 | 누르면 |
+  |---|---|---|
+  | 지금 법 | `aria-pressed=true`, 채운 배경 | 전환 중이면 전환 취소, 아니면 없음 |
+  | 전환 중 (목표) | 테두리 accent + 행 바닥 진행 막대 `(tick − startTick) / (endTick − startTick)` + `n일` | 없음 |
+  | 고를 수 있음 | 보통 버튼 | 전환 시작 (명령) |
+  | 조건 미달 | `disabled`, 조건 숫자를 `neg` 색 | 없음 |
+- 전환 중에는 다른 선택지를 모두 `disabled`로 둔다 (취소만 된다). 전환 중에는 지금 법이 그대로 적용된다 (7-18).
+- 조건 미달 툴팁: `금융가 NN% / 필요 NN%`. 세법 선택지 툴팁: 그 법의 세율 (`taxRates(k, law)`: 토지세 = 소작농 1인당 ƒ, 인두세 = 1인당 ƒ, 소득세 = %).
+- 확인 창은 두지 않는다 (전환 중 취소가 되므로).
+
+#### 2-45-3. 세법
+- 선택지: `토지세 / Land tax`, `인두세 / Poll tax`, `소득세 / Income tax`. 시작은 토지세. 조건은 sim이 준다 (예 인두세 30%, 소득세 60%, 비교로 정함 — 화면에 숫자를 박지 않는다). 순서 상관없이 조건만 맞으면 고른다.
+- **지금 할 수 있는 것:** 창을 만들고 `FinancePanel.tsx` 20의 `select`와 세율 문구를 이 섹션으로 옮긴다. 지금 sim은 `TaxLaw = 'land' | 'capita'` 둘이고 전환 없이 바로 바뀐다: 두 행 모두 "고를 수 있음", 조건 칸 비움. 3장 필드가 들어오면 세 행·조건·진행 막대로 바꾼다.
+- 재정 창 20행에는 세법 칩 하나만 남긴다 (`토지세` + 전환 중이면 작은 진행 막대, 누르면 `showWindow('policy')`).
+
+#### 2-45-4. 투자법 (금융가 지분을 살 수 있는 사람, sim 쪽 필요)
+- 선택지 넷 (넓어지는 순): `귀족만 / Nobles only` (시작) → `상층 평민까지 / + Upper commoners` (전문가) → `중층까지 / + Middle` (기술자) → `하층까지 / + Lower` (노동자·농부). 행 툴팁에 포함 직종 아이콘.
+- 넓히는 쪽은 조건(금융가 비율 ≥ 그 행의 값)이 맞아야 하고, 좁히는 쪽은 조건 없이 된다. 둘 다 6개월 전환.
+- 조건 숫자는 행마다 `≥ NN%`, 위의 지금 비율과 비교된다 (값은 비교 실행으로 정함, sim이 준다).
+- sim에 들어오기 전에는 섹션을 그리지 않는다.
+
+#### 2-45-5. 소식
+- 전환이 끝나면 sim 알림(3장 `lawChanged`)을 소식에 띄운다: `세법: 인두세` 처럼 라벨+이름. 누르면 정책 창 (`eventDestination.ts`에 `policy` 목적지).
+- 문자열: `policy` 정책 / Policies, `taxLawTitle` 세법 / Tax law, `investLaw` 투자법 / Investment law, `landTax`·`pollTax`·`incomeTax`(있는 것 재사용), `investNobles`·`investUpper`·`investMiddle`·`investLower`, `budgetSteps` 예산 단계 / Budget levels, `financeShare`(2-44).
+
+### 2-46. 지역 창 하나로: 개요·인구·건물 (사용자 요청 2026-10-21)
+**사용자 말:** 지역 개요 창과 지역 건물 창을 합친다.
+
+**지금:** `App.tsx` 200이 `RegionPanel`을 `mode` 셋(`overview`·`market`·`industry`)으로 세 창에 띄운다. 창마다 같은 머리(`RegionPanel.tsx` 88~124: 이름·작황·특산·지표 6칸)가 반복된다. 개요 창은 `RegionExplorer`(43줄)와 "지역 건물 전체 보기" 링크(122), 건물 창은 2-42 목록. `RegionPanel`에는 `!mode`일 때 쓰는 탭 줄(127~131)이 이미 있지만 쓰이지 않는다.
+
+**바꿀 것**
+- 창 `overview`·`industry`를 `region` 하나로 (`WindowId`에서 둘을 빼고 `'region'`, 제목 = 지역 이름, 아이콘 `MapPin`). 시세 창은 지역 창에서 떼어 따로 둔다 (2-47). localStorage의 창 위치(`rects`)는 `industry` 것을 `region`으로 한 번 옮긴다.
+- 창 머리 (모든 탭 공통, 한 줄): 지역 그림 · 이름 · `HarvestBadge` · 특산 칩 · 왕국 색 점. 지표 6칸(103~121)은 개요 탭으로 내린다.
+- 탭 셋 (`role="tablist"`, ←/→로 이동, 고른 탭은 localStorage `region-tab`):
+  1. **개요**: 지표 6칸(생활수준·인구·1인당 부·노동자 부·실업·교육, 지금 막대 그대로) + `RegionExplorer`의 땅·원 그림(`RegionCircles`). 건물 종류 요약(RegionExplorer 16의 `groups`)과 "지역 건물 전체 보기" 링크(122)는 지운다 (건물 탭이 같은 창에 있다).
+  2. **인구**: 직종별 인구 막대(`ClassDonut` 또는 RegionExplorer의 직종 줄) + 그 지역으로 고정한 `PopTable` (지역 필터를 잠근다). 직종을 누르면 같은 탭에서 표를 그 직종으로 거른다. 지금 `openPops`(`App.tsx` 112)는 통계 창으로 가는데, 이 탭으로 바꾼다.
+  3. **건물**: 2-42 전부 (종류별 행, 전체/민영/국영 상세, `+ 새 건물`, 소유 건물 두 행 → 2-32 표). 탭 이름 옆 숫자는 종류 수.
+- 여는 길:
+  - 지도 클릭(`selectRegion`, `App.tsx` 111): `region` 창을 열고 **탭은 그대로** (처음엔 `건물`, 2-0-1 유지).
+  - 건물 링크·소식의 건물(`openBuilding` 113, 117): `건물` 탭 + 그 건물 상세.
+  - 직종 링크(`openPops` 112): `인구` 탭.
+- `RegionPanel`의 `mode` prop, `onViewBuildings`, `region-buildings-link`(122), 머리 문구(123)를 지운다. 2-32 "보여줄 곳 2"는 이미 2-42로 대체됐고 2-42는 이 창의 건물 탭이 된다.
+- 문자열: `regionTabOverview` 개요 / Overview, `regionTabPeople` 인구 / People, `regionTabBuildings` 건물 / Buildings. 쓰지 않게 되는 `'지역 개요'`·`'지역 건물'`·`'지역 건물 전체 보기'` 인라인 문자열(`App.tsx` 200, `RegionPanel.tsx` 122·128)은 지운다.
+- sim 변경 없음.
+
+### 2-47. 시세 창: 전체 / 왕국 / 지역 고르기 (사용자 요청 2026-10-21)
+**사용자 말:** 시세 창에서 전체(왕국/세계 평균)와 각 지역을 빨리 고른다. 마지막 고른 것을 기억한다.
+
+**지금:** 시세 창 = `RegionPanel mode='market'` (`App.tsx` 200), 표는 `r.market[g]` (`RegionPanel.tsx` 76 근처). 보는 지역은 앱 전체의 `regionId`(`App.tsx` 66)라 지도에서 지역을 누르면 열린 시세 창도 말없이 그 지역으로 바뀐다. 2-0-1에서 지도 클릭이 시세 창을 열지 않게 했던 것과 같은 이유로, 시세 창은 지도 선택을 따라가지 않게 한다.
+
+**바꿀 것**
+- 시세 창은 자기 범위 상태를 가진다: `scope: 'world' | 'kingdom' | regionId`. `App.tsx`의 `regionId`와 상관없다. localStorage `market-scope`에 기억 (try/catch, 없는 지역이면 `world`).
+- 창 맨 위 칩 줄 (`role="radiogroup"`): `세계` · `왕국` · 가는 세로선 · 지역 7개(내 왕국 지역 먼저, 이름 앞에 왕국 색 점). ←/→로 이동, Home = 세계. 좁으면 가로 스크롤 한 줄 (줄바꿈 금지).
+- 칩 줄 오른쪽 `⌖` 아이콘 버튼 하나: 지도에서 고른 지역으로 범위를 맞춘다 (툴팁 `지도 선택 지역`). 따라가기는 이 버튼으로만 한다.
+- 모으는 셈 (client 순수 함수 `marketOf(world, scope)`, sim 변경 없음): 범위 지역들의 `market[g]`에서 가격 = `volumeEma` 가중 평균 (합이 0이면 단순 평균), `supplyEma`·`demandEma`·`volumeEma`는 합, 기본가 대비 = 가격 ÷ `GOODS[g].basePrice`. `왕국` = 내 왕국 지역들.
+- 상세(상품 하나): 지역 범위면 지금 상세 그대로. `세계`·`왕국`이면 범위 안 지역별 가격 막대 (지역 이름 · 가격 · 기본가 대비 막대, 비싼 순)를 더한다. 추이 차트는 세계면 `metrics[].goods[g].ratio`(30일), 그 밖은 지금 쓰는 값.
+- 창 머리의 지역 지표 6칸(`RegionPanel.tsx` 103~121)은 시세 창에서 뺀다 (2-46에서 지역 창으로 감). 창 제목은 `시세 · {범위 이름}`.
+- `selectGood`(`App.tsx` 122)는 지금처럼 시세 창을 열고 상품만 바꾼다. 범위는 바꾸지 않는다.
+- 문자열: `scopeWorld` 세계 / World, `scopeKingdom`(2-44와 같이 씀), `followMap` 지도 선택 지역 / Selected region.
+- sim 변경 없음.
+
+### 2-48. 연구 트리: 선행 관계 그래프 + 무엇이 열리는지 (사용자 요청 2026-10-21)
+**사용자 말:** 단계 열이 아니라 진짜 트리. 노드에 비용·진행·상태, 선행 기술로 가는 선, 끌기·확대, 지금 연구 강조. 노드에 마우스를 올리면 정확히 무엇이 열리는지(방식: 건물·방식 이름, 레벨당 일자리·원료·산출, 이익률 / 새 건물 / 정책). 사전 항목으로 잇는다.
+
+**지금:** `CompanyPanel.tsx` 561~590 `Research`: 비용(`x.cost`)별 단계 열, 선행은 `← 이름` 글자(578), 버튼 `연구`/`중지`.
+
+**데이터 (sim에 이미 있음)**
+- `TECHS` (`data.ts` 87~110, 17개, `requires: string[]`), `me.research.{known, current, progress, budget}`, `researchableTechs(me)` (`economy.ts` 237).
+- 열리는 방식: `BUILDINGS`의 방식 중 `m.tech === techId` (`types.ts` 93). 레벨당 하루 값: `m.workers`(직종별 인원), `m.inputs`, `m.outputs`. 이익률: `methodMarginAtBase(typeId, m.id).margin` (`encyclopedia.ts` 125, index에서 export됨).
+- 새 건물: 그 종류의 방식이 모두 `tech`를 가지고 그중 하나가 이 기술 (`canBuildType`, `economy.ts` 233와 같은 뜻). 이미 다른 방식 기술을 알면 "새 건물" 표시 없이 방식만.
+- 정책: 아직 기술로 열리는 정책이 없다. 칸은 sim 함수가 빈 배열을 줄 때 그리지 않는다.
+- **sim 쪽 필요 (3장):** `unlocksOf(techId)` → `{ methods: { typeId, methodId }[]; buildings: string[]; policies: string[] }` 한 곳에서 셈하게 (사전과 같이 씀). 들어오기 전에는 위 규칙으로 client에서 셈해도 된다 (함수 하나로 두고 나중에 바꾼다).
+
+**그래프**
+- 배치 (client, 한 번 계산해 메모): 열 = 뿌리에서 가장 긴 선행 경로 길이(`requires` 없으면 0). 열 안 순서 = 선행 노드 세로 위치 평균(교차를 줄이는 barycenter 2회). 노드 160×56, 열 간격 80, 행 간격 16. 왼쪽 → 오른쪽.
+- 선: 선행 → 기술, SVG 곡선 (노드 뒤). 둘 다 앎 = 실선 muted, 그 밖 = 점선. 마우스를 올린 노드의 선행 경로 전체를 accent로.
+- 노드: 이름 · `ƒ비용` · 남은 일 수(`budget>0`일 때, 지금 578의 셈) · 진행 막대(`progress / cost`, 0이면 없음). 상태 넷:
+  | 상태 | 조건 | 모양 |
+  |---|---|---|
+  | 앎 | `known` | 채운 muted 배경, 체크 아이콘 |
+  | 연구 중 | `current` | accent 테두리 2px + 진행 막대 accent, 창을 열면 이 노드가 가운데 |
+  | 가능 | `researchableTechs` | 보통 |
+  | 잠김 | 그 밖 | 흐리게(opacity .5), 점선 테두리 |
+- 조작: 끌기 = 이동, 휠 = 확대(50~150%, 마우스 위치 기준), 머리 오른쪽 `맞춤` 버튼. 키보드: Tab으로 노드 이동(열 순서), Enter = 아래 동작, `+`/`-` 확대, `0` 맞춤. 위치·배율은 localStorage `research-view`.
+- 누르기: 노드를 고르면 창 아래 띠(고정 높이)에 그 기술의 열리는 것 목록 + 버튼 (`가능` → `연구`, `연구 중` → `중지`, 명령은 지금과 같은 `setResearch`). 노드 안에 버튼을 두지 않는다.
+- 맨 위 일일 연구비 줄(567)은 그대로.
+
+**올렸을 때 툴팁 (= 아래 띠와 같은 내용)**
+- 방식 한 줄씩: 건물 그림 · `건물 이름 · 방식 이름` · 이익률 `NN%` · 레벨당 일자리(직종 아이콘 + 인원) · 원료 → 산출 (상품 아이콘 + 하루 양). 숫자는 `NumericValue`. 같은 건물의 지금 방식보다 나은지 비교는 넣지 않는다.
+- 새 건물 줄: `새 건물` 칩 + 건물 이름.
+- 정책 줄 (생기면): `정책` 칩 + 이름.
+- 오른쪽 위 `?` 링크: 규칙 사전 `encyclopedia/#tech` (항목 id `tech`, `encyclopedia.ts` 476). 방식 줄의 건물 이름 링크는 `#buildings`. 2-40처럼 지금은 단독 앱으로 새 탭.
+- 연구 창 기본 크기를 키운다 (`WindowWorkspace.tsx` 56 최소 너비 분기에 `research` 640).
+- 문자열: `fitView` 맞춤 / Fit, `newBuilding` 새 건물 / New building, `unlockPolicy` 정책 / Policy. 지울 것: `T.stage` (단계 머리, 569)를 다른 곳에서 안 쓰면.
+- sim 변경 없음 (unlocksOf는 있으면 좋음).
+
 ## 3. sim 쪽 필요 사항 (Claude가 처리할 것, UI 작업자는 요청만)
 - **2-35 소유 구성 (2026-10-21, 요청됨):**
   - 순수 함수 export: `ownershipOf(world, kingdomId, regionId?)` → `Record<'royal'|'stake'|'manor'|'finance', { levels, employed, jobs, profitWeek, reserve }>` (2-35-0 규칙 그대로, 지역을 주면 그 지역만). 화면·지표가 같은 계산을 쓰게 한다.
@@ -652,5 +785,13 @@ Keep the exact composition, coastline and every border position of the chosen ma
 - **2-42 지역 건물 (2026-10-21, 7-16이 들어올 때 같이):**
   - 민영화: `Command` `{ type: 'setPrivatize'; buildingId: number; on: boolean }`, 필드 `Building.privatize?: boolean` (DECISIONS 7-16).
   - 레벨 주인: 순수 함수 `levelOwnersOf(world, b)` → `{ owner: 'state' | 'manor' | 'finance'; ownerBuildingId?: number; regionId?: number; levels: number }[]` (레벨마다 주인 하나, 7-16). 화면은 이것으로 소유 비율 막대를 그린다 (지금은 2-35-0 몫으로 대신). `privateShare`가 없어지면 2-35-0 `stake` 몫도 같이 지운다.
+- **2-44 자산 비율 (2026-10-21):** 순수 함수 `ownershipAssets(world)` → `{ kingdoms: { kingdomId, manor, finance, ratio }[]; regions: { regionId, kingdomId, manor, finance, ratio }[] }`. 자산 = 가진 레벨의 주간 산출 가치(기본가, 지분이면 × 지분) + 저택은 소작지 수확 주간 가치(기본가), 100 단위. 지역 = 주인(저택·금융가)이 있는 지역. 지표: `KingdomMetrics.assetsManor`·`assetsFinance` (30일마다). 세법·투자법 조건도 이 `ratio`를 쓰게 한다.
+- **2-45 정책 창 (2026-10-21, DECISIONS 7-18·7-19):**
+  - 세법: `TaxLaw = 'land' | 'poll' | 'income'` (지금 `'capita'`를 나눈다). `setTaxLaw`는 바로 바꾸지 않고 6개월 전환을 시작한다. 지금 법과 같은 값을 보내면 전환 취소.
+  - 투자법: `InvestLaw = 'nobles' | 'upper' | 'middle' | 'lower'` (upper = 전문가, middle = + 기술자, lower = + 노동자·농부), 시작 `nobles`. `Command { type: 'setInvestLaw'; law: InvestLaw }`. 넓히기는 조건, 좁히기는 조건 없음, 둘 다 6개월.
+  - 필드: `Kingdom.investLaw`, `Kingdom.lawChange?: { tax?: { to: TaxLaw; startTick; endTick }; invest?: { to: InvestLaw; startTick; endTick } }`.
+  - 순수 함수 `policyStatus(world, kingdomId)` → `{ financeRatio; tax: LawStatus<TaxLaw>; invest: LawStatus<InvestLaw> }`, `LawStatus<L> = { current: L; pending?: { to: L; startTick; endTick }; options: { id: L; threshold: number | null; eligible: boolean }[] }`. 조건 값은 5% 단위.
+  - 알림: 전환이 끝나면 `lawChanged { kingdomId, law: 'tax' | 'invest', to }` (내 왕국만 소식).
+- **2-48 연구 트리 (2026-10-21, 있으면 좋음):** 순수 함수 `unlocksOf(techId)` → `{ methods: { typeId; methodId }[]; buildings: string[]; policies: string[] }` (`buildings` = 모든 방식이 기술을 요구하고 그중 하나가 이 기술인 종류). 사전도 같이 쓴다.
 - **2-17 정리 (UI 반영 끝, 2026-10-21 확인):** 클라이언트가 `isDistressed`·`SEIZURE_WEEKS`·`DISTRESS_DEBT_RATIO`·`landlordJobs`·`setResearchBudget`·`MAX_RESEARCH_BUDGET`·`Company.distressWeeks`를 더 쓰지 않는다 (grep 0건). sim은 `compat.ts`의 이 껍데기를 지워도 된다. 100배 값 사본(2-27)은 아직 지우지 않는다.
 - 이미 export되는 것: `paysDividend`, `kingdomGdp`, `kingdomById`, `builderOf`, `companyById`, `peasantSlots`, `disbanded`, `slots`, `harvestCondition`, `harvestLabel`, `HARVEST_KINDS`, `taxRates`, `taxCapacity`, `holdingsOf`, `ownerBuildingOf`, `budgetPreview`, `reserveCap`, `hasReserve`, `weeklyOutputValue`, `creditLimit`, `isGovernment`, `crewOf`, `wealthOf`, `literacyOf`, `educationOf`
