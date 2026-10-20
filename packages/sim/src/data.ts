@@ -131,9 +131,11 @@ export const BUILDING_TYPES: BuildingTypeDef[] = [
   {
     // 소유 건물 (빅토리아3 Manor House / Financial District). 지역마다 자동으로 생긴다.
     // 농지·산림·광산 건물은 저택이, 공장 부지 건물은 금융가가 소유하고, 배당은 거기서 일하는 귀족·자본가의 소득이 된다.
-    // 소작지 지대도 저택이 받는다. 크기는 지역의 그 직종 인원과 소유한 건물 레벨에 맞춰 저절로 바뀐다
+    // 소작지 지대도 저택이 받는다. 크기는 지역의 그 직종 인원과 소유한 건물 레벨에 맞춰 저절로 바뀐다.
+    // 저택에는 하급 귀족 자리도 같은 수만큼 있다. 저택 수입은 몫으로 나눈다: 귀족 1명 1몫, 하급 귀족 1명 TUNE.gentryShare 몫
+    // (빅토리아3 저택의 귀족 10몫·성직자 1몫과 같은 방식)
     id: 'manor', name: '저택', nameEn: 'Manor houses', land: 'plot', buildPoints: 0, auto: true, ownership: 'aristocrat',
-    methods: [m({ id: 'manor', name: '영지 관리', nameEn: 'Estate management', workers: { aristocrat: OWNERSHIP_SEATS }, inputs: {}, outputs: {} })],
+    methods: [m({ id: 'manor', name: '영지 관리', nameEn: 'Estate management', workers: { aristocrat: OWNERSHIP_SEATS, gentry: OWNERSHIP_SEATS }, inputs: {}, outputs: {} })],
   },
   {
     id: 'finance', name: '금융가', nameEn: 'Financial district', land: 'plot', buildPoints: 0, auto: true, ownership: 'capitalist',
@@ -296,7 +298,8 @@ export function scaleBonus(level: number): number {
  * - investWage: AI가 새로 지을지 판단할 때 쓰는 임금의 바닥 = 기본 임금 × 이 값 (0이면 지금 임금만 본다)
  * - localBias: 민간 상회가 그 지역 사람들 돈으로 그 지역에 지을 때 수익률에 곱하는 가산점 (1 + localBias)
  * - taxCurve: 징수율 곡선. 'exp' = 1 − e^(−x), 'hyp' = x / (1 + x) (x = 행정청 한도 / 인구)
- * - switchRate, switchPremium: 일하는 사람이 하루에 옮기는 상한 비율, 옮기는 데 필요한 소득(또는 생활수준) 배율
+ * - switchRate, switchPremium, switchMax: 일하는 사람은 소득이 switchPremium 배 넘게 나은 자리로 옮긴다. 하루에 옮기는 비율은
+ *   switchPremium 배일 때 switchRate 이고 소득 배율의 차이에 비례해 늘어 switchMax 에서 멈춘다 (labor.ts switchShare)
  * - cashBufferDays: 팝이 투자 풀로 보내지 않고 들고 있는 돈 (생활비 + 세금의 며칠분)
  * - landTax, pollTax, incomeTax: 세금 수준 3단계(보통)의 토지세율(소작지 판매 대금 중 국고 몫), 인두세(1인당 하루), 소득세율.
  *   세 세율을 같은 배율로 비교했다 (빅토리아3 보통 단계 기준 ×1·×1.5·×2·×2.5, 20년 × 시드 1~4). ×2는 ×1보다 건물 레벨이
@@ -309,9 +312,9 @@ export function scaleBonus(level: number): number {
  * - meatLinear, meatQuad: 고기 필요 = linear × (부 − 8) + quad × (부 − 8)²
  * - privateShare: 왕실이 짓는 건물(행정청·건축사무소 제외) 공사비 중 민간 상회가 내는 비율 (그만큼 지분)
  * - shrinkWeeks: 마지막 레벨의 손익이 이 주 수 동안 계속 마이너스면 AI가 철거를 시작한다
- * - reservePerLevel: 건물 유보 자산 상한 (레벨당). 이익의 35%를 여기까지 쌓고, 적자는 여기서 먼저 뺀다 (finance.ts settleReserve).
- *   25,000·50,000·100,000·200,000 비교 (20년 × 시드 1·2, 도입 전 대비): 50,000이 20년차 연 총생산(2,702 / 전 2,173)·노동자 생활수준(4.12 / 3.40)이
- *   가장 높고 15~20년차 철거 레벨이 가장 적다(163 / 247). 1레벨 주간 임금(약 15,000)의 3~4주치다
+ * - reserveWeeks: 건물 유보 자산 상한 = 레벨 × 지금 방식의 레벨당 주간 산출 가치(기본가) × 이 주 수. 이익의 35%를 여기까지 쌓고, 적자는 여기서 먼저 뺀다 (finance.ts settleReserve).
+ *   레벨당 고정 50,000(농지 0.5주, 공장 0.2~0.3주치)과 0.25·0.5·1·2·4주 비교 (10년 거름, 20년 × 시드 1·2·3): 0.5주가 산출 비례 중 20년차 연 총생산(2,580 / 1주 2,423 / 고정 2,745)·
+ *   건물 레벨(2,636 / 2,370 / 2,491)·노동자 생활수준(3.75 / 3.63 / 3.92)이 가장 낫고 철거(15~20년차 210 / 231 / 201)가 가장 적다. 4주는 10년차 총생산이 크게 준다(888 / 1,140)
  * - officeShrinkWeeks: 건축사무소에 빈 레벨이나 남는 포인트가 이 주 수 동안 이어지면 AI가 그만큼 헌다 (빈 레벨은 그동안 한 번도 사람이 차지 않은 것만)
  * - officeIdleDays: 맡은 공사가 없는 날이 이 일수를 넘으면 사무소가 인부를 해산한다 (그동안은 임금을 주며 붙잡아 둔다)
  *   두 값은 20년 × 시드 1·2로 비교했다 (하나씩 바꿈, DECISIONS.md 7-4의 표). 철거 26주는 10~20년차 하루 사용 포인트가 69로 52주(98)보다 크게 적고,
@@ -346,6 +349,8 @@ export function scaleBonus(level: number): number {
  */
 export const TUNE = {
   peasantSellShare: 0.2,
+  /** 저택의 하급 귀족 1명 몫 (귀족 1명 = 1). 0.1·0.25·0.5 비교 (10년, 20년 × 시드 1·2, 두 번): 0.1은 하급 귀족 생활수준이 가장 낮고, 0.25와 0.5는 총생산·레벨 순서가 실행마다 바뀐다. 상급 귀족 생활수준을 덜 깎는 0.25 */
+  gentryShare: 0.25,
   rentShare: 0.5,
   patronWealth: 2,
   patronShare: 0.5,
@@ -354,6 +359,7 @@ export const TUNE = {
   wageCeil: 0.85,
   switchRate: 0.005,
   switchPremium: 1.1,
+  switchMax: 0.05,
   adminScale: 0.3,
   lossBuildsPerWeek: 0,
   lossTolerance: Infinity,
@@ -391,7 +397,7 @@ export const TUNE = {
   treasuryHighWeeks: 52, // 1년치
   startTreasuryWeeks: 26,
   shrinkWeeks: 26,
-  reservePerLevel: 50_000,
+  reserveWeeks: 0.5,
   officeShrinkWeeks: 52, // 26주는 공사가 크게 줄고(10~20년차 하루 사용 포인트 69), 78주는 부지 몫과 40% 이상 지역이 늘어난다
   officeIdleDays: 10, // 사무소 새 규칙에서 3·7·10·14·21·28일 비교 (DECISIONS.md 7-4). 10일이 레벨을 지키며 한 지역 40% 이상이 거의 없고 철거가 가장 적다
   salvageShare: 0.5,

@@ -36,6 +36,6 @@ export function payTariff(w: World, to: number, amount: number) {
   if (amount <= 0) return;
   const k = w.kingdoms.find((x) => x.id === kingdomOf(w, to));
   const gov = k && w.companies.find((c) => c.id === k.governmentId);
-  if (gov) { gov.cash += amount; k!.revenueWeek += amount; }
+  if (gov) { gov.cash += amount; k!.revenueWeek += amount; k!.tariffWeek = (k!.tariffWeek ?? 0) + amount; }
   else w.fund += amount;
 }

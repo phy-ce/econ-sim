@@ -33,7 +33,7 @@ export const KO = {
     "classes": "계층을 클릭하면 이 지역·직종으로 필터링한 인구 상세 창을 엽니다.",
     "classPop": "각 계층의 인구를 기준으로 비중을 비교합니다.",
     "classWealth": "인구 × 부 단계로 계산한 지표의 비중입니다. 저축이나 자산 총액이 아닙니다.",
-    "cashIncome": "이 인구 집단의 최근 평균 현금 소득입니다. 현물 환산액은 별도 열에 표시합니다.",
+    "cashIncome": "이 인구 집단의 1인당 최근 평균 현금 소득입니다. 현물 환산액은 별도 열에 표시합니다.",
     "classIncome": "현금 소득의 최근 평균에 현물의 지역 시장가를 더해 비교합니다.",
     "taxLaw": "토지세는 토지 기반으로, 인두·소득세는 인두세와 소득세로 걷습니다. 옆에는 현재 세금 단계가 반영된 실제 세율을 표시합니다.",
     "taxCollection": "부과한 세금 중 행정 역량으로 실제 거둘 수 있는 비율입니다. 세금 단계와는 다른 값입니다.",
@@ -71,7 +71,7 @@ export const KO = {
 ,
 
   policyLevel:'단계', taxLaw:'세법', landBased:'토지세', perCapita:'인두·소득세', schoolSeats:'교육 정원', weatherRegions:'기상 피해 지역', outputLoss:'산출 감소',
-  demolitionQueue:(n:number)=>`철거 중 ${n}레벨`, cancelDemolition:'철거 취소', salvage:'철거 자재', keepConstruction:'계속 건설', popList:'인구 상세', popRegion:'지역', popProfession:'직종', popWork:'일터', popSize:'인구', popFood:'식량', popNeeds:'소비', popIncome:'소득 / 일', popKind:'현물', popLiteracy:'문해력', popGrowth:'연 증감', allRegions:'모든 지역', allProfessions:'모든 직종', unemployedOnly:'실업만', inKindValue:'현물 시장가 / 일', privateEquity:'민간 지분', adjustFinance:'재정에서 조정', pollTax:'인두세', incomeTax:'소득세', budgetShare:'비율', retainedBudget:'국고 적립', budgetRevenue:'예산 세입', loan:'대출', newConstruction:'신규', expansion:'증설', moveProjectUp:'공사 우선순위 올리기', moveProjectDown:'공사 우선순위 내리기', pauseProject:'공사 일시정지', resumeProject:'공사 재개', cancelSpent:(amount:string)=>`공사를 취소할까요? 지출 ${amount}은 돌려받지 못합니다.`, educationPending:'이번 주 교육 집행액은 아직 제공되지 않습니다.',
+  demolitionQueue:(n:number)=>`철거 중 ${n}레벨`, cancelDemolition:'철거 취소', salvage:'철거 자재', keepConstruction:'계속 건설', popList:'인구 상세', popRegion:'지역', popProfession:'직종', popWork:'일터', popSize:'인구', popFood:'식량', popNeeds:'소비', popIncome:'1인 소득 / 일', popKind:'1인 현물 / 일', popLiteracy:'문해력', popGrowth:'연 증감', allRegions:'모든 지역', allProfessions:'모든 직종', unemployedOnly:'실업만', inKindValue:'1인 현물 시장가 / 일', privateEquity:'민간 지분', adjustFinance:'재정에서 조정', pollTax:'인두세', incomeTax:'소득세', budgetShare:'비율', retainedBudget:'국고 적립', budgetRevenue:'예산 세입', loan:'대출', newConstruction:'신규', expansion:'증설', moveProjectUp:'공사 우선순위 올리기', moveProjectDown:'공사 우선순위 내리기', pauseProject:'공사 일시정지', resumeProject:'공사 재개', cancelSpent:(amount:string)=>`공사를 취소할까요? 지출 ${amount}은 돌려받지 못합니다.`, educationPending:'이번 주 교육 집행액은 아직 제공되지 않습니다.',
 
   weeklyProfit: '주간 손익', foreignTerritory: '다른 왕국 영토',
   territory: '영토', mapLayers: '지도 표시',
@@ -365,7 +365,7 @@ export const EN: Dict = {
 ,
 
   policyLevel:'Level', taxLaw:'Tax law', landBased:'Land tax', perCapita:'Per-capita tax', schoolSeats:'School seats', weatherRegions:'Weather-affected regions', outputLoss:'Output loss',
-  demolitionQueue:(n:number)=>`Demolishing ${n} levels`, cancelDemolition:'Cancel demolition', salvage:'Salvage', keepConstruction:'Keep construction', popList:'Population details', popRegion:'Region', popProfession:'Profession', popWork:'Workplace', popSize:'Population', popFood:'Food', popNeeds:'Needs', popIncome:'Income / day', popKind:'In kind', popLiteracy:'Literacy', popGrowth:'Annual growth', allRegions:'All regions', allProfessions:'All professions', unemployedOnly:'Unemployed only', inKindValue:'In-kind market value / day', privateEquity:'Private equity', adjustFinance:'Adjust in Finance', pollTax:'Poll tax', incomeTax:'Income tax', budgetShare:'Share', retainedBudget:'Treasury retained', budgetRevenue:'Budget revenue', loan:'Loan', newConstruction:'New', expansion:'Expansion', moveProjectUp:'Raise construction priority', moveProjectDown:'Lower construction priority', pauseProject:'Pause construction', resumeProject:'Resume construction', cancelSpent:(amount:string)=>`Cancel construction? The ${amount} spent will not be refunded.`, educationPending:'Current-week education spending is not provided yet.',
+  demolitionQueue:(n:number)=>`Demolishing ${n} levels`, cancelDemolition:'Cancel demolition', salvage:'Salvage', keepConstruction:'Keep construction', popList:'Population details', popRegion:'Region', popProfession:'Profession', popWork:'Workplace', popSize:'Population', popFood:'Food', popNeeds:'Needs', popIncome:'Income / person / day', popKind:'In kind / person / day', popLiteracy:'Literacy', popGrowth:'Annual growth', allRegions:'All regions', allProfessions:'All professions', unemployedOnly:'Unemployed only', inKindValue:'In-kind market value / person / day', privateEquity:'Private equity', adjustFinance:'Adjust in Finance', pollTax:'Poll tax', incomeTax:'Income tax', budgetShare:'Share', retainedBudget:'Treasury retained', budgetRevenue:'Budget revenue', loan:'Loan', newConstruction:'New', expansion:'Expansion', moveProjectUp:'Raise construction priority', moveProjectDown:'Lower construction priority', pauseProject:'Pause construction', resumeProject:'Resume construction', cancelSpent:(amount:string)=>`Cancel construction? The ${amount} spent will not be refunded.`, educationPending:'Current-week education spending is not provided yet.',
 
   weeklyProfit: 'Weekly profit', foreignTerritory: 'Foreign territory',
   territory: 'Territory', mapLayers: 'Map layers',

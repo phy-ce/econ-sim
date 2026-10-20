@@ -244,6 +244,12 @@ export function createWorld(seed = 1, opts: CreateWorldOptions = {}): World {
     }
     b.exp100 = 100;
   }
+  // 시작 건물에 앉지 못한 하급 귀족은 저택에서 일하며 시작한다
+  for (const o of w.buildings.filter((x) => x.typeId === 'manor')) {
+    const free = findPop(w, o.regionId, 'gentry', 0);
+    const room = slots(o, 'gentry');
+    if (free && free.size > 0 && room > 0) movePeople(w, free, getPop(w, o.regionId, 'gentry', o.id), Math.min(room, workforce(free)));
+  }
   syncEmployment(w);
   // 시작 징수율: 매일 징수(finance.ts collectIncomeTax)와 같은 규칙. 행정청은 아직 사람이 없어 한도가 0이라 0이다
   for (const k of kingdoms) {
