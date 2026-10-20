@@ -302,8 +302,19 @@ function manageBuildings(w: World, c: Company) {
       continue;
     }
 
+    // 행정청: 한도 × 원료 충족률이 가장 큰 방식. 원료가 있는 방식은 이 건물의 충족률 이동평균(fillEma)으로 본다.
+    // 원료가 없는 방식으로 도는 동안은 fillEma 를 매주 TUNE.adminFillRetry 만큼 1로 되돌려, 원료가 다시 돌면 언젠가 다시 시도한다
+    if (cur.taxCapacity) {
+      if (!Object.keys(cur.inputs).length && b.fillEma !== undefined) b.fillEma = round2(b.fillEma + (1 - b.fillEma) * TUNE.adminFillRetry);
+      const ema = b.fillEma ?? 1;
+      const value = (m: MethodDef) => m.taxCapacity! * (Object.keys(m.inputs).length ? ema : 1);
+      let best = cur;
+      for (const m of usable) if (m.taxCapacity && m.id !== cur.id && inputsAvailable(w, m, b.level) && value(m) > value(best) * 1.1) best = m;
+      if (best.id !== cur.id && w.tick - b.lastSwitchTick >= SWITCH_COOLDOWN) applyCommand(w, c.id, { type: 'setMethod', buildingId: b.id, methodId: best.id });
+      continue;
+    }
+
     // 생산 방식: 같은 상품을 더 싸게 만드는 방식으로 (3주 쿨다운). 투입재를 못 구해 생산이 멈췄으면 쿨다운 없이.
-    // 산출이 없는 행정청은 투입재가 모자라도 징세 한도가 그대로라 멈춘 것으로 보지 않는다
     const starved = Object.keys(cur.inputs).length > 0 && Object.keys(cur.outputs).length > 0 && b.active && b.last.inputFill < 0.5 && b.last.staffing > 0;
     if (usable.length > 1 && (starved || w.tick - b.lastSwitchTick >= SWITCH_COOLDOWN)) {
       let best = { m: cur, v: starved ? -Infinity : unitProfit(current.profit, cur) };

@@ -83,7 +83,7 @@ function updateEducation(w: World) {
   for (const b of w.buildings) {
     const m = getMethod(b.typeId, b.methodId);
     if (!b.active || !m.seats) continue;
-    seats.set(b.regionId, (seats.get(b.regionId) ?? 0) + b.level * b.utilization * b.last.staffing * m.seats);
+    seats.set(b.regionId, (seats.get(b.regionId) ?? 0) + b.level * b.utilization * b.last.staffing * b.last.inputFill * m.seats);
   }
   const pop = new Map<number, number>();
   for (const p of w.pops) pop.set(p.regionId, (pop.get(p.regionId) ?? 0) + p.size);

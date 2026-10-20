@@ -104,6 +104,7 @@ export function produce(w: World) {
         if (per) b.stock[g] = Math.max(0, (b.stock[g] ?? 0) - per * run * fill);
       }
       b.last.inputFill = b.idle ? 1 : fill;
+      if (!b.idle && Object.keys(method.inputs).length) b.fillEma = round2((b.fillEma ?? 1) * 0.95 + fill * 0.05);
       const scale = run * fill * efficiency(b);
       for (const g of GOOD_IDS) {
         const per = method.outputs[g];
