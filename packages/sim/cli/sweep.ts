@@ -143,7 +143,6 @@ for (let d = 0; d < years * 360; d++) {
     else { yearAcc.supR += gm.supply; yearAcc.demR += gm.demand; yearAcc.pR += pr / nR; }
   }
   for (const b of w.buildings) if (b.typeId === 'subsistence') { yearAcc.hG += b.last.output.grain ?? 0; yearAcc.hT += b.last.output.timber ?? 0; yearAcc.hF += b.last.output.fiber ?? 0; }
-  for (const k of w.kingdoms) yearAcc.landTax += k.landGot ?? 0;
   // 소작농 묶음 충족률·부 (인구 가중, 하루 평균)
   { let n = 0, f = 0, wl = 0; for (const p of w.pops) if (p.prof === 'peasant') { n += p.size; f += p.size * p.fulfillment; wl += p.size * p.wealth100 / 100; }
     if (n > 0) { yearAcc.pFul += f / n; yearAcc.pW += wl / n; } }
@@ -267,6 +266,12 @@ out.traj = w.metrics.filter((m) => m.tick % 360 === 0 && m.tick > 0).map((m) => 
     privCash: Math.round(sum(m, (k) => k.privateCash) / 1e6),
     // 레벨 주인: privSh 민간 레벨 비율, lvMan·lvFin 저택·금융가가 가진 레벨, manCash·finCash 저택·금융가 금고 합(백만)
     privSh: +(sum(m, (k) => k.levelsPrivate) / Math.max(1, sum(m, (k) => k.levelsState + k.levelsPrivate))).toFixed(3),
+    finR: +(sum(m, (k) => k.assetsFinance ?? 0) / Math.max(1, sum(m, (k) => (k.assetsManor ?? 0) + (k.assetsFinance ?? 0)))).toFixed(3),
+    // 세법·투자법 단계 (왕국 평균: 토지 0 / 인두 1 / 소득 2, 귀족 0 … 노동자·농부 3), 주간 세입(천), 징수율
+    taxIdx: +(Object.values(m.kingdoms).reduce((a, k) => a + ['land', 'poll', 'income'].indexOf(k.taxLaw ?? 'land'), 0) / Object.keys(m.kingdoms).length).toFixed(2),
+    invIdx: +(Object.values(m.kingdoms).reduce((a, k) => a + ['nobles', 'upper', 'middle', 'lower'].indexOf(k.investLaw ?? 'nobles'), 0) / Object.keys(m.kingdoms).length).toFixed(2),
+
+    treasury: Math.round(sum(m, (k) => k.treasury - k.debt) / 1e6),
     lvMan: sum(m, (k) => k.levelsManor ?? 0), lvFin: sum(m, (k) => k.levelsFinance ?? 0),
     manCash: +(sum(m, (k) => k.manorCash ?? 0) / 1e6).toFixed(1), finCash: +(sum(m, (k) => k.financeCash ?? 0) / 1e6).toFixed(1),
     jobless: +(sum(m, (k) => k.joblessShare * k.pop) / pop).toFixed(3),

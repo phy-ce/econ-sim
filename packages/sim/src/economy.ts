@@ -337,6 +337,8 @@ export function shareWeight(s: PopClass): number {
 
 /** 소유 건물에서 직종 s 한 사람이 받는 하루 몫 추정: 이익 이동평균 × 1명 몫 ÷ 앉은 사람의 몫 합 (s 는 적어도 1명으로 센다) */
 export function shareWage(b: Building, s: Skill): number {
+  // 금융가 전문가: 보장 임금 + 성과급 (받은 배당 이동평균 × TUNE.financeBonus ÷ 인원)
+  if (b.typeId === 'finance') return TUNE.financeWage + (Math.max(0, b.profitEma) * TUNE.financeBonus) / Math.max(1, b.employed.expert);
   let total = 0;
   for (const k of SKILLS) total += shareWeight(k) * (k === s ? Math.max(1, b.employed[k]) : b.employed[k]);
   return (Math.max(0, b.profitEma) * shareWeight(s)) / total;

@@ -15,6 +15,7 @@
 ## 0. 지금 할 일 (2026-10-21 기준, 위에서부터)
 **깨진 화면 (먼저):**
 0-1. **레벨 주인·민영화·저택·금융가 금고 (2-54, DECISIONS 7-16 1단계).** `privateShare`·`ownerBuildingOf`·투자 풀이 없어졌다. 소유 막대는 `levelOwnersOf(world, b)`로, 왕실 건물에 민영화 켜기(`setPrivatize`), `Kingdom.investmentPool` 칸 이름은 "저택·금융가 금고"로. 2-35-0 `stake` 몫은 지운다. sim 작업자가 클라이언트 두 줄을 지웠다 (컴파일 맞춤).
+0-2. **세법 셋·투자법·금융가 펀드·지대·귀족 자리 (2-55, DECISIONS 7-16~7-19 2~4단계).** `TaxLaw`가 `'land'|'poll'|'income'`, 새 `setInvestLaw`·`policyStatus`·`ownershipAssets`. sim 작업자가 `FinancePanel.tsx` 24의 세법 `select`를 세 값으로 고쳤다 (컴파일 맞춤). 정책 창(2-45)은 이제 sim 쪽이 준비됐다.
 0. **창 크기 조절 없앰 + 좁은 고정 창 + 통계·소식 깨짐 (2-53, 사용자 요청).** 모서리·최대화를 지우고 창은 왼쪽/오른쪽 두 자리, 440×982 고정(1920×1080, 지도 x 530~1390을 안 가림). 분류 줄 88px을 위 탭으로, 인구 표 `min-width:1000/1100px`(`strategy.css` 66, `workspace.css` 243)을 고정 2열+보기 칩 4열로, 요약 세 칸을 세로로, 스크롤 안 스크롤 없앰.
 
 아래는 사용자 요청이거나 정리다.
@@ -1053,18 +1054,23 @@ Cells, top row left to right, then bottom row:
   - 저택·금융가 상세에 금고 `b.cash` 숫자.
   - 1-x·2-32·2-35 본문 중 `privateShare`·`ownerBuildingOf`·투자 풀 설명은 이 절이 대신한다.
 
+### 2-55. 세법 셋·투자법·금융가 펀드·지대·귀족 자리 (2026-10-21, DECISIONS 7-16~7-19 2~4단계)
+- sim 변경:
+  - 세법 `TaxLaw = 'land' | 'poll' | 'income'` (하나만). `setTaxLaw`는 바로 바꾸지 않고 `TUNE.lawDays`(180)일 전환을 시작한다. 지금 법과 같은 값을 보내면 전환 취소. 고를 수 없는 법이면 명령 오류.
+  - 투자법 `InvestLaw = 'nobles' | 'upper' | 'middle' | 'lower'`, 명령 `{ type: 'setInvestLaw', law }`, 필드 `Kingdom.investLaw`, `Kingdom.lawChange?: { tax?, invest? }` (`{ to, startTick, endTick }`).
+  - `policyStatus(world, kingdomId)` → `{ financeRatio, tax: LawStatus<TaxLaw>, invest: LawStatus<InvestLaw> }` (3장 요청 모양 그대로, 조건 값 `threshold` 0..1). `ownershipAssets(world)` → `{ kingdoms, regions }` 각 `{ manor, finance, ratio }` (100 단위). 지표 `KingdomMetrics.assetsManor`·`assetsFinance`·`taxLaw`·`investLaw`.
+  - 금융가 = 펀드: `Pop.fund?: Record<financeBuildingId, units>`, `Building.nav` (지분 1개 값). 금융가 일꾼은 전문가 (`b.employed.expert`), 자본가 자리는 없다 (`capitalist` 타입·문자열은 남아 있지만 인구 0).
+  - 지대: 수확의 5%를 바로 팔아 저택으로 (판매 대금의 몫이 아니다). 토지세는 소작농 1인당 정액이라 `harvestShares(w, r).tax`는 이제 노동 인구 1명의 하루 토지세(플로린)다.
+  - 저택 상급 귀족 자리 `b.nobleSeats` (늘 있다, 경제 규모 ÷ 16,000).
+  - 저장 9판.
+- sim 작업자가 고친 클라이언트: `FinancePanel.tsx` 24 세법 `select` 옵션을 `land`/`poll`/`income`으로 (문자열은 있는 `T.landBased`·`T.pollTax`·`T.incomeTax`). `T.perCapita`는 안 쓰게 됐다.
+- 화면 작업자가 할 일: 2-45 정책 창 (세법 셋·투자법·전환 막대·조건선은 그리지 않고 고를 수 있는지만), 2-44 자산 비율 막대 (`ownershipAssets`), 금융가 상세에 지분 값 `nav`·지분 주인(`Pop.fund`) 수, 자본가 계층을 목록에서 숨기기 (인구 0).
+
 ## 3. sim 쪽 필요 사항 (Claude가 처리할 것, UI 작업자는 요청만)
 - **2-49 (선택):** 회수 자재 lot에 `buildingId`를 넣고 `salvageOf(w, b)` export.
 - **2-35 소유 구성 (2026-10-21, 요청됨):**
   - 순수 함수 export: `ownershipOf(world, kingdomId, regionId?)` → `Record<'royal'|'stake'|'manor'|'finance', { levels, employed, jobs, profitWeek, reserve }>` (2-35-0 규칙 그대로, 지역을 주면 그 지역만). 화면·지표가 같은 계산을 쓰게 한다.
   - 지표 기록: `KingdomMetrics`에 같은 4몫의 `levels`·`employed`·`profitWeek` (30일마다). 지금 있는 `levelsState`·`levelsPrivate`는 두 몫뿐이라 2-35-5 네 층 차트를 그릴 수 없다.
-- **2-44 자산 비율 (2026-10-21):** 순수 함수 `ownershipAssets(world)` → `{ kingdoms: { kingdomId, manor, finance, ratio }[]; regions: { regionId, kingdomId, manor, finance, ratio }[] }`. 자산 = 가진 레벨의 주간 산출 가치(기본가, 지분이면 × 지분) + 저택은 소작지 수확 주간 가치(기본가), 100 단위. 지역 = 주인(저택·금융가)이 있는 지역. 지표: `KingdomMetrics.assetsManor`·`assetsFinance` (30일마다). 세법·투자법 조건도 이 `ratio`를 쓰게 한다.
-- **2-45 정책 창 (2026-10-21, DECISIONS 7-18·7-19):**
-  - 세법: `TaxLaw = 'land' | 'poll' | 'income'` (지금 `'capita'`를 나눈다). `setTaxLaw`는 바로 바꾸지 않고 6개월 전환을 시작한다. 지금 법과 같은 값을 보내면 전환 취소.
-  - 투자법: `InvestLaw = 'nobles' | 'upper' | 'middle' | 'lower'` (upper = 전문가, middle = + 기술자, lower = + 노동자·농부), 시작 `nobles`. `Command { type: 'setInvestLaw'; law: InvestLaw }`. 넓히기는 조건, 좁히기는 조건 없음, 둘 다 6개월.
-  - 필드: `Kingdom.investLaw`, `Kingdom.lawChange?: { tax?: { to: TaxLaw; startTick; endTick }; invest?: { to: InvestLaw; startTick; endTick } }`.
-  - 순수 함수 `policyStatus(world, kingdomId)` → `{ financeRatio; tax: LawStatus<TaxLaw>; invest: LawStatus<InvestLaw> }`, `LawStatus<L> = { current: L; pending?: { to: L; startTick; endTick }; options: { id: L; threshold: number | null; eligible: boolean }[] }`. 조건 값은 5% 단위.
-  - 알림: 전환이 끝나면 `lawChanged { kingdomId, law: 'tax' | 'invest', to }` (내 왕국만 소식).
 - **2-48 연구 트리 (2026-10-21, 있으면 좋음):** 순수 함수 `unlocksOf(techId)` → `{ methods: { typeId; methodId }[]; buildings: string[]; policies: string[] }` (`buildings` = 모든 방식이 기술을 요구하고 그중 하나가 이 기술인 종류). 사전도 같이 쓴다.
 - **2-17 정리 (UI 반영 끝, 2026-10-21 확인):** 클라이언트가 `isDistressed`·`SEIZURE_WEEKS`·`DISTRESS_DEBT_RATIO`·`landlordJobs`·`setResearchBudget`·`MAX_RESEARCH_BUDGET`·`Company.distressWeeks`를 더 쓰지 않는다 (grep 0건). sim은 `compat.ts`의 이 껍데기를 지워도 된다. 100배 값 사본(2-27)은 아직 지우지 않는다.
 - 이미 export되는 것: `paysDividend`, `kingdomGdp`, `kingdomById`, `builderOf`, `companyById`, `peasantSlots`, `disbanded`, `slots`, `harvestCondition`, `harvestLabel`, `HARVEST_KINDS`, `taxRates`, `taxCapacity`, `holdingsOf`, `levelOwnersOf`, `budgetPreview`, `reserveCap`, `hasReserve`, `weeklyOutputValue`, `creditLimit`, `isGovernment`, `crewOf`, `wealthOf`, `literacyOf`, `educationOf`

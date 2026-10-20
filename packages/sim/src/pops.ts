@@ -120,6 +120,8 @@ export function movePeople(w: World, from: Pop, to: Pop, workers: number, qualif
   }
   const money = from.savings * frac, inc = from.incomeEma * frac;
   from.savings -= money; to.savings += money;
+  // 금융가 지분도 사람을 따라간다
+  if (from.fund) for (const id in from.fund) { const u = from.fund[id] * frac; from.fund[id] -= u; (to.fund ??= {})[id] = (to.fund[id] ?? 0) + u; }
   from.incomeEma -= inc; to.incomeEma += inc;
   from.size -= people;
   to.size = total;
@@ -136,9 +138,12 @@ export function prunePops(w: World) {
     const p = pops[i];
     if (p.size >= 1e-3) { if (keep) keep.push(p); continue; }
     if (!keep) keep = pops.slice(0, i);
-    if (p.savings !== 0 || p.incomeEma !== 0) {
+    if (p.savings !== 0 || p.incomeEma !== 0 || p.fund) {
       const heir = p.work !== 0 ? findPop(w, p.regionId, p.prof, 0) : undefined;
-      if (heir && heir !== p && heir.size >= 1e-3) { heir.savings += p.savings; heir.incomeEma += p.incomeEma; } else w.fund += p.savings;
+      if (heir && heir !== p && heir.size >= 1e-3) {
+        heir.savings += p.savings; heir.incomeEma += p.incomeEma;
+        if (p.fund) for (const id in p.fund) (heir.fund ??= {})[id] = (heir.fund[id] ?? 0) + p.fund[id];
+      } else w.fund += p.savings;
     }
   }
   if (keep) {

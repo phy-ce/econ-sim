@@ -100,6 +100,7 @@ function roundPop(p: Pop): void {
   p.food = r(p.food);
   p.sol = r(p.sol);
   p.growth = r(p.growth);
+  if (p.fund) { for (const id in p.fund) { p.fund[id] = r(p.fund[id]); if (p.fund[id] <= 0) delete p.fund[id]; } if (Object.keys(p.fund).length === 0) delete p.fund; }
   roundBag(p.quals);
   roundBag(p.inKind);
 }
@@ -112,6 +113,7 @@ function roundBuilding(b: Building): void {
   if (b.reserve !== undefined) b.reserve = r(b.reserve);
   if (b.tenants !== undefined) b.tenants = r(b.tenants);
   if (b.nobleSeats !== undefined) b.nobleSeats = r(b.nobleSeats);
+  if (b.nav !== undefined) b.nav = r(b.nav);
   if (b.crew100 !== undefined) { b.crew100 = r(b.crew100); b.crew = r(b.crew100 / 100); } else if (b.crew !== undefined) delete b.crew;
   if (b.staffPeak !== undefined) b.staffPeak = r(b.staffPeak);
   const e = b.employed;

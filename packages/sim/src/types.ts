@@ -203,6 +203,8 @@ export interface Pop {
   growth: number;
   /** 소작으로 직접 얻어 먹는 현물 */
   inKind: GoodBag;
+  /** 금융가 지분: 금융가 건물 id → 지분 수 (사람을 따라 옮긴다) */
+  fund?: Record<number, number>;
 }
 
 /** 100배로 저장한 값을 규칙 단위로 읽는다: 부 단계 1..99, 문해력 0..1, 교육 접근도 0..1 */
@@ -234,6 +236,8 @@ export interface Building {
   cash?: number;
   /** 왕실 건물의 민영화: 켜 두면 저택·금융가가 매주 1레벨씩 사 갈 수 있다 (ai.ts buyLevels) */
   privatize?: boolean;
+  /** 금융가 지분 1개 값 = (금고 + 가진 레벨의 공사비) ÷ 지분 수 (매주, finance.ts updateFunds) */
+  nav?: number;
   /** 소작지: 일하는 소작농 (노동 인구) */
   tenants?: number;
   /** 저택: 상급 귀족 자리 (노동 인구). 저택이 가진 건물 레벨과 소작지 칸으로 정한다 (production.ts updateOwnership) */
@@ -435,11 +439,12 @@ export interface Kingdom {
   tariff: Partial<Record<GoodId, number>>;
   /** 화면 표시용 사본 (소수 둘째 자리). sim은 읽지 않는다: 그 왕국 저택·금융가 금고의 합 (투자 풀은 없앴다, round.ts writeMirrors) */
   investmentPool: number;
-  /** 세법: 'land' = 토지 기반 과세 (소작지 수확의 토지세율만큼 걷는다, 인두세·소득세 없음), 'capita' = 1인당 과세 (인두세 + 소득세). 세율은 taxRates */
+  /** 세법 (하나만): 'land' 토지세 = 소작농 1인당 정액, 'poll' 인두세 = 소작농을 뺀 1인당 정액, 'income' 소득세 = 소작농을 뺀 소득(임금·배당) × 세율. 세율은 taxRates */
   taxLaw: TaxLaw;
-  /** 어제 걷은 토지세와 걷어야 했던 토지세 (행정청 손익용, 하루마다 비운다) */
-  landGot?: number;
-  landOwed?: number;
+  /** 투자법: 금융가 지분을 살 수 있는 계층 (INVEST_CLASSES). 시작 'nobles' */
+  investLaw: InvestLaw;
+  /** 바뀌는 중인 법 (TUNE.lawDays 일 뒤에 바뀐다. 그동안은 지금 법) */
+  lawChange?: { tax?: LawChange<TaxLaw>; invest?: LawChange<InvestLaw> };
   /** 마지막으로 세법을 바꾼 틱 */
   lawTick?: number;
   /** 세금을 내야 할 인구와 행정청이 감당하는 인구 (징수율 = 한도 / 인구) */
@@ -481,7 +486,12 @@ export interface Kingdom {
   startsMonth?: Record<string, number>;
 }
 
-export type TaxLaw = 'land' | 'capita';
+export type TaxLaw = 'land' | 'poll' | 'income';
+export const TAX_LAWS: TaxLaw[] = ['land', 'poll', 'income'];
+/** 투자법: 귀족만 → 전문가까지 → 기술자까지 → 노동자·농부까지 (소작농은 열지 않는다) */
+export type InvestLaw = 'nobles' | 'upper' | 'middle' | 'lower';
+export const INVEST_LAWS: InvestLaw[] = ['nobles', 'upper', 'middle', 'lower'];
+export interface LawChange<L> { to: L; startTick: number; endTick: number }
 /** 정책 손잡이: 세금 수준, 국영 임금 수준, 연구비 수준 (각각 1~5단계) */
 export const BUDGET_ITEMS = ['tax', 'wages', 'research'] as const;
 export const BUDGET_STEPS = 5;
@@ -546,7 +556,7 @@ export interface World {
    * 저장 형식 버전: 저장되는 모양이 바뀌면 올린다. 옛 저장은 compat.ts migrateWorld
    * (8: 레벨 소유·소유 건물 금고. 옛 저장은 불러오지 않는다)
    */
-  version: 8;
+  version: 9;
   config: WorldConfig;
   tick: number;
   seed: number;
@@ -592,7 +602,9 @@ export type Command =
   | { type: 'moveConstruction'; constructionId: number; index: number }
   | { type: 'setResearch'; techId: string | null }
   | { type: 'setResearchBudget'; budget: number }
+  /** 세법·투자법을 바꾼다 (TUNE.lawDays 일에 걸쳐. 지금 법과 같은 값이면 바뀌는 중인 것을 취소) */
   | { type: 'setTaxLaw'; law: TaxLaw }
+  | { type: 'setInvestLaw'; law: InvestLaw }
   /** 정책 단계: 세금 수준, 국영 임금 수준, 연구비 수준 (1~5) */
   | { type: 'setBudget'; item: BudgetItem; value: number }
   /** 왕실 건물 민영화 켜기·끄기: 켜 두면 저택·금융가가 매주 1레벨씩 사 갈 수 있다 */

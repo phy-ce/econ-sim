@@ -1,5 +1,5 @@
 import type {
-  BuildingTypeDef, ClassDef, DepositId, GoodDef, GoodId, HarvestDef, LandType, MethodDef, NeedDef, NeedId, PopClass, RegionDef, Skill, SkillDef, TechDef,
+  BuildingTypeDef, ClassDef, DepositId, GoodDef, GoodId, HarvestDef, LandType, MethodDef, NeedDef, NeedId, PopClass, RegionDef, Skill, SkillDef, TaxLaw, TechDef,
 } from './types';
 
 // 세계관: 근세에서 산업화로 넘어가는 가상의 대륙. 세 왕국이 땅을 나눠 갖는다. 화폐 단위는 플로린(ƒ).
@@ -145,7 +145,8 @@ export const BUILDING_TYPES: BuildingTypeDef[] = [
   },
   {
     id: 'finance', name: '금융가', nameEn: 'Financial district', land: 'plot', buildPoints: 0, auto: true, ownership: 'capitalist',
-    methods: [m({ id: 'finance', name: '투자 관리', nameEn: 'Investment management', workers: { capitalist: OWNERSHIP_SEATS }, inputs: {}, outputs: {} })],
+    // 금융가 = 투자 펀드: 지분을 산 pop 이 배당을 받는다. 일하는 사람은 전문가 (보장 임금 + 성과급, finance.ts payFinance). 자본가 계층은 없다
+    methods: [m({ id: 'finance', name: '투자 관리', nameEn: 'Investment management', workers: { expert: OWNERSHIP_SEATS }, inputs: {}, outputs: {} })],
   },
   {
     id: 'farm', name: '곡물 농장', nameEn: 'Grain farm', land: 'arable', buildPoints: 600,
@@ -320,7 +321,7 @@ export function scaleBonus(level: number): number {
  * - switchRate, switchPremium, switchMax: 일하는 사람은 소득이 switchPremium 배 넘게 나은 자리로 옮긴다. 하루에 옮기는 비율은
  *   switchPremium 배일 때 switchRate 이고 소득 배율의 차이에 비례해 늘어 switchMax 에서 멈춘다 (labor.ts switchShare)
  * - cashBufferDays: 팝이 금고(저택·금융가)로 보내지 않고 들고 있는 돈 (생활비 + 세금의 며칠분)
- * - landTax, pollTax, incomeTax: 세금 수준 3단계(보통)의 토지세율(소작지 판매 대금 중 국고 몫), 인두세(1인당 하루), 소득세율.
+ * - landTax, pollTax, incomeTax: 세금 수준 3단계(보통)의 토지세(소작농 1인당 하루), 인두세(소작농을 뺀 1인당 하루), 소득세율(소작농을 뺀 소득).
  *   세 세율을 같은 배율로 비교했다 (빅토리아3 보통 단계 기준 ×1·×1.5·×2·×2.5, 20년 × 시드 1~4). ×2는 ×1보다 건물 레벨이
  *   10년차 약 50%, 20년차 약 13% 많고 실업이 낮다 (×1은 세금 단계를 1~5 모두 쓰지만 건물이 가장 적다). ×2.5는 노동자 생활수준이 가장 낮다
  * - taxLevels: 세금 수준 1~5단계가 세법의 모든 세율에 곱하는 배율
@@ -356,9 +357,12 @@ export function scaleBonus(level: number): number {
  *   왕실 공사(사무소 증설 포함)도 high 주치를 넘는 돈으로만 한다. high 39·52·78·104 비교 (세율 ×2, 20년 × 시드 1~4): 52는 78보다
  *   건물 레벨이 약 20~30% 많고 소작농 비율이 낮다. 39는 10년차 실업 13%, 20년 인구가 가장 적다. 104는 건물이 가장 적다
  * - startTreasuryWeeks: 왕실 시작 국고 = 시작 정부 건물을 다 돌리는 주간 운영비(시작 임금, 기본가) × 이 주 수
- * - taxLaw: 시작 세법 ('land' 토지 기반 / 'capita' 1인당)
+ * - taxLaw: 시작 세법 ('land' 토지세 / 'poll' 인두세 / 'income' 소득세, 하나만)
+ * - lawDays: 세법·투자법을 바꾸는 데 걸리는 날 수
+ * - lawPoll, lawIncome: 인두세·소득세로 바꿀 수 있는 금융가 자산 비율 (금융가 ÷ (저택 + 금융가), economy.ts ownershipAssets)
+ * - investUpper, investMiddle, investLower: 투자법을 전문가까지·기술자까지·노동자·농부까지 넓힐 수 있는 금융가 자산 비율
+ * - financeWage, financeBonus, financeStaff: 금융가 전문가의 보장 임금(하루), 성과급(금융가가 받은 배당의 비율, 인원대로), 가진 레벨 1당 전문가 자리
  * - startLumber, startFiber: 시작 민간 벌목장·섬유 농장 레벨 (지역 인구 10만 명당). 소작지가 목재·섬유를 조금만 내서 건축사무소가 첫날부터 쓸 목재가 있어야 한다
- * - peasantPoll: 1인당 과세에서 소작농이 내는 인두세 배율
  * - rawFullWealth, rawCapWealth: 원자재로 의복·생활용품을 다 채울 수 있는 부 상한, 원래 상한(max)이 되는 부 (rawMax)
  * - harvestChance: 기상 조건이 한 지역에서 한 계절(90일)에 새로 시작할 확률 (0이면 기상 조건이 없다)
  * - harvestIntensity: 강도 범위 [최소, 최대]. 강도 1당 산출 −5% (HARVEST_STEP)
@@ -393,8 +397,8 @@ export const TUNE = {
   crownPrivatize: 'off' as 'off' | 'all',
   taxCurve: 'hyp' as 'exp' | 'hyp',
   cashBufferDays: 10,
-  pollTax: 0.4, // 인두세: 소작농은 peasantPoll 배 (세금 수준 3단계 기준)
-  incomeTax: 0.2,
+  pollTax: 0.6, // 인두세: 소작농을 뺀 1인당 하루 (세금 수준 3단계 기준)
+  incomeTax: 0.3,
   officeTargetDays: 30,
   officeUseFull: 0.9,
   startsPerWeek: 3,
@@ -418,9 +422,17 @@ export const TUNE = {
   schoolValue: 0.3,
   schoolTarget: 0.6, // 0.45·0.5·0.6 비교 (DECISIONS.md 7-4): 0.6이 20년차 소작농·건물 레벨·자격자가 가장 낫다
   schoolTaxMax: 4,
-  taxLaw: 'land' as 'land' | 'capita',
-  landTax: 0.2, // 토지세: 소작지 판매 대금의 20% (지대 rentShare 와 따로)
-  peasantPoll: 0.25,
+  taxLaw: 'land' as TaxLaw,
+  landTax: 0.02, // 토지세: 소작농 1인당 하루 (세금 수준 3단계)
+  lawDays: 180,
+  lawPoll: 0.1,
+  lawIncome: 0.3,
+  investUpper: 0.05,
+  investMiddle: 0.1,
+  investLower: 0.15,
+  financeWage: 20,
+  financeBonus: 0.1,
+  financeStaff: 2,
   rawFullWealth: 5,
   rawCapWealth: 10,
   taxLevels: [0.6, 0.8, 1, 1.2, 1.4],

@@ -98,7 +98,7 @@ describe('저장값 소수 둘째 자리', () => {
     const w = createWorld(7);
     runTo(w, 30);
     const old = JSON.parse(save(w));
-    for (const v of [3, 4, 5, 6, 7]) expect(migrateWorld({ ...old, version: v })).toBeNull();
+    for (const v of [3, 4, 5, 6, 7, 8]) expect(migrateWorld({ ...old, version: v })).toBeNull();
     expect(save(migrateWorld(JSON.parse(save(w)))!)).toBe(save(w));
   });
 

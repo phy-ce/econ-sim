@@ -1,8 +1,7 @@
-import { BUILDING_BY_ID, GOODS, SKILL_DEFS, TECH_BY_ID, TICKS_PER_WEEK, TUNE, getMethod } from './data';
+import { BUILDING_BY_ID, GOODS, SKILL_DEFS, TECH_BY_ID, TICKS_PER_WEEK, TUNE, WORKFORCE_RATIO, getMethod } from './data';
 import { collectionRatio, companyById, regionById, constructionEstimate, efficiency, isGovernment, isOwnerBuilding, kingdomGdp, logEvent, paysDividend, repay, sellThrough, shareWeight } from './economy';
 import { techNameEn } from './i18n';
 import { flow, kingdomById, kingdomOf, toFinance, toTreasury } from './kingdoms';
-import { tenantSaleBag } from './market';
 import { payPops } from './pops';
 import { round2 } from './rng';
 import { LOWER_JOBS, SKILLS, crewOf } from './types';
@@ -99,10 +98,10 @@ export function budgetMult(k: Kingdom, item: BudgetItem): number {
   return table[k.budget[item] - 1];
 }
 
-/** 지금 세율 = 세법의 기본 세율(TUNE) × 세금 수준 배율. 토지 기반은 토지세만, 1인당은 인두세와 소득세만 걷는다 */
+/** 지금 세율 = 세법의 기본 세율(TUNE) × 세금 수준 배율. 세법 하나가 세금 하나만 걷는다 (land 토지세, poll 인두세, income 소득세) */
 export function taxRates(k: Kingdom, law: TaxLaw = k.taxLaw): { land: number; poll: number; income: number } {
   const m = budgetMult(k, 'tax');
-  return law === 'land' ? { land: TUNE.landTax * m, poll: 0, income: 0 } : { land: 0, poll: TUNE.pollTax * m, income: TUNE.incomeTax * m };
+  return { land: law === 'land' ? TUNE.landTax * m : 0, poll: law === 'poll' ? TUNE.pollTax * m : 0, income: law === 'income' ? TUNE.incomeTax * m : 0 };
 }
 
 /**
@@ -185,28 +184,21 @@ export function taxCapacity(w: World, kingdomId: number): number {
  * 세금: 인두세(1인당 하루)와 소득세(최근 하루 소득 × 세율). 시장에서 쓰기 전에 걷고, 저축을 넘게는 못 걷는다.
  * 징수율은 행정청 한도와 인구의 비로 정한다 (collectionRatio). 모두에게 같은 비율로 덜 걷고, 못 걷은 몫은 백성 손에 남는다.
  */
-/** 그 pop 이 하루에 내야 할 세금 (인두세 + 소득세, 저축 한도 전). 토지 기반 과세면 0 (토지세는 수확에서 걷는다) */
+/**
+ * 그 pop 이 하루에 내야 할 세금 (저축 한도 전, 빅토리아3): 토지세 = 소작농 1인당 정액, 인두세 = 소작농을 뺀 1인당 정액,
+ * 소득세 = 소작농을 뺀 소득(임금·배당 이동평균) × 세율 (자급 소득은 면제)
+ */
 export function taxDue(w: World, p: Pop, law?: TaxLaw): number {
   const k = kingdomById(w, kingdomOf(w, p.regionId));
   const t = taxRates(k, law ?? k.taxLaw);
-  return p.size * t.poll * (p.prof === 'peasant' ? TUNE.peasantPoll : 1) + Math.max(0, p.incomeEma) * t.income;
+  if (p.prof === 'peasant') return p.size * t.land;
+  return p.size * t.poll + Math.max(0, p.incomeEma) * t.income;
 }
 
-/**
- * 그 세법으로 지금 하루에 걷힐 세금 (징수율 전). 토지 기반 = 소작지 판매분 대금 × 토지세율 (landTaxValue),
- * 1인당 = pop 마다 min(저축, 낼 세금)
- */
+/** 그 세법으로 지금 하루에 걷힐 세금 (징수율 전): pop 마다 min(저축, 낼 세금) */
 export function lawRevenue(w: World, k: Kingdom, law: TaxLaw): number {
-  if (law === 'land') {
-    let v = 0;
-    for (const b of w.buildings) {
-      if (b.typeId !== 'subsistence' || kingdomOf(w, b.regionId) !== k.id) continue;
-      v += landTaxValue(regionById(w, b.regionId), tenantSaleBag(w, b), taxRates(k, 'land').land);
-    }
-    return v;
-  }
   let v = 0;
-  for (const p of w.pops) if (kingdomOf(w, p.regionId) === k.id) v += Math.min(p.savings, taxDue(w, p, 'capita'));
+  for (const p of w.pops) if (kingdomOf(w, p.regionId) === k.id) v += Math.min(p.savings, taxDue(w, p, law));
   return v;
 }
 
@@ -240,16 +232,11 @@ export function collectIncomeTax(w: World) {
     const n = people.get(k.id) ?? 0, cap = taxCapacity(w, k.id);
     k.taxDue = n;
     k.taxCapacity = cap;
-    // 토지세는 어제 지대에서 걷힌 몫을 더한다
-    owed.set(k.id, (owed.get(k.id) ?? 0) + (k.landOwed ?? 0));
     k.taxOwed = (k.taxOwed ?? owed.get(k.id) ?? 0) * 0.9 + (owed.get(k.id) ?? 0) * 0.1;
     k.taxRatio = round2(collectionRatio(cap, n));
     ratio.set(k.id, collectionRatio(cap, n));
   }
-  const got = new Map<number, number>(), landGot = new Map<number, number>();
-  for (const k of w.kingdoms) {
-    got.set(k.id, k.landGot ?? 0); landGot.set(k.id, k.landGot ?? 0); k.landGot = 0; k.landOwed = 0;
-  }
+  const got = new Map<number, number>();
   for (const p of w.pops) {
     const kid = kingdomOf(w, p.regionId);
     const gov = companyById(w, kingdomById(w, kid).governmentId);
@@ -262,15 +249,15 @@ export function collectIncomeTax(w: World) {
     got.set(kid, (got.get(kid) ?? 0) + tax);
   }
   // 예산 미리보기 기준: 세금 수준 단계마다 하루 세입의 이동평균 (화면 전용, sim 은 읽지 않는다).
-  // pop 세금은 단계별로 저축 한도를 다시 걸고, 토지세는 배율에 비례한다
+  // pop 세금은 단계별로 저축 한도를 다시 건다
   const a = budgetEmaWeight(w, 0.1);
   for (const k of w.kingdoms) {
-    const m = budgetMult(k, 'tax'), r = ratio.get(k.id) ?? 1, land = landGot.get(k.id) ?? 0;
+    const r = ratio.get(k.id) ?? 1;
     const arr = byStep.get(k.id);
     const base = (k.budgetBase ??= {});
     const old = base.taxBy;
-    base.taxBy = TUNE.taxLevels.map((ms, i) => {
-      const day = (arr?.[i] ?? 0) * r + (m > 0 ? land * ms / m : 0);
+    base.taxBy = TUNE.taxLevels.map((_ms, i) => {
+      const day = (arr?.[i] ?? 0) * r;
       return round2(old?.[i] == null ? day : old[i] * (1 - a) + day * a);
     });
   }
@@ -369,11 +356,16 @@ function fitReserves(w: World, c: Company): number {
   return cash - total;
 }
 
-/** 소유 건물 o 가 받은 배당·지대: KEEP_SHARE 는 o 의 금고에 남기고, 나머지를 앉은 pop 에게 몫(shareWeight × 인원)대로. 앉은 사람이 없으면 모두 금고로 */
+/**
+ * 소유 건물 o 가 받은 배당·지대: KEEP_SHARE 는 o 의 금고에 남기고, 나머지를 나눈다.
+ * 저택: 앉은 귀족·하급 귀족에게 몫(shareWeight × 인원)대로. 금융가: 먼저 성과급(TUNE.financeBonus)을 일하는 전문가에게, 나머지를 지분 수대로.
+ * 받을 사람이 없으면 금고로
+ */
 function payOwners(w: World, o: Building, amount: number) {
   if (amount <= 0) return;
   o.last.revenue += amount;
   flow(`divIn.${o.typeId}`, amount);
+  if (o.typeId === 'finance') { payFinance(w, o, amount); return; }
   const pops = w.pops.filter((p) => p.work === o.id && p.size > 0);
   let total = 0;
   for (const p of pops) total += p.size * shareWeight(p.prof);
@@ -383,6 +375,46 @@ function payOwners(w: World, o: Building, amount: number) {
   const rest = amount - keep;
   flow(`toPops.${o.typeId}`, rest);
   for (const p of pops) payPops(w, [p], (rest * p.size * shareWeight(p.prof)) / total);
+}
+
+/** 금융가 배당: 성과급 → 일하는 전문가, 금고 몫 → 금고, 나머지 → 지분 주인 (지분 수대로) */
+function payFinance(w: World, o: Building, amount: number) {
+  const staff = w.pops.filter((p) => p.work === o.id && p.size > 0);
+  const bonus = staff.length ? amount * TUNE.financeBonus : 0;
+  if (bonus > 0) payPops(w, staff, bonus);
+  const rest = amount - bonus;
+  const holders: Pop[] = [];
+  let units = 0;
+  for (const p of w.pops) { const u = p.fund?.[o.id] ?? 0; if (u > 0) { holders.push(p); units += u; } }
+  if (units <= 0) { toTreasury(o, rest, 'noSeat'); return; }
+  const keep = rest * (KEEP_SHARE.finance ?? 0);
+  toTreasury(o, keep, 'keep');
+  flow('toPops.finance', rest - keep);
+  payPops(w, holders, rest - keep, (p) => p.fund![o.id]);
+}
+
+/**
+ * 금융가 운영 (매주): 일하는 전문가에게 보장 임금(TUNE.financeWage × 인원 × 7)을 금고에서 주고, 지분 값(nav)을 다시 잰다.
+ * 지분 값 = (금고 + 가진 레벨 × 그 건물 1레벨 공사비 추정) ÷ 지분 수 (지분이 없으면 1)
+ */
+export function updateFunds(w: World) {
+  const units = new Map<number, number>();
+  for (const p of w.pops) if (p.fund) for (const id in p.fund) units.set(Number(id), (units.get(Number(id)) ?? 0) + p.fund[id]);
+  const levelsOf = new Map<number, { typeId: string; n: number }[]>();
+  for (const b of w.buildings) if (b.owners) for (const [id, n] of Object.entries(b.owners)) { const l = levelsOf.get(Number(id)) ?? []; l.push({ typeId: b.typeId, n }); levelsOf.set(Number(id), l); }
+  for (const o of w.buildings) {
+    if (o.typeId !== 'finance') continue;
+    const staff = w.pops.filter((p) => p.work === o.id && p.size > 0);
+    let wf = 0;
+    for (const p of staff) wf += p.size;
+    const pay = Math.min(Math.max(0, o.cash ?? 0), TUNE.financeWage * WORKFORCE_RATIO * wf * TICKS_PER_WEEK);
+    if (pay > 0 && staff.length) { o.cash = (o.cash ?? 0) - pay; flow('staff.finance', pay); payPops(w, staff, pay); }
+    const firm = companyById(w, kingdomById(w, kingdomOf(w, o.regionId)).privateIds[0]);
+    let assets = Math.max(0, o.cash ?? 0);
+    if (firm) for (const x of levelsOf.get(o.id) ?? []) { const c = constructionEstimate(w, firm, x.typeId).cost; if (Number.isFinite(c)) assets += c * x.n; }
+    const u = units.get(o.id) ?? 0;
+    o.nav = u > 0 ? Math.max(0.01, assets / u) : 1;
+  }
 }
 
 /**
@@ -450,23 +482,6 @@ export function paySalvage(w: World, lot: SalvageLot, amt: number) {
   if (o) { toTreasury(o, amt, 'salvage'); return; }
   const c = companyById(w, lot.companyId);
   if (c) { c.cash += amt; c.weekProfit += amt; c.ledger.sales += amt; } else w.fund += amt;
-}
-
-/** 소작지 수확 out 에서 토지세율 rate 만큼 걷어 팔 때 받을 대금: 시장가 × 팔리는 비율 (안 팔리는 곡물은 세입이 되지 않는다) */
-export function landTaxValue(r: Region, out: GoodBag, rate: number): number {
-  let v = 0;
-  for (const g of Object.keys(out) as GoodId[]) v += (out[g] ?? 0) * r.market[g].price * sellThrough(r.market[g]);
-  return v * rate;
-}
-
-/** 토지세 판매 대금은 국고로 (행정청 손익용으로 걷힌 몫을 센다) */
-export function payLandTax(w: World, regionId: number, amount: number) {
-  const k = kingdomById(w, kingdomOf(w, regionId));
-  const gov = companyById(w, k.governmentId);
-  if (!gov) { w.fund += amount; return; }
-  gov.cash += amount;
-  k.revenueWeek += amount;
-  k.landGot = (k.landGot ?? 0) + amount;
 }
 
 /** 소작지 현금 지대: 그 지역 저택에 앉은 귀족에게 준다 (배당처럼 일부는 저택 금고로). 받을 사람이 없으면 false */

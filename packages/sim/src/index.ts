@@ -14,6 +14,8 @@ export * from './i18n';
 export { estimateAfterEntry } from './outlook';
 export { taxRates, taxCapacity, reserveCap, hasReserve, weeklyOutputValue, treasuryFree } from './finance';
 export { privatizePrice } from './ai';
+export { INVEST_CLASSES, financeRatio, ownershipAssets, policyStatus, taxThreshold, investThreshold } from './policy';
+export type { AssetRow, LawStatus } from './policy';
 export { budgetPreview, roundBudget } from './budget';
 export type { BudgetPreview, BudgetLine, BudgetLineKey } from './budget';
 export { recordMetrics, METRICS_EVERY } from './metrics';

@@ -36,6 +36,7 @@ import {
 } from './finance';
 import { CHUNKS, LAW_COOLDOWN, LAW_SWITCH, OFFICE_BLOCK, OFFICE_GROWTH, STAFFING_HORIZON, SWITCH_COOLDOWN } from './ai';
 import { budgetPreview } from './budget';
+import { ownershipAssets } from './policy';
 import type { BudgetLineKey } from './budget';
 import { MAX_CONCURRENT_CONSTRUCTIONS, MAX_LEVELS_PER_PROJECT } from './commands';
 import { START_CASH, START_FIRM_CASH, START_OFFICE_LEVELS, START_TECHS, TRADER_CAPITAL, createWorld } from './world';
@@ -1009,15 +1010,22 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   // ================================================================ 국가 재정
   {
     id: 'tax-laws', category: 'state', title: t('세법', 'Tax laws'),
-    rule: t('토지 기반 세법은 소작지 판매 대금의 토지세({0})만 걷는다. 1인당 세법은 인두세({1}/일, 소작농 ×{2})와 소득세({3})를 걷는다. 시작 세법은 {4}다.', 'Land-based law collects only land tax ({0}) on tenant sales. Per-capita law collects a poll tax ({1}/day, tenants ×{2}) and income tax ({3}). The starting law is {4}.'),
-    params: [tune('landTax', '토지세', 'Land tax', 'pct'), tune('pollTax', '인두세', 'Poll tax', 'florin'), tune('peasantPoll', '소작농 인두세 배율', 'Tenant poll multiple'), tune('incomeTax', '소득세', 'Income tax', 'pct'), tune('taxLaw', '시작 세법', 'Starting law')],
+    rule: t('세법은 하나만 쓴다. 토지세: 소작농 1인당 하루 {0}. 인두세: 소작농을 뺀 1인당 하루 {1}. 소득세: 소작농을 뺀 소득(임금·배당)의 {2} (자급 소득 면제). 시작 세법은 {3}. 바꾸는 데 {4}일이 걸리고(그동안은 옛 법), 인두세는 금융가 자산 비율 {5}, 소득세는 {6} 이상이어야 고를 수 있다.', 'One tax law at a time. Land tax: {0} a day per tenant. Poll tax: {1} a day per non-tenant. Income tax: {2} of non-tenant income (wages and dividends; subsistence is exempt). The starting law is {3}. A change takes {4} days (the old law applies meanwhile); poll tax needs a financial share of {5}, income tax {6}.'),
+    params: [tune('landTax', '토지세', 'Land tax', 'florin'), tune('pollTax', '인두세', 'Poll tax', 'florin'), tune('incomeTax', '소득세', 'Income tax', 'pct'), tune('taxLaw', '시작 세법', 'Starting law'), tune('lawDays', '바꾸는 날 수', 'Change days', 'day'), tune('lawPoll', '인두세 조건', 'Poll tax threshold', 'pct'), tune('lawIncome', '소득세 조건', 'Income tax threshold', 'pct')],
     live: {
       pick: ['kingdom'], run: (w, ctx) => {
         const k = kingdomOfCtx(w, ctx), r = taxRates(k);
         return { rows: [row('세법', 'Law', k.taxLaw), row('토지세', 'Land tax', r.land, 'pct'), row('인두세', 'Poll tax', r.poll, 'florin'), row('소득세', 'Income tax', r.income, 'pct')] };
       },
     },
-    related: ['tax-levels', 'collection', 'ai-tax-law'], seenIn: ['finance'], source: ['finance.ts taxRates', 'finance.ts collectIncomeTax'], design: ['9.1'],
+    related: ['tax-levels', 'collection', 'ai-tax-law', 'invest-law'], seenIn: ['finance'], source: ['finance.ts taxRates', 'finance.ts collectIncomeTax', 'policy.ts startLawChange'], design: ['9.1'],
+  },
+  {
+    id: 'invest-law', category: 'state', title: t('투자법과 금융가 지분', 'Investment law and fund units'),
+    rule: t('금융가는 투자 펀드다. 투자법이 허용한 계층의 pop은 남는 현금으로 그 지역 금융가 지분을 지분 값(금고 + 가진 레벨 공사비, ÷ 지분 수)에 사고, 배당을 지분 수대로 받는다. 되팔지 않는다. 처음은 귀족만. 금융가 자산 비율이 {0} / {1} / {2} 이상이면 전문가 / 기술자 / 노동자·농부까지 넓힐 수 있다 (바꾸는 데 세법과 같은 날 수). 금융가에서는 전문가가 가진 레벨 1당 {3}명 일하고 보장 임금 {4}와 받은 배당의 {5}를 성과급으로 받는다.', 'The financial district is a fund. Pops of the classes the investment law allows buy units of their regional district with spare cash at the unit value (treasury + build cost of owned levels, ÷ units) and receive dividends by units; units are never sold. At first only nobles may buy. At a financial share of {0} / {1} / {2} the law can widen to experts / skilled / labourers and farmers (same change time as tax law). Districts employ {3} experts per owned level at a base wage of {4} plus {5} of dividends received as a bonus.'),
+    params: [tune('investUpper', '전문가까지', 'Up to experts', 'pct'), tune('investMiddle', '기술자까지', 'Up to skilled', 'pct'), tune('investLower', '노동자·농부까지', 'Up to labourers', 'pct'), tune('financeStaff', '레벨당 전문가', 'Experts per level'), tune('financeWage', '보장 임금', 'Base wage', 'florin'), tune('financeBonus', '성과급', 'Bonus', 'pct')],
+    live: { pick: [], run: (w) => ({ bars: ownershipAssets(w).kingdoms.map((x) => bar(t(String(x.kingdomId), String(x.kingdomId)), x.ratio, 'pct', 1)), rows: w.kingdoms.map((k) => row(k.name, k.nameEn, `${k.taxLaw} / ${k.investLaw}`)) }) },
+    related: ['tax-laws', 'owner-treasury', 'dividends'], seenIn: ['finance'], source: ['policy.ts ownershipAssets', 'market.ts investSurplus', 'finance.ts payFinance', 'finance.ts updateFunds'], design: ['9.1', '9.3'],
   },
   {
     id: 'tax-levels', category: 'state', title: t('세금 수준', 'Tax level'),

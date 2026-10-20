@@ -94,7 +94,10 @@ export function updateOwnership(w: World) {
       let levels = (own * OWNER_SEATS_PER_LEVEL) / OWNERSHIP_SEATS;
       const seats = typeId === 'manor' ? nobleSeatsOf(w, r.id, b, own) : undefined;
       if (seats !== undefined) { b.nobleSeats = seats; levels = seats / OWNERSHIP_SEATS; }
+      // 금융가: 가진 레벨 1당 전문가 TUNE.financeStaff 자리 (실업자 수로 늘리지 않는다)
+      if (typeId === 'finance') levels = (own * TUNE.financeStaff) / OWNERSHIP_SEATS;
       for (const s of SKILLS) {
+        if (typeId === 'finance') break;
         const per = workers[s] ?? 0;
         if (!(per > 0) || (seats !== undefined && s === 'aristocrat')) continue;
         let wf = 0;
@@ -102,6 +105,8 @@ export function updateOwnership(w: World) {
         levels = Math.max(levels, wf / per);
       }
       b.companyId = owner; b.stateOwned = false;
+      // 저택·금융가는 늘 다 가동한다 (가동률·원료 충족 100%)
+      b.utilization = 1; b.last.inputFill = 1;
       b.level = Math.max(1, Math.ceil(levels));
       b.profitEma = b.profitEma * 0.95 + b.last.revenue * 0.05;
       b.last.revenue = 0;

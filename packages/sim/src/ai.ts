@@ -5,14 +5,15 @@ import { withEstimateCache, regionAvgWealth, regionPopulation, wageCostOf,
 import { MAX_CONCURRENT_CONSTRUCTIONS, MAX_LEVELS_PER_PROJECT, applyCommand } from './commands';
 import { committedCost, favours, funderWeight, lawRevenue, ownerBuildings, ownerFunds, reserveOf, treasuryFree } from './finance';
 import { privatizeLevel } from './production';
+import { policyStatus } from './policy';
 import { subsistenceWage } from './labor';
 import { marketOutlook, techValue, valueMethod } from './outlook';
 import type { Outlook } from './outlook';
 import { kingdomById } from './kingdoms';
 import { LITERACY_PER_WEALTH, workforce } from './pops';
 import { rand, round2 } from './rng';
-import { BUDGET_STEPS, SKILLS, isLowerJob, literacyOf } from './types';
-import type { BudgetItem, Building, Company, Kingdom, MethodDef, Region, Skill, World } from './types';
+import { BUDGET_STEPS, INVEST_LAWS, SKILLS, isLowerJob, literacyOf } from './types';
+import type { BudgetItem, Building, Company, Kingdom, MethodDef, Region, Skill, TaxLaw, World } from './types';
 
 // AI: 국영과 민간이 같은 판단을 쓴다. 다른 점은 자금원(국고 / 저택·금융가 금고)과 자기 왕국 땅에만 짓는다는 것뿐이다.
 
@@ -300,9 +301,21 @@ export const LAW_COOLDOWN = TICKS_PER_YEAR;
 function chooseTaxLaw(w: World, c: Company) {
   const k = w.kingdoms.find((x) => x.governmentId === c.id);
   if (!k || w.tick % (TICKS_PER_WEEK * 4) !== 0) return;
-  if (k.lawTick != null && w.tick - k.lawTick < LAW_COOLDOWN) return;
-  const other = k.taxLaw === 'land' ? 'capita' : 'land';
-  if (lawRevenue(w, k, other) > lawRevenue(w, k, k.taxLaw) * LAW_SWITCH) applyCommand(w, c.id, { type: 'setTaxLaw', law: other });
+  if (k.lawChange?.tax || (k.lawTick != null && w.tick - k.lawTick < LAW_COOLDOWN)) return;
+  // 고를 수 있는 세법 중 예상 세입이 가장 큰 것이 지금의 LAW_SWITCH 배를 넘으면 바꾸기 시작한다
+  const st = policyStatus(w, k.id);
+  let best: TaxLaw = k.taxLaw, top = lawRevenue(w, k, k.taxLaw) * LAW_SWITCH;
+  for (const o of st.tax.options) {
+    if (!o.eligible || o.id === k.taxLaw) continue;
+    const v = lawRevenue(w, k, o.id);
+    if (v > top) { top = v; best = o.id; }
+  }
+  if (best !== k.taxLaw) applyCommand(w, c.id, { type: 'setTaxLaw', law: best });
+  // 투자법: 고를 수 있으면 한 칸씩 넓힌다 (지분을 살 사람이 늘어 금융가가 커진다)
+  if (!k.lawChange?.invest) {
+    const next = INVEST_LAWS[INVEST_LAWS.indexOf(k.investLaw) + 1];
+    if (next && st.invest.options.find((o) => o.id === next)?.eligible) applyCommand(w, c.id, { type: 'setInvestLaw', law: next });
+  }
 }
 
 /** 산출물 1단위당 이윤 (방식끼리 비교용) */

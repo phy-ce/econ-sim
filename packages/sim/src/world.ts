@@ -165,7 +165,7 @@ export function createWorld(seed = 1, opts: CreateWorldOptions = {}): World {
   });
 
   const kingdoms: Kingdom[] = KINGDOMS.map((k) => ({
-    id: k.id, name: k.name, nameEn: k.nameEn, color: k.color, governmentId: k.gov.id, privateIds: [k.firm.id], tariff: {}, investmentPool: 0, taxLaw: TUNE.taxLaw, budget: { ...DEFAULT_BUDGET }, revenueWeek: 0,
+    id: k.id, name: k.name, nameEn: k.nameEn, color: k.color, governmentId: k.gov.id, privateIds: [k.firm.id], tariff: {}, investmentPool: 0, taxLaw: TUNE.taxLaw, investLaw: 'nobles', budget: { ...DEFAULT_BUDGET }, revenueWeek: 0,
   }));
   const companies: Company[] = [];
   for (const k of KINGDOMS) {
@@ -175,7 +175,7 @@ export function createWorld(seed = 1, opts: CreateWorldOptions = {}): World {
   }
 
   const w: World = {
-    version: 8, config: { ai }, tick: 0, seed, rngState: seed | 0, nextId: 1000,
+    version: 9, config: { ai }, tick: 0, seed, rngState: seed | 0, nextId: 1000,
     regions, kingdoms, pops: [], fund: 0, metrics: [],
     traders: { cash: TRADER_CAPITAL, capital: TRADER_CAPITAL, shipments: [] },
     mint: { minted: 0, issued: 0, retired: 0, interest: 0 },
@@ -300,6 +300,13 @@ export function createWorld(seed = 1, opts: CreateWorldOptions = {}): World {
     applyStateWages(w, k);
     const gov = companies.find((c) => c.id === k.governmentId)!;
     gov.cash = gov.weekStartCash = gov.isPlayer && playerCash != null ? playerCash : startTreasury(w, gov);
+  }
+  // 금융가 시작 지분: 시작 금고를 지분 값 1로 나눠 그 지역 귀족(상급·하급)에게 인원대로 준다
+  for (const f of w.buildings.filter((x) => x.typeId === 'finance')) {
+    const nobles = w.pops.filter((p) => p.regionId === f.regionId && (p.prof === 'aristocrat' || p.prof === 'gentry') && p.size > 0);
+    const n = nobles.reduce((a, p) => a + p.size, 0);
+    f.nav = 1;
+    if (n > 0) for (const p of nobles) (p.fund ??= {})[f.id] = ((f.cash ?? 0) * p.size) / n;
   }
   aggregateHouseholds(w);
   // 저장값은 소수 둘째 자리까지 (round.ts): 시작 저축의 센트 아래는 주인 없는 돈으로

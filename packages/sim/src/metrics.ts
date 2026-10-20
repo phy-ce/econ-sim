@@ -1,3 +1,4 @@
+import { ownershipAssets } from './policy';
 import { BUILDING_BY_ID, GOOD_IDS, GOODS } from './data';
 import { CLASS_DEFS, WORKFORCE_RATIO } from './data';
 import { builderOf, companyById, constructionEstimate, harvestCondition, isGovernment, kingdomGdp, slots } from './economy';
@@ -47,6 +48,11 @@ export interface KingdomMetrics {
   pool: number;
   manorCash: number;
   financeCash: number;
+  /** 저택·금융가 자산 (주간 산출 가치, policy.ts ownershipAssets) 과 세법·투자법 */
+  assetsManor: number;
+  assetsFinance: number;
+  taxLaw: string;
+  investLaw: string;
   savings: number;
   /** 건설: 사무소 레벨, 하루 포인트, 대기 포인트, 대기 일수, 공사 수 */
   officeLevels: number;
@@ -122,7 +128,9 @@ const byClass = (f: (s: PopClass) => number) => Object.fromEntries(POP_CLASSES.m
 export function recordMetrics(w: World) {
   if (w.tick % METRICS_EVERY !== 0) return;
   const kingdoms: Record<number, KingdomMetrics> = {};
+  const owned = ownershipAssets(w);
   for (const k of w.kingdoms) {
+    const assets = owned.kingdoms.find((x) => x.kingdomId === k.id);
     const gov = companyById(w, k.governmentId);
     const pops = w.pops.filter((p) => kingdomOf(w, p.regionId) === k.id);
     const n = byClass(() => 0), wealth = byClass(() => 0), sol = byClass(() => 0), food = byClass(() => 0), growth = byClass(() => 0);
@@ -192,7 +200,8 @@ export function recordMetrics(w: World) {
       gdp: r0(kingdomGdp(w, k.id)), revenueWeek: r0(k.lastBudget?.revenue ?? 0), feesWeek: r0(k.lastBudget?.fees ?? 0),
       govSpendWeek: r0((k.lastBudget?.wages ?? 0) + (k.lastBudget?.goods ?? 0)), research: r0(k.lastBudget?.research ?? 0), interest: r0(k.lastBudget?.interest ?? 0),
       taxRatio: k.taxRatio ?? 0, policy: { ...k.budget }, wageIndex: k.wageIndex ?? 0,
-      treasury: r0(gov?.cash ?? 0), debt: r0(gov?.debt ?? 0), privateCash: r0(firms.reduce((a, c) => a + c!.cash, 0)), pool: r0(manorCash + financeCash), manorCash: r0(manorCash), financeCash: r0(financeCash), savings: r0(savings),
+      treasury: r0(gov?.cash ?? 0), debt: r0(gov?.debt ?? 0), privateCash: r0(firms.reduce((a, c) => a + c!.cash, 0)), pool: r0(manorCash + financeCash), manorCash: r0(manorCash), financeCash: r0(financeCash),
+      assetsManor: assets?.manor ?? 0, assetsFinance: assets?.finance ?? 0, taxLaw: k.taxLaw, investLaw: k.investLaw, savings: r0(savings),
       officeLevels: w.buildings.filter((b) => b.companyId === builder?.id && b.typeId === 'builder').reduce((a, b) => a + b.level, 0),
       pointsPerDay: round2(est?.pointsPerDay ?? 0), queuePoints: r0(queuePoints),
       backlogDays: est && est.pointsPerDay > 0 ? r0(queuePoints / est.pointsPerDay) : 0, projects: queue.length,
