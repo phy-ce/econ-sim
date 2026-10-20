@@ -81,8 +81,12 @@ export function updateIdleOffices(w: World) {
   }
 }
 
+/** 오늘 건축사무소 비용 중 임금 (회사 id 별, 저장하지 않는다. 예산 미리보기용 수수료 나누기) */
+const buildWage = new Map<number, number>();
+
 export function produce(w: World) {
   for (const c of w.companies) { c.buildPoints = 0; c.buildCost = 0; }
+  buildWage.clear();
   for (const b of w.buildings) {
     if (!b.active || BUILDING_BY_ID[b.typeId].auto) continue;
     const c = companyById(w, b.companyId);
@@ -119,6 +123,7 @@ export function produce(w: World) {
         b.last.points = round2(method.construction * scale);
         c.buildPoints += b.last.points;
         c.buildCost += b.last.wageCost + b.last.inputCost;
+        buildWage.set(c.id, (buildWage.get(c.id) ?? 0) + b.last.wageCost);
       }
       b.exp100 = Math.min(100, b.exp100 + EXP_GAIN);
     } else {
@@ -154,6 +159,10 @@ function allocateConstruction(w: World) {
       continue;
     }
     const costPerPoint = c.buildCost / c.buildPoints;
+    // 수수료의 임금 몫 → 왕국 기록 (국영 임금 수준 배율 1로 환산, 예산 미리보기 전용)
+    const kd = c.state ? kingdomById(w, c.kingdomId) : undefined;
+    const wm = kd ? TUNE.govWageLevels[kd.budget.wages - 1] : 0;
+    const wageShare = c.buildCost > 0 && wm > 0 ? (buildWage.get(c.id) ?? 0) / c.buildCost / wm : 0;
     const mine = w.constructions.filter((k) => { const o = companyById(w, k.companyId); return !!o && builderOf(w, o) === c; });
     const taken = new Map<number, number>();
     const serve = (list: typeof mine, budget: number) => {
@@ -170,6 +179,7 @@ function allocateConstruction(w: World) {
           const fee = round2(take * costPerPoint);
           owner.cash -= fee; owner.ledger.buildPaid += fee;
           c.cash += fee; c.ledger.buildFees += fee; c.weekProfit += fee;
+          if (kd) kd.feeWageWeek = (kd.feeWageWeek ?? 0) + fee * wageShare;
         }
         k.points = round2(k.points + take);
         k.spent = round2(k.spent + take * costPerPoint);

@@ -6,8 +6,8 @@ import { clamp } from './rng';
 import { POP_CLASSES, SKILLS, WEALTH_MIN, wealthOf } from './types';
 import type { Building, Company, MethodDef, Pop, PopClass, Region, Skill, World } from './types';
 
-// 노동시장 (빅토리아3 방식): 직종 이동은 따로 정한 비율이 아니라 건물의 채용으로만 일어난다.
-// 빈자리가 있는 건물은 같은 직종 실업자 → 임금이 더 낮은 곳에서 일하는 같은 직종 → 그 직종 자격을 가진 다른 직종 순으로 뽑는다.
+// 노동시장: 사람은 자격이 되는 자리 중 1인당 소득이 가장 높은 곳으로 옮긴다 (조금 나은 정도로는 안 옮긴다).
+// 소득은 임금 자리는 회사 임금, 소유 자리(저택·금융가)는 한 사람이 받는 배당 추정, 소작지는 소작 소득이다.
 
 /** 하루 채용 상한: 자리의 이 비율 (최소 3명) */
 export const HIRE_RATE = 0.01;
@@ -94,6 +94,14 @@ export function subsistenceWage(w: World, r: Region): number {
   return tenantIncomePerWorker(w, r, pop ? wealthOf(pop) : WEALTH_MIN);
 }
 
+/**
+ * 소유 건물(저택·금융가)에서 직종 s 한 사람이 받는 하루 배당·지대 추정: 받은 배당의 이동평균 × 1명 몫 ÷ 앉은 사람의 몫 합
+ * (붐비는 자리일수록 낮다. 저택은 귀족 1몫·하급 귀족 TUNE.gentryShare 몫, economy.ts shareWage)
+ */
+export function dividendWage(b: Building, s: Skill): number {
+  return shareWage(b, s);
+}
+
 /** 지역 건물의 자리 (건물 순서, 건물 안에서는 SKILLS 순서). 소작지 임금은 지역마다 한 번만 센다 (그 사이 바뀌는 것이 없다) */
 function seatsIn(w: World, r: Region, local: Building[], comp: Map<number, Company>): Seat[] {
   const out: Seat[] = [];
@@ -109,19 +117,43 @@ function seatsIn(w: World, r: Region, local: Building[], comp: Map<number, Compa
     const c = comp.get(b.companyId);
     for (const s of SKILLS) {
       const n = slotsWith(b, m, s);
-      if (n > 0) out.push({ b, prof: s, slots: n, wage: paysShare(b, s) ? shareWage(b, s) : c?.wages[s] ?? 0, m });
+      if (n > 0) out.push({ b, prof: s, slots: n, wage: paysShare(b, s) ? dividendWage(b, s) : c?.wages[s] ?? 0, m });
     }
   }
   return out;
 }
 
-/** 하루 노동시장: 해고 → 채용 → 건물 고용 합계 갱신 */
+/** 노동자·소작농 자리는 귀족·자본가 말고 누구나 들어갈 수 있다 */
+const OPEN: PopClass[] = ['unskilled', 'peasant'];
+const isOwnerClass = (c: PopClass) => c === 'capitalist' || c === 'aristocrat';
+
+/**
+ * 일하는 사람이 지금 소득 cur 에서 소득 v 인 자리로 하루에 옮기는 비율: 소득이 switchPremium 배 넘게 나을 때만 옮기고,
+ * switchPremium 배에서 switchRate, 배율 차이에 비례해 늘어 switchMax 에서 멈춘다 (지금 소득이 0 이면 switchMax)
+ */
+export function switchShare(cur: number, v: number): number {
+  const premium = TUNE.switchPremium;
+  if (!(v > cur * premium)) return 0;
+  if (!(cur > 0)) return TUNE.switchMax;
+  return Math.min(TUNE.switchMax, TUNE.switchRate * (v / cur - 1) / (premium - 1));
+}
+
+/** 후보 한 줄: pop 순번, 실업 여부, 지금 소득, 같은 직종이면 0, 남은 하루 몫 (처음 뽑힐 때 정한다, -1 = 아직), 몫의 바탕(노동 인구 또는 자격자) */
+interface Cand { i: number; emp: boolean; cur: number; own: number; left: number; base: number }
+
+/**
+ * 하루 노동시장: 해고 → 채용 → 건물 고용 합계 갱신.
+ * 채용 (지역마다): 자리를 1인당 소득이 높은 순으로 한 번 정렬하고, 직종마다 후보(그 직종 pop, 자격자, 노동자·소작농 자리는 귀족·자본가 말고 모두)를
+ * 실업자 먼저, 그다음 지금 소득이 낮은 순으로 한 번 정렬해 둔다. 좋은 자리부터 그 직종 후보 목록 앞에서 빈자리만큼 데려간다.
+ * 일하는 사람은 지금 소득 × switchPremium 보다 나은 자리만 가고, 하루에 switchShare 만큼만 옮긴다. 다 옮긴 후보는 목록 머리가 넘어가므로
+ * 지역마다 O(자리 log 자리 + pop × 직종 × log pop) 이다.
+ */
 export function laborMarket(w: World) {
   const byId = buildingMap(w);
   const comp = companyMap(w);
   const localOf = groupBuildings(w, (b) => b.regionId);
   const regionPops = new RegionPops(w);
-  const premium = TUNE.switchPremium, rate = TUNE.switchRate;
+  const premium = TUNE.switchPremium;
   for (const r of w.regions) {
     const seats = seatsIn(w, r, localOf.get(r.id) ?? NO_BUILDINGS, comp);
     const seatOf = new Map<number, Seat>();
@@ -152,54 +184,67 @@ export function laborMarket(w: World) {
       if (fire > 0) movePeople(w, p, getPop(w, r.id, p.prof, 0), workforce(p) * fire);
     }
 
-    // 2) 채용: 임금이 높은 자리부터. 각 pop 의 지금 자리(from)는 pop 의 일터·직종이 바뀌지 않으므로 한 번만 찾는다
-    const from: (Seat | undefined)[] = [];
+    // 2) 채용. 후보는 지금 있는 pop 만 (채용으로 새로 생기는 pop 은 그 자리보다 나은 자리가 남아 있지 않으므로 오늘 다시 옮기지 않는다)
+    regionPops.catchUp();
+    const n = all.length;
     seats.sort((a, b) => b.wage - a.wage || a.b.id - b.b.id);
+    const lists = new Map<PopClass, Cand[]>();
+    const heads = new Map<PopClass, number>();
+    let curOf: Float64Array | null = null;
+    /** 직종 t 의 후보 목록 (처음 필요할 때 만든다) */
+    const listOf = (t: PopClass): Cand[] => {
+      let list = lists.get(t);
+      if (list) return list;
+      if (!curOf) {
+        curOf = new Float64Array(n);
+        for (let i = 0; i < n; i++) { const p = all[i]; curOf[i] = p.work === 0 ? 0 : seatOf.get(seatKey(p.work, p.prof))?.wage ?? 0; }
+      }
+      list = [];
+      const open = OPEN.includes(t);
+      for (let i = 0; i < n; i++) {
+        const p = all[i];
+        if (p.size <= 0) continue;
+        let base: number;
+        if (p.prof === t) base = workforce(p);
+        else if (open) { if (isOwnerClass(p.prof)) continue; base = workforce(p); }
+        else base = p.quals[t] ?? 0;
+        if (base <= 1e-6) continue;
+        list.push({ i, emp: p.work !== 0, cur: curOf[i], own: p.prof === t ? 0 : 1, left: -1, base });
+      }
+      list.sort((a, b) => (+a.emp - +b.emp) || a.cur - b.cur || a.own - b.own || a.i - b.i);
+      lists.set(t, list);
+      heads.set(t, 0);
+      return list;
+    };
     for (const seat of seats) {
       const { b, prof } = seat;
       const cap = prof === 'peasant' ? seat.slots : fillableWith(b, seat.m, prof as Skill, seat.slots);
       const cur = findPop(w, r.id, prof, b.id);
       let room = Math.min(cap - (cur ? workforce(cur) : 0), Math.max(3, seat.slots * HIRE_RATE));
       if (room <= 0.01) continue;
+      const list = listOf(prof);
+      let h = heads.get(prof)!;
+      if (h >= list.length) continue;
+      const wage = seat.wage;
       // dest 는 이 자리의 pop 이다 (findPop(w, r.id, prof, b.id) 도 늘 dest)
       const dest = getPop(w, r.id, prof, b.id);
-      regionPops.catchUp();
-      const n = all.length;
-      for (let i = from.length; i < n; i++) from.push(seatOf.get(seatKey(all[i].work, all[i].prof)));
-      const wage = seat.wage;
-      // 지금보다 소득이나 생활수준이 TUNE.switchPremium 배 넘게 나은 자리로 옮긴다 (같은 직종, 아래 직종도 마찬가지)
-      const better = (i: number, p: Pop) => {
-        const f = from[i];
-        if (!f) return false;
-        if (f.wage * premium < wage) return true;
-        return dest.size > 0 && dest.sol > p.sol * premium;
-      };
-      // 같은 직종 실업자
-      for (let i = 0; i < n; i++) {
-        if (room <= 0.01) break;
-        const p = all[i];
-        if (p.prof === prof && p.work === 0 && p !== dest) room -= movePeople(w, p, dest, Math.min(workforce(p), room));
+      const qualified = OPEN.includes(prof) ? undefined : prof;
+      for (let j = h; j < list.length && room > 0.01; j++) {
+        const c = list[j];
+        // 일하는 후보는 지금 소득이 낮은 순이므로, 이 자리가 충분히 낫지 않은 첫 후보에서 멈춘다
+        if (c.emp && !(wage > c.cur * premium)) break;
+        const p = all[c.i];
+        if (p === dest) continue;
+        // 하루 몫은 처음 뽑힐 때 (가장 좋은 자리에서) 정한다: 실업자는 전부, 일하는 사람은 switchShare
+        if (c.left < 0) c.left = c.emp ? c.base * switchShare(c.cur, wage) : c.base;
+        const want = Math.min(c.left, room);
+        if (want <= 1e-9) continue;
+        const moved = movePeople(w, p, dest, want, c.own ? qualified : undefined);
+        room -= moved;
+        c.left = moved < want - 1e-9 ? 0 : c.left - moved;
       }
-      // 같은 직종, 다른 일터
-      for (let i = 0; i < n; i++) {
-        if (room <= 0.01) break;
-        const p = all[i];
-        if (p.prof !== prof || p.work === 0 || p === dest) continue;
-        if (better(i, p)) room -= movePeople(w, p, dest, Math.min(workforce(p) * rate, room));
-      }
-      // 다른 직종: 노동자와 소작농 자리는 누구나, 그 위 직종은 자격자만
-      const open = prof === 'unskilled' || prof === 'peasant';
-      const qualified = open ? undefined : prof;
-      for (let i = 0; i < n; i++) {
-        if (room <= 0.01) break;
-        const p = all[i];
-        if (p.prof === prof || p === dest || p.size <= 0) continue;
-        if (p.prof === 'capitalist' || p.prof === 'aristocrat') { if (open) continue; }
-        const q = open ? workforce(p) : (p.quals[prof] ?? 0);
-        if (q <= 1e-6) continue;
-        if (p.work === 0) { room -= movePeople(w, p, dest, Math.min(q, room), qualified); continue; }
-        if (better(i, p)) room -= movePeople(w, p, dest, Math.min(q * rate, room), qualified);
-      }
+      while (h < list.length && list[h].left >= 0 && list[h].left <= 1e-9) h++;
+      heads.set(prof, h);
     }
   }
   syncEmployment(w);
@@ -343,7 +388,7 @@ export function migrate(w: World) {
       const m = methodOf(b);
       const jobs = slotsWith(b, m, s);
       const n = fillableWith(b, m, s, jobs) - b.employed[s];
-      if (n > 0) open.push({ wage: paysShare(b, s) ? shareWage(b, s) : comp.get(b.companyId)?.wages[s] ?? 0, n });
+      if (n > 0) open.push({ wage: paysShare(b, s) ? dividendWage(b, s) : comp.get(b.companyId)?.wages[s] ?? 0, n });
     }
     regionPops.catchUp();
     let food = 0, size = 0, seekers = 0;
@@ -377,7 +422,7 @@ export function migrate(w: World) {
     if (!b) return 0;
     if (isSubsistence(b.typeId)) return subsistence(r);
     const s = p.prof as Skill;
-    return paysShare(b, s) ? shareWage(b, s) : comp.get(b.companyId)?.wages[s] ?? 0;
+    return paysShare(b, s) ? dividendWage(b, s) : comp.get(b.companyId)?.wages[s] ?? 0;
   };
 
   const foodOf = new Map<number, number>();

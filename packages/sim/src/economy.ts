@@ -314,13 +314,11 @@ export function shareWeight(s: PopClass): number {
   return s === 'gentry' ? TUNE.gentryShare : 1;
 }
 
-/** 소유 건물의 직종 s 자리 하나가 기대하는 하루 몫 (채용·이주 판단용): 이익 이동평균 × 1명 몫 / 자리 전체 몫 */
+/** 소유 건물에서 직종 s 한 사람이 받는 하루 몫 추정: 이익 이동평균 × 1명 몫 ÷ 앉은 사람의 몫 합 (s 는 적어도 1명으로 센다) */
 export function shareWage(b: Building, s: Skill): number {
-  const m = getMethod(b.typeId, b.methodId);
   let total = 0;
-  for (const k of SKILLS) total += (m.workers[k] ?? 0) * shareWeight(k);
-  total *= b.level * b.utilization;
-  return total > 0 && (m.workers[s] ?? 0) > 0 ? (Math.max(0, b.profitEma) * shareWeight(s)) / total : 0;
+  for (const k of SKILLS) total += shareWeight(k) * (k === s ? Math.max(1, b.employed[k]) : b.employed[k]);
+  return (Math.max(0, b.profitEma) * shareWeight(s)) / total;
 }
 
 export function emptyJobs(): Record<Skill, number> {
