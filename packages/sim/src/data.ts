@@ -220,7 +220,7 @@ export const BUILDING_TYPES: BuildingTypeDef[] = [
     id: 'workshop', name: '공방', nameEn: 'Tool workshop', land: 'plot', buildPoints: 1000,
     methods: [
       m({ id: 'tools_wood', name: '목공구', nameEn: 'Wooden tools', tech: 'guilds', workers: jobs(800, 200), inputs: { timber: 2000 }, outputs: { tools: 1900 } }),
-      m({ id: 'tools_iron', name: '쇠공구', nameEn: 'Iron tools', tech: 'ironworking', workers: jobs(700, 300), inputs: { timber: 1000, ore: 1000 }, outputs: { tools: 2500 } }),
+      m({ id: 'tools_iron', name: '쇠공구', nameEn: 'Iron tools', tech: 'ironworking', workers: jobs(700, 300), inputs: { timber: 1000, metal: 500 }, outputs: { tools: 2500 } }),
     ],
   },
   {
