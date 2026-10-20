@@ -1,6 +1,6 @@
 import { BUILDING_BY_ID, BUILDING_TYPES, EDUCATION_FLOOR, EDUCATION_RANGE, GOOD_IDS, GOODS, SKILL_DEFS, TECH_BY_ID, TICKS_PER_WEEK, TICKS_PER_YEAR, TUNE, getMethod, regionPerk } from './data';
 import { withEstimateCache, regionAvgWealth, regionPopulation, wageCostOf,
-  availableMethods, builderOf, canBuildType, paysDividend, companyById, constructionEstimate, creditLimit, depositFree, efficiency, estimateMethod, harvestFactor, hasBuilder, isGovernment, regionById, researchableTechs, roomFor, slots,
+  availableMethods, builderOf, canBuildType, paysDividend, paysShare, companyById, constructionEstimate, creditLimit, depositFree, efficiency, estimateMethod, harvestFactor, hasBuilder, isGovernment, regionById, researchableTechs, roomFor, slots,
 } from './economy';
 import { MAX_CONCURRENT_CONSTRUCTIONS, MAX_LEVELS_PER_PROJECT, applyCommand } from './commands';
 import { committedCost, lawRevenue, reserveOf } from './finance';
@@ -50,10 +50,13 @@ const ownRegions = (w: World, c: Company) => w.regions.filter((r) => r.kingdomId
 function labourPool(w: World, r: Region, s: Skill): number {
   let n = 0;
   const reach = Math.min(1, TUNE.switchRate * STAFFING_HORIZON);
+  // 소유 건물(저택·금융가) id: 저택의 하급 귀족도 몫 자리에서 임금 자리로 옮겨 올 사람이다
+  const seats = new Set<number>();
+  for (const b of w.buildings) if (b.regionId === r.id && BUILDING_BY_ID[b.typeId].ownership) seats.add(b.id);
   for (const p of w.pops) {
     if (p.regionId !== r.id) continue;
-    // 같은 직종: 실업자 전부. 귀족·자본가는 소유 자리에서 임금 자리로 옮겨 오는 사람도 센다 (국영 건물의 임금 자리)
-    if (p.prof === s) { n += p.work === 0 ? workforce(p) : s === 'capitalist' || s === 'aristocrat' ? workforce(p) * reach : 0; continue; }
+    // 같은 직종: 실업자 전부. 소유 건물에 앉은 사람(귀족·자본가·저택의 하급 귀족)은 몫 자리에서 임금 자리로 옮겨 오는 몫을 센다
+    if (p.prof === s) { n += p.work === 0 ? workforce(p) : s === 'capitalist' || s === 'aristocrat' || seats.has(p.work) ? workforce(p) * reach : 0; continue; }
     if (p.prof === 'capitalist' || p.prof === 'aristocrat') continue;
     const q = s === 'unskilled' ? workforce(p) : (p.quals[s] ?? 0);
     n += p.work === 0 ? q : q * reach;
@@ -69,7 +72,7 @@ function poachable(w: World, r: Region, s: Skill, c: Company): number {
   const reach = Math.min(1, TUNE.switchRate * STAFFING_HORIZON);
   let n = 0;
   for (const b of w.buildings) {
-    if (b.regionId !== r.id || b.companyId === c.id || paysDividend(b.stateOwned, s) || !(b.employed[s] > 0)) continue;
+    if (b.regionId !== r.id || b.companyId === c.id || paysShare(b, s) || !(b.employed[s] > 0)) continue;
     const o = companyById(w, b.companyId);
     if (o && o.wages[s] * TUNE.switchPremium < c.wages[s]) n += b.employed[s] * reach;
   }
@@ -82,7 +85,7 @@ function poachable(w: World, r: Region, s: Skill, c: Company): number {
  */
 function openJobs(w: World, r: Region, s: Skill): number {
   let n = 0;
-  for (const b of w.buildings) if (b.regionId === r.id && !paysDividend(b.stateOwned, s)) n += Math.max(0, slots(b, s) - b.employed[s]);
+  for (const b of w.buildings) if (b.regionId === r.id && !paysShare(b, s)) n += Math.max(0, slots(b, s) - b.employed[s]);
   for (const k of w.constructions) {
     if (k.regionId !== r.id) continue;
     const owner = companyById(w, k.companyId);
@@ -128,7 +131,7 @@ function officeStaffable(w: World, c: Company, r: Region, m: MethodDef, byId: Ma
     for (const p of w.pops) {
       if (p.regionId !== r.id || p.prof !== s || p.work === 0) continue;
       const b = byId.get(p.work);
-      const o = b && !paysDividend(b.stateOwned, s) ? companyById(w, b.companyId) : undefined;
+      const o = b && !paysShare(b, s) ? companyById(w, b.companyId) : undefined;
       if (o && o.wages[s] * TUNE.switchPremium < c.wages[s]) n += workforce(p) * reach;
     }
     for (const b of w.buildings) {
@@ -385,7 +388,7 @@ function schoolNeed(w: World): SchoolNeed {
     const k = kingdomOf.get(b.regionId);
     if (k == null) continue;
     for (const s of LETTERED) {
-      if (paysDividend(b.stateOwned, s)) continue;
+      if (paysShare(b, s)) continue;
       const n = slots(b, s);
       if (!(n > 0)) continue;
       total.set(k, (total.get(k) ?? 0) + n);

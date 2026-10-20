@@ -1,5 +1,5 @@
 import { BUILDING_BY_ID, SKILL_DEFS, TECH_BY_ID, TICKS_PER_WEEK, TUNE, getMethod } from './data';
-import { collectionRatio, companyById, regionById, constructionEstimate, efficiency, kingdomGdp, logEvent, ownerBuildingOf, paysDividend, repay, sellThrough } from './economy';
+import { collectionRatio, companyById, regionById, constructionEstimate, efficiency, kingdomGdp, logEvent, ownerBuildingOf, paysDividend, repay, sellThrough, shareWeight } from './economy';
 import { techNameEn } from './i18n';
 import { addToPool, kingdomById, kingdomOf } from './kingdoms';
 import { tenantSaleBag } from './market';
@@ -245,8 +245,8 @@ export function collectIncomeTax(w: World) {
 
 // ---------------------------------------------------------------- 주간: 세금, 배당, 투자 풀
 
-/** 소유 직종이 배당에서 투자 풀로 넣는 비율 (빅토리아3 기본률) */
-const INVEST_SHARE: Record<'capitalist' | 'aristocrat', number> = { capitalist: 0.3, aristocrat: 0.2 };
+/** 소유 건물에서 받은 몫 중 투자 풀로 넣는 비율 (빅토리아3 기본률: 금융가 30%, 저택 20%) */
+const INVEST_SHARE: Partial<Record<PopClass, number>> = { capitalist: 0.3, aristocrat: 0.2, gentry: 0.2 };
 
 export function weeklyWageBill(w: World, c: Company): number {
   let bill = 0;
@@ -274,14 +274,14 @@ export function committedCost(w: World, c: Company): number {
 /** 건물 이익 중 회사가 준비금으로 남기는 몫 (빅토리아3: 25~50%) */
 export const RESERVE_SHARE = 0.35;
 
-/** 소유 직종에게 배당을 준다: 받은 몫의 일부는 그 왕국 투자 풀로 */
+/** 소유 건물에 앉은 pop 에게 배당·지대를 몫(shareWeight × 인원)대로 나눠 준다: 받은 몫의 일부는 그 왕국 투자 풀로 */
 function payOwners(w: World, kingdomId: number, regionId: number, pops: Pop[], amount: number) {
   let total = 0;
-  for (const p of pops) total += p.size;
+  for (const p of pops) total += p.size * shareWeight(p.prof);
   if (total <= 0) { addToPool(w, kingdomId, regionId, amount); return; }
   for (const p of pops) {
-    const amt = (amount * p.size) / total;
-    const invest = amt * INVEST_SHARE[p.prof as 'capitalist' | 'aristocrat'];
+    const amt = (amount * p.size * shareWeight(p.prof)) / total;
+    const invest = amt * (INVEST_SHARE[p.prof] ?? 0);
     addToPool(w, kingdomId, p.regionId, invest);
     payPops(w, [p], amt - invest);
   }

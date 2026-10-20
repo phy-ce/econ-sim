@@ -1,5 +1,6 @@
 import { BUILDING_BY_ID, GOOD_IDS, MAX_POINTS_PER_LEVEL_DAY, OWNER_SEATS_PER_LEVEL, OWNERSHIP_SEATS, TUNE, getMethod } from './data';
 import { builderOf, companyById, efficiency, harvestFactor, isGovernment, landFree, logEvent, newBuilding, ownerBuildingOf, regionById } from './economy';
+import { SKILLS } from './types';
 import { workforce } from './pops';
 import { kingdomById } from './kingdoms';
 import { buildingNameEn, regionNameEn } from './i18n';
@@ -32,8 +33,9 @@ export function updateSubsistence(w: World) {
 }
 
 /**
- * 소유 건물(저택·금융가): 지역마다 하나씩, 그 지역 민간 소유. 크기는 지역의 그 직종 노동 인구와
- * 소유한 건물 레벨 × OWNER_SEATS_PER_LEVEL 중 큰 쪽이 다 앉을 만큼이다.
+ * 소유 건물(저택·금융가): 지역마다 하나씩, 그 지역 민간 소유. 크기는 소유한 건물 레벨 × OWNER_SEATS_PER_LEVEL 과,
+ * 자리가 있는 직종마다 다른 건물에서 일하지 않는 그 지역 노동 인구(실업자 + 여기 앉은 사람)가 다 앉을 만큼 중 가장 큰 쪽이다
+ * (저택: 귀족과, 다른 일자리가 없는 하급 귀족).
  * 하루 받은 배당·지대(last.revenue)는 이동평균(profitEma)으로 남긴다 (자리 값).
  */
 export function updateOwnership(w: World) {
@@ -45,18 +47,23 @@ export function updateOwnership(w: World) {
   for (const r of w.regions) {
     const owner = kingdomById(w, r.kingdomId).privateIds[0];
     for (const typeId of ['manor', 'finance']) {
-      const cls = BUILDING_BY_ID[typeId].ownership!;
-      let wf = 0;
-      for (const p of w.pops) if (p.regionId === r.id && p.prof === cls) wf += workforce(p);
-      const seats = Math.max(wf, (owned.get(`${r.id}|${typeId}`) ?? 0) * OWNER_SEATS_PER_LEVEL);
       let b = w.buildings.find((x) => x.regionId === r.id && x.typeId === typeId);
       if (!b) {
         b = newBuilding(w.nextId++, typeId, r.id, owner, typeId, 0, false);
         b.exp100 = 100; b.crew100 = 100;
         w.buildings.push(b);
       }
+      const workers = getMethod(typeId, typeId).workers;
+      let levels = ((owned.get(`${r.id}|${typeId}`) ?? 0) * OWNER_SEATS_PER_LEVEL) / OWNERSHIP_SEATS;
+      for (const s of SKILLS) {
+        const per = workers[s] ?? 0;
+        if (!(per > 0)) continue;
+        let wf = 0;
+        for (const p of w.pops) if (p.regionId === r.id && p.prof === s && (p.work === 0 || p.work === b.id)) wf += workforce(p);
+        levels = Math.max(levels, wf / per);
+      }
       b.companyId = owner; b.stateOwned = false;
-      b.level = Math.max(1, Math.ceil(seats / OWNERSHIP_SEATS));
+      b.level = Math.max(1, Math.ceil(levels));
       b.profitEma = b.profitEma * 0.95 + b.last.revenue * 0.05;
       b.last.revenue = 0;
     }

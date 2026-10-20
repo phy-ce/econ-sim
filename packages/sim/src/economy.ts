@@ -290,6 +290,25 @@ export function paysDividend(stateOwned: boolean | undefined, s: Skill): boolean
   return !stateOwned && (OWNERS as Skill[]).includes(s);
 }
 
+/** 건물 b 의 직종 s 자리는 임금 대신 몫(배당·지대)을 받는가: 소유 건물(저택·금융가)의 모든 자리 + paysDividend */
+export function paysShare(b: Building, s: Skill): boolean {
+  return !!BUILDING_BY_ID[b.typeId].ownership || paysDividend(b.stateOwned, s);
+}
+
+/** 소유 건물에서 직종 1명이 받는 몫: 소유 직종 1, 하급 귀족 TUNE.gentryShare */
+export function shareWeight(s: PopClass): number {
+  return s === 'gentry' ? TUNE.gentryShare : 1;
+}
+
+/** 소유 건물의 직종 s 자리 하나가 기대하는 하루 몫 (채용·이주 판단용): 이익 이동평균 × 1명 몫 / 자리 전체 몫 */
+export function shareWage(b: Building, s: Skill): number {
+  const m = getMethod(b.typeId, b.methodId);
+  let total = 0;
+  for (const k of SKILLS) total += (m.workers[k] ?? 0) * shareWeight(k);
+  total *= b.level * b.utilization;
+  return total > 0 && (m.workers[s] ?? 0) > 0 ? (Math.max(0, b.profitEma) * shareWeight(s)) / total : 0;
+}
+
 export function emptyJobs(): Record<Skill, number> {
   return { unskilled: 0, skilled: 0, expert: 0, gentry: 0, capitalist: 0, aristocrat: 0 };
 }
