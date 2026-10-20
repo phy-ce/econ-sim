@@ -441,7 +441,7 @@ export const ENCYCLOPEDIA: EncEntry[] = [
     example: () => {
       const m = methodMarginAtBase('farm', 'farm_basic');
       return {
-        inputs: [row('곡물 농장 · 곡물 재배', 'Grain farm · grain farming', '800 농부 + 200 기술자 → 곡물 ' + getMethod('farm', 'farm_basic').outputs.grain)],
+        inputs: [row('곡물 농장 · 곡물 재배', 'Grain farm · grain farming', getMethod('farm', 'farm_basic').workers.farmer + ' 농부 → 곡물 ' + getMethod('farm', 'farm_basic').outputs.grain)],
         steps: [row('매출', 'Revenue', m.revenue, 'florin'), row('임금', 'Wages', m.wage, 'florin'), row('원료', 'Inputs', m.input, 'florin')],
         result: [row('이익률', 'Margin', r4(m.margin), 'pct')],
       };
