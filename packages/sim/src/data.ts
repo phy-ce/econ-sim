@@ -270,11 +270,13 @@ export const BUILDING_TYPES: BuildingTypeDef[] = [
     ],
   },
   {
-    // 세금은 행정청이 감당하는 인구만큼만 걷힌다 (1레벨 50만 명, 전문 관료제는 3배)
+    // 세금은 행정청이 감당하는 인구만큼만 걷힌다 (1레벨 50만 명, 전문 관료제는 3배).
+    // 1레벨 임금(기본): 세습 하급 귀족 50 × 30 = 1,500, 전문 기술자 100 × 15 = 1,500 + 종이 200 × 4 = 800 (한도당 비용은 전문이 약 절반).
+    // 종이 200은 종이 공장 1레벨(5,000)을 몇 레벨이 나눠 쓰는 크기라 줄이지 않는다 (줄이면 종이 공급이 끊겨 방식이 오간다, 2026-10-21 비교)
     id: 'admin', name: '행정청', nameEn: 'Government administration', buildPoints: 400, stateOnly: true,
     methods: [
-      m({ id: 'admin_hereditary', name: '세습 관료제', nameEn: 'Hereditary bureaucrats', workers: { skilled: 400, gentry: 100 }, inputs: {}, outputs: {}, taxCapacity: TAX_PEOPLE_PER_LEVEL }),
-      m({ id: 'admin_professional', name: '전문 관료제', nameEn: 'Professional bureaucrats', tech: 'printing', workers: { skilled: 500 }, inputs: { paper: 200 }, outputs: {}, taxCapacity: TAX_PEOPLE_PER_LEVEL * 3 }),
+      m({ id: 'admin_hereditary', name: '세습 관료제', nameEn: 'Hereditary bureaucrats', workers: { gentry: 50 }, inputs: {}, outputs: {}, taxCapacity: TAX_PEOPLE_PER_LEVEL }),
+      m({ id: 'admin_professional', name: '전문 관료제', nameEn: 'Professional bureaucrats', tech: 'printing', workers: { skilled: 100 }, inputs: { paper: 200 }, outputs: {}, taxCapacity: TAX_PEOPLE_PER_LEVEL * 3 }),
     ],
   },
 ];
@@ -348,6 +350,7 @@ export function scaleBonus(level: number): number {
  * - schoolTaxMax: AI 왕실은 세금 수준이 이 단계 이하일 때만 새 학교를 짓는다 (운영비를 낼 세금 칸을 남긴다)
  * - govWageLevels: 국영 임금 수준 1~5단계의 배율. 국영 임금 = 기본 임금 × 왕국 임금 지수 × 이 배율
  * - researchShare, researchLevels: 주간 연구비 = 주간 경제 규모 × researchShare × 연구비 수준 배율
+ * - doneWageMax: 기술을 다 연 AI 왕국이 풂 조건에서 국영 임금을 올리는 상한 단계 (임금 지수 1 이하일 때만)
  * - treasuryLowWeeks, treasuryHighWeeks: AI 왕실은 국고가 주간 국정 지출의 low 주치보다 적으면 조이고 high 주치를 넘으면 푼다.
  *   왕실 공사(사무소 증설 포함)도 high 주치를 넘는 돈으로만 한다. high 39·52·78·104 비교 (세율 ×2, 20년 × 시드 1~4): 52는 78보다
  *   건물 레벨이 약 20~30% 많고 소작농 비율이 낮다. 39는 10년차 실업 13%, 20년 인구가 가장 적다. 104는 건물이 가장 적다
@@ -424,6 +427,8 @@ export const TUNE = {
   researchLevels: [0.5, 0.75, 1, 1.5, 2],
   treasuryLowWeeks: 26,
   treasuryHighWeeks: 52, // 1년치
+  // 기술을 다 연 AI 왕국의 국영 임금 상한 단계. 3(끔)·4·5 비교 (20년 × 시드 1·2): 4가 20년차 총생산 2190→2761, 지역 격차 1.87→1.34, 기술자 생활수준 5.45→5.88. 5는 격차가 다시 커진다
+  doneWageMax: 4,
   startTreasuryWeeks: 26,
   shrinkWeeks: 26,
   reserveWeeks: 0.5,

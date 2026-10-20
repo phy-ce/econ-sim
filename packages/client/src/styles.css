@@ -460,10 +460,10 @@ table.goods tr.selected td:last-child { border-right: 2px solid var(--ink); }
 .ev.link:hover .ev-text { text-decoration: underline; text-decoration-color: var(--rule); }
 .ev.fresh time { color: var(--accent); font-weight: 700; }
 
-.toasts { position: fixed; bottom: 16px; right: 16px; display: grid; gap: 10px; z-index: 50; max-width: min(420px, calc(100vw - 32px)); }
-.toast { background: var(--ink); color: var(--sheet); padding: 10px 14px; border: 2px solid var(--ink); border-radius: 4px; font-size: 14px; box-shadow: 4px 4px 0 var(--gold); }
-.toast.error, .toast.danger { box-shadow: 4px 4px 0 var(--bad); }
-.toast.danger { font-weight: 700; }
+.toasts { position: fixed; bottom: 48px; right: 12px; display: grid; gap: 6px; z-index: 50; max-width: min(320px, calc(100vw - 24px)); }
+.toast { background: var(--ink); color: var(--sheet); padding: 5px 9px; border: 1px solid var(--ink); border-radius: 3px; font-size: 12px; line-height: 1.35; box-shadow: 2px 2px 0 var(--gold); }
+.toast.error, .toast.danger { box-shadow: 2px 2px 0 var(--bad); }
+.toast.danger { font-weight: 600; }
 .toast[role="button"] { cursor: pointer; }
 .warn-ink { color: var(--gold); }
 

@@ -1,7 +1,7 @@
 // 조정값 비교: npx tsx cli/sweep.ts '<TUNE JSON>' [seed] [years]  (JSON 의 "subsistence" 는 SUBSISTENCE 를 바꾼다)
 // 주요 지표(w.metrics)에서 5년마다(와 마지막 해) 대륙 합계를 뽑아 한 줄 JSON으로 출력한다.
 // TIMING=1 이면 time: { ms 시뮬레이션 시간, msPerDay 하루 평균 } 을 덧붙인다 (sweepsum.py 가 따로 요약한다)
-import { BUILDING_BY_ID, GOODS, SKILL_DEFS, SUBSISTENCE, TUNE } from '../src/data';
+import { BUILDING_BY_ID, GOODS, SKILL_DEFS, SUBSISTENCE, TECH_COST, TECHS, TUNE } from '../src/data';
 import { isGovernment, paysDividend, slots } from '../src/economy';
 import { committedCost } from '../src/finance';
 import { createWorld, literacyOf, step } from '../src/index';
@@ -56,7 +56,9 @@ const over = JSON.parse(process.argv[2] ?? '{}');
 const seed = Number(process.argv[3] ?? 1), years = Number(process.argv[4] ?? 10);
 // "subsistence": { grainPerWorker 등 } 은 소작지 1인당 산출(SUBSISTENCE)을 바꾼다
 // "world": 상품 가격·임금·일자리·원료 배율 (cli/worldtune.ts)
-const { subsistence, world, ...tune } = over;
+const { subsistence, world, tech4, ...tune } = over;
+// "tech4": 4단계 기술 연구비
+if (tech4) for (const t of TECHS) if (t.cost === TECH_COST[4]) t.cost = tech4;
 Object.assign(TUNE, tune);
 if (subsistence) Object.assign(SUBSISTENCE, subsistence);
 applyWorld(world);
@@ -81,6 +83,7 @@ const yearly: Record<number, Record<string, number>> = {};
 // 계층 소득 (해마다 마지막 날): incAri·incGen·incSk·incUnsk 상급 귀족·하급 귀족·기술자·노동자 1인당 하루 현금 소득(incomeEma),
 // ariSk 상급 귀족 ÷ 기술자, ariK 상급 귀족 인구(천), genK 하급 귀족 인구(천)
 const classInc: Record<number, Record<string, number>> = {};
+const ironY: Record<number, Record<string, number>> = {};
 function classIncome(w: World) {
   const n: Record<string, number> = {}, inc: Record<string, number> = {};
   for (const p of w.pops) { n[p.prof] = (n[p.prof] ?? 0) + p.size; inc[p.prof] = (inc[p.prof] ?? 0) + p.incomeEma; }
@@ -96,6 +99,34 @@ function classIncome(w: World) {
   }
   return { manOwn, cells, ariSeat: Math.round(ariSeat / 1e3), incAri: f2(per('aristocrat')), incGen: f2(per('gentry')), incSk: f2(per('skilled')), incUnsk: f2(per('unskilled')),
     ariSk: f2(per('skilled') > 0 ? per('aristocrat') / per('skilled') : 0), ariK: Math.round((n.aristocrat ?? 0) / 1e3), genK: Math.round((n.gentry ?? 0) / 1e3) };
+}
+// 행정청·하급 귀족 (해마다 마지막 날): admHer·admPro 세습·전문 관료제 레벨, admFill 행정청 충원율(자리 가중),
+// admWage 행정청 하루 임금(천), admSk·admGen 행정청 기술자·하급 귀족 고용(천), wIdx 국영 임금 지수 평균, wStep 국영 임금 배율 평균,
+// genK 하급 귀족 노동 인구(천), solGen 생활수준, gAdmSh·gManSh·gTutSh·gIdleSh 행정청·저택·가정교사·실업 비율
+const admY: Record<number, Record<string, number>> = {};
+function adminSnap(w: World) {
+  let her = 0, pro = 0, need = 0, have = 0, wage = 0, sk = 0, gen = 0;
+  const gov = new Map(w.companies.filter((c) => c.state).map((c) => [c.id, c] as const));
+  for (const b of w.buildings) {
+    if (b.typeId !== 'admin') continue;
+    if (b.methodId === 'admin_hereditary') her += b.level; else pro += b.level;
+    const c = gov.get(b.companyId);
+    for (const s of SKILLS) { const n = slots(b, s); need += n; have += Math.min(n, b.employed[s]); wage += b.employed[s] * (c?.wages[s] ?? 0); }
+    sk += b.employed.skilled ?? 0; gen += b.employed.gentry ?? 0;
+  }
+  const typeOf = new Map(w.buildings.map((b) => [b.id, b] as const));
+  let gn = 0, gs = 0, ga = 0, gm = 0, gt = 0, gi = 0;
+  for (const p of w.pops) {
+    if (p.prof !== 'gentry') continue;
+    const f = workforce(p); gn += f; gs += p.sol * f;
+    const b = typeOf.get(p.work);
+    if (!b) gi += f; else if (b.typeId === 'admin') ga += f; else if (b.typeId === 'manor') gm += f; else if (b.methodId === 'school_tutor') gt += f;
+  }
+  const f2 = (x: number) => +x.toFixed(2), f3 = (x: number) => +x.toFixed(3), d = Math.max(1, gn);
+  const wIdx = w.kingdoms.reduce((a, k) => a + (k.wageIndex ?? 1), 0) / w.kingdoms.length;
+  const wStep = w.kingdoms.reduce((a, k) => { const g = gov.get(k.governmentId); return a + (g ? g.wages.gentry / SKILL_DEFS.gentry.baseWage / (k.wageIndex ?? 1) : 1); }, 0) / w.kingdoms.length;
+  return { admHer: her, admPro: pro, admFill: f2(need > 0 ? have / need : 0), admWage: f2(wage / 1e3), admSk: f2(sk / 1e3), admGen: f2(gen / 1e3), wIdx: f2(wIdx), wStep: f2(wStep),
+    genK: f2(gn / 1e3), solGen: f2(gs / d), gAdmSh: f3(ga / d), gManSh: f3(gm / d), gTutSh: f3(gt / d), gIdleSh: f3(gi / d) };
 }
 const t0 = performance.now();
 for (let d = 0; d < years * 360; d++) {
@@ -119,6 +150,14 @@ for (let d = 0; d < years * 360; d++) {
   if (w.tick % 360 === 0) {
     const y = w.tick / 360;
     classInc[y] = classIncome(w);
+    admY[y] = adminSnap(w);
+    {
+      let lv = 0, st = 0;
+      for (const b of w.buildings) if (b.typeId === 'mine') { lv += b.level; st += b.level * b.last.staffing; }
+      const sup = (g: 'ore' | 'metal') => Math.round(w.regions.reduce((a, r) => a + r.market[g].supplyEma, 0) / 1e3);
+      const dem = (g: 'ore' | 'metal') => Math.round(w.regions.reduce((a, r) => a + r.market[g].demandEma, 0) / 1e3);
+      ironY[y] = { mineSt: +(lv > 0 ? st / lv : 0).toFixed(2), oreSup: sup('ore'), oreDem: dem('ore'), metalSup: sup('metal'), metalDem: dem('metal') };
+    }
     let cash = 0, n = 0;
     for (const p of w.pops) if (p.prof === 'peasant' && p.work !== 0) { cash += Math.max(0, p.incomeEma); n += p.size; }
     yearly[y] = {
@@ -238,6 +277,11 @@ out.traj = w.metrics.filter((m) => m.tick % 360 === 0 && m.tick > 0).map((m) => 
       return +(idle / Math.max(1, emp + idle)).toFixed(3);
     })(),
     ...(classInc[m.tick / 360] ?? {}),
+    taxRatio: +(sum(m, (k) => k.taxRatio * k.pop) / pop).toFixed(2), revWk: Math.round(sum(m, (k) => k.revenueWeek) / 1e3),
+    ...(admY[m.tick / 360] ?? {}),
+    // 철: 철광석·철 값(장기 기준 대비), 철광산 레벨, 철광산 충원율(레벨 가중), 철 생산(천/일)
+    oreP: m.goods.ore.ratio, wIdx: Math.max(...Object.values(m.kingdoms).map((k) => k.wageIndex)), metalP: m.goods.metal.ratio, mineLv: sum(m, (k) => k.levelsBy.mine ?? 0),
+    ...(ironY[m.tick / 360] ?? {}),
   };
 });
 const after1 = w.metrics.filter((m) => m.tick > 360);

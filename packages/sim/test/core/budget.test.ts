@@ -109,8 +109,8 @@ describe('예산 미리보기', () => {
     const v = createWorld(42);
     runTo(v, 21 * TICKS_PER_WEEK);
     const errs: string[] = [];
-    const sums: { pIn: number; rIn: number; pOut: number; rOut: number; gross: number; k: World['kingdoms'][number] }[] = [];
-    for (const k of v.kingdoms) sums.push({ pIn: 0, rIn: 0, pOut: 0, rOut: 0, gross: 0, k });
+    const sums: { pIn: number; rIn: number; pOut: number; rOut: number; gross: number; spend: number; k: World['kingdoms'][number] }[] = [];
+    for (const k of v.kingdoms) sums.push({ pIn: 0, rIn: 0, pOut: 0, rOut: 0, gross: 0, spend: 0, k });
     for (let wk = 0; wk < 8; wk++) {
       const pre = sums.map((s) => budgetPreview(v, s.k.id));
       runTo(v, v.tick + TICKS_PER_WEEK);
@@ -121,12 +121,14 @@ describe('예산 미리보기', () => {
         s.rIn += b.revenue;
         s.rOut += b.fees - b.wages - b.goods - b.research - b.interest;
         s.gross += b.revenue + b.fees + b.wages + b.goods + b.research + b.interest;
+        s.spend += b.wages + b.goods + b.research + b.interest;
       });
     }
     TUNE.harvestChance = chance;
     const pct = (a: number, b: number) => Math.round((a / Math.abs(b)) * 1000) / 10;
     for (const s of sums) {
-      const e = { income: pct(s.pIn - s.rIn, s.rIn), expense: pct(s.pOut - s.rOut, s.rOut), netOfGross: pct(s.pIn + s.pOut - s.rIn - s.rOut, s.gross) };
+      // 지출은 공사 수수료를 뺀 순액이라 0 가까이 갈 수 있다 (행정청 임금이 작은 판). 오차는 총 지출(임금·원료·연구·이자)에 대한 비율로 잰다
+      const e = { income: pct(s.pIn - s.rIn, s.rIn), expense: pct(s.pOut - s.rOut, s.spend), netOfGross: pct(s.pIn + s.pOut - s.rIn - s.rOut, s.gross) };
       errs.push(`왕국 ${s.k.id} ${JSON.stringify(e)}`);
       expect(Math.abs(e.income), `왕국 ${s.k.id} 수입`).toBeLessThan(15);
       expect(Math.abs(e.expense), `왕국 ${s.k.id} 지출`).toBeLessThan(15);

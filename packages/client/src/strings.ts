@@ -76,7 +76,7 @@ export const KO = {
   weeklyProfit: '주간 손익', foreignTerritory: '다른 왕국 영토',
   territory: '영토', mapLayers: '지도 표시',
   finance: '재정', weeklyAccounts: '주간 수지', currentWeek: '이번 주', previousWeek: '지난주', receipts: '수입', expenses: '지출', capitalFlows: '자본 흐름', incomeTaxRates: '소득세율', lowerStratum: '하층', middleStratum: '중층', upperStratum: '상층', construct: '건설', kingdomQueue: '왕국 공사', mySummary: '왕실 요약', companyDetails: '상회 상세', dailyCap: '일일 공사 상한', receivedToday: '오늘 받은 포인트', stage: '단계',
-  ledgerLabels: {sales:'판매',tax:'세금',mint:'주조',buildFees:'민간 공사 수수료',wages:'임금',inputs:'원자재',research:'연구',interest:'이자',welfare:'복지',dividends:'배당 지급',investment:'투자 풀 유입',buildPaid:'공사비 지급'},
+  ledgerLabels: {sales:'판매',tax:'세금',mint:'주조',buildFees:'민간 공사 수수료',wages:'정부 임금',inputs:'국영 건물 원료',research:'연구',interest:'이자',welfare:'복지',dividends:'배당 지급',investment:'투자 풀 유입',buildPaid:'공사비 지급'},
 
   kingdomLabel: '왕국', stateOwner: '왕실', privateOwner: '민간', playerOwner: '플레이어', dividend: '배당', sharedResearch: '왕실 기술 공유', taxCollection: '세금 징수율', taxCapacity: '세금 역량', investmentPool: '투자 풀', annualGdp: 'GDP / 년', kingdomAccounts: '왕국 재정', standardOfLiving: '생활수준', wealthLevel: '부', portClosed: '항구 폐쇄', ownership: '건물 소유', landlord: '지주', noBuildings: '건물 없음', noMatches: '검색 결과 없음',
 
@@ -89,6 +89,8 @@ export const KO = {
   treasury: '금고',
   loanLimit: '대출 / 한도',
   lastWeekPL: '지난주 손익',
+  budgetLines: {tax:'세금',tariffs:'관세',mint:'주조',fees:'민간 공사 수수료',wages:'정부 건물 인건비',goods:'정부 건물 물자',research:'연구',interest:'국채 이자'} as Record<string,string>,
+  weeklyBudget: '주간 예산 (예상)', budgetNet: '순수지',
   speedGroup: '게임 속도',
   pause: '일시정지 (Space)',
   stepDay: '하루 진행',
@@ -221,6 +223,7 @@ export const KO = {
   research: '연구',
   inProgress: '진행 중',
   wages: '임금',
+  govWages: '정부 임금',
   readOnly: '읽기 전용',
   cash: '현금',
   lastWeek: '지난주',
@@ -370,7 +373,7 @@ export const EN: Dict = {
   weeklyProfit: 'Weekly profit', foreignTerritory: 'Foreign territory',
   territory: 'Territory', mapLayers: 'Map layers',
   finance: 'Finance', weeklyAccounts: 'Weekly accounts', currentWeek: 'This week', previousWeek: 'Last week', receipts: 'Revenue', expenses: 'Expenses', capitalFlows: 'Capital flows', incomeTaxRates: 'Income tax', lowerStratum: 'Lower', middleStratum: 'Middle', upperStratum: 'Upper', construct: 'Build', kingdomQueue: 'Kingdom construction', mySummary: 'Royal summary', companyDetails: 'Company details', dailyCap: 'Daily construction cap', receivedToday: 'Points received today', stage: 'Stage',
-  ledgerLabels: {sales:'Sales',tax:'Taxes',mint:'Minting',buildFees:'Private construction fees',wages:'Wages',inputs:'Inputs',research:'Research',interest:'Interest',welfare:'Welfare',dividends:'Dividends paid',investment:'Investment inflow',buildPaid:'Construction paid'},
+  ledgerLabels: {sales:'Sales',tax:'Taxes',mint:'Minting',buildFees:'Private construction fees',wages:'Government wages',inputs:'State building inputs',research:'Research',interest:'Interest',welfare:'Welfare',dividends:'Dividends paid',investment:'Investment inflow',buildPaid:'Construction paid'},
 
   kingdomLabel: 'Kingdom', stateOwner: 'Royal', privateOwner: 'Private', playerOwner: 'Player', dividend: 'Dividend', sharedResearch: 'Shared royal technology', taxCollection: 'Tax collection', taxCapacity: 'Tax capacity', investmentPool: 'Investment pool', annualGdp: 'GDP / year', kingdomAccounts: 'Kingdom accounts', standardOfLiving: 'Living standard', wealthLevel: 'Wealth', portClosed: 'Port closed', ownership: 'Building ownership', landlord: 'Landlords', noBuildings: 'No buildings', noMatches: 'No results',
 
@@ -382,6 +385,8 @@ export const EN: Dict = {
   treasury: 'Treasury',
   loanLimit: 'Loans / limit',
   lastWeekPL: 'Last week',
+  budgetLines: {tax:'Taxes',tariffs:'Tariffs',mint:'Minting',fees:'Private construction fees',wages:'Government building staff',goods:'Government building supplies',research:'Research',interest:'Bond interest'} as Record<string,string>,
+  weeklyBudget: 'Weekly budget (expected)', budgetNet: 'Net',
   speedGroup: 'Game speed',
   pause: 'Pause (Space)',
   stepDay: 'Advance one day',
@@ -505,6 +510,7 @@ export const EN: Dict = {
   research: 'Research',
   inProgress: 'In progress',
   wages: 'Wages',
+  govWages: 'Government wages',
   readOnly: 'Read-only',
   cash: 'Cash',
   lastWeek: 'Last week',

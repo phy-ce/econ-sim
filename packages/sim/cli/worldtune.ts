@@ -5,7 +5,9 @@
 import { BUILDING_TYPES, GOODS, NEEDS, SKILL_DEFS } from '../src/data';
 import type { GoodId, MethodDef, Skill } from '../src/types';
 
-export interface WorldSpec { price?: Partial<Record<GoodId, number>>; wage?: Partial<Record<Skill, number>>; workMul?: number; inputMul?: number; buildMul?: number }
+export interface WorldSpec { price?: Partial<Record<GoodId, number>>; wage?: Partial<Record<Skill, number>>; workMul?: number; inputMul?: number; buildMul?: number;
+  /** 방식 숫자 직접 바꾸기: { 방식 id: { workers, inputs, taxCapacity } } (workers·inputs 는 통째로 바꾼다) */
+  methods?: Record<string, Partial<Pick<MethodDef, 'workers' | 'inputs' | 'taxCapacity'>>> }
 
 const cost = (m: MethodDef) =>
   (Object.entries(m.workers) as [Skill, number][]).reduce((a, [s, n]) => a + (n ?? 0) * SKILL_DEFS[s].baseWage, 0) +
@@ -14,6 +16,10 @@ const revenue = (m: MethodDef) => (Object.entries(m.outputs) as [GoodId, number]
 
 export function applyWorld(spec: WorldSpec | undefined) {
   if (!spec) return;
+  for (const [id, o] of Object.entries(spec.methods ?? {})) {
+    const m = BUILDING_TYPES.flatMap((t) => t.methods).find((x) => x.id === id);
+    if (m) Object.assign(m, o);
+  }
   const methods = BUILDING_TYPES.filter((t) => !t.auto).flatMap((t) => t.methods).filter((m) => Object.keys(m.outputs).length > 0);
   // 바꾸기 전 이익률: 매출 / 비용
   const ratio = new Map(methods.map((m) => [m, cost(m) > 0 ? revenue(m) / cost(m) : 0] as const));

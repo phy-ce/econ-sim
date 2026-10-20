@@ -1,4 +1,4 @@
-# 인수인계 (2026-10-20 기준)
+# 인수인계 (2026-10-21 기준)
 
 에스테라 왕국 경제 시뮬레이션. 빅토리아3의 경제 루프에서 영감을 받은 근세 왕국 경영 게임이다. 공개 배포가 목표다.
 
@@ -8,18 +8,31 @@
 - 사용자 결정 대기: 아래 0장 "결정 대기". 화면 작업자에게 넘길 것: `docs/UI_CHANGES.md` 맨 위 "0. 지금 할 일".
 - 클라우드 세션(claude.ai/code)으로 이어서 할 수 있다. 규칙은 CLAUDE.md "클라우드 세션"을 본다.
 
+## 0. sim 할 일 (2026-10-21, 위에서부터)
+아래 0-xxx 절의 브랜치(basicnoskill, nobank, encyclopedia, adminfill, farmer, gentry, reserve, bestjob, budgetview, grainuse, nobles)는 모두 main에 합쳐졌다.
+
+1. **경제 설계 묶음 (DECISIONS 7-16~7-19), 4단계로 차례로.** 단계마다 테스트 + main 대비 20년 × 시드 1·2 해마다 그래프 후 합침.
+   1. 레벨 소유·소유 건물 금고·민간 공사 자금·민영화 (`setPrivatize`, `levelOwnersOf`) — 진행 중 (브랜치 wt-own1)
+   2. 배당 흐름 (레벨당 배당 → 국고 / 저택·금융가 금고 + pop), 투자 풀 없앰
+   3. 소작지 지대 (수확의 일정 비율을 바로 팔아 저택으로), 저택 크기 (가진 경제 규모 ÷ 상수, 하루 조금씩), 시작 상급 귀족 줄임 (`TUNE.nobleSeats` 스위치는 7-17)
+   4. 세법 셋 (토지세 = 소작농 1인당 고정액 / 인두세 / 소득세, 하나만, 시작 토지세, 바꾸면 6개월, 금융가 자산 비율 조건), 투자법 (귀족만 → 전문가 → 기술자 → 노동자·농부), 금융가 = 펀드 (전문가 직원: 보장 임금 + 성과급), 자본가 계층 없앰
+2. **지역별 기록 (사용자 2026-10-21).** sweep traj 에 해마다 지역별 항목 (땅 종류별 사용률, 광맥 사용률, 인구, 소작농 비율, 계층별 생활수준, 실업, 곡물 공급/수요) 을 넣고 `cli/trajchart.py` 가 지역별 선을 그리게 한다. 다음으로 metrics(통계 기록)에도 지역별 항목 → 화면 통계에서 지역 추이.
+3. **UI_CHANGES 3장 sim 요청:** `ownershipAssets`·`KingdomMetrics.assetsManor/assetsFinance` (2-44), 세법·투자법 명령과 상태 `setInvestLaw`·`lawChange`·`policyStatus`·`lawChanged` (2-45), `unlocksOf(techId)` (2-48). 1번 묶음과 함께 넣는다.
+4. **사용자 결정 (2026-10-21):** 흉작 대책(소작농 분담·공장 하루치 주문)은 하지 않는다. 장기 테스트 기준(4단계 기술 7년, 노동자 식량 최저 35%)은 그대로 둔다. 15년차부터 기술자 1인당 소득 하락(5.0 → 2.2) 진단과 철광산 적게 짓기는 진단 후 수치·AI로만 고친다 (진행 중, 브랜치 wt-skiron).
+5. **알려진 문제:** AI가 철광산을 적게 지음 (20년에 철 광맥 7%만 사용), 지역 간 교역 개편 (사용자 보류, "이동할 때마다 돈이 드는 방식" 선호; VIC3_REFERENCE 시장 접근성).
+
 ## 0-own1. wt-own1 (2026-10-21, 합치기 전, DECISIONS 7-16·7-18·7-19 1단계)
 - 레벨마다 주인 하나 (`Building.owners`, 국가 = 왕실 건물). 저택·금융가 금고(`Building.cash`), 투자 풀 없앰, 민간 공사비는 금고가 냄 (`finance.ts chooseFunders`, 완공 레벨 약정 비율, `production.ts giveLevels`), 민영화 명령 `setPrivatize` + 매주 `ai.ts buyLevels`, 철거 대금은 헐린 레벨 주인, 배당은 레벨 수대로. 민간 상회 운영 자금 2주(`firmBufferWeeks`), 모자라면 주인이 채움(`callCapital`).
-- 저장 8판, 옛 저장 안 받음. 클라이언트 두 줄 지움 (UI_CHANGES 2-44).
+- 저장 8판, 옛 저장 안 받음. 클라이언트 두 줄 지움 (UI_CHANGES 2-54).
 - 수치·비교는 DECISIONS 7-16 "1단계 구현". 그래프 `.tmp/reports/2026-10-21-own1.png`.
 - 확인: 워크트리의 node_modules 는 main 의 것을 잇는다 → `npm run typecheck` 의 클라이언트 검사는 main 의 sim 을 본다. 이 브랜치 sim 으로 클라이언트를 보려면 paths 로 sim 을 가리키는 tsconfig 를 따로 쓴다 (`.tmp/own1/tsconfig.client.json`).
 
-## 0-basicnoskill. wt-basicnoskill (2026-10-21, 합치기 전, 사용자 결정 "1차 산업 기본 방식은 기술자 없음")
+## 0-basicnoskill. wt-basicnoskill (2026-10-21, main에 합침, 사용자 결정 "1차 산업 기본 방식은 기술자 없음")
 - 기본 방식 6개를 농부·노동자 1,000명으로: farm_basic·fiber_basic 6,500 (이익률 23%), ranch_basic 곡물 3,000 → 고기 1,250 (20%), lumber_manual 목재 6,500 (23%), iron_shaft 광석 3,000 (17%), coal_shaft 석탄 4,000 (17%). 산출은 500 단위 중 가까운 값. 기술 방식은 그대로 (27~45%, 일꾼당 산출 모두 기본보다 많다).
 - 규칙 사전 farm 예시의 일꾼 문구를 데이터에서 읽게 고침. DESIGN 8.x 건물 표·유보 자산 표 갱신. sweep traj 에 `joblessSk` 추가.
 - 20년 × 시드 1·2 (main 대비, y5/y10/y20): 총생산 602/1057/2187 → 770/1519/2092, 실업 0/0/0.14 → 0/0.02/0.02, 소작농 SoL 2.96/2.91/2.40 → 3.01/3.02/3.03, 노동자 SoL 2.63/2.84/3.83 → 2.75/2.75/3.67, 기술자 SoL 15~20년차 약 0.5 낮음 (5.0~5.6), 기술자 실업은 둘 다 0~3%. 그래프 `.tmp/reports/2026-10-21-basic-noskill-v2.png`.
 
-## 0-nobank. wt-nobank (2026-10-21, 합치기 전, 사용자 결정 "일단 왕실만 빌리는 걸로")
+## 0-nobank. wt-nobank (2026-10-21, main에 합침, 사용자 결정 "일단 왕실만 빌리는 걸로")
 - 규칙: 왕실만 빌린다. 국고가 모자라면 자동으로 국채를 찍어 빌리고, 남으면 갚는다. 민간 상회는 빌리지 않는다.
 - `World.bank`·`BANK_CAPITAL`(3억)·`MetricPoint.bank` 없앰. `borrow`는 왕실만, `creditLimit`은 민간 0, `repay`·이자는 국채만. `weeklyBanking`은 국채 상환 + 상인 초과분·주인 없는 돈 → 투자 풀.
 - 옛 저장 (`compat.ts removeBank`): 은행 현금 → `fund`(다음 주 인구 비례로 투자 풀), 민간 빚 탕감 (빚은 장부라 화폐 장부 그대로, decimals 시험에 넣음).
@@ -27,13 +40,13 @@
 - 규칙 사전: `banking` 항목(국채와 이자), `start-state`(은행 자본 뺌), `investment-pool`, 분류 이름 '소유·배당·국채', DESIGN 9.4 제목 '국채·주조'.
 - 화면: 컴파일 수정 없음. UI_CHANGES 2-41 (민간 대출 줄 숨기기).
 
-## 0-encyclopedia. wt-encyclopedia (2026-10-21, 합치기 전)
+## 0-encyclopedia. wt-encyclopedia (2026-10-21, main에 합침)
 - 규칙 사전: 데이터 `packages/sim/src/encyclopedia.ts` (항목 79개, 분류 10개), 단독 앱 `packages/encyclopedia` (`npm run encyclopedia`, 포트 5200, Pages `/econ-sim/encyclopedia/`).
 - 값은 코드 상수를 읽고, 예시는 실제 sim 함수를 부르고, live는 워커에서 도는 세계를 읽는다. sim 변경은 상수·`splitHarvest`에 `export`만 붙였다 (결과 그대로).
 - 시험 `test/core/encyclopedia.test.ts` (약 0.3초): DESIGN.md 번호 절 ↔ `DESIGN_SECTIONS`, 모든 TUNE 키가 어느 항목에 실렸는지, 모든 값·예시·live 함수.
 - 코드와 DESIGN.md가 다른 곳: 기술자 기본 임금은 코드 15, DESIGN 3.2 표와 CLAUDE.md는 20.
 
-## 0-adminfill. wt-adminfill (2026-10-21, 합치기 전)
+## 0-adminfill. wt-adminfill (2026-10-21, main에 합침)
 - 행정청 징세 한도 × 원료 충족률(`adminCapacityOf`), 학교 자리도 같다. AI: 행정청 방식은 한도 × `fillEma`, 원료 방식은 왕국 시장에 남는 원료가 있을 때만.
 - 종이(기본가 4)와 종이 공장(목재 2,500 → 종이 5,000). 전문 관료제는 종이 200을 쓴다. 왕실이 행정청 원료를 왕국 안에서 대도록 종이 공장을 직접 짓는다(`secureGovInputs`).
 - 20년 × 시드 1·2 (main 799c0ea 대비): 징수율 y1 0.64→0.52, y5 0.71→0.70, y10 0.70→0.70, y20 0.74→0.70. 종이 공장 3레벨, 공급 6,400~7,900 / 수요 4,800~6,200.
