@@ -170,3 +170,12 @@
 - Pulp Pressing: 목재 30 → 종이 40, 상점주 500·노동자 4,500, 기술 요건 표시 없음 (https://vic3.paradoxwikis.com/List_of_production_methods).
 - 행정청 방식 이름: Simple Organization, Filing Cabinets, Standardized Filing System, Telephone Switchboards, Hereditary/Professional Bureaucrats 등 (https://vic3.paradoxwikis.com/Government_Administration). Filing Cabinets 줄에 "Paper 10"이 있으나 투입인지는 평탄화된 표에서 **확인 못 함**.
 - 이 게임: 목재 2,500 → 종이 5,000 (기본가 목재 2, 종이 4, 이익률 20%). 기술 없이 짓는다. 전문 관료제가 종이 200을 쓴다 (가구 100과 같은 값).
+
+## 대출과 신용 (2026-10-21 확인, 위키 1.13)
+출처: https://vic3.paradoxwikis.com/Treasury
+- 금 보유고가 비면 재정 적자는 자동으로 국가 신용 대출이 된다. 흑자는 자동으로 원금을 갚는다.
+- 빌려주는 쪽은 문서에 없다 (외국인지, 새로 만든 돈인지 확인 못 함). 이자는 "소유 지분을 가진 pop"에게 간다.
+- 신용 한도 = 건물 유보 자산 합 + £100K + GDP의 50%. 원금이 한도의 50% 이상이면 "건강하지 않은 경제".
+- 이자율: 기본 20%에서 은행 관련 기술마다 −2% (최대 다섯 개 → 10%), 강대국 −50%·약소국 +25% 같은 배율.
+- 디폴트(보유고 0, 신용 소진): 공사 전부 멈춤, 처리량 등 벌칙이 주마다 −1%씩 최대 −50%. 파산 선언은 빚을 지우는 대신 공사 대기열 취소, 모든 건물 유보 자산 소멸, 급진화, 10년 벌칙.
+- 민간 건물·회사가 빌린다는 내용은 없다. 대출은 국가 단위다.
