@@ -206,6 +206,12 @@ out.traj = w.metrics.filter((m) => m.tick % 360 === 0 && m.tick > 0).map((m) => 
     foodPeas: by('peasant', (k) => k.foodBy.peasant), gdp: Math.round(sum(m, (k) => k.gdp) / 1e6), levels: sum(m, (k) => k.levelsState + k.levelsPrivate),
     grain: m.goods.grain.ratio, peas: +(sum(m, (k) => k.popBy.peasant) / pop).toFixed(2),
     privCash: Math.round(sum(m, (k) => k.privateCash) / 1e6), jobless: +(sum(m, (k) => k.joblessShare * k.pop) / pop).toFixed(3),
+    // 기술자 실업률: 기술자 실업 / (고용 + 실업)
+    joblessSk: (() => {
+      const lab = (k: MetricPoint['kingdoms'][number]) => (k.labor as Record<string, { employed: number; jobless: number } | undefined>).skilled;
+      const emp = sum(m, (k) => lab(k)?.employed ?? 0), idle = sum(m, (k) => lab(k)?.jobless ?? 0);
+      return +(idle / Math.max(1, emp + idle)).toFixed(3);
+    })(),
   };
 });
 const after1 = w.metrics.filter((m) => m.tick > 360);
