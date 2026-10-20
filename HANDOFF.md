@@ -26,6 +26,7 @@
 - 저장 8판, 옛 저장 안 받음. 클라이언트 두 줄 지움 (UI_CHANGES 2-54).
 - 수치·비교는 DECISIONS 7-16 "1단계 구현". 그래프 `.tmp/reports/2026-10-21-own1.png`.
 - main e9304c1 을 합친 뒤(ba373c5) 다시 비교하니 1단계가 총생산·생활수준·귀족 소득에서 뚜렷이 나쁘다 (DECISIONS 7-16, 그래프 `-own1-v2.png`). 합치기 전에 진단할 것.
+- 2~4단계도 이 브랜치에 넣었다 (d5d78b3, 6e4b001, 769e98f). 묶음 평가는 DECISIONS 7-16 "2~4단계 구현과 묶음 평가". 남은 문제: 3~5년차 노동자 생활수준 하락(인두세 전환 때), 왕실 국고가 쌓임(20년 7.5억), 저택 금고 마름, 소작농 비율 25%에서 멈춤. 투자법 밖 남는 현금 → 금융가 금고(지분 없이)는 사용자 확인 필요.
 - 확인: 워크트리의 node_modules 는 main 의 것을 잇는다 → `npm run typecheck` 의 클라이언트 검사는 main 의 sim 을 본다. 이 브랜치 sim 으로 클라이언트를 보려면 paths 로 sim 을 가리키는 tsconfig 를 따로 쓴다 (`.tmp/own1/tsconfig.client.json`).
 
 ## 0-basicnoskill. wt-basicnoskill (2026-10-21, main에 합침, 사용자 결정 "1차 산업 기본 방식은 기술자 없음")
