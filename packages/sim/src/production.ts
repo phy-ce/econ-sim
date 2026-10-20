@@ -2,7 +2,7 @@ import { BUILDING_BY_ID, GOOD_IDS, MAX_POINTS_PER_LEVEL_DAY, OWNER_SEATS_PER_LEV
 import { addOwnerLevels, builderOf, companyById, efficiency, harvestFactor, isGovernment, landFree, logEvent, newBuilding, regionById } from './economy';
 import { SKILLS } from './types';
 import { workforce } from './pops';
-import { kingdomById } from './kingdoms';
+import { flow, kingdomById } from './kingdoms';
 import { buildingNameEn, regionNameEn } from './i18n';
 import { clamp, round2 } from './rng';
 import type { Building, Company, Construction, GoodBag, World } from './types';
@@ -213,7 +213,7 @@ function allocateConstruction(w: World) {
           const fee = round2(take * costPerPoint);
           if (funds) {
             let rest = fee;
-            funds.forEach(([o, sh], i) => { const pay = i === funds.length - 1 ? rest : round2(fee * sh); o.cash = (o.cash ?? 0) - pay; rest = round2(rest - pay); });
+            funds.forEach(([o, sh], i) => { const pay = i === funds.length - 1 ? rest : round2(fee * sh); o.cash = (o.cash ?? 0) - pay; flow(`build.${o.typeId}`, pay); rest = round2(rest - pay); });
           } else { owner.cash -= fee; owner.ledger.buildPaid += fee; }
           c.cash += fee; c.ledger.buildFees += fee; c.weekProfit += fee;
           if (kd) kd.feeWageWeek = (kd.feeWageWeek ?? 0) + fee * wageShare;
@@ -360,6 +360,7 @@ export function privatizeLevel(w: World, b: Building, buyer: Building, price: nu
   const firm = k ? companyById(w, k.privateIds[0]) : undefined;
   if (!gov || !firm || b.level < 1) return;
   buyer.cash = (buyer.cash ?? 0) - price;
+  flow(`priv.${buyer.typeId}`, price);
   gov.cash += price; gov.ledger.investment += price;
   let p = w.buildings.find((x) => x.companyId === firm.id && x.regionId === b.regionId && x.typeId === b.typeId);
   if (p) {

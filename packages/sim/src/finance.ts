@@ -1,7 +1,7 @@
 import { BUILDING_BY_ID, GOODS, SKILL_DEFS, TECH_BY_ID, TICKS_PER_WEEK, TUNE, getMethod } from './data';
 import { collectionRatio, companyById, regionById, constructionEstimate, efficiency, isGovernment, isOwnerBuilding, kingdomGdp, logEvent, paysDividend, repay, sellThrough, shareWeight } from './economy';
 import { techNameEn } from './i18n';
-import { kingdomById, kingdomOf, toFinance, toTreasury } from './kingdoms';
+import { flow, kingdomById, kingdomOf, toFinance, toTreasury } from './kingdoms';
 import { tenantSaleBag } from './market';
 import { payPops } from './pops';
 import { round2 } from './rng';
@@ -376,11 +376,13 @@ function payOwners(w: World, o: Building, amount: number) {
   const pops = w.pops.filter((p) => p.work === o.id && p.size > 0);
   let total = 0;
   for (const p of pops) total += p.size * shareWeight(p.prof);
-  if (total <= 0) { toTreasury(o, amount); return; }
+  flow(`divIn.${o.typeId}`, amount);
+  if (total <= 0) { toTreasury(o, amount, 'noSeat'); return; }
   for (const p of pops) {
     const amt = (amount * p.size * shareWeight(p.prof)) / total;
     const invest = amt * (INVEST_SHARE[p.prof] ?? 0);
-    toTreasury(o, invest);
+    toTreasury(o, invest, 'keep');
+    flow(`toPops.${o.typeId}`, amt - invest);
     payPops(w, [p], amt - invest);
   }
 }
@@ -417,7 +419,7 @@ export function payDividends(w: World, c: Company) {
     c.ledger.dividends += profit;
     const owners = Object.keys(b.owners ?? {}).map(Number).sort((x, y) => x - y);
     const n = owners.reduce((a, id) => a + b.owners![id], 0);
-    if (n <= 0) { toFinance(w, b.regionId, profit); continue; }
+    if (n <= 0) { toFinance(w, b.regionId, profit, 'noOwner'); continue; }
     for (const id of owners) {
       const o = byId.get(id);
       const amt = (profit * b.owners![id]) / n;
@@ -439,6 +441,7 @@ function callCapital(w: World, c: Company, mine: Building[], byId: Map<number, B
     const amt = round2(Math.min((need * levels.get(id)!) / total, Math.max(0, treasuryFree(w, o))));
     if (amt <= 0) continue;
     o.cash = (o.cash ?? 0) - amt;
+    flow(`call.${o.typeId}`, amt);
     c.cash += amt; c.ledger.investment += amt;
   }
 }
@@ -446,7 +449,7 @@ function callCapital(w: World, c: Company, mine: Building[], byId: Map<number, B
 /** 철거 자재 판매 대금: 헐린 레벨의 주인이 받는다. 저택·금융가 레벨이면 그 금고로, 국영 레벨이면 국고(건물 주인 회사)로 */
 export function paySalvage(w: World, lot: SalvageLot, amt: number) {
   const o = lot.ownerId != null ? w.buildings.find((x) => x.id === lot.ownerId) : undefined;
-  if (o) { toTreasury(o, amt); return; }
+  if (o) { toTreasury(o, amt, 'salvage'); return; }
   const c = companyById(w, lot.companyId);
   if (c) { c.cash += amt; c.weekProfit += amt; c.ledger.sales += amt; } else w.fund += amt;
 }
@@ -572,7 +575,7 @@ export function weeklyBanking(w: World) {
   let total = 0;
   for (const p of w.pops) { popOf.set(p.regionId, (popOf.get(p.regionId) ?? 0) + p.size); total += p.size; }
   if (total <= 0) { w.fund += pool; return; }
-  for (const r of w.regions) toFinance(w, r.id, (pool * (popOf.get(r.id) ?? 0)) / total);
+  for (const r of w.regions) toFinance(w, r.id, (pool * (popOf.get(r.id) ?? 0)) / total, 'ownerless');
 }
 
 // ---------------------------------------------------------------- 주조와 보유고 (빅토리아3 방식)

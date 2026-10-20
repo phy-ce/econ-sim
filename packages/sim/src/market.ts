@@ -762,8 +762,8 @@ function investSurplus(w: World, p: Pop, cashCost: number) {
   // 저택·금융가 자리는 소유 직종과 하급 귀족만 앉는다
   const upper = p.work !== 0 && (p.prof === 'aristocrat' || p.prof === 'gentry' || p.prof === 'capitalist');
   const seat = upper ? w.buildings.find((b) => b.id === p.work) : undefined;
-  if (seat && (seat.typeId === 'manor' || seat.typeId === 'finance')) toTreasury(seat, over);
-  else toFinance(w, p.regionId, over);
+  if (seat && (seat.typeId === 'manor' || seat.typeId === 'finance')) toTreasury(seat, over, 'surplusSeat');
+  else toFinance(w, p.regionId, over, 'surplusPop');
 }
 
 /** 그 부 단계의 하루 소비 묶음 비용 (지역 가격 기준) */
