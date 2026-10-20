@@ -438,7 +438,7 @@ export const HARVEST_KINDS: HarvestDef[] = [
 export const SUBSISTENCE = {
   /** 소작지 1칸 = 소작농 1,000명. 다른 건물 1레벨(일꾼 1,000명)과 같아서 경작지 1칸을 농장으로 바꿔도 일자리 수는 그대로다 */
   workersPerCell: 1000,
-  grainPerWorker: 2.85,
+  grainPerWorker: 3.25, // 2.85·3·3.25·3.5 비교 (20년 × 시드 1~4, 해마다 흐름): 3.25가 모든 구간에서 생활수준·인구가 높다 (DECISIONS 7-12)
   fiberPerWorker: 0.6,
   timberPerWorker: 1.3,
 };
