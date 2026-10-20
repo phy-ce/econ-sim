@@ -141,3 +141,13 @@
 - throughput은 투입과 산출을 함께 바꾸고 일자리는 그대로 둔다: "Both input and output goods are modified by the throughput percentage while required workers remains the same" (https://vic3.paradoxwikis.com/Buildings). 그래서 기상 조건이 걸린 건물은 원료도 덜 쓴다. 이 게임도 같다 (DESIGN 7.1, 7.4).
 - 채취(`bg_extraction`)는 광산(`bg_mining`)과 벌목(`bg_logging`)의 부모 그룹이다 (G `building_groups/00_building_groups.txt`). 자급 농업(`bg_subsistence_agriculture`)은 농업(`bg_agriculture`)의 자식이라 농업 보정이 소작지에도 붙는다고 보았다. 상속 규칙 자체는 문서로 확인 못 함.
 - **확인 못 함:** 확률이 무엇에 대한 확률인지(검사당·종류별), 임계값 0.2와의 결합, 진원지에서 멀어질 때 강도가 얼마나 줄어드는지. 공식 개발 일지 DD#131 (https://admin-forum.paradoxplaza.com/forum/developer-diary/victoria-3-dev-diary-131-famines-starvation-harvest-conditions.1708680)은 열리지 않았다.
+
+## 저택(Manor House)의 일자리와 몫 (2026-10-21 확인)
+- 출처: https://vic3.paradoxwikis.com/Building (소유 건물 절과 Manor Houses·Financial Districts 표), https://vic3.paradoxwikis.com/Treasury
+- 저택 방식별 레벨당 일자리: Privately Owned 귀족 50 / Clergy Oversight 성직자 100 / Increased Clergy Oversight 귀족 50·성직자 50 / Bureaucrat Oversight 관료 100.
+- 몫(ownership shares): 귀족 +10, 성직자 +1, 관료 +1. 금융가: 자본가 50·상점주 25·서기 25, 자본가 +10, 상점주 +1 (교회 감독이면 성직자 +2).
+- 배당 분배: "Dividends are divided and paid per share.", "Shares are per employee". 즉 한 사람 몫은 직종 몫 비율대로다 (귀족 1명 = 성직자 10명).
+- 투자 풀 기여율 (Treasury): 자본가 30%, 귀족 20%, 성직자 20%, 상점주 20%.
+- 소유 건물에서 몫이 없는 직원(서기 등)이 임금을 따로 받는지: 확인 못 함.
+- 이 게임: 저택에 하급 귀족 자리(귀족과 같은 수)를 두고, 하급 귀족 1명 몫을 귀족 1명의 `gentryShare`로 둔다 (빅토리아3 성직자 1/10에 해당). 투자 풀 기여는 저택 몫 모두 20%.
+- 확인한 개발 일지(https://forum.paradoxplaza.com/forum/developer-diary/victoria-3-dev-diary-110-building-ownership-foreign-investment.1647879/)는 본문을 열지 못했다 (브라우저 확인 페이지). 검색 요약만 봤다: 저택은 소유한 건물의 배당으로 직원에게 준다. 원문 확인 못 함.

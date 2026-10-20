@@ -131,9 +131,11 @@ export const BUILDING_TYPES: BuildingTypeDef[] = [
   {
     // 소유 건물 (빅토리아3 Manor House / Financial District). 지역마다 자동으로 생긴다.
     // 농지·산림·광산 건물은 저택이, 공장 부지 건물은 금융가가 소유하고, 배당은 거기서 일하는 귀족·자본가의 소득이 된다.
-    // 소작지 지대도 저택이 받는다. 크기는 지역의 그 직종 인원과 소유한 건물 레벨에 맞춰 저절로 바뀐다
+    // 소작지 지대도 저택이 받는다. 크기는 지역의 그 직종 인원과 소유한 건물 레벨에 맞춰 저절로 바뀐다.
+    // 저택에는 하급 귀족 자리도 같은 수만큼 있다. 저택 수입은 몫으로 나눈다: 귀족 1명 1몫, 하급 귀족 1명 TUNE.gentryShare 몫
+    // (빅토리아3 저택의 귀족 10몫·성직자 1몫과 같은 방식)
     id: 'manor', name: '저택', nameEn: 'Manor houses', land: 'plot', buildPoints: 0, auto: true, ownership: 'aristocrat',
-    methods: [m({ id: 'manor', name: '영지 관리', nameEn: 'Estate management', workers: { aristocrat: OWNERSHIP_SEATS }, inputs: {}, outputs: {} })],
+    methods: [m({ id: 'manor', name: '영지 관리', nameEn: 'Estate management', workers: { aristocrat: OWNERSHIP_SEATS, gentry: OWNERSHIP_SEATS }, inputs: {}, outputs: {} })],
   },
   {
     id: 'finance', name: '금융가', nameEn: 'Financial district', land: 'plot', buildPoints: 0, auto: true, ownership: 'capitalist',
@@ -347,6 +349,8 @@ export function scaleBonus(level: number): number {
  */
 export const TUNE = {
   peasantSellShare: 0.2,
+  /** 저택의 하급 귀족 1명 몫 (귀족 1명 = 1). 0.1·0.25·0.5 비교 (10년, 20년 × 시드 1·2, 두 번): 0.1은 하급 귀족 생활수준이 가장 낮고, 0.25와 0.5는 총생산·레벨 순서가 실행마다 바뀐다. 상급 귀족 생활수준을 덜 깎는 0.25 */
+  gentryShare: 0.25,
   rentShare: 0.5,
   patronWealth: 2,
   patronShare: 0.5,

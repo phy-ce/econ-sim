@@ -1,5 +1,5 @@
 import { BUILDING_BY_ID, CLASS_DEFS, SKILL_DEFS, TUNE, getMethod } from './data';
-import { borrow, disbanded, emptyJobs, emptyStats, isSubsistence, paysDividend, peasantSlots } from './economy';
+import { borrow, disbanded, emptyJobs, emptyStats, isSubsistence, paysDividend, paysShare, peasantSlots, shareWage } from './economy';
 import { tenantIncomePerWorker } from './market';
 import { findPop, getPop, movePeople, workforce } from './pops';
 import { clamp } from './rng';
@@ -94,9 +94,12 @@ export function subsistenceWage(w: World, r: Region): number {
   return tenantIncomePerWorker(w, r, pop ? wealthOf(pop) : WEALTH_MIN);
 }
 
-/** 소유 건물(저택·금융가)에서 한 사람이 받는 하루 배당·지대 추정: 받은 배당의 이동평균 ÷ 지금 앉은 사람 (붐비는 자리일수록 낮다) */
+/**
+ * 소유 건물(저택·금융가)에서 직종 s 한 사람이 받는 하루 배당·지대 추정: 받은 배당의 이동평균 × 1명 몫 ÷ 앉은 사람의 몫 합
+ * (붐비는 자리일수록 낮다. 저택은 귀족 1몫·하급 귀족 TUNE.gentryShare 몫, economy.ts shareWage)
+ */
 export function dividendWage(b: Building, s: Skill): number {
-  return Math.max(0, b.profitEma) / Math.max(1, b.employed[s]);
+  return shareWage(b, s);
 }
 
 /** 지역 건물의 자리 (건물 순서, 건물 안에서는 SKILLS 순서). 소작지 임금은 지역마다 한 번만 센다 (그 사이 바뀌는 것이 없다) */
@@ -114,7 +117,7 @@ function seatsIn(w: World, r: Region, local: Building[], comp: Map<number, Compa
     const c = comp.get(b.companyId);
     for (const s of SKILLS) {
       const n = slotsWith(b, m, s);
-      if (n > 0) out.push({ b, prof: s, slots: n, wage: paysDividend(b.stateOwned, s) ? dividendWage(b, s) : c?.wages[s] ?? 0, m });
+      if (n > 0) out.push({ b, prof: s, slots: n, wage: paysShare(b, s) ? dividendWage(b, s) : c?.wages[s] ?? 0, m });
     }
   }
   return out;
@@ -385,7 +388,7 @@ export function migrate(w: World) {
       const m = methodOf(b);
       const jobs = slotsWith(b, m, s);
       const n = fillableWith(b, m, s, jobs) - b.employed[s];
-      if (n > 0) open.push({ wage: paysDividend(b.stateOwned, s) ? dividendWage(b, s) : comp.get(b.companyId)?.wages[s] ?? 0, n });
+      if (n > 0) open.push({ wage: paysShare(b, s) ? dividendWage(b, s) : comp.get(b.companyId)?.wages[s] ?? 0, n });
     }
     regionPops.catchUp();
     let food = 0, size = 0, seekers = 0;
@@ -419,7 +422,7 @@ export function migrate(w: World) {
     if (!b) return 0;
     if (isSubsistence(b.typeId)) return subsistence(r);
     const s = p.prof as Skill;
-    return paysDividend(b.stateOwned, s) ? dividendWage(b, s) : comp.get(b.companyId)?.wages[s] ?? 0;
+    return paysShare(b, s) ? dividendWage(b, s) : comp.get(b.companyId)?.wages[s] ?? 0;
   };
 
   const foodOf = new Map<number, number>();
