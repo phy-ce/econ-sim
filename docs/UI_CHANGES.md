@@ -21,6 +21,7 @@
 7. **광맥은 자원별, 탐광으로 늘어난다 (2-26).** 지역 패널의 광맥 칸을 철·석탄 두 줄(`r.deposits.iron`·`r.deposits.coal`, 남은 칸 `depositFree`)로 나눈다. 탐광 알림은 그대로 보이면 된다.
 8. **소작지는 수확의 20%를 판다 (DECISIONS 7-11 F50).** 지대(대금의 50%)와 토지세(대금 × 토지세율)는 판매 대금의 몫이고, 나머지 80%에서 먹고 쓰며 남으면 사라진다. 클라이언트에 "수확의 %"라는 토지세 라벨은 없어서 고칠 코드는 없다. 토지세 툴팁·설명을 넣는다면 "소작지 판매 대금의 %"로 쓴다.
 9. **금고와 대출을 한 칸으로 (2-28).** 상단 칩·재정 탭·회사 패널의 `현금`과 `대출` 두 칸을 `금고  순자산 / 한도` 한 칸으로 합친다. 순자산 = `c.cash - c.debt` (빚이 더 크면 음수, 빨간색), 한도 = `creditLimit(world, c)`.
+10. **저택·금융가가 무엇을 가졌는지 한눈에 (2-32).** 소유 건물 창에 `holdingsOf(world, b)` 목록(배당·지분·지대), 지역 패널에 저택/금융가 두 묶음, 일반 건물 상세에 "→ 저택/금융가" 링크.
 - 바뀌지 않는 것: 왕실 학교 AI는 화면 변경이 없다. 현물 값의 뜻도 그대로다.
 - **아직 sim에 없음 (만들지 말 것, 들어오면 이 목록에 올린다):**
   - 건물별 임금·현금·보조금 (브랜치 wt-wage). 들어오면 국영 임금 손잡이(`budget.wages`)가 없어지고, 건물 패널에 임금·현금·보조금 켜기가 생기고, 저장 형식이 5로 바뀐다(옛 저장은 `migrateWorld`로 변환). 그래서 2번에서 국영 임금 손잡이는 작게 두어도 된다.
@@ -467,9 +468,40 @@ sim이 아래 제도를 없앴다. 화면이 계속 컴파일되도록 `packages
 - 문자열: `T.treasury`(금고/Treasury)를 라벨로 쓴다. `T.loan`·`T.loanLimit`는 안 쓰게 되면 지운다.
 - sim 변경 없음. 대출을 받으면 현금과 빚이 같이 늘어 금고 값은 그대로다 (이자·상환만 금고를 바꾼다).
 
+
+### 2-32. 저택·금융가가 무엇을 가졌는지 (소유 관계 보기, 사용자 요청 2026-10-21)
+**문제:** 저택과 금융가가 어느 건물을 가지고 어디서 돈을 받는지 한눈에 들어오지 않는다.
+
+**sim 규칙 (지금 코드 기준, 바뀌면 이 절을 고친다)**
+- 지역마다 저택(`typeId 'manor'`) 하나, 금융가(`'finance'`) 하나가 자동으로 있다. 둘 다 그 왕국 민간 소유다.
+- 같은 지역의 건물 중
+  - 농지·산림·광산 땅을 쓰는 **민간** 건물 → 저택 소유 (`kind 'full'`, 배당 전부)
+  - 공장 부지(`land 'plot'`)를 쓰거나 땅을 쓰지 않는 **민간** 건물 → 금융가 소유 (`'full'`)
+  - **국영** 건물 중 민간 지분(`privateShare` > 0)이 있는 것 → 같은 땅 규칙으로 저택/금융가가 그 지분만큼 가진다 (`'share'`, `share` = 0..1)
+  - 지분이 없는 국영 건물 → 소유 건물 없음 (목록에 없다)
+  - 소작지(`subsistence`) → 저택이 지대를 받는다 (`'rent'`)
+- 저택·금융가의 돈(배당·지분 배당·지대)은 그 안에 앉은 귀족·자본가(직원 목록)에게 가고, 일부(귀족 20%, 자본가 30%)는 왕국 투자 풀로 간다. 아무도 없으면 전부 투자 풀로 간다.
+- 하루 받은 돈의 이동평균은 소유 건물의 `profitEma`(하루 값)다.
+
+**API**
+- `holdingsOf(world, ownerBuilding): Holding[]` (index에서 export, 순수 함수)
+  - `Holding = { building: Building; kind: 'full' | 'share' | 'rent'; share: number }`
+- 거꾸로 (이 건물의 주인): `ownerBuildingOf(world, b, true)` → 저택/금융가 건물 또는 `undefined`. 국영이면 `b.privateShare`가 그 지분이다.
+
+**보여줄 곳**
+1. **소유 건물 창** (저택·금융가를 열었을 때, `ResourceInspector.tsx`의 `BuildingInspector`):
+   - 맨 위 한 줄: `받는 돈/주 = profitEma × 7`, `자리: 앉은 인원 / 자리 수` (하급 귀족 자리가 생기면 직종별 두 줄, 2-29).
+   - 그 아래 표 `holdingsOf` 한 행에 하나: 아이콘 · 건물 이름 · 레벨 · 종류 칩(`배당` / `지분 NN%` / `지대`) · 그 건물의 주간 이익(`profitEma × 7`, 지분이면 × share). 행을 누르면 그 건물로 간다.
+   - 정렬: 주간 이익 큰 순. 표 맨 아래 합계.
+2. **지역 패널** (`RegionPanel.tsx`): 건물 목록을 `저택` / `금융가` / `국영` 세 묶음으로 나눈다. 묶음 머리에 소유 건물 이름과 주간 수입, 그 아래 `holdingsOf` 건물들. 지분 없는 국영 건물은 `국영` 묶음. 소작지는 `저택` 묶음 맨 아래 한 줄(합친 레벨).
+3. **일반 건물 상세**: 소유 배지(2-1 `OwnerBadge`) 옆에 `→ 저택` 또는 `→ 금융가` 링크 칩 (`ownerBuildingOf(world, b, true)`). 국영이면서 지분이 있으면 `국영 · 저택 NN%`.
+4. 색: 저택과 금융가에 고정 색 두 개를 정해 칩·묶음 머리·지도 원에 같이 쓴다 (다크 모드에서도 구분).
+- 설명 문구 금지: 라벨·숫자·칩만.
+- 들어올 변경: 건물 유보 자산(2-31)이 들어오면 배당은 "이익 − 유보 적립"이 된다. 그때 표의 주간 이익 열 옆에 실제 배당을 따로 줄 수 있게 sim에서 필드를 더하고 이 절을 고친다.
+
 ---
 
 ## 3. sim 쪽 필요 사항 (Claude가 처리할 것, UI 작업자는 요청만)
 - 남은 요청 없음 (2026-10-19).
   - 처리함: `taxCapacity` export, `peasantSlots`(economy.ts, 이미 export됨). `PORTS_OPEN`은 sim에서 항구 코드를 없애 export할 것이 없다 (0장 4번).
-- 이미 export되는 것: `paysDividend`, `landlordJobs`, `kingdomGdp`, `kingdomById`, `builderOf`, `companyById`, `peasantSlots`, `disbanded`, `slots`, `harvestCondition`, `harvestLabel`, `HARVEST_KINDS`, `taxRates`, `taxCapacity`
+- 이미 export되는 것: `paysDividend`, `landlordJobs`, `kingdomGdp`, `kingdomById`, `builderOf`, `companyById`, `peasantSlots`, `disbanded`, `slots`, `harvestCondition`, `harvestLabel`, `HARVEST_KINDS`, `taxRates`, `taxCapacity`, `holdingsOf`, `ownerBuildingOf`

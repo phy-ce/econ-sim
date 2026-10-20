@@ -285,6 +285,20 @@ export function ownerBuildingOf(w: World, b: Building, share = false): Building 
   return w.buildings.find((x) => x.regionId === b.regionId && x.typeId === typeId);
 }
 
+/** 소유 건물(저택·금융가)이 가진 것: 'full' 민간 건물(배당 전부), 'share' 국영 건물의 민간 지분, 'rent' 소작지(지대, 저택만) */
+export interface Holding { building: Building; kind: 'full' | 'share' | 'rent'; share: number }
+export function holdingsOf(w: World, owner: Building): Holding[] {
+  const out: Holding[] = [];
+  for (const b of w.buildings) {
+    if (b.regionId !== owner.regionId || b === owner) continue;
+    if (isSubsistence(b.typeId)) { if (owner.typeId === 'manor') out.push({ building: b, kind: 'rent', share: 1 }); continue; }
+    if (b.stateOwned && !b.privateShare) continue;
+    if (ownerBuildingOf(w, b, true) !== owner) continue;
+    out.push(b.stateOwned ? { building: b, kind: 'share', share: b.privateShare! } : { building: b, kind: 'full', share: 1 });
+  }
+  return out;
+}
+
 /** 이 자리는 임금 대신 배당을 받는가: 민간 건물의 소유 직종 자리 (국영 건물은 국가가 주인이라 모두 임금) */
 export function paysDividend(stateOwned: boolean | undefined, s: Skill): boolean {
   return !stateOwned && (OWNERS as Skill[]).includes(s);
