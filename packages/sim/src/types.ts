@@ -498,11 +498,6 @@ export interface Traders {
   shipments: Shipment[];
 }
 
-export interface Bank {
-  cash: number;
-  capital: number;
-}
-
 import type { MetricPoint } from './metrics';
 
 export interface HistoryPoint {
@@ -559,7 +554,6 @@ export interface World {
   pops: Pop[];
   /** 받을 사람이 없는 돈. 매주 은행 자본과 투자 풀로 돌린다 */
   fund: number;
-  bank: Bank;
   traders: Traders;
   /** 국가가 만들고 없앤 돈의 누적 장부 (화폐 보존 검증용) */
   mint: MintLedger;

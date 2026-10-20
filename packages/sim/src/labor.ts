@@ -292,7 +292,7 @@ function staffingOf(b: Building): number {
 }
 
 /**
- * 임금 지급: 회사가 자기 건물에서 일하는 pop 에게 임금을 준다. 모자라면 자동 대출, 그래도 모자라면 비례로 덜 준다.
+ * 임금 지급: 회사가 자기 건물에서 일하는 pop 에게 임금을 준다. 모자라면 왕실은 국채로 빌리고, 그래도 모자라면(민간은 바로) 비례로 덜 준다.
  * 소유 건물(저택·금융가)의 귀족·자본가는 배당과 지대를, 소작지의 소작농은 수확을 받으므로 임금이 없다.
  */
 export function payWages(w: World) {
@@ -314,6 +314,7 @@ export function payWages(w: World) {
       const list = workersOf.get(b.id);
       if (list) for (const p of list) bill += workforce(p) * wages[p.prof as Skill];
     }
+    // 왕실만 빌린다. 민간은 가진 현금만큼 비례로 준다
     if (c.cash < bill) borrow(w, c, bill - c.cash);
     const ratio = bill > 0 ? clamp(c.cash / bill, 0, 1) : 1;
     for (const b of mine) {

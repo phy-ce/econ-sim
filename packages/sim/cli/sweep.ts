@@ -197,7 +197,7 @@ for (const m of w.metrics) {
     ...investInterval(w.metrics, (y - 5) * 360, y * 360),
   };
 }
-// 해마다 흐름 (cli/flowsum.py): 인구, 소작농·노동자 SoL, 소작농 식량, 총생산, 레벨, 곡물값, 소작농 비율
+// 해마다 흐름 (cli/flowsum.py, trajchart.py): 인구, 소작농·노동자 SoL, 소작농 식량, 총생산, 레벨, 곡물값, 소작농 비율, 민간 현금(백만), 실업 비율
 out.traj = w.metrics.filter((m) => m.tick % 360 === 0 && m.tick > 0).map((m) => {
   const pop = sum(m, (k) => k.pop), by = (c: 'peasant' | 'unskilled' | 'skilled', f: (k: MetricPoint['kingdoms'][number]) => number) =>
     +(sum(m, (k) => f(k) * k.popBy[c]) / Math.max(1, sum(m, (k) => k.popBy[c]))).toFixed(2);
@@ -205,6 +205,7 @@ out.traj = w.metrics.filter((m) => m.tick % 360 === 0 && m.tick > 0).map((m) => 
     y: m.tick / 360, pop: +(pop / 1e6).toFixed(2), solPeas: by('peasant', (k) => k.solBy.peasant), solUnsk: by('unskilled', (k) => k.solBy.unskilled), solSk: by('skilled', (k) => k.solBy.skilled),
     foodPeas: by('peasant', (k) => k.foodBy.peasant), gdp: Math.round(sum(m, (k) => k.gdp) / 1e6), levels: sum(m, (k) => k.levelsState + k.levelsPrivate),
     grain: m.goods.grain.ratio, peas: +(sum(m, (k) => k.popBy.peasant) / pop).toFixed(2),
+    privCash: Math.round(sum(m, (k) => k.privateCash) / 1e6), jobless: +(sum(m, (k) => k.joblessShare * k.pop) / pop).toFixed(3),
   };
 });
 const after1 = w.metrics.filter((m) => m.tick > 360);

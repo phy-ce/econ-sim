@@ -22,7 +22,7 @@ const lv: Record<string, number> = {};
 for (const b of w.buildings) lv[b.methodId] = (lv[b.methodId] ?? 0) + b.level;
 console.log(Object.entries(lv).map(([k, v]) => `${k} ${v}`).join(', '));
 console.log('price×base: ' + GOOD_IDS.map((g) => `${g} ${(w.regions.reduce((a, r) => a + r.market[g].price, 0) / w.regions.length / GOODS[g].basePrice).toFixed(2)}`).join(' '));
-console.log('pools', w.kingdoms.map((k) => Math.round(k.investmentPool)).join(','), 'fund', Math.round(w.fund), 'bank', Math.round(w.bank.cash / 1000) + 'k', 'traders', Math.round(w.traders.cash / 1000) + 'k');
+console.log('pools', w.kingdoms.map((k) => Math.round(k.investmentPool)).join(','), 'fund', Math.round(w.fund), 'traders', Math.round(w.traders.cash / 1000) + 'k');
 const ev = w.events.filter((e) => /파산|압류|은행 관리/.test(e.text));
 console.log('distress events (last 300):', ev.length, ev.slice(-5).map((e) => `t${e.tick} ${e.text.slice(0, 40)}`).join(' / '));
 console.log('policy', w.kingdoms.map((k) => `${k.name} ${k.taxLaw} 세금${k.budget.tax} 임금${k.budget.wages} 연구${k.budget.research} 지수${k.wageIndex ?? '-'}`).join(' | '));

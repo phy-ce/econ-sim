@@ -46,6 +46,7 @@ export function migrateWorld(input: unknown): World | null {
   for (const p of w.pops ?? []) delete (p as { unsoldKind?: number }).unsoldKind;
   // 나중에 더한 상품(종이 등)은 옛 저장의 지역 시장에 기본가로 넣는다
   for (const r of w.regions ?? []) for (const g of GOOD_IDS) if (!r.market[g]) r.market[g] = newMarketGood(g);
+  removeBank(w);
   if (w.version === 7) { writeMirrors(w); return w; }
   if (w.version === 6) { addFarmers(w); w.version = 7; writeMirrors(w); return w; }
   if (w.version !== 4 && w.version !== 5) return null;
@@ -61,6 +62,17 @@ export function migrateWorld(input: unknown): World | null {
   w.version = 7;
   roundWorld(w);
   return w;
+}
+
+/**
+ * 은행을 없앴다 (왕실만 빌린다). 옛 저장의 은행 현금은 주인 없는 돈(fund)으로 옮긴다: 다음 주 weeklyBanking 이 인구 비례로 왕국 투자 풀에 나눈다.
+ * 민간 상회의 빚은 탕감한다. 빚은 돈이 아니라 은행이 받을 장부일 뿐이고 은행이 없어지므로, 화폐 총량(moneyIdentity)은 센트까지 그대로다.
+ * 왕실의 빚(국채)은 그대로 둔다
+ */
+function removeBank(w: World): void {
+  const old = w as World & { bank?: { cash?: number } };
+  if (old.bank) { w.fund += old.bank.cash ?? 0; delete old.bank; }
+  for (const c of w.companies ?? []) if (!c.state && c.debt) c.debt = 0;
 }
 
 /** 농부 직종이 생긴 건물 (6판까지는 이 건물의 노동자 자리였다) */

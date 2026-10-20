@@ -296,7 +296,7 @@ const FOOD_Q = new Float64Array(NG);
 
 export function collectOrders(w: World, book: Book) {
   const days = regionDays(w);
-  // 기업: 투입재 (2일분 보유 목표). 모자라면 자동 대출
+  // 기업: 투입재 (2일분 보유 목표). 모자라면 왕실은 국채로 빌리고, 그래도 모자라면(민간은 바로) 현금만큼 줄인다
   for (const c of w.companies) {
     const operating: Order[] = [];
     for (const b of w.buildings) {

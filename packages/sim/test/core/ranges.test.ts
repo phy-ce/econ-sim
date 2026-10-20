@@ -23,7 +23,6 @@ describe('경제 불변식: 범위', () => {
         if (!Number.isFinite(p.size)) flag(`pop ${p.id} 인구 ${p.size}`);
       }
       for (const c of w.companies) if (!(c.cash >= -1e-6)) flag(`회사 ${c.id} 현금 ${c.cash}`);
-      if (!(w.bank.cash >= -1e-6)) flag(`은행 현금 ${w.bank.cash}`);
       if (!(w.traders.cash >= -1e-6)) flag(`무역상 현금 ${w.traders.cash}`);
       // 다른 시드에서도 화폐 보존을 매일 본다 (덤, 거의 공짜)
       if (!(Math.abs(moneyIdentity(w) - m0) / m0 < 1e-9)) flag(`화폐 장부 어긋남 ${moneyIdentity(w) - m0}`);

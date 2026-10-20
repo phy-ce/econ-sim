@@ -39,7 +39,7 @@ export const roundingDrift = (w: World): number => dropped.get(w) ?? 0;
 /** 훑지 않는 것: 기록(로그)은 쓸 때 반올림하고, 알림 상태는 틱(정수)만 담는다 */
 const SKIP = new Set(['history', 'metrics', 'events', 'alertState']);
 /** 아래에서 필드를 직접 적어 맞추는 것 */
-const LISTED = new Set(['regions', 'pops', 'buildings', 'constructions', 'salvage', 'traders', 'bank', 'mint']);
+const LISTED = new Set(['regions', 'pops', 'buildings', 'constructions', 'salvage', 'traders', 'mint']);
 
 /**
  * 화면 표시용 사본(Pop.wealth·literacy, Region.education, Building.crew)을 100배 값에서 다시 쓴다 (roundWorld 가 하루 끝마다 같은 일을 한다).
@@ -190,7 +190,6 @@ export function roundWorld(w: World): void {
   for (const l of w.salvage) { l.q = r(l.q); l.ownerShare = r(l.ownerShare); }
   for (const sh of w.traders.shipments) sh.q = r(sh.q);
   w.traders.capital = r(w.traders.capital);
-  w.bank.capital = r(w.bank.capital);
   const all = w as unknown as Record<string, unknown>;
   for (const k in all) {
     if (SKIP.has(k) || LISTED.has(k)) continue;

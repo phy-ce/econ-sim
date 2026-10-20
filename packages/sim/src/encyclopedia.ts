@@ -38,7 +38,7 @@ import { CHUNKS, LAW_COOLDOWN, LAW_SWITCH, OFFICE_BLOCK, OFFICE_GROWTH, STAFFING
 import { budgetPreview } from './budget';
 import type { BudgetLineKey } from './budget';
 import { MAX_CONCURRENT_CONSTRUCTIONS, MAX_LEVELS_PER_PROJECT } from './commands';
-import { BANK_CAPITAL, START_CASH, START_OFFICE_LEVELS, START_TECHS, TRADER_CAPITAL, createWorld } from './world';
+import { START_CASH, START_OFFICE_LEVELS, START_TECHS, TRADER_CAPITAL, createWorld } from './world';
 import { regionNameEn } from './i18n';
 import { POP_CLASSES, SKILLS, educationOf, literacyOf, wealthOf } from './types';
 import type { Building, Company, GoodId, Kingdom, PopClass, Region, Skill, World } from './types';
@@ -151,7 +151,7 @@ export const ENC_CATEGORIES: EncCategory[] = [
   { id: 'labour', title: t('노동과 임금', 'Labour and wages') },
   { id: 'people', title: t('인구와 생활', 'Population and living') },
   { id: 'tenants', title: t('소작과 땅', 'Tenant farms') },
-  { id: 'ownership', title: t('소유·배당·은행', 'Ownership and money') },
+  { id: 'ownership', title: t('소유·배당·국채', 'Ownership and money') },
   { id: 'state', title: t('국가 재정', 'State finance') },
   { id: 'ai', title: t('AI 판단', 'AI decisions') },
 ];
@@ -194,7 +194,7 @@ export const DESIGN_SECTIONS: Record<string, string> = {
   '9.1': '세법과 세금',
   '9.2': '예산',
   '9.3': '배당·투자 풀',
-  '9.4': '은행·국채·주조',
+  '9.4': '국채·주조',
   '10': 'AI 판단 요약',
   '11': '주요 조정값',
 };
@@ -223,10 +223,10 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   },
   {
     id: 'start-state', category: 'basics', title: t('시작 상태', 'Starting state'),
-    rule: t('지역 티어가 인구·계층·교육·부지·농지를 정하고 ±{0} 흔든다. 민간 상회는 {1}, 은행 {2}, 상인 {3}으로 시작한다.', 'Region tiers set population, classes, education, plots and farmland, jittered by ±{0}. Private houses start with {1}, the bank {2}, traders {3}.'),
+    rule: t('지역 티어가 인구·계층·교육·부지·농지를 정하고 ±{0} 흔든다. 민간 상회는 {1}, 상인 {2}으로 시작한다. 은행은 없다.', 'Region tiers set population, classes, education, plots and farmland, jittered by ±{0}. Private houses start with {1}, traders {2}. There is no bank.'),
     params: [
       p('티어 흔들림', 'Tier jitter', () => TIER_JITTER, 'pct'), p('민간 상회 시작 현금', 'Private start cash', () => START_CASH, 'florin'),
-      p('은행 자본', 'Bank capital', () => BANK_CAPITAL, 'florin'), p('상인 자본', 'Trader capital', () => TRADER_CAPITAL, 'florin'),
+      p('상인 자본', 'Trader capital', () => TRADER_CAPITAL, 'florin'),
       tune('startTreasuryWeeks', '시작 국고 (정부 건물 운영비 주 수)', 'Start treasury (weeks of government upkeep)', 'week'),
       p('시작 건축사무소', 'Starting construction office', () => START_OFFICE_LEVELS, 'level'),
       p('시작 기술', 'Starting techs', () => START_TECHS.join(', ')),
@@ -958,18 +958,18 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   },
   {
     id: 'investment-pool', category: 'ownership', title: t('투자 풀', 'Investment pool'),
-    rule: t('배당 재투자, pop의 남는 현금, 은행·상인 초과분이 왕국 투자 풀에 모여 매주 민간 상회로 간다. 지역 표시가 붙은 돈은 그 지역 공사에 가산점({0})을 준다.', 'Reinvested dividends, surplus pop cash and bank/trader excess collect in the kingdom\'s pool and go to the private house weekly. Money tagged with a region gives projects there a bonus ({0}).'),
+    rule: t('배당 재투자, pop의 남는 현금, 상인 초과분과 주인 없는 돈이 왕국 투자 풀에 모여 매주 민간 상회로 간다. 지역 표시가 붙은 돈은 그 지역 공사에 가산점({0})을 준다.', 'Reinvested dividends, surplus pop cash, trader excess and ownerless money collect in the kingdom\'s pool and go to the private house weekly. Money tagged with a region gives projects there a bonus ({0}).'),
     params: [tune('localBias', '지역 가산점', 'Local bonus', 'pct')],
     live: { pick: [], run: (w) => ({ bars: w.kingdoms.map((k) => bar(t(k.name, k.nameEn), r2(k.investmentPool), 'florin')), rows: w.kingdoms.map((k) => row(k.name, k.nameEn, r2(companyById(w, k.privateIds[0])?.cash ?? 0), 'florin')) }) },
     related: ['cash-surplus', 'dividends', 'ai-construction'], seenIn: ['finance'], source: ['finance.ts distributeInvestment'], design: ['9.3'],
   },
   {
-    id: 'banking', category: 'ownership', title: t('빚과 이자', 'Debt and interest'),
-    rule: t('이자는 하루 {0}. 민간은 은행에서 {1} + 건물 장부가의 50%까지 빌린다. 왕실은 {1} + 연간 총생산 × {2}까지 국채(새 돈)를 찍는다. 매주 2주치 임금을 넘는 현금의 20%로 갚는다.', 'Interest is {0} a day. Private houses borrow from the bank up to {1} + 50% of book value. Crowns print bonds (new money) up to {1} + yearly GDP × {2}. Each week 20% of cash above two weeks\' wages repays debt.'),
+    id: 'banking', category: 'ownership', title: t('국채와 이자', 'Crown bonds and interest'),
+    rule: t('왕실만 빌린다. 국고가 모자라면 자동으로 국채(새 돈)를 {1} + 연간 총생산 × {2}까지 찍어 빌리고, 매주 2주치 임금과 유보 자산을 넘는 현금의 20%로 갚는다. 이자는 하루 {0}. 민간 상회는 빌리지 않는다: 현금이 모자라면 원료를 덜 사고 임금을 비례로 준다.', 'Only the crown borrows. When the treasury runs short it prints bonds (new money) up to {1} + yearly GDP × {2}, and each week repays with 20% of cash above two weeks of wages and reserves. Interest is {0} a day. Private houses never borrow: short of cash, they buy fewer inputs and pay wages in proportion.'),
     params: [p('하루 이자', 'Daily interest', () => DAILY_INTEREST, 'pct'), p('기본 한도', 'Base credit', () => BASE_CREDIT, 'florin'), p('국채 한도 비율', 'Bond limit share of GDP', () => STATE_CREDIT_GDP, 'pct')],
     live: {
       pick: [], run: (w) => ({
-        rows: w.companies.map((c) => ({ label: t(c.name, c.name), value: `${Math.round(c.cash).toLocaleString()} / −${Math.round(c.debt).toLocaleString()} / ${Math.round(creditLimit(w, c)).toLocaleString()}` })),
+        rows: w.companies.filter((c) => c.state).map((c) => ({ label: t(c.name, c.name), value: `${Math.round(c.cash).toLocaleString()} / −${Math.round(c.debt).toLocaleString()} / ${Math.round(creditLimit(w, c)).toLocaleString()}` })),
       }),
     },
     related: ['mint', 'money-conservation'], seenIn: ['finance', 'company'], source: ['economy.ts creditLimit', 'finance.ts chargeInterest'], design: ['9.4'],

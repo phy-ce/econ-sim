@@ -110,13 +110,18 @@ describe('저장값 소수 둘째 자리', () => {
     }
     for (const c of old.companies) c.cash += 0.004321;
     old.traders.shipments.push(...old.traders.shipments.map((s: { q: number }) => ({ ...s, q: s.q / 3 + 1e-4 })));
-    const before = moneyIdentity(old as World);
+    // 옛 저장에는 은행과 민간 빚이 있었다: 은행 현금은 주인 없는 돈으로 가고 민간 빚은 탕감된다
+    old.bank = { cash: 300_000_000.004, capital: 300_000_000 };
+    for (const c of old.companies) if (!c.state) c.debt = 1_234_567.89;
+    const before = moneyIdentity(old as World) + old.bank.cash;
     const got = migrateWorld(old)!;
     expect(got.version).toBe(7);
     expect(violations(save(got))).toEqual([]);
     // 옛 저장의 끝수는 장부의 센트 아래이므로 마지막 반올림이 그만큼(반 센트 아래)만 지운다
     expect(Math.abs(moneyIdentity(got) - before)).toBeLessThan(0.01);
     expect(got.fund).toBeGreaterThanOrEqual(0);
+    expect('bank' in got).toBe(false);
+    expect(got.companies.every((c) => c.state || c.debt === 0)).toBe(true);
     expect(got.pops[0].wealth100).toBeGreaterThanOrEqual(100);
     expect(got.buildings.every((b) => b.exp100 >= 0 && b.exp100 <= 100 && !('exp' in b) && b.crew === (b.crew100 === undefined ? undefined : round2(b.crew100 / 100)))).toBe(true);
     expect(got.pops.every((p) => p.wealth === round2(p.wealth100 / 100) && p.literacy === round2(p.literacy100 / 100))).toBe(true);
