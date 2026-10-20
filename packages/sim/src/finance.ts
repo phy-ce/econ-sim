@@ -289,8 +289,8 @@ export function collectIncomeTax(w: World) {
 
 // ---------------------------------------------------------------- 주간: 세금, 배당, 소유 건물 금고
 
-/** 소유 건물에서 받은 몫 중 그 소유 건물 금고에 남기는 비율 (빅토리아3 기본률: 금융가 30%, 저택 20%) */
-export const INVEST_SHARE: Partial<Record<PopClass, number>> = { capitalist: 0.3, aristocrat: 0.2, gentry: 0.2 };
+/** 소유 건물이 받은 배당·지대 중 그 금고에 남기는 비율 (빅토리아3 투자 풀 기본률: 저택 20%, 금융가 30%). 나머지를 앉은 사람·지분 주인에게 준다 */
+export const KEEP_SHARE: Record<string, number> = { manor: 0.2, finance: 0.3 };
 
 export function weeklyWageBill(w: World, c: Company): number {
   let bill = 0;
@@ -369,22 +369,20 @@ function fitReserves(w: World, c: Company): number {
   return cash - total;
 }
 
-/** 소유 건물 o 에 앉은 pop 에게 배당·지대를 몫(shareWeight × 인원)대로 나눠 준다: 받은 몫의 일부(INVEST_SHARE)는 o 의 금고로. 앉은 사람이 없으면 모두 금고로 */
+/** 소유 건물 o 가 받은 배당·지대: KEEP_SHARE 는 o 의 금고에 남기고, 나머지를 앉은 pop 에게 몫(shareWeight × 인원)대로. 앉은 사람이 없으면 모두 금고로 */
 function payOwners(w: World, o: Building, amount: number) {
   if (amount <= 0) return;
   o.last.revenue += amount;
+  flow(`divIn.${o.typeId}`, amount);
   const pops = w.pops.filter((p) => p.work === o.id && p.size > 0);
   let total = 0;
   for (const p of pops) total += p.size * shareWeight(p.prof);
-  flow(`divIn.${o.typeId}`, amount);
   if (total <= 0) { toTreasury(o, amount, 'noSeat'); return; }
-  for (const p of pops) {
-    const amt = (amount * p.size * shareWeight(p.prof)) / total;
-    const invest = amt * (INVEST_SHARE[p.prof] ?? 0);
-    toTreasury(o, invest, 'keep');
-    flow(`toPops.${o.typeId}`, amt - invest);
-    payPops(w, [p], amt - invest);
-  }
+  const keep = amount * (KEEP_SHARE[o.typeId] ?? 0);
+  toTreasury(o, keep, 'keep');
+  const rest = amount - keep;
+  flow(`toPops.${o.typeId}`, rest);
+  for (const p of pops) payPops(w, [p], (rest * p.size * shareWeight(p.prof)) / total);
 }
 
 /**

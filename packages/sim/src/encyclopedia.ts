@@ -31,7 +31,7 @@ import {
 import { HIRE_RATE, MIGRATE_FULL, MIGRATE_MAX, MIGRATE_START, RATIO_GATE, UNPAID_QUIT, subsistenceWage, switchShare } from './labor';
 import { CREW_RATE, EXP_GAIN } from './production';
 import {
-  DAILY_INTEREST, INVEST_SHARE, MINT_BASE, MINT_RATE, RESEARCHER_WEIGHT, RESERVE_SHARE, adminCapacityOf, reserveCap, taxCapacity, taxRates,
+  DAILY_INTEREST, KEEP_SHARE, MINT_BASE, MINT_RATE, RESEARCHER_WEIGHT, RESERVE_SHARE, adminCapacityOf, reserveCap, taxCapacity, taxRates,
   weeklyOutputValue,
 } from './finance';
 import { CHUNKS, LAW_COOLDOWN, LAW_SWITCH, OFFICE_BLOCK, OFFICE_GROWTH, STAFFING_HORIZON, SWITCH_COOLDOWN } from './ai';
@@ -971,7 +971,7 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   {
     id: 'dividends', category: 'ownership', title: t('배당', 'Dividends'),
     rule: t('민간 건물은 유보 자산을 채우고 남은 이익을 매주 레벨 주인(저택·금융가)에게 레벨 수대로 보낸다. 왕실 건물의 이익은 국고에 남는다. 받은 몫의 자본가 {0}, 귀족 {1}는 그 금고에 남긴다. 민간 상회는 먼저 임금·원료 {2}주치를 운영 자금으로 남긴다.', 'Private buildings send profit beyond their reserve to their level owners (manors and districts) by level count weekly; crown building profit stays in the treasury. Capitalists keep {0} and nobles {1} of what they receive in their treasury. The private house first keeps {2} weeks of wages and inputs as working cash.'),
-    params: [p('자본가 재투자', 'Capitalist reinvestment', () => INVEST_SHARE.capitalist ?? 0, 'pct'), p('귀족 재투자', 'Noble reinvestment', () => INVEST_SHARE.aristocrat ?? 0, 'pct'), tune('firmBufferWeeks', '상회 운영 자금 (주)', 'House working cash (weeks)', 'week')],
+    params: [p('금융가 금고 몫', 'District keeps', () => KEEP_SHARE.finance, 'pct'), p('저택 금고 몫', 'Manor keeps', () => KEEP_SHARE.manor, 'pct'), tune('firmBufferWeeks', '상회 운영 자금 (주)', 'House working cash (weeks)', 'week')],
     related: ['reserves', 'owner-treasury', 'owner-buildings'], seenIn: ['company', 'finance'], source: ['finance.ts payDividends', 'finance.ts payOwners'], design: ['9.3'],
   },
   {
