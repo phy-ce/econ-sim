@@ -355,6 +355,7 @@
 - 옛 저장: `migrateWorld`가 지역 시장에 `paper`를 기본가로 넣는다. 불러오기 전 기록(`history[].prices`)에는 `paper`가 없으니 가격 그래프는 값이 없는 칸을 건너뛴다.
 - 행정청 징세 한도는 이제 원료 충족률을 따른다 (`b.last.inputFill`). 건물 패널의 "원료 충족"이 행정청에도 실제 효과가 있다.
 
+- 임시 (sim 쪽에서 컴파일·테스트용으로 넣음): `spriteAtlas.ts` 13행 별칭 `paper_mill:'workshop'`, `paper:'cloth'`. 전용 아이콘을 그리면 이 별칭을 지운다.
 ---
 
 ## 3. sim 쪽 필요 사항 (Claude가 처리할 것, UI 작업자는 요청만)
