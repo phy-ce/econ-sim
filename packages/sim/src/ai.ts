@@ -333,7 +333,8 @@ function manageBuildings(w: World, c: Company) {
     // 기상 조건이 걸린 동안의 적자는 일시적이라 세지 않는다
     const cost = b.last.inputCost + b.last.wageCost;
     const actualMargin = cost > 0 ? (b.last.revenue - cost) / cost : 0;
-    const bleeding = harvestFactor(w, b.regionId, BUILDING_BY_ID[b.typeId].land) >= 1 && b.profitEma < 0 && (current.margin < -0.2 || actualMargin < -0.2);
+    // 유보 자산이 남아 있으면 적자를 거기서 메우고 가동률을 줄이지 않는다
+    const bleeding = !b.reserve && harvestFactor(w, b.regionId, BUILDING_BY_ID[b.typeId].land) >= 1 && b.profitEma < 0 && (current.margin < -0.2 || actualMargin < -0.2);
     b.lossWeeks = bleeding ? b.lossWeeks + 1 : 0;
     if (b.lossWeeks >= 4 && b.utilization > 0.1 + 1e-9) {
       applyCommand(w, c.id, { type: 'setUtilization', buildingId: b.id, utilization: Math.max(0.1, b.utilization - 0.1) });
@@ -607,6 +608,7 @@ function levelValue(w: World, c: Company, o: Outlook, b: Building, pointsPerDay:
 
 /**
  * 철거 판단 (짓기와 같은 주, 같은 전망): 마지막 레벨 손익이 TUNE.shrinkWeeks 주 연속 마이너스면 레벨의 1/4(최소 1)을 철거 대기에 올린다.
+ * 건물이 적자를 유보 자산으로 메우는 동안은 세지 않는다 (유보 자산이 바닥나야 센다).
  * 건축사무소는 TUNE.officeShrinkWeeks 주를 보고, 그동안 한 번도 사람이 차지 않은 레벨(일하던 주의 최고 충원율 staffPeak 로 센다)과
  * 남는 포인트 몫(많아야 1/4) 중 큰 쪽을 헌다. 쉬다가 다시 뽑는 중이라 비어 있는 레벨은 헐지 않는다. 왕국의 마지막 사무소 레벨은 남긴다.
  * 손실 때문에 헐리는 중인 건물이 다시 이익을 내면 철거를 취소한다. 증설 공사 중인 건물은 보지 않는다
@@ -622,7 +624,9 @@ function reviewLevels(w: World, c: Company, o: Outlook, pointsPerDay: number) {
       continue;
     }
     b.swap = false;
-    b.negWeeks = v < 0 ? (b.negWeeks ?? 0) + 1 : 0;
+    // 적자를 유보 자산으로 메우는 동안은 철거 주 수를 세지 않는다
+    const covered = b.profitEma < 0 && !!b.reserve;
+    b.negWeeks = v < 0 && !covered ? (b.negWeeks ?? 0) + 1 : 0;
     const m = getMethod(b.typeId, b.methodId);
     if (!m.construction) {
       if (b.negWeeks >= TUNE.shrinkWeeks) {

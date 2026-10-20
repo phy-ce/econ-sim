@@ -99,6 +99,7 @@ function roundBuilding(b: Building): void {
   b.utilization = r(b.utilization);
   b.exp100 = r(b.exp100);
   b.profitEma = r(b.profitEma);
+  if (b.reserve !== undefined) b.reserve = r(b.reserve);
   if (b.privateShare !== undefined) b.privateShare = r(b.privateShare);
   if (b.tenants !== undefined) b.tenants = r(b.tenants);
   if (b.crew100 !== undefined) { b.crew100 = r(b.crew100); b.crew = r(b.crew100 / 100); } else if (b.crew !== undefined) delete b.crew;

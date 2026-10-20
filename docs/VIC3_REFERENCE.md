@@ -53,6 +53,14 @@
 - 민간 공사: "Buildings constructed from the investment pool use a separate, private construction queue." 건설 부문 임금은 국고가 낸다: "the wages of construction sector employees are always paid by the national treasury."
 - 이 게임과 다른 점: 이 게임은 모든 pop의 남는 현금(생활비·세금 10일치 초과분의 하루 5%)도 투자 풀로 간다 (`DESIGN.md` 9.3). 측정한 유입의 61~93%가 이것이다 (`DECISIONS.md` 7-8).
 
+## 건물 유보 자산 (cash reserves, 2026-10-21 확인)
+출처: https://vic3.paradoxwikis.com/Treasury, https://vic3.paradoxwikis.com/Defines, https://vic3.paradoxwikis.com/Building, https://vic3.paradoxwikis.com/Patch_1.2, https://vic3.paradoxwikis.com/Patch_1.3, https://vic3.paradoxwikis.com/Patch_1.8
+- 건물마다 유보 자산 상한이 레벨당 상수다 (£25,000/레벨, 소유 건물은 £10,000/레벨).
+- 이익이 나면 주간 이익의 25~50%를 유보 자산에 넣는다 (수익률에 따라 26~78주에 다 찬다). 나머지는 배당이다. 다 차면 이익을 100% 배당한다.
+- 적자일 때 유보 자산이 50% 넘으면 임금을 깎지 않는다. 50% 아래이고 적자면 임금을 깎거나 해고한다 (임금은 주마다 최대 10%).
+- 유보 자산이 적으면 채용을 멈추고, 자동 증설은 유보 자산이 95% 이상일 때만 한다.
+- 이 게임: 레벨당 상한(`TUNE.reservePerLevel`), 이익의 35%를 쌓고, 다 차면 100% 배당, 적자는 유보 자산에서 먼저 뺀다. 유보 자산이 남아 있으면 가동률을 줄이지 않고 철거 주 수를 세지 않는다 (`DESIGN.md` 9.3). 임금 깎기·채용 멈춤·증설 조건은 유보 자산과 잇지 않았다 (임금은 회사 단위다).
+
 ## 정부 건물과 땅, 건설 부문 레벨 상한 (2026-10-19 확인)
 - "Most urban buildings have no limit on their total levels and can be built in any state." (https://vic3.paradoxwikis.com/Buildings, 직접 확인)
   - 같은 문서에서 농지(arable land) 상한은 농촌 건물에만 나온다. 행정청·대학에는 땅이나 도시화 상한이 없다.
