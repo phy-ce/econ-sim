@@ -1028,8 +1028,10 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   },
   {
     id: 'admin-capacity', category: 'state', title: t('행정청 한도와 종이', 'Administrative capacity and paper'),
-    rule: t('행정청 한도 = Σ {0}명 × {1} × 레벨 × 가동률 × 작업 인원 × 효율 × 원료 충족. 전문 관료제는 3배이고 종이를 쓴다. 시작 행정청은 왕국 인구 × {2}를 감당한다. 걷힌 세금은 한도 기여 비율대로 행정청 매출로 잡힌다.', 'Capacity = Σ {0} × {1} × level × util × crew × efficiency × input fill. Professional bureaucrats give 3× and consume paper. The starting administration covers population × {2}. Taxes count as administration revenue by capacity share.'),
+    rule: t('행정청 한도 = Σ {0}명 × {1} × 레벨 × 가동률 × 작업 인원 × 효율 × 원료 충족. 세습 관료제는 하급 귀족만, 전문 관료제는 기술자만 쓰고, 전문 관료제는 한도가 3배이고 종이를 쓴다. 시작 행정청은 왕국 인구 × {2}를 감당한다. 걷힌 세금은 한도 기여 비율대로 행정청 매출로 잡힌다.', 'Capacity = Σ {0} × {1} × level × util × crew × efficiency × input fill. Hereditary bureaucrats employ only gentry, professional bureaucrats only skilled workers; professional bureaucrats give 3× and consume paper. The starting administration covers population × {2}. Taxes count as administration revenue by capacity share.'),
     params: [p('1레벨 기본 인구', 'People per level', () => TAX_PEOPLE_PER_LEVEL, 'people'), tune('adminScale', '배율', 'Scale'), tune('adminStart', '시작 한도 ÷ 인구', 'Start capacity ÷ population'),
+      p('세습 관료제 하급 귀족 (레벨당)', 'Gentry per hereditary level', () => getMethod('admin', 'admin_hereditary').workers.gentry ?? 0, 'people'),
+      p('전문 관료제 기술자 (레벨당)', 'Skilled per professional level', () => getMethod('admin', 'admin_professional').workers.skilled ?? 0, 'people'),
       p('전문 관료제 종이 (레벨당 하루)', 'Paper per professional level/day', () => getMethod('admin', 'admin_professional').inputs.paper ?? 0, 'good')],
     live: {
       pick: ['kingdom'], run: (w, ctx) => {
