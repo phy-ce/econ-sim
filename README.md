@@ -2,126 +2,131 @@
 
 **Play in the browser: https://phy-ce.github.io/econ-sim/** (built from `main` on every push)
 
-A management game prototype about the market economy of Estera, a fictional early-modern kingdom. You run one trading house and compete with three AI houses across seven regional markets, while millions of simulated people work, eat, save, migrate and climb (or fall) between social classes. The economic loop is inspired by Victoria 3, but the rules and numbers are this game's own. The currency is the florin (ƒ).
+A management game about the market economy of an early-modern continent. Three kingdoms (Estera, Belonia and Karten) share seven regions. You play the crown of Estera. Each kingdom has two companies: the crown (a state company whose cash is the treasury) and one private company that invests the people's savings. About five million simulated people work, eat, save, migrate and change jobs. The economic loop is inspired by Victoria 3, but the rules and numbers are this game's own. The currency is the florin (ƒ).
 
-The UI is a single-screen dashboard drawn in a parchment and pixel-art style. It is available in Korean and English.
+The UI is a dashboard in a parchment and pixel-art style, in Korean and English. It shows labels, numbers and bars only. This README explains the rules.
 
 ## Running
 
 ```bash
 npm install
-npm run dev                                  # play locally (http://localhost:5173)
-npm test                                     # simulation invariants, class structure, long-run stability
-npm run build                                # production build of the client
-npm run typecheck
-
-# headless tools (packages/sim/cli)
-npx tsx packages/sim/cli/run.ts --years 30 --seed 1   # long run, CSV output in packages/sim/out
-npx tsx packages/sim/cli/sweep.ts --seeds 10 --years 10  # stability sweep across seeds
-npx tsx packages/sim/cli/curve.ts --seeds 1,2         # wealth by class over 15 years
-npx tsx packages/sim/cli/calib.ts 1,2                 # price vs base price and supply/demand per good
-npx tsx packages/sim/cli/scale.ts 1                   # per good: sales, building supply, imports, price vs base, one level vs sales
-npx tsx packages/sim/cli/methods.ts                   # every production method per level: inputs, outputs, wages, margin
-npx tsx packages/sim/cli/diag.ts 1 5 10 15            # levels per method, efficiency, owner seats, class movements
+npm run dev          # play locally (Vite, http://localhost:5173)
+npm run build        # production build of the client
+npm run typecheck    # simulation and client
+npm run test:core    # money conservation, determinism (incl. save/load), value ranges (~10 s)
+npm run test:long    # 20-year runs, seeds 1 and 2
+npm test             # all simulation tests (~1 min)
 ```
+
+Headless tools live in `packages/sim/cli`. Run them from `packages/sim`. Many take a tuning override as JSON (`'{}'` for none), then a seed and a number of years.
+
+```bash
+npx tsx cli/report.ts 1 10                # yearly table per kingdom: seed, years, [out.json], [TUNE JSON]
+npx tsx cli/popdiag.ts '{}' 1 20          # population by class, living standard, construction starts
+npx tsx cli/soldiag.ts '{}' 1 20          # lower-class income, taxes and cost of living
+npx tsx cli/treasury.ts '{}' 1 20         # treasury, debt, policy levels, yearly budget per kingdom
+npx tsx cli/jobdiag.ts '{}' 1 20          # unemployment, vacancies and free land per region
+npx tsx cli/classdiag.ts '{}' 1 20        # employment and living standard per class
+npx tsx cli/skilldiag.ts 1 20             # jobs, employment and qualified people per class
+npx tsx cli/schooldiag.ts 1 20            # schools, literacy and qualified skilled workers
+npx tsx cli/gentrydiag.ts 1 10            # gentry and high nobility: seats, income, living standard
+npx tsx cli/regions.ts 1 5                # classes, wealth and buildings per region
+npx tsx cli/methods_audit.ts              # every method at base prices and wages: wages, inputs, revenue, margin
+bash cli/fast.sh perf.ts 2                # time per simulation step (fast.sh runs any CLI bundled with esbuild)
+bash cli/sweep.sh out.jsonl '{}' '{"landTax":0.3}'   # compare tuning values, 20 years x seeds 1 and 2
+python cli/sweepsum.py out.jsonl          # summarise a sweep
+```
+
+`sweep.sh` reads `SEEDS` (default `"1 2"`), `YEARS` (default 20), `PAR` (parallel runs) and `TIMING=1`.
 
 Controls: `Space` pauses and resumes, `1`–`4` set the speed (1× = one game hour per real second, then 10×, 100×, 500×).
 
 ## Layout
 
 ```
-packages/sim      Pure TypeScript simulation core: no IO, seeded RNG, fully serializable state
-  src/data.ts       goods, buildings, production methods, techs, regions, classes, needs
-  src/tick.ts       one day: interest, research, labour market, wages, grants, tenant farming,
-                    orders, market clearing, production and construction, prices, population
-  src/ai.ts         weekly decisions of AI houses: wages, methods, research, construction, dividends
-  src/outlook.ts    market outlook used by the AI to value investments
-  src/commands.ts   the single validated path for every action (player and AI alike)
-  src/alerts.ts     weekly checks that raise notifications
-  cli/              headless runs, sweeps and calibration tools
+packages/sim      Pure TypeScript simulation: no IO, seeded RNG, fully serializable state
+  src/data.ts       goods, buildings, methods, techs, regions, needs, tuning values (TUNE)
+  src/world.ts      starting state
+  src/tick.ts       one day and one week, in order
+  src/pops.ts       people: qualifications, literacy, growth
+  src/labor.ts      hiring, job switching, migration
+  src/market.ts     orders, tenant harvest, market clearing, prices
+  src/production.ts production, construction, demolition, ownership buildings
+  src/finance.ts    taxes, policy levels, reserves, dividends, banking, minting
+  src/budget.ts     budget preview for the UI
+  src/ai.ts         weekly AI decisions (src/outlook.ts values investments)
+  src/commands.ts   the single validated path for every action, player and AI alike
+  cli/              headless runs, sweeps and diagnostics
 packages/client   React + Vite. The simulation runs in a Web Worker; the UI only sends commands.
 ```
 
 ## World
 
-- **Seven regions**, each with a fixed number of land cells (arable, forest, ore, building plots). Each building level occupies one cell, except government administration and schools, which use no land (as government buildings do in Victoria 3); construction offices use building plots. Regions have hundreds to thousands of cells. Each region has its own market. Each region also has a perk, for example +10% output for mines in the northern mining district.
-- **About 2.9 million people** at the start, almost all of them tenant farmers.
-- **Twelve goods** in a production chain: raw goods (grain, fibre, timber, ore), processed goods (food, fuel, clothing, metal), finished goods (tools, furniture, precision instruments), plus **transport**, a service produced by railways.
-- **Trade and transport.** Moving goods out of a region (traders, buying inputs from a neighbour, port imports and exports) requires transport bought in the origin market. Rail transport costs about 6% of the cargo value. Whatever cannot go by rail is carried by porters and carts at 30%, paid to local labourers. Only the port city trades abroad, and foreign buyers only pay low prices, so exporting is a loss-making outlet for surplus.
-- **Harvest conditions.** Each season (90 days) each region has a 5% chance of a drought, flood or wildfire. It cuts the output and inputs of its land (farms, and mines or logging camps for floods and wildfires) by 10–30% in 5% steps for one or two seasons, and can spread to neighbouring regions.
-- **Prospecting.** Mines need discovered ore veins, counted separately for iron and coal. Each region knows 30% of its veins at the start; every season each region has a 10% chance per resource to find another 10% of its potential, until its veins are all found.
-- **Storage.** Unsold goods go to a regional warehouse that slowly decays and is capped at three times the target stock (about a month of trade).
+- One tick is one day. A week is 7 days, a year 360.
+- **Seven regions**, each with one market. The seed decides which kingdom holds which regions (at least two each, connected). Regions come in four tiers that set population, classes, education and land. In total about 5 million people (4.9 to 5.1 million in seeds 1–4).
+- **Land.** One building level uses one cell of farmland, forest, ore veins or building plots. Administration and schools use no land. Each region has a perk, for example +10% output for mines in the Northern Mining District.
+- **Goods.** Raw goods (grain, fibre, timber, iron ore, coal), processed goods (groceries, clothing, iron), finished goods (tools, furniture, machinery), luxuries (meat, fine clothes, luxury furniture) and **transport**, a service that cannot be stored.
+- **Trade.** Merchants buy where goods are cheap and sell in a neighbouring region the next day. Shipping costs 6% of the cargo value where transport bought in the origin market covers it; the rest goes by porters at 30%, paid to local labourers. Crossing a border adds the destination kingdom's tariff (10%). There is no foreign trade.
+- **Unsold output is lost.** Buildings keep no stock. Merchant cargo decays 2% a day until sold.
+- **Prices** move 3% a day towards a target set by demand against supply, between 0.25× and 1.75× the base price.
+- **Harvest conditions.** Each season (90 days), each region has a 5% chance of a drought, flood or wildfire. It cuts output and inputs on its land (farmland; also ore veins for floods and forest for wildfires) by 10–30% for one or two seasons. It spreads to each neighbour with a 50% chance.
+- **Prospecting.** Mines need discovered veins, counted separately for iron and coal. A region knows 30% of its veins at the start. Each season, each region has a 10% chance per resource to find another 10% of its potential.
 
 ## Technology
 
-Each house researches on its own. At the start only primary industry is open: farms, lumber camps, mines and construction offices. Sixteen techs in five tiers unlock processing industries (milling, charcoal, spinning, bloomeries, printing for schools, wagonways for railways), then guild workshops, improved farming, water-powered saws and looms, coal fuel, pumped mines, food preservation, steel frames, steam railways and finally precision engineering. Research speed is capped by a daily budget, so even at full budget a first-tier tech takes about a month.
+Technology belongs to the kingdom. The crown researches, and the private company uses the crown's techs. At the start the crown knows the spinning wheel and craft guilds. There are 17 techs in four tiers, costing ƒ12, 24, 40 and 70 million. Tier 1 opens processing (milling, bloomery), printing (public schools, professional bureaucrats) and wagon roads (carters). Later tiers bring ironworking, timber scaffolding, coke smelting, improved implements and the steam engine, then steam pumps, power looms, food machinery, farm machinery, steam railways and iron frames.
 
-Some better methods need no tech at all: iron tools raise the output of farms, lumber camps and mines from day one, if tools can be bought.
+Research is paid each week from the research budget (see Money). That money becomes income for skilled workers and experts.
 
 ## Construction and buildings
 
-- **Small levels, big markets.** A building level is small compared with a regional market: every method makes fewer than 100 units a day per level (a basic farm level: 300 labourers and 12 skilled workers making 72 grain), while a region trades thousands to tens of thousands of units a day. Regional industries are built from tens to hundreds of levels, as in Victoria 3. Population is scaled by `POP_SCALE` (100) and building levels by `BUILDING_SCALE` (3) in `data.ts`.
-- **Construction offices build everything.** Every house starts with a 33-level office. Projects advance with construction points produced daily by offices; better office methods (timber scaffolding, steel frames) are faster. A project builds 1 to 50 levels at once, and up to 40 projects run at once.
-- **One building per type per region and house.** Building the same type again adds levels to the existing building, and the whole building shares one production method. The UI shows a level count with −, + and +10 buttons.
-- **Owners.** Each level has owner seats (3 per level): capitalists for buildings on plots, landed aristocrats for farms, lumber camps and mines. The region's existing owners are seated in its buildings first, all buildings at the same fill ratio. Dividends go to the owner class of the building's region.
-- **Efficiency** = experience × owners × scale × regional perk.
-  - Experience: new staff start at 40% and reach 100% in about a month. Switching methods halves experience.
-  - Owners: 0.7 + 0.3 × owner fill, so a building with no seated owners makes 30% less. The fill follows seat changes at 8% a day, like the work crew. The AI values new levels with the owner fill it can expect in that region.
-  - Economies of scale: +10% output per 333 levels of the same building, up to +50%.
-- **Technology changes the labour mix.** Tech methods replace labourers with skilled workers and experts: improved farming, water-powered sawing, pumped mining, power looms, food preservation, steam railways and the better office methods need 40–60% fewer labourers and about twice the skilled workers of the method they replace (experts where the work is technical), and produce each unit more cheaply. The no-tech iron tools methods keep the basic workforce and add tools.
+- **One level = 1,000 jobs.** Building numbers follow one rule: at base prices and base wages a basic method makes about 20% margin, the first improved method about 30%, the second about 40%. Inputs and outputs come in steps of 500 units a day.
+- **The crown's construction offices build everything,** for both companies. Each crown starts with 10 office levels. Offices make construction points; better methods (timber scaffolding, iron frames) make more. A project gets at most 10 points per level a day. Half of each day's points go to crown projects and half to private ones, and either side can use what the other leaves. The private company pays a fee for the points it uses. A company can run 40 projects at once, each of 1 to 50 levels. An office with no project rests, and lets its workers go after 10 days.
+- **One building per type, region and company.** Building again adds levels. The whole building uses one method.
+- **Efficiency** = (0.4 + 0.6 × experience) × (1 + 1% per level, up to +20%) × (1 + regional perk). Experience grows 3.5% a day, halves on a method switch and is diluted by new levels.
+- **Ownership buildings.** Every region has a manor and a financial district that grow by themselves. Private farms, lumber camps and mines belong to the manor; private plot buildings belong to the financial district. Dividends and tenant rent go there and are split by shares among the seated owners: a high noble or capitalist holds 1 share, a gentry member 0.25. Owners keep 80% of what they receive (capitalists 70%); the rest goes to the investment pool.
+- **Cash reserves.** Every building that sells goods keeps 35% of its weekly profit as a reserve, up to **level × weekly output value at base price × 0.5 weeks**. Losses are paid from the reserve first. Only when it is empty does the AI cut utilisation or demolish. Profit beyond a full reserve is paid out as dividends.
+- **Private shares in crown buildings.** When the crown builds anything other than an office or administration, the private company may pay up to 50% of the cost and receives that share of the profit.
+- **Demolition** removes one level a week. Half the materials are sold back over 28 days.
 
 ## Classes
 
-| Class | Stratum | Income |
-|---|---|---|
-| Tenant farmers | lower | farm a landlord's empty land; they sell 20% of the harvest: half the money is rent, the land-tax rate goes to the crown, the rest is theirs; they eat and use what they need from the other 80%, and whatever is left vanishes |
-| Labourers | lower | wages |
-| Skilled workers, experts | middle | wages and research spending |
-| Capitalists | upper | dividends from plot buildings |
-| Landed aristocrats | upper | dividends from land buildings and tenant rent |
+| Class | Stratum | Base wage | Income |
+|---|---|---|---|
+| Tenant farmers | lower | – | the region's free farmland (see below) |
+| Labourers | lower | 10 | wages |
+| Skilled workers | middle | 15 | wages, research funding |
+| Experts | middle | 40 | wages, research funding |
+| Gentry | middle | 30 | wages in hereditary administration and tutor schools, or a 0.25 share in the manor |
+| Capitalists | upper | 40 | shares in the financial district |
+| High nobility | upper | 40 | shares in the manor: dividends of land buildings and tenant rent |
 
-- **Wealth** is a standard of living from 1 to 99. It rises when spendable income exceeds the cost of the next consumption basket and falls when it cannot cover the current one.
-- **Starvation** is based on food fulfilment, not wealth. Below 90% people die faster, and they migrate to better-fed neighbouring regions.
-- **Tenants become labourers** when factories have vacancies, but slowly: new factories take weeks to months to staff. Education also caps how far this goes: labourers can be at most 25% + 2 × education (up to 95%) of the lower class. Laid-off labourers return to the land if there is room.
-- **Promotion** to skilled worker or expert needs wealth, savings and vacancies, and is limited by the region's education level, which schools raise.
-- **Upper classes are the hardest to enter.** Owner seats are filled first by conversion between capitalists and aristocrats, then by rich experts and skilled workers in well-educated regions only.
-- **Migration.** A region's pull is the daily income an unemployed person can expect there, times its food fulfilment. Open jobs (and, for tenants and labourers, free tenant land) are shared out best-paid first among the region's unemployed; whoever gets no seat counts as earning nothing. People start moving when a neighbour pulls more than 30% harder, fastest at twice as hard.
-
-### Population movement
-
-All rates are per day and per region.
-
-| Movement | Rate | Conditions |
-|---|---|---|
-| Tenant → labourer | ≤ 0.2% of tenants × (0.25 + 1.5 × education) | labourer vacancies above unemployed labourers (at most half the gap); labourers ≤ 25% + 2 × education of the lower class |
-| Labourer → tenant | 0.1% of labourers × unemployment | unemployment ≥ 10%, free land |
-| Labourer → skilled | ≈ 0.04% × education × wage pull (0.5–4) | wealth ≥ 6, savings ≥ ƒ8 a head, skilled vacancies, skilled share below 4% + 40% × education |
-| Skilled → expert | ≈ 0.04% × 2 × (education − 25%) × wage pull | wealth ≥ 9, savings ≥ ƒ30 a head, expert vacancies |
-| Expert → skilled, skilled → labourer | 0.05% × unemployment | unemployment ≥ 15% |
-| Aristocrat → capitalist | ≤ 0.05% of aristocrats | aristocrats exceed their seats, capitalist seats vacant |
-| Capitalist → aristocrat | ≤ 0.01% of capitalists | aristocrat seats vacant, wealth ≥ 18, savings ≥ ƒ150 a head, education ≥ 50% |
-| Expert/skilled → capitalist | ≤ 0.01% of the source class (experts first) | vacant seats, education ≥ 40%, wealth ≥ 12, savings ≥ ƒ80 a head |
-| Expert/skilled → aristocrat | ≤ 0.005% of the source class (experts first) | vacant seats, education ≥ 50%, wealth ≥ 12, savings ≥ ƒ100 a head |
-| Surplus owners → skilled | 0.05% of the surplus | more owners than seats |
-| Hiring | ≤ 2% of a building's slots | unemployed people of that skill in the region |
-| Job switching | people move to the best-paying seat they qualify for; employed: 0.5%/day at 10% more income, faster for bigger gaps (max 5%/day) | income > 10% higher |
-| Migration | ≤ 0.1% of the unemployed, ≤ 0.025% of the employed (full at a 2× gap) | neighbour pull > 1.3× here (the unemployed compare pulls, the employed their own pay × food); employed upper classes stay |
-
-People carry their savings with them in every move. Migration notifications appear only when at least 0.5% of the source population has left within four weeks.
-- Goods are substitutable within a need (food or grain, fuel or timber, clothing or fibre). Processed goods are preferred at equal price.
+- **Tenant farms.** All free farmland is tenant land, 1,000 tenants per cell. Tenants sell **20% of the harvest**. Half of that money is rent for the manor, the land-tax rate goes to the crown, and the rest is theirs. From the other 80% they eat and use what they need; the rest is lost. Very poor tenants (wealth below 2) keep half the rent.
+- **Wealth** is a standard of living from 1 to 99. It rises when income covers the next consumption basket and falls when it does not cover the current one. Living standard (wealth × fulfilment) sets births and deaths, as in Victoria 3. Hunger raises deaths sharply.
+- **Qualifications.** Literacy (from schools and wealth) and wealth let people qualify for skilled, expert, gentry, capitalist and noble seats. Anyone except capitalists and high nobility can take labourer and tenant seats.
+- **Best-paying job.** People move to the best-paying seat they qualify for. The unemployed move at once. The employed move only for more than 1.1× their current income: 0.5% a day at 1.1×, up to 5% a day at 2×. Income per person is the wage, the tenant harvest value, or, for an ownership seat, the building's dividends × own shares ÷ all seated shares. A building hires at most max(3, 1% of its seats) a day.
+- **Migration.** A region's pull is the income an unemployed person can expect there times its food fulfilment. People move when a neighbour pulls more than 1.3× harder, fastest (0.1% a day) at 2×. Employed people move at a quarter of that speed; employed upper classes stay.
+- **Spare cash.** People hold 10 days of living costs and taxes. Each day 5% of anything above that goes to the kingdom's investment pool.
 
 ## Money
 
-- Running costs are borrowed automatically from the bank when cash runs short. The credit limit grows with the book value of buildings.
-- If debt exceeds 90% of the limit and cash cannot cover a day of wages, the bank steps in. For the player, a building is auctioned every four weeks. AI houses go bankrupt after twelve weeks.
-- Household savings are partly deposited and partly invested in AI houses. The player raises capital only through loans.
-- **Money is conserved**: money inside the kingdom plus the foreign account is constant, and the tests check it.
+- **Taxes.** Two tax laws. *Land-based* (the start): a 20% land tax on tenant sales. *Per capita*: a poll tax of ƒ0.4 a day (tenants pay a quarter) and a 20% income tax. Taxes are collected only as far as administration reaches: collection = x ÷ (1 + x), where x = administration capacity ÷ population. One level covers 150,000 people, professional bureaucrats three times as many.
+- **Policy levels** (1–5, start 3). **Tax level** multiplies every tax rate by 0.6 / 0.8 / 1 / 1.2 / 1.4. **State wages**: every crown building pays base wage × wage index × 0.7 / 0.85 / 1 / 1.15 / 1.3; the wage index follows the average private labourer wage. **Research** spends 4.5% of weekly output × 0.5 / 0.75 / 1 / 1.5 / 2. The budget preview shows the weekly balance at each level before you change it.
+- **Government buildings** (administration, offices, schools) always run at full capacity. The treasury pays their wages and inputs. Only the crown builds schools and administration.
+- **Schools.** Noble tutors (100 gentry, 20,000 places) or, with printing, public schools (1,000 workers, 100,000 places). Education moves towards 0.1 + 0.8 × places ÷ population and raises literacy.
+- **Treasury income**: taxes, tariffs, private construction fees and minting (ƒ1,000 + 3% of weekly output each week). The crown starts with 26 weeks of running costs.
+- **Debt.** Private companies borrow from the bank up to ƒ300,000 + 50% of their buildings' book value. The crown issues bonds up to ƒ300,000 + 25% of yearly output. Interest is 0.025% a day.
+- **Investment pool.** Reinvested dividends and people's spare cash go each week to the kingdom's private company, which builds with them.
+- **Money is conserved.** Total money changes only by minting, bond issues, repayments and bond interest. The tests check this to the cent.
 
 ## AI
 
-AI houses use the same command path as the player. Each week they build a market outlook: for every good, kingdom-wide demand (including inputs of projects under construction and latent demand from better methods they could switch to) against supply capacity (including projects under construction), turned into an expected long-run price. Every candidate building is valued the same way. Outputs are valued at the price after entry, minus transport. Inputs are valued at the price after purchase, plus transport. Utilisation is chosen to maximise profit. Houses with spare cash occasionally invest in an industry that does not pay yet, preferring scarce goods, which is how new production chains get started. Research is chosen by the value of the methods a tech unlocks, divided by its cost; printing (schools) also gets the value of the kingdom's skilled-worker shortage.
+The other two crowns and all three private companies are run by AI, through the same command path as the player. Each week:
 
-Each week a house can start up to three projects while its spare cash, the 40-project limit and a four-month office backlog allow. For each candidate it picks the largest chunk (20, 10, 5, 2 or 1 levels) whose expected annual return is still comfortably above the 40% hurdle. Labour is counted realistically: idle people in the region, tenants that can arrive within about 60 days at the tenant → labourer rate, a little from neighbours, and middle-class promotion if education allows. Schools are valued by their grant plus the regional skilled-worker shortage they relieve.
+- **Investment.** For every good the AI forms a long-run price from continent-wide demand (including projects under construction and better methods) against supply. Each candidate is valued at that price, with transport and the best utilisation (100/75/50/25%). It builds where yearly profit ÷ construction cost is above 0.2 and it can find at least half the workers, up to three projects a week.
+- **Wages.** Raised while vacancies stay open, cut after a losing week. Kept between 1.2× what new workers earn now and 85% of value added.
+- **Methods, utilisation, demolition.** Switches to a method that earns 5% more per unit. Cuts utilisation after four weeks of heavy loss and demolishes after 26 weeks of a losing last level, but not while the reserve still covers the loss.
+- **Crown.** Picks the tax law with the higher expected revenue. Moves the policy levels by how many weeks of spending the treasury holds (tightens below 26 weeks, loosens above 52). Picks research by value ÷ cost. Adds office levels when the queue is longer than 30 days. Builds schools until regions can reach 60% literacy.
 
 ## Art
 
