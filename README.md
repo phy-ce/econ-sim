@@ -2,7 +2,7 @@
 
 **Play in the browser: https://phy-ce.github.io/econ-sim/** (built from `main` on every push)
 
-A management game about the market economy of an early-modern continent. Three kingdoms (Estera, Belonia and Karten) share seven regions. You play the crown of Estera. Each kingdom has two companies: the crown (a state company whose cash is the treasury) and one private company that invests the people's savings. About five million simulated people work, eat, save, migrate and change jobs. The economic loop is inspired by Victoria 3, but the rules and numbers are this game's own. The currency is the florin (ƒ).
+A management game about the market economy of an early-modern continent. Three kingdoms (Estera, Belonia and Karten) share seven regions. You play the crown of Estera. Each kingdom has two companies: the crown (a state company whose cash is the treasury) and one private company that runs private buildings and decides what to build with the savings held by manors and financial districts. About five million simulated people work, eat, save, migrate and change jobs. The economic loop is inspired by Victoria 3, but the rules and numbers are this game's own. The currency is the florin (ƒ).
 
 The UI is a dashboard in a parchment and pixel-art style, in Korean and English. It shows labels, numbers and bars only. This README explains the rules.
 
@@ -92,12 +92,14 @@ Research is paid each week from the research budget (see Money). That money beco
 ## Construction and buildings
 
 - **One level = 1,000 jobs.** Building numbers follow one rule: at base prices and base wages a basic method makes about 20% margin, the first improved method about 30%, the second about 40%. Inputs and outputs come in steps of 500 units a day.
-- **The crown's construction offices build everything,** for both companies. Each crown starts with 10 office levels. Offices make construction points; better methods (timber scaffolding, iron frames) make more. A project gets at most 10 points per level a day. Half of each day's points go to crown projects and half to private ones, and either side can use what the other leaves. The private company pays a fee for the points it uses. A company can run 40 projects at once, each of 1 to 50 levels. An office with no project rests, and lets its workers go after 10 days.
+- **The crown's construction offices build everything,** for both companies. Each crown starts with 10 office levels. Offices make construction points; better methods (timber scaffolding, iron frames) make more. A project gets at most 10 points per level a day. Half of each day's points go to crown projects and half to private ones, and either side can use what the other leaves. Private projects pay a fee for the points they use. A company can run 40 projects at once, each of 1 to 50 levels. An office with no project rests, and lets its workers go after 10 days.
 - **One building per type, region and company.** Building again adds levels. The whole building uses one method.
 - **Efficiency** = (0.4 + 0.6 × experience) × (1 + 1% per level, up to +20%) × (1 + regional perk). Experience grows 3.5% a day, halves on a method switch and is diluted by new levels.
-- **Ownership buildings.** Every region has a manor and a financial district that grow by themselves. Private farms, lumber camps and mines belong to the manor; private plot buildings belong to the financial district. Dividends and tenant rent go there and are split by shares among the seated owners: a high noble or capitalist holds 1 share, a gentry member 0.25. Owners keep 80% of what they receive (capitalists 70%); the rest goes to the investment pool.
+- **Ownership buildings.** Every region has a manor and a financial district that grow by themselves. Each keeps a treasury. Every building level has exactly one owner: the state, or the manor or district that paid for it. Dividends of owned levels (by level count) and tenant rent go there and are split by shares among the seated owners: a high noble or capitalist holds 1 share, a gentry member 0.25. Owners take home 80% of what they receive (capitalists 70%); the rest stays in their treasury.
 - **Cash reserves.** Every building that sells goods keeps 35% of its weekly profit as a reserve, up to **level × weekly output value at base price × 0.5 weeks**. Losses are paid from the reserve first. Only when it is empty does the AI cut utilisation or demolish. Profit beyond a full reserve is paid out as dividends.
-- **Private shares in crown buildings.** When the crown builds anything other than an office or administration, the private company may pay up to 50% of the cost and receives that share of the profit.
+- **Who pays for construction.** The crown pays for its own projects and owns those levels. Private projects are paid from manor and district treasuries: the same region and the favoured kind first (manors like farms, forests and mines; districts like the rest), whole levels each, pooling money if needed. Finished levels are split by money paid. When levels do not divide evenly, the larger payer takes the extra level and refunds the difference.
+- **Privatisation.** Switch it on for a crown production building and manors and districts may buy one level a week at max(construction cost × 0.5, construction cost + one year of that level's profit). They buy when their treasury holds twice the price and the price pays back within 10 years. The money goes to the treasury; the level moves to the private building in the same region.
+- **Demolition proceeds** go to the owner of the demolished level.
 - **Demolition** removes one level a week. Half the materials are sold back over 28 days.
 
 ## Classes
@@ -111,14 +113,14 @@ Research is paid each week from the research budget (see Money). That money beco
 | Experts | middle | 40 | wages, research funding |
 | Gentry | middle | 30 | wages in hereditary administration and tutor schools, or a 0.25 share in the manor |
 | Capitalists | upper | 40 | shares in the financial district |
-| High nobility | upper | 40 | shares in the manor: dividends of land buildings and tenant rent |
+| High nobility | upper | 40 | shares in the manor: dividends of the manor's levels and tenant rent |
 
 - **Tenant farms.** All free farmland is tenant land, 1,000 tenants per cell. Tenants sell **20% of the harvest**. Half of that money is rent for the manor, the land-tax rate goes to the crown, and the rest is theirs. From the other 80% they eat and use what they need; the rest is lost. Very poor tenants (wealth below 2) keep half the rent.
 - **Wealth** is a standard of living from 1 to 99. It rises when income covers the next consumption basket and falls when it does not cover the current one. Living standard (wealth × fulfilment) sets births and deaths, as in Victoria 3. Hunger raises deaths sharply.
 - **Qualifications.** Literacy (from schools and wealth) and wealth let people qualify for skilled, expert, gentry, capitalist and noble seats. Anyone except capitalists and high nobility can take labourer and tenant seats.
 - **Best-paying job.** People move to the best-paying seat they qualify for. The unemployed move at once. The employed move only for more than 1.1× their current income: 0.5% a day at 1.1×, up to 5% a day at 2×. Income per person is the wage, the tenant harvest value, or, for an ownership seat, the building's dividends × own shares ÷ all seated shares. A building hires at most max(3, 1% of its seats) a day.
 - **Migration.** A region's pull is the income an unemployed person can expect there times its food fulfilment. People move when a neighbour pulls more than 1.3× harder, fastest (0.1% a day) at 2×. Employed people move at a quarter of that speed; employed upper classes stay.
-- **Spare cash.** People hold 10 days of living costs and taxes. Each day 5% of anything above that goes to the kingdom's investment pool.
+- **Spare cash.** People hold 10 days of living costs and taxes. Each day 5% of anything above that goes to a treasury: their own manor or district if they sit there, otherwise the regional financial district.
 
 ## Money
 
@@ -127,8 +129,8 @@ Research is paid each week from the research budget (see Money). That money beco
 - **Government buildings** (administration, offices, schools) always run at full capacity. The treasury pays their wages and inputs. Only the crown builds schools and administration.
 - **Schools.** Noble tutors (100 gentry, 20,000 places) or, with printing, public schools (1,000 workers, 100,000 places). Education moves towards 0.1 + 0.8 × places ÷ population and raises literacy.
 - **Treasury income**: taxes, tariffs, private construction fees and minting (ƒ1,000 + 3% of weekly output each week). The crown starts with 26 weeks of running costs.
-- **Debt.** Only the crown borrows. When the treasury runs short it automatically issues bonds (new money) up to ƒ300,000 + 25% of yearly output, and repays them when it has spare cash. Interest is 0.025% a day. There is no bank: private companies never borrow. Short of cash, they buy fewer inputs, pay wages in proportion to what they have, and build only from cash and the investment pool.
-- **Investment pool.** Reinvested dividends and people's spare cash go each week to the kingdom's private company, which builds with them.
+- **Debt.** Only the crown borrows. When the treasury runs short it automatically issues bonds (new money) up to ƒ300,000 + 25% of yearly output, and repays them when it has spare cash. Interest is 0.025% a day. There is no bank: private companies never borrow. Short of cash, they buy fewer inputs, pay wages in proportion to what they have, and build only with manor and district treasuries.
+- **No investment pool.** Kept dividends and people's spare cash stay in manor and district treasuries, which pay for private construction and buy privatised levels. Ownerless money and excess trader cash go to the regional financial districts.
 - **Money is conserved.** Total money changes only by minting, bond issues, repayments and bond interest. The tests check this to the cent.
 
 ## AI
