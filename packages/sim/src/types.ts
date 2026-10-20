@@ -456,11 +456,15 @@ export interface Kingdom {
   expenseEma?: number;
   /** 이번 주에 들어온 관세 (주마다 비운다) */
   tariffWeek?: number;
+  /** 이번 주 민간 공사 수수료 중 건축사무소 임금 몫, 국영 임금 수준 배율 1로 환산 (주마다 비운다) */
+  feeWageWeek?: number;
   /**
    * 예산 미리보기(budgetPreview)의 기준값. 화면 전용이고 sim 은 읽지 않는다.
-   * tax = 세금 수준 배율 1일 때의 하루 세입 (매일, 이동평균 0.9/0.1). tariffs·fees·goods = 주간 관세·민간 공사 수수료·정부 건물 원료 (매주, 0.75/0.25)
+   * taxBy = 세금 수준 단계 1~5 각각의 하루 세입 (매일, 이동평균 0.9/0.1, 저축 한도·징수율·토지세 포함).
+   * mint = 지난 주조액 (매주). tariffs·goods = 주간 관세·정부 건물 원료. feesWage = 민간 공사 수수료의 건축사무소 임금 몫(국영 임금 배율 1), feesOther = 나머지 (매주, 0.75/0.25).
+   * 처음 8주는 가중치를 세 배로 한다
    */
-  budgetBase?: { tax?: number; tariffs?: number; fees?: number; goods?: number };
+  budgetBase?: { taxBy?: number[]; mint?: number; tariffs?: number; feesWage?: number; feesOther?: number; goods?: number };
   /** AI: 지난 정책 점검 때 국고 순자산 (현금 − 빚) */
   netLast?: number;
   /** 이번 달 착공 레벨 (지표용): '건물|s'(왕실) '건물|p'(민간) '건물|loss'(AI 손해 짓기) '건물|d'(철거) */

@@ -38,6 +38,69 @@ describe('예산 미리보기', () => {
     expect(wages[4]).toBeLessThan(wages[0]);
   });
 
+  it('세금 단계별 금액(byLevel)이 그 단계로 바꾼 뒤 실제 세입과 맞는다', () => {
+    const v = createWorld(42);
+    runTo(v, 20 * TICKS_PER_WEEK);
+    const pid = playerCompany(v)!;
+    const pre = budgetPreview(v, pid.kingdomId).lines.find((l) => l.key === 'tax')!.byLevel!;
+    const out: string[] = [];
+    for (const s of [1, 5]) {
+      const x = structuredClone(v);
+      expect(applyCommandMsg(x, pid.id, { type: 'setBudget', item: 'tax', value: s })).toBeNull();
+      runTo(x, x.tick + TICKS_PER_WEEK);
+      const k = x.kingdoms.find((y) => y.id === pid.kingdomId)!;
+      const gov = x.companies.find((c) => c.id === k.governmentId)!;
+      const real = k.lastBudget!.revenue - gov.lastLedger.mint;
+      const err = (pre[s - 1] - real) / real;
+      out.push(`단계 ${s}: 예상 ${pre[s - 1]} 실제 ${Math.round(real)} (${(err * 100).toFixed(1)}%)`);
+      expect(Math.abs(err), `세금 단계 ${s}`).toBeLessThan(0.08);
+    }
+    console.log(`budgetPreview 세금 단계: ${out.join(' / ')}`);
+  });
+
+  it('국영 임금 단계의 순수지 변화에 공사 수수료 증가가 들어간다', () => {
+    const v = createWorld(42);
+    runTo(v, 20 * TICKS_PER_WEEK);
+    const pid = playerCompany(v)!;
+    const k0 = v.kingdoms.find((y) => y.id === pid.kingdomId)!;
+    const now = k0.budget.wages, next = now >= 4 ? now - 2 : now + 2;
+    const a = budgetPreview(v, pid.kingdomId);
+    const fees = a.lines.find((l) => l.key === 'fees')!;
+    expect(fees.knob).toBe('wages');
+    const predicted = a.netByLevel.wages[next - 1] - a.net;
+    const realNet = (x: World) => {
+      const b = x.kingdoms.find((y) => y.id === pid.kingdomId)!.lastBudget!;
+      return b.revenue + b.fees - b.wages - b.goods - b.research - b.interest;
+    };
+    const ctl = structuredClone(v), chg = structuredClone(v);
+    expect(applyCommandMsg(chg, pid.id, { type: 'setBudget', item: 'wages', value: next })).toBeNull();
+    runTo(ctl, ctl.tick + TICKS_PER_WEEK); runTo(chg, chg.tick + TICKS_PER_WEEK);
+    const real = realNet(chg) - realNet(ctl);
+    console.log(`budgetPreview 임금 ${now}→${next}: 순수지 변화 예상 ${predicted} 실제 ${Math.round(real)}`);
+    expect(Math.abs(predicted - real) / Math.abs(real)).toBeLessThan(0.2);
+  });
+
+  it('첫 주들(2~9주)도 실제 수지와 크게 다르지 않다', () => {
+    const v = createWorld(42);
+    runTo(v, 2 * TICKS_PER_WEEK);
+    const out: string[] = [];
+    let p = 0, r = 0, gross = 0;
+    for (let wk = 0; wk < 8; wk++) {
+      const pre = v.kingdoms.map((k) => budgetPreview(v, k.id).net);
+      runTo(v, v.tick + TICKS_PER_WEEK);
+      v.kingdoms.forEach((k, i) => {
+        const b = k.lastBudget!;
+        p += pre[i];
+        r += b.revenue + b.fees - b.wages - b.goods - b.research - b.interest;
+        gross += b.revenue + b.fees + b.wages + b.goods + b.research + b.interest;
+      });
+    }
+    const e = Math.round(((p - r) / gross) * 1000) / 10;
+    out.push(`순수지 오차 ${e}% (총 흐름 대비)`);
+    console.log(`budgetPreview 2~9주: ${out.join(' ')}`);
+    expect(Math.abs(e)).toBeLessThan(10);
+  });
+
   it('주초 미리보기가 그 주 실제 국정 수지와 크게 다르지 않다 (8주, 모든 왕국)', () => {
     const v = createWorld(42);
     runTo(v, 21 * TICKS_PER_WEEK);

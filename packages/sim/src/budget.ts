@@ -1,4 +1,4 @@
-import { BUILDING_BY_ID, SKILL_DEFS, TICKS_PER_WEEK, TUNE } from './data';
+import { BUILDING_BY_ID, SKILL_DEFS, TECH_BY_ID, TICKS_PER_WEEK, TUNE } from './data';
 import { companyById, isGovernment, kingdomGdp } from './economy';
 import { DAILY_INTEREST, MINT_BASE, MINT_RATE } from './finance';
 import { kingdomById } from './kingdoms';
@@ -48,12 +48,13 @@ const levelOf = (item: BudgetItem, step: number) =>
 
 /**
  * 왕국의 주간 예상 국정 수지 (steps 를 넘기면 그 단계로, 빠진 손잡이는 지금 단계).
- * - 세금 = 배율 1 하루 세입 이동평균 × 7 × 세금 수준 배율 (징수율·저축 한도·토지세 포함)
- * - 관세·민간 공사 수수료·정부 건물 원료 = 주간 이동평균
- * - 주조 = mintMoney 와 같은 식 (pop 소득 이동평균)
+ * - 세금 = 그 단계였다면 걷혔을 하루 세입의 이동평균 × 7 (pop 마다 저축 한도를 단계별로 다시 건다. 징수율·토지세 포함)
+ * - 주조·관세·정부 건물 원료 = 주간 이동평균
+ * - 민간 공사 수수료 = 건축사무소 임금 몫(이동평균, 배율 1) × 국영 임금 수준 배율 + 나머지(이동평균). 그래서 국영 임금 손잡이가 이 줄도 움직인다
  * - 정부 건물 임금 = 지금 고용 × 기본 임금 × 임금 지수 × 국영 임금 수준 배율 × 7
- * - 연구비 = 주간 경제 규모(이동평균) × 연구비 비율 × 연구비 수준 배율 (연구 중인 기술이 없으면 0)
+ * - 연구비 = min(주간 경제 규모(이동평균) × 연구비 비율 × 연구비 수준 배율, 남은 기술 비용, 국고 현금). 연구 중인 기술이 없으면 0
  * - 국채 이자 = 지금 빚 × 일 이자율 × 7
+ * 기준값이 아직 없으면(새 게임 첫 주, 옛 저장) 지난주 장부, 그것도 없으면 이번 주 지금까지를 7일로 늘린 값을 쓴다.
  */
 export function budgetPreview(w: World, kingdomId: number, steps: Partial<Record<BudgetItem, number>> = {}): BudgetPreview {
   const k = kingdomById(w, kingdomId);
@@ -63,6 +64,9 @@ export function budgetPreview(w: World, kingdomId: number, steps: Partial<Record
 
   // 단계 배율 1 일 때의 주간 기준값
   const base = k.budgetBase ?? {};
+  const last = k.lastBudget;
+  const days = w.tick % TICKS_PER_WEEK;
+  const soFar = (x: number | undefined) => (days > 0 ? ((x ?? 0) * TICKS_PER_WEEK) / days : 0);
   let wageBase = 0, firmBase = 0;
   if (gov) {
     for (const b of w.buildings) {
@@ -72,36 +76,45 @@ export function budgetPreview(w: World, kingdomId: number, steps: Partial<Record
       if (isGovernment(b.typeId)) wageBase += day * TICKS_PER_WEEK; else firmBase += day * TICKS_PER_WEEK;
     }
   }
-  const t = gov?.research.current;
-  const researching = !!t && !gov!.research.known.includes(t);
-  const researchBase = researching ? (k.output ?? 0) * TUNE.researchShare : 0;
+  const t = gov?.research.current ? TECH_BY_ID[gov.research.current] : undefined;
+  const researchLeft = gov && t && !gov.research.known.includes(t.id)
+    ? Math.min(Math.max(0, t.cost - (gov.research.progress[t.id] ?? 0)), Math.max(0, gov.cash)) : 0;
+  const researchBase = (k.output ?? 0) * TUNE.researchShare;
+  const taxPerDay = base.taxBy ?? TUNE.taxLevels.map((m) => ((last?.revenue ?? 0) / TICKS_PER_WEEK / levelOf('tax', k.budget.tax)) * m);
+  const feesWage = base.feesWage ?? 0;
+  const feesOther = base.feesOther ?? last?.fees ?? soFar(gov?.ledger.buildFees);
   const fixed = {
-    tariffs: base.tariffs ?? 0,
-    mint: gov ? MINT_BASE + (kingdomGdp(w, k.id) * TICKS_PER_WEEK / 360) * MINT_RATE : 0,
-    fees: base.fees ?? 0,
-    goods: -(base.goods ?? 0),
+    tariffs: base.tariffs ?? soFar(k.tariffWeek),
+    mint: base.mint ?? (gov ? MINT_BASE + (kingdomGdp(w, k.id) * TICKS_PER_WEEK / 360) * MINT_RATE : 0),
+    goods: -(base.goods ?? last?.goods ?? soFar(k.spentWeek?.goods)),
     interest: -Math.max(0, gov?.debt ?? 0) * DAILY_INTEREST * TICKS_PER_WEEK,
   };
-  const knobbed = (item: BudgetItem, step: number): number =>
-    item === 'tax' ? (base.tax ?? 0) * TICKS_PER_WEEK * levelOf('tax', step)
-      : item === 'wages' ? -wageBase * levelOf('wages', step)
-        : -researchBase * levelOf('research', step);
+  const value = (key: BudgetLineKey, st: Record<BudgetItem, number>): number => {
+    switch (key) {
+      case 'tax': return (taxPerDay[st.tax - 1] ?? 0) * TICKS_PER_WEEK;
+      case 'fees': return feesWage * levelOf('wages', st.wages) + feesOther;
+      case 'wages': return -wageBase * levelOf('wages', st.wages);
+      case 'research': return -Math.min(researchBase * levelOf('research', st.research), researchLeft);
+      default: return fixed[key];
+    }
+  };
+  const knobOf: Partial<Record<BudgetLineKey, BudgetItem>> = { tax: 'tax', fees: 'wages', wages: 'wages', research: 'research' };
   const levels = Array.from({ length: BUDGET_STEPS }, (_, i) => i + 1);
+  const at = (item: BudgetItem, s: number) => ({ ...cur, [item]: s });
 
-  const line = (key: BudgetLineKey, knob?: BudgetItem): BudgetLine => knob
-    ? { key, knob, weekly: roundBudget(knobbed(knob, cur[knob])), byLevel: levels.map((s) => roundBudget(knobbed(knob, s))) }
-    : { key, weekly: roundBudget(fixed[key as keyof typeof fixed]) };
-  const lines = [
-    line('tax', 'tax'), line('tariffs'), line('mint'), line('fees'),
-    line('wages', 'wages'), line('goods'), line('research', 'research'), line('interest'),
-  ];
+  const keys: BudgetLineKey[] = ['tax', 'tariffs', 'mint', 'fees', 'wages', 'goods', 'research', 'interest'];
+  const lines: BudgetLine[] = keys.map((key) => {
+    const knob = knobOf[key];
+    return knob
+      ? { key, knob, weekly: roundBudget(value(key, cur)), byLevel: levels.map((s) => roundBudget(value(key, at(knob, s)))) }
+      : { key, weekly: roundBudget(value(key, cur)) };
+  });
   let income = 0, expense = 0;
   for (const l of lines) if (l.weekly >= 0) income += l.weekly; else expense += l.weekly;
   const net = income + expense;
   const netByLevel = {} as Record<BudgetItem, number[]>;
   for (const item of BUDGET_ITEMS) {
-    const l = lines.find((x) => x.knob === item)!;
-    netByLevel[item] = l.byLevel!.map((v) => net - l.weekly + v);
+    netByLevel[item] = levels.map((s) => lines.reduce((sum, l) => sum + (l.knob === item ? l.byLevel![s - 1] : l.weekly), 0));
   }
   return {
     steps: cur, lines, income, expense, net, netByLevel,
