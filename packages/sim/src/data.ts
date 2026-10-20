@@ -296,7 +296,8 @@ export function scaleBonus(level: number): number {
  * - investWage: AI가 새로 지을지 판단할 때 쓰는 임금의 바닥 = 기본 임금 × 이 값 (0이면 지금 임금만 본다)
  * - localBias: 민간 상회가 그 지역 사람들 돈으로 그 지역에 지을 때 수익률에 곱하는 가산점 (1 + localBias)
  * - taxCurve: 징수율 곡선. 'exp' = 1 − e^(−x), 'hyp' = x / (1 + x) (x = 행정청 한도 / 인구)
- * - switchRate, switchPremium: 일하는 사람이 하루에 옮기는 상한 비율, 옮기는 데 필요한 소득(또는 생활수준) 배율
+ * - switchRate, switchPremium, switchMax: 일하는 사람은 소득이 switchPremium 배 넘게 나은 자리로 옮긴다. 하루에 옮기는 비율은
+ *   switchPremium 배일 때 switchRate 이고 소득 배율의 차이에 비례해 늘어 switchMax 에서 멈춘다 (labor.ts switchShare)
  * - cashBufferDays: 팝이 투자 풀로 보내지 않고 들고 있는 돈 (생활비 + 세금의 며칠분)
  * - landTax, pollTax, incomeTax: 세금 수준 3단계(보통)의 토지세율(소작지 판매 대금 중 국고 몫), 인두세(1인당 하루), 소득세율.
  *   세 세율을 같은 배율로 비교했다 (빅토리아3 보통 단계 기준 ×1·×1.5·×2·×2.5, 20년 × 시드 1~4). ×2는 ×1보다 건물 레벨이
@@ -354,6 +355,7 @@ export const TUNE = {
   wageCeil: 0.85,
   switchRate: 0.005,
   switchPremium: 1.1,
+  switchMax: 0.05,
   adminScale: 0.3,
   lossBuildsPerWeek: 0,
   lossTolerance: Infinity,
