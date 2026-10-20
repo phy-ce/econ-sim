@@ -7,7 +7,6 @@ import { useT } from '../i18n';
 import { pct } from '../format';
 import { taxCollectionRatio } from '../systemMetrics';
 import { SectionStack } from './SectionStack';
-import { Wages } from './CompanyPanel';
 export function FinancePanel({game,world,me}:{game:Game;world:World;me:Company}) {
  const T=useT(),kingdom=world.kingdoms.find(k=>k.id===me.kingdomId);
  if(!kingdom)return null;
@@ -24,6 +23,5 @@ export function FinancePanel({game,world,me}:{game:Game;world:World;me:Company})
   return <tr key={key}><th><HelpText text={T.help[key as keyof typeof T.help]??label(key)}>{label(key)}</HelpText> {key==='tax'&&<small data-help={T.help.taxCollection} tabIndex={0}>{pct(taxCollectionRatio(kingdom))}</small>}</th><td><NumericValue value={previous} format="money"/></td><td><NumericValue value={me.ledger[key]} format="money"/></td><td>{budget&&<div className="policy-steps" role="group" aria-label={`${label(key)} ${T.policyLevel}`}>{[1,2,3,4,5].map(level=><button key={level} aria-pressed={kingdom.budget[budget]===level} data-help={`${label(key)} · ${level} · ×${multipliers[budget][level-1]}`} onClick={()=>game.command({type:'setBudget',item:budget,value:level})}>{level}</button>)}</div>}</td></tr>;
  })}</tbody>)}
  <tfoot><tr><th>{T.weeklyProfit}</th><td><NumericValue value={me.lastWeekProfit} format="signedMoney"/></td><td><NumericValue value={me.weekProfit} format="signedMoney"/></td><td/></tr><tr><th>{T.budgetRevenue}</th><td><NumericValue value={kingdom.lastBudget?.revenue??0} format="money"/></td><td><NumericValue value={kingdom.revenueWeek} format="money"/></td><td/></tr></tfoot></table></div></>},
- {id:'wages',title:T.govWages,height:320,content:<Wages game={game} world={world} me={me}/>},
  ]}/>;
 }
