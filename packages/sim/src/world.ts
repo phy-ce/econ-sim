@@ -195,6 +195,12 @@ export function createWorld(seed = 1, opts: CreateWorldOptions = {}): World {
     const firm = companies.find((c) => !c.state && c.kingdomId === r.kingdomId);
     const levels = Math.min(starts.get(r.id)!.farms, r.land.arable);
     if (firm && levels > 0) w.buildings.push(newBuilding(w.nextId++, 'farm', r.id, firm.id, 'farm_basic', levels, false));
+    // 시작 벌목장·섬유 농장: 인구 10만 명당 TUNE.startLumber·startFiber 레벨 (소작지는 목재·섬유를 조금만 낸다)
+    const people = Object.values(starts.get(r.id)!.population).reduce((a, b) => a + b, 0) / 100_000;
+    const lumber = Math.min(r.land.forest, Math.round(people * TUNE.startLumber));
+    if (firm && lumber > 0) w.buildings.push(newBuilding(w.nextId++, 'lumber', r.id, firm.id, 'lumber_manual', lumber, false));
+    const fiber = Math.round(people * TUNE.startFiber);
+    if (firm && fiber > 0) { r.land.arable += fiber; w.buildings.push(newBuilding(w.nextId++, 'fiber_farm', r.id, firm.id, 'fiber_basic', fiber, false)); }
   }
   updateSubsistence(w);
 
