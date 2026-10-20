@@ -145,7 +145,7 @@ export function spendBudget(w: World) {
     if (!gov) continue;
     const research = fundResearch(w, gov, k.output * TUNE.researchShare * budgetMult(k, 'research'));
     gov.research.budget = round2(research / TICKS_PER_WEEK);
-    const b = { revenue: round2(revenue), fees: round2(gov.ledger.buildFees), wages: round2(spent.wages), goods: round2(spent.goods), research: round2(research), interest: round2(gov.ledger.interest) };
+    const b = { revenue: round2(revenue), tariffs: round2(k.tariffWeek ?? 0), fees: round2(gov.ledger.buildFees), wages: round2(spent.wages), goods: round2(spent.goods), research: round2(research), interest: round2(gov.ledger.interest) };
     k.lastBudget = b;
     const net = b.wages + b.goods + b.research + b.interest - b.fees;
     k.expenseEma = round2(k.expenseEma == null ? net : k.expenseEma * 0.75 + net * 0.25);

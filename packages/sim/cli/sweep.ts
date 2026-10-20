@@ -1,7 +1,7 @@
 // 조정값 비교: npx tsx cli/sweep.ts '<TUNE JSON>' [seed] [years]  (JSON 의 "subsistence" 는 SUBSISTENCE 를 바꾼다)
 // 주요 지표(w.metrics)에서 5년마다(와 마지막 해) 대륙 합계를 뽑아 한 줄 JSON으로 출력한다.
 // TIMING=1 이면 time: { ms 시뮬레이션 시간, msPerDay 하루 평균 } 을 덧붙인다 (sweepsum.py 가 따로 요약한다)
-import { BUILDING_BY_ID, SKILL_DEFS, SUBSISTENCE, TUNE } from '../src/data';
+import { BUILDING_BY_ID, GOODS, SKILL_DEFS, SUBSISTENCE, TUNE } from '../src/data';
 import { isGovernment, paysDividend, slots } from '../src/economy';
 import { committedCost } from '../src/finance';
 import { createWorld, literacyOf, step } from '../src/index';
@@ -73,7 +73,10 @@ let schDem = 0;
 const schoolLevels = new Map<number, number>();
 // 소작 시장 (해마다 하루 평균): subG·subT 소작지가 내놓은 곡물·목재, demG·demT 곡물·목재 수요 (만), landTax 걷힌 토지세 (천/일),
 // shG·shT·shF 소작지가 내놓은 양 / 소작지 수확 (곡물·목재·섬유)
-const yearAcc = { subG: 0, demG: 0, subT: 0, demT: 0, subF: 0, hG: 0, hT: 0, hF: 0, landTax: 0 };
+const yearAcc = { subG: 0, demG: 0, subT: 0, demT: 0, subF: 0, hG: 0, hT: 0, hF: 0, landTax: 0, pG: 0, pC: 0, pFu: 0, pT: 0, pFi: 0, pFul: 0, pW: 0, supU: 0, demU: 0, supR: 0, demR: 0, pU: 0, pR: 0 };
+// 곡물 도시(티어 1·2)·농촌(티어 3·4) 지역: supU·demU·supR·demR 하루 공급·수요 합, pU·pR 값/기본가의 지역 평균 (해마다 하루 평균)
+const urban = (t: number | undefined) => (t ?? 9) <= 2;
+const nU = w.regions.filter((r) => urban(r.tier)).length, nR = w.regions.length - nU;
 const yearly: Record<number, Record<string, number>> = {};
 const t0 = performance.now();
 for (let d = 0; d < years * 360; d++) {
@@ -82,9 +85,18 @@ for (let d = 0; d < years * 360; d++) {
     yearAcc.subG += r.market.grain.supplyBy?.subsistence ?? 0; yearAcc.demG += r.market.grain.demand;
     yearAcc.subT += r.market.timber.supplyBy?.subsistence ?? 0; yearAcc.demT += r.market.timber.demand;
     yearAcc.subF += r.market.fiber.supplyBy?.subsistence ?? 0;
+    yearAcc.pG += r.market.grain.demandBy?.['pop:peasant'] ?? 0;
+    yearAcc.pC += r.market.cloth.demandBy?.['pop:peasant'] ?? 0; yearAcc.pFu += r.market.furniture.demandBy?.['pop:peasant'] ?? 0;
+    yearAcc.pT += r.market.timber.demandBy?.['pop:peasant'] ?? 0; yearAcc.pFi += r.market.fiber.demandBy?.['pop:peasant'] ?? 0;
+    const gm = r.market.grain, pr = gm.price / GOODS.grain.basePrice;
+    if (urban(r.tier)) { yearAcc.supU += gm.supply; yearAcc.demU += gm.demand; yearAcc.pU += pr / nU; }
+    else { yearAcc.supR += gm.supply; yearAcc.demR += gm.demand; yearAcc.pR += pr / nR; }
   }
   for (const b of w.buildings) if (b.typeId === 'subsistence') { yearAcc.hG += b.last.output.grain ?? 0; yearAcc.hT += b.last.output.timber ?? 0; yearAcc.hF += b.last.output.fiber ?? 0; }
   for (const k of w.kingdoms) yearAcc.landTax += k.landGot ?? 0;
+  // 소작농 묶음 충족률·부 (인구 가중, 하루 평균)
+  { let n = 0, f = 0, wl = 0; for (const p of w.pops) if (p.prof === 'peasant') { n += p.size; f += p.size * p.fulfillment; wl += p.size * p.wealth100 / 100; }
+    if (n > 0) { yearAcc.pFul += f / n; yearAcc.pW += wl / n; } }
   if (w.tick % 360 === 0) {
     const y = w.tick / 360;
     let cash = 0, n = 0;
@@ -93,7 +105,14 @@ for (let d = 0; d < years * 360; d++) {
       subG: +(yearAcc.subG / 360 / 1e4).toFixed(1), demG: +(yearAcc.demG / 360 / 1e4).toFixed(1),
       subT: +(yearAcc.subT / 360 / 1e4).toFixed(1), demT: +(yearAcc.demT / 360 / 1e4).toFixed(1),
       shG: +(yearAcc.subG / Math.max(1, yearAcc.hG)).toFixed(3), shT: +(yearAcc.subT / Math.max(1, yearAcc.hT)).toFixed(3), shF: +(yearAcc.subF / Math.max(1, yearAcc.hF)).toFixed(3),
-      landTax: +(yearAcc.landTax / 360 / 1e3).toFixed(1), cashPeas: +(n > 0 ? cash / n : 0).toFixed(3),
+      landTax: +(yearAcc.landTax / 360 / 1e3).toFixed(1),
+      peasBuyG: +(yearAcc.pG / 360 / 1e3).toFixed(1),
+      // 소작농이 산 의복·가구·목재·섬유 (천/일), 묶음 충족률, 부
+      pbC: +(yearAcc.pC / 360 / 1e3).toFixed(1), pbFu: +(yearAcc.pFu / 360 / 1e3).toFixed(1), pbT: +(yearAcc.pT / 360 / 1e3).toFixed(1), pbFi: +(yearAcc.pFi / 360 / 1e3).toFixed(1),
+      peasFul: +(yearAcc.pFul / 360).toFixed(2), peasW: +(yearAcc.pW / 360).toFixed(2),
+      gSD: +((yearAcc.supU + yearAcc.supR) / Math.max(1, yearAcc.demU + yearAcc.demR)).toFixed(2),
+      gSDu: +(yearAcc.supU / Math.max(1, yearAcc.demU)).toFixed(2), gSDr: +(yearAcc.supR / Math.max(1, yearAcc.demR)).toFixed(2),
+      gPu: +(yearAcc.pU / 360).toFixed(2), gPr: +(yearAcc.pR / 360).toFixed(2), cashPeas: +(n > 0 ? cash / n : 0).toFixed(3),
     };
     for (const key of Object.keys(yearAcc) as (keyof typeof yearAcc)[]) yearAcc[key] = 0;
   }
@@ -138,7 +157,7 @@ const sum = (m: MetricPoint, f: (k: MetricPoint['kingdoms'][number]) => number) 
 const out: Record<string, unknown> = { tune: over, seed };
 for (const m of w.metrics) {
   const y = m.tick / 360;
-  if (!Number.isInteger(y) || (y % 5 !== 0 && y !== years && y !== 2)) continue;
+  if (!Number.isInteger(y) || (y % 5 !== 0 && y !== years && y !== 2 && y !== 1)) continue;
   const pop = sum(m, (k) => k.pop);
   out[`y${y}`] = {
     pop: +(pop / 1e6).toFixed(2),
@@ -150,6 +169,8 @@ for (const m of w.metrics) {
     gdp: Math.round(sum(m, (k) => k.gdp) / 1e6),
     pts: Math.round(sum(m, (k) => k.pointsPerDay)),
     grain: m.goods.grain.ratio,
+    // 곡물 농장 레벨, 그중 적자 레벨
+    farm: sum(m, (k) => k.levelsBy.farm ?? 0), farmLoss: sum(m, (k) => k.typeBy.farm?.lossLevels ?? 0),
     timber: m.goods.timber.ratio,
     fiber: m.goods.fiber.ratio,
     solArist: +(sum(m, (k) => k.solBy.aristocrat * k.popBy.aristocrat) / Math.max(1, sum(m, (k) => k.popBy.aristocrat))).toFixed(2),

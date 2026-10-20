@@ -31,7 +31,7 @@ for (let it = 0; it < 50; it++) {
 }
 // 소작지 (값 비율로 나눔): 일꾼 1명이 하루에 내는 산출
 const sub = SUBSISTENCE as any;
-const subOut: Record<G, number> = sub.harvest ?? { grain: sub.grainPerWorker, fiber: sub.fiberPerWorker, timber: sub.timberPerWorker };
+const subOut: Record<G, number> = sub.output;
 const subVal = Object.entries(subOut).reduce((a, [h, q]) => a + q * GOODS[h as keyof typeof GOODS].basePrice, 0);
 const Lsub: Record<G, number> = {};
 for (const [h, q] of Object.entries(subOut)) Lsub[h] = (GOODS[h as keyof typeof GOODS].basePrice * q / subVal) / q;
