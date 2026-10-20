@@ -29,6 +29,7 @@ export const GOOD_IDS: GoodId[] = [
   'transport',
   'luxury_furniture', 'luxury_cloth',
   'meat',
+  'paper',
 ];
 
 export const GOODS: Record<GoodId, GoodDef> = {
@@ -47,6 +48,7 @@ export const GOODS: Record<GoodId, GoodDef> = {
   luxury_furniture: { id: 'luxury_furniture', name: '고급 가구', nameEn: 'Luxury furniture', basePrice: 40 },
   luxury_cloth: { id: 'luxury_cloth', name: '고급 의복', nameEn: 'Fine clothes', basePrice: 30 },
   meat: { id: 'meat', name: '고기', nameEn: 'Meat', basePrice: 16 },
+  paper: { id: 'paper', name: '종이', nameEn: 'Paper', basePrice: 4 },
 };
 
 /**
@@ -225,6 +227,13 @@ export const BUILDING_TYPES: BuildingTypeDef[] = [
     ],
   },
   {
+    // 목재를 눌러 종이를 낸다 (빅토리아3 Paper Mills, Pulp Pressing: 목재 30 → 종이 40). 전문 관료제 행정청이 쓴다. 기술 없이 지을 수 있다
+    id: 'paper_mill', name: '종이 공장', nameEn: 'Paper mill', land: 'plot', buildPoints: 1000,
+    methods: [
+      m({ id: 'pulp_press', name: '펄프 압착', nameEn: 'Pulp pressing', workers: jobs(800, 200), inputs: { timber: 2500 }, outputs: { paper: 5000 } }),
+    ],
+  },
+  {
     id: 'fab', name: '기계 공장', nameEn: 'Machine works', land: 'plot', buildPoints: 1200,
     methods: [
       m({ id: 'machine_steam', name: '증기 기계 제작', nameEn: 'Steam engineering', tech: 'steam_engine', workers: jobs(600, 300, 100), inputs: { metal: 2000, fuel: 500 }, outputs: { electronics: 2000 } }),
@@ -259,7 +268,7 @@ export const BUILDING_TYPES: BuildingTypeDef[] = [
     id: 'admin', name: '행정청', nameEn: 'Government administration', buildPoints: 400, stateOnly: true,
     methods: [
       m({ id: 'admin_hereditary', name: '세습 관료제', nameEn: 'Hereditary bureaucrats', workers: { skilled: 400, gentry: 100 }, inputs: {}, outputs: {}, taxCapacity: TAX_PEOPLE_PER_LEVEL }),
-      m({ id: 'admin_professional', name: '전문 관료제', nameEn: 'Professional bureaucrats', tech: 'printing', workers: { skilled: 500 }, inputs: { furniture: 100 }, outputs: {}, taxCapacity: TAX_PEOPLE_PER_LEVEL * 3 }),
+      m({ id: 'admin_professional', name: '전문 관료제', nameEn: 'Professional bureaucrats', tech: 'printing', workers: { skilled: 500 }, inputs: { paper: 200 }, outputs: {}, taxCapacity: TAX_PEOPLE_PER_LEVEL * 3 }),
     ],
   },
 ];

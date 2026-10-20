@@ -141,3 +141,10 @@
 - throughput은 투입과 산출을 함께 바꾸고 일자리는 그대로 둔다: "Both input and output goods are modified by the throughput percentage while required workers remains the same" (https://vic3.paradoxwikis.com/Buildings). 그래서 기상 조건이 걸린 건물은 원료도 덜 쓴다. 이 게임도 같다 (DESIGN 7.1, 7.4).
 - 채취(`bg_extraction`)는 광산(`bg_mining`)과 벌목(`bg_logging`)의 부모 그룹이다 (G `building_groups/00_building_groups.txt`). 자급 농업(`bg_subsistence_agriculture`)은 농업(`bg_agriculture`)의 자식이라 농업 보정이 소작지에도 붙는다고 보았다. 상속 규칙 자체는 문서로 확인 못 함.
 - **확인 못 함:** 확률이 무엇에 대한 확률인지(검사당·종류별), 임계값 0.2와의 결합, 진원지에서 멀어질 때 강도가 얼마나 줄어드는지. 공식 개발 일지 DD#131 (https://admin-forum.paradoxplaza.com/forum/developer-diary/victoria-3-dev-diary-131-famines-starvation-harvest-conditions.1708680)은 열리지 않았다.
+
+## 종이와 종이 공장 (2026-10-21 확인)
+- 종이 기본가 30 (https://vic3.paradoxwikis.com/Paper). 쓰는 곳: pop 소비, 폭약 공장, 예술 학교, 정부 행정청(Government Administration), 대학, 마천루 (같은 문서).
+- 종이 공장(Paper Mills): 필요 기술 Manufacturies, 건설비 600. 방식 이름 Hand Assembly, Pulp Pressing, Sulfite Pulping, Paper Bleaching, Water-tube Boiler, Rotary Valve Engine (https://vic3.paradoxwikis.com/Paper_Mills, 건물 목록으로 넘어간다).
+- Pulp Pressing: 목재 30 → 종이 40, 상점주 500·노동자 4,500, 기술 요건 표시 없음 (https://vic3.paradoxwikis.com/List_of_production_methods).
+- 행정청 방식 이름: Simple Organization, Filing Cabinets, Standardized Filing System, Telephone Switchboards, Hereditary/Professional Bureaucrats 등 (https://vic3.paradoxwikis.com/Government_Administration). Filing Cabinets 줄에 "Paper 10"이 있으나 투입인지는 평탄화된 표에서 **확인 못 함**.
+- 이 게임: 목재 2,500 → 종이 5,000 (기본가 목재 2, 종이 4, 이익률 20%). 기술 없이 짓는다. 전문 관료제가 종이 200을 쓴다 (가구 100과 같은 값).

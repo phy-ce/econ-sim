@@ -10,7 +10,8 @@ export type GoodId =
   | 'tools' | 'furniture' | 'electronics'
   | 'transport'
   | 'luxury_furniture' | 'luxury_cloth'
-  | 'meat';
+  | 'meat'
+  | 'paper';
 
 /** 소유 직종: 민간 건물에서는 배당을, 국영 건물에서는 임금을 받는 일자리 */
 export type Owner = 'capitalist' | 'aristocrat';
