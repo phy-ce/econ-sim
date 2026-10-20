@@ -1,5 +1,7 @@
 # Kingdom of Estera (econ-sim)
 
+**Play in the browser: https://phy-ce.github.io/econ-sim/** (built from `main` on every push)
+
 A management game prototype about the market economy of Estera, a fictional early-modern kingdom. You run one trading house and compete with three AI houses across seven regional markets, while millions of simulated people work, eat, save, migrate and climb (or fall) between social classes. The economic loop is inspired by Victoria 3, but the rules and numbers are this game's own. The currency is the florin (ƒ).
 
 The UI is a single-screen dashboard drawn in a parchment and pixel-art style. It is available in Korean and English.
@@ -8,7 +10,7 @@ The UI is a single-screen dashboard drawn in a parchment and pixel-art style. It
 
 ```bash
 npm install
-npm run dev                                  # play in the browser (http://localhost:5173)
+npm run dev                                  # play locally (http://localhost:5173)
 npm test                                     # simulation invariants, class structure, long-run stability
 npm run build                                # production build of the client
 npm run typecheck
