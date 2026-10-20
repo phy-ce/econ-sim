@@ -351,7 +351,9 @@ export function buildingReserves(w: World, c: Company): number {
 function settleReserve(b: Building, weekProfit: number): number {
   const res = Math.min(b.reserve ?? 0, reserveCap(b));
   if (weekProfit <= 0) { b.reserve = round2(Math.max(0, res + weekProfit)); return 0; }
-  const keep = Math.max(0, Math.min(reserveCap(b) - res, weekProfit * RESERVE_SHARE));
+  // 유보 자산이 찰수록 적립 비율이 줄어든다 (비었으면 RESERVE_SHARE, 가득 차면 0): 배당이 한꺼번에 뛰지 않게
+  const cap = reserveCap(b);
+  const keep = cap > 0 ? Math.max(0, Math.min(cap - res, weekProfit * RESERVE_SHARE * (1 - res / cap))) : 0;
   b.reserve = round2(res + keep);
   return weekProfit - keep;
 }
