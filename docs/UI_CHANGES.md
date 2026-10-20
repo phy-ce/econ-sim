@@ -17,17 +17,18 @@
 1. **금고와 대출을 한 칸으로 (2-28).** 상단 칩 `App.tsx` 144~145, 재정 탭 `FinancePanel.tsx` 19의 `현금`·`대출` 두 칸을 `금고  순자산 / 한도` 한 칸으로. 2-35의 금고 상자도 같은 모양.
 2. **재정 탭: 단계별 예산 미리보기 (2-30).** 지난주·이번주 열을 없애고 `budgetPreview(world, kingdomId)` 한 표로. 단계 버튼 아래에 `byLevel`. 안 쓰는 재정 문자열도 지운다.
 3. **상회 상세 → 왕국 경제 창, 왕실 요약은 왕국 합계 (2-35, 사용자 요청 2026-10-21).** 왕실·민간 회사로 나눈 통계를 없애고 왕국 하나의 숫자 + 소유 구성 막대(왕실 / 민간 지분 / 저택 / 금융가)로. 통계의 `summary`(`BottomPanel.tsx` 39)도 정부 + 민간 합계로 바꾸고, 금고 상자만 왕실 것으로 둔다 (2-35-1).
-4. **건물 유보 자산 (2-31).** 건물 패널에 `reserve / reserveCap(b)` 막대 (`hasReserve(b)`일 때). 2-35 건물 표에도 같은 막대.
-5. **저택·금융가가 무엇을 가졌는지 (2-32).** 소유 건물 창에 `holdingsOf` 표, 지역 패널 세 묶음, 일반 건물 상세에 "→ 저택/금융가" 칩.
-6. **부·생활수준 지도 그라데이션 (2-33).** `RegionMap.tsx` 46~52 `wealthColor`를 OKLab 보간으로, 범례 160~162를 연속 막대로.
-7. **아래 창 버튼은 켜기/끄기 토글 (2-34).** `WindowWorkspace.tsx` 13·59·67~70: 최소화 상태와 왕국 지도 버튼을 없앤다.
-8. **100배 값 필드로 옮기기 (2-27).** 남은 세 파일: `CompanyPanel.tsx` 46 `b.crew`, `PopTable.tsx` 23·24·28 `p.wealth`·`p.literacy`, `RegionPanel.tsx` 119 `r.education`. 끝나면 알려 달라 (sim이 사본을 지운다).
-9. **광맥은 자원별 (2-26).** 지역 땅 표시(`RegionCircles.tsx` 22~29)의 광맥을 철·석탄 두 줄로.
-10. **저택에 하급 귀족 자리 (2-29).** 저택 일자리에 하급 귀족이 보이고 둘 다 임금이 아니라 몫이다. 저택 크기는 다른 일이 없는 하급 귀족만 센다. 소유 건물 자리의 "배당" 표시는 `paysShare(b, s)`로 가린다.
-11. **농부 계층 (2-37).** 새 직종 `farmer`(농부). 색 토큰 `--c-farmer`와 아이콘을 만들고, 계층·직종 목록(인구표·생활수준·실업·일자리 막대)에 노동자 옆으로 넣는다. sim이 임시로 고친 곳: `ui.tsx` 8·11, `spriteAtlas.ts` 13.
-12. **임시 아이콘을 전용 아이콘으로 (2-39).** 다른 아이콘을 빌려 쓰는 8개(종이·종이 공장·농부·하급 귀족·목장·고기·고급 가구·고급 옷감)와 농부 색 토큰. 목록과 위치는 2-39.
-13. **규칙 사전 (2-40, 급하지 않음).** 단독 앱 `packages/encyclopedia`가 있다. 나중에 게임 화면에 옮기거나, 지금은 도움말 버튼에서 `encyclopedia/#<항목 id>`로 잇기만 해도 된다.
-14. **은행 없앰, 민간은 빌리지 않음 (2-41).** 민간 상회의 대출·한도 줄(`CompanyPanel.tsx` 132~144)은 늘 0 / 0이다: 왕실(`c.state`)일 때만 보인다. 컴파일은 깨지지 않았다 (화면 파일은 고치지 않음).
+4. **지역 건물: 종류별 한 줄 + 전체/민영/국영, 건설 통합 (2-42, 사용자 요청 2026-10-21).** `RegionPanel.tsx` 182~196 칩 격자를 종류마다 한 행(합계 레벨·소유 비율 막대·고용·주간 이익)으로. 상세에 `전체`/`민영`/`국영` 버튼, `전체`·`국영`에 왕실 건물 조작(+1/+5, −1, 방식), 공사는 그 행·상세 안에, 새 종류는 `+ 새 건물` 행. 건설 창은 왕국 대기열 보기로.
+5. **건물 유보 자산 (2-31).** 건물 패널에 `reserve / reserveCap(b)` 막대 (`hasReserve(b)`일 때). 2-35 건물 표에도 같은 막대.
+6. **저택·금융가가 무엇을 가졌는지 (2-32).** 소유 건물 창에 `holdingsOf` 표, 지역 패널 세 묶음, 일반 건물 상세에 "→ 저택/금융가" 칩.
+7. **부·생활수준 지도 그라데이션 (2-33).** `RegionMap.tsx` 46~52 `wealthColor`를 OKLab 보간으로, 범례 160~162를 연속 막대로.
+8. **아래 창 버튼은 켜기/끄기 토글 (2-34).** `WindowWorkspace.tsx` 13·59·67~70: 최소화 상태와 왕국 지도 버튼을 없앤다.
+9. **100배 값 필드로 옮기기 (2-27).** 남은 세 파일: `CompanyPanel.tsx` 46 `b.crew`, `PopTable.tsx` 23·24·28 `p.wealth`·`p.literacy`, `RegionPanel.tsx` 119 `r.education`. 끝나면 알려 달라 (sim이 사본을 지운다).
+10. **광맥은 자원별 (2-26).** 지역 땅 표시(`RegionCircles.tsx` 22~29)의 광맥을 철·석탄 두 줄로.
+11. **저택에 하급 귀족 자리 (2-29).** 저택 일자리에 하급 귀족이 보이고 둘 다 임금이 아니라 몫이다. 저택 크기는 다른 일이 없는 하급 귀족만 센다. 소유 건물 자리의 "배당" 표시는 `paysShare(b, s)`로 가린다.
+12. **농부 계층 (2-37).** 새 직종 `farmer`(농부). 색 토큰 `--c-farmer`와 아이콘을 만들고, 계층·직종 목록(인구표·생활수준·실업·일자리 막대)에 노동자 옆으로 넣는다. sim이 임시로 고친 곳: `ui.tsx` 8·11, `spriteAtlas.ts` 13.
+13. **임시 아이콘을 전용 아이콘으로 (2-39).** 다른 아이콘을 빌려 쓰는 8개(종이·종이 공장·농부·하급 귀족·목장·고기·고급 가구·고급 옷감)와 농부 색 토큰. 목록과 위치는 2-39.
+14. **규칙 사전 (2-40, 급하지 않음).** 단독 앱 `packages/encyclopedia`가 있다. 나중에 게임 화면에 옮기거나, 지금은 도움말 버튼에서 `encyclopedia/#<항목 id>`로 잇기만 해도 된다.
+15. **은행 없앰, 민간은 빌리지 않음 (2-41).** 민간 상회의 대출·한도 줄(`CompanyPanel.tsx` 132~144)은 늘 0 / 0이다: 왕실(`c.state`)일 때만 보인다. 컴파일은 깨지지 않았다 (화면 파일은 고치지 않음).
 - **아직 sim에 없음 (만들지 말 것, 들어오면 이 목록에 올린다):**
   - 건물별 임금·현금·보조금 (브랜치 wt-wage). 들어오면 국영 임금 손잡이(`budget.wages`)가 없어지고, 건물 패널에 임금·현금·보조금 켜기가 생기고, 저장 형식이 바뀐다(옛 저장은 `migrateWorld`로 변환). 그래서 2-30의 국영 임금 줄은 작게 두어도 된다.
 
@@ -164,7 +165,7 @@
    - 맨 위 한 줄: `받는 돈/주 = profitEma × 7`, `자리: 앉은 인원 / 자리 수` (하급 귀족 자리가 생기면 직종별 두 줄, 2-29).
    - 그 아래 표 `holdingsOf` 한 행에 하나: 아이콘 · 건물 이름 · 레벨 · 종류 칩(`배당` / `지분 NN%` / `지대`) · 그 건물의 주간 이익(`profitEma × 7`, 지분이면 × share). 행을 누르면 그 건물로 간다.
    - 정렬: 주간 이익 큰 순. 표 맨 아래 합계.
-2. **지역 패널** (`RegionPanel.tsx`): 건물 목록을 `저택` / `금융가` / `국영` 세 묶음으로 나눈다. 묶음 머리에 소유 건물 이름과 주간 수입, 그 아래 `holdingsOf` 건물들. 지분 없는 국영 건물은 `국영` 묶음. 소작지는 `저택` 묶음 맨 아래 한 줄(합친 레벨).
+2. **지역 패널** (2-42로 대체: 종류별 한 행 + 소유 비율 막대, 저택·금융가는 목록 맨 아래 두 행. 아래 원안은 쓰지 않는다) (`RegionPanel.tsx`): 건물 목록을 `저택` / `금융가` / `국영` 세 묶음으로 나눈다. 묶음 머리에 소유 건물 이름과 주간 수입, 그 아래 `holdingsOf` 건물들. 지분 없는 국영 건물은 `국영` 묶음. 소작지는 `저택` 묶음 맨 아래 한 줄(합친 레벨).
 3. **일반 건물 상세**: 소유 배지(2-1 `OwnerBadge`) 옆에 `→ 저택` 또는 `→ 금융가` 링크 칩 (`ownerBuildingOf(world, b, true)`). 국영이면서 지분이 있으면 `국영 · 저택 NN%`.
 4. 색: 저택과 금융가에 고정 색 두 개를 정해 칩·묶음 머리·지도 원에 같이 쓴다 (다크 모드에서도 구분).
 - 설명 문구 금지: 라벨·숫자·칩만.
@@ -398,9 +399,133 @@
   - `BottomPanel.tsx` 34의 `c.cash - c.debt`: 민간은 빚이 0이라 현금과 같다. 그대로 두어도 된다.
 - 컴파일 수정: 없음 (sim 이름·타입 중 화면이 쓰는 것은 바뀌지 않았다).
 
+### 2-42. 지역 건물: 종류별 한 줄 + 전체/민영/국영 보기, 건설 통합 (사용자 요청 2026-10-21)
+**사용자 말:** "지역 건물의 건물 부분에 민간/왕실의 소유가 처음부터 갈라져 있는데, 눌러서 세부에서 전체/민영/국영을 선택하고, 각각의 통계 및 전체나 국영에는 건설 등의 조작을 할 수 있도록. 지금은 건설이랑 전체 건설물이 분리되어 있는데 이걸 잘 통합."
+
+**지금 화면 (main `465062a`)**
+- 창: `App.tsx` 200 `industry` 창 = `RegionPanel mode='industry'`. 건설 창은 따로: `App.tsx` 203 `construction` = `Projects owner={me} projects={world.constructions}` (왕국 전체 공사, 왕실/민간 두 줄).
+- 지역 건물 창 (`RegionPanel.tsx` 174~198)
+  - 175: `T.construct` 버튼 → `BuildList`(`CompanyPanel.tsx` 486~520) 카드 격자를 펼친다. 카드를 누르면 `BuildCard`(522~558): 방식별 예상 이익, 공사비·기간·회수 기간, 이미 가진 레벨, 짓기(+1만).
+  - 176: 그 지역 공사가 있으면 `Projects`(287~305, 왕실/민간 두 줄, 순서·일시정지·취소는 왕실 공사만).
+  - 178: 고른 건물의 `BuildingInspector`(`ResourceInspector.tsx` 17~37). 조작은 35 `BuildingControls` → `Controls`(`CompanyPanel.tsx` 403~441, 593~596): −/+/+10, 철거 취소, 방식, 가동률, 정지. **플레이어 회사 건물일 때만** 나온다.
+  - 179: `ListTools` 정렬(규모·이름·소유 회사·가동률·손익)과 검색(건물 이름 + 회사 이름, 57~61).
+  - 182~196: 건물 칩 격자. **건물 하나 = 칩 하나**라 같은 종류가 왕실 칩과 민간 칩으로 처음부터 갈린다 (`OwnerBadge` 190, 테두리 색 189 = 회사 색).
+  - 123: 머리 문구 "모든 상회 · 건물 n개 · 총 n레벨".
+- sim 사실: 한 지역에서 한 회사는 한 종류의 건물을 하나만 가진다 (`commands.ts` 105 `build`가 있으면 그 건물 증설로 바뀐다). 왕국마다 회사는 왕실 하나와 민간 하나다 (1-1). 그래서 **지역 × 종류마다 건물은 많아야 둘**: 국영 `b`(회사 `state`, `b.stateOwned === true`)와 민영 `b`(그 왕국 민간 회사). 소작지·저택·금융가(`BUILDING_BY_ID[t].auto`)는 민영 하나뿐이다.
+
+**바꿀 구조 (한 창에서 보기·짓기·공사)**
+
+#### 2-42-1. 목록: 종류마다 한 줄
+- 행 = 그 지역에 건물이 있거나 공사가 있는 **종류**: `typeIds = union(world.buildings.filter(b => b.regionId === r.id).map(b => b.typeId), world.constructions.filter(k => k.regionId === r.id).map(k => k.typeId))`.
+- 칩 격자(182~196)를 행 목록으로 바꾼다 (`ResourceInspector`의 `industry-row` 모양에 가깝게). 한 행의 칸:
+
+| 칸 | 내용 | 값 |
+|---|---|---|
+| 그림 | `BuildingSprite` 48 | |
+| 이름 | `buildingName(t)` + `HarvestBadge` | |
+| 레벨 | `×{Σ level}` + 공사 중 `+{Σ k.levels ?? 1}`(주황 작은 숫자) + 철거 대기 `T.demolitionQueue(Σ shrinking)` | 두 건물 합 |
+| 소유 막대 | 가로 비율 막대 하나 (칸 나누기 아님), 너비 ∝ 레벨 | 2-35-0 몫 (아래) |
+| 고용 | `Σ emp / Σ jobs` 숫자 + 얇은 막대 | `rowOf` 합 |
+| 주간 이익 | `Σ profitEma × 7`, 음수 `neg` | 정부 건물(`isGovernment`)은 이익 대신 "—" |
+| 공사 | 공사가 있으면 행 바닥에 2px 진행 막대 `Σ points / Σ required` | |
+
+- 소유 막대 (2-35-0과 같은 규칙, 같은 색): 건물마다 레벨 × 몫을 더한다. 지금은 `royal`(국영 × `1 − privateShare`) · `stake`(국영 × `privateShare`) · `manor`/`finance`(민영 건물, `ownerBuildingOf(world, b, true)?.typeId`). 툴팁은 몫별 레벨과 %만. 국영만 있으면 왕실 색 한 칸 막대가 꽉 찬다.
+  - **DECISIONS 7-16 대비 (레벨 소유):** 막대는 "몫 키 → 레벨 수" 맵 하나만 받아 그리게 만든다 (`ownerLevels(world, buildings): Record<'royal'|'stake'|'manor'|'finance', number>` 를 client 함수 하나로). 7-16이 sim에 들어오면 `stake`가 없어지고 레벨마다 주인(국가 / 어느 지역의 저택·금융가)이 생긴다. 그때 이 함수만 sim의 레벨 주인 함수(3장)로 바꾸면 막대는 그대로 `국가 / 저택 / 금융가` 세 칸이 된다. 툴팁에 주인 지역 이름을 붙인다 (다른 지역 저택이 산 레벨).
+- 정렬 (`ListTools`): 규모(Σ level, 기본) · 이름 · 가동률(레벨 가중 평균, 2-42-3) · 고용률 · 주간 이익. `owner`(소유 회사) 정렬은 없앤다. 검색은 건물 이름만. 순서는 주마다만 다시 매긴다 (`House`처럼, 행이 뛰지 않게).
+- 소유 건물(저택·금융가)은 목록 맨 아래 가는 줄 아래 두 행. 누르면 2-32의 소유 건물 표(`holdingsOf`). **2-32 보여줄 곳 2번(지역 패널 세 묶음)은 이 절로 대체한다.**
+- 맨 아래 `+ 새 건물` 행 (2-42-5). 다른 왕국 지역(`r.kingdomId !== me.kingdomId`)이면 없다.
+- 머리 123: 문구 대신 `종류 {n} · 레벨 {Σ}` 라벨+숫자. 175~176(`T.construct` 버튼, `BuildList`, `Projects`)은 이 창에서 지운다 (2-42-4·5로 옮겨 감).
+
+#### 2-42-2. 상세: 전체 / 민영 / 국영
+- 행을 누르면 그 행 바로 아래(또는 지금 178 자리)에 상세가 열린다. 맨 위 segmented 버튼 셋: `전체` · `민영` · `국영`, 각 버튼에 레벨 수 작은 숫자. 레벨 0이고 공사도 없는 쪽은 `disabled` (안 숨긴다: 자리가 흔들리지 않게).
+  - 기본: `전체`. 단 `buildingRequest`(`App.tsx` 113 `openBuilding(id)`: 알림·통계에서 건물 하나를 열 때)로 왔으면 그 건물 쪽(국영/민영)으로 연다. `RegionPanel` 상태는 `buildingId` 대신 `{ typeId, view: 'all'|'private'|'state' }`.
+- 보기마다 건물 집합: `S = 국영 [b]`, `P = 민영 [b]`, `A = S ∪ P`.
+- 상세 내용 (지금 `BuildingInspector` 28~33을 "건물 집합"을 받게 고친다. 건물 하나면 지금 그대로):
+  1. 머리: 그림 · 이름 `×{Σ level}` · 방식 (2-42-3) · 소유 막대(2-42-1과 같은 것, `국영`·`민영` 보기에서도 그 집합 몫만) · 국영 보기에서 지분이 있으면 지금 30의 `T.privateEquity NN%`.
+  2. 지표 줄: 가동률 · 충원율 · 원료 충족 · 주간 이익 · (판매 건물이면) 유보 막대 (2-31).
+  3. 직종별 인력 (`Workforce`): 직종마다 `Σ emp / Σ jobs` 막대.
+  4. 투입 → 산출: 상품마다 `Σ cur / Σ max` (지금 `bag` 26은 `n × b.level` 기준량만 보인다. 기준량 `Σ (method.inputs[g] × b.level)`은 그대로 두고, 그 옆에 실제 충족 막대를 더한다).
+  5. 손익 줄: 수입 · 원료 · 임금 · 이익 (`rowOf`의 `rev`·`raw`·`wage`·`profit` 합, 하루 값) + 주간 이익 `Σ profitEma × 7`.
+  6. 공사 (2-42-4), 조작 (2-42-3).
+- 소유 배지 링크(30)는 `국영` 보기에서는 `OwnerBadge`(왕실), `민영`에서는 2-32 칩 `→ 저택/금융가`. `전체`에서는 소유 막대가 대신한다.
+
+#### 2-42-3. `전체` 합치는 규칙 (sim 필드 기준)
+- 건물마다 `rowOf(world, b)`(`CompanyPanel.tsx` 42~80)를 구하고 아래처럼 더한다. 함수 하나 `aggregateRows(rows: Row[])`로 만들어 `국영`·`민영`(건물 하나)도 같은 함수를 지나게 한다.
+
+| 값 | 합치는 법 |
+|---|---|
+| 레벨 | `Σ b.level`. 철거 대기 `Σ (b.shrinking ?? 0)`, 공사 중 `Σ queued` |
+| 직종별 고용·일자리 | 직종 `s`마다 `Σ emp`, `Σ jobs` (`rowOf.staff`) |
+| 충원율 | `Σ emp / Σ jobs` (일자리 가중) |
+| 가동률 | `Σ (b.level × (b.active && !b.idle ? b.utilization : 0)) / Σ b.level` (레벨 가중) |
+| 상품별 투입·산출 | 상품 `g`마다 `Σ cur`, `Σ max` (`rowOf.inputs/outputs`) |
+| 원료 충족 | `Σ_g Σ cur × price / Σ_g Σ max × price` (값 가중, 원료 없으면 1) |
+| 수입·원료·임금·이익 | 합. 이익률 = `Σ profit / Σ rev` (`Σ rev = 0`이면 "—") |
+| 주간 이익 | `Σ b.profitEma × 7` |
+| 유보 | `hasReserve(b)`인 건물만: `Σ (b.reserve ?? 0) / Σ reserveCap(b)` (막대는 100%에서 자른다) |
+| 방식 | 두 건물 방식이 같으면 `methodName` 하나, 다르면 칩 두 개 `국영 · 방식A` / `민영 · 방식B` |
+| 건설력·세수 역량·학교 자리 | 지금 33처럼 `method.x × b.level`의 합 |
+
+- 정부 건물(`isGovernment`)·학교·건축사무소는 국영만 있으니 `전체` = `국영`.
+
+#### 2-42-4. 조작: `전체`·`국영`은 왕실 건물을, `민영`은 보기만
+- 조작 대상은 늘 **플레이어 왕실 건물** `S[0]` (`b.companyId === me.id`). `전체`와 `국영`은 같은 조작 줄을 쓰고, 숫자 옆에 `왕실 ×{S[0].level}` 라벨을 붙여 무엇이 바뀌는지 보이게 한다. `민영`에는 조작 줄이 없다. 다른 왕국 지역이면 세 보기 모두 조작 없음.
+- 조작 줄 (지금 `Controls` 403~441을 고쳐 쓴다):
+
+| 조작 | 명령 (`types.ts` 575~594) | 막힘 |
+|---|---|---|
+| −1 | `{type:'demolish', buildingId, levels:1}` (마지막 레벨이면 지금처럼 confirm) | 증설 공사 중, `shrinking >= level` |
+| +1 / +5 | `{type:'expand', buildingId, levels:1|5}` (+10을 +5로 바꾼다) | `landFree(world, r.id, def.land) < n`, `def.deposit`이면 `depositFree(world, r.id, def.deposit) < n` (지금 `Controls`는 광맥을 안 본다), `shrinking > 0`, 공사 수 `>= MAX_CONCURRENT_CONSTRUCTIONS` |
+| 철거 취소 | `{type:'cancelDemolish', buildingId}` | `shrinking`이 있을 때만 보인다 |
+| 방식 | `{type:'setMethod', buildingId, methodId}`, 선택지 옆 `estimateMethod(...).profit` (지금 그대로) | 정부 건물 |
+| 가동률·정지 | `setUtilization`, `setActive` (지금 그대로) | 정부 건물은 없음 |
+| 민영화 켜기 | **sim 쪽 필요** (DECISIONS 7-16): `{type:'setPrivatize', buildingId, on}` + `Building.privatize?: boolean`. 들어오기 전에는 그리지 않는다 | 판매 건물만 (`sellsShares`) |
+
+- 왕실 건물이 아직 없을 때 (`S`가 비었는데 민영 건물만 있음): `국영`·`전체`의 조작 줄 자리에 짓기 줄 `+1` / `+5` → `{type:'build', typeId, regionId: r.id, levels}`. 옆에 2-42-5의 짓기 정보(공사비·기간·예상 이익).
+- 단추 툴팁: 막힌 이유는 지금 `buildBlockers`(475~484) 문자열을 그대로 툴팁에 (화면 문구 아님).
+
+#### 2-42-5. 공사를 같은 행·상세 안에
+- 행: 2-42-1의 `+n` 숫자와 바닥 진행 막대. 새로 짓는 종류(아직 건물 0)도 행이 생기고 레벨 칸은 `×0 +n`.
+- 상세의 공사 칸: `world.constructions.filter(k => k.regionId === r.id && k.typeId === t)`. 보기별로 `국영` = 왕실 공사(`companyById(k.companyId).state`), `민영` = 민간 공사, `전체` = 둘 다.
+  - 한 공사 한 줄 (지금 `Projects` 299 `article`을 컴포넌트 `ProjectRow`로 떼어 두 곳에서 같이 쓴다): `+{levels}` · 증설/신축 칩 · 진행 막대 `points / required` · `points / required pt` · `spent` · `ticksElapsed`일 · 일시정지 표시 · `capped` ◆.
+  - 순서 칸: `#{position + 1} / {own.length}` (`own` = 그 회사의 **왕국 전체** 공사 목록. 순서는 왕국 대기열 순서다).
+  - 왕실 공사만 단추: 위/아래 `moveConstruction index ±1`, `pauseConstruction`, `cancelConstruction`(지금 confirm 그대로). 민간 공사는 줄만.
+- `+ 새 건물` 행 (목록 맨 아래): 누르면 그 자리에 종류 고르기 목록이 펼쳐진다. 지금 `BuildList`(486~520)를 그대로 쓰되 **이 지역에 행이 없는 종류만** 보인다 (행이 있는 종류는 그 행 상세의 짓기·증설로). 카드 머리: 그림 · 이름 · 땅 `landName(land) landFree` 또는 광맥 `DEPOSIT_NAMES[deposit] depositFree` · 예상 이익/일(`estimateAfterEntry(world, r.id, t, m, me.wages).profit` 최대) · 회수 기간. 펼치면 `BuildCard`(522~558) 그대로 + 짓기 단추를 `+1` / `+5` 둘로 (`build` 명령의 `levels`). 짓고 나면 목록에 그 종류 행이 생기고 상세가 `국영`으로 열린다.
+- 상세 머리에도 땅·광맥 남은 칸을 숫자로 둔다 (`+5`가 왜 막혔는지 보인다).
+
+#### 2-42-6. 건설 창은 왕국 대기열 보기로 남긴다 (추천)
+- **추천: 건설 창(`App.tsx` 203)을 없애지 않고 "왕국 공사" 대기열 하나로 둔다.** 이유: 건축사무소 포인트는 왕국 대기열 순서대로 지역을 가리지 않고 나뉘고(`moveConstruction`은 회사 전체 순서를 바꾼다), 공사 상한 40건도 왕국 단위다. 지역 창만으로는 순서를 볼 수 없다. 짓기는 지역 창 한 곳에서만 한다.
+- 건설 창 제목 `T.construct` → `T.kingdomQueue`(있음, "왕국 공사"). 내용은 지금 `Projects`(왕실/민간 두 줄) 그대로 + 행마다 지역 이름 링크: 누르면 지역 건물 창이 그 지역·그 종류 상세(`국영` 또는 `민영`)로 열린다 (`App.tsx` 113 `openBuilding`과 같은 방식으로 `openType(regionId, typeId, view)`를 하나 더한다).
+- 위에 합계 한 줄: `공사 {왕실 건수} / 40` · 받는 포인트/일 (지금 header의 `receivedToday`).
+- 한 창으로 합치는 안(건설 창을 지우고 지역 창에 왕국 대기열 탭)은 지역 창이 두 일을 하게 되어 고르지 않았다.
+
+#### 2-42-7. 지울 것, 문자열
+- 지운다: `RegionPanel.tsx` 47 `buildingMenu`, 175~176, 182~196 칩 격자, 57~60의 회사 이름 검색·`owner` 정렬, 188 칩 `title`(`T.myHouse`). `Controls`의 +10 단추(`T.expandTen`). 다른 곳에서 안 쓰면 `T.expandTen`·`T.myHouse` 문자열도.
+- 더할 문자열 (ko / en):
+
+| 키 | ko | en |
+|---|---|---|
+| `viewAll` | 전체 | All |
+| `viewPrivate` | 민영 | Private |
+| `viewState` | 국영 | Crown |
+| `newBuilding` | + 새 건물 | + New building |
+| `expandFive` | 5레벨 증설 | Expand by 5 |
+| `buildFive` | +5 | +5 |
+| `ownership` | 소유 | Ownership |
+| `typesCount` | 종류 | Types |
+| `queuePosition` | 순서 | Queue |
+| `privatize` | 민영화 | Privatize (7-16이 sim에 들어온 뒤) |
+
+  - 2-35-8에서 더하는 것: `T.employment`·`T.reserve`. 있는 것: `T.weeklyProfit`, `T.expansion`, `T.newConstruction`, `T.kingdomQueue`, `T.demolitionQueue`, `T.cancelDemolition`, `T.cost`, `T.duration`, `T.payback`.
+- 화면 규칙: 설명 문구 없음 (라벨·숫자·막대·칩, 막힌 이유는 툴팁). 소유 막대는 칸 나누기가 아니라 비율 막대. 왕실·지분·저택·금융가 색은 2-35-0과 같고 다크 모드에서 구분된다. 숫자는 이동평균(`profitEma`)·주 단위.
+- sim 변경 없이 만들 수 있다 (민영화 단추와 레벨 주인 막대만 7-16 이후, 3장).
+
 ## 3. sim 쪽 필요 사항 (Claude가 처리할 것, UI 작업자는 요청만)
 - **2-35 소유 구성 (2026-10-21, 요청됨):**
   - 순수 함수 export: `ownershipOf(world, kingdomId, regionId?)` → `Record<'royal'|'stake'|'manor'|'finance', { levels, employed, jobs, profitWeek, reserve }>` (2-35-0 규칙 그대로, 지역을 주면 그 지역만). 화면·지표가 같은 계산을 쓰게 한다.
   - 지표 기록: `KingdomMetrics`에 같은 4몫의 `levels`·`employed`·`profitWeek` (30일마다). 지금 있는 `levelsState`·`levelsPrivate`는 두 몫뿐이라 2-35-5 네 층 차트를 그릴 수 없다.
+- **2-42 지역 건물 (2026-10-21, 7-16이 들어올 때 같이):**
+  - 민영화: `Command` `{ type: 'setPrivatize'; buildingId: number; on: boolean }`, 필드 `Building.privatize?: boolean` (DECISIONS 7-16).
+  - 레벨 주인: 순수 함수 `levelOwnersOf(world, b)` → `{ owner: 'state' | 'manor' | 'finance'; ownerBuildingId?: number; regionId?: number; levels: number }[]` (레벨마다 주인 하나, 7-16). 화면은 이것으로 소유 비율 막대를 그린다 (지금은 2-35-0 몫으로 대신). `privateShare`가 없어지면 2-35-0 `stake` 몫도 같이 지운다.
 - **2-17 정리 (UI 반영 끝, 2026-10-21 확인):** 클라이언트가 `isDistressed`·`SEIZURE_WEEKS`·`DISTRESS_DEBT_RATIO`·`landlordJobs`·`setResearchBudget`·`MAX_RESEARCH_BUDGET`·`Company.distressWeeks`를 더 쓰지 않는다 (grep 0건). sim은 `compat.ts`의 이 껍데기를 지워도 된다. 100배 값 사본(2-27)은 아직 지우지 않는다.
 - 이미 export되는 것: `paysDividend`, `kingdomGdp`, `kingdomById`, `builderOf`, `companyById`, `peasantSlots`, `disbanded`, `slots`, `harvestCondition`, `harvestLabel`, `HARVEST_KINDS`, `taxRates`, `taxCapacity`, `holdingsOf`, `ownerBuildingOf`, `budgetPreview`, `reserveCap`, `hasReserve`, `weeklyOutputValue`, `creditLimit`, `isGovernment`, `crewOf`, `wealthOf`, `literacyOf`, `educationOf`
