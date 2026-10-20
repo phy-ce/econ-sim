@@ -12,9 +12,9 @@ import type { Building, Company, MethodDef, Pop, PopClass, Region, Skill, World 
 /** 하루 채용 상한: 자리의 이 비율 (최소 3명) */
 export const HIRE_RATE = 0.01;
 /** 임금을 다 못 받으면 하루에 떠나는 비율 */
-const UNPAID_QUIT = 0.03;
+export const UNPAID_QUIT = 0.03;
 /** 노동자는 다른 직종이 이 비율 이상 차야 다 뽑힌다 (직종 비율 유지) */
-const RATIO_GATE = 0.9;
+export const RATIO_GATE = 0.9;
 
 interface Seat { b: Building; prof: PopClass; slots: number; wage: number; m: MethodDef | null }
 
@@ -339,9 +339,9 @@ export function payWages(w: World) {
 // ---------------------------------------------------------------- 이주
 
 /** 이주가 시작되는 매력도 배율과 최대가 되는 배율, 하루 최대 이주 비율 */
-const MIGRATE_START = 1.3;
-const MIGRATE_FULL = 2;
-const MIGRATE_MAX = 0.001;
+export const MIGRATE_START = 1.3;
+export const MIGRATE_FULL = 2;
+export const MIGRATE_MAX = 0.001;
 
 /**
  * 이주: 이웃 지역 매력도가 여기보다 30% 넘게 높으면 조금씩 옮겨 간다 (모든 계급).

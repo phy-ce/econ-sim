@@ -232,7 +232,7 @@ export function harvestShares(w: World, r: Region): { rent: number; tax: number 
  * 소작지 수확 out(GOOD_IDS 순서)을 size 명, 부 wealth 인 소작농이 나누는 법 (현물 사용 순서·상한은 collectOrders 와 같다).
  * 그날 지금 부 단계로 쓸 만큼 쓰고(own) 나머지를 판다(sell). 수확이 필요보다 적으면 다 쓰고 팔지 않는다
  */
-function splitHarvest(size: number, wealth: number, out: number[]): { own: number[]; sell: number[] } {
+export function splitHarvest(size: number, wealth: number, out: number[]): { own: number[]; sell: number[] } {
   const left = useOwnKind(size, wealth, out.slice());
   return { own: out.map((x, i) => Math.max(0, x - left[i])), sell: left.map((x) => Math.max(0, x)) };
 }
@@ -395,7 +395,7 @@ export function collectOrders(w: World, book: Book) {
 }
 
 /** 대체재 선택 민감도: 클수록 싼 쪽으로 쏠린다 */
-const SUBSTITUTION_EXP = 10;
+export const SUBSTITUTION_EXP = 10;
 
 /** 필요 단위 비용^-k 에 비례해서 선택지별 비중을 나누고, 상품별 최대 비중(max)을 넘는 몫은 나머지에 다시 나눈다 */
 type Split = (NeedDef['options'][number] & { share: number })[];
@@ -492,9 +492,9 @@ function transportOrder(w: World, regionId: number, value: number, payer: Payer,
 }
 
 /** 운송비와 관세를 넘는 가격 차 1%당 평균 유통량의 몇 %를 옮기는가 */
-const SHIP_RATE = 10;
+export const SHIP_RATE = 10;
 /** 팔리지 않은 상인 화물이 하루에 상하는 비율 */
-const CARGO_DECAY = 0.02;
+export const CARGO_DECAY = 0.02;
 
 /**
  * 상인 화물의 시장(mkey)별 수량 합 (화물 순서대로). 화물 목록은 이 파일만 바꾸고, updatePrices 뒤로 다음 날 addTraderOrders 까지는
@@ -572,7 +572,7 @@ function addTraderOrders(w: World, book: Book, days: RegionDay[]) {
 // ---------------------------------------------------------------- 체결
 
 /** 팔리지 않은 상인 화물 중 가격 신호에 공급으로 세는 비율 (같은 화물을 매일 새 공급으로 세지 않게) */
-const STALE_SIGNAL = 0.02;
+export const STALE_SIGNAL = 0.02;
 
 /** 한 시장의 상인 화물 합계 (clearMarkets 안에서만) */
 interface TradeAcc { mk: number; mg: MarketGood; supply: number; shippedIn: number; by: number | undefined; qs: number[] }
@@ -748,7 +748,7 @@ export function clearMarkets(w: World, book: Book) {
 }
 
 /** 생활비를 넘는 현금 중 하루에 투자 풀로 가는 비율 */
-const INVEST_RATE = 0.05;
+export const INVEST_RATE = 0.05;
 
 /**
  * 팝은 저축하지 않는다 (빅토리아3): 생활비와 세금의 며칠분(TUNE.cashBufferDays)을 넘는 현금은 매일 조금씩 그 왕국 투자 풀로 간다.
@@ -834,14 +834,14 @@ function updateWealth(p: Pop, rd: RegionDay, plan: PopPlan) {
 export const PRICE_MIN = 0.25;
 export const PRICE_MAX = 1.75;
 /** 하루에 목표 가격으로 다가가는 비율 */
-const PRICE_SPEED = 0.03;
+export const PRICE_SPEED = 0.03;
 /** 수요·공급 평균이 하루에 따라가는 비율 */
-const FLOW_EMA = 0.1;
+export const FLOW_EMA = 0.1;
 /**
  * 수요·공급 이동평균은 소수 둘째 자리로 저장해서, 흐름이 끊겨도 0.05 언저리에서 줄지 않고 남는다 (0.05 × 10% 가 반올림에 묻힌다).
  * 그런 찌꺼기는 없는 수요·공급을 있는 것처럼 보이게 한다 (가격이 기본가로 돌아가고 상인이 헛물을 나른다). 그날 흐름도 이만큼 작으면 0으로 둔다
  */
-const FLOW_EMA_MIN = 0.05;
+export const FLOW_EMA_MIN = 0.05;
 
 /** 수요·공급 이동평균 하루치 (소수 둘째 자리, 0.05 이하 찌꺼기는 0) */
 function flowEma(ema: number, cur: number): number {

@@ -66,6 +66,8 @@ data(상품·건물·기술·TUNE) · types · world(시작 상태) · tick(하�
 
 ## 문서
 - `docs/DESIGN.md`: 지금 경제 규칙의 요약 (규칙을 바꾸면 같이 고친다)
+- `packages/sim/src/encyclopedia.ts`: 플레이어용 규칙 사전 (`npm run encyclopedia`). 규칙을 바꾸면 `encyclopedia.ts` 항목도 같이 고친다 (테스트가 확인한다:
+  DESIGN.md 절 목록, TUNE 키, 모든 값·예시·live 함수). 숫자는 옮겨 적지 않고 코드 상수를 읽는다
 - `docs/VIC3_REFERENCE.md`: 웹에서 확인한 빅토리아3 동작과 출처 (새로 확인하면 덧붙인다)
 - `docs/UI_CHANGES.md`: 화면 작업자에게 넘길 변경 (할 일만). `docs/UI_DONE.md`: 반영된 변경 보관
 - `docs/DECISIONS.md`: 사용자 결정이 필요한 것

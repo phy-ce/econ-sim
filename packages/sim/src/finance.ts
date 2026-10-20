@@ -45,7 +45,7 @@ function shareTechs(w: World) {
 }
 
 /** 연구비는 그 왕국 연구원(전문가·기술자) pop 의 소득이 된다 */
-const RESEARCHER_WEIGHT: Partial<Record<PopClass, number>> = { skilled: 0.3, expert: 1 };
+export const RESEARCHER_WEIGHT: Partial<Record<PopClass, number>> = { skilled: 0.3, expert: 1 };
 
 export function doResearch(w: World) {
   shareTechs(w);
@@ -290,7 +290,7 @@ export function collectIncomeTax(w: World) {
 // ---------------------------------------------------------------- 주간: 세금, 배당, 투자 풀
 
 /** 소유 건물에서 받은 몫 중 투자 풀로 넣는 비율 (빅토리아3 기본률: 금융가 30%, 저택 20%) */
-const INVEST_SHARE: Partial<Record<PopClass, number>> = { capitalist: 0.3, aristocrat: 0.2, gentry: 0.2 };
+export const INVEST_SHARE: Partial<Record<PopClass, number>> = { capitalist: 0.3, aristocrat: 0.2, gentry: 0.2 };
 
 export function weeklyWageBill(w: World, c: Company): number {
   let bill = 0;

@@ -12,8 +12,8 @@ import { SKILLS, emptyLedger, isLowerJob } from './types';
 
 /** 민간 상회의 시작 자금 (농장 약 다섯 레벨 공사비). 왕실 국고는 startTreasury 가 정한다 */
 export const START_CASH = 30_000_000;
-const BANK_CAPITAL = 300_000_000;
-const TRADER_CAPITAL = 100_000_000;
+export const BANK_CAPITAL = 300_000_000;
+export const TRADER_CAPITAL = 100_000_000;
 /** 시작 정책 단계: 세금 수준, 국영 임금 수준, 연구비 수준 모두 보통(3) */
 const DEFAULT_BUDGET = { tax: 3, wages: 3, research: 3 };
 /** 플레이어 회사 id (화면이 이 값을 쓴다) */
@@ -28,9 +28,9 @@ const KINGDOMS = [
 /** 1인당 시작 저축 (부양가족 포함 1인 기준) */
 const START_SAVINGS: Record<PopClass, number> = { peasant: 5, unskilled: 20, farmer: 20, skilled: 100, expert: 300, gentry: 200, capitalist: 500, aristocrat: 500 };
 /** 처음부터 아는 기술: 손베틀·손가구·목공구 등 수공업 방식 */
-const START_TECHS = ['spinning', 'guilds'];
+export const START_TECHS = ['spinning', 'guilds'];
 /** 왕실이 갖고 시작하는 건축사무소 레벨 (목조 4 × 10레벨 = 하루 약 40포인트. 공사 하나는 레벨당 하루 10포인트까지라 농장 1레벨은 약 60일) */
-const START_OFFICE_LEVELS = 10;
+export const START_OFFICE_LEVELS = 10;
 /** 상층의 시작 문해력 */
 const UPPER_LITERACY = 0.6;
 

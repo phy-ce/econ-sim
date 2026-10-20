@@ -82,7 +82,7 @@ export const CLASS_DEFS: Record<PopClass, ClassDef> = {
 const tech = (id: string, name: string, nameEn: string, tier: number, requires: string[], description: string, descriptionEn: string): TechDef =>
   ({ id, name, nameEn, cost: TECH_COST[tier], requires, description, descriptionEn });
 /** 단계별 연구비. 1단계는 최대 연구비로 넉 달, 기술 전부는 최대 연구비로 약 18년 */
-const TECH_COST = [0, 12_000_000, 24_000_000, 40_000_000, 70_000_000];
+export const TECH_COST = [0, 12_000_000, 24_000_000, 40_000_000, 70_000_000];
 
 export const TECHS: TechDef[] = [
   // 1단계: 선행 없음. 가공 산업과 기반 시설을 연다
@@ -114,7 +114,7 @@ export const TECH_BY_ID: Record<string, TechDef> = Object.fromEntries(TECHS.map(
 
 const m = (def: MethodDef): MethodDef => def;
 /** 행정청 1레벨이 세금을 걷을 수 있는 인구 */
-const TAX_PEOPLE_PER_LEVEL = 500_000;
+export const TAX_PEOPLE_PER_LEVEL = 500_000;
 
 /** 레벨당 일자리 (노동자, 기술자, 전문가). 합이 1,000명이 되게 쓴다 */
 const jobs = (unskilled: number, skilled = 0, expert = 0) => ({ unskilled, skilled, expert });

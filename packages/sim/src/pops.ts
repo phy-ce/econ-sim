@@ -196,10 +196,10 @@ export function payProf(w: World, regionId: number, prof: PopClass, amount: numb
 /** 자격이 쌓이는 하루 속도 (계수 1, 노동 인구 1명당) */
 export const QUAL_RATE = 0.00002;
 /** 조건을 못 맞춘 자격이 사라지는 하루 비율 */
-const QUAL_DECAY = 0.001;
+export const QUAL_DECAY = 0.001;
 
 /** 대상 직종별 기본 계수 (L = 문해력, W = 부). 0 이하면 자격이 쌓이지 않고 줄어든다 */
-const QUAL_FACTOR: Partial<Record<PopClass, (L: number, W: number) => number>> = {
+export const QUAL_FACTOR: Partial<Record<PopClass, (L: number, W: number) => number>> = {
   skilled: (L) => Math.max(0, (L - TUNE.qualSkilledL) * 20),
   expert: (L, W) => (L > TUNE.qualExpertL ? (L - TUNE.qualExpertL) * 10 + W / 20 : 0),
   gentry: (L, W) => (L > TUNE.qualSkilledL ? (L - TUNE.qualSkilledL) * 10 + W / 20 : 0),
@@ -207,7 +207,7 @@ const QUAL_FACTOR: Partial<Record<PopClass, (L: number, W: number) => number>> =
   aristocrat: (L, W) => (W >= 15 ? ((W - 14) / 20 + Math.max(0, (W - 20) / 5)) * (0.5 + L / 2) : 0),
 };
 /** 출신 직종 배율: 가까운 직종에서 더 잘 옮겨 간다 */
-const QUAL_FROM: Partial<Record<PopClass, Partial<Record<PopClass, number>>>> = {
+export const QUAL_FROM: Partial<Record<PopClass, Partial<Record<PopClass, number>>>> = {
   skilled: { unskilled: 2, farmer: 2 },
   expert: { skilled: 5 },
   gentry: { aristocrat: 5, expert: 2 },
@@ -292,7 +292,7 @@ export function mortalityAt(sol: number): number {
 
 /** 식량 부족 (빅토리아3): 식량 충족 40% 아래부터 출생 −35%·사망 +30% 까지, 20% 아래로 출생 −90%·사망 +100% 까지 */
 export const STARVATION_LINE = 0.4;
-const SEVERE_STARVATION = 0.2;
+export const SEVERE_STARVATION = 0.2;
 
 /** 생활수준이 sol0 (popSol) 인 pop 의 하루 순증가율 */
 function growthWith(p: Pop, sol0: number): number {
