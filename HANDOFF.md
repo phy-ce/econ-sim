@@ -25,6 +25,7 @@
 - 레벨마다 주인 하나 (`Building.owners`, 국가 = 왕실 건물). 저택·금융가 금고(`Building.cash`), 투자 풀 없앰, 민간 공사비는 금고가 냄 (`finance.ts chooseFunders`, 완공 레벨 약정 비율, `production.ts giveLevels`), 민영화 명령 `setPrivatize` + 매주 `ai.ts buyLevels`, 철거 대금은 헐린 레벨 주인, 배당은 레벨 수대로. 민간 상회 운영 자금 2주(`firmBufferWeeks`), 모자라면 주인이 채움(`callCapital`).
 - 저장 8판, 옛 저장 안 받음. 클라이언트 두 줄 지움 (UI_CHANGES 2-54).
 - 수치·비교는 DECISIONS 7-16 "1단계 구현". 그래프 `.tmp/reports/2026-10-21-own1.png`.
+- main e9304c1 을 합친 뒤(ba373c5) 다시 비교하니 1단계가 총생산·생활수준·귀족 소득에서 뚜렷이 나쁘다 (DECISIONS 7-16, 그래프 `-own1-v2.png`). 합치기 전에 진단할 것.
 - 확인: 워크트리의 node_modules 는 main 의 것을 잇는다 → `npm run typecheck` 의 클라이언트 검사는 main 의 sim 을 본다. 이 브랜치 sim 으로 클라이언트를 보려면 paths 로 sim 을 가리키는 tsconfig 를 따로 쓴다 (`.tmp/own1/tsconfig.client.json`).
 
 ## 0-basicnoskill. wt-basicnoskill (2026-10-21, main에 합침, 사용자 결정 "1차 산업 기본 방식은 기술자 없음")
