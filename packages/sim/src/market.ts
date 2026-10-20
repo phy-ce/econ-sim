@@ -183,7 +183,7 @@ function harvestOutput(wf: number): GoodBag {
 
 /**
  * 소작지 수확 (빅토리아3 자급 산출): 소작농 노동 인구 × 1인당 산출.
- * 상품마다 수확의 TUNE.peasantSellShare(20%)를 팔고, 나머지에서 그날 지금 부 단계로 쓸 만큼 현물로 쓴다. 남는 것은 사라진다.
+ * 곡물은 그날 먹을 만큼 남기고 나머지를 판다. 섬유·목재는 수확의 TUNE.peasantSellShare(20%)를 팔고, 나머지에서 쓸 만큼 쓴다 (splitHarvest).
  * 판매 대금은 지대(TUNE.rentShare, 그 지역 저택에 귀족이 있을 때) → 귀족, 토지세 → 국고, 나머지 → 소작농.
  */
 export function harvest(w: World, book: Book) {
@@ -228,16 +228,20 @@ export function harvestShares(w: World, r: Region): { rent: number; tax: number 
 
 /**
  * 소작지 수확 out(GOOD_IDS 순서)을 size 명, 부 wealth 인 소작농이 나누는 법 (현물 사용 순서·상한은 collectOrders 와 같다).
- * 상품마다 수확의 TUNE.peasantSellShare 를 판다 (sell). 나머지에서 그날 쓸 만큼 쓴다 (own). 그 밖에 남는 것은 시장에 나오지 않고 소득도 아니다
+ * 곡물: 그날 먹을 만큼(지금 부 단계의 식량 필요) 남기고 나머지를 판다. 수확이 필요보다 적으면 다 먹고 팔지 않는다.
+ * 섬유·목재: 수확의 TUNE.peasantSellShare 를 팔고 나머지에서 쓸 만큼 쓴다. 남는 것은 시장에 나오지 않고 소득도 아니다
  */
 function splitHarvest(size: number, wealth: number, out: number[]): { own: number[]; sell: number[] } {
   const s = TUNE.peasantSellShare;
-  const sell = out.map((q) => q * s);
   // 나머지는 q × (1 − 몫)으로 센다 (q − q × 몫과 끝자리가 달라 결과가 갈린다. DECISIONS 7-11 표가 이 계산으로 쟀다)
-  const avail = out.map((q) => q * (1 - s));
+  const avail = out.map((q, i) => (i === GRAIN ? q : q * (1 - s)));
   const left = useOwnKind(size, wealth, avail.slice());
-  return { own: avail.map((x, i) => Math.max(0, x - left[i])), sell };
+  return {
+    own: avail.map((x, i) => Math.max(0, x - left[i])),
+    sell: out.map((q, i) => (i === GRAIN ? Math.max(0, left[i]) : q * s)),
+  };
 }
+const GRAIN = GOOD_IDS.indexOf('grain');
 
 function bagOf(q: number[]): GoodBag {
   const bag: GoodBag = {};

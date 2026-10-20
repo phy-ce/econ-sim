@@ -73,7 +73,7 @@ let schDem = 0;
 const schoolLevels = new Map<number, number>();
 // 소작 시장 (해마다 하루 평균): subG·subT 소작지가 내놓은 곡물·목재, demG·demT 곡물·목재 수요 (만), landTax 걷힌 토지세 (천/일),
 // shG·shT·shF 소작지가 내놓은 양 / 소작지 수확 (곡물·목재·섬유)
-const yearAcc = { subG: 0, demG: 0, subT: 0, demT: 0, subF: 0, hG: 0, hT: 0, hF: 0, landTax: 0, pG: 0, supU: 0, demU: 0, supR: 0, demR: 0, pU: 0, pR: 0 };
+const yearAcc = { subG: 0, demG: 0, subT: 0, demT: 0, subF: 0, hG: 0, hT: 0, hF: 0, landTax: 0, pG: 0, pC: 0, pFu: 0, pT: 0, pFi: 0, pFul: 0, pW: 0, supU: 0, demU: 0, supR: 0, demR: 0, pU: 0, pR: 0 };
 // 곡물 도시(티어 1·2)·농촌(티어 3·4) 지역: supU·demU·supR·demR 하루 공급·수요 합, pU·pR 값/기본가의 지역 평균 (해마다 하루 평균)
 const urban = (t: number | undefined) => (t ?? 9) <= 2;
 const nU = w.regions.filter((r) => urban(r.tier)).length, nR = w.regions.length - nU;
@@ -86,12 +86,17 @@ for (let d = 0; d < years * 360; d++) {
     yearAcc.subT += r.market.timber.supplyBy?.subsistence ?? 0; yearAcc.demT += r.market.timber.demand;
     yearAcc.subF += r.market.fiber.supplyBy?.subsistence ?? 0;
     yearAcc.pG += r.market.grain.demandBy?.['pop:peasant'] ?? 0;
+    yearAcc.pC += r.market.cloth.demandBy?.['pop:peasant'] ?? 0; yearAcc.pFu += r.market.furniture.demandBy?.['pop:peasant'] ?? 0;
+    yearAcc.pT += r.market.timber.demandBy?.['pop:peasant'] ?? 0; yearAcc.pFi += r.market.fiber.demandBy?.['pop:peasant'] ?? 0;
     const gm = r.market.grain, pr = gm.price / GOODS.grain.basePrice;
     if (urban(r.tier)) { yearAcc.supU += gm.supply; yearAcc.demU += gm.demand; yearAcc.pU += pr / nU; }
     else { yearAcc.supR += gm.supply; yearAcc.demR += gm.demand; yearAcc.pR += pr / nR; }
   }
   for (const b of w.buildings) if (b.typeId === 'subsistence') { yearAcc.hG += b.last.output.grain ?? 0; yearAcc.hT += b.last.output.timber ?? 0; yearAcc.hF += b.last.output.fiber ?? 0; }
   for (const k of w.kingdoms) yearAcc.landTax += k.landGot ?? 0;
+  // 소작농 묶음 충족률·부 (인구 가중, 하루 평균)
+  { let n = 0, f = 0, wl = 0; for (const p of w.pops) if (p.prof === 'peasant') { n += p.size; f += p.size * p.fulfillment; wl += p.size * p.wealth100 / 100; }
+    if (n > 0) { yearAcc.pFul += f / n; yearAcc.pW += wl / n; } }
   if (w.tick % 360 === 0) {
     const y = w.tick / 360;
     let cash = 0, n = 0;
@@ -102,6 +107,9 @@ for (let d = 0; d < years * 360; d++) {
       shG: +(yearAcc.subG / Math.max(1, yearAcc.hG)).toFixed(3), shT: +(yearAcc.subT / Math.max(1, yearAcc.hT)).toFixed(3), shF: +(yearAcc.subF / Math.max(1, yearAcc.hF)).toFixed(3),
       landTax: +(yearAcc.landTax / 360 / 1e3).toFixed(1),
       peasBuyG: +(yearAcc.pG / 360 / 1e3).toFixed(1),
+      // 소작농이 산 의복·가구·목재·섬유 (천/일), 묶음 충족률, 부
+      pbC: +(yearAcc.pC / 360 / 1e3).toFixed(1), pbFu: +(yearAcc.pFu / 360 / 1e3).toFixed(1), pbT: +(yearAcc.pT / 360 / 1e3).toFixed(1), pbFi: +(yearAcc.pFi / 360 / 1e3).toFixed(1),
+      peasFul: +(yearAcc.pFul / 360).toFixed(2), peasW: +(yearAcc.pW / 360).toFixed(2),
       gSD: +((yearAcc.supU + yearAcc.supR) / Math.max(1, yearAcc.demU + yearAcc.demR)).toFixed(2),
       gSDu: +(yearAcc.supU / Math.max(1, yearAcc.demU)).toFixed(2), gSDr: +(yearAcc.supR / Math.max(1, yearAcc.demR)).toFixed(2),
       gPu: +(yearAcc.pU / 360).toFixed(2), gPr: +(yearAcc.pR / 360).toFixed(2), cashPeas: +(n > 0 ? cash / n : 0).toFixed(3),
