@@ -93,42 +93,13 @@ describe('저장값 소수 둘째 자리', () => {
     expect(roundingDrift(w)).toBeLessThan(1e-5);
   });
 
-  it('옛 저장(4판)을 바꾸면 모든 숫자가 소수 둘째 자리이고 화폐 장부가 센트 안에서 그대로다', () => {
+  // 8판(레벨 소유)부터는 옛 저장을 바꾸지 않는다 (사용자 2026-10-21: 옛 저장은 신경 쓰지 않는다)
+  it('옛 판 저장은 불러오지 않는다', () => {
     const w = createWorld(7);
-    runTo(w, 60);
-    // 4판 모양으로 되돌린다: 부·문해력·교육 접근도·숙련도·작업 인원은 규칙 단위, 돈과 수량에는 센트 아래 끝수
+    runTo(w, 30);
     const old = JSON.parse(save(w));
-    old.version = 4;
-    for (const p of old.pops) {
-      p.wealth = p.wealth100 / 100 + 1e-5; p.literacy = p.literacy100 / 100 + 1e-5; delete p.wealth100; delete p.literacy100;
-      p.savings += 0.001234; p.size += 0.000321;
-    }
-    for (const r of old.regions) { r.education = r.education100 / 100 + 1e-5; delete r.education100; }
-    for (const b of old.buildings) {
-      b.exp = b.exp100 / 100 + 1e-5; delete b.exp100;
-      if (b.crew100 !== undefined) { b.crew = b.crew100 / 100 + 1e-5; delete b.crew100; }
-    }
-    for (const c of old.companies) c.cash += 0.004321;
-    old.traders.shipments.push(...old.traders.shipments.map((s: { q: number }) => ({ ...s, q: s.q / 3 + 1e-4 })));
-    // 옛 저장에는 은행과 민간 빚이 있었다: 은행 현금은 주인 없는 돈으로 가고 민간 빚은 탕감된다
-    old.bank = { cash: 300_000_000.004, capital: 300_000_000 };
-    for (const c of old.companies) if (!c.state) c.debt = 1_234_567.89;
-    const before = moneyIdentity(old as World) + old.bank.cash;
-    const got = migrateWorld(old)!;
-    expect(got.version).toBe(7);
-    expect(violations(save(got))).toEqual([]);
-    // 옛 저장의 끝수는 장부의 센트 아래이므로 마지막 반올림이 그만큼(반 센트 아래)만 지운다
-    expect(Math.abs(moneyIdentity(got) - before)).toBeLessThan(0.01);
-    expect(got.fund).toBeGreaterThanOrEqual(0);
-    expect('bank' in got).toBe(false);
-    expect(got.companies.every((c) => c.state || c.debt === 0)).toBe(true);
-    expect(got.pops[0].wealth100).toBeGreaterThanOrEqual(100);
-    expect(got.buildings.every((b) => b.exp100 >= 0 && b.exp100 <= 100 && !('exp' in b) && b.crew === (b.crew100 === undefined ? undefined : round2(b.crew100 / 100)))).toBe(true);
-    expect(got.pops.every((p) => p.wealth === round2(p.wealth100 / 100) && p.literacy === round2(p.literacy100 / 100))).toBe(true);
-    expect(got.buildings.some((b) => (b.crew100 ?? 0) > 1)).toBe(true);
-    // 바꾼 세계도 계속 돈다
-    runTo(got, 90);
-    expect(violations(save(got))).toEqual([]);
+    for (const v of [3, 4, 5, 6, 7]) expect(migrateWorld({ ...old, version: v })).toBeNull();
+    expect(save(migrateWorld(JSON.parse(save(w)))!)).toBe(save(w));
   });
 
   // 화면 표시용 사본(Pop.wealth·literacy, Region.education, Building.crew)은 sim 이 읽지 않는다: 사본을 엉뚱한 값으로 바꿔도 다음 날 세계가 같고,
@@ -154,53 +125,6 @@ describe('저장값 소수 둘째 자리', () => {
     const loaded = migrateWorld(bare)!;
     expect(synced(loaded)).toBe(true);
     expect(loaded).toEqual(JSON.parse(save(a)));
-  });
-
-  // 5판은 이 변경의 중간 판이다: 건물 숙련도·작업 인원이 규칙 단위(exp, crew)인 것과 지금처럼 100배 값인 것이 있다. 둘 다 지금 세계와 같아진다
-  it('5판 저장(두 모양)을 바꾸면 지금 세계와 같다', () => {
-    const w = createWorld(7);
-    runTo(w, 30);
-    const want = JSON.parse(save(w));
-    const same = JSON.parse(save(w));
-    same.version = 5;
-    expect(save(migrateWorld(same)!)).toBe(save(w));
-    const older = JSON.parse(save(w));
-    older.version = 5;
-    for (const b of older.buildings) {
-      b.exp = b.exp100 / 100; delete b.exp100;
-      if (b.crew100 !== undefined) { b.crew = b.crew100 / 100; delete b.crew100; }
-    }
-    const got = migrateWorld(older)!;
-    expect(got.version).toBe(7);
-    // 필드 순서만 다를 수 있다 (바꾼 필드가 끝으로 간다)
-    expect(got).toEqual(want);
-    expect(violations(save(got))).toEqual([]);
-    expect(migrateWorld({ ...want, version: 3 })).toBeNull();
-  });
-
-  // 6판에는 농부가 없다: 농장·목장의 일꾼은 노동자였다. 바꾸면 그 노동자가 농부가 되고 세계가 지금 규칙으로 계속 돈다
-  it('6판 저장을 바꾸면 농장·목장의 노동자가 농부가 된다', () => {
-    const w = createWorld(7);
-    runTo(w, 30);
-    const want = JSON.parse(save(w)) as World;
-    const old = JSON.parse(save(w));
-    old.version = 6;
-    for (const p of old.pops) if (p.prof === 'farmer' && p.work !== 0) p.prof = 'unskilled';
-    for (const b of old.buildings) { b.employed.unskilled += b.employed.farmer; delete b.employed.farmer; }
-    for (const c of old.companies) { delete c.wages.farmer; if (c.wageOffset) delete c.wageOffset.farmer; }
-    for (const r of old.regions) delete r.households.farmer;
-    for (const h of old.history) { delete h.sol.farmer; delete h.population.farmer; delete h.unemployment.farmer; }
-    const got = migrateWorld(old)!;
-    expect(got.version).toBe(7);
-    const farmers = (x: World) => x.pops.filter((p) => p.prof === 'farmer' && p.work !== 0).map((p) => p.id);
-    expect(farmers(got)).toEqual(farmers(want));
-    expect(farmers(got).length).toBeGreaterThan(0);
-    expect(got.buildings.map((b) => b.employed)).toEqual(want.buildings.map((b) => b.employed));
-    expect(got.companies.every((c) => c.wages.farmer === c.wages.unskilled)).toBe(true);
-    expect(got.regions.every((r) => r.households.farmer.population === 0)).toBe(true);
-    expect(Math.abs(moneyIdentity(got) - moneyIdentity(want))).toBeLessThan(0.01);
-    runTo(got, 60);
-    expect(violations(save(got))).toEqual([]);
   });
 
   // 반올림 찌꺼기(0.05 이하 이동평균)는 0이 되고, 사고파는 사람이 없는 시장은 기본가에서 벗어난 쪽 끝으로 간다 (market.ts updatePrices)

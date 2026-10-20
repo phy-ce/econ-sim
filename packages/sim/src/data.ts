@@ -308,11 +308,14 @@ export function scaleBonus(level: number): number {
  * - adminScale: 행정청 1레벨이 감당하는 인구 배율 (기본 50만 명 × 이 값)
  * - adminStart: 시작 행정청이 감당하는 인구 / 왕국 인구
  * - investWage: AI가 새로 지을지 판단할 때 쓰는 임금의 바닥 = 기본 임금 × 이 값 (0이면 지금 임금만 본다)
- * - localBias: 민간 상회가 그 지역 사람들 돈으로 그 지역에 지을 때 수익률에 곱하는 가산점 (1 + localBias)
+ * - localBias: 저택·금융가가 자기 지역 공사에 돈을 낼 마음과, 민간 상회가 그 돈으로 그 지역에 지을 때 수익률에 곱하는 가산점 (1 + localBias)
+ * - ownerTilt: 저택은 땅 건물(농지·산림·광맥), 금융가는 그 밖의 건물을 좋아한다 (AI 성향). 좋아하지 않는 종류에 낼 마음의 배율
+ * - privatizeMargin, privatizePayback: 민영화 레벨을 사는 조건 (AI): 금고 ≥ 레벨 값 × privatizeMargin, 레벨 값 ÷ 그 레벨의 1년 이익 ≤ privatizePayback 년
+ * - crownPrivatize: 비교용. 'all' 이면 AI 왕실이 생산 건물 모두에 민영화를 켠다 (기본 'off': 민영화는 플레이어가 켠다)
  * - taxCurve: 징수율 곡선. 'exp' = 1 − e^(−x), 'hyp' = x / (1 + x) (x = 행정청 한도 / 인구)
  * - switchRate, switchPremium, switchMax: 일하는 사람은 소득이 switchPremium 배 넘게 나은 자리로 옮긴다. 하루에 옮기는 비율은
  *   switchPremium 배일 때 switchRate 이고 소득 배율의 차이에 비례해 늘어 switchMax 에서 멈춘다 (labor.ts switchShare)
- * - cashBufferDays: 팝이 투자 풀로 보내지 않고 들고 있는 돈 (생활비 + 세금의 며칠분)
+ * - cashBufferDays: 팝이 금고(저택·금융가)로 보내지 않고 들고 있는 돈 (생활비 + 세금의 며칠분)
  * - landTax, pollTax, incomeTax: 세금 수준 3단계(보통)의 토지세율(소작지 판매 대금 중 국고 몫), 인두세(1인당 하루), 소득세율.
  *   세 세율을 같은 배율로 비교했다 (빅토리아3 보통 단계 기준 ×1·×1.5·×2·×2.5, 20년 × 시드 1~4). ×2는 ×1보다 건물 레벨이
  *   10년차 약 50%, 20년차 약 13% 많고 실업이 낮다 (×1은 세금 단계를 1~5 모두 쓰지만 건물이 가장 적다). ×2.5는 노동자 생활수준이 가장 낮다
@@ -322,7 +325,6 @@ export function scaleBonus(level: number): number {
  * - startsPerWeek: AI 회사 하나가 한 주에 새로 넣는 공사 수 상한
  * - luxuryLinear, luxuryQuad: 사치품 필요 = linear × (부 − 10) + quad × (부 − 10)²
  * - meatLinear, meatQuad: 고기 필요 = linear × (부 − 8) + quad × (부 − 8)²
- * - privateShare: 왕실이 짓는 건물(행정청·건축사무소 제외) 공사비 중 민간 상회가 내는 비율 (그만큼 지분)
  * - shrinkWeeks: 마지막 레벨의 손익이 이 주 수 동안 계속 마이너스면 AI가 철거를 시작한다
  * - reserveWeeks: 건물 유보 자산 상한 = 레벨 × 지금 방식의 레벨당 주간 산출 가치(기본가) × 이 주 수. 이익의 35%를 여기까지 쌓고, 적자는 여기서 먼저 뺀다 (finance.ts settleReserve).
  *   레벨당 고정 50,000(농지 0.5주, 공장 0.2~0.3주치)과 0.25·0.5·1·2·4주 비교 (10년 거름, 20년 × 시드 1·2·3): 0.5주가 산출 비례 중 20년차 연 총생산(2,580 / 1주 2,423 / 고정 2,745)·
@@ -379,6 +381,10 @@ export const TUNE = {
   adminStart: 1,
   investWage: 0.75,
   localBias: 0.5,
+  ownerTilt: 0.5,
+  privatizeMargin: 2,
+  privatizePayback: 10,
+  crownPrivatize: 'off' as 'off' | 'all',
   taxCurve: 'hyp' as 'exp' | 'hyp',
   cashBufferDays: 10,
   pollTax: 0.4, // 인두세: 소작농은 peasantPoll 배 (세금 수준 3단계 기준)
@@ -390,7 +396,6 @@ export const TUNE = {
   luxuryQuad: 0.02,
   meatLinear: 0.3,
   meatQuad: 0.01,
-  privateShare: 0.5,
   qualSkilledL: 0.4,
   qualExpertL: 0.6,
   qualRate: 0.25,

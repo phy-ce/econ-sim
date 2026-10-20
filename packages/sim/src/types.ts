@@ -223,10 +223,17 @@ export interface Building {
   active: boolean;
   /** 가동률 0..1 */
   utilization: number;
-  /** 국영 건물: 이익은 국고에 남고, 소유 직종 자리도 임금을 받는다 */
+  /** 국영 건물: 이익은 국고에 남고, 소유 직종 자리도 임금을 받는다. 레벨은 모두 국가 것이다 */
   stateOwned?: boolean;
-  /** 국영 건물 중 민간(그 왕국 민간 상회)이 가진 지분 0..1. 이익의 이 몫은 소유 건물을 거쳐 귀족·자본가에게 배당된다 */
-  privateShare?: number;
+  /**
+   * 민간 건물의 레벨 주인: 소유 건물(저택·금융가) id → 그 건물이 가진 레벨 수 (합 = level). 주인은 공사비를 낸 곳이다.
+   * 국영 건물과 자동 건물(소작지·저택·금융가)에는 없다 (economy.ts levelOwnersOf)
+   */
+  owners?: Record<number, number>;
+  /** 소유 건물(저택·금융가)의 금고: 레벨을 사고 민간 공사비를 낸다 (돈 계정) */
+  cash?: number;
+  /** 왕실 건물의 민영화: 켜 두면 저택·금융가가 매주 1레벨씩 사 갈 수 있다 (ai.ts buyLevels) */
+  privatize?: boolean;
   /** 소작지: 일하는 소작농 (노동 인구) */
   tenants?: number;
   /** 저택: 상급 귀족 자리 (노동 인구). 저택이 가진 건물 레벨과 소작지 칸으로 정한다 (production.ts updateOwnership) */
@@ -269,16 +276,15 @@ export interface Building {
   materials?: GoodBag;
 }
 
-/** 철거로 회수한 자재: TUNE.salvageDays 동안 나눠 팔고, 대금은 지분대로 나눈다 */
+/** 철거로 회수한 자재: TUNE.salvageDays 동안 나눠 팔고, 대금은 헐린 레벨의 주인이 받는다 */
 export interface SalvageLot {
   regionId: number;
   good: GoodId;
   q: number;
   days: number;
   companyId: number;
-  /** 대금을 받을 소유 건물(저택·금융가) id 와 그 몫 (민간 건물 1, 국영 건물은 민간 지분) */
+  /** 대금을 받을 소유 건물(저택·금융가) id. null 이면 건물 주인 회사(국영 레벨은 국고) */
   ownerId: number | null;
-  ownerShare: number;
 }
 
 export interface BuildingStats {
@@ -307,9 +313,8 @@ export interface Construction {
   ticksElapsed: number;
   /** 일시정지된 공사는 건설 포인트를 받지 않는다 */
   paused?: boolean;
-  /** 왕실 공사에 민간 상회가 낸 돈과 그 돈이 사는 지분 (완공 때 건물 지분이 된다) */
-  privatePaid?: number;
-  privateShare?: number;
+  /** 민간 공사의 공사비를 내는 소유 건물(저택·금융가) id → 약정액. 날마다 공사비를 약정액 비율로 나눠 내고, 완공 레벨도 그 비율로 나눈다 */
+  funders?: Record<number, number>;
 }
 
 export interface Research {
@@ -332,8 +337,6 @@ export interface Company {
   wages: Record<Skill, number>;
   /** 지난주 직종별 고용 인원 (AI가 실제로 사람이 찼는지 보고 임금을 정한다) */
   lastEmployed?: Partial<Record<Skill, number>>;
-  /** 투자 풀에서 받은 돈 중 아직 그 지역에 쓰지 않은 몫 (민간 상회, 지역 우선 투자) */
-  regionFunds?: Record<number, number>;
   weekProfit: number;
   lastWeekProfit: number;
   weekStartCash: number;
@@ -354,7 +357,7 @@ export interface Company {
 
 /**
  * 회사 장부 항목. 손익(weekProfit)에 들어가는 것: 판매, 세금, 주조, 공사 수수료(수입) / 임금, 원자재, 연구, 이자(지출).
- * 손익 밖의 자본 흐름: 배당 지급, 투자 풀 유입, 민간이 낸 공사비(건물이라는 자산으로 바뀐다)
+ * 손익 밖의 자본 흐름: 배당 지급, investment(왕실: 민영화로 판 레벨 대금), 낸 공사비(건물이라는 자산으로 바뀐다)
  */
 export const LEDGER_KEYS = ['sales', 'tax', 'mint', 'buildFees', 'wages', 'inputs', 'research', 'interest', 'dividends', 'investment', 'buildPaid'] as const;
 export type LedgerKey = (typeof LEDGER_KEYS)[number];
@@ -430,10 +433,8 @@ export interface Kingdom {
   privateIds: number[];
   /** 수입 관세율 (상품별, 없으면 기본값) */
   tariff: Partial<Record<GoodId, number>>;
-  /** 투자 풀: 소유 직종 배당의 일부가 모여 민간 건설 자금이 된다 */
+  /** 화면 표시용 사본 (소수 둘째 자리). sim은 읽지 않는다: 그 왕국 저택·금융가 금고의 합 (투자 풀은 없앴다, round.ts writeMirrors) */
   investmentPool: number;
-  /** 투자 풀 중 지역별로 들어온 몫 (그 지역 pop 의 재투자와 남는 현금) */
-  poolByRegion?: Record<number, number>;
   /** 세법: 'land' = 토지 기반 과세 (소작지 수확의 토지세율만큼 걷는다, 인두세·소득세 없음), 'capita' = 1인당 과세 (인두세 + 소득세). 세율은 taxRates */
   taxLaw: TaxLaw;
   /** 어제 걷은 토지세와 걷어야 했던 토지세 (행정청 손익용, 하루마다 비운다) */
@@ -543,9 +544,9 @@ export interface MintLedger {
 export interface World {
   /**
    * 저장 형식 버전: 저장되는 모양이 바뀌면 올린다. 옛 저장은 compat.ts migrateWorld
-   * (6: 부·문해력·교육 접근도·숙련도·작업 인원을 100배 값으로, 모든 숫자 소수 둘째 자리. 5는 그 작업 중간 판이었다)
+   * (8: 레벨 소유·소유 건물 금고. 옛 저장은 불러오지 않는다)
    */
-  version: 7;
+  version: 8;
   config: WorldConfig;
   tick: number;
   seed: number;
@@ -554,7 +555,7 @@ export interface World {
   regions: Region[];
   kingdoms: Kingdom[];
   pops: Pop[];
-  /** 받을 사람이 없는 돈. 매주 은행 자본과 투자 풀로 돌린다 */
+  /** 받을 사람이 없는 돈. 매주 지역 금융가 금고로 돌린다 (인구 비례) */
   fund: number;
   traders: Traders;
   /** 국가가 만들고 없앤 돈의 누적 장부 (화폐 보존 검증용) */
@@ -593,7 +594,9 @@ export type Command =
   | { type: 'setResearchBudget'; budget: number }
   | { type: 'setTaxLaw'; law: TaxLaw }
   /** 정책 단계: 세금 수준, 국영 임금 수준, 연구비 수준 (1~5) */
-  | { type: 'setBudget'; item: BudgetItem; value: number };
+  | { type: 'setBudget'; item: BudgetItem; value: number }
+  /** 왕실 건물 민영화 켜기·끄기: 켜 두면 저택·금융가가 매주 1레벨씩 사 갈 수 있다 */
+  | { type: 'setPrivatize'; buildingId: number; on: boolean };
 
 export interface QueuedCommand {
   actor: number;

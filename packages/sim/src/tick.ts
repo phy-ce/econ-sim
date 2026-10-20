@@ -6,7 +6,7 @@ import { runAi } from './ai';
 import { weeklyAlerts } from './alerts';
 import { recordMetrics } from './metrics';
 import { applyCommandMsg } from './commands';
-import { chargeInterest, collectIncomeTax, distributeInvestment, doResearch, mintMoney, payDividends, spendBudget, weeklyBanking } from './finance';
+import { chargeInterest, collectIncomeTax, doResearch, mintMoney, payDividends, spendBudget, weeklyBanking } from './finance';
 import { laborMarket, migrate, payWages, syncEmployment } from './labor';
 import { clearMarkets, collectOrders, harvest, newBook, resetMarkets, updatePrices } from './market';
 import { aggregateHouseholds, matchNobles, prunePops, updateGrowth, updateLiteracy, updateQualifications, weekToward } from './pops';
@@ -102,7 +102,6 @@ function weekly(w: World) {
   mintMoney(w);
   spendBudget(w);
   for (const c of w.companies) payDividends(w, c);
-  distributeInvestment(w);
   progressDemolition(w);
   runAi(w);
   weeklyBanking(w);

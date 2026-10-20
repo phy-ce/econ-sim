@@ -259,7 +259,7 @@ export function isGovernment(typeId: string): boolean {
   return !!t.stateOnly || t.methods.some((m) => m.construction);
 }
 
-/** 왕실이 지어도 민간이 지분을 살 수 있는 건물: 정부 건물을 뺀 모두 */
+/** 민영화할 수 있는 왕실 건물: 정부 건물과 자동 건물을 뺀 모두 */
 export function sellsShares(typeId: string): boolean {
   return !BUILDING_BY_ID[typeId].auto && !isGovernment(typeId);
 }
@@ -275,27 +275,47 @@ export function peasantSlots(b: Building): number {
   return isSubsistence(b.typeId) ? b.level * SUBSISTENCE.workersPerCell : 0;
 }
 
+/** 레벨 주인 하나: 국가, 또는 어느 지역의 저택·금융가 (ownerBuildingId = 그 소유 건물 id, regionId = 그 지역) */
+export interface LevelOwner { owner: 'state' | 'manor' | 'finance'; ownerBuildingId?: number; regionId?: number; levels: number }
+
 /**
- * 이 건물을 소유하는 지역의 소유 건물: 농지·산림·광산 건물은 저택, 공장 부지 건물(과 땅을 쓰지 않는 건물)은 금융가.
- * 국영 건물은 소유 건물이 없다. share 면 국영 건물의 민간 지분 몫이 갈 곳을 찾는다 (배당·철거 대금)
+ * 건물 레벨의 주인 목록 (화면의 소유 비율 막대용). 국영 건물은 모두 국가, 민간 건물은 owners (공사비를 낸 저택·금융가, 소유 건물 id 순).
+ * 자동 건물(소작지·저택·금융가)은 빈 목록
  */
-export function ownerBuildingOf(w: World, b: Building, share = false): Building | undefined {
-  const t = BUILDING_BY_ID[b.typeId];
-  if (t.auto || (b.stateOwned && !share)) return undefined;
-  const typeId = !t.land || t.land === 'plot' ? 'finance' : 'manor';
-  return w.buildings.find((x) => x.regionId === b.regionId && x.typeId === typeId);
+export function levelOwnersOf(w: World, b: Building): LevelOwner[] {
+  if (BUILDING_BY_ID[b.typeId].auto) return [];
+  if (b.stateOwned) return b.level > 0 ? [{ owner: 'state', levels: b.level }] : [];
+  const out: LevelOwner[] = [];
+  for (const id of Object.keys(b.owners ?? {}).map(Number).sort((a, c) => a - c)) {
+    const n = b.owners![id];
+    const o = w.buildings.find((x) => x.id === id);
+    if (n > 0 && o) out.push({ owner: o.typeId === 'manor' ? 'manor' : 'finance', ownerBuildingId: id, regionId: o.regionId, levels: n });
+  }
+  return out;
 }
 
-/** 소유 건물(저택·금융가)이 가진 것: 'full' 민간 건물(배당 전부), 'share' 국영 건물의 민간 지분, 'rent' 소작지(지대, 저택만) */
+/** 소유 건물(저택·금융가)인가 */
+export function isOwnerBuilding(typeId: string): boolean {
+  return !!BUILDING_BY_ID[typeId].ownership;
+}
+
+/** 민간 건물 b 에서 소유 건물 ownerId 의 레벨을 n 만큼 늘리거나(+) 줄인다 (0이 되면 지운다) */
+export function addOwnerLevels(b: Building, ownerId: number, n: number) {
+  const o = (b.owners ??= {});
+  const v = (o[ownerId] ?? 0) + n;
+  if (v > 0) o[ownerId] = v; else delete o[ownerId];
+}
+
+/** 소유 건물(저택·금융가)이 가진 것: 'full'/'share' 민간 건물의 레벨 (share = 가진 레벨 ÷ 건물 레벨, 다른 지역 건물도 된다), 'rent' 소작지(지대, 같은 지역 저택만) */
 export interface Holding { building: Building; kind: 'full' | 'share' | 'rent'; share: number }
 export function holdingsOf(w: World, owner: Building): Holding[] {
   const out: Holding[] = [];
   for (const b of w.buildings) {
-    if (b.regionId !== owner.regionId || b === owner) continue;
-    if (isSubsistence(b.typeId)) { if (owner.typeId === 'manor') out.push({ building: b, kind: 'rent', share: 1 }); continue; }
-    if (b.stateOwned && !b.privateShare) continue;
-    if (ownerBuildingOf(w, b, true) !== owner) continue;
-    out.push(b.stateOwned ? { building: b, kind: 'share', share: b.privateShare! } : { building: b, kind: 'full', share: 1 });
+    if (b === owner) continue;
+    if (isSubsistence(b.typeId)) { if (owner.typeId === 'manor' && b.regionId === owner.regionId) out.push({ building: b, kind: 'rent', share: 1 }); continue; }
+    const n = b.owners?.[owner.id] ?? 0;
+    if (n <= 0 || b.level <= 0) continue;
+    out.push({ building: b, kind: n >= b.level ? 'full' : 'share', share: n / b.level });
   }
   return out;
 }
@@ -548,7 +568,7 @@ export function mapMoney(w: World, f: (x: number) => number): void {
   w.traders.cash = f(w.traders.cash);
   for (const c of w.companies) c.cash = f(c.cash);
   for (const p of w.pops) p.savings = f(p.savings);
-  for (const k of w.kingdoms) k.investmentPool = f(k.investmentPool);
+  for (const b of w.buildings) if (b.cash !== undefined) b.cash = f(b.cash);
 }
 
 export function totalMoney(w: World): number {

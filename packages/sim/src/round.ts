@@ -49,6 +49,15 @@ export function writeMirrors(w: World): void {
   for (const p of w.pops) { p.wealth = r(p.wealth100 / 100); p.literacy = r(p.literacy100 / 100); }
   for (const reg of w.regions) reg.education = r(reg.education100 / 100);
   for (const b of w.buildings) { if (b.crew100 !== undefined) b.crew = r(b.crew100 / 100); else if (b.crew !== undefined) delete b.crew; }
+  writePool(w);
+}
+
+/** 왕국 투자 풀 칸 (화면 호환용 사본): 그 왕국 저택·금융가 금고의 합 */
+function writePool(w: World): void {
+  const pool = new Map<number, number>();
+  const kOf = new Map(w.regions.map((x) => [x.id, x.kingdomId] as const));
+  for (const b of w.buildings) if (b.cash !== undefined) { const k = kOf.get(b.regionId) ?? 0; pool.set(k, (pool.get(k) ?? 0) + b.cash); }
+  for (const k of w.kingdoms) k.investmentPool = r(pool.get(k.id) ?? 0);
 }
 
 /** 객체·배열 안의 모든 숫자를 소수 둘째 자리로 (제자리에서, −0 은 0) */
@@ -101,7 +110,6 @@ function roundBuilding(b: Building): void {
   b.profitEma = r(b.profitEma);
   if (b.fillEma !== undefined) b.fillEma = r(b.fillEma);
   if (b.reserve !== undefined) b.reserve = r(b.reserve);
-  if (b.privateShare !== undefined) b.privateShare = r(b.privateShare);
   if (b.tenants !== undefined) b.tenants = r(b.tenants);
   if (b.crew100 !== undefined) { b.crew100 = r(b.crew100); b.crew = r(b.crew100 / 100); } else if (b.crew !== undefined) delete b.crew;
   if (b.staffPeak !== undefined) b.staffPeak = r(b.staffPeak);
@@ -172,6 +180,7 @@ export function roundWorld(w: World): void {
   const d = Math.abs(fund - w.fund);
   if (d > (dropped.get(w) ?? 0)) dropped.set(w, d);
 
+  writePool(w);
   for (const p of w.pops) roundPop(p);
   for (const b of w.buildings) roundBuilding(b);
   for (const reg of w.regions) {
@@ -184,10 +193,9 @@ export function roundWorld(w: World): void {
   for (const k of w.constructions) {
     k.points = r(k.points);
     k.spent = r(k.spent);
-    if (k.privatePaid !== undefined) k.privatePaid = r(k.privatePaid);
-    if (k.privateShare !== undefined) k.privateShare = r(k.privateShare);
+    if (k.funders) for (const id in k.funders) k.funders[id] = r(k.funders[id]);
   }
-  for (const l of w.salvage) { l.q = r(l.q); l.ownerShare = r(l.ownerShare); }
+  for (const l of w.salvage) l.q = r(l.q);
   for (const sh of w.traders.shipments) sh.q = r(sh.q);
   w.traders.capital = r(w.traders.capital);
   const all = w as unknown as Record<string, unknown>;

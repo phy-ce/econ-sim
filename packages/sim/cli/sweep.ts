@@ -2,7 +2,7 @@
 // 주요 지표(w.metrics)에서 5년마다(와 마지막 해) 대륙 합계를 뽑아 한 줄 JSON으로 출력한다.
 // TIMING=1 이면 time: { ms 시뮬레이션 시간, msPerDay 하루 평균 } 을 덧붙인다 (sweepsum.py 가 따로 요약한다)
 import { BUILDING_BY_ID, GOODS, SKILL_DEFS, SUBSISTENCE, TUNE } from '../src/data';
-import { isGovernment, ownerBuildingOf, paysDividend, slots } from '../src/economy';
+import { isGovernment, paysDividend, slots } from '../src/economy';
 import { committedCost } from '../src/finance';
 import { createWorld, literacyOf, step } from '../src/index';
 import type { MetricPoint } from '../src/index';
@@ -88,10 +88,11 @@ function classIncome(w: World) {
   const f2 = (x: number) => +x.toFixed(2);
   // manOwn 저택이 가진 건물 레벨 합, cells 소작지 칸 합, ariSeat 저택 상급 귀족 자리 합(천)
   let manOwn = 0, cells = 0, ariSeat = 0;
+  const manors = new Set(w.buildings.filter((b) => b.typeId === 'manor').map((b) => b.id));
   for (const b of w.buildings) {
     if (b.typeId === 'subsistence') cells += b.level;
     else if (b.typeId === 'manor') ariSeat += slots(b, 'aristocrat');
-    else if (ownerBuildingOf(w, b)?.typeId === 'manor') manOwn += b.level;
+    for (const [id, n] of Object.entries(b.owners ?? {})) if (manors.has(Number(id))) manOwn += n;
   }
   return { manOwn, cells, ariSeat: Math.round(ariSeat / 1e3), incAri: f2(per('aristocrat')), incGen: f2(per('gentry')), incSk: f2(per('skilled')), incUnsk: f2(per('unskilled')),
     ariSk: f2(per('skilled') > 0 ? per('aristocrat') / per('skilled') : 0), ariK: Math.round((n.aristocrat ?? 0) / 1e3), genK: Math.round((n.gentry ?? 0) / 1e3) };
@@ -224,7 +225,12 @@ out.traj = w.metrics.filter((m) => m.tick % 360 === 0 && m.tick > 0).map((m) => 
     y: m.tick / 360, pop: +(pop / 1e6).toFixed(2), solPeas: by('peasant', (k) => k.solBy.peasant), solUnsk: by('unskilled', (k) => k.solBy.unskilled), solSk: by('skilled', (k) => k.solBy.skilled),
     foodPeas: by('peasant', (k) => k.foodBy.peasant), gdp: Math.round(sum(m, (k) => k.gdp) / 1e6), levels: sum(m, (k) => k.levelsState + k.levelsPrivate),
     grain: m.goods.grain.ratio, peas: +(sum(m, (k) => k.popBy.peasant) / pop).toFixed(2),
-    privCash: Math.round(sum(m, (k) => k.privateCash) / 1e6), jobless: +(sum(m, (k) => k.joblessShare * k.pop) / pop).toFixed(3),
+    privCash: Math.round(sum(m, (k) => k.privateCash) / 1e6),
+    // 레벨 주인: privSh 민간 레벨 비율, lvMan·lvFin 저택·금융가가 가진 레벨, manCash·finCash 저택·금융가 금고 합(백만)
+    privSh: +(sum(m, (k) => k.levelsPrivate) / Math.max(1, sum(m, (k) => k.levelsState + k.levelsPrivate))).toFixed(3),
+    lvMan: sum(m, (k) => k.levelsManor ?? 0), lvFin: sum(m, (k) => k.levelsFinance ?? 0),
+    manCash: +(sum(m, (k) => k.manorCash ?? 0) / 1e6).toFixed(1), finCash: +(sum(m, (k) => k.financeCash ?? 0) / 1e6).toFixed(1),
+    jobless: +(sum(m, (k) => k.joblessShare * k.pop) / pop).toFixed(3),
     // 기술자 실업률: 기술자 실업 / (고용 + 실업)
     joblessSk: (() => {
       const lab = (k: MetricPoint['kingdoms'][number]) => (k.labor as Record<string, { employed: number; jobless: number } | undefined>).skilled;

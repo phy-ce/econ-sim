@@ -1,6 +1,6 @@
-import { BUILDING_BY_ID, DEPOSIT_NAMES, DEPOSIT_NAMES_EN, LAND_NAMES, SKILL_DEFS, TECH_BY_ID, TUNE } from './data';
+import { BUILDING_BY_ID, DEPOSIT_NAMES, DEPOSIT_NAMES_EN, LAND_NAMES, SKILL_DEFS, TECH_BY_ID } from './data';
 import { availableMethods, companyById, constructionEstimate, depositFree, emptyJobs, hasBuilder, isGovernment, knowsTech, landFree, logEvent, regionById, sellsShares } from './economy';
-import { applyStateWages, committedCost, reserveOf } from './finance';
+import { applyStateWages, chooseFunders } from './finance';
 import { kingdomById } from './kingdoms';
 import { buildingNameEn, landNameEn, regionNameEn, techNameEn } from './i18n';
 import { round2 } from './rng';
@@ -65,23 +65,16 @@ function runCommand(w: World, actor: number, cmd: Command): CommandError | null 
     if (!hasBuilder(w, company) && typeId !== 'builder') {
       return fail('건축사무소가 없습니다. 먼저 건축사무소를 지어야 다른 건물을 지을 수 있습니다.', 'You have no construction office. Build one first before building anything else.');
     }
-    // 왕실 공사는 그 왕국 민간 상회가 공사비의 TUNE.privateShare 를 내고 그만큼 지분을 갖는다 (낼 수 있는 만큼만)
-    let privatePaid = 0, privateShare = 0;
-    if (company.state && sellsShares(typeId)) {
-      const firm = kingdomById(w, company.kingdomId).privateIds.map((id) => companyById(w, id)).find((c) => !!c);
-      const est = constructionEstimate(w, company, typeId).cost * levels;
-      if (firm && Number.isFinite(est) && est > 0) {
-        privatePaid = round2(Math.min(est * TUNE.privateShare, Math.max(0, firm.cash - reserveOf(w, firm) - committedCost(w, firm))));
-        privateShare = round2(privatePaid / est);
-        firm.cash -= privatePaid; firm.ledger.buildPaid += privatePaid;
-        if (firm.regionFunds?.[regionId]) firm.regionFunds[regionId] = Math.max(0, firm.regionFunds[regionId] - privatePaid);
-        company.cash += privatePaid; company.ledger.investment += privatePaid;
-      }
+    // 민간 공사는 저택·금융가 금고가 공사비를 낸다 (finance.ts chooseFunders: 낼 곳과 약정액). 왕실 공사는 국고가 다 내고 레벨도 다 갖는다
+    let funders: Record<number, number> | null = null;
+    if (!company.state && !company.isPlayer) {
+      funders = chooseFunders(w, company.kingdomId, regionId, typeId, levels, constructionEstimate(w, company, typeId).cost);
+      if (!funders) return fail('공사비를 낼 저택·금융가 금고가 모자랍니다.', 'The manors and financial districts lack the funds for this project.');
     }
     w.constructions.push({
       id: w.nextId++, companyId: actor, regionId, typeId, methodId, targetBuildingId,
       points: 0, required: def.buildPoints * levels, spent: 0, ticksElapsed: 0, ...(levels > 1 ? { levels } : {}),
-      ...(privatePaid > 0 ? { privatePaid, privateShare } : {}),
+      ...(funders ? { funders } : {}),
     });
     const starts = (kingdomById(w, company.kingdomId).startsMonth ??= {});
     const key = `${typeId}|${company.state ? 's' : 'p'}`;
@@ -175,13 +168,8 @@ function runCommand(w: World, actor: number, cmd: Command): CommandError | null 
     case 'cancelConstruction': {
       const k = w.constructions.find((x) => x.id === cmd.constructionId && x.companyId === actor);
       if (!k) return fail('해당 공사가 없습니다.', 'No such project.');
+      // 약정만 하고 아직 안 낸 돈은 금고에 그대로 있다 (낸 돈은 돌려받지 못한다)
       w.constructions = w.constructions.filter((x) => x.id !== k.id);
-      // 민간이 낸 돈 중 아직 안 쓴 몫은 돌려준다
-      if (k.privatePaid) {
-        const firm = kingdomById(w, company.kingdomId).privateIds.map((id) => companyById(w, id)).find((c) => !!c);
-        const back = Math.min(Math.max(0, company.cash), k.privatePaid * (1 - k.points / k.required));
-        if (firm && back > 0) { company.cash -= back; firm.cash += back; }
-      }
       const prog = Math.round((k.points / k.required) * 100), lost = Math.round(k.spent);
       logEvent(w, actor, `${BUILDING_BY_ID[k.typeId].name} 공사 취소 (진행 ${prog}%, 들어간 비용 ƒ${lost} 손실)`,
         { kind: 'warn', regionId: k.regionId, en: `${buildingNameEn(k.typeId)} project cancelled (${prog}% done, ƒ${lost} spent and lost)` });
@@ -229,6 +217,14 @@ function runCommand(w: World, actor: number, cmd: Command): CommandError | null 
       if (!k) return fail('왕실만 세법을 정할 수 있습니다.', 'Only a royal house can set the tax law.');
       if (cmd.law !== 'land' && cmd.law !== 'capita') return fail('잘못된 세법입니다.', 'Invalid tax law.');
       if (k.taxLaw !== cmd.law) { k.taxLaw = cmd.law; k.lawTick = w.tick; }
+      return null;
+    }
+    case 'setPrivatize': {
+      const b = ownBuilding(cmd.buildingId);
+      if (!b) return fail('소유한 건물이 아닙니다.', 'You do not own that building.');
+      if (!company.state) return fail('왕실 건물만 민영화할 수 있습니다.', 'Only royal buildings can be privatised.');
+      if (!sellsShares(b.typeId)) return fail('정부 건물은 민영화할 수 없습니다.', 'Government buildings cannot be privatised.');
+      if (cmd.on) b.privatize = true; else delete b.privatize;
       return null;
     }
     default:

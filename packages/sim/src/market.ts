@@ -1,7 +1,7 @@
 import { CONSUMPTION_PER_CAPITA, GOOD_IDS, GOODS, NEEDS, SUBSISTENCE, TUNE, WORKFORCE_RATIO, getMethod, needsAt, rawMax } from './data';
 import { CARTAGE_RATE, RAIL_RATE, borrow, harvestFactor, priceFormula, regionById, sellThrough, shippingRate, isSubsistence } from './economy';
 import { landTaxValue, payLandTax, payRent, paySalvage, taxDue, taxRates } from './finance';
-import { addToPool, borderCost, kingdomById, kingdomOf, payTariff } from './kingdoms';
+import { borderCost, kingdomById, kingdomOf, payTariff, toFinance, toTreasury } from './kingdoms';
 import { findPop, payPops, payProf, workforce } from './pops';
 import { clamp, floor2, round2 } from './rng';
 import { POP_CLASSES, WEALTH_MAX, WEALTH_MIN, wealthOf } from './types';
@@ -747,19 +747,23 @@ export function clearMarkets(w: World, book: Book) {
   }
 }
 
-/** 생활비를 넘는 현금 중 하루에 투자 풀로 가는 비율 */
+/** 생활비를 넘는 현금 중 하루에 금고로 가는 비율 */
 export const INVEST_RATE = 0.05;
 
 /**
- * 팝은 저축하지 않는다 (빅토리아3): 생활비와 세금의 며칠분(TUNE.cashBufferDays)을 넘는 현금은 매일 조금씩 그 왕국 투자 풀로 간다.
- * 이것이 민간 투자의 재원이다. 쓰고 남는 소득이 꾸준하면 부 단계가 올라 쓰는 양이 는다.
+ * 팝은 저축하지 않는다 (빅토리아3): 생활비와 세금의 며칠분(TUNE.cashBufferDays)을 넘는 현금은 매일 조금씩 금고로 간다:
+ * 저택·금융가에 앉은 사람은 그 소유 건물 금고로, 나머지는 그 지역 금융가 금고로. 이것이 민간 투자의 재원이다. 쓰고 남는 소득이 꾸준하면 부 단계가 올라 쓰는 양이 는다.
  * 세금은 걷는 쪽과 같은 계산(taxDue)이다: 토지 기반 세법이면 pop 이 현금으로 낼 세금은 없다.
  */
 function investSurplus(w: World, p: Pop, cashCost: number) {
   const over = (p.savings - (Math.max(0, cashCost) + taxDue(w, p)) * TUNE.cashBufferDays) * INVEST_RATE;
   if (over <= 0) return;
   p.savings -= over;
-  addToPool(w, kingdomOf(w, p.regionId), p.regionId, over);
+  // 저택·금융가 자리는 소유 직종과 하급 귀족만 앉는다
+  const upper = p.work !== 0 && (p.prof === 'aristocrat' || p.prof === 'gentry' || p.prof === 'capitalist');
+  const seat = upper ? w.buildings.find((b) => b.id === p.work) : undefined;
+  if (seat && (seat.typeId === 'manor' || seat.typeId === 'finance')) toTreasury(seat, over);
+  else toFinance(w, p.regionId, over);
 }
 
 /** 그 부 단계의 하루 소비 묶음 비용 (지역 가격 기준) */

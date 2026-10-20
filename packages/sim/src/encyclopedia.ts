@@ -16,7 +16,7 @@ import {
 } from './data';
 import {
   BASE_CREDIT, CARTAGE_RATE, RAIL_RATE, STATE_CREDIT_GDP, collectionRatio, companyById, constructionEstimate, creditLimit, efficiencyParts,
-  harvestCondition, harvestFactor, holdingsOf, kingdomGdp, knownVeins, landFree, landUsed, moneyIdentity, netMinted, popSol,
+  harvestCondition, harvestFactor, holdingsOf, kingdomGdp, levelOwnersOf, knownVeins, landFree, landUsed, moneyIdentity, netMinted, popSol,
   priceFormula, regionById, sellThrough, shareWage, shippingRate, staffing, totalMoney,
 } from './economy';
 import { borderCost, kingdomById, DEFAULT_TARIFF } from './kingdoms';
@@ -38,7 +38,7 @@ import { CHUNKS, LAW_COOLDOWN, LAW_SWITCH, OFFICE_BLOCK, OFFICE_GROWTH, STAFFING
 import { budgetPreview } from './budget';
 import type { BudgetLineKey } from './budget';
 import { MAX_CONCURRENT_CONSTRUCTIONS, MAX_LEVELS_PER_PROJECT } from './commands';
-import { START_CASH, START_OFFICE_LEVELS, START_TECHS, TRADER_CAPITAL, createWorld } from './world';
+import { START_CASH, START_FIRM_CASH, START_OFFICE_LEVELS, START_TECHS, TRADER_CAPITAL, createWorld } from './world';
 import { regionNameEn } from './i18n';
 import { POP_CLASSES, SKILLS, educationOf, literacyOf, wealthOf } from './types';
 import type { Building, Company, GoodId, Kingdom, PopClass, Region, Skill, World } from './types';
@@ -95,7 +95,9 @@ export const TUNE_DOCUMENTED = new Set<TuneKey>();
 /** 비교 실행용 손잡이: 기본값이 기능을 끄고 있어 규칙이 아니다 */
 export const TUNE_EXPERIMENTAL: TuneKey[] = ['subReturn', 'sellThrough', 'laborNet', 'officeRichWeeks', 'officeSelfPay', 'laborPoach', 'officeSchoolFirst', 'needMul',
   // 저택 상급 귀족 자리 규칙 비교 중 (DECISIONS 7-17, 기본 'fit' = 지금 규칙)
-  'nobleSeats', 'nobleSeatsPerLevel', 'nobleSeatsPerCell', 'nobleIncome', 'nobleSeatsLand', 'noblePerMille', 'nobleAdjust', 'aristStart'];
+  'nobleSeats', 'nobleSeatsPerLevel', 'nobleSeatsPerCell', 'nobleIncome', 'nobleSeatsLand', 'noblePerMille', 'nobleAdjust', 'aristStart',
+  // AI 왕실 민영화 (비교용, 기본 'off': 민영화는 플레이어가 켠다)
+  'crownPrivatize'];
 
 function showTune(v: unknown): number | string {
   if (typeof v === 'number') return Number.isFinite(v) ? v : '∞';
@@ -195,7 +197,7 @@ export const DESIGN_SECTIONS: Record<string, string> = {
   '9': '재정',
   '9.1': '세법과 세금',
   '9.2': '예산',
-  '9.3': '배당·투자 풀',
+  '9.3': '배당·소유 건물 금고',
   '9.4': '국채·주조',
   '10': 'AI 판단 요약',
   '11': '주요 조정값',
@@ -565,7 +567,7 @@ export const ENCYCLOPEDIA: EncEntry[] = [
         result: [row('1레벨 공사비 (시드 1 첫날)', 'Cost of one level (seed 1, day 0)', Math.round(est.cost), 'florin')],
       };
     },
-    related: ['build-points', 'crown-share'], seenIn: ['company'], source: ['economy.ts constructionEstimate'], design: ['8'],
+    related: ['build-points', 'privatize'], seenIn: ['company'], source: ['economy.ts constructionEstimate'], design: ['8'],
   },
   {
     id: 'land', category: 'construction', title: t('땅', 'Land'),
@@ -580,14 +582,28 @@ export const ENCYCLOPEDIA: EncEntry[] = [
     related: ['forests-veins', 'tenant-farms', 'ai-swap'], seenIn: ['region'], source: ['economy.ts landFree'], design: ['8'],
   },
   {
-    id: 'crown-share', category: 'construction', title: t('왕실 공사의 민간 지분', 'Private share of crown projects'),
-    rule: t('왕실이 정부 건물이 아닌 건물을 착공하면 민간 상회가 공사비의 최대 {0}를 미리 내고 그만큼 지분을 갖는다. 지분 몫 배당은 저택·금융가로 간다.', 'When the crown starts a non-government building, its private house prepays up to {0} of the cost and gets that share. Share dividends go to the manor or financial district.'),
-    params: [tune('privateShare', '민간 최대 지분', 'Max private share', 'pct')],
-    related: ['owner-buildings', 'dividends'], seenIn: ['company'], source: ['commands.ts startConstruction', 'finance.ts payShareDividends'], design: ['8', '9.3'],
+    id: 'privatize', category: 'construction', title: t('레벨 주인과 민영화', 'Level owners and privatisation'),
+    rule: t('레벨마다 주인이 하나다: 국가, 또는 공사비를 낸 저택·금융가. 왕실이 지은 레벨은 국가 것이다. 왕실 건물에 민영화를 켜 두면 저택·금융가가 매주 건물마다 1레벨까지 산다. 값 = max(공사비 × 0.5, 공사비 + 그 레벨의 1년 이익). 금고가 값의 {0}배 이상이고 값 ÷ 1년 이익이 {1}년 이하일 때 산다. 산 레벨은 같은 지역 민간 건물로 옮긴다.', 'Every level has one owner: the state, or the manor or financial district that paid for it. Crown-built levels belong to the state. With privatisation on, manors and districts buy up to one level per building a week at max(cost × 0.5, cost + one year of that level\'s profit), when their treasury is at least {0}× the price and the price is at most {1} years of profit. Bought levels move to the private building in the same region.'),
+    formula: 'price = max(cost × 0.5, cost + profitEma × 360 ÷ level)',
+    params: [tune('privatizeMargin', '금고 배수', 'Treasury margin'), tune('privatizePayback', '회수 연수', 'Payback years'), tune('ownerTilt', '좋아하지 않는 종류 배율', 'Unfavoured kind weight', 'pct')],
+    live: {
+      pick: ['region'], run: (w, ctx) => {
+        const r = regionOf(w, ctx), rows: EncRow[] = [];
+        for (const b of w.buildings) {
+          if (b.regionId !== r.id) continue;
+          for (const x of levelOwnersOf(w, b)) {
+            const who = x.owner === 'state' ? t('국가', 'State') : t(`${regionById(w, x.regionId!).name} ${BUILDING_BY_ID[x.owner].name}`, `${regionNameEn(x.regionId!)} ${BUILDING_BY_ID[x.owner].nameEn}`);
+            rows.push(row(`${BUILDING_BY_ID[b.typeId].name} ← ${who.ko}`, `${BUILDING_BY_ID[b.typeId].nameEn} ← ${who.en}`, x.levels, 'level'));
+          }
+        }
+        return { rows };
+      },
+    },
+    related: ['owner-buildings', 'owner-treasury', 'dividends'], seenIn: ['company'], source: ['economy.ts levelOwnersOf', 'ai.ts buyLevels', 'production.ts privatizeLevel'], design: ['8', '9.3'],
   },
   {
     id: 'demolition', category: 'construction', title: t('철거', 'Demolition'),
-    rule: t('철거 대기 건물은 주마다 1레벨씩 헐린다. 자재의 {0}를 {1}일에 나눠 판다. 대금은 민간이면 소유 건물로, 국영이면 국고로 간다.', 'Buildings marked for demolition lose one level a week. {0} of their materials is sold over {1} days; proceeds go to the owner building (private) or the treasury (state).'),
+    rule: t('철거 대기 건물은 주마다 1레벨씩 헐린다 (민간 건물은 레벨을 가장 많이 가진 주인의 것부터). 자재의 {0}를 {1}일에 나눠 판다. 대금은 헐린 레벨의 주인이 받는다 (저택·금융가 금고 또는 국고).', 'Buildings marked for demolition lose one level a week (in private buildings, from the owner holding the most levels). {0} of their materials is sold over {1} days; proceeds go to the owner of that level (a manor or district treasury, or the crown).'),
     params: [tune('salvageShare', '회수 비율', 'Salvage share', 'pct'), tune('salvageDays', '파는 날 수', 'Sale days', 'day')],
     related: ['ai-demolition', 'ai-swap'], seenIn: ['company'], source: ['production.ts progressDemolition'], design: ['8'],
   },
@@ -820,9 +836,9 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   },
   {
     id: 'cash-surplus', category: 'people', title: t('남는 현금', 'Surplus cash'),
-    rule: t('pop은 저축을 쌓지 않는다. (생활비 + 세금) × {0}일을 넘는 현금의 {1}가 매일 그 왕국 투자 풀로 간다.', 'Pops do not hoard. Each day {1} of cash above {0} days of (living costs + taxes) goes to the kingdom\'s investment pool.'),
+    rule: t('pop은 저축을 쌓지 않는다. (생활비 + 세금) × {0}일을 넘는 현금의 {1}가 매일 금고로 간다: 저택·금융가에 앉은 사람은 그 금고, 나머지는 그 지역 금융가 금고.', 'Pops do not hoard. Each day {1} of cash above {0} days of (living costs + taxes) goes to a treasury: their own manor or district if seated there, otherwise the regional financial district.'),
     params: [tune('cashBufferDays', '쥐는 일수', 'Buffer days', 'day'), p('하루 투자 비율', 'Daily investment rate', () => INVEST_RATE, 'pct')],
-    related: ['investment-pool', 'orders'], seenIn: ['finance'], source: ['market.ts investSurplus'], design: ['5', '9.3'],
+    related: ['owner-treasury', 'orders'], seenIn: ['finance'], source: ['market.ts investSurplus'], design: ['5', '9.3'],
   },
 
   // ================================================================ 소작
@@ -915,7 +931,7 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   // ================================================================ 소유·금융
   {
     id: 'owner-buildings', category: 'ownership', title: t('저택과 금융가', 'Manors and financial districts'),
-    rule: t('지역마다 저택(귀족)과 금융가(자본가)가 저절로 생긴다. 농지·산림·광산 민간 건물과 소작 지대는 저택이, 공장 부지 건물은 금융가가 갖는다. 1레벨 자리 {0}, 소유 건물 1레벨마다 {1}자리.', 'Each region has a manor (nobles) and a financial district (capitalists). Farm, forest and mine buildings and tenant rent belong to the manor; plot buildings to the district. {0} seats per level; {1} seats per owned level.'),
+    rule: t('지역마다 저택(귀족)과 금융가(자본가)가 저절로 생긴다. 둘 다 금고를 갖고 어떤 민간 건물의 레벨이든 짓거나 사서 갖는다. 소작 지대는 그 지역 저택이 받는다. 1레벨 자리 {0}, 가진 레벨마다 {1}자리.', 'Each region has a manor (nobles) and a financial district (capitalists). Both keep a treasury and can build or buy levels of any private building. Tenant rent goes to the regional manor. {0} seats per level; {1} seats per owned level.'),
     params: [p('1레벨 자리', 'Seats per level', () => OWNERSHIP_SEATS, 'people'), p('소유 레벨당 자리', 'Seats per owned level', () => OWNER_SEATS_PER_LEVEL, 'people')],
     live: {
       pick: ['region'], run: (w, ctx) => {
@@ -928,7 +944,7 @@ export const ENCYCLOPEDIA: EncEntry[] = [
         return { rows: out };
       },
     },
-    related: ['shares', 'dividends', 'crown-share', 'rent-landtax'], seenIn: ['region', 'company'], source: ['economy.ts holdingsOf', 'production.ts updateOwnership'], design: ['3.2', '9.3'],
+    related: ['shares', 'dividends', 'privatize', 'owner-treasury', 'rent-landtax'], seenIn: ['region', 'company'], source: ['economy.ts holdingsOf', 'production.ts updateOwnership'], design: ['3.2', '9.3'],
   },
   {
     id: 'shares', category: 'ownership', title: t('몫 나누기', 'Shares'),
@@ -954,16 +970,16 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   },
   {
     id: 'dividends', category: 'ownership', title: t('배당', 'Dividends'),
-    rule: t('민간 건물은 유보 자산을 채우고 남은 이익을 매주 소유 건물로 보낸다. 받은 몫의 자본가 {0}, 귀족 {1}는 투자 풀로 간다.', 'Private buildings send profit beyond their reserve to the owner building weekly. Capitalists reinvest {0} and nobles {1} of what they receive.'),
+    rule: t('민간 건물은 유보 자산을 채우고 남은 이익을 매주 레벨 주인(저택·금융가)에게 레벨 수대로 보낸다. 왕실 건물의 이익은 국고에 남는다. 받은 몫의 자본가 {0}, 귀족 {1}는 그 금고에 남긴다.', 'Private buildings send profit beyond their reserve to their level owners (manors and districts) by level count weekly; crown building profit stays in the treasury. Capitalists keep {0} and nobles {1} of what they receive in their treasury.'),
     params: [p('자본가 재투자', 'Capitalist reinvestment', () => INVEST_SHARE.capitalist ?? 0, 'pct'), p('귀족 재투자', 'Noble reinvestment', () => INVEST_SHARE.aristocrat ?? 0, 'pct')],
-    related: ['reserves', 'investment-pool', 'owner-buildings'], seenIn: ['company', 'finance'], source: ['finance.ts payDividends', 'finance.ts payOwners'], design: ['9.3'],
+    related: ['reserves', 'owner-treasury', 'owner-buildings'], seenIn: ['company', 'finance'], source: ['finance.ts payDividends', 'finance.ts payOwners'], design: ['9.3'],
   },
   {
-    id: 'investment-pool', category: 'ownership', title: t('투자 풀', 'Investment pool'),
-    rule: t('배당 재투자, pop의 남는 현금, 상인 초과분과 주인 없는 돈이 왕국 투자 풀에 모여 매주 민간 상회로 간다. 지역 표시가 붙은 돈은 그 지역 공사에 가산점({0})을 준다.', 'Reinvested dividends, surplus pop cash, trader excess and ownerless money collect in the kingdom\'s pool and go to the private house weekly. Money tagged with a region gives projects there a bonus ({0}).'),
-    params: [tune('localBias', '지역 가산점', 'Local bonus', 'pct')],
-    live: { pick: [], run: (w) => ({ bars: w.kingdoms.map((k) => bar(t(k.name, k.nameEn), r2(k.investmentPool), 'florin')), rows: w.kingdoms.map((k) => row(k.name, k.nameEn, r2(companyById(w, k.privateIds[0])?.cash ?? 0), 'florin')) }) },
-    related: ['cash-surplus', 'dividends', 'ai-construction'], seenIn: ['finance'], source: ['finance.ts distributeInvestment'], design: ['9.3'],
+    id: 'owner-treasury', category: 'ownership', title: t('저택·금융가 금고', 'Manor and district treasuries'),
+    rule: t('저택·금융가 금고에는 배당·지대 중 남기는 몫, 앉은 사람의 남는 현금, 철거 대금이 들어온다. 그 밖 pop의 남는 현금, 상인 초과분과 주인 없는 돈은 지역 금융가 금고로 간다. 민간 공사비는 금고가 낸다: 같은 지역(마음 × (1 + {0}))과 좋아하는 종류(저택은 땅 건물, 금융가는 그 밖, 아니면 × {1})부터 레벨 단위로 맡고, 모자라면 함께 낸다. 완공 레벨은 낸 돈 비율로 나누고 나머지 레벨은 많이 낸 쪽이 가진 뒤 차액을 돌려준다.', 'Manor and district treasuries receive the kept part of dividends and rent, surplus cash of seated pops and salvage proceeds. Other pops\' surplus cash, trader excess and ownerless money go to the regional district. Treasuries pay for private construction: same region first (weight × (1 + {0})) and favoured kinds (manors: land buildings, districts: the rest, otherwise × {1}), whole levels each, pooling if short. Finished levels are split by money paid; leftover levels go to the larger payer, who refunds the difference.'),
+    params: [tune('localBias', '같은 지역 가산', 'Same-region bonus', 'pct'), tune('ownerTilt', '좋아하지 않는 종류', 'Unfavoured kind', 'pct'), p('민간 상회 시작 운영 자금', 'Private house start cash', () => START_FIRM_CASH, 'florin')],
+    live: { pick: [], run: (w) => ({ bars: w.kingdoms.map((k) => bar(t(k.name, k.nameEn), r2(k.investmentPool), 'florin')), rows: w.buildings.filter((b) => b.cash !== undefined).map((b) => row(`${regionById(w, b.regionId).name} ${BUILDING_BY_ID[b.typeId].name}`, `${regionNameEn(b.regionId)} ${BUILDING_BY_ID[b.typeId].nameEn}`, r2(b.cash ?? 0), 'florin')) }) },
+    related: ['cash-surplus', 'dividends', 'privatize', 'ai-construction'], seenIn: ['finance'], source: ['finance.ts chooseFunders', 'production.ts giveLevels', 'kingdoms.ts toFinance'], design: ['9.3'],
   },
   {
     id: 'banking', category: 'ownership', title: t('국채와 이자', 'Crown bonds and interest'),
@@ -1101,7 +1117,7 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   // ================================================================ AI
   {
     id: 'ai-overview', category: 'ai', title: t('AI 한 주', 'An AI week'),
-    rule: t('AI는 매주 회사마다 돈다 (플레이어 제외). 국영과 민간이 같은 판단을 쓴다. 다른 점은 자금원(국고 / 투자 풀)과, 세법·정책 단계·연구·사무소 증설은 왕실만 한다는 것이다.', 'AI runs weekly for every company except the player\'s. State and private use the same logic; they differ in funding (treasury / investment pool), and only crowns choose tax law, policy steps, research and office growth.'),
+    rule: t('AI는 매주 회사마다 돈다 (플레이어 제외). 국영과 민간이 같은 판단을 쓴다. 다른 점은 자금원(국고 / 저택·금융가 금고)과, 세법·정책 단계·연구·사무소 증설은 왕실만 한다는 것이다.', 'AI runs weekly for every company except the player\'s. State and private use the same logic; they differ in funding (treasury / manor and district treasuries), and only crowns choose tax law, policy steps, research and office growth.'),
     formula: 'tax law → policy → wages → methods & utilisation → research → construction → demolition',
     params: [],
     related: ['ai-tax-law', 'ai-budget', 'ai-methods', 'ai-construction'], seenIn: [], source: ['ai.ts runAi'], design: ['10'],
@@ -1147,7 +1163,7 @@ export const ENCYCLOPEDIA: EncEntry[] = [
     rule: t('주에 최대 {0}건. 연 손익 ÷ 공사비 > {1}이고 일손을 {2} 이상 ({3}일 안에) 모을 수 있는 후보 중, 덩어리({4}레벨)를 골라 점수 = 수익률 × 무작위 × (1 + {5} × 지역 자금 비율)이 가장 큰 것을 짓는다. 기상 조건이 걸린 땅은 뺀다.', 'Up to {0} starts a week. Candidates need yearly profit ÷ cost > {1} and {2} of jobs fillable within {3} days; chunks of {4} levels; score = return × random × (1 + {5} × local fund share). Land under a harvest condition is skipped.'),
     params: [tune('startsPerWeek', '주간 착공', 'Starts per week'), tune('minRoi', '최소 수익률', 'Minimum return', 'pct'), tune('minStaffing', '일손 기준', 'Staffing threshold', 'pct'), p('일손 기간', 'Staffing horizon', () => STAFFING_HORIZON, 'day'), p('덩어리', 'Chunks', () => CHUNKS.join(' / ')), tune('localBias', '지역 가산', 'Local bias', 'pct'),
       tune('lossBuildsPerWeek', '손해 후보 짓기 (주간)', 'Loss builds per week'), tune('lossTolerance', '손해 허용', 'Loss tolerance'), tune('schoolTaxMax', '학교 짓는 세금 상한', 'Max tax step for schools')],
-    related: ['ai-outlook', 'investment-pool', 'land'], seenIn: ['company'], source: ['ai.ts planConstruction', 'ai.ts pickProject'], design: ['10'],
+    related: ['ai-outlook', 'owner-treasury', 'land'], seenIn: ['company'], source: ['ai.ts planConstruction', 'ai.ts pickProject'], design: ['10'],
   },
   {
     id: 'ai-outlook', category: 'ai', title: t('장기 손익 전망', 'Long-run valuation'),

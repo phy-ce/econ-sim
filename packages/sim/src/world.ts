@@ -12,6 +12,8 @@ import { SKILLS, emptyLedger, isLowerJob } from './types';
 
 /** 민간 상회의 시작 자금 (농장 약 다섯 레벨 공사비). 왕실 국고는 startTreasury 가 정한다 */
 export const START_CASH = 30_000_000;
+/** 그중 민간 상회가 운영 자금으로 갖는 돈. 나머지는 왕국 저택·금융가 금고로 (지역 인구 비례, 저택과 금융가 반씩) */
+export const START_FIRM_CASH = 5_000_000;
 export const TRADER_CAPITAL = 100_000_000;
 /** 시작 정책 단계: 세금 수준, 국영 임금 수준, 연구비 수준 모두 보통(3) */
 const DEFAULT_BUDGET = { tax: 3, wages: 3, research: 3 };
@@ -169,11 +171,11 @@ export function createWorld(seed = 1, opts: CreateWorldOptions = {}): World {
   for (const k of KINGDOMS) {
     const player = withPlayer && k.gov.id === PLAYER_ID;
     companies.push(newCompany(k.gov.id, player && playerName ? playerName : k.gov.name, k.color, k.id, true, player, 0));
-    companies.push(newCompany(k.firm.id, k.firm.name, k.firm.color, k.id, false, false, START_CASH));
+    companies.push(newCompany(k.firm.id, k.firm.name, k.firm.color, k.id, false, false, START_FIRM_CASH));
   }
 
   const w: World = {
-    version: 7, config: { ai }, tick: 0, seed, rngState: seed | 0, nextId: 1000,
+    version: 8, config: { ai }, tick: 0, seed, rngState: seed | 0, nextId: 1000,
     regions, kingdoms, pops: [], fund: 0, metrics: [],
     traders: { cash: TRADER_CAPITAL, capital: TRADER_CAPITAL, shipments: [] },
     mint: { minted: 0, issued: 0, retired: 0, interest: 0 },
@@ -204,6 +206,24 @@ export function createWorld(seed = 1, opts: CreateWorldOptions = {}): World {
     if (firm && fiber > 0) { r.land.arable += fiber; w.buildings.push(newBuilding(w.nextId++, 'fiber_farm', r.id, firm.id, 'fiber_basic', fiber, false)); }
   }
   updateSubsistence(w);
+  // 시작 민간 건물의 레벨은 그 지역 저택(땅 건물)이나 금융가(그 밖)의 것이다
+  for (const b of w.buildings) {
+    if (b.stateOwned || BUILDING_BY_ID[b.typeId].auto) continue;
+    const land = BUILDING_BY_ID[b.typeId].land;
+    const typeId = land === 'arable' || land === 'forest' || land === 'ore' ? 'manor' : 'finance';
+    const o = w.buildings.find((x) => x.regionId === b.regionId && x.typeId === typeId)!;
+    b.owners = { [o.id]: b.level };
+  }
+  // 시작 금고: 민간 시작 돈 중 상회 운영 자금을 뺀 나머지 (왕국마다 지역 인구 비례, 저택·금융가 반씩)
+  for (const k of kingdoms) {
+    const mine = regions.filter((r) => r.kingdomId === k.id);
+    const people = (r: Region) => Object.values(starts.get(r.id)!.population).reduce((a, b) => a + b, 0);
+    const total = mine.reduce((a, r) => a + people(r), 0);
+    for (const r of mine) for (const typeId of ['manor', 'finance']) {
+      const o = w.buildings.find((x) => x.regionId === r.id && x.typeId === typeId)!;
+      o.cash = round2(total > 0 ? ((START_CASH - START_FIRM_CASH) * people(r)) / total / 2 : 0);
+    }
+  }
 
   // 시작 pop: 하층은 전부 소작농. 숙련 인력은 소작지에 있으면서 자격만 갖고 있다. 상층은 아직 자리가 없다
   for (const d of REGIONS) {

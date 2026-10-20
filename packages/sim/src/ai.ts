@@ -1,9 +1,10 @@
 import { BUILDING_BY_ID, BUILDING_TYPES, EDUCATION_FLOOR, EDUCATION_RANGE, GOOD_IDS, GOODS, SKILL_DEFS, TECH_BY_ID, TICKS_PER_WEEK, TICKS_PER_YEAR, TUNE, getMethod, regionPerk } from './data';
 import { withEstimateCache, regionAvgWealth, regionPopulation, wageCostOf,
-  availableMethods, builderOf, canBuildType, paysDividend, paysShare, companyById, constructionEstimate, creditLimit, depositFree, efficiency, estimateMethod, harvestFactor, hasBuilder, isGovernment, regionById, researchableTechs, roomFor, slots,
+  availableMethods, builderOf, canBuildType, paysDividend, paysShare, companyById, constructionEstimate, creditLimit, depositFree, efficiency, estimateMethod, harvestFactor, hasBuilder, isGovernment, regionById, researchableTechs, roomFor, sellsShares, slots,
 } from './economy';
 import { MAX_CONCURRENT_CONSTRUCTIONS, MAX_LEVELS_PER_PROJECT, applyCommand } from './commands';
-import { committedCost, lawRevenue, reserveOf } from './finance';
+import { committedCost, favours, funderWeight, lawRevenue, ownerBuildings, ownerFunds, reserveOf, treasuryFree } from './finance';
+import { privatizeLevel } from './production';
 import { subsistenceWage } from './labor';
 import { marketOutlook, techValue, valueMethod } from './outlook';
 import type { Outlook } from './outlook';
@@ -13,7 +14,7 @@ import { rand, round2 } from './rng';
 import { BUDGET_STEPS, SKILLS, isLowerJob, literacyOf } from './types';
 import type { BudgetItem, Building, Company, Kingdom, MethodDef, Region, Skill, World } from './types';
 
-// AI: 국영과 민간이 같은 판단을 쓴다. 다른 점은 자금원(국고 / 투자 풀)과 자기 왕국 땅에만 짓는다는 것뿐이다.
+// AI: 국영과 민간이 같은 판단을 쓴다. 다른 점은 자금원(국고 / 저택·금융가 금고)과 자기 왕국 땅에만 짓는다는 것뿐이다.
 
 /** 건설 판단 기준: 연간 이윤 / 공사비 (5년 안에 회수) */
 const MIN_ROI = () => TUNE.minRoi;
@@ -37,7 +38,42 @@ export function runAi(w: World) {
     if (c.state) { chooseTaxLaw(w, c); adjustBudget(w, c); } else adjustWages(w, c);
     manageBuildings(w, c);
     if (c.state) planResearch(w, c, outlook);
+    if (c.state && TUNE.crownPrivatize === 'all') for (const b of w.buildings) if (b.companyId === c.id && sellsShares(b.typeId)) b.privatize = true;
     withEstimateCache(() => planConstruction(w, c, outlook));
+  }
+  withEstimateCache(() => buyLevels(w));
+}
+
+/**
+ * 민영화 레벨 사기 (저택·금융가 AI, 매주): 민영화가 켜진 왕실 건물마다 1레벨까지 판다.
+ * 레벨 값 = max(공사비 × 0.5, 공사비 + 그 레벨의 1년 이익) (적자면 공사비보다 싸고, 반값 아래로는 내려가지 않는다).
+ * 사는 조건: 금고(약정 뺀 돈) ≥ 값 × TUNE.privatizeMargin, 값 ÷ 1년 이익 ≤ TUNE.privatizePayback 년.
+ * 사는 곳은 마음(funderWeight: 같은 지역, 좋아하는 종류)이 큰 곳부터. 한 소유 건물은 한 주에 1레벨만 산다
+ */
+export function privatizePrice(w: World, gov: Company, b: Building): { price: number; yearProfit: number } {
+  const cost = constructionEstimate(w, gov, b.typeId).cost;
+  const yearProfit = b.level > 0 ? (b.profitEma * TICKS_PER_YEAR) / b.level : 0;
+  return { price: round2(Math.max(cost * 0.5, cost + yearProfit)), yearProfit };
+}
+
+function buyLevels(w: World) {
+  const bought = new Set<number>();
+  for (const k of w.kingdoms) {
+    const gov = companyById(w, k.governmentId);
+    if (!gov) continue;
+    const forSale = w.buildings.filter((b) => b.companyId === gov.id && b.privatize && b.level >= 1 && !b.shrinking && sellsShares(b.typeId)
+      && !w.constructions.some((x) => x.targetBuildingId === b.id));
+    if (forSale.length === 0) continue;
+    const owners = ownerBuildings(w, k.id);
+    for (const b of forSale) {
+      const { price, yearProfit } = privatizePrice(w, gov, b);
+      if (!Number.isFinite(price) || price <= 0 || yearProfit <= 0 || price / yearProfit > TUNE.privatizePayback) continue;
+      const buyer = owners.filter((o) => !bought.has(o.id)).map((o) => ({ o, free: treasuryFree(w, o), wt: funderWeight(o, b.regionId, b.typeId) }))
+        .filter((x) => x.free >= price * TUNE.privatizeMargin).sort((a, c) => c.wt - a.wt || c.free - a.free || a.o.id - c.o.id)[0];
+      if (!buyer) continue;
+      bought.add(buyer.o.id);
+      privatizeLevel(w, b, buyer.o, price);
+    }
   }
 }
 
@@ -536,7 +572,8 @@ function planConstruction(w: World, c: Company, o: Outlook) {
     const own = w.constructions.filter((k) => k.companyId === c.id).length;
     if (own >= MAX_CONCURRENT_CONSTRUCTIONS) break;
     if (c.debt > creditLimit(w, c) * 0.3) break;
-    const free = freeCash(w, c, est.costPerDay);
+    // 민간 상회는 저택·금융가 금고(약정 뺀 돈)로 짓는다
+    const free = c.state || c.isPlayer ? freeCash(w, c, est.costPerDay) : ownerFunds(w, c.kingdomId);
     const school = schoolCash(w, c, est.costPerDay);
     if (free <= 0 && school <= 0) break;
     const out = { best: null as Pick | null };
@@ -554,8 +591,6 @@ function planConstruction(w: World, c: Company, o: Outlook) {
       starts[`${pick.typeId}|loss`] = (starts[`${pick.typeId}|loss`] ?? 0) + pick.levels;
     }
     if (isGovernment(pick.typeId)) toFront(w, c);
-    // 지역 돈을 먼저 쓴다
-    if (c.regionFunds?.[pick.regionId]) c.regionFunds[pick.regionId] = Math.max(0, c.regionFunds[pick.regionId] - constructionEstimate(w, c, pick.typeId).cost * pick.levels);
     o.add(getMethod(pick.typeId, pick.methodId), pick.levels, 1 + regionPerk(pick.regionId, pick.typeId));
   }
   if (blocked?.best) swapLand(w, c, o, blocked.best);
@@ -753,6 +788,15 @@ interface Pick { regionId: number; typeId: string; methodId: string; levels: num
 export function pickProject(w: World, c: Company, o: Outlook, free: number, allowLoss = false, blocked?: { best: Pick | null }, schoolFree = 0): Pick | null {
   let best: Pick | null = null, least: Pick | null = null;
   const pools = new Map<string, number>();
+  // 지역 우선 투자 (민간): 그 지역 저택·금융가 금고(약정 뺀 돈). 좋아하지 않는 종류의 건물에는 TUNE.ownerTilt 배로 센다
+  const local = new Map<number, Building[]>();
+  const freeOf = new Map<number, number>();
+  if (!c.state) for (const o of ownerBuildings(w, c.kingdomId)) {
+    freeOf.set(o.id, Math.max(0, treasuryFree(w, o)));
+    if (!local.has(o.regionId)) local.set(o.regionId, []);
+    local.get(o.regionId)!.push(o);
+  }
+  const localFunds = (regionId: number, typeId: string) => (local.get(regionId) ?? []).reduce((a, o) => a + freeOf.get(o.id)! * (favours(o, typeId) ? 1 : TUNE.ownerTilt), 0);
   for (const r of ownRegions(w, c)) {
     for (const t of BUILDING_TYPES) {
       if (t.id === 'builder' || !canBuildType(c, t)) continue;
@@ -796,9 +840,9 @@ export function pickProject(w: World, c: Company, o: Outlook, free: number, allo
         }
         const pick = choice ?? top;
         if (!pick) continue;
-        // 지역 우선 투자: 그 지역 사람들이 낸 돈으로 짓는 몫만큼 가산점
-        const local = Math.min(1, (c.regionFunds?.[r.id] ?? 0) / (perLevel * pick.levels));
-        const score = pick.roi * (0.85 + rand(w) * 0.3) * (1 + TUNE.localBias * local);
+        // 지역 우선 투자: 그 지역 저택·금융가 돈으로 짓는 몫만큼 가산점
+        const here = c.state ? 0 : Math.min(1, localFunds(r.id, t.id) / (perLevel * pick.levels));
+        const score = pick.roi * (0.85 + rand(w) * 0.3) * (1 + TUNE.localBias * here);
         if (!best || score > best.score) best = { regionId: r.id, typeId: t.id, methodId: m.id, levels: pick.levels, score };
       }
     }

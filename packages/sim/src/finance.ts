@@ -1,12 +1,12 @@
 import { BUILDING_BY_ID, GOODS, SKILL_DEFS, TECH_BY_ID, TICKS_PER_WEEK, TUNE, getMethod } from './data';
-import { collectionRatio, companyById, regionById, constructionEstimate, efficiency, isGovernment, kingdomGdp, logEvent, ownerBuildingOf, paysDividend, repay, sellThrough, shareWeight } from './economy';
+import { collectionRatio, companyById, regionById, constructionEstimate, efficiency, isGovernment, isOwnerBuilding, kingdomGdp, logEvent, paysDividend, repay, sellThrough, shareWeight } from './economy';
 import { techNameEn } from './i18n';
-import { addToPool, kingdomById, kingdomOf } from './kingdoms';
+import { kingdomById, kingdomOf, toFinance, toTreasury } from './kingdoms';
 import { tenantSaleBag } from './market';
 import { payPops } from './pops';
 import { round2 } from './rng';
 import { LOWER_JOBS, SKILLS, crewOf } from './types';
-import type { BudgetItem, Building, Company, GoodBag, GoodId, Kingdom, Pop, PopClass, Region, SalvageLot, TaxLaw, World } from './types';
+import type { BudgetItem, Building, Company, Construction, GoodBag, GoodId, Kingdom, Pop, PopClass, Region, SalvageLot, TaxLaw, World } from './types';
 
 // ---------------------------------------------------------------- 국채 이자
 
@@ -287,9 +287,9 @@ export function collectIncomeTax(w: World) {
   }
 }
 
-// ---------------------------------------------------------------- 주간: 세금, 배당, 투자 풀
+// ---------------------------------------------------------------- 주간: 세금, 배당, 소유 건물 금고
 
-/** 소유 건물에서 받은 몫 중 투자 풀로 넣는 비율 (빅토리아3 기본률: 금융가 30%, 저택 20%) */
+/** 소유 건물에서 받은 몫 중 그 소유 건물 금고에 남기는 비율 (빅토리아3 기본률: 금융가 30%, 저택 20%) */
 export const INVEST_SHARE: Partial<Record<PopClass, number>> = { capitalist: 0.3, aristocrat: 0.2, gentry: 0.2 };
 
 export function weeklyWageBill(w: World, c: Company): number {
@@ -369,33 +369,36 @@ function fitReserves(w: World, c: Company): number {
   return cash - total;
 }
 
-/** 소유 건물에 앉은 pop 에게 배당·지대를 몫(shareWeight × 인원)대로 나눠 준다: 받은 몫의 일부는 그 왕국 투자 풀로 */
-function payOwners(w: World, kingdomId: number, regionId: number, pops: Pop[], amount: number) {
+/** 소유 건물 o 에 앉은 pop 에게 배당·지대를 몫(shareWeight × 인원)대로 나눠 준다: 받은 몫의 일부(INVEST_SHARE)는 o 의 금고로. 앉은 사람이 없으면 모두 금고로 */
+function payOwners(w: World, o: Building, amount: number) {
+  if (amount <= 0) return;
+  o.last.revenue += amount;
+  const pops = w.pops.filter((p) => p.work === o.id && p.size > 0);
   let total = 0;
   for (const p of pops) total += p.size * shareWeight(p.prof);
-  if (total <= 0) { addToPool(w, kingdomId, regionId, amount); return; }
+  if (total <= 0) { toTreasury(o, amount); return; }
   for (const p of pops) {
     const amt = (amount * p.size * shareWeight(p.prof)) / total;
     const invest = amt * (INVEST_SHARE[p.prof] ?? 0);
-    addToPool(w, kingdomId, p.regionId, invest);
+    toTreasury(o, invest);
     payPops(w, [p], amt - invest);
   }
 }
 
 /**
- * 배당 (민간 회사, 빅토리아3 방식): 건물마다 지난주 이익에서 준비금을 뺀 몫이 그 건물을 소유한 지역 소유 건물
- * (농지·산림·광산은 저택, 공장 부지는 금융가)로 가고, 거기서 일하는 귀족·자본가의 소득이 된다.
- * 소유주는 받은 배당의 일부를 왕국 투자 풀에 넣는다. 소유 건물에 아무도 없으면 그 몫은 투자 풀로 간다.
+ * 배당 (빅토리아3 방식): 건물마다 지난주 이익에서 준비금을 뺀 몫을 레벨 주인에게 레벨 수대로 나눈다.
+ * 민간 건물의 레벨 주인은 저택·금융가(공사비를 낸 곳)이고, 그 몫은 거기 앉은 귀족·자본가의 소득이 된다 (일부는 그 금고로).
+ * 왕실 건물은 레벨이 모두 국가 것이라 이익이 국고에 남는다 (유보 자산만 정산한다).
  */
 export function payDividends(w: World, c: Company) {
-  if (c.state) { payShareDividends(w, c); return; }
   const mine = w.buildings.filter((b) => b.companyId === c.id && !BUILDING_BY_ID[b.typeId].auto);
+  if (c.state) {
+    for (const b of mine) if (hasReserve(b)) settleReserve(b, b.profitEma * TICKS_PER_WEEK);
+    fitReserves(w, c);
+    return;
+  }
+  const byId = new Map(w.buildings.map((b) => [b.id, b] as const));
   const toOwner = new Map<Building, number>();
-  const give = (b: Building, amt: number) => {
-    const o = ownerBuildingOf(w, b);
-    if (o) toOwner.set(o, (toOwner.get(o) ?? 0) + amt);
-    else addToPool(w, c.kingdomId, b.regionId, amt);
-  };
   const due = new Map<Building, number>();
   for (const b of mine) due.set(b, hasReserve(b) ? settleReserve(b, b.profitEma * TICKS_PER_WEEK) : Math.max(0, b.profitEma) * TICKS_PER_WEEK * (1 - RESERVE_SHARE));
   let free = fitReserves(w, c);
@@ -405,28 +408,24 @@ export function payDividends(w: World, c: Company) {
     free -= profit;
     c.cash -= profit;
     c.ledger.dividends += profit;
-    give(b, profit);
+    const owners = Object.keys(b.owners ?? {}).map(Number).sort((x, y) => x - y);
+    const n = owners.reduce((a, id) => a + b.owners![id], 0);
+    if (n <= 0) { toFinance(w, b.regionId, profit); continue; }
+    for (const id of owners) {
+      const o = byId.get(id);
+      const amt = (profit * b.owners![id]) / n;
+      if (o) toOwner.set(o, (toOwner.get(o) ?? 0) + amt); else toFinance(w, b.regionId, amt);
+    }
   }
-  for (const [o, amt] of toOwner) {
-    o.last.revenue += amt;
-    const seated = w.pops.filter((p) => p.work === o.id);
-    payOwners(w, c.kingdomId, o.regionId, seated, amt);
-  }
+  for (const [o, amt] of toOwner) payOwners(w, o, amt);
 }
 
-/** 철거 자재 판매 대금: 소유 건물(저택·금융가) 몫은 그 귀족·자본가에게 (배당과 같은 길), 나머지는 건물 주인 회사에 */
+/** 철거 자재 판매 대금: 헐린 레벨의 주인이 받는다. 저택·금융가 레벨이면 그 금고로, 국영 레벨이면 국고(건물 주인 회사)로 */
 export function paySalvage(w: World, lot: SalvageLot, amt: number) {
-  const toOwner = amt * lot.ownerShare;
   const o = lot.ownerId != null ? w.buildings.find((x) => x.id === lot.ownerId) : undefined;
-  const kid = kingdomOf(w, lot.regionId);
-  if (toOwner > 0) {
-    if (o) { o.last.revenue += toOwner; payOwners(w, kid, o.regionId, w.pops.filter((p) => p.work === o.id), toOwner); }
-    else addToPool(w, kid, lot.regionId, toOwner);
-  }
-  const rest = amt - toOwner;
-  if (rest <= 0) return;
+  if (o) { toTreasury(o, amt); return; }
   const c = companyById(w, lot.companyId);
-  if (c) { c.cash += rest; c.weekProfit += rest; c.ledger.sales += rest; } else w.fund += rest;
+  if (c) { c.cash += amt; c.weekProfit += amt; c.ledger.sales += amt; } else w.fund += amt;
 }
 
 /** 소작지 수확 out 에서 토지세율 rate 만큼 걷어 팔 때 받을 대금: 시장가 × 팔리는 비율 (안 팔리는 곡물은 세입이 되지 않는다) */
@@ -446,67 +445,93 @@ export function payLandTax(w: World, regionId: number, amount: number) {
   k.landGot = (k.landGot ?? 0) + amount;
 }
 
-/** 소작지 현금 지대: 그 지역 저택에 앉은 귀족에게 준다 (배당처럼 일부는 투자 풀로). 받을 사람이 없으면 false */
+/** 소작지 현금 지대: 그 지역 저택에 앉은 귀족에게 준다 (배당처럼 일부는 저택 금고로). 받을 사람이 없으면 false */
 export function payRent(w: World, regionId: number, amount: number): boolean {
   const manor = w.buildings.find((x) => x.regionId === regionId && x.typeId === 'manor');
   if (!manor) return false;
-  const seated = w.pops.filter((p) => p.work === manor.id && p.size > 0);
-  if (seated.length === 0) return false;
-  manor.last.revenue += amount;
-  payOwners(w, kingdomOf(w, regionId), regionId, seated, amount);
+  if (!w.pops.some((p) => p.work === manor.id && p.size > 0)) return false;
+  payOwners(w, manor, amount);
   return true;
 }
 
-/** 국영 건물의 민간 지분 배당: 이익 중 지분 몫을 그 지역 소유 건물(저택·금융가)의 귀족·자본가에게 준다 */
-function payShareDividends(w: World, c: Company) {
-  const toOwner = new Map<Building, number>();
-  const due = new Map<Building, number>();
-  for (const b of w.buildings) {
-    if (b.companyId !== c.id) continue;
-    if (hasReserve(b)) due.set(b, settleReserve(b, b.profitEma * TICKS_PER_WEEK));
-    else if (b.privateShare) due.set(b, Math.max(0, b.profitEma) * TICKS_PER_WEEK * (1 - RESERVE_SHARE));
-  }
-  let free = fitReserves(w, c);
-  for (const [b, profit] of due) {
-    if (!b.privateShare) continue;
-    const amt = Math.min(free, profit * b.privateShare);
-    if (amt <= 0) continue;
-    free -= amt;
-    c.cash -= amt;
-    c.weekProfit -= amt;
-    c.ledger.dividends += amt;
-    const o = ownerBuildingOf(w, b, true);
-    if (o) toOwner.set(o, (toOwner.get(o) ?? 0) + amt);
-    else addToPool(w, c.kingdomId, b.regionId, amt);
-  }
-  for (const [o, amt] of toOwner) {
-    o.last.revenue += amt;
-    payOwners(w, c.kingdomId, o.regionId, w.pops.filter((p) => p.work === o.id), amt);
-  }
+// ---------------------------------------------------------------- 소유 건물 금고와 민간 공사비
+
+/** 공사 k 에서 소유 건물 ownerId 가 아직 낼 약정액: 약정액 − 이미 낸 몫 (공사비는 약정액 비율로 나눠 낸다) */
+function pledgeLeft(k: Construction, ownerId: number): number {
+  const f = k.funders;
+  if (!f || !f[ownerId]) return 0;
+  let total = 0;
+  for (const v of Object.values(f)) total += v;
+  return total > 0 ? Math.max(0, f[ownerId] - (k.spent * f[ownerId]) / total) : 0;
 }
 
-/** 투자 풀은 매주 그 왕국 민간 상회의 자금이 된다 (나눠 받는다) */
-export function distributeInvestment(w: World) {
-  for (const k of w.kingdoms) {
-    const firms = k.privateIds.map((id) => companyById(w, id)).filter((c): c is Company => !!c);
-    if (firms.length === 0 || k.investmentPool <= 0) continue;
-    const each = k.investmentPool / firms.length;
-    for (const c of firms) {
-      c.cash += each; c.ledger.investment += each;
-      for (const [rid, v] of Object.entries(k.poolByRegion ?? {})) (c.regionFunds ??= {})[Number(rid)] = (c.regionFunds[Number(rid)] ?? 0) + v / firms.length;
-    }
-    k.investmentPool = 0;
-    k.poolByRegion = {};
-    // 지역 표시가 붙은 돈은 회사 현금보다 클 수 없다 (다른 데 쓴 만큼 비례로 줄인다)
-    for (const c of firms) {
-      const tagged = Object.values(c.regionFunds ?? {}).reduce((a, v) => a + v, 0);
-      if (tagged > Math.max(0, c.cash) && tagged > 0) for (const rid of Object.keys(c.regionFunds!)) c.regionFunds![Number(rid)] *= Math.max(0, c.cash) / tagged;
-    }
-  }
+/** 소유 건물이 새 일에 쓸 수 있는 금고 돈: 금고 − 진행 중 공사에 아직 낼 약정액 */
+export function treasuryFree(w: World, o: Building): number {
+  let left = 0;
+  for (const k of w.constructions) if (k.funders?.[o.id]) left += pledgeLeft(k, o.id);
+  return (o.cash ?? 0) - left;
+}
+
+/** 왕국의 소유 건물(저택·금융가) */
+export function ownerBuildings(w: World, kingdomId: number): Building[] {
+  const mine = new Set(w.regions.filter((r) => r.kingdomId === kingdomId).map((r) => r.id));
+  return w.buildings.filter((b) => mine.has(b.regionId) && isOwnerBuilding(b.typeId));
+}
+
+/** 저택은 땅 건물(농지·산림·광맥)을, 금융가는 그 밖의 건물을 더 좋아한다 (AI 성향) */
+export function favours(o: Building, typeId: string): boolean {
+  const land = BUILDING_BY_ID[typeId].land;
+  const landBuilding = land === 'arable' || land === 'forest' || land === 'ore';
+  return o.typeId === 'manor' ? landBuilding : !landBuilding;
+}
+
+/** 소유 건물이 이 지역·이 건물에 돈을 낼 마음 (AI 성향): 같은 지역 × (1 + TUNE.localBias), 좋아하지 않는 종류 × TUNE.ownerTilt */
+export function funderWeight(o: Building, regionId: number, typeId: string): number {
+  return (o.regionId === regionId ? 1 + TUNE.localBias : 1) * (favours(o, typeId) ? 1 : TUNE.ownerTilt);
 }
 
 /**
- * 왕실이 남는 돈으로 국채를 갚고, 상인 조합이 자본보다 크게 쌓은 돈과 주인 없는 돈은 왕국 투자 풀로 간다 (인구 비례).
+ * 민간 공사의 돈줄 (AI 판단): 왕국 저택·금융가 중 마음(funderWeight)이 큰 곳부터, 낼 수 있는 만큼 레벨 단위로 맡긴다.
+ * 레벨 단위로 다 못 맡기면 남은 레벨은 남은 금고 돈을 모아 함께 낸다. 모자라면 null.
+ * 돌려주는 값: 소유 건물 id → 약정액 (합 = 레벨당 공사비 × 레벨)
+ */
+export function chooseFunders(w: World, kingdomId: number, regionId: number, typeId: string, levels: number, perLevel: number): Record<number, number> | null {
+  if (!(perLevel > 0) || !Number.isFinite(perLevel)) return null;
+  const cands = ownerBuildings(w, kingdomId).map((o) => ({ o, free: treasuryFree(w, o), wt: funderWeight(o, regionId, typeId) }))
+    .filter((x) => x.free > 0).sort((a, b) => b.wt - a.wt || b.free - a.free || a.o.id - b.o.id);
+  const out: Record<number, number> = {};
+  let left = levels;
+  for (const x of cands) {
+    if (left <= 0) break;
+    const n = Math.min(left, Math.floor(x.free / perLevel));
+    if (n <= 0) continue;
+    out[x.o.id] = round2(n * perLevel);
+    x.free -= n * perLevel;
+    left -= n;
+  }
+  if (left > 0) {
+    let need = left * perLevel;
+    for (const x of cands) {
+      if (need <= 0.005) break;
+      const give = Math.min(need, x.free);
+      if (give <= 0) continue;
+      out[x.o.id] = round2((out[x.o.id] ?? 0) + give);
+      need -= give;
+    }
+    if (need > 0.005) return null;
+  }
+  return out;
+}
+
+/** 왕국 저택·금융가 금고 중 새 공사에 쓸 수 있는 돈의 합 */
+export function ownerFunds(w: World, kingdomId: number): number {
+  let t = 0;
+  for (const o of ownerBuildings(w, kingdomId)) t += Math.max(0, treasuryFree(w, o));
+  return t;
+}
+
+/**
+ * 왕실이 남는 돈으로 국채를 갚는다. 상인 조합이 자본보다 크게 쌓은 돈과 주인 없는 돈은 지역 금융가 금고로 간다 (인구 비례).
  * 돈이 어디에도 고이지 않게 하는 일반 규칙.
  */
 export function weeklyBanking(w: World) {
@@ -521,10 +546,10 @@ export function weeklyBanking(w: World) {
   if (traderExcess > 0) { w.traders.cash -= traderExcess; pool += traderExcess; }
   if (pool <= 0) return;
   const popOf = new Map<number, number>();
-  for (const p of w.pops) { const k = kingdomOf(w, p.regionId); popOf.set(k, (popOf.get(k) ?? 0) + p.size); }
-  const total = [...popOf.values()].reduce((a, b) => a + b, 0);
+  let total = 0;
+  for (const p of w.pops) { popOf.set(p.regionId, (popOf.get(p.regionId) ?? 0) + p.size); total += p.size; }
   if (total <= 0) { w.fund += pool; return; }
-  for (const k of w.kingdoms) addToPool(w, k.id, null, (pool * (popOf.get(k.id) ?? 0)) / total);
+  for (const r of w.regions) toFinance(w, r.id, (pool * (popOf.get(r.id) ?? 0)) / total);
 }
 
 // ---------------------------------------------------------------- 주조와 보유고 (빅토리아3 방식)
