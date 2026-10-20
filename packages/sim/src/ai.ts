@@ -98,7 +98,7 @@ function openJobs(w: World, r: Region, s: Skill): number {
  * 이 방식을 levels 레벨 돌릴 일손이 공사 기간 안에 모이는가 0..1 (민간 건물의 배당 자리는 승진으로 천천히 차므로 세지 않는다).
  * pools: pop 이 바뀌지 않는 동안 (지역, 직종) 별 labourPool 을 한 번만 센다
  */
-export function laborAvailability(w: World, r: Region, m: MethodDef, levels: number, stateOwned = true, pools?: Map<string, number>, c?: Company): number {
+export function laborAvailability(w: World, r: Region, m: MethodDef, levels: number, stateOwned = true, pools?: Map<string, number>, c?: Company, own?: Building): number {
   let ok = 1;
   // 민간 건물의 소유주 자리(1%)는 공사 판단을 막지 않는다
   for (const s of SKILLS) {
@@ -111,7 +111,8 @@ export function laborAvailability(w: World, r: Region, m: MethodDef, levels: num
       pool = labourPool(w, r, s) - (TUNE.laborNet ? TUNE.laborNet * openJobs(w, r, s) : 0) + (TUNE.laborPoach && c ? poachable(w, r, s, c) : 0);
       pools?.set(k, pool);
     }
-    ok = Math.min(ok, pool / need);
+    // own: 방식을 바꾸는 건물 자신의 재직자는 그대로 남는다
+    ok = Math.min(ok, (pool + (own ? own.employed[s] : 0)) / need);
   }
   return ok;
 }
@@ -203,13 +204,14 @@ function treasuryTight(c: Company, k: Kingdom): boolean {
 
 /**
  * 정책 단계 (AI 왕국, 4주마다 한 칸). 기준은 국고가 주간 국정 지출의 몇 주치인가와, 지난 점검보다 늘었는가다.
- * 단계는 한 줄 사다리로 움직인다 (후함 → 긴축): 연구비 5·4 → 세금 1~5 → 연구비 2·1 → 연구 멈춤 → 국영 임금 2·1.
+ * 단계는 한 줄 사다리로 움직인다 (후함 → 긴축): 국영 임금 4 → 연구비 5·4 → 세금 1~5 → 연구비 2·1 → 연구 멈춤 → 국영 임금 2·1.
  * - 조임 (빚이 있거나 TUNE.treasuryLowWeeks 주치 미만이고, 지난 점검보다 줄었다): 긴축 쪽으로 한 칸.
  *   조이는 동안 새 연구를 고르지 않는다 (planResearch). 학교는 적자 때문에 헐지 않는다: 사다리를 끝까지(국영 임금 1단계) 내려가고도
  *   빚을 지며 줄 때만 학교를 줄인다 (shrinkSchools)
  * - 회복 (빚 없고 low 주치 이상, 줄지 않았다): 보통(3) 아래로 내린 국영 임금, 연구비를 한 칸씩 되돌린다
  * - 풂 (TUNE.treasuryHighWeeks 주치 초과, 줄지 않았다): 세금을 내리고, 세금이 1단계면 연구비를 보통 위로 올린다.
- * AI는 국영 임금을 보통 위로 올리지 않는다
+ * - 기술을 다 연 왕국은 연구비가 끊긴다. 풂 조건에서 임금 지수가 1 이하면 국영 임금을 TUNE.doneWageMax 단계까지 올리고,
+ *   임금 지수가 1을 넘으면 보통(3)으로 되돌린다. 그 밖에는 국영 임금을 보통 위로 올리지 않는다
  */
 function adjustBudget(w: World, c: Company) {
   const k = w.kingdoms.find((x) => x.governmentId === c.id);
@@ -219,9 +221,12 @@ function adjustBudget(w: World, c: Company) {
   k.netLast = round2(net);
   const b = k.budget;
   let step: [BudgetItem, number] | null = null;
+  // 기술을 다 연 왕국: 연구비가 끊기는 몫을 국영 임금으로 돌린다 (임금 지수 1 이하, 국고 넉넉할 때 보통 위로 TUNE.doneWageMax 단계까지)
+  const done = !c.research.current && researchableTechs(c).length === 0;
   if (treasuryTight(c, k)) {
     if (losing) {
-      if (b.research > 3) step = ['research', b.research - 1];
+      if (b.wages > 3) step = ['wages', b.wages - 1];
+      else if (b.research > 3) step = ['research', b.research - 1];
       else if (b.tax < BUDGET_STEPS) step = ['tax', b.tax + 1];
       else if (b.research > 1) step = ['research', b.research - 1];
       else if (c.research.current) applyCommand(w, c.id, { type: 'setResearch', techId: null });
@@ -230,7 +235,9 @@ function adjustBudget(w: World, c: Company) {
     }
   } else if (!losing) {
     const rich = treasuryWeeks(c, k) > TUNE.treasuryHighWeeks;
-    if (b.wages < 3) step = ['wages', b.wages + 1];
+    if (b.wages > 3 && (k.wageIndex ?? 1) > 1) step = ['wages', b.wages - 1];
+    else if (b.wages < 3) step = ['wages', b.wages + 1];
+    else if (done && rich && b.wages < TUNE.doneWageMax && (k.wageIndex ?? 1) <= 1) step = ['wages', b.wages + 1];
     else if (b.research < 3) step = ['research', b.research + 1];
     else if (rich && b.tax > 1) step = ['tax', b.tax - 1];
     else if (rich && b.research < BUDGET_STEPS) step = ['research', b.research + 1];
@@ -328,11 +335,16 @@ function manageBuildings(w: World, c: Company) {
     }
 
     // 생산 방식: 같은 상품을 더 싸게 만드는 방식으로 (3주 쿨다운). 투입재를 못 구해 생산이 멈췄으면 쿨다운 없이.
+    // 일손을 구할 수 없는 방식(지금 재직자를 더해도 충원 가능성이 기준 미만)으로는 바꾸지 않는다 (학교와 같다).
+    // 지금 방식이 반도 채워지지 않고 일손도 구할 수 없으면(understaffed), 손익이 낮아도 일손을 구할 수 있는 방식으로 바꾼다
     const starved = Object.keys(cur.inputs).length > 0 && Object.keys(cur.outputs).length > 0 && b.active && b.last.inputFill < 0.5 && b.last.staffing > 0;
+    const region = regionById(w, b.regionId);
+    const staffable = (m: MethodDef) => laborAvailability(w, region, m, b.level, c.state, undefined, c, b) >= MIN_STAFFING();
+    const understaffed = b.active && b.last.staffing < MIN_STAFFING() && !staffable(cur);
     if (usable.length > 1 && (starved || w.tick - b.lastSwitchTick >= SWITCH_COOLDOWN)) {
-      let best = { m: cur, v: starved ? -Infinity : unitProfit(current.profit, cur) };
+      let best = { m: cur, v: starved || understaffed ? -Infinity : unitProfit(current.profit, cur) };
       for (const m of usable) {
-        if (m.id === cur.id || !inputsAvailable(w, m, b.level)) continue;
+        if (m.id === cur.id || !inputsAvailable(w, m, b.level) || !staffable(m)) continue;
         const v = unitProfit(estimateMethod(w, b.regionId, b.typeId, m.id, c.wages, c.state).profit, m);
         if (v > best.v * 1.05 + 0.01) best = { m, v };
       }
