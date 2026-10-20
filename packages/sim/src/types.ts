@@ -454,7 +454,8 @@ export interface Kingdom {
   /** 이번 주 정부 건물(행정청·건축사무소·학교)의 임금과 원료 */
   spentWeek?: { wages: number; goods: number };
   /** 지난주 국정 수지: 세입, 민간 공사 수수료 / 정부 건물 임금, 원료, 연구비, 국채 이자 */
-  lastBudget?: { revenue: number; fees: number; wages: number; goods: number; research: number; interest: number };
+  /** revenue 는 세금·관세·주조를 모두 더한 값, tariffs 는 그중 관세 */
+  lastBudget?: { revenue: number; tariffs?: number; fees: number; wages: number; goods: number; research: number; interest: number };
   /** 주간 국정 지출(정부 건물 + 연구 + 이자 − 민간 공사 수수료)의 이동평균. 국고가 몇 주를 버티는지의 기준 */
   expenseEma?: number;
   /** 이번 주에 들어온 관세 (주마다 비운다) */

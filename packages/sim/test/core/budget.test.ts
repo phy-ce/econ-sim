@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { TICKS_PER_WEEK, applyCommandMsg, budgetPreview, createWorld, playerCompany, step } from '../../src/index';
+import { TICKS_PER_WEEK, TUNE, applyCommandMsg, budgetPreview, createWorld, playerCompany, step } from '../../src/index';
 import type { BudgetPreview, World } from '../../src/index';
 
 const runTo = (w: World, tick: number) => { while (w.tick < tick) step(w); };
@@ -50,7 +50,8 @@ describe('예산 미리보기', () => {
       runTo(x, x.tick + TICKS_PER_WEEK);
       const k = x.kingdoms.find((y) => y.id === pid.kingdomId)!;
       const gov = x.companies.find((c) => c.id === k.governmentId)!;
-      const real = k.lastBudget!.revenue - gov.lastLedger.mint;
+      // 관세는 세금 단계와 상관없으므로 뺀다
+      const real = k.lastBudget!.revenue - gov.lastLedger.mint - (k.lastBudget!.tariffs ?? 0);
       const err = (pre[s - 1] - real) / real;
       out.push(`단계 ${s}: 예상 ${pre[s - 1]} 실제 ${Math.round(real)} (${(err * 100).toFixed(1)}%)`);
       expect(Math.abs(err), `세금 단계 ${s}`).toBeLessThan(0.08);
@@ -102,6 +103,9 @@ describe('예산 미리보기', () => {
   });
 
   it('주초 미리보기가 그 주 실제 국정 수지와 크게 다르지 않다 (8주, 모든 왕국)', () => {
+    // 기상 조건이 끝나는 날 소작지 판매(토지세)가 몇 배로 뛴다 (소작농은 먹고 남는 만큼만 판다). 미리보기는 계절을 내다보지 않으므로 기상 조건 없이 잰다
+    const chance = TUNE.harvestChance;
+    TUNE.harvestChance = 0;
     const v = createWorld(42);
     runTo(v, 21 * TICKS_PER_WEEK);
     const errs: string[] = [];
@@ -119,6 +123,7 @@ describe('예산 미리보기', () => {
         s.gross += b.revenue + b.fees + b.wages + b.goods + b.research + b.interest;
       });
     }
+    TUNE.harvestChance = chance;
     const pct = (a: number, b: number) => Math.round((a / Math.abs(b)) * 1000) / 10;
     for (const s of sums) {
       const e = { income: pct(s.pIn - s.rIn, s.rIn), expense: pct(s.pOut - s.rOut, s.rOut), netOfGross: pct(s.pIn + s.pOut - s.rIn - s.rOut, s.gross) };

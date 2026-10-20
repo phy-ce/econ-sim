@@ -37,11 +37,11 @@ describe('왕국', () => {
 describe('인구', () => {
   it('시작 시 하층은 시작 건물 일꾼을 빼고 전부 소작농이고, 숙련 인력은 자격으로 들어 있다', () => {
     const w = createWorld(1);
-    // 노동자는 시작 건물(건축사무소·행정청·농장) 자리만큼만 있다
+    // 노동자는 시작 건물(건축사무소·행정청·농장·벌목장·섬유 농장) 자리만큼만 있다
     const seats = w.buildings.reduce((a, b) => a + b.employed.unskilled, 0);
     expect(Math.abs(colonyPopulation(w, 'unskilled') * WORKFORCE_RATIO - seats)).toBeLessThan(1);
     const total = w.pops.reduce((a, p) => a + p.size, 0);
-    expect(colonyPopulation(w, 'peasant') / total).toBeGreaterThan(0.9);
+    expect(colonyPopulation(w, 'peasant') / total).toBeGreaterThan(0.88);
     expect(w.pops.some((p) => (p.quals.skilled ?? 0) > 0)).toBe(true);
     expect(total).toBeGreaterThan(4_500_000);
     expect(total).toBeLessThan(5_500_000);

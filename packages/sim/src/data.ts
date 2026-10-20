@@ -340,6 +340,7 @@ export function scaleBonus(level: number): number {
  *   건물 레벨이 약 20~30% 많고 소작농 비율이 낮다. 39는 10년차 실업 13%, 20년 인구가 가장 적다. 104는 건물이 가장 적다
  * - startTreasuryWeeks: 왕실 시작 국고 = 시작 정부 건물을 다 돌리는 주간 운영비(시작 임금, 기본가) × 이 주 수
  * - taxLaw: 시작 세법 ('land' 토지 기반 / 'capita' 1인당)
+ * - startLumber, startFiber: 시작 민간 벌목장·섬유 농장 레벨 (지역 인구 10만 명당). 소작지가 목재·섬유를 조금만 내서 건축사무소가 첫날부터 쓸 목재가 있어야 한다
  * - peasantPoll: 1인당 과세에서 소작농이 내는 인두세 배율
  * - rawFullWealth, rawCapWealth: 원자재로 의복·생활용품을 다 채울 수 있는 부 상한, 원래 상한(max)이 되는 부 (rawMax)
  * - harvestChance: 기상 조건이 한 지역에서 한 계절(90일)에 새로 시작할 확률 (0이면 기상 조건이 없다)
@@ -422,8 +423,8 @@ export const TUNE = {
   laborPoach: 0,
   officeSchoolFirst: 0,
   needMul: {} as Partial<Record<NeedId, number>>,
-  startLumber: 0,
-  startFiber: 0,
+  startLumber: 0.6,
+  startFiber: 0.2,
 };
 
 // ---------------------------------------------------------------- 기상 조건
@@ -447,13 +448,14 @@ export const HARVEST_KINDS: HarvestDef[] = [
  * 소작: 소작지 1칸(레벨)에서 일할 수 있는 소작농(노동 인구)과 노동 인구 1명당 하루 산출.
  * 한 줄 규칙: 소작농은 산출에서 식구가 그날 쓸 만큼 남기고 나머지를 판다 (market.ts splitHarvest). 판 돈의 절반은 지대, 토지세율만큼은 세금.
  * 산출 규칙 (식구 = 소비 단위 2.5, 부 5 기준, DESIGN 4장): 곡물 = 식량 필요 2.5 × 1.2 = 3,
- * 의복·목재·가구 = 의복·난방·생활용품 필요(각 하루 1.25플로린)의 1/4 을 기본가로 나눈 양 (의복 0.05, 목재 0.15, 가구 0.04).
- * 농장·공장 1명 산출은 곡물 2.3배, 의복 76배, 목재 46배, 가구 62배다
+ * 의복·목재·가구 = 의복·난방·생활용품 필요(각 하루 1.25플로린)의 절반을 기본가로 나눈 양 (의복 0.1, 목재 0.3, 가구 0.08).
+ *   1/4(0.05·0.15·0.04)은 소작농 생활수준이 1.6~2로 떨어져 인구가 준다 (DECISIONS 7-15).
+ * 기본 방식 건물 일꾼 1명 산출은 소작농의 곡물 2.3배, 의복 38배, 목재 23배, 가구 31배다
  */
 export const SUBSISTENCE = {
   /** 소작지 1칸 = 소작농 1,000명. 다른 건물 1레벨(일꾼 1,000명)과 같아서 경작지 1칸을 농장으로 바꿔도 일자리 수는 그대로다 */
   workersPerCell: 1000,
-  output: { grain: 3, cloth: 0.05, timber: 0.15, furniture: 0.04 } as Partial<Record<GoodId, number>>,
+  output: { grain: 3, cloth: 0.1, timber: 0.3, furniture: 0.08 } as Partial<Record<GoodId, number>>,
 };
 
 
