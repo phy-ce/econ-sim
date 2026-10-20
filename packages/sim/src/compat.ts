@@ -1,4 +1,6 @@
+import { GOOD_IDS } from './data';
 import { roundAll, roundWorld, writeMirrors } from './round';
+import { newMarketGood } from './world';
 import type { Building, Company, Shipment, World } from './types';
 
 // 화면 호환용 껍데기와 옛 저장 변환. 껍데기는 sim 에서 없앤 제도들이다. 화면이 UI_CHANGES 2-17 을 반영하면 껍데기는 지운다.
@@ -42,6 +44,8 @@ export function migrateWorld(input: unknown): World | null {
   if (!w || typeof w !== 'object') return null;
   // 옛 저장의 '안 팔린 현물' 소득 칸은 더 쓰지 않는다 (안 팔리고 사라진 물건은 소득이 아니다)
   for (const p of w.pops ?? []) delete (p as { unsoldKind?: number }).unsoldKind;
+  // 나중에 더한 상품(종이 등)은 옛 저장의 지역 시장에 기본가로 넣는다
+  for (const r of w.regions ?? []) for (const g of GOOD_IDS) if (!r.market[g]) r.market[g] = newMarketGood(g);
   if (w.version === 7) { writeMirrors(w); return w; }
   if (w.version === 6) { addFarmers(w); w.version = 7; writeMirrors(w); return w; }
   if (w.version !== 4 && w.version !== 5) return null;

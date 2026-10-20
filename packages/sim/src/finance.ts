@@ -167,14 +167,17 @@ export function spendBudget(w: World) {
 
 // ---------------------------------------------------------------- 국고
 
+/** 행정청 하나가 감당하는 인구. 다른 건물의 산출처럼 원료 충족률(inputFill)을 따른다 */
+export function adminCapacityOf(b: Building): number {
+  const m = getMethod(b.typeId, b.methodId);
+  if (!m.taxCapacity || !b.active) return 0;
+  return m.taxCapacity * TUNE.adminScale * b.level * b.utilization * crewOf(b) * efficiency(b) * b.last.inputFill;
+}
+
 /** 왕국 행정청이 세금을 걷을 수 있는 인구 (징세 한도) */
 export function taxCapacity(w: World, kingdomId: number): number {
   let cap = 0;
-  for (const b of w.buildings) {
-    if (!b.active || kingdomOf(w, b.regionId) !== kingdomId) continue;
-    const m = getMethod(b.typeId, b.methodId);
-    if (m.taxCapacity) cap += m.taxCapacity * TUNE.adminScale * b.level * b.utilization * crewOf(b) * efficiency(b);
-  }
+  for (const b of w.buildings) if (b.active && kingdomOf(w, b.regionId) === kingdomId) cap += adminCapacityOf(b);
   return cap;
 }
 
@@ -277,7 +280,7 @@ export function collectIncomeTax(w: World) {
     const m = getMethod(b.typeId, b.methodId);
     const k = w.kingdoms.find((x) => x.id === kingdomOf(w, b.regionId));
     if (!m.taxCapacity || !b.active || !k || !(k.taxCapacity ?? 0)) continue;
-    const share = (m.taxCapacity * TUNE.adminScale * b.level * b.utilization * crewOf(b) * efficiency(b)) / k.taxCapacity!;
+    const share = adminCapacityOf(b) / k.taxCapacity!;
     const amt = (got.get(k.id) ?? 0) * share;
     b.last.revenue += amt;
     b.last.tax = (b.last.tax ?? 0) + amt;

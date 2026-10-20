@@ -163,3 +163,10 @@
 - 접근성은 그 주가 시장에 내는 구매·판매 주문의 크기도 줄인다. 운송·전기 같은 현지 상품은 늘 주 가격을 쓴다.
 - 예: 철(기본가 40)을 만들기만 하고 쓰지 않는 주는 주 가격 10, MAPI 85%면 지역 가격 35.5.
 - 기반시설 사용량이 건물·pop마다 어떻게 생기는지는 이 문서에 없어 확인 못 함 (Infrastructure 문서).
+
+## 종이와 종이 공장 (2026-10-21 확인)
+- 종이 기본가 30 (https://vic3.paradoxwikis.com/Paper). 쓰는 곳: pop 소비, 폭약 공장, 예술 학교, 정부 행정청(Government Administration), 대학, 마천루 (같은 문서).
+- 종이 공장(Paper Mills): 필요 기술 Manufacturies, 건설비 600. 방식 이름 Hand Assembly, Pulp Pressing, Sulfite Pulping, Paper Bleaching, Water-tube Boiler, Rotary Valve Engine (https://vic3.paradoxwikis.com/Paper_Mills, 건물 목록으로 넘어간다).
+- Pulp Pressing: 목재 30 → 종이 40, 상점주 500·노동자 4,500, 기술 요건 표시 없음 (https://vic3.paradoxwikis.com/List_of_production_methods).
+- 행정청 방식 이름: Simple Organization, Filing Cabinets, Standardized Filing System, Telephone Switchboards, Hereditary/Professional Bureaucrats 등 (https://vic3.paradoxwikis.com/Government_Administration). Filing Cabinets 줄에 "Paper 10"이 있으나 투입인지는 평탄화된 표에서 **확인 못 함**.
+- 이 게임: 목재 2,500 → 종이 5,000 (기본가 목재 2, 종이 4, 이익률 20%). 기술 없이 짓는다. 전문 관료제가 종이 200을 쓴다 (가구 100과 같은 값).

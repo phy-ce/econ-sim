@@ -29,6 +29,7 @@ export const GOOD_IDS: GoodId[] = [
   'transport',
   'luxury_furniture', 'luxury_cloth',
   'meat',
+  'paper',
 ];
 
 export const GOODS: Record<GoodId, GoodDef> = {
@@ -47,6 +48,7 @@ export const GOODS: Record<GoodId, GoodDef> = {
   luxury_furniture: { id: 'luxury_furniture', name: '고급 가구', nameEn: 'Luxury furniture', basePrice: 40 },
   luxury_cloth: { id: 'luxury_cloth', name: '고급 의복', nameEn: 'Fine clothes', basePrice: 30 },
   meat: { id: 'meat', name: '고기', nameEn: 'Meat', basePrice: 16 },
+  paper: { id: 'paper', name: '종이', nameEn: 'Paper', basePrice: 4 },
 };
 
 /**
@@ -231,6 +233,13 @@ export const BUILDING_TYPES: BuildingTypeDef[] = [
     ],
   },
   {
+    // 목재를 눌러 종이를 낸다 (빅토리아3 Paper Mills, Pulp Pressing: 목재 30 → 종이 40). 전문 관료제 행정청이 쓴다. 기술 없이 지을 수 있다
+    id: 'paper_mill', name: '종이 공장', nameEn: 'Paper mill', land: 'plot', buildPoints: 1000,
+    methods: [
+      m({ id: 'pulp_press', name: '펄프 압착', nameEn: 'Pulp pressing', workers: jobs(800, 200), inputs: { timber: 2500 }, outputs: { paper: 5000 } }),
+    ],
+  },
+  {
     id: 'fab', name: '기계 공장', nameEn: 'Machine works', land: 'plot', buildPoints: 1200,
     methods: [
       m({ id: 'machine_steam', name: '증기 기계 제작', nameEn: 'Steam engineering', tech: 'steam_engine', workers: jobs(600, 300, 100), inputs: { metal: 2000, fuel: 500 }, outputs: { electronics: 2000 } }),
@@ -265,7 +274,7 @@ export const BUILDING_TYPES: BuildingTypeDef[] = [
     id: 'admin', name: '행정청', nameEn: 'Government administration', buildPoints: 400, stateOnly: true,
     methods: [
       m({ id: 'admin_hereditary', name: '세습 관료제', nameEn: 'Hereditary bureaucrats', workers: { skilled: 400, gentry: 100 }, inputs: {}, outputs: {}, taxCapacity: TAX_PEOPLE_PER_LEVEL }),
-      m({ id: 'admin_professional', name: '전문 관료제', nameEn: 'Professional bureaucrats', tech: 'printing', workers: { skilled: 500 }, inputs: { furniture: 100 }, outputs: {}, taxCapacity: TAX_PEOPLE_PER_LEVEL * 3 }),
+      m({ id: 'admin_professional', name: '전문 관료제', nameEn: 'Professional bureaucrats', tech: 'printing', workers: { skilled: 500 }, inputs: { paper: 200 }, outputs: {}, taxCapacity: TAX_PEOPLE_PER_LEVEL * 3 }),
     ],
   },
 ];
@@ -319,6 +328,7 @@ export function scaleBonus(level: number): number {
  *   레벨당 고정 50,000(농지 0.5주, 공장 0.2~0.3주치)과 0.25·0.5·1·2·4주 비교 (10년 거름, 20년 × 시드 1·2·3): 0.5주가 산출 비례 중 20년차 연 총생산(2,580 / 1주 2,423 / 고정 2,745)·
  *   건물 레벨(2,636 / 2,370 / 2,491)·노동자 생활수준(3.75 / 3.63 / 3.92)이 가장 낫고 철거(15~20년차 210 / 231 / 201)가 가장 적다. 4주는 10년차 총생산이 크게 준다(888 / 1,140)
  * - officeShrinkWeeks: 건축사무소에 빈 레벨이나 남는 포인트가 이 주 수 동안 이어지면 AI가 그만큼 헌다 (빈 레벨은 그동안 한 번도 사람이 차지 않은 것만)
+ * - adminFillRetry: (AI) 원료 없는 방식으로 도는 행정청이 원료 충족률 기억(fillEma)을 매주 1 쪽으로 되돌리는 비율
  * - officeIdleDays: 맡은 공사가 없는 날이 이 일수를 넘으면 사무소가 인부를 해산한다 (그동안은 임금을 주며 붙잡아 둔다)
  *   두 값은 20년 × 시드 1·2로 비교했다 (하나씩 바꿈, DECISIONS.md 7-4의 표). 철거 26주는 10~20년차 하루 사용 포인트가 69로 52주(98)보다 크게 적고,
  *   78주는 3~10년차 정부 건물 부지 몫이 26.5%(52주 24%)이고 한 지역 40% 이상 표본이 76(52주 51)이다.
@@ -402,6 +412,7 @@ export const TUNE = {
   shrinkWeeks: 26,
   reserveWeeks: 0.5,
   officeShrinkWeeks: 52, // 26주는 공사가 크게 줄고(10~20년차 하루 사용 포인트 69), 78주는 부지 몫과 40% 이상 지역이 늘어난다
+  adminFillRetry: 0.02,
   officeIdleDays: 10, // 사무소 새 규칙에서 3·7·10·14·21·28일 비교 (DECISIONS.md 7-4). 10일이 레벨을 지키며 한 지역 40% 이상이 거의 없고 철거가 가장 적다
   salvageShare: 0.5,
   salvageDays: 28,

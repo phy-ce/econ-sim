@@ -94,14 +94,17 @@ function newCompany(id: number, name: string, color: string, kingdomId: number, 
   };
 }
 
+/** 한 지역의 새 상품 시장 (기본가, 거래 없음). 옛 저장에 없는 상품도 이것으로 채운다 (compat.ts) */
+export function newMarketGood(g: GoodId): MarketGood {
+  return {
+    price: GOODS[g].basePrice, inventory: 0, demand: 0, supply: 0, demandEma: 0, supplyEma: 0,
+    sold: 0, volumeEma: 0, shippedIn: 0, shippedOut: 0, demandBy: {}, supplyBy: {}, demandByEma: {}, supplyByEma: {},
+  };
+}
+
 function newMarket(): Record<GoodId, MarketGood> {
   const market = {} as Record<GoodId, MarketGood>;
-  for (const g of GOOD_IDS) {
-    market[g] = {
-      price: GOODS[g].basePrice, inventory: 0, demand: 0, supply: 0, demandEma: 0, supplyEma: 0,
-      sold: 0, volumeEma: 0, shippedIn: 0, shippedOut: 0, demandBy: {}, supplyBy: {}, demandByEma: {}, supplyByEma: {},
-    };
-  }
+  for (const g of GOOD_IDS) market[g] = newMarketGood(g);
   return market;
 }
 
