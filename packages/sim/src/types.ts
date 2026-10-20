@@ -245,6 +245,8 @@ export interface Building {
   unpaid: boolean;
   last: BuildingStats;
   profitEma: number;
+  /** 유보 자산 (빅토리아3): 이익의 일부를 레벨 × TUNE.reservePerLevel 까지 쌓고, 적자는 여기서 먼저 뺀다. 돈은 회사 현금 안에 있다 (finance.ts settleReserve). 없으면 0 */
+  reserve?: number;
   lossWeeks: number;
   pausedWeeks: number;
   /** 철거 대기 레벨: 매주 1레벨씩 헐린다 */

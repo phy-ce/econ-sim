@@ -309,6 +309,9 @@ export function scaleBonus(level: number): number {
  * - meatLinear, meatQuad: 고기 필요 = linear × (부 − 8) + quad × (부 − 8)²
  * - privateShare: 왕실이 짓는 건물(행정청·건축사무소 제외) 공사비 중 민간 상회가 내는 비율 (그만큼 지분)
  * - shrinkWeeks: 마지막 레벨의 손익이 이 주 수 동안 계속 마이너스면 AI가 철거를 시작한다
+ * - reservePerLevel: 건물 유보 자산 상한 (레벨당). 이익의 35%를 여기까지 쌓고, 적자는 여기서 먼저 뺀다 (finance.ts settleReserve).
+ *   25,000·50,000·100,000·200,000 비교 (20년 × 시드 1·2, 도입 전 대비): 50,000이 20년차 연 총생산(2,702 / 전 2,173)·노동자 생활수준(4.12 / 3.40)이
+ *   가장 높고 15~20년차 철거 레벨이 가장 적다(163 / 247). 1레벨 주간 임금(약 15,000)의 3~4주치다
  * - officeShrinkWeeks: 건축사무소에 빈 레벨이나 남는 포인트가 이 주 수 동안 이어지면 AI가 그만큼 헌다 (빈 레벨은 그동안 한 번도 사람이 차지 않은 것만)
  * - officeIdleDays: 맡은 공사가 없는 날이 이 일수를 넘으면 사무소가 인부를 해산한다 (그동안은 임금을 주며 붙잡아 둔다)
  *   두 값은 20년 × 시드 1·2로 비교했다 (하나씩 바꿈, DECISIONS.md 7-4의 표). 철거 26주는 10~20년차 하루 사용 포인트가 69로 52주(98)보다 크게 적고,
@@ -388,6 +391,7 @@ export const TUNE = {
   treasuryHighWeeks: 52, // 1년치
   startTreasuryWeeks: 26,
   shrinkWeeks: 26,
+  reservePerLevel: 50_000,
   officeShrinkWeeks: 52, // 26주는 공사가 크게 줄고(10~20년차 하루 사용 포인트 69), 78주는 부지 몫과 40% 이상 지역이 늘어난다
   officeIdleDays: 10, // 사무소 새 규칙에서 3·7·10·14·21·28일 비교 (DECISIONS.md 7-4). 10일이 레벨을 지키며 한 지역 40% 이상이 거의 없고 철거가 가장 적다
   salvageShare: 0.5,
