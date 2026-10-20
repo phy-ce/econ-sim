@@ -1,4 +1,4 @@
-import { BUILDING_BY_ID, SKILL_DEFS, TECH_BY_ID, TICKS_PER_WEEK, TUNE, getMethod } from './data';
+import { BUILDING_BY_ID, GOODS, SKILL_DEFS, TECH_BY_ID, TICKS_PER_WEEK, TUNE, getMethod } from './data';
 import { collectionRatio, companyById, regionById, constructionEstimate, efficiency, isGovernment, kingdomGdp, logEvent, ownerBuildingOf, paysDividend, repay, sellThrough } from './economy';
 import { techNameEn } from './i18n';
 import { addToPool, kingdomById, kingdomOf } from './kingdoms';
@@ -322,9 +322,16 @@ export function hasReserve(b: Building): boolean {
   return !m.construction && !m.seats;
 }
 
-/** 건물 유보 자산 상한: 레벨 × TUNE.reservePerLevel */
+/** 방식 1레벨의 주간 산출 가치 (기본가, 만원 가동). 상품을 내지 않는 방식(건축사무소·학교·행정청)은 0 */
+export function weeklyOutputValue(typeId: string, methodId: string): number {
+  let v = 0;
+  for (const [g, q] of Object.entries(getMethod(typeId, methodId).outputs) as [GoodId, number][]) v += q * GOODS[g].basePrice;
+  return v * TICKS_PER_WEEK;
+}
+
+/** 건물 유보 자산 상한: 레벨 × 지금 방식의 레벨당 주간 산출 가치(기본가) × TUNE.reserveWeeks. 방식을 바꿔 상한이 줄면 다음 정산에서 상한까지 줄인다 */
 export function reserveCap(b: Building): number {
-  return b.level * TUNE.reservePerLevel;
+  return round2(b.level * weeklyOutputValue(b.typeId, b.methodId) * TUNE.reserveWeeks);
 }
 
 /** 회사 건물 유보 자산 합 (회사 현금 중 그 몫) */
