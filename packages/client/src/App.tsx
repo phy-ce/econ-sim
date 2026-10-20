@@ -60,7 +60,7 @@ export function App() {
   const game = useGame();
   const [opened, setOpened] = useState<WindowId[]>(['map']);
   const [revealRequest,setRevealRequest] = useState(0);
-  const showWindow = (id: WindowId) => { setOpened(id==='map'?['map']:['map',id]); setRevealRequest(v=>v+1); };
+  const showWindow = (id: WindowId) => { setOpened(current=>id==='map'?current:[...current.filter(w=>w!==id),id]); setRevealRequest(v=>v+1); };
   const [popRequest,setPopRequest]=useState<PopRequest|null>(null);
   const [buildingRequest,setBuildingRequest]=useState<{id:number;sequence:number}|null>(null);
   const [regionId, setRegionId] = useState(1);

@@ -1,10 +1,12 @@
+import { RegionExplorer } from './RegionExplorer';
+import { HelpText } from '../TooltipLayer';
 import { NumericValue } from '../NumericValue';
 import type { Game } from '../useGame';
 import { BuildList, Projects } from './CompanyPanel';
 import { playerCompany } from '@econ/sim';
 import { OwnerBadge } from './OwnerBadge';
-import { PORTS_OPEN, regionLivingStandard } from '../systemMetrics';
-import { LockKeyhole } from 'lucide-react';
+import { regionLivingStandard } from '../systemMetrics';
+import { HarvestBadge } from './HarvestBadge';
 import { SortHeader } from './SortHeader';
 import { SectionStack } from './SectionStack';
 import { useMemo, useState, useEffect, useRef } from 'react';
@@ -40,7 +42,8 @@ export function RegionPanel({ world, region, history, selectedGood, onSelectGood
   const [buildingId, setBuildingId] = useState<number | null>(null);
   useEffect(()=>{if(buildingRequest){setBuildingId(buildingRequest.id);setIndustrySearch('');}},[buildingRequest]);
   useEffect(()=>{if(buildingId!==null)inspectorRef.current?.scrollIntoView({block:'nearest'});},[buildingId]);
-  const selectGood = (g: GoodId) => { onSelectGood(g); setTab('market'); };
+  const [resourceRequest,setResourceRequest]=useState<number|null>(null);
+  const selectGood = (g: GoodId) => { onSelectGood(g); setTab('market'); setResourceRequest(v=>(v??0)+1); };
   const [buildingMenu,setBuildingMenu]=useState(false);
   const me=playerCompany(world);
   const r = region;
@@ -82,15 +85,15 @@ export function RegionPanel({ world, region, history, selectedGood, onSelectGood
 
   return (
     <>
-      <header className="pane-head">
+      <header className={`pane-head ${tab==='overview'?'explorer-region-head':''}`}>
         <div className="title-row">
           <span className="tile lg region-art"><Sprite64 id={headline} size={64} /></span>
           <h2>{regionName(r)}</h2>
-          {r.spaceport && <span className={`pill soft ${PORTS_OPEN ? '' : 'port-closed'}`}>{!PORTS_OPEN && <LockKeyhole size={12}/>} {PORTS_OPEN ? T.port : T.portClosed}</span>}
+          <HarvestBadge world={world} regionId={r.id}/>
           {Object.entries(REGIONS.find((d) => d.id === r.id)?.perks ?? {}).length > 0 && (
             <span className="perks">
               {Object.entries(REGIONS.find((d) => d.id === r.id)!.perks).map(([t, v]) => (
-                <span key={t} className="tag-soft">
+                <span key={t} className="tag-soft" tabIndex={0} data-help={T.help.perk}>
                   <BuildingSprite typeId={t} size={16} /> {buildingName(t)} +{Math.round((v ?? 0) * 100)}%
                 </span>
               ))}
@@ -98,23 +101,23 @@ export function RegionPanel({ world, region, history, selectedGood, onSelectGood
           )}
         </div>
         <div className="stats region-stats">
-          <div className="stat"><span className="stat-label">{T.standardOfLiving}</span><span className="stat-value">{regionLivingStandard(r).toFixed(1)}</span><Bar value={regionLivingStandard(r)/30} size="sm" label={T.standardOfLiving}/></div>
-          <div className="stat"><span className="stat-label">{T.population}</span><span className="stat-value"><NumericValue value={pop} format="compact"/></span></div>
+          <div className="stat"><span className="stat-label"><HelpText text={T.help.sol}>{T.standardOfLiving}</HelpText></span><span className="stat-value">{regionLivingStandard(r).toFixed(1)}</span><Bar value={regionLivingStandard(r)/30} size="sm" label={T.standardOfLiving}/></div>
+          <div className="stat"><span className="stat-label"><HelpText text={T.help.population}>{T.population}</HelpText></span><span className="stat-value"><NumericValue value={pop} format="compact"/></span></div>
           <div className="stat">
-            <span className="stat-label">{T.wealthPerHead}</span>
+            <span className="stat-label"><HelpText text={T.help.wealth}>{T.wealthPerHead}</HelpText></span>
             <span className={`stat-value ${regionAvgWealth(r) < 4 ? 'neg' : ''}`}>{regionAvgWealth(r).toFixed(1)}</span>
           </div>
           <div className="stat">
-            <span className="stat-label">{T.laborerWealth}</span>
+            <span className="stat-label"><HelpText text={T.help.laborerWealth}>{T.laborerWealth}</HelpText></span>
             <span className="stat-value">{laborer.wealth.toFixed(1)}</span>
           </div>
           <div className="stat">
-            <span className="stat-label">{T.unemployment}</span>
+            <span className="stat-label"><HelpText text={T.help.unemployment}>{T.unemployment}</HelpText></span>
             <span className="stat-value">{pct(unemp)}</span>
             <Bar value={unemp} tone="neg" size="sm" label={T.unemployment} />
           </div>
-          <div className="stat"><span className="stat-label">{T.education}</span><span className="stat-value">{pct(r.education)}</span><Bar value={r.education} tone="pos" size="sm" label={T.education} /></div>
-          <div className="stat"><span className="stat-label">{T.tenants}</span><span className="stat-value accent">{pct(tenantShare)}</span><Bar value={tenantShare} tone="accent" size="sm" label={T.tenants} /></div>
+          <div className="stat"><span className="stat-label"><HelpText text={T.help.education}>{T.education}</HelpText></span><span className="stat-value">{pct(r.education)}</span><Bar value={r.education} tone="pos" size="sm" label={T.education} /></div>
+          <div className="stat"><span className="stat-label"><HelpText text={T.help.tenants}>{T.tenants}</HelpText></span><span className="stat-value accent">{pct(tenantShare)}</span><Bar value={tenantShare} tone="accent" size="sm" label={T.tenants} /></div>
         </div>
         {tab !== 'industry' && <button className="region-buildings-link" onClick={() => { if (onViewBuildings) onViewBuildings(); else setTab('industry'); }}><Factory size={15}/>{lang === 'ko' ? '지역 건물 전체 보기' : 'All regional buildings'} <b>{allBuildings.length}</b></button>}
         {tab === 'industry' && <p className="lbl">{lang === 'ko' ? `모든 상회 · 건물 ${allBuildings.length}개 · 총 ${allBuildings.reduce((sum,b)=>sum+b.level,0)}레벨` : `All companies · ${allBuildings.length} buildings`}</p>}
@@ -125,30 +128,9 @@ export function RegionPanel({ world, region, history, selectedGood, onSelectGood
         <button aria-pressed={tab === 'market'} onClick={() => setTab('market')}><Package size={18}/>{T.market}</button>
         <button aria-pressed={tab === 'industry'} onClick={() => setTab('industry')}><Factory size={18}/>{T.buildings}<span className="count-pill">{buildings.length}</span></button>
       </nav>}
-      {tab === 'overview' && <>
-      <section className="block">
-        <h3><MapPin size={16}/>{T.landUse}</h3>
-        <div className="land">
-          {LAND_TYPES.map((l) => {
-            const used = landUsed(world, r.id, l), total = r.land[l];
-            if (total === 0) return null;
-            return [
-              <span key={`${l}n`}>{landName(l)}</span>,
-              <Bar key={`${l}m`} value={used / total} tone={l === 'arable' ? 'pos' : l === 'plot' ? 'accent' : 'gold'} label={`${landName(l)} ${used}/${total}`} />,
-              <span key={`${l}v`} className="num pxnum"><NumericValue value={used} format="int"/>/<NumericValue value={total} format="int"/></span>,
-            ];
-          })}
-        </div>
-      </section>
-
-      <section className="block">
-        <h3>{T.classes}</h3>
-        <ClassDonut region={r} onViewPops={prof=>onViewPops?.(r.id,prof)} />
-      </section>
-
-      </>}
+      {tab === 'overview' && <RegionExplorer world={world} region={r} onBuildings={()=>{if(onViewBuildings)onViewBuildings();else setTab('industry');}} onPops={prof=>onViewPops?.(r.id,prof)}/>}
       {tab === 'market' && <section className="block market-workspace">
-        <SectionStack storageKey="market" items={[{ id: 'prices', title: lang === 'ko' ? '전체 시세표' : 'Market prices', height: 174, content: <section className="market-ledger unified-market">
+        <SectionStack explorer revealId="resource" revealKey={resourceRequest} storageKey="market" items={[{ id: 'prices', title: lang === 'ko' ? '전체 시세표' : 'Market prices', height: 174, content: <section className="market-ledger unified-market">
 
         <div className="table-scroll">
           <table className="goods">
@@ -175,8 +157,8 @@ export function RegionPanel({ world, region, history, selectedGood, onSelectGood
           </table>
         </div>
         </section>
-        }, { id: 'resource', title: lang === 'ko' ? '선택 상품 · 관련 건물' : 'Selected good · Buildings', height: 290, content: <ResourceInspector game={game} key={`${r.id}-${selectedGood}`} world={world} region={r} good={selectedGood} onGood={selectGood} onCompany={onViewCompany}/>
-        }, { id: 'sources', title: lang === 'ko' ? '수요·공급 구성' : 'Supply and demand', height: 210, content: <SourceBreakdown good={selectedGood} m={r.market[selectedGood]} />
+        }, { id: 'resource', shortTitle:lang==='ko'?'상품 상세':'Good details', title: lang === 'ko' ? '선택 상품 · 관련 건물' : 'Selected good · Buildings', height: 290, content: <ResourceInspector game={game} key={`${r.id}-${selectedGood}`} world={world} region={r} good={selectedGood} onGood={selectGood} onCompany={onViewCompany}/>
+        }, { id: 'sources', shortTitle:lang==='ko'?'수요·공급':'Supply / demand', title: lang === 'ko' ? '수요·공급 구성' : 'Supply and demand', height: 210, content: <SourceBreakdown good={selectedGood} m={r.market[selectedGood]} />
         }, { id: 'history', title: lang === 'ko' ? '가격 추이' : 'Price history', height: 190, content: <div className="price-chart">
           <div className="card-head">
             <span className="good-name strong"><GoodSprite g={selectedGood} /> {T.priceTrend(goodName(selectedGood))}</span>
@@ -205,7 +187,7 @@ export function RegionPanel({ world, region, history, selectedGood, onSelectGood
                   <button className={`b-chip ${b.active ? '' : 'off'}`} aria-pressed={buildingId === b.id} onClick={() => setBuildingId(b.id === buildingId ? null : b.id)}
                     title={c?.isPlayer ? T.myHouse : c ? companyName(c) : undefined}>
                     <span className="b-chip-icon" style={{ borderColor: c?.color }}><BuildingSprite typeId={b.typeId} size={48} /></span>
-                    <span className="b-chip-name">{buildingName(b.typeId)}<OwnerBadge company={c} world={world}/></span>
+                    <span className="b-chip-name">{buildingName(b.typeId)}<HarvestBadge world={world} regionId={b.regionId} typeId={b.typeId}/><OwnerBadge company={c} world={world}/></span>
                     <span className="b-chip-count">×{b.level}{(b.shrinking??0)>0&&<small className="demolition-badge">{T.demolitionQueue(b.shrinking!)}</small>}</span>
                   </button>
                 </li>

@@ -1,6 +1,7 @@
+import { HarvestBadge } from './HarvestBadge';
 import { NumericValue } from '../NumericValue';
-import { PORTS_OPEN, regionLivingStandard } from '../systemMetrics';
-import { Crown, BriefcaseBusiness, LockKeyhole } from 'lucide-react';
+import { regionLivingStandard } from '../systemMetrics';
+import { Crown, BriefcaseBusiness } from 'lucide-react';
 import { SortHeader } from './SortHeader';
 import { useMemo, useState, useRef } from 'react';
 import { regionPopulation , regionAvgWealth } from '@econ/sim';
@@ -143,12 +144,6 @@ export function RegionMap({ world, selected, onSelect }: { world: World; selecte
               <SvgSprite name={`region-${r.id}`} x={x - 7.5} y={y - 2} size={15} />
               <text x={x-7} y={y+7} className="kingdom-symbol" fill={kingdomOf(r.kingdomId)?.color}>{['●','◆','▲'][world.kingdoms.findIndex(k=>k.id===r.kingdomId)]}</text>
               <text x={x} y={y - 1} className="map-label">{regionName(r)}</text>
-              {r.spaceport && (
-                <g className={`badge-port ${PORTS_OPEN ? '' : 'port-closed'}`}>
-                  <rect x={x - 12.6} y={y + 0.6} width={8.2} height={8.2} rx={0.6} />
-                  <SvgSprite name="m-ship" x={x - 12.1} y={y + 1.1} size={7.2} />{!PORTS_OPEN && <g transform={`translate(${x-8},${y+5})`}><rect width="4" height="3" fill="var(--ink)"/><path d="M1 0v-1a1 1 0 0 1 2 0v1" fill="none" stroke="var(--ink)" strokeWidth=".7"/></g>}
-                </g>
-              )}
               {total > 0 && <g className="map-ownership"><rect x={x-7} y={y+9} width={14} height={1.8} fill="var(--private-owner)"/><rect x={x-7} y={y+9} width={14*royalShare} height={1.8} fill="var(--royal-owner)"/><rect x={x-7} y={y+9} width={14} height={1.8} fill="none" stroke="var(--ink)" strokeWidth=".25"/></g>}
               {mine > 0 && (
                 <g className="badge-mine">
@@ -168,14 +163,14 @@ export function RegionMap({ world, selected, onSelect }: { world: World; selecte
         </>}<div className="map-keys lbl">
           <span><i className="key-rail" /> {T.keyRail}</span>
           <span><i className="key-mine" /> {T.keyMine}</span>
-          <span><LockKeyhole size={13}/> {PORTS_OPEN ? T.port : T.portClosed}</span><span><Crown size={13}/><i className="ownership-key royal"/>{T.stateOwner}</span><span><BriefcaseBusiness size={13}/><i className="ownership-key private"/>{T.privateOwner}</span>
+          <span><Crown size={13}/><i className="ownership-key royal"/>{T.stateOwner}</span><span><BriefcaseBusiness size={13}/><i className="ownership-key private"/>{T.privateOwner}</span>
           <span><Sprite name="m-wheat" size={16} /><Sprite name="m-tree" size={16} /><Sprite name="m-mine" size={16} /> {T.keyLand}</span>
         </div>
       </div>
       <details className="map-directory"><summary>{ko?'지역 목록':'Regions'}</summary><table className="region-directory-table">
         <thead><tr>{[['name',ko?'지역':'Region'],['population',T.population],['wealth',T.wealthPerHead],['sol',T.standardOfLiving]].map(([key,label]) => <SortHeader key={key} label={label} active={sort===key} direction={direction} onClick={()=>{setSort(key);setDirection(sort===key?-direction:key==='name'?1:-1);}}/>)}</tr></thead>
         <tbody>{regions.map(r=><tr key={r.id} className={r.id===selected?'selected':''}>
-          <td><button className="name-link" aria-pressed={r.id===selected} onClick={()=>onSelect(r.id)}><span className="territory-marker" title={kingdomName(r.kingdomId)} style={{color:kingdomOf(r.kingdomId)?.color}}>{['●','◆','▲'][world.kingdoms.findIndex(k=>k.id===r.kingdomId)]}</span>{regionName(r)}</button></td><td><NumericValue value={regionPopulation(r)} format="int"/></td><td>{regionAvgWealth(r).toFixed(1)}</td><td>{regionLivingStandard(r).toFixed(1)}</td>
+          <td><button className="name-link" aria-pressed={r.id===selected} onClick={()=>onSelect(r.id)}><span className="territory-marker" title={kingdomName(r.kingdomId)} style={{color:kingdomOf(r.kingdomId)?.color}}>{['●','◆','▲'][world.kingdoms.findIndex(k=>k.id===r.kingdomId)]}</span>{regionName(r)}</button><HarvestBadge world={world} regionId={r.id}/></td><td><NumericValue value={regionPopulation(r)} format="int"/></td><td>{regionAvgWealth(r).toFixed(1)}</td><td>{regionLivingStandard(r).toFixed(1)}</td>
         </tr>)}</tbody>
       </table></details>
     </>

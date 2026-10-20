@@ -1,3 +1,4 @@
+import { isGovernment } from '@econ/sim';
 import { NumericValue } from '../NumericValue';
 import { OwnerBadge } from './OwnerBadge';
 import { Workforce } from './Workforce';
@@ -427,13 +428,13 @@ function Controls({ r, game, world, owner }: { r: Row; game: Game; world: World;
           return <option key={m.id} value={m.id} disabled={!ok}>{methodName(m)} {label}</option>;
         })}
       </select>
-      <label className="util">
+      {!(owner.state && isGovernment(b.typeId)) && <><label className="util">
         <span className="lbl">{T.utilisation}</span>
         <input type="range" min={10} max={100} step={10} value={Math.round(b.utilization * 100)} aria-label={T.utilisation}
           onChange={(e) => game.command({ type: 'setUtilization', buildingId: b.id, utilization: Number(e.target.value) / 100 })} />
         <output className="pxnum">{pct(b.utilization)}</output>
       </label>
-      <button className="sm-btn" onClick={() => game.command({ type: 'setActive', buildingId: b.id, active: !b.active })}>{b.active ? T.stop : T.resume}</button>
+      <button className="sm-btn" onClick={() => game.command({ type: 'setActive', buildingId: b.id, active: !b.active })}>{b.active ? T.stop : T.resume}</button></>}
     </div>
   );
 }
@@ -454,9 +455,9 @@ export function Wages({ game, world, me }: { game: Game; world: World; me: Compa
               <span className="wage-name"><i className="sw" style={{ background: SKILL_COLOR[s] }} />{skillName(s)}</span>
               <output className="wage-out">ƒ<NumericValue value={me.wages[s]} format="two"/> <small className={offset >= 0 ? 'pos' : 'neg'}>{spct(offset)}</small></output>
             </div>
-            <input type="range" min={-50} max={100} step={5} value={Math.round(offset * 100)}
+            {!me.state && <input type="range" min={-50} max={100} step={5} value={Math.round(offset * 100)}
               aria-label={T.wageAria(skillName(s))}
-              onChange={(e) => game.command({ type: 'setWageOffset', skill: s, offset: Number(e.target.value) / 100 })} />
+              onChange={(e) => game.command({ type: 'setWageOffset', skill: s, offset: Number(e.target.value) / 100 })} />}
             <div className="wage-meta">
               <span className="lbl">{T.marketWage} <span className="pxnum">ƒ<NumericValue value={market} format="two"/></span></span>
               <span className="wage-unemp"><span className="lbl">{T.unemployment}</span><Bar value={unemp} tone="neg" size="sm" label={T.unemployment} /><span className="pxnum small">{pct(unemp)}</span></span>
@@ -501,7 +502,7 @@ export function BuildList({ game, world, me, region, projects }: { game: Game; w
           <div key={bt.id} className={`cat ${isOpen ? 'open' : ''} ${blockers.length ? 'blocked' : ''}`}>
             <button className="cat-head" aria-expanded={isOpen} onClick={() => setOpen(isOpen ? null : bt.id)}>
               <span className="tile md"><Sprite64 id={bt.id} size={40} /></span>
-              <span className="cat-name">{buildingName(bt.id)}{bt.land && <small className="muted">{landName(bt.land)} <span className="pxnum">{free}</span></small>}</span>
+              <span className="cat-name">{buildingName(bt.id)}{bt.land && <small className="muted">{landName(bt.land)} <span className="pxnum">{free}</span></small>}{!bt.land && <small className="muted">{bt.methods[0].seats ? <>{T.schoolSeats} <NumericValue value={bt.methods[0].seats} format="compact"/></> : bt.methods[0].taxCapacity ? <>{T.taxCapacity} <NumericValue value={bt.methods[0].taxCapacity*TUNE.adminScale} format="compact"/></> : null}</small>}</span>
               <span className="cat-figure">
                 {locked ? <span className="muted">{T.techNeeded}</span>
                   : free < 1 ? <span className="neg">{T.noLand}</span>
@@ -533,7 +534,7 @@ function BuildCard({ bt, region, est, blockers, payback, game, world, me }: {
             <div className="m-main">
               <strong>{methodName(m)}{!ok && <span className="tag-soft">{T.needsTechTag(techName(m.tech!))}</span>}</strong>
               <span className="m-line">{SKILLS.filter((s) => m.workers[s]).map((s) => <span key={s} className="bag-item"><i className="sw" style={{ background: SKILL_COLOR[s] }} />{skillName(s)} <span className="pxnum">{qty(m.workers[s]!)}</span></span>)}</span>
-              <span className="m-line">{GOOD_IDS.some((g) => m.inputs[g]) && <><Bag bag={m.inputs} /> → </>}{m.taxCapacity ? <span>{T.taxCapacity} <b><NumericValue value={m.taxCapacity*TUNE.adminScale} format="compact"/></b></span> : m.construction ? <span className="pxnum">{m.construction}pt</span> : <Bag bag={m.outputs} />}</span>
+              <span className="m-line">{GOOD_IDS.some((g) => m.inputs[g]) && <><Bag bag={m.inputs} /> → </>}{m.taxCapacity ? <span>{T.taxCapacity} <b><NumericValue value={m.taxCapacity*TUNE.adminScale} format="compact"/></b></span> : m.seats ? <span>{T.schoolSeats} <NumericValue value={m.seats} format="compact"/></span> : m.construction ? <span className="pxnum">{m.construction}pt</span> : <Bag bag={m.outputs} />}</span>
             </div>
             {!m.construction && <div className={`m-est ${e.profit >= 0 ? 'pos' : 'neg'}`}><NumericValue value={e.profit} format="signedMoney"/><small>{T.perDay}</small></div>}
           </li>

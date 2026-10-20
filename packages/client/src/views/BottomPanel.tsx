@@ -35,11 +35,11 @@ export function BottomPanel({ world, history, lastReadTick, onRead, onJump, view
     .sort((a,b) => (sort==='name' ? companyName(a.c).localeCompare(companyName(b.c)) : sort==='levels' ? a.levels-b.levels : sort==='profit' ? a.c.lastWeekProfit-b.c.lastWeekProfit : a.net-b.net)*dir);
 
   return (
-    <SectionStack revealId={popRequest?'pops':'company'} revealKey={popRequest?.sequence??viewedId} storageKey="trends-v2" items={[
+    <SectionStack explorer revealId={popRequest?'pops':'company'} revealKey={popRequest?.sequence??viewedId} storageKey="trends-v2" items={[
       ...(me?[{id:'summary',title:T.mySummary,height:220,content:<CompanySummary world={world} company={me}/>}]:[]),
       {id:'pops',title:T.popList,height:360,content:<PopTable world={world} request={popRequest} onRegion={onJump} onBuilding={onBuilding}/>},
       ...(viewed?[{id:'company',title:T.companyDetails,height:310,content:<CompanyView world={world} company={viewed} onView={onViewCompany}/>}]:[]),
-{ id: 'kingdoms', title: T.kingdomAccounts, height: 174, content: <table className="kingdom-accounts"><thead><tr><th>{T.kingdomLabel}</th><th>{T.investmentPool}</th><th>{T.annualGdp}</th></tr></thead><tbody>{world.kingdoms.map(k=><tr key={k.id}><th><i className="swatch" style={{background:k.color}}/>{lang==='ko'?k.name:k.nameEn}</th><td><NumericValue value={k.investmentPool} format="compactMoney"/></td><td><NumericValue value={kingdomGdp(world,k.id)} format="compactMoney"/></td></tr>)}</tbody></table> }, { id: 'wealth' , title: T.wealthByClassTitle, height: 236, content: <>
+{ id: 'kingdoms', title: T.kingdomAccounts, height: 174, content: <table className="kingdom-accounts"><thead><tr><th>{T.kingdomLabel}</th><th>{T.investmentPool}</th><th>{T.annualGdp}</th></tr></thead><tbody>{world.kingdoms.map(k=><tr key={k.id}><th><i className="swatch" style={{background:k.color}}/>{lang==='ko'?k.name:k.nameEn}</th><td><NumericValue value={k.investmentPool} format="compactMoney"/></td><td><NumericValue value={kingdomGdp(world,k.id)} format="compactMoney"/></td></tr>)}</tbody></table> }, { id: 'wealth' , title: T.wealthByClassTitle, shortTitle:lang==='ko'?'생활수준':'Living standards', height: 236, content: <>
       
         <div className="card-head">
           
@@ -50,7 +50,7 @@ export function BottomPanel({ world, history, lastReadTick, onRead, onJump, view
           </ul>
         </div>
         <TimeChart data={wealthData} series={series} format={(v) => v.toFixed(0)} height={200} reference={{ y: 5, label: T.povertyLine, color: 'var(--bad)' }} />
-      </> }, { id: 'rankings', title: T.rankings, height: 220, content: <>
+      </> }, {id:'weather',title:T.weatherRegions,shortTitle:lang==='ko'?'기상 피해':'Weather',height:164,content:<TimeChart data={(world.metrics??[]).map(p=>({tick:p.tick,affected:p.harvestRegions??0}))} series={[{key:'affected',name:T.weatherRegions,color:'var(--bad)'}]} format={v=>v.toFixed(0)} height={145}/>}, { id: 'rankings', title: T.rankings, height: 220, content: <>
 
         <div className="table-scroll"><table className="ranks">
           <thead><tr>{[['name',T.colHouse],['net',T.colNet],['levels',T.colBuildings],['profit',T.colLastWeek]].map(([key,label])=><SortHeader key={key} label={label} active={sort===key} direction={dir} onClick={()=>{setSort(key);setDir(sort===key?-dir:key==='name'?1:-1);}}/>)}</tr></thead>

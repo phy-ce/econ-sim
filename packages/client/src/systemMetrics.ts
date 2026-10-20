@@ -10,4 +10,4 @@ export function taxCollectionRatio(kingdom?: Kingdom): number {
   return kingdom?.taxRatio ?? 1;
 }
 
-export const PORTS_OPEN = false;
+

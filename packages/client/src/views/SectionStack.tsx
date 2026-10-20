@@ -2,14 +2,17 @@ import { useEffect, useId, useState, useRef, type ReactNode } from 'react';
 import { ChevronDown, ChevronRight, ArrowUp, ArrowDown, RotateCcw } from 'lucide-react';
 import { useLang } from '../i18n';
 
-type Item = { id: string; title: string; content: ReactNode; height: number };
+type Item = { id: string; title: string; shortTitle?:string; content: ReactNode; height: number };
 type Preference = { id: string; collapsed: boolean; height: number };
 const clamp = (height: number) => Math.max(96, Math.min(640, height));
 
-export function SectionStack({ storageKey, items, revealId, revealKey }: { storageKey: string; items: Item[]; revealId?:string; revealKey?:number|null }) {
+export function SectionStack({ storageKey, items, revealId, revealKey, explorer=false }: { storageKey: string; items: Item[]; revealId?:string; revealKey?:number|null; explorer?:boolean }) {
   const ko = useLang() === 'ko';
   const prefix = useId();
   const root=useRef<HTMLDivElement>(null);
+  const [browse,setBrowse]=useState(explorer);
+  const [selected,setSelected]=useState(items[0]?.id);
+  const active=items.some(i=>i.id===selected)?selected:items[0]?.id;
   const defaults = () => items.map(({ id, height }) => ({ id, height, collapsed: false }));
   const [prefs, setPrefs] = useState<Preference[]>(() => {
     try {
@@ -29,6 +32,7 @@ export function SectionStack({ storageKey, items, revealId, revealKey }: { stora
   }, [prefs, storageKey]);
   useEffect(()=>{
     if(!revealId||revealKey==null)return;
+    setSelected(revealId);
     setPrefs(ps=>ps.map(p=>p.id===revealId?{...p,collapsed:false}:p));
     const frame=requestAnimationFrame(()=>root.current?.querySelector(`[data-section="${revealId}"]`)?.scrollIntoView({block:'nearest'}));
     return ()=>cancelAnimationFrame(frame);
@@ -41,6 +45,18 @@ export function SectionStack({ storageKey, items, revealId, revealKey }: { stora
     return next;
   });
   return <div className="section-stack" ref={root}>
+    {explorer&&<div className="explorer-mode" role="group" aria-label={ko?'정보 표시 방식':'Information layout'}>
+      <button aria-pressed={browse} onClick={()=>setBrowse(true)} data-help={ko?'왼쪽 분류를 선택하면 오른쪽에 상세를 표시합니다.':'Select a category on the left to inspect its details.'}>{ko?'탐색':'Explore'}</button>
+      <button aria-pressed={!browse} onClick={()=>setBrowse(false)} data-help={ko?'모든 구역을 펼쳐 보고 순서와 높이를 조절합니다.':'Show all sections and customize their order and height.'}>{ko?'전체 보기':'Show all'}</button>
+    </div>}
+    {browse?<div className="information-explorer">
+      <nav className="explorer-rail" aria-label={ko?'정보 분류':'Information categories'}>
+        {prefs.map(p=>items.find(i=>i.id===p.id)).filter((item):item is Item=>!!item).map(item=><button key={item.id} aria-pressed={active===item.id} aria-controls={`${prefix}-detail`} data-help={item.title} onClick={()=>setSelected(item.id)}>{item.shortTitle??item.title}<ChevronRight size={12}/></button>)}
+      </nav>
+      <section className="explorer-detail" id={`${prefix}-detail`} aria-label={items.find(i=>i.id===active)?.title}>
+        {items.map(item=><div key={item.id} hidden={active!==item.id} data-section={item.id}><h3 className="explorer-heading">{item.title}</h3>{item.content}</div>)}
+      </section>
+    </div>:<>
     <div className="section-settings"><span>{ko ? '정보 구역' : 'Sections'}</span><button onClick={() => setPrefs(defaults())} title={ko ? '구역 배치·높이 초기화' : 'Reset section layout'}><RotateCcw size={12}/>{ko ? '초기화' : 'Reset'}</button></div>
     {prefs.map((p, index) => {
       const item = items.find(i => i.id === p.id);
@@ -62,6 +78,6 @@ export function SectionStack({ storageKey, items, revealId, revealKey }: { stora
           />
         </div>
       </section>;
-    })}
+    })}</>}
   </div>;
 }
