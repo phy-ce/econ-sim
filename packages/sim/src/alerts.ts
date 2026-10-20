@@ -85,7 +85,7 @@ export function weeklyAlerts(w: World) {
       }
     }
   }
-  // 지역 알림은 그 지역 왕국의 왕실에게만 간다. 다른 왕국에도 알리는 것은 중대한 알림(심한 기아)뿐이다
+  // 지역 알림은 그 지역 왕국의 왕실에게만 간다 (다른 왕국의 기아·인력 사정은 알리지 않는다)
   const crownOf = (r: Region) => w.kingdoms.find((k) => k.id === r.kingdomId)?.governmentId ?? null;
   // 기상 조건: 지난 점검 뒤에 새로 걸린 조건마다 한 번 (조건은 날짜로 다시 계산하므로 따로 기억하지 않는다)
   for (const r of w.regions) {
@@ -104,7 +104,7 @@ export function weeklyAlerts(w: World) {
       if (h.population >= 5000 && h.food < line) {
         const food = Math.round(h.food * 100);
         const severe = h.food < SEVERE_FAMINE;
-        alertOnce(w, `famine:${r.id}:${cls}`, TICKS_PER_WEEK * 8, severe ? null : crownOf(r),
+        alertOnce(w, `famine:${r.id}:${cls}`, TICKS_PER_WEEK * 8, crownOf(r),
           `${r.name}의 ${STARVING_KO[cls]} 굶고 있습니다(식량 충족 ${food}%). 인구가 줄어듭니다.`,
           { kind: severe ? 'danger' : 'warn', regionId: r.id, en: `${CLASS_DEFS[cls].nameEn} in ${regionNameEn(r.id)} are starving (food ${food}%). The population is shrinking.` });
       }
