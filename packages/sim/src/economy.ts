@@ -249,6 +249,7 @@ export function disbanded(b: Building): boolean {
 
 export function slots(b: Building, skill: Skill): number {
   if (!b.active || disbanded(b)) return 0;
+  if (skill === 'aristocrat' && b.nobleSeats !== undefined) return b.nobleSeats;
   return (getMethod(b.typeId, b.methodId).workers[skill] ?? 0) * b.level * b.utilization;
 }
 

@@ -132,7 +132,7 @@ export function regionStarts(seed: number, owner: Record<number, number>): Map<n
   for (const id of ids) {
     const t = TIERS[tierOf[id]];
     const total = Math.round((t.pop[0] + rnd() * (t.pop[1] - t.pop[0])) / 1000) * 1000;
-    const aristocrat = Math.round(total * t.aristocrat * jit()), skilled = Math.round(total * t.skilled * jit()), expert = Math.round(total * t.expert * jit());
+    const aristocrat = Math.round(total * t.aristocrat * TUNE.aristStart * jit()), skilled = Math.round(total * t.skilled * jit()), expert = Math.round(total * t.expert * jit());
     const gentry = Math.round(total * t.gentry);
     const peasant = total - aristocrat - gentry - skilled - expert;
     const farms = Math.round((total / 100_000) * t.farms * jit());
@@ -229,11 +229,12 @@ export function createWorld(seed = 1, opts: CreateWorldOptions = {}): World {
       p.size = size; p.savings = size * START_SAVINGS[cls]; p.literacy100 = UPPER_LITERACY * 100;
     }
   }
-  // 귀족은 저택, 자본가는 금융가에서 일하며 시작한다
+  // 귀족은 저택, 자본가는 금융가에서 일하며 시작한다 (저택 상급 귀족 자리는 시작 귀족이 다 앉을 만큼에서 시작한다)
+  for (const b of w.buildings) if (b.typeId === 'manor') delete b.nobleSeats;
   updateOwnership(w);
   for (const o of w.buildings.filter((x) => BUILDING_BY_ID[x.typeId].ownership)) {
     const free = getPop(w, o.regionId, BUILDING_BY_ID[o.typeId].ownership!, 0);
-    if (free.size > 0) movePeople(w, free, getPop(w, o.regionId, free.prof, o.id), workforce(free));
+    if (free.size > 0) movePeople(w, free, getPop(w, o.regionId, free.prof, o.id), Math.min(workforce(free), slots(o, free.prof as Skill)));
   }
   // 시작 건물(건축사무소·행정청·농장)은 이미 돌던 건물이라 일꾼이 찬 채로 시작한다: 그 지역 소작농에서 데려온다 (위 직종은 자격자만)
   for (const b of w.buildings.filter((x) => !BUILDING_BY_ID[x.typeId].auto)) {

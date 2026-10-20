@@ -229,6 +229,8 @@ export interface Building {
   privateShare?: number;
   /** 소작지: 일하는 소작농 (노동 인구) */
   tenants?: number;
+  /** 저택: 상급 귀족 자리 (노동 인구). 저택이 가진 건물 레벨과 소작지 칸으로 정한다 (production.ts updateOwnership) */
+  nobleSeats?: number;
   lastSwitchTick: number;
   /** 숙련도 % (0..100, 100배 값. 하루 3.5씩 오른다). 규칙 단위(0..1)는 expOf(b) */
   exp100: number;

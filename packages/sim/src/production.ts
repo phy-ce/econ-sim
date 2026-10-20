@@ -1,4 +1,4 @@
-import { BUILDING_BY_ID, GOOD_IDS, MAX_POINTS_PER_LEVEL_DAY, OWNER_SEATS_PER_LEVEL, OWNERSHIP_SEATS, TUNE, getMethod } from './data';
+import { BUILDING_BY_ID, GOOD_IDS, MAX_POINTS_PER_LEVEL_DAY, OWNER_SEATS_PER_LEVEL, OWNERSHIP_SEATS, TUNE, WORKFORCE_RATIO, getMethod } from './data';
 import { builderOf, companyById, efficiency, harvestFactor, isGovernment, landFree, logEvent, newBuilding, ownerBuildingOf, regionById } from './economy';
 import { SKILLS } from './types';
 import { workforce } from './pops';
@@ -33,9 +33,34 @@ export function updateSubsistence(w: World) {
 }
 
 /**
- * 소유 건물(저택·금융가): 지역마다 하나씩, 그 지역 민간 소유. 크기는 소유한 건물 레벨 × OWNER_SEATS_PER_LEVEL 과,
- * 자리가 있는 직종마다 다른 건물에서 일하지 않는 그 지역 노동 인구(실업자 + 여기 앉은 사람)가 다 앉을 만큼 중 가장 큰 쪽이다
- * (저택: 귀족과, 다른 일자리가 없는 하급 귀족).
+ * 저택의 상급 귀족 자리 (노동 인구, TUNE.nobleSeats 규칙. 비교 중이며 기본 'fit' 은 정해진 자리 없이 지역 귀족이 다 앉는다 → undefined).
+ * - owned: 저택이 가진 건물 레벨 × nobleSeatsPerLevel + 소작지 칸 × nobleSeatsPerCell
+ * - income: 저택 수입(profitEma) ÷ 귀족 1명 목표 수입 nobleIncome (하루 1% 씩 다가간다. 처음에는 지금 귀족 수에서 시작한다)
+ * - land: (소작지 칸 + 저택이 가진 건물 레벨) × nobleSeatsLand
+ * - pop: 지역 인구 × noblePerMille / 1000 × 노동 인구 비율
+ * 규칙이 있으면 상급 귀족 수는 이 자리에 맞춰 간다 (pops.ts matchNobles)
+ */
+function nobleSeatsOf(w: World, regionId: number, b: Building, own: number): number | undefined {
+  const rule = TUNE.nobleSeats;
+  if (rule === 'fit') return undefined;
+  const cells = () => w.buildings.find((x) => x.regionId === regionId && x.typeId === 'subsistence')?.level ?? 0;
+  if (rule === 'owned') return Math.round(own * TUNE.nobleSeatsPerLevel + cells() * TUNE.nobleSeatsPerCell);
+  if (rule === 'land') return Math.round((own + cells()) * TUNE.nobleSeatsLand);
+  if (rule === 'pop') {
+    let n = 0;
+    for (const p of w.pops) if (p.regionId === regionId) n += p.size;
+    return Math.round((n * TUNE.noblePerMille) / 1000 * WORKFORCE_RATIO);
+  }
+  let prev = b.nobleSeats;
+  if (prev === undefined) { prev = 0; for (const p of w.pops) if (p.regionId === regionId && p.prof === 'aristocrat') prev += workforce(p); }
+  return round2(prev + (Math.max(0, b.profitEma) / TUNE.nobleIncome - prev) * 0.01);
+}
+
+/**
+ * 소유 건물(저택·금융가): 지역마다 하나씩, 그 지역 민간 소유.
+ * 크기는 소유한 건물 레벨 × OWNER_SEATS_PER_LEVEL 과, 자리가 있는 직종마다 다른 건물에서 일하지 않는 그 지역 노동 인구(실업자 + 여기 앉은 사람)가
+ * 다 앉을 만큼 중 가장 큰 쪽이다 (저택: 귀족과, 다른 일자리가 없는 하급 귀족). 저택 상급 귀족 자리 규칙(nobleSeatsOf)이 있으면 귀족 자리는 그 값이고,
+ * 저택 레벨은 그 자리와 하급 귀족이 다 앉을 만큼 중 큰 쪽이다.
  * 하루 받은 배당·지대(last.revenue)는 이동평균(profitEma)으로 남긴다 (자리 값).
  */
 export function updateOwnership(w: World) {
@@ -54,10 +79,13 @@ export function updateOwnership(w: World) {
         w.buildings.push(b);
       }
       const workers = getMethod(typeId, typeId).workers;
-      let levels = ((owned.get(`${r.id}|${typeId}`) ?? 0) * OWNER_SEATS_PER_LEVEL) / OWNERSHIP_SEATS;
+      const own = owned.get(`${r.id}|${typeId}`) ?? 0;
+      let levels = (own * OWNER_SEATS_PER_LEVEL) / OWNERSHIP_SEATS;
+      const seats = typeId === 'manor' ? nobleSeatsOf(w, r.id, b, own) : undefined;
+      if (seats !== undefined) { b.nobleSeats = seats; levels = seats / OWNERSHIP_SEATS; }
       for (const s of SKILLS) {
         const per = workers[s] ?? 0;
-        if (!(per > 0)) continue;
+        if (!(per > 0) || (seats !== undefined && s === 'aristocrat')) continue;
         let wf = 0;
         for (const p of w.pops) if (p.regionId === r.id && p.prof === s && (p.work === 0 || p.work === b.id)) wf += workforce(p);
         levels = Math.max(levels, wf / per);

@@ -9,7 +9,7 @@ import { applyCommandMsg } from './commands';
 import { chargeInterest, collectIncomeTax, distributeInvestment, doResearch, mintMoney, payDividends, spendBudget, weeklyBanking } from './finance';
 import { laborMarket, migrate, payWages, syncEmployment } from './labor';
 import { clearMarkets, collectOrders, harvest, newBook, resetMarkets, updatePrices } from './market';
-import { aggregateHouseholds, prunePops, updateGrowth, updateLiteracy, updateQualifications, weekToward } from './pops';
+import { aggregateHouseholds, matchNobles, prunePops, updateGrowth, updateLiteracy, updateQualifications, weekToward } from './pops';
 import { advanceConstruction, produce, progressDemolition, updateIdleOffices, updateSubsistence } from './production';
 import { POP_CLASSES, SKILLS, educationOf, emptyLedger } from './types';
 import type { GoodId, HistoryPoint, PopClass, QueuedCommand, Skill, World } from './types';
@@ -50,6 +50,7 @@ export function step(w: World, commands: QueuedCommand[] = []): string[] {
   updatePrices(w);
 
   updateQualifications(w);
+  matchNobles(w);
   updateGrowth(w);
   migrate(w);
   prunePops(w);
