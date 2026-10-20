@@ -55,7 +55,7 @@ export const GOODS: Record<GoodId, GoodDef> = {
  */
 export const SKILL_DEFS: Record<Skill, SkillDef> = {
   unskilled: { id: 'unskilled', name: '노동자', nameEn: 'Labourers', baseWage: 10 },
-  skilled: { id: 'skilled', name: '기술자', nameEn: 'Skilled workers', baseWage: 20 },
+  skilled: { id: 'skilled', name: '기술자', nameEn: 'Skilled workers', baseWage: 15 },
   expert: { id: 'expert', name: '전문가', nameEn: 'Experts', baseWage: 40 },
   gentry: { id: 'gentry', name: '하급 귀족', nameEn: 'Gentry', baseWage: 30 },
   capitalist: { id: 'capitalist', name: '자본가', nameEn: 'Capitalists', baseWage: 40 },
@@ -142,99 +142,99 @@ export const BUILDING_TYPES: BuildingTypeDef[] = [
   {
     id: 'farm', name: '곡물 농장', nameEn: 'Grain farm', land: 'arable', buildPoints: 600,
     methods: [
-      m({ id: 'farm_basic', name: '곡물 재배', nameEn: 'Grain farming', workers: jobs(800, 200), inputs: {}, outputs: { grain: 7500 } }),
-      m({ id: 'farm_tools', name: '쇠 농기구', nameEn: 'Iron implements', tech: 'iron_tools', workers: jobs(600, 200), inputs: { tools: 100 }, outputs: { grain: 8000 } }),
-      m({ id: 'farm_mech', name: '농업 기계', nameEn: 'Farm machinery', tech: 'agri_mech', workers: jobs(400, 100), inputs: { fuel: 300, electronics: 100 }, outputs: { grain: 8000 } }),
+      m({ id: 'farm_basic', name: '곡물 재배', nameEn: 'Grain farming', workers: jobs(800, 200), inputs: {}, outputs: { grain: 6900 } }),
+      m({ id: 'farm_tools', name: '쇠 농기구', nameEn: 'Iron implements', tech: 'iron_tools', workers: jobs(600, 200), inputs: { tools: 100 }, outputs: { grain: 7300 } }),
+      m({ id: 'farm_mech', name: '농업 기계', nameEn: 'Farm machinery', tech: 'agri_mech', workers: jobs(400, 100), inputs: { fuel: 300, electronics: 100 }, outputs: { grain: 7600 } }),
     ],
   },
   {
     id: 'fiber_farm', name: '섬유 농장', nameEn: 'Fibre farm', land: 'arable', buildPoints: 600,
     methods: [
-      m({ id: 'fiber_basic', name: '섬유 재배', nameEn: 'Fibre farming', workers: jobs(800, 200), inputs: {}, outputs: { fiber: 7500 } }),
-      m({ id: 'fiber_tools', name: '쇠 농기구', nameEn: 'Iron implements', tech: 'iron_tools', workers: jobs(600, 200), inputs: { tools: 100 }, outputs: { fiber: 8000 } }),
-      m({ id: 'fiber_mech', name: '농업 기계', nameEn: 'Farm machinery', tech: 'agri_mech', workers: jobs(400, 100), inputs: { fuel: 300, electronics: 100 }, outputs: { fiber: 8000 } }),
+      m({ id: 'fiber_basic', name: '섬유 재배', nameEn: 'Fibre farming', workers: jobs(800, 200), inputs: {}, outputs: { fiber: 6900 } }),
+      m({ id: 'fiber_tools', name: '쇠 농기구', nameEn: 'Iron implements', tech: 'iron_tools', workers: jobs(600, 200), inputs: { tools: 100 }, outputs: { fiber: 7300 } }),
+      m({ id: 'fiber_mech', name: '농업 기계', nameEn: 'Farm machinery', tech: 'agri_mech', workers: jobs(400, 100), inputs: { fuel: 300, electronics: 100 }, outputs: { fiber: 7600 } }),
     ],
   },
   {
     // 곡물을 사료로 먹여 고기를 낸다. 곡물이 쌀수록 남는다
     id: 'ranch', name: '목장', nameEn: 'Livestock ranch', land: 'arable', buildPoints: 600,
     methods: [
-      m({ id: 'ranch_basic', name: '가축 사육', nameEn: 'Livestock raising', workers: jobs(800, 200), inputs: { grain: 3000 }, outputs: { meat: 1400 } }),
+      m({ id: 'ranch_basic', name: '가축 사육', nameEn: 'Livestock raising', workers: jobs(800, 200), inputs: { grain: 3000 }, outputs: { meat: 1300 } }),
     ],
   },
   {
     id: 'lumber', name: '벌목장', nameEn: 'Lumber camp', land: 'forest', buildPoints: 600,
     methods: [
-      m({ id: 'lumber_manual', name: '수작업 벌목', nameEn: 'Hand felling', workers: jobs(800, 200), inputs: {}, outputs: { timber: 7500 } }),
-      m({ id: 'lumber_axe', name: '쇠도끼와 톱', nameEn: 'Iron axes and saws', tech: 'iron_tools', workers: jobs(700, 300), inputs: { tools: 100 }, outputs: { timber: 10000 } }),
+      m({ id: 'lumber_manual', name: '수작업 벌목', nameEn: 'Hand felling', workers: jobs(800, 200), inputs: {}, outputs: { timber: 6900 } }),
+      m({ id: 'lumber_axe', name: '쇠도끼와 톱', nameEn: 'Iron axes and saws', tech: 'iron_tools', workers: jobs(700, 300), inputs: { tools: 100 }, outputs: { timber: 8900 } }),
     ],
   },
   {
     id: 'mine', name: '철광산', nameEn: 'Iron mine', land: 'ore', deposit: 'iron', buildPoints: 800,
     methods: [
-      m({ id: 'iron_shaft', name: '갱도 채굴', nameEn: 'Shaft mining', workers: jobs(900, 100), inputs: {}, outputs: { ore: 3500 } }),
-      m({ id: 'iron_pick', name: '쇠곡괭이', nameEn: 'Iron picks', tech: 'iron_tools', workers: jobs(800, 200), inputs: { tools: 100 }, outputs: { ore: 4500 } }),
-      m({ id: 'iron_pump', name: '증기 양수기', nameEn: 'Steam pumps', tech: 'steam_pump', workers: jobs(600, 300, 100), inputs: { tools: 200, fuel: 300 }, outputs: { ore: 8000 } }),
+      m({ id: 'iron_shaft', name: '갱도 채굴', nameEn: 'Shaft mining', workers: jobs(900, 100), inputs: {}, outputs: { ore: 3300 } }),
+      m({ id: 'iron_pick', name: '쇠곡괭이', nameEn: 'Iron picks', tech: 'iron_tools', workers: jobs(800, 200), inputs: { tools: 100 }, outputs: { ore: 4200 } }),
+      m({ id: 'iron_pump', name: '증기 양수기', nameEn: 'Steam pumps', tech: 'steam_pump', workers: jobs(600, 300, 100), inputs: { tools: 200, fuel: 300 }, outputs: { ore: 7400 } }),
     ],
   },
   {
     id: 'coal_mine', name: '석탄광산', nameEn: 'Coal mine', land: 'ore', deposit: 'coal', buildPoints: 800,
     methods: [
-      m({ id: 'coal_shaft', name: '갱도 채굴', nameEn: 'Shaft mining', workers: jobs(800, 200), inputs: {}, outputs: { fuel: 5000 } }),
-      m({ id: 'coal_pick', name: '쇠곡괭이', nameEn: 'Iron picks', tech: 'iron_tools', workers: jobs(800, 200), inputs: { tools: 100 }, outputs: { fuel: 6000 } }),
-      m({ id: 'coal_pump', name: '증기 양수기', nameEn: 'Steam pumps', tech: 'steam_pump', workers: jobs(600, 300, 100), inputs: { tools: 200 }, outputs: { fuel: 10000 } }),
+      m({ id: 'coal_shaft', name: '갱도 채굴', nameEn: 'Shaft mining', workers: jobs(800, 200), inputs: {}, outputs: { fuel: 4600 } }),
+      m({ id: 'coal_pick', name: '쇠곡괭이', nameEn: 'Iron picks', tech: 'iron_tools', workers: jobs(800, 200), inputs: { tools: 100 }, outputs: { fuel: 5500 } }),
+      m({ id: 'coal_pump', name: '증기 양수기', nameEn: 'Steam pumps', tech: 'steam_pump', workers: jobs(600, 300, 100), inputs: { tools: 200 }, outputs: { fuel: 9200 } }),
     ],
   },
   {
     id: 'foodplant', name: '식료품 공장', nameEn: 'Grocery plant', land: 'plot', buildPoints: 1000,
     methods: [
-      m({ id: 'food_manual', name: '수작업 가공', nameEn: 'Manual processing', tech: 'milling', workers: jobs(800, 200), inputs: { grain: 3500 }, outputs: { food: 6000 } }),
-      m({ id: 'food_machine', name: '기계 가공', nameEn: 'Machine processing', tech: 'food_machinery', workers: jobs(500, 200), inputs: { grain: 3500, tools: 100 }, outputs: { food: 6000 } }),
+      m({ id: 'food_manual', name: '수작업 가공', nameEn: 'Manual processing', tech: 'milling', workers: jobs(800, 200), inputs: { grain: 3500 }, outputs: { food: 5700 } }),
+      m({ id: 'food_machine', name: '기계 가공', nameEn: 'Machine processing', tech: 'food_machinery', workers: jobs(500, 200), inputs: { grain: 3500, tools: 100 }, outputs: { food: 5600 } }),
     ],
   },
   {
     id: 'textile', name: '방직 공장', nameEn: 'Textile mill', land: 'plot', buildPoints: 1000,
     methods: [
-      m({ id: 'textile_hand', name: '손베틀', nameEn: 'Handlooms', tech: 'spinning', workers: jobs(800, 200), inputs: { fiber: 3500 }, outputs: { cloth: 4000 } }),
-      m({ id: 'textile_tailor', name: '맞춤 재단', nameEn: 'Bespoke tailoring', tech: 'spinning', workers: jobs(400, 600), inputs: { fiber: 1500 }, outputs: { luxury_cloth: 800 } }),
-      m({ id: 'textile_steam', name: '증기 직기', nameEn: 'Power looms', tech: 'power_loom', workers: jobs(500, 200), inputs: { fiber: 3500, tools: 100 }, outputs: { cloth: 4000 } }),
-      m({ id: 'textile_tailor_steam', name: '증기 재단', nameEn: 'Steam tailoring', tech: 'power_loom', workers: jobs(300, 600, 100), inputs: { fiber: 1500, tools: 100 }, outputs: { luxury_cloth: 1100 } }),
+      m({ id: 'textile_hand', name: '손베틀', nameEn: 'Handlooms', tech: 'spinning', workers: jobs(800, 200), inputs: { fiber: 3500 }, outputs: { cloth: 3800 } }),
+      m({ id: 'textile_tailor', name: '맞춤 재단', nameEn: 'Bespoke tailoring', tech: 'spinning', workers: jobs(400, 600), inputs: { fiber: 1500 }, outputs: { luxury_cloth: 650 } }),
+      m({ id: 'textile_steam', name: '증기 직기', nameEn: 'Power looms', tech: 'power_loom', workers: jobs(500, 200), inputs: { fiber: 3500, tools: 100 }, outputs: { cloth: 3800 } }),
+      m({ id: 'textile_tailor_steam', name: '증기 재단', nameEn: 'Steam tailoring', tech: 'power_loom', workers: jobs(300, 600, 100), inputs: { fiber: 1500, tools: 100 }, outputs: { luxury_cloth: 950 } }),
     ],
   },
   {
     id: 'smelter', name: '제철소', nameEn: 'Ironworks', land: 'plot', buildPoints: 1200,
     methods: [
-      m({ id: 'smelt_charcoal', name: '목탄 제련', nameEn: 'Charcoal smelting', tech: 'bloomery', workers: jobs(700, 300), inputs: { ore: 2000, timber: 2000 }, outputs: { metal: 4000 } }),
-      m({ id: 'smelt_coke', name: '코크스 제련', nameEn: 'Coke smelting', tech: 'coking', workers: jobs(700, 300), inputs: { ore: 2000, fuel: 1000 }, outputs: { metal: 4500 } }),
+      m({ id: 'smelt_charcoal', name: '목탄 제련', nameEn: 'Charcoal smelting', tech: 'bloomery', workers: jobs(700, 300), inputs: { ore: 2000, timber: 2000 }, outputs: { metal: 3800 } }),
+      m({ id: 'smelt_coke', name: '코크스 제련', nameEn: 'Coke smelting', tech: 'coking', workers: jobs(700, 300), inputs: { ore: 2000, fuel: 1000 }, outputs: { metal: 4200 } }),
     ],
   },
   {
     id: 'workshop', name: '공방', nameEn: 'Tool workshop', land: 'plot', buildPoints: 1000,
     methods: [
-      m({ id: 'tools_wood', name: '목공구', nameEn: 'Wooden tools', tech: 'guilds', workers: jobs(800, 200), inputs: { timber: 2000 }, outputs: { tools: 2000 } }),
-      m({ id: 'tools_iron', name: '쇠공구', nameEn: 'Iron tools', tech: 'ironworking', workers: jobs(700, 300), inputs: { timber: 1000, ore: 1000 }, outputs: { tools: 2700 } }),
+      m({ id: 'tools_wood', name: '목공구', nameEn: 'Wooden tools', tech: 'guilds', workers: jobs(800, 200), inputs: { timber: 2000 }, outputs: { tools: 1900 } }),
+      m({ id: 'tools_iron', name: '쇠공구', nameEn: 'Iron tools', tech: 'ironworking', workers: jobs(700, 300), inputs: { timber: 1000, ore: 1000 }, outputs: { tools: 2500 } }),
     ],
   },
   {
     id: 'furniture', name: '가구 공방', nameEn: 'Furniture workshop', land: 'plot', buildPoints: 1000,
     methods: [
-      m({ id: 'furniture_hand', name: '손가구', nameEn: 'Hand-made furniture', tech: 'guilds', workers: jobs(800, 200), inputs: { timber: 2000, fiber: 500 }, outputs: { furniture: 2700 } }),
-      m({ id: 'furniture_luxury', name: '장인 가구', nameEn: 'Master cabinetmakers', tech: 'guilds', workers: jobs(400, 600), inputs: { timber: 1000, cloth: 200 }, outputs: { luxury_furniture: 600 } }),
-      m({ id: 'furniture_tools', name: '공구 가구', nameEn: 'Furniture with tools', tech: 'ironworking', workers: jobs(600, 300, 100), inputs: { timber: 2000, fiber: 500, tools: 100 }, outputs: { furniture: 3900 } }),
-      m({ id: 'furniture_luxury_tools', name: '공구 장인 가구', nameEn: 'Cabinetmakers with tools', tech: 'ironworking', workers: jobs(300, 600, 100), inputs: { timber: 1000, cloth: 200, tools: 100 }, outputs: { luxury_furniture: 850 } }),
+      m({ id: 'furniture_hand', name: '손가구', nameEn: 'Hand-made furniture', tech: 'guilds', workers: jobs(800, 200), inputs: { timber: 2000, fiber: 500 }, outputs: { furniture: 2500 } }),
+      m({ id: 'furniture_luxury', name: '장인 가구', nameEn: 'Master cabinetmakers', tech: 'guilds', workers: jobs(400, 600), inputs: { timber: 1000, cloth: 200 }, outputs: { luxury_furniture: 500 } }),
+      m({ id: 'furniture_tools', name: '공구 가구', nameEn: 'Furniture with tools', tech: 'ironworking', workers: jobs(600, 300, 100), inputs: { timber: 2000, fiber: 500, tools: 100 }, outputs: { furniture: 3600 } }),
+      m({ id: 'furniture_luxury_tools', name: '공구 장인 가구', nameEn: 'Cabinetmakers with tools', tech: 'ironworking', workers: jobs(300, 600, 100), inputs: { timber: 1000, cloth: 200, tools: 100 }, outputs: { luxury_furniture: 750 } }),
     ],
   },
   {
     id: 'fab', name: '기계 공장', nameEn: 'Machine works', land: 'plot', buildPoints: 1200,
     methods: [
-      m({ id: 'machine_steam', name: '증기 기계 제작', nameEn: 'Steam engineering', tech: 'steam_engine', workers: jobs(600, 300, 100), inputs: { metal: 2000, fuel: 500 }, outputs: { electronics: 2100 } }),
+      m({ id: 'machine_steam', name: '증기 기계 제작', nameEn: 'Steam engineering', tech: 'steam_engine', workers: jobs(600, 300, 100), inputs: { metal: 2000, fuel: 500 }, outputs: { electronics: 2000 } }),
     ],
   },
   {
     id: 'railway', name: '운송 조합', nameEn: 'Carters\' guild', land: 'plot', buildPoints: 600,
     methods: [
-      m({ id: 'rail_wagon', name: '짐마차', nameEn: 'Freight wagons', tech: 'wagonway', workers: jobs(900, 100), inputs: { grain: 1000, timber: 500 }, outputs: { transport: 6000 } }),
-      m({ id: 'rail_steam', name: '증기 철도', nameEn: 'Steam railway', tech: 'steam_rail', workers: jobs(500, 400, 100), inputs: { electronics: 100, fuel: 1000 }, outputs: { transport: 10500 } }),
+      m({ id: 'rail_wagon', name: '짐마차', nameEn: 'Freight wagons', tech: 'wagonway', workers: jobs(900, 100), inputs: { grain: 1000, timber: 500 }, outputs: { transport: 5800 } }),
+      m({ id: 'rail_steam', name: '증기 철도', nameEn: 'Steam railway', tech: 'steam_rail', workers: jobs(500, 400, 100), inputs: { electronics: 100, fuel: 1000 }, outputs: { transport: 9500 } }),
     ],
   },
   {

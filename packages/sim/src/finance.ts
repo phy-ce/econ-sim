@@ -107,7 +107,7 @@ export function taxRates(k: Kingdom, law: TaxLaw = k.taxLaw): { land: number; po
 
 /**
  * 임금 지수 (매주, 빅토리아3의 '보통 임금'): 왕국 민간 건물 노동자의 평균 임금 ÷ 노동자 기본 임금 (고용 가중)의 이동평균.
- * 국영 임금은 이 지수에 직종별 기본 임금(노동자 10, 기술자 20, 전문가 40 …)을 곱한다. 민간 노동자 고용이 없으면 그대로 둔다
+ * 국영 임금은 이 지수에 직종별 기본 임금(노동자 10, 기술자 15, 전문가 40 …)을 곱한다. 민간 노동자 고용이 없으면 그대로 둔다
  */
 export function updateWageIndex(w: World, k: Kingdom) {
   let paid = 0, base = 0;
