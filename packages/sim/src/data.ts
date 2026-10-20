@@ -442,7 +442,7 @@ export const HARVEST_KINDS: HarvestDef[] = [
 export const SUBSISTENCE = {
   /** 소작지 1칸 = 소작농 1,000명. 다른 건물 1레벨(일꾼 1,000명)과 같아서 경작지 1칸을 농장으로 바꿔도 일자리 수는 그대로다 */
   workersPerCell: 1000,
-  grainPerWorker: 3.25, // 2.85·3·3.25·3.5 비교 (20년 × 시드 1~4, 해마다 흐름): 3.25가 모든 구간에서 생활수준·인구가 높다 (DECISIONS 7-12)
+  grainPerWorker: 3, // 초반 곡물 과잉을 줄이려고 3.25 → 3 (2026-10-21). 3.25·3·2.75·2.5 (20년 × 시드 1·2), 2·1.5 (10년) 비교: 3이 20년 총생산이 가장 높고 1년차 공급/수요 4.3 → 3.4. 2.5 이하는 소작농 생활수준·인구가 크게 준다 (DESIGN 4장)
   fiberPerWorker: 0.6,
   timberPerWorker: 1.3,
 };
