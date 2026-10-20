@@ -8,7 +8,7 @@ import { round2 } from './rng';
 import { LOWER_JOBS, SKILLS, crewOf } from './types';
 import type { BudgetItem, Building, Company, GoodBag, GoodId, Kingdom, Pop, PopClass, Region, SalvageLot, TaxLaw, World } from './types';
 
-// ---------------------------------------------------------------- 은행
+// ---------------------------------------------------------------- 국채 이자
 
 /** 일 이자율 (연 약 9%) */
 export const DAILY_INTEREST = 0.00025;
@@ -19,8 +19,8 @@ export function chargeInterest(w: World) {
     const interest = c.debt * DAILY_INTEREST;
     const paid = Math.min(interest, Math.max(0, c.cash));
     c.cash -= paid;
-    // 국채 이자는 사라지는 돈이다
-    if (c.state) w.mint.interest += paid; else w.bank.cash += paid;
+    // 국채 이자는 사라지는 돈이다 (빚은 왕실만 진다)
+    w.mint.interest += paid;
     c.debt += interest - paid;
     c.weekProfit -= interest;
     c.ledger.interest += interest;
@@ -504,7 +504,7 @@ export function distributeInvestment(w: World) {
 }
 
 /**
- * 은행·상인 조합이 자본보다 크게 쌓은 돈과 주인 없는 돈은 은행 자본을 먼저 채우고, 남으면 왕국 투자 풀로 간다 (인구 비례).
+ * 왕실이 남는 돈으로 국채를 갚고, 상인 조합이 자본보다 크게 쌓은 돈과 주인 없는 돈은 왕국 투자 풀로 간다 (인구 비례).
  * 돈이 어디에도 고이지 않게 하는 일반 규칙.
  */
 export function weeklyBanking(w: World) {
@@ -515,14 +515,8 @@ export function weeklyBanking(w: World) {
   }
   let pool = Math.max(0, w.fund);
   w.fund -= pool;
-  const bankExcess = w.bank.cash - w.bank.capital * 2;
-  if (bankExcess > 0) { w.bank.cash -= bankExcess; pool += bankExcess; }
   const traderExcess = w.traders.cash - w.traders.capital * 1.2;
   if (traderExcess > 0) { w.traders.cash -= traderExcess; pool += traderExcess; }
-  // 파산으로 떼인 돈 때문에 은행 자본이 줄었으면 먼저 채운다
-  const refill = Math.min(pool, Math.max(0, w.bank.capital - w.bank.cash));
-  w.bank.cash += refill;
-  pool -= refill;
   if (pool <= 0) return;
   const popOf = new Map<number, number>();
   for (const p of w.pops) { const k = kingdomOf(w, p.regionId); popOf.set(k, (popOf.get(k) ?? 0) + p.size); }

@@ -544,7 +544,6 @@ export function colonySol(w: World, prof: PopClass): number {
  * 화폐 총량(totalMoney)과 센트 맞춤(round.ts roundWorld)이 이 목록 하나를 쓴다: 돈을 가진 계정을 새로 두면 여기에만 넣는다
  */
 export function mapMoney(w: World, f: (x: number) => number): void {
-  w.bank.cash = f(w.bank.cash);
   w.traders.cash = f(w.traders.cash);
   for (const c of w.companies) c.cash = f(c.cash);
   for (const p of w.pops) p.savings = f(p.savings);
@@ -575,37 +574,34 @@ export function kingdomGdp(w: World, kingdomId: number): number {
   return daily * 360;
 }
 
-export function bookValue(b: Building): number {
-  return BUILDING_BY_ID[b.typeId].buildPoints * POINT_VALUE * b.level;
-}
-
-/** 신용 한도: 보유 건물 장부가의 절반 + 기본 한도. 왕국 정부는 국채 한도(연간 총생산 비례) */
+/**
+ * 왕실만 빌린다: 국고가 모자라면 국채를 찍어 빌리고(새 돈), 남으면 갚는다(그 돈은 사라진다). 민간 상회는 빌리지 않는다 (한도 0).
+ * 국채 한도 = 기본 한도 + 연간 총생산 × STATE_CREDIT_GDP
+ */
 export const BASE_CREDIT = 300_000;
 /** 국채 한도 = 연간 총생산 × 이 비율 */
 export const STATE_CREDIT_GDP = 0.25;
 export function creditLimit(w: World, c: Company): number {
-  if (c.state) return BASE_CREDIT + kingdomGdp(w, c.kingdomId) * STATE_CREDIT_GDP;
-  let book = 0;
-  for (const b of w.buildings) if (b.companyId === c.id) book += bookValue(b);
-  return BASE_CREDIT + book * 0.5;
+  return c.state ? BASE_CREDIT + kingdomGdp(w, c.kingdomId) * STATE_CREDIT_GDP : 0;
 }
 
+/** 왕실이 국채를 찍어 빌린다. 민간은 0 (빌리지 않는다) */
 export function borrow(w: World, c: Company, amount: number): number {
-  const room = Math.max(0, creditLimit(w, c) - c.debt);
-  // 왕국 정부는 은행이 아니라 국채를 찍어 빌린다 (새 돈)
-  const take = Math.max(0, Math.min(amount, room, c.state ? Infinity : w.bank.cash));
+  if (!c.state) return 0;
+  const take = Math.max(0, Math.min(amount, creditLimit(w, c) - c.debt));
   if (take <= 0) return 0;
-  if (c.state) w.mint.issued += take; else w.bank.cash -= take;
+  w.mint.issued += take;
   c.cash += take;
   c.debt += take;
   return take;
 }
 
+/** 왕실이 국채를 갚는다 (갚은 돈은 사라진다) */
 export function repay(w: World, c: Company, amount: number): number {
   const pay = Math.max(0, Math.min(amount, c.debt, c.cash));
   c.cash -= pay;
   c.debt -= pay;
-  if (c.state) w.mint.retired += pay; else w.bank.cash += pay;
+  w.mint.retired += pay;
   return pay;
 }
 

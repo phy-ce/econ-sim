@@ -52,7 +52,7 @@ packages/sim      Pure TypeScript simulation: no IO, seeded RNG, fully serializa
   src/labor.ts      hiring, job switching, migration
   src/market.ts     orders, tenant harvest, market clearing, prices
   src/production.ts production, construction, demolition, ownership buildings
-  src/finance.ts    taxes, policy levels, reserves, dividends, banking, minting
+  src/finance.ts    taxes, policy levels, reserves, dividends, crown bonds, minting
   src/budget.ts     budget preview for the UI
   src/ai.ts         weekly AI decisions (src/outlook.ts values investments)
   src/commands.ts   the single validated path for every action, player and AI alike
@@ -116,7 +116,7 @@ Research is paid each week from the research budget (see Money). That money beco
 - **Government buildings** (administration, offices, schools) always run at full capacity. The treasury pays their wages and inputs. Only the crown builds schools and administration.
 - **Schools.** Noble tutors (100 gentry, 20,000 places) or, with printing, public schools (1,000 workers, 100,000 places). Education moves towards 0.1 + 0.8 × places ÷ population and raises literacy.
 - **Treasury income**: taxes, tariffs, private construction fees and minting (ƒ1,000 + 3% of weekly output each week). The crown starts with 26 weeks of running costs.
-- **Debt.** Private companies borrow from the bank up to ƒ300,000 + 50% of their buildings' book value. The crown issues bonds up to ƒ300,000 + 25% of yearly output. Interest is 0.025% a day.
+- **Debt.** Only the crown borrows. When the treasury runs short it automatically issues bonds (new money) up to ƒ300,000 + 25% of yearly output, and repays them when it has spare cash. Interest is 0.025% a day. There is no bank: private companies never borrow. Short of cash, they buy fewer inputs, pay wages in proportion to what they have, and build only from cash and the investment pool.
 - **Investment pool.** Reinvested dividends and people's spare cash go each week to the kingdom's private company, which builds with them.
 - **Money is conserved.** Total money changes only by minting, bond issues, repayments and bond interest. The tests check this to the cent.
 

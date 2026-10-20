@@ -105,8 +105,7 @@ export interface MetricPoint {
   /** 빈부격차: 상층 / 하층 평균 생활수준, 가장 잘사는 지역 / 가장 못사는 지역 평균 생활수준 */
   classGap: number;
   regionGap: number;
-  /** 은행·상인 현금, 대륙 전체 돈 */
-  bank: number;
+  /** 상인 조합 현금 */
   traders: number;
   /** 기상 조건이 걸린 지역 수 (없으면 기록하지 않는다 = 0) */
   harvestRegions?: number;
@@ -212,7 +211,7 @@ export function recordMetrics(w: World) {
   const classGap = upN > 0 && lowN > 0 && low > 0 ? round2((up / upN) / (low / lowN)) : 0;
   const regionGap = regionSol.length && Math.min(...regionSol) > 0 ? round2(Math.max(...regionSol) / Math.min(...regionSol)) : 0;
   const harvestRegions = w.regions.filter((r) => harvestCondition(w, r.id)).length;
-  const point: MetricPoint = { tick: w.tick, kingdoms, goods, classGap, regionGap, bank: r0(w.bank.cash), traders: r0(w.traders.cash), ...(harvestRegions ? { harvestRegions } : {}) };
+  const point: MetricPoint = { tick: w.tick, kingdoms, goods, classGap, regionGap, traders: r0(w.traders.cash), ...(harvestRegions ? { harvestRegions } : {}) };
   // 지표는 이미 소수 둘째 자리로 쓰지만, 기록이라 한 번 더 맞춘다 (저장값 규칙)
   roundAll(point);
   (w.metrics ??= []).push(point);

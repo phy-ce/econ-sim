@@ -12,7 +12,6 @@ import { SKILLS, emptyLedger, isLowerJob } from './types';
 
 /** 민간 상회의 시작 자금 (농장 약 다섯 레벨 공사비). 왕실 국고는 startTreasury 가 정한다 */
 export const START_CASH = 30_000_000;
-const BANK_CAPITAL = 300_000_000;
 const TRADER_CAPITAL = 100_000_000;
 /** 시작 정책 단계: 세금 수준, 국영 임금 수준, 연구비 수준 모두 보통(3) */
 const DEFAULT_BUDGET = { tax: 3, wages: 3, research: 3 };
@@ -176,7 +175,6 @@ export function createWorld(seed = 1, opts: CreateWorldOptions = {}): World {
   const w: World = {
     version: 7, config: { ai }, tick: 0, seed, rngState: seed | 0, nextId: 1000,
     regions, kingdoms, pops: [], fund: 0, metrics: [],
-    bank: { cash: BANK_CAPITAL, capital: BANK_CAPITAL },
     traders: { cash: TRADER_CAPITAL, capital: TRADER_CAPITAL, shipments: [] },
     mint: { minted: 0, issued: 0, retired: 0, interest: 0 },
     companies, buildings: [], constructions: [], salvage: [],
