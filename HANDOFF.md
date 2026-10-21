@@ -21,6 +21,19 @@
 4. **사용자 결정 (2026-10-21):** 흉작 대책(소작농 분담·공장 하루치 주문)은 하지 않는다. 장기 테스트 기준(4단계 기술 7년, 노동자 식량 최저 35%)은 그대로 둔다. 15년차부터 기술자 1인당 소득 하락(5.0 → 2.2) 진단과 철광산 적게 짓기는 진단 후 수치·AI로만 고친다 (진행 중, 브랜치 wt-skiron).
 5. **알려진 문제:** AI가 철광산을 적게 지음 (20년에 철 광맥 7%만 사용), 지역 간 교역 개편 (사용자 보류, "이동할 때마다 돈이 드는 방식" 선호; VIC3_REFERENCE 시장 접근성).
 
+## 0-office. wt-office (2026-10-22, main d34ecd0 위, 합치기 전, 사용자 요청 "민간 공사 수수료가 건축사무소에 먼저 들어가서 수익 건물처럼, 배당으로 국고에")
+- 규칙: 건축사무소는 모든 공사(왕실 것도)에 쓴 포인트 × 포인트당 수수료(사무소 운영비 ÷ (1 − 이익률))를 받는다. 이익률은 건물 숫자 규칙대로 방식 단계별 20/30/40% (`economy.ts officeMargin`, TUNE 아님).
+  수수료는 사무소 매출(`b.last.revenue`, `b.last.fee`)이고, 사무소는 유보 자산을 쌓고(`hasReserve`, 상한 = 기본가 수수료 매출 기준) 남는 이익은 국고 몫(`payout.crown`)으로 국고에 남는다. 왕실 공사는 국고가 자기 사무소에 내므로 현금은 그대로 (장부 buildPaid·buildFees, weekProfit 상쇄).
+- 고른 이유: 이익률 0(운영비 그대로)이면 사무소는 쓰지 않은 포인트만큼 늘 적자라 "수익 건물"이 아니다. 고정 10·20·30%와 단계형을 20년 × 시드 1~6 비교: 20년차 총생산 main 1,040 / 10% 1,560 / 20% 1,750 / 30% 2,530 / 단계형 1,840.
+  단계형은 6시드 중 5개가 main보다 크고 하나는 같다 (가장 낮은 시드 1,441, 고정 20%는 918). 30%는 평균이 가장 크지만 시드 차이가 크다. 민간 공사가 20~40% 비싸지는 대신 국고 수입이 늘어 세금 단계가 내려간다 (20년차 2.75 → 1.74). 보고서 `2026-10-22-office`.
+- 왕실 공사도 같은 수수료: 규칙 하나로 사무소 매출 = 쓴 포인트 전부. 수지 표에는 `왕실 공사`(build) 지출과 사무소 매출이 함께 적혀 지운다 (그래서 왕실이 공사에 쓰는 돈과 사무소 손익이 따로 보인다).
+- 예산 (`budget.ts`): `fees` 줄 없앰, 새 줄 `build`. `wages`·`goods`는 행정청·학교만 (`isBudgetFunded`), 사무소는 `stateFirms`. 사무소 줄은 오늘 값 (매출 = 오늘 수수료 ÷ 오늘 운영비 × (오늘 원료 + 지금 임금 × 단계)), 이동평균은 공사가 끝날 때 15~26% 틀렸다.
+  미리보기 순수지 vs 실제 국고 변화 8주 합 (총 흐름 대비): 시드 1·150주 −3.8/−0.3/−0.6%, 시드 2·150주 −3.0/0.4/−0.1%, 시드 42·21주 0.3/0.4/−0.3%. `drillFees` → `drillBuild`, `buildingEcon.day.fee`, 국영 건물 `dividendsWeek` = 국고 몫.
+- AI: `expenseEma` = wages + goods + research + interest + welfare + build − office (예전 "정부 건물 운영비 − 민간 수수료"와 같은 양). `constructionEstimate.cost`는 민간 = 수수료, 왕실 = 운영비 (`feeMult`). 사무소 증설 조건은 그대로 (주석만).
+- 장부·저장: `lastBudget.fees`(민간 수수료, 지표용)·`office`·`build`, `Kingdom.privateFeeWeek`, `budgetBase.build`(오늘 왕실 공사 수수료), `spentWeek.office/build`, `BuildingStats.fee`. 저장 13판 그대로 (모두 없어도 된다). `feeWageWeek`·`budgetBase.feesWage/feesOther` 없앰.
+- cli: `sweep.ts` traj 에 해마다 사무소 지표 `ofLevel ofPts ofUsed ofBacklog ofProfit ofFees ofBuild ofRes`, `report.py` 이름표 묶음 `건축사무소`.
+- 화면: UI_CHANGES 0-8 / 2-61. 열린 것: `metrics.govSpendWeek`(wages + goods)에 사무소 운영비가 빠졌다 (그래프 뜻이 바뀜). 이익률이 국고 수입 구실을 해서 세금 균형이 바뀌었다: 세금·복지 조정값을 다시 볼 만하다.
+
 ## 0-regionecon. wt-regionecon (2026-10-22, main c3d8efb 병합 뒤, 합치기 전)
 - `buildingEcon(w, b)` (지역 건물 수지·지분·배당, UI_CHANGES 2-59).
 - 재정 수지 표 (UI_CHANGES 2-60, DESIGN 9.2): `budgetPreview` 에 줄 `stateFirms`(국영 사업 손익 = 왕실 생산 건물 매출 − 원료 − 임금, 순수지에 들어감)와 손잡이별 묶음 `groups`(`BUDGET_GROUPS`).

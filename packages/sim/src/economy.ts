@@ -266,10 +266,31 @@ export function slots(b: Building, skill: Skill): number {
   return (getMethod(b.typeId, b.methodId).workers[skill] ?? 0) * b.level * b.utilization;
 }
 
-/** 정부 건물: 행정청, 건축사무소, 학교 (왕국 운영에 쓰는 건물). 왕실 것은 늘 다 가동하고 국고가 운영비를 낸다 */
+/** 정부 건물: 행정청, 건축사무소, 학교 (왕국 운영에 쓰는 건물). 왕실 것은 늘 다 가동하고, 민영화하지 않는다 */
 export function isGovernment(typeId: string): boolean {
   const t = BUILDING_BY_ID[typeId];
   return !!t.stateOnly || t.methods.some((m) => m.construction);
+}
+
+/** 국고가 운영비(임금·원료)를 내는 정부 건물: 행정청·학교. 건축사무소는 공사 수수료를 받는 국영 사업이다 (이익·손실이 국고로) */
+export function isBudgetFunded(typeId: string): boolean {
+  return !!BUILDING_BY_ID[typeId].stateOnly;
+}
+
+/**
+ * 건축사무소 방식의 이익률 (매출 대비): 건물 숫자 규칙과 같이 방식 단계에 따라 20% + 단계 × 10% (목조 20%, 목재 비계 30%, 철골 40%).
+ * 고정 10·20·30%와 20년 × 시드 1~6 비교 (DESIGN 11장)
+ */
+export function officeMargin(methodId: string): number {
+  const i = BUILDING_BY_ID.builder.methods.findIndex((m) => m.id === methodId);
+  return 0.2 + 0.1 * Math.max(0, i);
+}
+
+/**
+ * 건축사무소 수수료 배율: 공사가 쓴 포인트 × 사무소의 포인트당 비용(그날 임금 + 원료) × 이 값 = 비용 ÷ (1 − 이익률). 왕실 공사도 같은 수수료를 낸다
+ */
+export function officeFeeMult(methodId: string): number {
+  return 1 / (1 - officeMargin(methodId));
 }
 
 /** 민영화할 수 있는 왕실 건물: 정부 건물과 자동 건물을 뺀 모두 */
@@ -474,6 +495,8 @@ export interface ConstructionEstimate {
   days: number;
   cost: number;
   required: number;
+  /** 이 회사가 내는 돈 ÷ 사무소 운영비: 민간은 수수료 배율(사무소 방식별 officeFeeMult 의 운영비 가중 평균), 왕실은 1 (자기 사무소에 낸 수수료의 이익이 국고로 돌아온다) */
+  feeMult: number;
 }
 
 /** 회사의 건축사무소로 이 건물 1레벨을 지을 때 걸리는 날과 비용 추정 */
@@ -485,7 +508,7 @@ export function builderOf(w: World, c: Company): Company {
 }
 
 /** withEstimateCache 안에서는 사무소 합계를 사무소마다 한 번만 센다 (그동안 건물이 안 바뀌는 구간에서만 쓴다) */
-let officeCache: Map<number, { pointsPerDay: number; costPerDay: number }> | null = null;
+let officeCache: Map<number, { pointsPerDay: number; costPerDay: number; feePerDay: number }> | null = null;
 export function withEstimateCache<T>(fn: () => T): T {
   officeCache = new Map();
   try { return fn(); } finally { officeCache = null; }
@@ -494,7 +517,7 @@ export function withEstimateCache<T>(fn: () => T): T {
 function officeTotals(w: World, builder: Company) {
   const hit = officeCache?.get(builder.id);
   if (hit) return hit;
-  let pointsPerDay = 0, costPerDay = 0;
+  let pointsPerDay = 0, costPerDay = 0, feePerDay = 0;
   for (const b of w.buildings) {
     if (b.companyId !== builder.id || !b.active) continue;
     const m = getMethod(b.typeId, b.methodId);
@@ -502,19 +525,24 @@ function officeTotals(w: World, builder: Company) {
     const st = b.idle ? 1 : Math.max(0.3, b.last.staffing);
     pointsPerDay += m.construction * b.level * b.utilization * st * efficiency(b);
     const e = estimateMethod(w, b.regionId, b.typeId, b.methodId, builder.wages);
-    costPerDay += (e.wageCost + e.inputCost) * b.level * b.utilization * st;
+    const cost = (e.wageCost + e.inputCost) * b.level * b.utilization * st;
+    costPerDay += cost;
+    feePerDay += cost * officeFeeMult(b.methodId);
   }
-  const t = { pointsPerDay, costPerDay };
+  const t = { pointsPerDay, costPerDay, feePerDay };
   officeCache?.set(builder.id, t);
   return t;
 }
 
 export function constructionEstimate(w: World, c: Company, typeId: string): ConstructionEstimate {
   const required = BUILDING_BY_ID[typeId].buildPoints;
-  const { pointsPerDay, costPerDay } = officeTotals(w, builderOf(w, c));
-  // 한 공사는 레벨당 하루 MAX_POINTS_PER_LEVEL_DAY 까지만 받는다. 비용은 쓴 포인트만큼이다
+  const builder = builderOf(w, c);
+  const { pointsPerDay, costPerDay, feePerDay } = officeTotals(w, builder);
+  // 한 공사는 레벨당 하루 MAX_POINTS_PER_LEVEL_DAY 까지만 받는다. 비용은 쓴 포인트만큼이다.
+  // costPerDay 는 사무소 운영비, cost 는 이 회사가 실제로 내는 돈 (민간은 수수료, 왕실은 사무소 운영비)
+  const feeMult = builder === c || !(costPerDay > 0) ? 1 : feePerDay / costPerDay;
   const days = pointsPerDay > 0 ? required / Math.min(pointsPerDay, MAX_POINTS_PER_LEVEL_DAY) : Infinity;
-  return { pointsPerDay, costPerDay, days, cost: pointsPerDay > 0 ? (required * costPerDay) / pointsPerDay : Infinity, required };
+  return { pointsPerDay, costPerDay, days, cost: pointsPerDay > 0 ? (required * costPerDay * feeMult) / pointsPerDay : Infinity, required, feeMult };
 }
 
 export function hasBuilder(w: World, c: Company): boolean {

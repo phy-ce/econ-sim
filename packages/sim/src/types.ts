@@ -268,11 +268,11 @@ export interface Building {
   /**
    * 화면 표시용 (sim은 읽지 않는다): 지난 주간 정산 (finance.ts payDividends, 매주 덮어쓴다).
    * reserve = 그 주 유보 자산 증감 (적자를 메우면 음수), paid = 배당을 받은 소유 건물(저택·금융가) id → 금액.
-   * 주인 없는 레벨의 몫은 그 지역 금융가 id 로 (금융가가 없으면 0). 국영 건물은 paid 가 비어 있다 (이익은 국고에 남는다). 자동 건물에는 없다
+   * 주인 없는 레벨의 몫은 그 지역 금융가 id 로 (금융가가 없으면 0). 국영 건물은 paid 가 비어 있고 crown 에 국고 몫(유보 자산을 뺀 이익, 국고에 남는다)을 적는다. 자동 건물에는 없다
    */
-  payout?: { reserve: number; paid: Record<number, number> };
+  payout?: { reserve: number; paid: Record<number, number>; crown?: number };
   /**
-   * 화면 표시용 (sim은 읽지 않는다): 왕실 생산 건물(정부 건물이 아닌 국영 건물)의 하루 매출·원료비 이동평균 (매일, 0.95/0.05, 처음 8주는 0.85/0.15).
+   * 화면 표시용 (sim은 읽지 않는다): 왕실 생산 건물과 건축사무소(국고가 운영비를 내지 않는 국영 건물)의 하루 매출·원료비 이동평균 (매일, 0.95/0.05, 처음 8주는 0.85/0.15).
    * 예산 미리보기의 국영 사업 손익 줄(budget.ts stateFirms)이 쓴다
    */
   firmEma?: { sales: number; inputs: number };
@@ -311,6 +311,8 @@ export interface BuildingStats {
   points: number;
   /** 그날 매출 중 행정청 몫으로 잡힌 세금 (장부에서 판매와 나눠 적는다) */
   tax?: number;
+  /** 그날 매출 중 공사 수수료 (건축사무소, 장부에서 판매와 나눠 적는다) */
+  fee?: number;
 }
 
 export interface Construction {
@@ -481,27 +483,30 @@ export interface Kingdom {
   wageIndex?: number;
   /** 이번 주에 들어온 세입 (세금 + 관세 + 주조) */
   revenueWeek: number;
-  /** 이번 주 정부 건물(행정청·건축사무소·학교)의 임금과 원료, 복지, firms = 왕실 생산 건물(정부 건물이 아닌 국영 건물)의 매출 − 원료 − 임금 (화면 전용) */
-  spentWeek?: { wages: number; goods: number; welfare?: number; firms?: number };
-  /** 지난주 국정 수지: 세입, 민간 공사 수수료 / 정부 건물 임금, 원료, 연구비, 국채 이자 */
-  /** revenue 는 세금·관세·주조를 모두 더한 값, tariffs 는 그중 관세 */
-  /** firms = 왕실 생산 건물(정부 건물이 아닌 국영 건물)의 매출 − 원료 − 임금 (국고에 바로 들고 난다. 화면 전용, AI 는 읽지 않는다) */
-  lastBudget?: { revenue: number; tariffs?: number; fees: number; wages: number; goods: number; research: number; interest: number; welfare?: number; firms?: number };
-  /** 주간 국정 지출(정부 건물 + 연구 + 이자 − 민간 공사 수수료)의 이동평균. 국고가 몇 주를 버티는지의 기준 */
+  /**
+   * 이번 주 정부 건물(행정청·학교)의 임금과 원료, 복지, firms = 왕실 생산 건물과 건축사무소의 매출 − 원료 − 임금 (그중 건축사무소 몫 office),
+   * build = 왕실 공사가 자기 건축사무소에 낸 수수료
+   */
+  spentWeek?: { wages: number; goods: number; welfare?: number; firms?: number; office?: number; build?: number };
+  /** 지난주 국정 수지: 세입 / 정부 건물(행정청·학교) 임금, 원료, 연구비, 국채 이자, 복지, 왕실 공사(build) / 국영 사업 손익(firms, 그중 건축사무소 office) */
+  /** revenue 는 세금·관세·주조를 모두 더한 값, tariffs 는 그중 관세. fees 는 건축사무소가 민간 공사에서 받은 수수료 (사무소 매출의 일부, firms 안에 들어 있다. 지표용) */
+  /** 국고 순변화 ≈ revenue − wages − goods − research − interest − welfare − build + firms */
+  lastBudget?: { revenue: number; tariffs?: number; fees: number; wages: number; goods: number; research: number; interest: number; welfare?: number; firms?: number; office?: number; build?: number };
+  /** 주간 국정 지출(정부 건물 + 연구 + 이자 + 복지 + 왕실 공사 − 건축사무소 손익)의 이동평균. 국고가 몇 주를 버티는지의 기준 (왕실 생산 건물 손익은 넣지 않는다) */
   expenseEma?: number;
   /** 이번 주에 들어온 관세 (주마다 비운다) */
   tariffWeek?: number;
   /** 이번 주 관세를 상품('g:곡물')과 출발 왕국('k:2')으로 나눈 것 (화면 전용, 주마다 비운다) */
   tariffWeekBy?: Record<string, number>;
-  /** 이번 주 민간 공사 수수료 중 건축사무소 임금 몫, 국영 임금 수준 배율 1로 환산 (주마다 비운다) */
-  feeWageWeek?: number;
+  /** 이번 주 건축사무소가 민간 공사에서 받은 수수료 (주마다 비운다) */
+  privateFeeWeek?: number;
   /**
    * 예산 미리보기(budgetPreview)의 기준값. 화면 전용이고 sim 은 읽지 않는다.
    * taxBy = 세금 수준 단계 1~5 각각의 하루 세입 (매일, 이동평균 0.9/0.1, 저축 한도·징수율·토지세 포함).
-   * mint = 지난 주조액 (매주). tariffs·goods = 주간 관세·정부 건물 원료. feesWage = 민간 공사 수수료의 건축사무소 임금 몫(국영 임금 배율 1), feesOther = 나머지 (매주, 0.75/0.25).
+   * mint = 지난 주조액 (매주). tariffs·goods = 주간 관세·정부 건물 원료. build = 오늘 왕실 공사가 자기 사무소에 낸 수수료 (매일).
    * 처음 8주는 가중치를 세 배로 한다
    */
-  budgetBase?: { taxBy?: number[]; mint?: number; tariffs?: number; feesWage?: number; feesOther?: number; goods?: number; tariffsBy?: Record<string, number> };
+  budgetBase?: { taxBy?: number[]; mint?: number; tariffs?: number; build?: number; goods?: number; tariffsBy?: Record<string, number> };
   /** 복지 필요액을 지역·무리('3|poor')로 나눈 것 (welfareNeed 와 같은 이동평균, 화면 전용): need = 단계 1~5 하루 필요액, short = 모자란 사람(비율 가중) */
   welfareNeedBy?: Record<string, { need: number[]; short: number[] }>;
   /** AI: 지난 정책 점검 때 국고 순자산 (현금 − 빚) */

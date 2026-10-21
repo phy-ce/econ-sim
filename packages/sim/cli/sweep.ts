@@ -307,6 +307,24 @@ for (let d = 0; d < years * 360; d++) {
       sellThru: +(aiAcc.soldV / Math.max(1, aiAcc.supV)).toFixed(3), minted: M(w.mint.minted - mintPrev),
       welOn: +(aiAcc.welOn / w.kingdoms.length / d).toFixed(3), welStp: +(aiAcc.welOn > 0 ? aiAcc.welStp / aiAcc.welOn : 0).toFixed(2), welFlips: aiAcc.welFlips,
     };
+    {
+      // 건축사무소 (해마다, 왕국 합): ofLevel 레벨, ofPts 하루 포인트, ofUsed 쓰인 포인트(buildUsed), ofBacklog 남은 공사 ÷ 하루 포인트(일, 왕국 평균),
+      // ofProfit·ofFees·ofBuild 지난주 사무소 손익·민간 수수료·왕실 공사 수수료(천), ofRes 사무소 유보 자산(천). 옛 sim 에는 office·build 가 없어 0
+      let lv = 0, pts = 0, used = 0, back = 0, prof = 0, fees = 0, bld = 0, res = 0;
+      for (const b of w.buildings) if (b.typeId === 'builder') { lv += b.level; pts += b.last.points; res += b.reserve ?? 0; }
+      for (const k of w.kingdoms) {
+        const g = w.companies.find((c) => c.id === k.governmentId);
+        if (!g) continue;
+        used += g.buildUsed ?? 0;
+        const left = w.constructions.filter((x) => w.companies.find((c) => c.id === x.companyId)?.kingdomId === k.id).reduce((a, x) => a + x.required - x.points, 0);
+        const p = w.buildings.filter((b) => b.companyId === g.id && b.typeId === 'builder').reduce((a, b) => a + b.last.points, 0);
+        back += p > 0 ? left / p / w.kingdoms.length : 0;
+        const lb = k.lastBudget as { office?: number; fees?: number; build?: number } | undefined;
+        prof += lb?.office ?? 0; fees += lb?.fees ?? 0; bld += lb?.build ?? 0;
+      }
+      const T = (x: number) => Math.round(x / 1e3);
+      Object.assign(aiY[w.tick / 360], { ofLevel: lv, ofPts: Math.round(pts), ofUsed: Math.round(used), ofBacklog: Math.round(back), ofProfit: T(prof), ofFees: T(fees), ofBuild: T(bld), ofRes: T(res) });
+    }
     mintPrev = w.mint.minted;
     for (const key of Object.keys(aiAcc) as (keyof typeof aiAcc)[]) aiAcc[key] = 0;
   }

@@ -17,7 +17,7 @@ import {
 import {
   BASE_CREDIT, CARTAGE_RATE, RAIL_RATE, STATE_CREDIT_GDP, collectionRatio, companyById, constructionEstimate, creditLimit, efficiencyParts,
   harvestCondition, harvestFactor, holdingsOf, kingdomGdp, levelOwnersOf, knownVeins, landFree, landUsed, moneyIdentity, netMinted, popSol,
-  FLOW_ZERO, priceFormula, regionById, sellThrough, shareWage, shippingRate, staffing, totalMoney,
+  FLOW_ZERO, officeMargin, priceFormula, regionById, sellThrough, shareWage, shippingRate, staffing, totalMoney,
 } from './economy';
 import { borderCost, kingdomById, DEFAULT_TARIFF } from './kingdoms';
 import {
@@ -147,7 +147,7 @@ export function exampleWorld(): World {
 
 /** 예산 미리보기 줄 이름 */
 const BUDGET_LINE_LABELS: Record<BudgetLineKey, L10n> = {
-  tax: t('세금', 'Taxes'), tariffs: t('관세', 'Tariffs'), mint: t('주조', 'Minting'), fees: t('민간 공사 수수료', 'Construction fees'),
+  tax: t('세금', 'Taxes'), tariffs: t('관세', 'Tariffs'), mint: t('주조', 'Minting'), build: t('왕실 공사', 'Crown construction'),
   wages: t('정부 건물 임금', 'Government wages'), stateFirms: t('국영 사업 손익', 'State enterprises'), goods: t('정부 건물 원료', 'Government inputs'), research: t('연구비', 'Research'), interest: t('국채 이자', 'Bond interest'), welfare: t('복지', 'Welfare'),
 };
 
@@ -562,19 +562,20 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   },
   {
     id: 'build-cost', category: 'construction', title: t('공사비', 'Construction cost'),
-    rule: t('포인트당 비용 = 그날 사무소 (임금 + 자재) ÷ 포인트. 민간은 받은 포인트만큼 왕실에 수수료를 내고, 낼 현금만큼만 받는다.', 'Cost per point = the office\'s daily (wages + materials) ÷ points. Private builders pay the crown a fee for the points they receive, and only get as many as they can pay for.'),
-    formula: 'cost = buildPoints × costPerDay ÷ pointsPerDay',
-    params: [],
+    rule: t('건축사무소는 모든 공사(왕실 것도)에 쓴 포인트 × 포인트당 비용 ÷ (1 − 이익률)을 수수료로 받는다. 이익률은 건물 숫자 규칙과 같이 방식 단계에 따라 {0} / {1} / {2}다 (목조 / 목재 비계 / 철골). 포인트당 비용 = 그날 사무소 (임금 + 자재) ÷ 포인트. 수수료는 사무소의 매출이고, 사무소는 다른 왕실 건물처럼 이익을 유보 자산에 쌓고 나머지를 국고에 남긴다. 민간은 낼 현금만큼만 포인트를 받는다. 왕실 공사는 국고가 자기 사무소에 내므로 국고의 실제 공사비는 사무소 운영비다.', 'The construction office charges every project (crown ones too) points used × cost per point ÷ (1 − margin). The margin follows the building numbers rule by method stage: {0} / {1} / {2} (timber / scaffolding / iron frames). Cost per point = the office\'s daily (wages + materials) ÷ points. The fee is the office\'s sales; like other crown buildings it puts part of its profit into a reserve and leaves the rest in the treasury. Private builders only get as many points as they can pay for. Crown projects pay the crown\'s own office, so the treasury\'s real cost is the office\'s upkeep.'),
+    formula: 'fee per point = Σ office (wages + materials) ÷ (1 − margin) ÷ points; private cost = buildPoints × fee per point',
+    params: BUILDING_BY_ID.builder.methods.map((m) => p(`${m.name} 이익률`, `${m.nameEn ?? m.id} margin`, () => officeMargin(m.id), 'pct')),
     example: () => {
-      const w = exampleWorld(), gov = govOf(w, w.kingdoms[0])!;
-      const est = constructionEstimate(w, gov, 'farm');
+      const w = exampleWorld(), k = w.kingdoms[0], gov = govOf(w, k)!;
+      const firm = companyById(w, k.privateIds[0]) ?? gov;
+      const est = constructionEstimate(w, gov, 'farm'), priv = constructionEstimate(w, firm, 'farm');
       return {
         inputs: [row('곡물 농장 포인트', 'Grain farm points', est.required, 'pt'), row('사무소 하루 포인트', 'Office points/day', r2(est.pointsPerDay), 'pt'), row('사무소 하루 비용', 'Office cost/day', r2(est.costPerDay), 'florin')],
-        steps: [row('포인트당 비용', 'Cost per point', r2(est.costPerDay / est.pointsPerDay), 'florin'), row('공사 일수', 'Days', r2(est.days), 'day')],
-        result: [row('1레벨 공사비 (시드 1 첫날)', 'Cost of one level (seed 1, day 0)', Math.round(est.cost), 'florin')],
+        steps: [row('포인트당 비용', 'Cost per point', r2(est.costPerDay / est.pointsPerDay), 'florin'), row('포인트당 수수료', 'Fee per point', r2((est.costPerDay / est.pointsPerDay) * priv.feeMult), 'florin'), row('공사 일수', 'Days', r2(est.days), 'day')],
+        result: [row('1레벨 수수료 (민간, 시드 1 첫날)', 'Fee for one level (private, seed 1, day 0)', Math.round(priv.cost), 'florin'), row('1레벨 사무소 운영비 (왕실 실제 비용)', 'Office upkeep for one level (crown\'s real cost)', Math.round(est.cost), 'florin')],
       };
     },
-    related: ['build-points', 'privatize'], seenIn: ['company'], source: ['economy.ts constructionEstimate'], design: ['8'],
+    related: ['build-points', 'privatize', 'reserves', 'treasury'], seenIn: ['company', 'finance', 'region'], source: ['economy.ts constructionEstimate', 'economy.ts officeFeeMult', 'production.ts allocateConstruction'], design: ['8'],
   },
   {
     id: 'land', category: 'construction', title: t('땅', 'Land'),
@@ -962,7 +963,7 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   },
   {
     id: 'reserves', category: 'ownership', title: t('유보 자산', 'Building reserves'),
-    rule: t('파는 건물은 주간 이익의 최대 {0}를 유보 자산에 쌓는다. 찰수록 덜 쌓는다 (비었으면 {0}, 가득 차면 0). 상한 = 레벨 × 레벨당 주간 산출 가치(기본가) × {1}주. 적자는 유보 자산에서 먼저 빠진다.', 'Selling buildings put up to {0} of weekly profit into a reserve, less as it fills ({0} when empty, 0 when full), capped at level × weekly output value (base prices) × {1} weeks. Losses come out of the reserve first.'),
+    rule: t('파는 건물과 건축사무소는 주간 이익의 최대 {0}를 유보 자산에 쌓는다. 찰수록 덜 쌓는다 (비었으면 {0}, 가득 차면 0). 상한 = 레벨 × 레벨당 주간 산출 가치(기본가) × {1}주. 사무소의 산출 가치는 기본 임금·기본가 자재로 센 하루 운영비 ÷ (1 − 사무소 이익률). 적자는 유보 자산에서 먼저 빠진다.', 'Selling buildings and construction offices put up to {0} of weekly profit into a reserve, less as it fills ({0} when empty, 0 when full), capped at level × weekly output value (base prices) × {1} weeks. An office\'s output value is its daily upkeep at base wages and prices ÷ (1 − office margin). Losses come out of the reserve first.'),
     formula: 'keep = profit × {0} × (1 − reserve / cap); cap = level × Σ out × base × 7 × {1}',
     params: [p('유보 비율', 'Reserve share', () => RESERVE_SHARE, 'pct'), tune('reserveWeeks', '상한 주 수', 'Cap in weeks', 'week')],
     example: () => {
@@ -977,7 +978,7 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   },
   {
     id: 'dividends', category: 'ownership', title: t('배당', 'Dividends'),
-    rule: t('민간 건물은 유보 자산을 채우고 남은 이익을 매주 레벨 주인(저택·금융가)에게 레벨 수대로 보낸다. 왕실 건물의 이익은 국고에 남는다. 받은 몫의 자본가 {0}, 귀족 {1}는 그 금고에 남긴다. 민간 상회는 먼저 임금·원료 {2}주치를 운영 자금으로 남긴다.', 'Private buildings send profit beyond their reserve to their level owners (manors and districts) by level count weekly; crown building profit stays in the treasury. Capitalists keep {0} and nobles {1} of what they receive in their treasury. The private house first keeps {2} weeks of wages and inputs as working cash.'),
+    rule: t('민간 건물은 유보 자산을 채우고 남은 이익을 매주 레벨 주인(저택·금융가)에게 레벨 수대로 보낸다. 왕실 건물(건축사무소 포함)의 이익은 국고 몫으로 국고에 남는다. 받은 몫의 자본가 {0}, 귀족 {1}는 그 금고에 남긴다. 민간 상회는 먼저 임금·원료 {2}주치를 운영 자금으로 남긴다.', 'Private buildings send profit beyond their reserve to their level owners (manors and districts) by level count weekly; crown building profit (construction offices included) stays in the treasury as its share. Capitalists keep {0} and nobles {1} of what they receive in their treasury. The private house first keeps {2} weeks of wages and inputs as working cash.'),
     params: [p('금융가 금고 몫', 'District keeps', () => KEEP_SHARE.finance, 'pct'), p('저택 금고 몫', 'Manor keeps', () => KEEP_SHARE.manor, 'pct'), tune('firmBufferWeeks', '상회 운영 자금 (주)', 'House working cash (weeks)', 'week')],
     related: ['reserves', 'owner-treasury', 'owner-buildings'], seenIn: ['company', 'finance'], source: ['finance.ts payDividends', 'finance.ts payOwners'], design: ['9.3'],
   },
@@ -1077,7 +1078,7 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   },
   {
     id: 'budget-steps', category: 'state', title: t('정책 단계', 'Policy steps'),
-    rule: t('금액 편성은 없다. 손잡이는 세금 수준·국영 임금·연구비·복지의 네 단계(1~5, 3이 보통)다. 정부 건물(행정청·건축사무소·학교)은 늘 다 돌고 국고가 운영비를 낸다. 국고가 비면 국채로 낸다. 수지 표는 손잡이별로 묶는다: 세금 수준 → 세금, 국영 임금 → 정부 건물 임금·민간 공사 수수료·국영 사업 손익, 연구비 → 연구비, 복지 → 복지, 나머지(관세·주조·정부 건물 원료·국채 이자)는 손잡이가 없다.', 'There is no line-item budget. The knobs are four steps (1–5, 3 is normal): tax level, state wages, research, welfare. Government buildings always run at full and the treasury pays; when it is empty it issues bonds. The budget table groups lines by knob: tax level → taxes; state wages → government wages, construction fees and state enterprises; research → research; welfare → welfare; the rest (tariffs, minting, government inputs, bond interest) has no knob.'),
+    rule: t('금액 편성은 없다. 손잡이는 세금 수준·국영 임금·연구비·복지의 네 단계(1~5, 3이 보통)다. 정부 건물(행정청·건축사무소·학교)은 늘 다 돈다. 행정청·학교는 국고가 운영비를 내고, 건축사무소는 공사 수수료로 운영비를 낸다. 국고가 비면 국채로 낸다. 수지 표는 손잡이별로 묶는다: 세금 수준 → 세금, 국영 임금 → 정부 건물 임금·국영 사업 손익(건축사무소 포함)·왕실 공사, 연구비 → 연구비, 복지 → 복지, 나머지(관세·주조·정부 건물 원료·국채 이자)는 손잡이가 없다.', 'There is no line-item budget. The knobs are four steps (1–5, 3 is normal): tax level, state wages, research, welfare. Government buildings always run at full. The treasury pays administration and schools; construction offices pay their way from construction fees. When the treasury is empty it issues bonds. The budget table groups lines by knob: tax level → taxes; state wages → government wages, state enterprises (construction offices included) and crown construction; research → research; welfare → welfare; the rest (tariffs, minting, government inputs, bond interest) has no knob.'),
     params: [tune('taxLevels', '세금 수준', 'Tax level', 'x'), tune('govWageLevels', '국영 임금', 'State wages', 'x'), tune('researchLevels', '연구비', 'Research', 'x'), tune('welfareLevels', '복지 목표 생활수준', 'Welfare target SoL')],
     live: {
       pick: ['kingdom'], run: (w, ctx) => {
@@ -1104,12 +1105,12 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   },
   {
     id: 'treasury', category: 'state', title: t('국고와 수지', 'Treasury and balance'),
-    rule: t('주간 세입 = 세금 + 토지세 + 관세 + 주조. 지출 = 정부 건물 임금·원료 + 연구비 + 이자 − 민간 공사 수수료. 국영 사업 손익 = 왕실 생산 건물(정부 건물이 아닌 것)의 매출 − 원료 − 임금으로, 국고에 바로 들고 나며 수지 표의 순수지에 들어간다. AI는 국고 ÷ 주간 지출(몇 주치)로 판단한다 (국영 사업 손익은 넣지 않는다). 시작 국고는 운영비 {0}주치다.', 'Weekly revenue = taxes + land tax + tariffs + mint. Spending = government wages and inputs + research + interest − private construction fees. State enterprises = sales − inputs − wages of crown production buildings (not government buildings); it goes straight into or out of the treasury and is part of the budget table\'s net. AI judges the treasury in weeks of spending (state enterprises left out). The start treasury is {0} weeks of upkeep.'),
+    rule: t('주간 세입 = 세금 + 토지세 + 관세 + 주조. 지출 = 행정청·학교 임금·원료 + 연구비 + 이자 + 복지 + 왕실 공사(자기 건축사무소에 낸 수수료). 국영 사업 손익 = 왕실 생산 건물과 건축사무소의 매출 − 원료 − 임금으로, 국고에 바로 들고 난다. 사무소 매출에는 왕실 공사 수수료도 들어 있어 왕실 공사 줄과 서로 지운다. AI는 국고 ÷ 주간 지출(몇 주치)로 판단한다 (지출에서 건축사무소 손익을 빼고, 왕실 생산 건물 손익은 넣지 않는다). 시작 국고는 운영비 {0}주치다.', 'Weekly revenue = taxes + land tax + tariffs + mint. Spending = administration and school wages and inputs + research + interest + welfare + crown construction (fees paid to its own construction office). State enterprises = sales − inputs − wages of crown production buildings and construction offices; it goes straight into or out of the treasury. Office sales include the crown\'s own construction fees, which cancel against the crown construction line. AI judges the treasury in weeks of spending (spending net of the office\'s profit; production buildings left out). The start treasury is {0} weeks of upkeep.'),
     params: [tune('startTreasuryWeeks', '시작 국고', 'Start treasury', 'week')],
     live: {
       pick: ['kingdom'], run: (w, ctx) => {
         const k = kingdomOfCtx(w, ctx), gov = govOf(w, k), exp = k.expenseEma ?? 0;
-        return { rows: [row('국고', 'Treasury', Math.round(gov?.cash ?? 0), 'florin'), row('빚', 'Debt', Math.round(gov?.debt ?? 0), 'florin'), row('주간 지출 이동평균', 'Weekly spending EMA', Math.round(exp), 'florin'), row('몇 주치', 'Weeks covered', exp > 0 ? r2((gov?.cash ?? 0) / exp) : '-', 'week'), row('지난주 국영 사업 손익', 'Last week\'s state enterprises', Math.round(k.lastBudget?.firms ?? 0), 'florin')] };
+        return { rows: [row('국고', 'Treasury', Math.round(gov?.cash ?? 0), 'florin'), row('빚', 'Debt', Math.round(gov?.debt ?? 0), 'florin'), row('주간 지출 이동평균', 'Weekly spending EMA', Math.round(exp), 'florin'), row('몇 주치', 'Weeks covered', exp > 0 ? r2((gov?.cash ?? 0) / exp) : '-', 'week'), row('지난주 국영 사업 손익', 'Last week\'s state enterprises', Math.round(k.lastBudget?.firms ?? 0), 'florin'), row('그중 건축사무소', 'Of which construction office', Math.round(k.lastBudget?.office ?? 0), 'florin'), row('지난주 왕실 공사', 'Last week\'s crown construction', Math.round(k.lastBudget?.build ?? 0), 'florin'), row('지난주 민간 공사 수수료', 'Last week\'s private construction fees', Math.round(k.lastBudget?.fees ?? 0), 'florin')] };
       },
     },
     related: ['budget-steps', 'ai-budget', 'mint'], seenIn: ['finance'], source: ['finance.ts spendBudget', 'budget.ts budgetPreview', 'budget.ts budgetDrill'], design: ['9', '9.2'],
@@ -1195,7 +1196,7 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   },
   {
     id: 'ai-office', category: 'ai', title: t('사무소 늘리고 줄이기', 'Growing and shrinking offices'),
-    rule: t('쓰인 포인트가 능력의 {0} 이상이고 대기가 {1}일을 넘으면, 빚 없고 국고가 넉넉할 때 늘린다 (최소 max({2}, 지금의 {3})). 빈 레벨이나 남는 포인트가 {4}주 이어지면 헌다.', 'Grow when used points reach {0} of capacity and the queue exceeds {1} days, with no debt and a full treasury (at least max({2}, {3} of current)). Shrink after {4} weeks of empty levels or spare points.'),
+    rule: t('쓰인 포인트가 능력의 {0} 이상이고 대기가 {1}일을 넘으면, 빚 없고 국고가 넉넉할 때 늘린다 (사무소는 쓰지 않는 포인트에도 임금·자재를 내므로 수수료로 메워지지 않는다) (최소 max({2}, 지금의 {3})). 빈 레벨이나 남는 포인트가 {4}주 이어지면 헌다.', 'Grow when used points reach {0} of capacity and the queue exceeds {1} days, with no debt and a full treasury (unused points still cost wages and materials, which fees do not cover) (at least max({2}, {3} of current)). Shrink after {4} weeks of empty levels or spare points.'),
     params: [tune('officeUseFull', '사용률', 'Use threshold', 'pct'), tune('officeTargetDays', '대기 목표', 'Queue target', 'day'), p('최소 증설', 'Min block', () => OFFICE_BLOCK, 'level'), p('증설 비율', 'Growth share', () => OFFICE_GROWTH, 'pct'), tune('officeShrinkWeeks', '철거 주 수', 'Shrink weeks', 'week')],
     related: ['build-points', 'ai-demolition'], seenIn: ['company'], source: ['ai.ts planConstruction', 'ai.ts reviewLevels'], design: ['10'],
   },
