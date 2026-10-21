@@ -1,10 +1,11 @@
 import { BUILDING_BY_ID, GOODS, SKILL_DEFS, TECH_BY_ID, TICKS_PER_WEEK, TUNE, WORKFORCE_RATIO, getMethod } from './data';
-import { collectionRatio, companyById, regionById, constructionEstimate, efficiency, isGovernment, isOwnerBuilding, kingdomGdp, logEvent, paysDividend, repay, sellThrough, shareWeight } from './economy';
+import { collectionRatio, companyById, levelOwnersOf, slots, regionById, constructionEstimate, efficiency, isGovernment, isOwnerBuilding, kingdomGdp, logEvent, paysDividend, repay, sellThrough, shareWeight } from './economy';
 import { techNameEn } from './i18n';
 import { flow, kingdomById, kingdomOf, toFinance, toTreasury } from './kingdoms';
 import { payPops } from './pops';
 import { round2 } from './rng';
 import { LOWER_JOBS, SKILLS, crewOf } from './types';
+import type { LevelOwner } from './economy';
 import type { BudgetItem, Building, Company, Construction, GoodBag, GoodId, Kingdom, Pop, PopClass, Region, SalvageLot, TaxLaw, World } from './types';
 
 // ---------------------------------------------------------------- 국채 이자
@@ -446,9 +447,14 @@ export function financeIdle(w: World, o: Building): boolean {
  */
 export function payDividends(w: World, c: Company) {
   const mine = w.buildings.filter((b) => b.companyId === c.id && !BUILDING_BY_ID[b.typeId].auto);
+  // 화면 표시용 기록 (b.payout): 주초 유보 자산과 이번 주 배당을 적는다. sim은 읽지 않는다
+  const res0 = new Map(mine.map((b) => [b, b.reserve ?? 0] as const));
+  const paid = new Map<Building, Record<number, number>>(mine.map((b) => [b, {}] as const));
+  const record = () => { for (const b of mine) b.payout = { reserve: round2((b.reserve ?? 0) - res0.get(b)!), paid: paid.get(b)! }; };
   if (c.state) {
     for (const b of mine) if (hasReserve(b)) settleReserve(b, b.profitEma * TICKS_PER_WEEK);
     fitReserves(w, c);
+    record();
     return;
   }
   const byId = new Map(w.buildings.map((b) => [b.id, b] as const));
@@ -461,7 +467,7 @@ export function payDividends(w: World, c: Company) {
   for (const b of mine) ops += b.last.wageCost + b.last.inputCost;
   const buffer = ops * TICKS_PER_WEEK * TUNE.firmBufferWeeks;
   const spare = fitReserves(w, c);
-  if (spare < buffer) { callCapital(w, c, mine, byId, buffer - spare); return; }
+  if (spare < buffer) { callCapital(w, c, mine, byId, buffer - spare); record(); return; }
   let free = spare - buffer;
   for (const b of mine) {
     const profit = Math.min(free, due.get(b)!);
@@ -471,14 +477,19 @@ export function payDividends(w: World, c: Company) {
     c.ledger.dividends += profit;
     const owners = Object.keys(b.owners ?? {}).map(Number).sort((x, y) => x - y);
     const n = owners.reduce((a, id) => a + b.owners![id], 0);
-    if (n <= 0) { toFinance(w, b.regionId, profit, 'noOwner'); continue; }
+    const rec = paid.get(b)!;
+    const fin = () => w.buildings.find((x) => x.regionId === b.regionId && x.typeId === 'finance')?.id ?? 0;
+    if (n <= 0) { toFinance(w, b.regionId, profit, 'noOwner'); rec[fin()] = (rec[fin()] ?? 0) + profit; continue; }
     for (const id of owners) {
       const o = byId.get(id);
       const amt = (profit * b.owners![id]) / n;
       if (o) toOwner.set(o, (toOwner.get(o) ?? 0) + amt); else toFinance(w, b.regionId, amt);
+      const key = o ? id : fin();
+      rec[key] = (rec[key] ?? 0) + amt;
     }
   }
   for (const [o, amt] of toOwner) payOwners(w, o, amt);
+  record();
 }
 
 /** 민간 상회의 운영 자금이 need 만큼 모자라면 그 상회 건물의 레벨 주인이 가진 레벨 수대로 금고(약정 뺀 돈)에서 낸다 (낼 수 있는 만큼) */
@@ -639,4 +650,73 @@ export function mintMoney(w: World) {
     k.revenueWeek += amt;
     w.mint.minted += amt;
   }
+}
+
+/** 건물 레벨 주인 한 줄 + 지분 비율과 지난주 받은 배당 (화면용, buildingEcon) */
+export interface OwnerShare extends LevelOwner {
+  /** 레벨 비율 0..1 (levels ÷ 건물 레벨) */
+  share: number;
+  /** 지난 주간 정산에서 이 주인이 받은 배당 (국가는 0: 이익이 국고에 남는다) */
+  dividendWeek: number;
+}
+
+/** 건물 하나의 수지·지분 (화면용 순수 함수). day = 오늘(마지막 하루) 장부, week = 주 단위 */
+export interface BuildingEcon {
+  /** 하루: 매출(행정청은 세금 몫 포함), 그중 세금 몫, 원료비, 임금(민간 건물의 소유 직종은 임금 대신 배당이라 빠진다), 이익 = 매출 − 원료비 − 임금 */
+  day: { sales: number; tax: number; inputs: number; wages: number; profit: number };
+  /** 이익률 = 하루 이익 ÷ 매출 (매출이 0이면 null) */
+  margin: number | null;
+  /** 주간 이익 = profitEma × 7 (이동평균), 레벨당 주간 이익 */
+  profitWeek: number;
+  profitWeekPerLevel: number;
+  /** 유보 자산을 쌓는 건물인가, 지금 유보 자산, 상한, 지난주 증감 */
+  hasReserve: boolean;
+  reserve: number;
+  reserveCap: number;
+  reserveWeek: number;
+  /** 지난주 배당 합과 주인별 내역 (주인이 없는 몫은 ownerless 로) */
+  dividendsWeek: number;
+  owners: OwnerShare[];
+  /** 주인 목록에 없는 곳(주인 없는 레벨 → 지역 금융가)으로 간 지난주 배당: 소유 건물 id(0 = 주인 없는 돈) → 금액 */
+  ownerless: Record<number, number>;
+  /** 충원율 0..1, 고용(노동 인구), 일자리(노동 인구, 가동률 반영) */
+  staffing: number;
+  employed: number;
+  jobs: number;
+}
+
+export function buildingEcon(w: World, b: Building): BuildingEcon {
+  const L = b.last;
+  const profit = L.revenue - L.inputCost - L.wageCost;
+  const paid = b.payout?.paid ?? {};
+  const owners: OwnerShare[] = levelOwnersOf(w, b).map((o) => ({
+    ...o,
+    share: b.level > 0 ? o.levels / b.level : 0,
+    dividendWeek: o.ownerBuildingId !== undefined ? round2(paid[o.ownerBuildingId] ?? 0) : 0,
+  }));
+  const ownerless: Record<number, number> = {};
+  let dividendsWeek = 0;
+  for (const id of Object.keys(paid).map(Number)) {
+    dividendsWeek += paid[id];
+    if (!owners.some((o) => o.ownerBuildingId === id)) ownerless[id] = round2(paid[id]);
+  }
+  let employed = 0, jobs = 0;
+  for (const s of SKILLS) { employed += b.employed[s]; jobs += slots(b, s); }
+  const week = b.profitEma * TICKS_PER_WEEK;
+  return {
+    day: { sales: round2(L.revenue), tax: round2(L.tax ?? 0), inputs: round2(L.inputCost), wages: round2(L.wageCost), profit: round2(profit) },
+    margin: L.revenue > 0 ? profit / L.revenue : null,
+    profitWeek: round2(week),
+    profitWeekPerLevel: b.level > 0 ? round2(week / b.level) : 0,
+    hasReserve: hasReserve(b),
+    reserve: round2(b.reserve ?? 0),
+    reserveCap: hasReserve(b) ? reserveCap(b) : 0,
+    reserveWeek: round2(b.payout?.reserve ?? 0),
+    dividendsWeek: round2(dividendsWeek),
+    owners,
+    ownerless,
+    staffing: crewOf(b),
+    employed: round2(employed),
+    jobs: round2(jobs),
+  };
 }

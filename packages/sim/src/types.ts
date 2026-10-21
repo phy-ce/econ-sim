@@ -268,6 +268,12 @@ export interface Building {
   fillEma?: number;
   /** 유보 자산 (빅토리아3): 이익의 일부를 레벨 × 레벨당 주간 산출 가치(기본가) × TUNE.reserveWeeks 까지 쌓고, 적자는 여기서 먼저 뺀다. 돈은 회사 현금 안에 있다 (finance.ts settleReserve). 없으면 0 */
   reserve?: number;
+  /**
+   * 화면 표시용 (sim은 읽지 않는다): 지난 주간 정산 (finance.ts payDividends, 매주 덮어쓴다).
+   * reserve = 그 주 유보 자산 증감 (적자를 메우면 음수), paid = 배당을 받은 소유 건물(저택·금융가) id → 금액.
+   * 주인 없는 레벨의 몫은 그 지역 금융가 id 로 (금융가가 없으면 0). 국영 건물은 paid 가 비어 있다 (이익은 국고에 남는다). 자동 건물에는 없다
+   */
+  payout?: { reserve: number; paid: Record<number, number> };
   lossWeeks: number;
   pausedWeeks: number;
   /** 철거 대기 레벨: 매주 1레벨씩 헐린다 */
