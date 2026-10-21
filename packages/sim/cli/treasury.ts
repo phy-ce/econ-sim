@@ -29,7 +29,7 @@ for (let d = 1; d <= years * 360; d++) {
     const bud = Object.entries(a.budget).map(([x, v]) => `${x} ${r0(v)}`).join(', ');
     const bt = Object.entries(a.byType).sort((x, y) => y[1] - x[1]).map(([t, v]) => `${t} ${r0(v)}`).join(', ');
     const weeks = (k.expenseEma ?? 0) > 0 ? (g.cash / k.expenseEma!).toFixed(0) : '-';
-    console.log(`왕국${k.id} ${k.taxLaw} 세금${k.budget.tax} 임금${k.budget.wages} 연구${k.budget.research} 지수${k.wageIndex ?? '-'} 징수${k.taxRatio ?? 0} | 순자산 ${r0(g.cash - g.debt - a.cash0 + a.debt0)}/일 (현금 ${Math.round(g.cash)}, 빚 ${Math.round(g.debt)}, 지출 ${weeks}주치) 경제 ${Math.round((k.output ?? 0) / 7)}/일`);
+    console.log(`왕국${k.id} ${k.taxLaw} 세금${k.budget.tax} 임금${k.budget.wages} 지수${k.wageIndex ?? '-'} 징수${k.taxRatio ?? 0} | 순자산 ${r0(g.cash - g.debt - a.cash0 + a.debt0)}/일 (현금 ${Math.round(g.cash)}, 빚 ${Math.round(g.debt)}, 지출 ${weeks}주치) 경제 ${Math.round((k.output ?? 0) / 7)}/일`);
     console.log(`  국정 수지: ${bud}`);
     console.log(`  장부: ${led}`);
     console.log(`  건물 운영비: ${bt}`);

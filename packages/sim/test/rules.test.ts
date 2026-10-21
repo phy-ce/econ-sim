@@ -60,7 +60,7 @@ describe('인구', () => {
 });
 
 describe('기술', () => {
-  it('기술 없이는 가공 산업을 열 수 없고, 1단계 기술은 기본 예산으로 석 달~아홉 달 걸린다', () => {
+  it('기술 없이는 가공 산업을 열 수 없고, 1단계 기술은 시작 문해력의 연구 포인트로 석 달~아홉 달 걸린다', () => {
     const w = createWorld(1);
     const me = playerCompany(w)!;
     const home = w.regions.find((r) => r.kingdomId === me.kingdomId)!;

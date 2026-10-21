@@ -189,13 +189,12 @@ export function treasuryTight(w: World, c: Company, k: Kingdom): boolean {
 
 /**
  * 정책 단계 (AI 왕국, 4주마다 한 칸). 기준은 국고가 주간 국정 지출의 몇 주치인가와, 지난 점검보다 늘었는가다.
- * 단계는 한 줄 사다리로 움직인다 (후함 → 긴축): 국영 임금 4 → 연구비 5·4 → 세금 1~5 → 연구비 2·1 → 연구 멈춤 → 국영 임금 2·1.
+ * 단계는 한 줄 사다리로 움직인다 (후함 → 긴축): 국영 임금 4 → 세금 1~5 → 국영 임금 2·1. 연구는 돈이 들지 않아 사다리에 없다.
  * - 조임 (빚이 있거나 TUNE.treasuryLowWeeks 주치 미만이고, 지난 점검보다 줄었다): 긴축 쪽으로 한 칸.
- *   조이는 동안 새 연구를 고르지 않는다 (planResearch). 학교는 적자 때문에 헐지 않는다: 사다리를 끝까지(국영 임금 1단계) 내려가고도
- *   빚을 지며 줄 때만 학교를 줄인다 (shrinkSchools)
- * - 회복 (빚 없고 low 주치 이상, 줄지 않았다): 보통(3) 아래로 내린 국영 임금, 연구비를 한 칸씩 되돌린다
- * - 풂 (TUNE.treasuryHighWeeks 주치 초과, 줄지 않았다): 세금을 내리고, 세금이 1단계면 연구비를 보통 위로 올린다.
- * - 기술을 다 연 왕국은 연구비가 끊긴다. 풂 조건에서 임금 지수가 1 이하면 국영 임금을 TUNE.doneWageMax 단계까지 올리고,
+ *   학교는 적자 때문에 헐지 않는다: 사다리를 끝까지(국영 임금 1단계) 내려가고도 빚을 지며 줄 때만 학교를 줄인다 (shrinkSchools)
+ * - 회복 (빚 없고 low 주치 이상, 줄지 않았다): 보통(3) 아래로 내린 국영 임금을 한 칸씩 되돌린다
+ * - 풂 (TUNE.treasuryHighWeeks 주치 초과, 줄지 않았다): 세금을 내린다.
+ * - 기술을 다 연 왕국: 풂 조건에서 임금 지수가 1 이하면 국영 임금을 TUNE.doneWageMax 단계까지 올리고,
  *   임금 지수가 1을 넘으면 보통(3)으로 되돌린다. 그 밖에는 국영 임금을 보통 위로 올리지 않는다
  * - 복지 (cutWelfare·raiseWelfare): 조임에서는 복지를 가장 먼저 줄인다 (단계를 1까지, 빚이 있으면 그다음 복지법을 끈다). 조이지 않는데 국고가 줄며
  *   TUNE.welfareWeeks 의 절반 주치 아래면 복지 단계를 내린다. 다른 손잡이를 움직이지 않은 점검에서는 복지를 켜거나 올린다 (raiseWelfare)
@@ -208,15 +207,12 @@ function adjustBudget(w: World, c: Company) {
   k.netLast = net;
   const b = k.budget;
   let step: [BudgetItem, number] | null = null;
-  // 기술을 다 연 왕국: 연구비가 끊기는 몫을 국영 임금으로 돌린다 (임금 지수 1 이하, 국고 넉넉할 때 보통 위로 TUNE.doneWageMax 단계까지)
+  // 기술을 다 연 왕국: 국영 임금을 보통 위로 TUNE.doneWageMax 단계까지 올릴 수 있다 (임금 지수 1 이하, 국고 넉넉할 때)
   const done = !c.research.current && researchableTechs(c).length === 0;
   if (treasuryTight(w, c, k)) {
     if (losing && !cutWelfare(w, c, k)) {
       if (b.wages > 3) step = ['wages', b.wages - 1];
-      else if (b.research > 3) step = ['research', b.research - 1];
       else if (b.tax < BUDGET_STEPS) step = ['tax', b.tax + 1];
-      else if (b.research > 1) step = ['research', b.research - 1];
-      else if (c.research.current) applyCommand(w, c.id, { type: 'setResearch', techId: null });
       else if (b.wages > 1) step = ['wages', b.wages - 1];
       else if (c.debt > 0) shrinkSchools(w, c);
     }
@@ -225,9 +221,7 @@ function adjustBudget(w: World, c: Company) {
     if (b.wages > 3 && (k.wageIndex ?? 1) > 1) step = ['wages', b.wages - 1];
     else if (b.wages < 3) step = ['wages', b.wages + 1];
     else if (done && rich && b.wages < TUNE.doneWageMax && (k.wageIndex ?? 1) <= 1) step = ['wages', b.wages + 1];
-    else if (b.research < 3) step = ['research', b.research + 1];
     else if (rich && b.tax > 1) step = ['tax', b.tax - 1];
-    else if (rich && b.research < BUDGET_STEPS) step = ['research', b.research + 1];
     else raiseWelfare(w, c, k);
   } else if (k.welfareLaw !== 'none' && b.welfare > 1 && c.cash < (TUNE.welfareWeeks / 2) * (k.expenseEma ?? 0)) {
     // 조이지는 않지만 국고가 줄며 복지 기준의 절반 주치 아래: 복지를 한 칸 내린다
@@ -608,10 +602,10 @@ function schoolValuation(w: World, c: Company, r: Region, m: MethodDef, levels: 
   return { wageCost, profit: benefit - wageCost };
 }
 
-/** 연구 고르기 (AI 왕실): 진행 중인 연구가 없을 때. 국고가 조이는 동안은 새 연구를 시작하지 않는다 (adjustBudget) */
+/** 연구 고르기 (AI 왕실): 진행 중인 연구가 없으면 늘 하나 고른다 (연구는 돈이 들지 않는다) */
 function planResearch(w: World, c: Company, o: Outlook) {
   const r = c.research;
-  if (!r.current && !treasuryTight(w, c, kingdomById(w, c.kingdomId))) {
+  if (!r.current) {
     const direct = new Map(Object.keys(TECH_BY_ID).map((id) => [id, techValue(w, o, c, id)] as const));
     // 학교를 여는 기술: 자기 왕국에서 목표 자리(schoolWanted)까지 모자란 자리의 가치 (seatValue)
     let uncovered = 0;

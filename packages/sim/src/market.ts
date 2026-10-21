@@ -551,7 +551,7 @@ function addTraderOrders(w: World, book: Book, days: RegionDay[]) {
               ma.shippedOut += qq;
               // 관세는 화물가 기준으로 도착 왕국 국고에
               const duty = cost * tariff;
-              if (duty > 0) { w.traders.cash -= duty; payTariff(w, b.id, duty); }
+              if (duty > 0) { w.traders.cash -= duty; payTariff(w, b.id, duty, g, a.id); }
             },
           },
         });

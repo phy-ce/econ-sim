@@ -265,6 +265,17 @@ export interface Building {
   fillEma?: number;
   /** 유보 자산 (빅토리아3): 이익의 일부를 레벨 × 레벨당 주간 산출 가치(기본가) × TUNE.reserveWeeks 까지 쌓고, 적자는 여기서 먼저 뺀다. 돈은 회사 현금 안에 있다 (finance.ts settleReserve). 없으면 0 */
   reserve?: number;
+  /**
+   * 화면 표시용 (sim은 읽지 않는다): 지난 주간 정산 (finance.ts payDividends, 매주 덮어쓴다).
+   * reserve = 그 주 유보 자산 증감 (적자를 메우면 음수), paid = 배당을 받은 소유 건물(저택·금융가) id → 금액.
+   * 주인 없는 레벨의 몫은 그 지역 금융가 id 로 (금융가가 없으면 0). 국영 건물은 paid 가 비어 있다 (이익은 국고에 남는다). 자동 건물에는 없다
+   */
+  payout?: { reserve: number; paid: Record<number, number> };
+  /**
+   * 화면 표시용 (sim은 읽지 않는다): 왕실 생산 건물(정부 건물이 아닌 국영 건물)의 하루 매출·원료비 이동평균 (매일, 0.95/0.05, 처음 8주는 0.85/0.15).
+   * 예산 미리보기의 국영 사업 손익 줄(budget.ts stateFirms)이 쓴다
+   */
+  firmEma?: { sales: number; inputs: number };
   lossWeeks: number;
   pausedWeeks: number;
   /** 철거 대기 레벨: 매주 1레벨씩 헐린다 */
@@ -321,8 +332,10 @@ export interface Construction {
 }
 
 export interface Research {
-  budget: number;
+  /** 지난주에 쌓은 연구 포인트 (주간, 화면용 기록). 왕국 문해력으로 정한다 (finance.ts researchPoints). 고른 기술이 없으면 0 */
+  points: number;
   current: string | null;
+  /** 기술별로 쌓은 연구 포인트 (기술을 바꿔도 남는다) */
   progress: Record<string, number>;
   known: string[];
 }
@@ -359,10 +372,10 @@ export interface Company {
 }
 
 /**
- * 회사 장부 항목. 손익(weekProfit)에 들어가는 것: 판매, 세금, 주조, 공사 수수료(수입) / 임금, 원자재, 연구, 이자, 복지(왕실, 지출).
+ * 회사 장부 항목. 손익(weekProfit)에 들어가는 것: 판매, 세금, 주조, 공사 수수료(수입) / 임금, 원자재, 이자, 복지(왕실, 지출).
  * 손익 밖의 자본 흐름: 배당 지급, investment(왕실: 민영화로 판 레벨 대금), 낸 공사비(건물이라는 자산으로 바뀐다)
  */
-export const LEDGER_KEYS = ['sales', 'tax', 'mint', 'buildFees', 'wages', 'inputs', 'research', 'interest', 'welfare', 'dividends', 'investment', 'buildPaid'] as const;
+export const LEDGER_KEYS = ['sales', 'tax', 'mint', 'buildFees', 'wages', 'inputs', 'interest', 'welfare', 'dividends', 'investment', 'buildPaid'] as const;
 export type LedgerKey = (typeof LEDGER_KEYS)[number];
 export type Ledger = Record<LedgerKey, number>;
 export const emptyLedger = (): Ledger => Object.fromEntries(LEDGER_KEYS.map((k) => [k, 0])) as Ledger;
@@ -462,23 +475,26 @@ export interface Kingdom {
   taxOwed?: number;
   /** 징수율 0..1 (행정청 한도와 인구로 정한다, collectionRatio) */
   taxRatio?: number;
-  /** 정책 단계 1~5 (3이 보통): 세금 수준, 국영 임금 수준, 연구비 수준. 배율은 TUNE.taxLevels·govWageLevels·researchLevels */
+  /** 정책 단계 1~5 (3이 보통): 세금 수준, 국영 임금 수준, 복지 수준. 배율은 TUNE.taxLevels·govWageLevels, 복지는 목표 생활수준 TUNE.welfareLevels */
   budget: Record<BudgetItem, number>;
-  /** 주간 경제 규모 (이동평균): 민간·국영 생산 건물 부가가치 + 소작 현물의 시장가. 연구비의 기준 */
+  /** 주간 경제 규모 (이동평균): 민간·국영 생산 건물 부가가치 + 소작 현물의 시장가 */
   output?: number;
   /** 임금 지수: 왕국 민간 건물이 실제로 주는 임금 ÷ 기본 임금 (일자리 가중, 주간 이동평균). 국영 임금의 기준 */
   wageIndex?: number;
   /** 이번 주에 들어온 세입 (세금 + 관세 + 주조) */
   revenueWeek: number;
-  /** 이번 주 정부 건물(행정청·건축사무소·학교)의 임금과 원료 */
-  spentWeek?: { wages: number; goods: number; welfare?: number };
-  /** 지난주 국정 수지: 세입, 민간 공사 수수료 / 정부 건물 임금, 원료, 연구비, 국채 이자 */
+  /** 이번 주 정부 건물(행정청·건축사무소·학교)의 임금과 원료, 복지, firms = 왕실 생산 건물(정부 건물이 아닌 국영 건물)의 매출 − 원료 − 임금 (화면 전용) */
+  spentWeek?: { wages: number; goods: number; welfare?: number; firms?: number };
+  /** 지난주 국정 수지: 세입, 민간 공사 수수료 / 정부 건물 임금, 원료, 국채 이자, 복지 */
   /** revenue 는 세금·관세·주조를 모두 더한 값, tariffs 는 그중 관세 */
-  lastBudget?: { revenue: number; tariffs?: number; fees: number; wages: number; goods: number; research: number; interest: number; welfare?: number };
-  /** 주간 국정 지출(정부 건물 + 연구 + 이자 − 민간 공사 수수료)의 이동평균. 국고가 몇 주를 버티는지의 기준 */
+  /** firms = 왕실 생산 건물(정부 건물이 아닌 국영 건물)의 매출 − 원료 − 임금 (국고에 바로 들고 난다. 화면 전용, AI 는 읽지 않는다) */
+  lastBudget?: { revenue: number; tariffs?: number; fees: number; wages: number; goods: number; interest: number; welfare?: number; firms?: number };
+  /** 주간 국정 지출(정부 건물 + 이자 + 복지 − 민간 공사 수수료)의 이동평균. 국고가 몇 주를 버티는지의 기준 */
   expenseEma?: number;
   /** 이번 주에 들어온 관세 (주마다 비운다) */
   tariffWeek?: number;
+  /** 이번 주 관세를 상품('g:곡물')과 출발 왕국('k:2')으로 나눈 것 (화면 전용, 주마다 비운다) */
+  tariffWeekBy?: Record<string, number>;
   /** 이번 주 민간 공사 수수료 중 건축사무소 임금 몫, 국영 임금 수준 배율 1로 환산 (주마다 비운다) */
   feeWageWeek?: number;
   /**
@@ -487,7 +503,9 @@ export interface Kingdom {
    * mint = 지난 주조액 (매주). tariffs·goods = 주간 관세·정부 건물 원료. feesWage = 민간 공사 수수료의 건축사무소 임금 몫(국영 임금 배율 1), feesOther = 나머지 (매주, 0.75/0.25).
    * 처음 8주는 가중치를 세 배로 한다
    */
-  budgetBase?: { taxBy?: number[]; mint?: number; tariffs?: number; feesWage?: number; feesOther?: number; goods?: number };
+  budgetBase?: { taxBy?: number[]; mint?: number; tariffs?: number; feesWage?: number; feesOther?: number; goods?: number; tariffsBy?: Record<string, number> };
+  /** 복지 필요액을 지역·무리('3|poor')로 나눈 것 (welfareNeed 와 같은 이동평균, 화면 전용): need = 단계 1~5 하루 필요액, short = 모자란 사람(비율 가중) */
+  welfareNeedBy?: Record<string, { need: number[]; short: number[] }>;
   /** AI: 지난 정책 점검 때 국고 순자산 (현금 − 빚) */
   netLast?: number;
   /** 이번 달 착공 레벨 (지표용): '건물|s'(왕실) '건물|p'(민간) '건물|loss'(AI 손해 짓기) '건물|d'(철거) '건물|v'(민영화로 판 레벨) */
@@ -503,8 +521,8 @@ export const INVEST_LAWS: InvestLaw[] = ['nobles', 'upper', 'middle', 'lower'];
 export type WelfareLaw = 'none' | 'poor' | 'wage' | 'universal';
 export const WELFARE_LAWS: WelfareLaw[] = ['none', 'poor', 'wage', 'universal'];
 export interface LawChange<L> { to: L; startTick: number; endTick: number }
-/** 정책 손잡이: 세금 수준, 국영 임금 수준, 연구비 수준, 복지 수준 (각각 1~5단계) */
-export const BUDGET_ITEMS = ['tax', 'wages', 'research', 'welfare'] as const;
+/** 정책 손잡이: 세금 수준, 국영 임금 수준, 복지 수준 (각각 1~5단계). 연구는 돈이 들지 않는다 (문해력으로 정한다) */
+export const BUDGET_ITEMS = ['tax', 'wages', 'welfare'] as const;
 export const BUDGET_STEPS = 5;
 export type BudgetItem = (typeof BUDGET_ITEMS)[number];
 
@@ -569,9 +587,11 @@ export interface World {
   /**
    * 저장 형식 버전: 저장되는 모양이 바뀌면 올린다. 옛 저장은 compat.ts migrateWorld
    * (8: 레벨 소유·소유 건물 금고. 11: 금융가 지분 Pop.fund 를 배열 묶음으로. 12: 반올림 없음, 100배 값(wealth100·literacy100·education100·exp100·crew100) 대신 규칙 단위 값.
-   * 10·11판은 불러올 때 바꾼다, 그보다 옛 저장은 불러오지 않는다)
+   * 13: 화면 전용 기록(Building.payout·firmEma, Kingdom.tariffWeekBy·budgetBase.tariffsBy·welfareNeedBy, lastBudget.firms·spentWeek.firms)이 생겼다, 없어도 되므로 12판은 그대로 불러온다.
+   * 14: 연구가 돈 대신 문해력 포인트다 (연구비 수준·연구비 장부·Research.budget 없음, Research.points, 진행은 포인트).
+   * 10~13판은 불러올 때 바꾼다, 그보다 옛 저장은 불러오지 않는다)
    */
-  version: 12;
+  version: 14;
   config: WorldConfig;
   tick: number;
   seed: number;
@@ -616,12 +636,11 @@ export type Command =
   /** 내 공사 목록 안에서 위치를 옮긴다 (0 = 맨 앞) */
   | { type: 'moveConstruction'; constructionId: number; index: number }
   | { type: 'setResearch'; techId: string | null }
-  | { type: 'setResearchBudget'; budget: number }
   /** 세법·투자법을 바꾼다 (TUNE.lawDays 일에 걸쳐. 지금 법과 같은 값이면 바뀌는 중인 것을 취소) */
   | { type: 'setTaxLaw'; law: TaxLaw }
   | { type: 'setInvestLaw'; law: InvestLaw }
   | { type: 'setWelfareLaw'; law: WelfareLaw }
-  /** 정책 단계: 세금 수준, 국영 임금 수준, 연구비 수준 (1~5) */
+  /** 정책 단계: 세금 수준, 국영 임금 수준, 복지 수준 (1~5) */
   | { type: 'setBudget'; item: BudgetItem; value: number }
   /** 왕실 건물 민영화 켜기·끄기: 켜 두면 저택·금융가가 매주 1레벨씩 사 갈 수 있다 */
   | { type: 'setPrivatize'; buildingId: number; on: boolean };

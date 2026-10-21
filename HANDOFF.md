@@ -32,6 +32,21 @@
   새 데이터에서 철광산은 6~10년차(main 12~13년차), 철 수요 1천/일은 12~19년차(main 18~21년차)에 생긴다. 40년차 총생산은 main보다 낮다 (952 vs 1,509).
   sweep traj 추가: `toolSh`(공구 쓰는 방식 레벨 비율), `upSh`(윗단 방식 비율), `slot.<직종>`·`qual.<직종>`(일자리·자격자, 천).
 - 남은 일: 시드 3 붕괴 진단 (석탄 공급이 처음부터 0, 곡물값 0.4, 민간 현금이 0이 되며 총생산 0으로), 옛 방식 바꾸기의 되돌아감(의복 ↔ 고급 의복)은 그대로.
+## 0-research. wt-research (2026-10-22, main d34ecd0 위, 합치기 전, DECISIONS 7-20 사용자 결정)
+- 연구는 돈이 들지 않는다: 주간 연구 포인트 = 50(`researchBase`) + 3(`researchPerLiteracy`) × 왕국 문해력(%) (`finance.ts researchPoints`·`advanceResearch`·`kingdomLiteracy`). 기술 값 4,500 / 9,000 / 15,000 / 26,250 포인트. 고른 기술이 없으면 포인트는 사라진다.
+- 없앤 것: 연구비 손잡이(`BUDGET_ITEMS` = tax·wages·welfare), `researchShare`·`researchLevels`, 예산 줄·묶음·`drillResearch`, `ledger.research`, `lastBudget.research`, `setResearchBudget`, `MAX_RESEARCH_BUDGET`, `RESEARCHER_WEIGHT`(연구비 → 기술자·전문가 소득), `Research.budget`(→ `points`), 연구의 국고 준비금·`treasuryNeed` 몫.
+- AI: 늘 연구를 고른다. 정책 사다리 국영 임금 4 → 세금 1~5 → 국영 임금 2·1. `doneWageMax` 4는 3(끔)과 다시 비교해 그대로 (25~40년 총생산 +13%).
+- 시작 세계: 왕실마다 인구가 가장 많은 지역에 학교 1레벨(귀족 가정교사, `START_SCHOOL_LEVELS`). 저장 14판 (13판 이전은 연구비를 포인트로 비례 변환).
+- 비교 (보고서 2026-10-22-research): 문해력 1%당 1·2·3 × 기술 값 ×1·×1.5. 고른 3·×1.5는 기술 전부 23~30년(가운데 27.2, main 27.6), 4단계 첫 11.4년. 20년차 총생산 main 1,098 → 2,213, 기술자 생활수준 5·10년 6.9 / 8.4 → 4.9 / 5.0 (사용자 승인). 국고가 더 쌓인다 (20년차 488~549백만, main 200~213) — 남은 문제.
+- 테스트: `budget.test` 국영 사업 손익은 100·150·200주 세 구간 합의 오차를 총 흐름(매출 + 원료 + 임금)에 견준다 (한 구간·매출 기준은 새 궤적에서 15~28%가 나왔다. 매출 이동평균이 늘고 주는 적자 국영 사업을 늦게 따라가는 것). 새 기준 오차 = |예상 − 장부| ÷ 총 흐름 = 4.1% (시드 42: 예상 −153,280, 장부 −140,184, 총 흐름 323,060), 한도 10%는 그대로 둠 (근거 없음). `decimals.test` 13 → 14 이전 확인.
+- 화면: UI_CHANGES 2-61 (0-8). 클라이언트 컴파일 맞춤 `CompanyPanel.tsx` 156·567·577, `FinancePanel.tsx` 15.
+- 다른 브랜치와 겹침: wt-chain2·wt-office 가 ai.ts·data.ts·budget.ts 를 고친다. 이 브랜치는 ai.ts adjustBudget·planResearch, data.ts TECH_COST·TUNE 연구 두 키, budget.ts 연구 줄만 고쳤다. UI_CHANGES 절 번호 2-61 이 겹치면 뒤에 합치는 쪽이 번호를 민다.
+
+## 0-regionecon. wt-regionecon (2026-10-22, main c3d8efb 병합 뒤, 합치기 전)
+- `buildingEcon(w, b)` (지역 건물 수지·지분·배당, UI_CHANGES 2-59).
+- 재정 수지 표 (UI_CHANGES 2-60, DESIGN 9.2): `budgetPreview` 에 줄 `stateFirms`(국영 사업 손익 = 왕실 생산 건물 매출 − 원료 − 임금, 순수지에 들어감)와 손잡이별 묶음 `groups`(`BUDGET_GROUPS`).
+  줄 자세히 보기 `budgetDrill(w, kid, key, steps?)` (+ 줄마다 `drillWages` 등, `budgetLineRaw`). 화면 전용 새 저장 필드: `Building.payout`·`firmEma`, `Kingdom.tariffWeekBy`·`budgetBase.tariffsBy`·`welfareNeedBy`, `lastBudget.firms`·`spentWeek.firms`. sim·AI 는 읽지 않고 반올림하지 않는다 (main 의 noround 규칙). 저장 13판 (12판은 그대로 불러온다).
+  미리보기 순수지 vs 실제 주간 국고 변화(현금 − 빚), 150주차부터 8주 합: 총 흐름 대비 0.2~0.9% (국영 사업 빼면 1.3~2.2%), 시드 1·2. 열린 문제: AI 국고 판단(expenseEma)에 국영 사업 손익을 넣을지.
 
 ## 0-metrics. wt-metrics (2026-10-22, main d4f95a4 위, 합치기 전, cli·보고서만)
 - 보고서 형식 2 (`format: 2`): 지표 이름은 `keys` 에 한 번, 실행·시드마다 해마다 한 줄 배열 `[y, v1, v2, ...]` (없으면 null), 값은 유효숫자 3자리 (정수·해는 그대로).

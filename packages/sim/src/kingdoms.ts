@@ -42,10 +42,16 @@ export function toFinance(w: World, regionId: number, amount: number, tag = 'oth
 }
 
 /** 관세 수입을 받는 곳: 도착 왕국의 국고 (국영 회사 현금) */
-export function payTariff(w: World, to: number, amount: number) {
+export function payTariff(w: World, to: number, amount: number, good?: string, from?: number) {
   if (amount <= 0) return;
   const k = w.kingdoms.find((x) => x.id === kingdomOf(w, to));
   const gov = k && w.companies.find((c) => c.id === k.governmentId);
-  if (gov) { gov.cash += amount; k!.revenueWeek += amount; k!.tariffWeek = (k!.tariffWeek ?? 0) + amount; }
+  if (gov) {
+    gov.cash += amount; k!.revenueWeek += amount; k!.tariffWeek = (k!.tariffWeek ?? 0) + amount;
+    // 화면 전용 나누기 (예산 미리보기 관세 줄 자세히 보기)
+    const by = (k!.tariffWeekBy ??= {});
+    if (good) by[`g:${good}`] = (by[`g:${good}`] ?? 0) + amount;
+    if (from != null) by[`k:${kingdomOf(w, from)}`] = (by[`k:${kingdomOf(w, from)}`] ?? 0) + amount;
+  }
   else w.fund += amount;
 }

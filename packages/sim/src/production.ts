@@ -6,7 +6,7 @@ import { flow, kingdomById } from './kingdoms';
 import { buildingNameEn, regionNameEn } from './i18n';
 import { clamp } from './rng';
 import type { Building, Company, Construction, GoodBag, GoodId, World } from './types';
-import { weeklyOutputValue } from './finance';
+import { budgetEmaWeight, weeklyOutputValue } from './finance';
 
 /** 숙련도가 하루에 오르는 양 (0..1 에서 3.5%p, 약 한 달이면 최대) */
 export const EXP_GAIN = 0.035;
@@ -186,6 +186,12 @@ export function produce(w: World) {
       const spent = (kingdomById(w, c.kingdomId).spentWeek ??= { wages: 0, goods: 0 });
       spent.wages += b.last.wageCost;
       spent.goods += b.last.inputCost;
+    } else if (c.state) {
+      // 왕실 생산 건물: 매출·원료·임금이 국고에 바로 들고 난다. 국정 수지의 국영 사업 손익 줄 (화면 전용, sim 은 읽지 않는다)
+      const spent = (kingdomById(w, c.kingdomId).spentWeek ??= { wages: 0, goods: 0 });
+      spent.firms = (spent.firms ?? 0) + profit;
+      const a = budgetEmaWeight(w, 0.05), e = b.firmEma;
+      b.firmEma = e ? { sales: e.sales * (1 - a) + b.last.revenue * a, inputs: e.inputs * (1 - a) + b.last.inputCost * a } : { sales: b.last.revenue, inputs: b.last.inputCost };
     }
   }
   allocateConstruction(w);
