@@ -24,9 +24,9 @@
 
 - 역할 에이전트 (`.claude/agents/`): `economist`(통계·경제 분석으로 로직 검증), `ui-ux`(UI_CHANGES·UI_DONE 기술서), `tester`(테스트·불변식). 맞는 일은 이들에게 맡긴다.
 - 사용자에게 보고할 때는 그래프가 가장 좋다. 숫자는 최소 1년 단위로 낸다 (20년차 값만 던지지 않는다).
-  보고는 실험 보고서 앱(`tools/reports`, 로컬 `npm run reports` 포트 5201)으로 한다:
+  보고는 실험 보고서 앱(`tools/reports`, GitHub Pages `/econ-sim/reports/`, 로컬 `npm run reports` 포트 5201)으로 한다:
   `cd packages/sim && TITLE=.. DESC=.. L="기준,새 규칙" python cli/report.py <날짜-이름> out.jsonl ...` 가 `tools/reports/public/data/` 에 보고서를 더한다
-  (인자 `이름=파일`로 실행 이름, 진단 스크립트의 해마다 한 줄 파일도 읽는다). 보고서 데이터는 git에 올리지 않는다(.gitignore). 사용자 PC의 main 체크아웃에서 report.py를 돌리고(worktree 결과는 파일 경로로 넘긴다), 서버가 꺼져 있으면 백그라운드로 켜고 `http://localhost:5201/#<id>` 링크를 준다. PNG는 `cli/trajchart.py`.
+  (인자 `이름=파일`로 실행 이름, 진단 스크립트의 해마다 한 줄 파일도 읽는다). 커밋·푸시하면 배포되고, 사용자에게 `https://phy-ce.github.io/econ-sim/reports/#<id>` 링크를 준다. PNG는 `cli/trajchart.py`.
 
 ## 지켜야 할 것 (깨면 안 됨)
 - 화폐 보존과 결정성(저장/불러오기 포함) 테스트는 항상 통과한다.
