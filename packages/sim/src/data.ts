@@ -492,6 +492,10 @@ export const TUNE = {
   laborNet: 0,
   minRoi: 0.2,
   minStaffing: 0.5,
+  // AI 방식 바꾸기와 잠재 수요 (2026-10-22, 새 방식 사다리): 1 = 새 규칙, 0 = 옛 규칙. 비교 실행으로 기본값을 정한다 (DESIGN 11)
+  latentFeasible: 1, // 잠재 수요에 실제로 바꿀 수 있는 몫만 센다 (지역 일손 × 다른 투입재)
+  aiSwitchV2: 1, // 방식 비교 = 건물 전체 하루 손익 × 기대 충원율 × 투입 충족 (옛: 산출 1단위당 이윤, 일손 50% 기준, 공급 50% 기준)
+  aiMixedMethods: 0, // 1 = 건물 전체를 바꿀 수 없을 때 같은 지역에 더 나은 방식 1~2레벨을 따로 짓는다 (세계 규칙이 바뀌어 사용자 결정 필요, DECISIONS)
   officeRichWeeks: 52,
   officeSelfPay: 0,
   laborPoach: 0,

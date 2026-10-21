@@ -1,5 +1,5 @@
 import { BUILDING_BY_ID, buildPointsOf, GOODS, GOOD_IDS, TICKS_PER_WEEK, MAX_POINTS_PER_LEVEL_DAY, OWNER_SEATS_PER_LEVEL, OWNERSHIP_SEATS, TUNE, WORKFORCE_RATIO, getMethod } from './data';
-import { addOwnerLevels, builderOf, companyById, efficiency, harvestFactor, isGovernment, landFree, logEvent, newBuilding, regionById } from './economy';
+import { addOwnerLevels, ownBuildingAt, builderOf, companyById, efficiency, harvestFactor, isGovernment, landFree, logEvent, newBuilding, regionById } from './economy';
 import { SKILLS } from './types';
 import { workforce } from './pops';
 import { flow, kingdomById } from './kingdoms';
@@ -260,7 +260,7 @@ export function advanceConstruction(w: World) {
     const rname = regionById(w, k.regionId).name;
     const add = k.levels ?? 1;
     const target = (k.targetBuildingId != null ? w.buildings.find((b) => b.id === k.targetBuildingId) : undefined)
-      ?? w.buildings.find((b) => b.companyId === k.companyId && b.regionId === k.regionId && b.typeId === k.typeId);
+      ?? ownBuildingAt(w, k.companyId, k.regionId, k.typeId, k.methodId);
     const mats = materialsPerLevel(w, companyById(w, k.companyId), k.typeId);
     if (target) {
       const old = target.materials ?? materialsPerLevel(w, undefined, k.typeId);
@@ -380,7 +380,7 @@ export function privatizeLevel(w: World, b: Building, buyer: Building, price: nu
   buyer.cash = (buyer.cash ?? 0) - price;
   flow(`priv.${buyer.typeId}`, price);
   gov.cash += price; gov.ledger.investment += price;
-  let p = w.buildings.find((x) => x.companyId === firm.id && x.regionId === b.regionId && x.typeId === b.typeId);
+  let p = ownBuildingAt(w, firm.id, b.regionId, b.typeId, b.methodId);
   if (p) {
     const q = p;
     const old = q.materials ?? materialsPerLevel(w, undefined, q.typeId), mats = b.materials ?? materialsPerLevel(w, undefined, b.typeId);

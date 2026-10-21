@@ -1,5 +1,5 @@
 import { BUILDING_BY_ID, buildPointsOf, DEPOSIT_NAMES, DEPOSIT_NAMES_EN, LAND_NAMES, SKILL_DEFS, TECH_BY_ID, TUNE } from './data';
-import { availableMethods, companyById, constructionEstimate, depositFree, emptyJobs, hasBuilder, isGovernment, knowsTech, landFree, logEvent, regionById, sellsShares } from './economy';
+import { availableMethods, ownBuildingAt, companyById, constructionEstimate, depositFree, emptyJobs, hasBuilder, isGovernment, knowsTech, landFree, logEvent, regionById, sellsShares } from './economy';
 import { applyStateWages, chooseFunders } from './finance';
 import { kingdomById } from './kingdoms';
 import { buildingNameEn, landNameEn, regionNameEn, techNameEn } from './i18n';
@@ -98,7 +98,7 @@ function runCommand(w: World, actor: number, cmd: Command): CommandError | null 
       if (usable.length === 0) return fail(`${t.name}을 지으려면 먼저 기술을 연구해야 합니다.`, `Research the required technology before building a ${buildingNameEn(t.id).toLowerCase()}.`);
       const methodId = cmd.methodId ?? usable[0].id;
       if (!usable.some((m) => m.id === methodId)) return fail('아직 쓸 수 없는 생산 방식입니다.', 'That production method is not available yet.');
-      const existing = w.buildings.find((b) => b.companyId === actor && b.regionId === cmd.regionId && b.typeId === cmd.typeId);
+      const existing = ownBuildingAt(w, actor, cmd.regionId, cmd.typeId, methodId);
       if (existing) return startConstruction(existing.regionId, existing.typeId, existing.methodId, existing.id, cmd.levels);
       return startConstruction(cmd.regionId, cmd.typeId, methodId, null, cmd.levels);
     }

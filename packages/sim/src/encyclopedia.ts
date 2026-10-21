@@ -35,7 +35,7 @@ import {
   DAILY_INTEREST, KEEP_SHARE, MINT_BASE, MINT_RATE, RESEARCHER_WEIGHT, RESERVE_SHARE, adminCapacityOf, reserveCap, taxCapacity, taxRates,
   weeklyOutputValue,
 } from './finance';
-import { CHUNKS, LAW_COOLDOWN, LAW_SWITCH, WELFARE_COOLDOWN, WELFARE_SWITCH, OFFICE_BLOCK, OFFICE_GROWTH, STAFFING_HORIZON, SWITCH_COOLDOWN } from './ai';
+import { CHUNKS, MIXED_LEVELS, LAW_COOLDOWN, LAW_SWITCH, WELFARE_COOLDOWN, WELFARE_SWITCH, OFFICE_BLOCK, OFFICE_GROWTH, STAFFING_HORIZON, SWITCH_COOLDOWN } from './ai';
 import { budgetPreview } from './budget';
 import { ownershipAssets } from './policy';
 import { welfareIncome, welfareTarget, welfareWeekly } from './welfare';
@@ -1178,8 +1178,8 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   },
   {
     id: 'ai-methods', category: 'ai', title: t('방식 바꾸기', 'Switching methods'),
-    rule: t('생산 건물은 산출 1단위당 이윤이 5% + 0.01 넘게 나은 방식으로 바꾼다 ({0}일 쿨다운). 지금 재직자를 더해도 일손을 {2} 이상 모을 수 없는 방식은 고르지 않고, 지금 방식이 {2} 미만으로 채워지고 일손도 없으면 이윤이 낮아도 일손을 구할 수 있는 방식으로 바꾼다. 사무소는 자재를 구할 수 있는 방식 중 포인트 최대. 행정청은 한도 × 원료 충족이 10% 넘게 큰 방식으로, 원료 없는 방식이면 충족 기억을 매주 {1}씩 1로 되돌린다.', 'Producers switch when profit per unit beats the current method by 5% + 0.01 ({0}-day cooldown). Methods that cannot be staffed to {2} (counting current workers) are skipped; a building under {2} staffed with no labour for its method moves to a staffable one even at lower profit. Offices take the highest-point method with available materials. Administrations take the method with 10% more capacity × fill; on a no-input method the fill memory drifts back to 1 by {1} a week.'),
-    params: [p('쿨다운', 'Cooldown', () => SWITCH_COOLDOWN, 'day'), tune('adminFillRetry', '행정청 재시도', 'Administration retry', 'pct'), tune('minStaffing', '일손 기준', 'Staffing threshold', 'pct')],
+    rule: t('생산 건물은 건물 전체의 하루 손익이 5% (최소 인건비의 1%) 넘게 큰 방식으로 바꾼다 ({0}일 쿨다운, 원료가 끊겨 멈췄으면 쿨다운 없이). 손익 = 레벨 × 기대 충원율 × (매출 × 투입 충족 × 숙련 − 원료비 × 투입 충족 − 인건비). 기대 충원율 = 지금 재직자와 그 지역에서 데려올 사람으로 채우는 비율 (임금 가중), 투입 충족 = 대륙의 남는 투입재(건물 수요는 방식 × 레벨 × 가동률 × 충원율로, 절반 넘게 지은 공사의 산출 포함)로 채우는 비율, 숙련 = 바꾸면 반으로 주는 숙련의 효과. 값은 대륙 장기 가격으로 재고 이 건물이 바꾸며 내놓는 양만큼 움직인다. 손해인 방식으로는 바꾸지 않는다. 같은 주에 바꾼 건물이 더 뽑을 사람과 원료는 다른 건물이 세지 않는다. ({2} = 0이면 옛 규칙: 산출 1단위당 이윤, 일손 {3}·공급 50% 기준.) 사무소는 자재를 구할 수 있는 방식 중 포인트 최대. 행정청은 한도 × 원료 충족이 10% 넘게 큰 방식으로, 원료 없는 방식이면 충족 기억을 매주 {1}씩 1로 되돌린다.', 'Producers switch to the method whose whole-building daily profit beats the current one by 5% (at least 1% of wages) ({0}-day cooldown; none when starved of inputs). Profit = levels × expected staffing × (revenue × input fill × skill − input cost × input fill − wages). Expected staffing = share filled by current workers plus people the region can supply (wage-weighted); input fill = share covered by spare continental inputs (building demand counted as method × levels × utilisation × staffing; output of constructions past half-way included); skill = the effect of the halved experience after a switch. Prices are long-run continental prices, moved by the output this building adds or removes. Never switches into a loss. People and inputs a switching building takes are not counted again that week. ({2} = 0 restores the old rule: profit per unit, {3} staffing and 50% supply thresholds.) Offices take the highest-point method with available materials. Administrations take the method with 10% more capacity × fill; on a no-input method the fill memory drifts back to 1 by {1} a week.'),
+    params: [p('쿨다운', 'Cooldown', () => SWITCH_COOLDOWN, 'day'), tune('adminFillRetry', '행정청 재시도', 'Administration retry', 'pct'), tune('aiSwitchV2', '손익 비교 (새 규칙)', 'Profit comparison (new rule)'), tune('minStaffing', '일손 기준', 'Staffing threshold', 'pct')],
     related: ['input-fill', 'admin-capacity', 'methods-rule'], seenIn: ['company'], source: ['ai.ts manageBuildings'], design: ['10'],
   },
   {
@@ -1202,15 +1202,16 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   },
   {
     id: 'ai-construction', category: 'ai', title: t('착공', 'Starting construction'),
-    rule: t('주에 최대 {0}건. 연 손익 ÷ 공사비 > {1}이고 일손을 {2} 이상 ({3}일 안에) 모을 수 있는 후보 중, 덩어리({4}레벨)를 골라 점수 = 수익률 × 무작위 × (1 + {5} × 지역 자금 비율)이 가장 큰 것을 짓는다. 기상 조건이 걸린 땅은 뺀다.', 'Up to {0} starts a week. Candidates need yearly profit ÷ cost > {1} and {2} of jobs fillable within {3} days; chunks of {4} levels; score = return × random × (1 + {5} × local fund share). Land under a harvest condition is skipped.'),
+    rule: t('주에 최대 {0}건. 연 손익 ÷ 공사비 > {1}이고 일손을 {2} 이상 ({3}일 안에) 모을 수 있는 후보 중, 덩어리({4}레벨)를 골라 점수 = 수익률 × 무작위 × (1 + {5} × 지역 자금 비율)이 가장 큰 것을 짓는다. 기상 조건이 걸린 땅은 뺀다. 이미 건물이 있으면 그 방식으로만 늘린다 ({9} = 1이면 그 건물이 바꾸지 못한 더 나은 방식을 옆에 새 건물로 공사 하나에 {10}레벨까지 짓는다).', 'Up to {0} starts a week. Candidates need yearly profit ÷ cost > {1} and {2} of jobs fillable within {3} days; chunks of {4} levels; score = return × random × (1 + {5} × local fund share). Land under a harvest condition is skipped. An existing building only grows in its own method ({9} = 1: a better method the building could not switch to is built next to it as a new building, up to {10} levels per project).'),
     params: [tune('startsPerWeek', '주간 착공', 'Starts per week'), tune('minRoi', '최소 수익률', 'Minimum return', 'pct'), tune('minStaffing', '일손 기준', 'Staffing threshold', 'pct'), p('일손 기간', 'Staffing horizon', () => STAFFING_HORIZON, 'day'), p('덩어리', 'Chunks', () => CHUNKS.join(' / ')), tune('localBias', '지역 가산', 'Local bias', 'pct'),
-      tune('lossBuildsPerWeek', '손해 후보 짓기 (주간)', 'Loss builds per week'), tune('lossTolerance', '손해 허용', 'Loss tolerance'), tune('schoolTaxMax', '학교 짓는 세금 상한', 'Max tax step for schools')],
+      tune('lossBuildsPerWeek', '손해 후보 짓기 (주간)', 'Loss builds per week'), tune('lossTolerance', '손해 허용', 'Loss tolerance'), tune('schoolTaxMax', '학교 짓는 세금 상한', 'Max tax step for schools'),
+      tune('aiMixedMethods', '옆에 새 방식 짓기', 'Build a better method alongside'), p('새 방식 레벨 상한', 'Alongside level cap', () => MIXED_LEVELS, 'level')],
     related: ['ai-outlook', 'owner-treasury', 'land'], seenIn: ['company'], source: ['ai.ts planConstruction', 'ai.ts pickProject'], design: ['10'],
   },
   {
     id: 'ai-outlook', category: 'ai', title: t('장기 손익 전망', 'Long-run valuation'),
-    rule: t('가동률 1/0.75/0.5/0.25 중 손익이 가장 큰 값을 쓴다. 가격 = (장기 가격 + 현지 가격) ÷ 2. 장기 가격은 대륙 수요(공사 중 투입·대체 수요 포함)와 공급(공사 중 산출 포함)을 가격 공식에 넣은 값이다. 민간 임금은 max(지금 임금, 기본 × {0}).', 'Use the best of utilisation 1/0.75/0.5/0.25. Price = (long-run + local) ÷ 2; long-run price feeds continental demand (incl. pending inputs, substitution) and supply (incl. pending output) into the price formula. Private wages = max(current, base × {0}).'),
-    params: [tune('investWage', '임금 바닥', 'Wage floor', 'x')],
+    rule: t('가동률 1/0.75/0.5/0.25 중 손익이 가장 큰 값을 쓴다. 가격 = (장기 가격 + 현지 가격) ÷ 2. 장기 가격은 대륙 수요(공사 중 투입·대체 수요 포함)와 공급(공사 중 산출 포함)을 가격 공식에 넣은 값이다. 파는 쪽 가격에는 잠재 수요(기본가로 더 나은 방식으로 바꾸면 더 쓸 투입재)도 센다. {1} = 1이면 그중 실제로 바꿀 수 있는 몫만: 그 지역에서 데려올 사람 ÷ 그 지역 후보들이 더 필요한 사람 (직종마다, 최대 1) × 다른 새 투입재가 남는 공급으로 채워지는 비율. 민간 임금은 max(지금 임금, 기본 × {0}).', 'Use the best of utilisation 1/0.75/0.5/0.25. Price = (long-run + local) ÷ 2; long-run price feeds continental demand (incl. pending inputs, substitution) and supply (incl. pending output) into the price formula. Sell-side prices also count latent demand (extra inputs of better methods at base prices). With {1} = 1 only the feasible share counts: people the region can supply ÷ extra people its candidates need (per skill, at most 1) × how far spare supply covers the other new inputs. Private wages = max(current, base × {0}).'),
+    params: [tune('investWage', '임금 바닥', 'Wage floor', 'x'), tune('latentFeasible', '바꿀 수 있는 몫만', 'Feasible share only')],
     related: ['price-formula', 'ai-construction', 'substitution'], seenIn: [], source: ['outlook.ts valueMethod', 'outlook.ts marketOutlook'], design: ['10'],
   },
   {

@@ -647,6 +647,15 @@ export function repay(w: World, c: Company, amount: number): number {
 
 // ---------------------------------------------------------------- 기타
 
+/**
+ * 회사의 그 지역·그 종류 건물 (공사가 붙을 건물). 한 회사는 지역마다 종류마다 건물 하나다.
+ * TUNE.aiMixedMethods 이면 방식마다 하나다 (methodId 가 같은 건물만 찾는다)
+ */
+export function ownBuildingAt(w: World, companyId: number, regionId: number, typeId: string, methodId?: string): Building | undefined {
+  const mixed = !!TUNE.aiMixedMethods && methodId !== undefined;
+  return w.buildings.find((b) => b.companyId === companyId && b.regionId === regionId && b.typeId === typeId && (!mixed || b.methodId === methodId));
+}
+
 export function companyById(w: World, id: number): Company | undefined {
   return w.companies.find((c) => c.id === id);
 }
