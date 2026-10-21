@@ -238,6 +238,8 @@ export interface Building {
   privatize?: boolean;
   /** 금융가 지분 1개 값 = (금고 + 가진 레벨의 공사비) ÷ 지분 수 (매주, finance.ts updateFunds) */
   nav?: number;
+  /** 금융가: 마지막으로 민간 공사비를 맡은 날 (TUNE.financeIdle 이 켜졌을 때만 쓴다, finance.ts financeIdle) */
+  fundedTick?: number;
   /** 소작지: 일하는 소작농 (노동 인구) */
   tenants?: number;
   /** 저택: 상급 귀족 자리 (노동 인구). 저택이 가진 건물 레벨과 소작지 칸으로 정한다 (production.ts updateOwnership) */

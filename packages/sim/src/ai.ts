@@ -1,6 +1,6 @@
 import { BUILDING_BY_ID, BUILDING_TYPES, EDUCATION_FLOOR, EDUCATION_RANGE, GOOD_IDS, GOODS, SKILL_DEFS, TECH_BY_ID, TICKS_PER_WEEK, TICKS_PER_YEAR, TUNE, getMethod, regionPerk } from './data';
 import { withEstimateCache, regionAvgWealth, regionPopulation, wageCostOf,
-  availableMethods, builderOf, canBuildType, paysDividend, paysShare, companyById, constructionEstimate, creditLimit, depositFree, efficiency, estimateMethod, harvestFactor, hasBuilder, isGovernment, regionById, researchableTechs, roomFor, sellsShares, slots,
+  availableMethods, builderOf, canBuildType, kingdomGdp, paysDividend, paysShare, companyById, constructionEstimate, creditLimit, depositFree, efficiency, estimateMethod, harvestFactor, hasBuilder, isGovernment, regionById, researchableTechs, roomFor, sellsShares, slots,
 } from './economy';
 import { MAX_CONCURRENT_CONSTRUCTIONS, MAX_LEVELS_PER_PROJECT, applyCommand } from './commands';
 import { committedCost, favours, funderWeight, lawRevenue, ownerBuildings, ownerFunds, reserveOf, treasuryFree } from './finance';
@@ -29,7 +29,8 @@ export const OFFICE_GROWTH = 0.25;
 /** 공사 기간 동안 채울 수 있는 사람을 셀 때 보는 날 수 */
 export const STAFFING_HORIZON = 60;
 /** 짓기 기준: 공사 기간 안에 일자리의 이 비율 이상을 채울 사람이 있어야 한다 (건축사무소는 대신 채울 수 있는 레벨 수 officeStaffable 을 본다) */
-const MIN_STAFFING = () => TUNE.minStaffing;
+// TUNE.laborStrict: 일손이 다 차야(1) 짓는다
+const MIN_STAFFING = () => (TUNE.laborStrict ? 1 : TUNE.minStaffing);
 
 export function runAi(w: World) {
   if (!w.config.ai) return;
@@ -85,7 +86,7 @@ const ownRegions = (w: World, c: Company) => w.regions.filter((r) => r.kingdomId
  * 이 지역에서 공사 기간 안에 이 직종으로 데려올 수 있는 노동 인구.
  * 같은 직종 실업자 + (노동자) 다른 실업자와 소작농이 옮겨 오는 몫 + (그 위 직종) 자격자가 옮겨 오는 몫.
  */
-function labourPool(w: World, r: Region, s: Skill): number {
+function labourPool(w: World, r: Region, s: Skill, strict = false): number {
   let n = 0;
   const reach = Math.min(1, TUNE.switchRate * STAFFING_HORIZON);
   // 소유 건물(저택·금융가) id: 저택의 하급 귀족도 몫 자리에서 임금 자리로 옮겨 올 사람이다
@@ -97,7 +98,8 @@ function labourPool(w: World, r: Region, s: Skill): number {
     if (p.prof === s) { n += p.work === 0 ? workforce(p) : s === 'capitalist' || s === 'aristocrat' || seats.has(p.work) ? workforce(p) * reach : 0; continue; }
     if (p.prof === 'capitalist' || p.prof === 'aristocrat') continue;
     const q = isLowerJob(s) ? workforce(p) : (p.quals[s] ?? 0);
-    n += p.work === 0 ? q : q * reach;
+    // strict (TUNE.laborStrict): 다른 임금 자리에서 일하는 사람은 세지 않는다 (소작농만 소작지에서 옮겨 오는 몫을 센다)
+    n += p.work === 0 ? q : strict && p.prof !== 'peasant' ? 0 : q * reach;
   }
   return n;
 }
@@ -146,7 +148,9 @@ export function laborAvailability(w: World, r: Region, m: MethodDef, levels: num
     const k = `${r.id}|${s}`;
     let pool = pools?.get(k);
     if (pool === undefined) {
-      pool = labourPool(w, r, s) - (TUNE.laborNet ? TUNE.laborNet * openJobs(w, r, s) : 0) + (TUNE.laborPoach && c ? poachable(w, r, s, c) : 0);
+      // TUNE.laborStrict: 실업자와 소작농만 세고, 그 지역 빈자리·공사 중 자리를 모두 뺀다
+      const net = TUNE.laborStrict ? 1 : TUNE.laborNet;
+      pool = labourPool(w, r, s, !!TUNE.laborStrict) - (net ? net * openJobs(w, r, s) : 0) + (TUNE.laborPoach && c ? poachable(w, r, s, c) : 0);
       pools?.set(k, pool);
     }
     // own: 방식을 바꾸는 건물 자신의 재직자는 그대로 남는다
@@ -235,9 +239,23 @@ function treasuryWeeks(c: Company, k: Kingdom): number {
   return spend > 0 ? c.cash / spend : Infinity;
 }
 
-/** 국고가 조이는 중인가: 빚이 있거나 지출 TUNE.treasuryLowWeeks 주치보다 적다 */
-function treasuryTight(c: Company, k: Kingdom): boolean {
-  return c.debt > 0 || treasuryWeeks(c, k) < TUNE.treasuryLowWeeks;
+/**
+ * 왕실이 남겨 둘 국고 (AI): 기본은 국정 지출 TUNE.treasuryHighWeeks 주치.
+ * TUNE.crownGdpReserve > 0 이면 왕국 연간 총생산 × 그 비율 (지출이 커지거나 줄어도 경제 크기에 맞춘 기준)
+ */
+function crownKeep(w: World, c: Company, k: Kingdom): number {
+  return TUNE.crownGdpReserve > 0 ? TUNE.crownGdpReserve * kingdomGdp(w, k.id) : TUNE.treasuryHighWeeks * (k.expenseEma ?? 0);
+}
+
+/** 국고가 넉넉한가 (풂): 남겨 둘 국고(crownKeep)를 넘는다 */
+function treasuryRich(w: World, c: Company, k: Kingdom): boolean {
+  return TUNE.crownGdpReserve > 0 ? c.cash > crownKeep(w, c, k) : treasuryWeeks(c, k) > TUNE.treasuryHighWeeks;
+}
+
+/** 국고가 조이는 중인가: 빚이 있거나 지출 TUNE.treasuryLowWeeks 주치보다 적다 (TUNE.crownGdpReserve > 0 이면 남겨 둘 국고의 절반보다 적다) */
+export function treasuryTight(w: World, c: Company, k: Kingdom): boolean {
+  if (c.debt > 0) return true;
+  return TUNE.crownGdpReserve > 0 ? c.cash < crownKeep(w, c, k) / 2 : treasuryWeeks(c, k) < TUNE.treasuryLowWeeks;
 }
 
 /**
@@ -263,7 +281,7 @@ function adjustBudget(w: World, c: Company) {
   let step: [BudgetItem, number] | null = null;
   // 기술을 다 연 왕국: 연구비가 끊기는 몫을 국영 임금으로 돌린다 (임금 지수 1 이하, 국고 넉넉할 때 보통 위로 TUNE.doneWageMax 단계까지)
   const done = !c.research.current && researchableTechs(c).length === 0;
-  if (treasuryTight(c, k)) {
+  if (treasuryTight(w, c, k)) {
     if (losing && !cutWelfare(w, c, k)) {
       if (b.wages > 3) step = ['wages', b.wages - 1];
       else if (b.research > 3) step = ['research', b.research - 1];
@@ -274,7 +292,7 @@ function adjustBudget(w: World, c: Company) {
       else if (c.debt > 0) shrinkSchools(w, c);
     }
   } else if (!losing) {
-    const rich = treasuryWeeks(c, k) > TUNE.treasuryHighWeeks;
+    const rich = treasuryRich(w, c, k);
     if (b.wages > 3 && (k.wageIndex ?? 1) > 1) step = ['wages', b.wages - 1];
     else if (b.wages < 3) step = ['wages', b.wages + 1];
     else if (done && rich && b.wages < TUNE.doneWageMax && (k.wageIndex ?? 1) <= 1) step = ['wages', b.wages + 1];
@@ -574,7 +592,7 @@ function schoolValuation(w: World, c: Company, r: Region, m: MethodDef, levels: 
 /** 연구 고르기 (AI 왕실): 진행 중인 연구가 없을 때. 국고가 조이는 동안은 새 연구를 시작하지 않는다 (adjustBudget) */
 function planResearch(w: World, c: Company, o: Outlook) {
   const r = c.research;
-  if (!r.current && !treasuryTight(c, kingdomById(w, c.kingdomId))) {
+  if (!r.current && !treasuryTight(w, c, kingdomById(w, c.kingdomId))) {
     const direct = new Map(Object.keys(TECH_BY_ID).map((id) => [id, techValue(w, o, c, id)] as const));
     // 학교를 여는 기술: 자기 왕국에서 목표 자리(schoolWanted)까지 모자란 자리의 가치 (seatValue)
     let uncovered = 0;
@@ -715,7 +733,7 @@ function secureGovInputs(w: World, c: Company, o: Outlook, costPerDay: number) {
     const m = availableMethods(c, t.id).find((x) => (x.outputs[g] ?? 0) > 0)!;
     const perLevel = constructionEstimate(w, c, t.id).cost;
     // 국고가 조이지 않으면(빚 없음, 지출 TUNE.treasuryLowWeeks 주치 이상) 진행 중 공사비를 뺀 현금으로 짓는다
-    const afford = treasuryTight(c, kingdomById(w, c.kingdomId)) ? 0 : Math.floor((c.cash - committedCost(w, c)) / perLevel);
+    const afford = treasuryTight(w, c, kingdomById(w, c.kingdomId)) ? 0 : Math.floor((c.cash - committedCost(w, c)) / perLevel);
     let levels = Math.min(Math.ceil((n - supply) / m.outputs[g]!), MAX_LEVELS_PER_PROJECT, afford);
     // 행정청이 큰 지역부터, 땅과 일손이 되는 곳
     const regions = ownRegions(w, c).sort((x, y) => (where.get(y.id) ?? 0) - (where.get(x.id) ?? 0) || x.id - y.id);
@@ -737,7 +755,7 @@ function secureGovInputs(w: World, c: Company, o: Outlook, costPerDay: number) {
  * 왕실은 국정 지출 TUNE.treasuryHighWeeks 주치를 남긴다 (학교·행정청·생산 건물 모두 그 위의 여윳돈으로만 짓는다)
  */
 function freeCash(w: World, c: Company, costPerDay: number): number {
-  const keep = c.state ? TUNE.treasuryHighWeeks * (kingdomById(w, c.kingdomId).expenseEma ?? 0) : 0;
+  const keep = c.state ? crownKeep(w, c, kingdomById(w, c.kingdomId)) : 0;
   return c.cash - Math.max(reserveOf(w, c), keep) - committedCost(w, c) - costPerDay * 30;
 }
 
@@ -750,13 +768,13 @@ function freeCash(w: World, c: Company, costPerDay: number): number {
 function schoolCash(w: World, c: Company, costPerDay: number): number {
   if (!c.state) return 0;
   const k = kingdomById(w, c.kingdomId);
-  if (treasuryTight(c, k) || k.budget.tax > TUNE.schoolTaxMax) return 0;
+  if (treasuryTight(w, c, k) || k.budget.tax > TUNE.schoolTaxMax) return 0;
   let pending = 0;
   for (const x of w.constructions) {
     const m = getMethod(x.typeId, x.methodId);
     if (x.companyId === c.id && m.seats) pending += wageCostOf(m, c.wages, c.state) * (x.levels ?? 1) * TICKS_PER_WEEK;
   }
-  const keep = TUNE.treasuryLowWeeks * ((k.expenseEma ?? 0) + pending);
+  const keep = TUNE.crownGdpReserve > 0 ? crownKeep(w, c, k) / 2 + TUNE.treasuryLowWeeks * pending : TUNE.treasuryLowWeeks * ((k.expenseEma ?? 0) + pending);
   return c.cash - Math.max(reserveOf(w, c), keep) - committedCost(w, c) - costPerDay * 30;
 }
 

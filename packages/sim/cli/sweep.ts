@@ -4,6 +4,8 @@
 import { BUILDING_BY_ID, GOODS, LAW_TECH, SKILL_DEFS, SUBSISTENCE, TECH_BY_ID, TECH_COST, TECHS, TUNE } from '../src/data';
 import { isGovernment, paysDividend, slots } from '../src/economy';
 import { committedCost } from '../src/finance';
+import { treasuryTight } from '../src/ai';
+import { kingdomGdp } from '../src/economy';
 import { createWorld, financeRatio, investThreshold, literacyOf, step, taxThreshold } from '../src/index';
 import type { MetricPoint } from '../src/index';
 import { workforce } from '../src/pops';
@@ -92,6 +94,12 @@ const ironY: Record<number, Record<string, number>> = {};
 // below3 귀족·자본가를 뺀 인구 중 생활수준 3 미만 비율, solFarm 농부 생활수준
 const welY: Record<number, Record<string, number>> = {};
 let welAcc = 0;
+// 돈과 왕실 (해마다, cli/report.py 의 '돈 ÷ 총생산'·'왕실'): 재고 ÷ 연간 총생산과 절대값(백만), 세금 단계 평균, 조임 비율(날마다 왕국 평균),
+// 국고 주치(지출 몇 주치, 왕국 평균), 세금 올림 횟수, 팔린 비율(가치 기준), 한 해 주조(백만)
+const aiY: Record<number, Record<string, number>> = {};
+const aiAcc = { tight: 0, tax: 0, weeks: 0, ups: 0, soldV: 0, supV: 0, days: 0 };
+const taxPrev = w.kingdoms.map((k) => k.budget.tax);
+let mintPrev = 0;
 function classIncome(w: World) {
   const n: Record<string, number> = {}, inc: Record<string, number> = {}, sav: Record<string, number> = {};
   for (const p of w.pops) { n[p.prof] = (n[p.prof] ?? 0) + p.size; inc[p.prof] = (inc[p.prof] ?? 0) + p.incomeEma; sav[p.prof] = (sav[p.prof] ?? 0) + p.savings; }
@@ -164,6 +172,37 @@ for (let d = 0; d < years * 360; d++) {
   { let n = 0, f = 0, wl = 0; for (const p of w.pops) if (p.prof === 'peasant') { n += p.size; f += p.size * p.fulfillment; wl += p.size * p.wealth100 / 100; }
     if (n > 0) { yearAcc.pFul += f / n; yearAcc.pW += wl / n; } }
   if (w.tick % 7 === 0) for (const k of w.kingdoms) welAcc += k.lastBudget?.welfare ?? 0;
+  {
+    let tight = 0, tax = 0, weeks = 0;
+    w.kingdoms.forEach((k, i) => {
+      const c = w.companies.find((x) => x.id === k.governmentId);
+      if (!c) return;
+      if (treasuryTight(w, c, k)) tight++;
+      tax += k.budget.tax;
+      weeks += Math.min(520, (k.expenseEma ?? 0) > 0 ? c.cash / k.expenseEma! : 520);
+      if (k.budget.tax > taxPrev[i]) aiAcc.ups++;
+      taxPrev[i] = k.budget.tax;
+    });
+    const n = w.kingdoms.length;
+    aiAcc.tight += tight / n; aiAcc.tax += tax / n; aiAcc.weeks += weeks / n; aiAcc.days++;
+    for (const r of w.regions) for (const g in r.market) { const m = r.market[g as keyof typeof r.market]; aiAcc.soldV += m.sold * m.price; aiAcc.supV += m.supply * m.price; }
+  }
+  if (w.tick % 360 === 0) {
+    let gdp = 0, crown = 0, debt = 0, firms = 0, man = 0, fin = 0, hh = 0;
+    for (const k of w.kingdoms) gdp += kingdomGdp(w, k.id);
+    for (const c of w.companies) { if (c.state) { crown += c.cash; debt += c.debt; } else firms += c.cash; }
+    for (const b of w.buildings) { if (b.typeId === 'manor') man += b.cash ?? 0; if (b.typeId === 'finance') fin += b.cash ?? 0; }
+    for (const p of w.pops) hh += p.savings;
+    const R = (x: number) => +(x / Math.max(1, gdp)).toFixed(3), M = (x: number) => +(x / 1e6).toFixed(1), d = Math.max(1, aiAcc.days);
+    aiY[w.tick / 360] = {
+      gdpY: M(gdp), rCrown: R(crown - debt), rFin: R(fin), rMan: R(man), rFirm: R(firms), rHh: R(hh),
+      mCrown: M(crown - debt), mFin: M(fin), mMan: M(man), mFirm: M(firms), mHh: M(hh),
+      taxStep: +(aiAcc.tax / d).toFixed(2), tight: +(aiAcc.tight / d).toFixed(3), tWeeks: Math.round(aiAcc.weeks / d), taxUps: aiAcc.ups,
+      sellThru: +(aiAcc.soldV / Math.max(1, aiAcc.supV)).toFixed(3), minted: M(w.mint.minted - mintPrev),
+    };
+    mintPrev = w.mint.minted;
+    for (const key of Object.keys(aiAcc) as (keyof typeof aiAcc)[]) aiAcc[key] = 0;
+  }
   if (w.tick % 360 === 0) {
     // 해마다 지표 (w.metrics 는 30년까지만 남아 따로 모은다)
     const last = w.metrics[w.metrics.length - 1];
@@ -337,6 +376,7 @@ out.traj = yearPts.map((m) => {
     oreP: m.goods.ore.ratio, wIdx: Math.max(...Object.values(m.kingdoms).map((k) => k.wageIndex)), metalP: m.goods.metal.ratio, mineLv: sum(m, (k) => k.levelsBy.mine ?? 0),
     ...(ironY[m.tick / 360] ?? {}),
     ...(welY[m.tick / 360] ?? {}),
+    ...(aiY[m.tick / 360] ?? {}),
   };
 });
 const after1 = w.metrics.filter((m) => m.tick > 360);

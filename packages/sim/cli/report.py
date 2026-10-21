@@ -34,8 +34,18 @@ LABELS = {
     'wIdx': ('국영 임금 지수', '정부', ''), 'wStep': ('국영 임금 배율', '정부', ''),
     'gAdmSh': ('하급 귀족: 행정청', '하급 귀족 일자리', ''), 'gManSh': ('하급 귀족: 저택', '하급 귀족 일자리', ''),
     'gTutSh': ('하급 귀족: 가정교사', '하급 귀족 일자리', ''), 'gIdleSh': ('하급 귀족: 실업', '하급 귀족 일자리', ''),
+    # 돈 ÷ 총생산 (sweep.ts aiY: 해마다 마지막 날 재고 ÷ 연간 총생산)
+    'gdpY': ('총생산 (연간)', '경제', '백만/년'),
+    'rCrown': ('왕실 (국고 − 빚)', '돈 ÷ 총생산', ''), 'rFin': ('금융가 금고', '돈 ÷ 총생산', ''), 'rMan': ('저택 금고', '돈 ÷ 총생산', ''),
+    'rFirm': ('상회 금고', '돈 ÷ 총생산', ''), 'rHh': ('가계 현금', '돈 ÷ 총생산', ''),
+    'mCrown': ('왕실 (국고 − 빚)', '돈', '백만'), 'mFin': ('금융가 금고', '돈', '백만'), 'mMan': ('저택 금고', '돈', '백만'),
+    'mFirm': ('상회 금고', '돈', '백만'), 'mHh': ('가계 현금', '돈', '백만'), 'minted': ('한 해 주조', '돈', '백만/년'),
+    # 왕실 (AI 정책 단계, 해마다 날마다 왕국 평균)
+    'taxStep': ('세금 단계', '왕실', '1~5'), 'tight': ('조임 비율', '왕실', ''), 'tWeeks': ('국고 (지출 몇 주치)', '왕실', '주'),
+    'taxUps': ('세금 올림 횟수', '왕실', '/년'), 'welY': ('복지 지급', '왕실', '백만/년'), 'welS': ('복지 단계', '왕실', '1~5'),
+    'sellThru': ('팔린 비율 (가치)', '시장', ''), 'below3': ('생활수준 3 미만 비율', '생활수준', ''), 'solFarm': ('농부 생활수준', '생활수준', ''),
 }
-GROUPS = ['경제', '생활수준', '소득', '인구', '돈', '임금', '재정', '시장', '일자리', '왕실 장부', '민간 장부', '소유', '정부', '하급 귀족 일자리', '기타']
+GROUPS = ['경제', '생활수준', '소득', '인구', '돈 ÷ 총생산', '왕실', '돈', '임금', '재정', '시장', '일자리', '왕실 장부', '민간 장부', '소유', '정부', '하급 귀족 일자리', '기타']
 # 해마다 한 줄 파일 (cli 진단: .tmp/col/collapse.ts) 의 지표 이름
 FLAT = {
     'peas': ('소작농 수', '인구', '백만'), 'sellThru': ('팔린 비율', '시장', ''), 'util': ('가동률', '경제', ''), 'food': ('식량 충족', '생활수준', ''),
@@ -59,7 +69,7 @@ for side, nm in (('govL', '왕실'), ('privL', '민간')):
 for k in ['unskilled', 'farmer', 'skilled', 'expert', 'gentry']:
     FLAT['jobs.' + k] = (k + ' 일자리', '일자리', '천')
 FLAT_DEFAULTS = ['gdp', 'pop', 'peas', 'food', 'stock.savAll', 'stock.gov', 'stock.fin', 'stock.total', 'wage.pU', 'price.grain', 'sellThru', 'util']
-DEFAULTS = ['gdp', 'levels', 'solUnsk', 'solPeas', 'peas', 'revWk', 'taxRatio', 'privCash', 'jobless']
+DEFAULTS = ['gdp', 'levels', 'solUnsk', 'solPeas', 'peas', 'rCrown', 'rFin', 'rHh', 'taxStep', 'tight', 'sellThru', 'revWk', 'taxRatio', 'privCash', 'jobless']
 
 def flat(d, pre=''):
     o = {}
@@ -97,7 +107,7 @@ def build(files):
         'keys': keys,
         'labels': {k: {'name': v[0], 'group': v[1], 'unit': v[2]} for k, v in labels.items() if k in keys},
         'groupOrder': GROUPS,
-        'defaults': os.environ['K'].split() if os.environ.get('K') else (FLAT_DEFAULTS if flat_mode else DEFAULTS),
+        'defaults': os.environ['K'].split() if os.environ.get('K') else [k for k in (FLAT_DEFAULTS if flat_mode else DEFAULTS) if k in keys],
     }
 
 if __name__ == '__main__':

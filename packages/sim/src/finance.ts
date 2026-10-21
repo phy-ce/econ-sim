@@ -413,8 +413,30 @@ export function updateFunds(w: World) {
     let assets = Math.max(0, o.cash ?? 0);
     if (firm) for (const x of levelsOf.get(o.id) ?? []) { const c = constructionEstimate(w, firm, x.typeId).cost; if (Number.isFinite(c)) assets += c * x.n; }
     const u = units.get(o.id) ?? 0;
+    // TUNE.financeIdle: 쉬는 금융가는 금고에서 (금고 + 가진 레벨 값) × KEEP_SHARE 를 넘는 돈을 지분 주인에게 지분 수대로 돌려준다
+    if (u > 0 && financeIdle(w, o)) {
+      const out = Math.max(0, o.cash ?? 0) - assets * (KEEP_SHARE.finance ?? 0);
+      if (out > 0.01) {
+        const holders = w.pops.filter((p) => (p.fund?.[o.id] ?? 0) > 0);
+        o.cash = (o.cash ?? 0) - out;
+        flow('idle.finance', out);
+        payPops(w, holders, out, (p) => p.fund![o.id]);
+        assets -= out;
+      }
+    }
     o.nav = u > 0 ? Math.max(0.01, assets / u) : 1;
   }
+}
+
+/**
+ * 쉬는 금융가 (TUNE.financeIdle 주, 0 이면 끔): 그만큼 공사비를 맡지 않았고 아직 낼 약정도 없다.
+ * 쉬는 금융가는 새 지분을 팔지 않고 (market.ts investSurplus: 투자자는 현금을 그대로 든다), 남는 금고를 배당한다 (updateFunds)
+ */
+export function financeIdle(w: World, o: Building): boolean {
+  if (!(TUNE.financeIdle > 0) || o.typeId !== 'finance') return false;
+  if (w.tick - (o.fundedTick ?? 0) <= TUNE.financeIdle * TICKS_PER_WEEK) return false;
+  for (const k of w.constructions) if (k.funders?.[o.id] && pledgeLeft(k, o.id) > 0) return false;
+  return true;
 }
 
 /**

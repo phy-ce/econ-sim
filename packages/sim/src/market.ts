@@ -1,6 +1,6 @@
 import { CONSUMPTION_PER_CAPITA, GOOD_IDS, GOODS, NEEDS, SUBSISTENCE, TUNE, WORKFORCE_RATIO, getMethod, needsAt, rawMax } from './data';
 import { CARTAGE_RATE, RAIL_RATE, borrow, harvestFactor, priceFormula, regionById, sellThrough, shippingRate, isSubsistence } from './economy';
-import { payRent, paySalvage, taxDue, taxRates } from './finance';
+import { financeIdle, payRent, paySalvage, taxDue, taxRates } from './finance';
 import { borderCost, kingdomById, kingdomOf, payTariff, toTreasury } from './kingdoms';
 import { INVEST_CLASSES } from './policy';
 import { findPop, payPops, payProf, workforce } from './pops';
@@ -766,7 +766,7 @@ function investSurplus(w: World, p: Pop, cashCost: number) {
   if (over <= 0) return;
   // 투자법이 허용한 계층은 그 지역 금융가 지분을 산다 (지분 가격 nav)
   const f = financeOf(w, p.regionId);
-  if (!f) return;
+  if (!f || financeIdle(w, f)) return;
   p.savings -= over;
   toTreasury(f, over, 'units');
   const fund = (p.fund ??= {});

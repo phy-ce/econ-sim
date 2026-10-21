@@ -101,7 +101,9 @@ export const TUNE_EXPERIMENTAL: TuneKey[] = ['subReturn', 'sellThrough', 'laborN
   // 저택 상급 귀족 자리 규칙 비교 중 (DECISIONS 7-17, 기본 'fit' = 지금 규칙)
   'nobleSeats', 'nobleSeatsPerLevel', 'nobleSeatsPerCell', 'nobleIncome', 'nobleSeatsLand', 'noblePerMille', 'nobleAdjust', 'aristStart',
   // AI 왕실 민영화 (비교용, 기본 'off': 민영화는 플레이어가 켠다)
-  'crownPrivatize'];
+  'crownPrivatize',
+  // AI 수정 비교 (2026-10-22, 기본 0 = 지금 동작)
+  'crownGdpReserve', 'financeIdle', 'laborStrict'];
 
 function showTune(v: unknown): number | string {
   if (typeof v === 'number') return Number.isFinite(v) ? v : '∞';

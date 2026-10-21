@@ -486,6 +486,12 @@ export const TUNE = {
   needMul: {} as Partial<Record<NeedId, number>>,
   startLumber: 0.6,
   startFiber: 0.2,
+  // AI 수정 비교 (2026-10-22, 기본값 = 지금 동작). crownGdpReserve: 왕실이 남길 국고 = 연간 총생산 × 이 비율 (0 = 지출 treasuryHighWeeks 주치)
+  crownGdpReserve: 0,
+  // 금융가가 이 주 동안 공사비를 맡지 않으면 새 지분을 팔지 않고 남는 금고를 배당한다 (0 = 끔)
+  financeIdle: 0,
+  // AI 일손 판단을 엄격하게 (1): 다른 임금 자리에서 일하는 사람을 세지 않고, 그 지역 빈자리·공사 중 자리를 빼고, 일손이 다 차야 짓는다 (0 = 끔)
+  laborStrict: 0,
 };
 
 // ---------------------------------------------------------------- 기상 조건

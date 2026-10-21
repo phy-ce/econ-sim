@@ -1,4 +1,4 @@
-import { BUILDING_BY_ID, DEPOSIT_NAMES, DEPOSIT_NAMES_EN, LAND_NAMES, SKILL_DEFS, TECH_BY_ID } from './data';
+import { BUILDING_BY_ID, DEPOSIT_NAMES, DEPOSIT_NAMES_EN, LAND_NAMES, SKILL_DEFS, TECH_BY_ID, TUNE } from './data';
 import { availableMethods, companyById, constructionEstimate, depositFree, emptyJobs, hasBuilder, isGovernment, knowsTech, landFree, logEvent, regionById, sellsShares } from './economy';
 import { applyStateWages, chooseFunders } from './finance';
 import { kingdomById } from './kingdoms';
@@ -71,6 +71,8 @@ function runCommand(w: World, actor: number, cmd: Command): CommandError | null 
     if (!company.state && !company.isPlayer) {
       funders = chooseFunders(w, company.kingdomId, regionId, typeId, levels, constructionEstimate(w, company, typeId).cost);
       if (!funders) return fail('공사비를 낼 저택·금융가 금고가 모자랍니다.', 'The manors and financial districts lack the funds for this project.');
+      // TUNE.financeIdle: 금융가가 마지막으로 공사비를 맡은 날 (쉬는 금융가 판단)
+      if (TUNE.financeIdle > 0) for (const id in funders) { const o = w.buildings.find((b) => b.id === Number(id)); if (o?.typeId === 'finance') o.fundedTick = w.tick; }
     }
     w.constructions.push({
       id: w.nextId++, companyId: actor, regionId, typeId, methodId, targetBuildingId,
