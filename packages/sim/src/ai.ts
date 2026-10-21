@@ -1,19 +1,22 @@
 import { BUILDING_BY_ID, BUILDING_TYPES, EDUCATION_FLOOR, EDUCATION_RANGE, GOOD_IDS, GOODS, SKILL_DEFS, TECH_BY_ID, TICKS_PER_WEEK, TICKS_PER_YEAR, TUNE, getMethod, regionPerk } from './data';
 import { withEstimateCache, regionAvgWealth, regionPopulation, wageCostOf,
-  availableMethods, builderOf, canBuildType, paysDividend, paysShare, companyById, constructionEstimate, creditLimit, depositFree, efficiency, estimateMethod, harvestFactor, hasBuilder, isGovernment, regionById, researchableTechs, roomFor, slots,
+  availableMethods, builderOf, canBuildType, paysDividend, paysShare, companyById, constructionEstimate, creditLimit, depositFree, efficiency, estimateMethod, harvestFactor, hasBuilder, isGovernment, regionById, researchableTechs, roomFor, sellsShares, slots,
 } from './economy';
 import { MAX_CONCURRENT_CONSTRUCTIONS, MAX_LEVELS_PER_PROJECT, applyCommand } from './commands';
-import { committedCost, lawRevenue, reserveOf } from './finance';
+import { committedCost, favours, funderWeight, lawRevenue, ownerBuildings, ownerFunds, reserveOf, treasuryFree } from './finance';
+import { privatizeLevel } from './production';
+import { policyStatus } from './policy';
 import { subsistenceWage } from './labor';
 import { marketOutlook, techValue, valueMethod } from './outlook';
 import type { Outlook } from './outlook';
 import { kingdomById } from './kingdoms';
 import { LITERACY_PER_WEALTH, workforce } from './pops';
 import { rand, round2 } from './rng';
-import { BUDGET_STEPS, SKILLS, isLowerJob, literacyOf } from './types';
-import type { BudgetItem, Building, Company, Kingdom, MethodDef, Region, Skill, World } from './types';
+import { BUDGET_STEPS, INVEST_LAWS, SKILLS, isLowerJob, literacyOf } from './types';
+import type { BudgetItem, Building, Company, Kingdom, MethodDef, Region, Skill, TaxLaw, WelfareLaw, World } from './types';
+import { welfareShortOf, welfareWeekly } from './welfare';
 
-// AI: 국영과 민간이 같은 판단을 쓴다. 다른 점은 자금원(국고 / 투자 풀)과 자기 왕국 땅에만 짓는다는 것뿐이다.
+// AI: 국영과 민간이 같은 판단을 쓴다. 다른 점은 자금원(국고 / 저택·금융가 금고)과 자기 왕국 땅에만 짓는다는 것뿐이다.
 
 /** 건설 판단 기준: 연간 이윤 / 공사비 (5년 안에 회수) */
 const MIN_ROI = () => TUNE.minRoi;
@@ -37,7 +40,42 @@ export function runAi(w: World) {
     if (c.state) { chooseTaxLaw(w, c); adjustBudget(w, c); } else adjustWages(w, c);
     manageBuildings(w, c);
     if (c.state) planResearch(w, c, outlook);
+    if (c.state && TUNE.crownPrivatize === 'all') for (const b of w.buildings) if (b.companyId === c.id && sellsShares(b.typeId)) b.privatize = true;
     withEstimateCache(() => planConstruction(w, c, outlook));
+  }
+  withEstimateCache(() => buyLevels(w));
+}
+
+/**
+ * 민영화 레벨 사기 (저택·금융가 AI, 매주): 민영화가 켜진 왕실 건물마다 1레벨까지 판다.
+ * 레벨 값 = max(공사비 × 0.5, 공사비 + 그 레벨의 1년 이익) (적자면 공사비보다 싸고, 반값 아래로는 내려가지 않는다).
+ * 사는 조건: 금고(약정 뺀 돈) ≥ 값 × TUNE.privatizeMargin, 값 ÷ 1년 이익 ≤ TUNE.privatizePayback 년.
+ * 사는 곳은 마음(funderWeight: 같은 지역, 좋아하는 종류)이 큰 곳부터. 한 소유 건물은 한 주에 1레벨만 산다
+ */
+export function privatizePrice(w: World, gov: Company, b: Building): { price: number; yearProfit: number } {
+  const cost = constructionEstimate(w, gov, b.typeId).cost;
+  const yearProfit = b.level > 0 ? (b.profitEma * TICKS_PER_YEAR) / b.level : 0;
+  return { price: round2(Math.max(cost * 0.5, cost + yearProfit)), yearProfit };
+}
+
+function buyLevels(w: World) {
+  const bought = new Set<number>();
+  for (const k of w.kingdoms) {
+    const gov = companyById(w, k.governmentId);
+    if (!gov) continue;
+    const forSale = w.buildings.filter((b) => b.companyId === gov.id && b.privatize && b.level >= 1 && !b.shrinking && sellsShares(b.typeId)
+      && !w.constructions.some((x) => x.targetBuildingId === b.id));
+    if (forSale.length === 0) continue;
+    const owners = ownerBuildings(w, k.id);
+    for (const b of forSale) {
+      const { price, yearProfit } = privatizePrice(w, gov, b);
+      if (!Number.isFinite(price) || price <= 0 || yearProfit <= 0 || price / yearProfit > TUNE.privatizePayback) continue;
+      const buyer = owners.filter((o) => !bought.has(o.id)).map((o) => ({ o, free: treasuryFree(w, o), wt: funderWeight(o, b.regionId, b.typeId) }))
+        .filter((x) => x.free >= price * TUNE.privatizeMargin).sort((a, c) => c.wt - a.wt || c.free - a.free || a.o.id - c.o.id)[0];
+      if (!buyer) continue;
+      bought.add(buyer.o.id);
+      privatizeLevel(w, b, buyer.o, price);
+    }
   }
 }
 
@@ -212,6 +250,8 @@ function treasuryTight(c: Company, k: Kingdom): boolean {
  * - 풂 (TUNE.treasuryHighWeeks 주치 초과, 줄지 않았다): 세금을 내리고, 세금이 1단계면 연구비를 보통 위로 올린다.
  * - 기술을 다 연 왕국은 연구비가 끊긴다. 풂 조건에서 임금 지수가 1 이하면 국영 임금을 TUNE.doneWageMax 단계까지 올리고,
  *   임금 지수가 1을 넘으면 보통(3)으로 되돌린다. 그 밖에는 국영 임금을 보통 위로 올리지 않는다
+ * - 복지 (cutWelfare·raiseWelfare): 조임에서는 복지를 가장 먼저 줄인다 (단계를 1까지, 빚이 있으면 그다음 복지법을 끈다). 조이지 않는데 국고가 줄며
+ *   TUNE.welfareWeeks 의 절반 주치 아래면 복지 단계를 내린다. 다른 손잡이를 움직이지 않은 점검에서는 복지를 켜거나 올린다 (raiseWelfare)
  */
 function adjustBudget(w: World, c: Company) {
   const k = w.kingdoms.find((x) => x.governmentId === c.id);
@@ -224,7 +264,7 @@ function adjustBudget(w: World, c: Company) {
   // 기술을 다 연 왕국: 연구비가 끊기는 몫을 국영 임금으로 돌린다 (임금 지수 1 이하, 국고 넉넉할 때 보통 위로 TUNE.doneWageMax 단계까지)
   const done = !c.research.current && researchableTechs(c).length === 0;
   if (treasuryTight(c, k)) {
-    if (losing) {
+    if (losing && !cutWelfare(w, c, k)) {
       if (b.wages > 3) step = ['wages', b.wages - 1];
       else if (b.research > 3) step = ['research', b.research - 1];
       else if (b.tax < BUDGET_STEPS) step = ['tax', b.tax + 1];
@@ -241,8 +281,65 @@ function adjustBudget(w: World, c: Company) {
     else if (b.research < 3) step = ['research', b.research + 1];
     else if (rich && b.tax > 1) step = ['tax', b.tax - 1];
     else if (rich && b.research < BUDGET_STEPS) step = ['research', b.research + 1];
+    else raiseWelfare(w, c, k);
+  } else if (k.welfareLaw !== 'none' && b.welfare > 1 && c.cash < (TUNE.welfareWeeks / 2) * (k.expenseEma ?? 0)) {
+    // 조이지는 않지만 국고가 줄며 복지 기준의 절반 주치 아래: 복지를 한 칸 내린다
+    step = ['welfare', b.welfare - 1];
   }
   if (step) applyCommand(w, c.id, { type: 'setBudget', item: step[0], value: step[1] });
+}
+
+/** 복지를 받을 수 있는 법 (끄기 'none' 제외) */
+const WELFARE_ON: WelfareLaw[] = ['poor', 'wage', 'universal'];
+
+/** 조임: 바뀌는 중인 복지법을 거두고, 복지 단계를 1까지 내리고, 빚이 있으면 복지법을 끈다. 무엇을 했으면 true */
+function cutWelfare(w: World, c: Company, k: Kingdom): boolean {
+  const pending = k.lawChange?.welfare;
+  if (pending && pending.to !== 'none') { applyCommand(w, c.id, { type: 'setWelfareLaw', law: k.welfareLaw }); return true; }
+  if (k.welfareLaw === 'none') return false;
+  if (k.budget.welfare > 1) { applyCommand(w, c.id, { type: 'setBudget', item: 'welfare', value: k.budget.welfare - 1 }); return true; }
+  // 복지법은 빚을 질 때만 끈다 (지출 몇 주치가 모자란 것만으로 끄면 180일 전환 동안 다시 켜고 끄기를 되풀이한다)
+  if (!pending && c.debt > 0) { applyCommand(w, c.id, { type: 'setWelfareLaw', law: 'none' }); return true; }
+  return false;
+}
+
+/** 복지법을 바꾸는 기준: 다른 법이 모자란 사람을 이 배수 넘게 더 돕고, 마지막으로 바꾼 지 WELFARE_COOLDOWN 틱이 지났을 때 */
+export const WELFARE_SWITCH = 1.5;
+export const WELFARE_COOLDOWN = 2 * TICKS_PER_YEAR;
+
+/**
+ * 복지 켜기·올리기 (AI 왕실, 다른 손잡이를 움직이지 않은 점검에서). 감당 = 국고 ≥ (복지를 뺀 주간 국정 지출 + 그 법·단계의 주간 복지 예상액) × TUNE.welfareWeeks.
+ * 법마다 감당할 수 있는 가장 높은 단계에서 목표 소득에 모자란 사람(모자란 비율로 가중)을 세어 가장 많은 법을 고른다.
+ * - 복지법이 없으면: 가장 나은 법으로 바꾸기 시작하고 복지 단계를 1로 둔다 (켜진 뒤 한 칸씩 올린다)
+ * - 복지법이 있으면: 마지막으로 바꾼 지 WELFARE_COOLDOWN 이 지났고 다른 법이 지금 법의 WELFARE_SWITCH 배를 넘게 돕는다면 그 법으로 바꾼다.
+ *   아니면 다음 단계를 감당할 수 있고 그 단계에 모자란 사람이 있으면 한 칸 올린다
+ */
+function raiseWelfare(w: World, c: Company, k: Kingdom) {
+  if (k.lawChange?.welfare) return;
+  const paid = k.lastBudget?.welfare ?? 0;
+  const base = Math.max(0, (k.expenseEma ?? 0) - paid);
+  const afford = (law: WelfareLaw, s: number) => c.cash >= TUNE.welfareWeeks * (base + welfareWeekly(k, law, s));
+  const best = (law: WelfareLaw) => {
+    for (let s = BUDGET_STEPS; s >= 1; s--) if (afford(law, s)) return { s, v: welfareShortOf(k, law, s) };
+    return { s: 0, v: 0 };
+  };
+  let pick: WelfareLaw | null = null, top = 0;
+  for (const law of WELFARE_ON) { const x = best(law); if (x.v > top) { top = x.v; pick = law; } }
+  if (k.welfareLaw === 'none') {
+    if (!pick) return;
+    applyCommand(w, c.id, { type: 'setWelfareLaw', law: pick });
+    if (k.budget.welfare !== 1) applyCommand(w, c.id, { type: 'setBudget', item: 'welfare', value: 1 });
+    return;
+  }
+  const cooled = k.welfareTick == null || w.tick - k.welfareTick >= WELFARE_COOLDOWN;
+  if (cooled && pick && pick !== k.welfareLaw && top > best(k.welfareLaw).v * WELFARE_SWITCH) {
+    applyCommand(w, c.id, { type: 'setWelfareLaw', law: pick });
+    return;
+  }
+  const next = k.budget.welfare + 1;
+  if (next <= BUDGET_STEPS && afford(k.welfareLaw, next) && welfareShortOf(k, k.welfareLaw, next) > 0) {
+    applyCommand(w, c.id, { type: 'setBudget', item: 'welfare', value: next });
+  }
 }
 
 /** 사다리를 다 쓰고도 빚을 지며 줄 때: 가장 큰 학교를 왕실 학교 전체 레벨의 1/4(최소 1)만큼 철거 대기에 올린다 */
@@ -264,9 +361,24 @@ export const LAW_COOLDOWN = TICKS_PER_YEAR;
 function chooseTaxLaw(w: World, c: Company) {
   const k = w.kingdoms.find((x) => x.governmentId === c.id);
   if (!k || w.tick % (TICKS_PER_WEEK * 4) !== 0) return;
-  if (k.lawTick != null && w.tick - k.lawTick < LAW_COOLDOWN) return;
-  const other = k.taxLaw === 'land' ? 'capita' : 'land';
-  if (lawRevenue(w, k, other) > lawRevenue(w, k, k.taxLaw) * LAW_SWITCH) applyCommand(w, c.id, { type: 'setTaxLaw', law: other });
+  // 바꾸기가 끝날 때 실패했으면 LAW_COOLDOWN 동안 그 법은 다시 시작하지 않는다
+  const failed = (kind: 'tax' | 'invest') => k.lawFail?.[kind] != null && w.tick - k.lawFail[kind]! < LAW_COOLDOWN;
+  const st = policyStatus(w, k.id);
+  // 기술로 열리고 조건이 맞는 세법 중 예상 세입이 가장 큰 것이 지금의 LAW_SWITCH 배를 넘으면 바꾸기 시작한다
+  if (!k.lawChange?.tax && !(k.lawTick != null && w.tick - k.lawTick < LAW_COOLDOWN) && !failed('tax')) {
+    let best: TaxLaw = k.taxLaw, top = lawRevenue(w, k, k.taxLaw) * LAW_SWITCH;
+    for (const o of st.tax.options) {
+      if (!o.eligible || o.id === k.taxLaw) continue;
+      const v = lawRevenue(w, k, o.id);
+      if (v > top) { top = v; best = o.id; }
+    }
+    if (best !== k.taxLaw) applyCommand(w, c.id, { type: 'setTaxLaw', law: best });
+  }
+  // 투자법: 열리고 조건이 맞으면 한 칸씩 넓힌다 (지분을 살 사람이 늘어 금융가가 커진다)
+  if (!k.lawChange?.invest && !failed('invest')) {
+    const next = INVEST_LAWS[INVEST_LAWS.indexOf(k.investLaw) + 1];
+    if (next && st.invest.options.find((o) => o.id === next)?.eligible) applyCommand(w, c.id, { type: 'setInvestLaw', law: next });
+  }
 }
 
 /** 산출물 1단위당 이윤 (방식끼리 비교용) */
@@ -548,7 +660,8 @@ function planConstruction(w: World, c: Company, o: Outlook) {
     const own = w.constructions.filter((k) => k.companyId === c.id).length;
     if (own >= MAX_CONCURRENT_CONSTRUCTIONS) break;
     if (c.debt > creditLimit(w, c) * 0.3) break;
-    const free = freeCash(w, c, est.costPerDay);
+    // 민간 상회는 저택·금융가 금고(약정 뺀 돈)로 짓는다
+    const free = c.state || c.isPlayer ? freeCash(w, c, est.costPerDay) : ownerFunds(w, c.kingdomId);
     const school = schoolCash(w, c, est.costPerDay);
     if (free <= 0 && school <= 0) break;
     const out = { best: null as Pick | null };
@@ -566,8 +679,6 @@ function planConstruction(w: World, c: Company, o: Outlook) {
       starts[`${pick.typeId}|loss`] = (starts[`${pick.typeId}|loss`] ?? 0) + pick.levels;
     }
     if (isGovernment(pick.typeId)) toFront(w, c);
-    // 지역 돈을 먼저 쓴다
-    if (c.regionFunds?.[pick.regionId]) c.regionFunds[pick.regionId] = Math.max(0, c.regionFunds[pick.regionId] - constructionEstimate(w, c, pick.typeId).cost * pick.levels);
     o.add(getMethod(pick.typeId, pick.methodId), pick.levels, 1 + regionPerk(pick.regionId, pick.typeId));
   }
   if (blocked?.best) swapLand(w, c, o, blocked.best);
@@ -765,6 +876,15 @@ interface Pick { regionId: number; typeId: string; methodId: string; levels: num
 export function pickProject(w: World, c: Company, o: Outlook, free: number, allowLoss = false, blocked?: { best: Pick | null }, schoolFree = 0): Pick | null {
   let best: Pick | null = null, least: Pick | null = null;
   const pools = new Map<string, number>();
+  // 지역 우선 투자 (민간): 그 지역 저택·금융가 금고(약정 뺀 돈). 좋아하지 않는 종류의 건물에는 TUNE.ownerTilt 배로 센다
+  const local = new Map<number, Building[]>();
+  const freeOf = new Map<number, number>();
+  if (!c.state) for (const o of ownerBuildings(w, c.kingdomId)) {
+    freeOf.set(o.id, Math.max(0, treasuryFree(w, o)));
+    if (!local.has(o.regionId)) local.set(o.regionId, []);
+    local.get(o.regionId)!.push(o);
+  }
+  const localFunds = (regionId: number, typeId: string) => (local.get(regionId) ?? []).reduce((a, o) => a + freeOf.get(o.id)! * (favours(o, typeId) ? 1 : TUNE.ownerTilt), 0);
   for (const r of ownRegions(w, c)) {
     for (const t of BUILDING_TYPES) {
       if (t.id === 'builder' || !canBuildType(c, t)) continue;
@@ -808,9 +928,9 @@ export function pickProject(w: World, c: Company, o: Outlook, free: number, allo
         }
         const pick = choice ?? top;
         if (!pick) continue;
-        // 지역 우선 투자: 그 지역 사람들이 낸 돈으로 짓는 몫만큼 가산점
-        const local = Math.min(1, (c.regionFunds?.[r.id] ?? 0) / (perLevel * pick.levels));
-        const score = pick.roi * (0.85 + rand(w) * 0.3) * (1 + TUNE.localBias * local);
+        // 지역 우선 투자: 그 지역 저택·금융가 돈으로 짓는 몫만큼 가산점
+        const here = c.state ? 0 : Math.min(1, localFunds(r.id, t.id) / (perLevel * pick.levels));
+        const score = pick.roi * (0.85 + rand(w) * 0.3) * (1 + TUNE.localBias * here);
         if (!best || score > best.score) best = { regionId: r.id, typeId: t.id, methodId: m.id, levels: pick.levels, score };
       }
     }

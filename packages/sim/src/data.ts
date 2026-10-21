@@ -1,5 +1,5 @@
 import type {
-  BuildingTypeDef, ClassDef, DepositId, GoodDef, GoodId, HarvestDef, LandType, MethodDef, NeedDef, NeedId, PopClass, RegionDef, Skill, SkillDef, TechDef,
+  BuildingTypeDef, ClassDef, DepositId, GoodDef, GoodId, HarvestDef, LandType, MethodDef, NeedDef, NeedId, PopClass, RegionDef, Skill, SkillDef, TaxLaw, InvestLaw, TechDef,
 } from './types';
 
 // 세계관: 근세에서 산업화로 넘어가는 가상의 대륙. 세 왕국이 땅을 나눠 갖는다. 화폐 단위는 플로린(ƒ).
@@ -110,6 +110,15 @@ export const TECHS: TechDef[] = [
 
 export const TECH_BY_ID: Record<string, TechDef> = Object.fromEntries(TECHS.map((t) => [t.id, t]));
 
+/**
+ * 법(세법·투자법 선택지)마다 그 법을 여는 기술 (null = 처음부터 열림). 열린 법도 금융가 자산 비율 조건이 맞아야 바꾸기를 시작하고,
+ * 바꾸는 기간(TUNE.lawDays)이 끝날 때 조건이 아직 맞아야 바뀐다 (policy.ts)
+ */
+export const LAW_TECH: Record<TaxLaw | InvestLaw, string | null> = {
+  land: null, poll: 'ironworking', income: 'steam_rail',
+  nobles: null, upper: 'printing', middle: 'bloomery', lower: 'steam_engine',
+};
+
 // ---------------------------------------------------------------- 건물과 생산 방식
 
 const m = (def: MethodDef): MethodDef => def;
@@ -145,7 +154,8 @@ export const BUILDING_TYPES: BuildingTypeDef[] = [
   },
   {
     id: 'finance', name: '금융가', nameEn: 'Financial district', land: 'plot', buildPoints: 0, auto: true, ownership: 'capitalist',
-    methods: [m({ id: 'finance', name: '투자 관리', nameEn: 'Investment management', workers: { capitalist: OWNERSHIP_SEATS }, inputs: {}, outputs: {} })],
+    // 금융가 = 투자 펀드: 지분을 산 pop 이 배당을 받는다. 일하는 사람은 전문가 (보장 임금 + 성과급, finance.ts payFinance). 자본가 계층은 없다
+    methods: [m({ id: 'finance', name: '투자 관리', nameEn: 'Investment management', workers: { expert: OWNERSHIP_SEATS }, inputs: {}, outputs: {} })],
   },
   {
     id: 'farm', name: '곡물 농장', nameEn: 'Grain farm', land: 'arable', buildPoints: 600,
@@ -300,7 +310,8 @@ export function scaleBonus(level: number): number {
 
 /**
  * 조정값 (테스트로 여러 값을 비교하는 손잡이). 시작 전에 바꾸면 그 판 전체에 적용된다.
- * - rentShare: 소작지 판매 대금 중 저택 귀족에게 가는 지대 비율 (토지세는 대금 × 토지세율 × 징수율, 나머지는 소작농)
+ * - rentShare: 지대 = 소작지 수확 중 먼저 떼어 바로 파는 비율. 대금은 그 지역 저택으로 (3단계, DECISIONS 7-18)
+ * - nobleEconPer: 저택 상급 귀족 자리 1 (노동 인구)당 저택이 가진 주간 경제 규모 (기본가: 가진 레벨 산출 가치 + 소작지 수확, nobleSeats 'econ')
  * - patronWealth, patronShare: 소작농 부가 patronWealth 아래면 귀족이 지대의 patronShare 를 돌려준다
  * - growthEq: 신분별로 출생과 사망이 같아지는 생활수준 (이보다 높으면 인구가 는다)
  * - wageOutside: AI 임금 바닥 = 그 자리로 옮겨 올 사람들의 지금 소득 × 이 배율
@@ -310,12 +321,17 @@ export function scaleBonus(level: number): number {
  * - adminScale: 행정청 1레벨이 감당하는 인구 배율 (기본 50만 명 × 이 값)
  * - adminStart: 시작 행정청이 감당하는 인구 / 왕국 인구
  * - investWage: AI가 새로 지을지 판단할 때 쓰는 임금의 바닥 = 기본 임금 × 이 값 (0이면 지금 임금만 본다)
- * - localBias: 민간 상회가 그 지역 사람들 돈으로 그 지역에 지을 때 수익률에 곱하는 가산점 (1 + localBias)
+ * - localBias: 저택·금융가가 자기 지역 공사에 돈을 낼 마음과, 민간 상회가 그 돈으로 그 지역에 지을 때 수익률에 곱하는 가산점 (1 + localBias)
+ * - ownerTilt: 저택은 땅 건물(농지·산림·광맥), 금융가는 그 밖의 건물을 좋아한다 (AI 성향). 좋아하지 않는 종류에 낼 마음의 배율
+ * - privatizeMargin, privatizePayback: 민영화 레벨을 사는 조건 (AI): 금고 ≥ 레벨 값 × privatizeMargin, 레벨 값 ÷ 그 레벨의 1년 이익 ≤ privatizePayback 년
+ * - firmBufferWeeks: 민간 상회가 배당 전에 남기는 운영 자금 = 주간 (임금 + 원료) × 이 주 수 (임금·원료가 판매 대금보다 먼저 나간다)
+ * - crownPrivatize: 비교용. 'all' 이면 AI 왕실이 생산 건물 모두에 민영화를 켠다 (기본 'off': 민영화는 플레이어가 켠다)
  * - taxCurve: 징수율 곡선. 'exp' = 1 − e^(−x), 'hyp' = x / (1 + x) (x = 행정청 한도 / 인구)
  * - switchRate, switchPremium, switchMax: 일하는 사람은 소득이 switchPremium 배 넘게 나은 자리로 옮긴다. 하루에 옮기는 비율은
  *   switchPremium 배일 때 switchRate 이고 소득 배율의 차이에 비례해 늘어 switchMax 에서 멈춘다 (labor.ts switchShare)
- * - cashBufferDays: 팝이 투자 풀로 보내지 않고 들고 있는 돈 (생활비 + 세금의 며칠분)
- * - landTax, pollTax, incomeTax: 세금 수준 3단계(보통)의 토지세율(소작지 판매 대금 중 국고 몫), 인두세(1인당 하루), 소득세율.
+ * - cashBufferDays: 팝이 금고(저택·금융가)로 보내지 않고 들고 있는 돈 (생활비 + 세금의 며칠분)
+ * - peasantKeepWeeks: 소작농이 들고 있는 저축 상한 (생활비 + 세금의 주 수). 넘는 돈은 그 지역 저택 금고로 간다
+ * - landTax, pollTax, incomeTax: 세금 수준 3단계(보통)의 토지세(소작농 1인당 하루), 인두세(소작농을 뺀 1인당 하루), 소득세율(소작농을 뺀 소득).
  *   세 세율을 같은 배율로 비교했다 (빅토리아3 보통 단계 기준 ×1·×1.5·×2·×2.5, 20년 × 시드 1~4). ×2는 ×1보다 건물 레벨이
  *   10년차 약 50%, 20년차 약 13% 많고 실업이 낮다 (×1은 세금 단계를 1~5 모두 쓰지만 건물이 가장 적다). ×2.5는 노동자 생활수준이 가장 낮다
  * - taxLevels: 세금 수준 1~5단계가 세법의 모든 세율에 곱하는 배율
@@ -324,7 +340,6 @@ export function scaleBonus(level: number): number {
  * - startsPerWeek: AI 회사 하나가 한 주에 새로 넣는 공사 수 상한
  * - luxuryLinear, luxuryQuad: 사치품 필요 = linear × (부 − 10) + quad × (부 − 10)²
  * - meatLinear, meatQuad: 고기 필요 = linear × (부 − 8) + quad × (부 − 8)²
- * - privateShare: 왕실이 짓는 건물(행정청·건축사무소 제외) 공사비 중 민간 상회가 내는 비율 (그만큼 지분)
  * - shrinkWeeks: 마지막 레벨의 손익이 이 주 수 동안 계속 마이너스면 AI가 철거를 시작한다
  * - reserveWeeks: 건물 유보 자산 상한 = 레벨 × 지금 방식의 레벨당 주간 산출 가치(기본가) × 이 주 수. 이익의 35%를 여기까지 쌓고, 적자는 여기서 먼저 뺀다 (finance.ts settleReserve).
  *   레벨당 고정 50,000(농지 0.5주, 공장 0.2~0.3주치)과 0.25·0.5·1·2·4주 비교 (10년 거름, 20년 × 시드 1·2·3): 0.5주가 산출 비례 중 20년차 연 총생산(2,580 / 1주 2,423 / 고정 2,745)·
@@ -347,14 +362,19 @@ export function scaleBonus(level: number): number {
  * - schoolTaxMax: AI 왕실은 세금 수준이 이 단계 이하일 때만 새 학교를 짓는다 (운영비를 낼 세금 칸을 남긴다)
  * - govWageLevels: 국영 임금 수준 1~5단계의 배율. 국영 임금 = 기본 임금 × 왕국 임금 지수 × 이 배율
  * - researchShare, researchLevels: 주간 연구비 = 주간 경제 규모 × researchShare × 연구비 수준 배율
+ * - welfareLevels: 복지 수준 1~5단계의 목표 생활수준. 복지법이 덮는 pop 중 생활수준이 이보다 낮은 pop 의 소득을 목표 소득까지 채운다 (welfare.ts)
+ * - welfareWeeks: (AI) 복지를 올리거나 켜는 조건: 국고 ≥ (복지를 뺀 주간 국정 지출 + 그 복지의 주간 예상액) × 이 주 수. 이 주 수의 절반 아래로 줄면서 국고가 줄면 내린다
  * - doneWageMax: 기술을 다 연 AI 왕국이 풂 조건에서 국영 임금을 올리는 상한 단계 (임금 지수 1 이하일 때만)
  * - treasuryLowWeeks, treasuryHighWeeks: AI 왕실은 국고가 주간 국정 지출의 low 주치보다 적으면 조이고 high 주치를 넘으면 푼다.
  *   왕실 공사(사무소 증설 포함)도 high 주치를 넘는 돈으로만 한다. high 39·52·78·104 비교 (세율 ×2, 20년 × 시드 1~4): 52는 78보다
  *   건물 레벨이 약 20~30% 많고 소작농 비율이 낮다. 39는 10년차 실업 13%, 20년 인구가 가장 적다. 104는 건물이 가장 적다
  * - startTreasuryWeeks: 왕실 시작 국고 = 시작 정부 건물을 다 돌리는 주간 운영비(시작 임금, 기본가) × 이 주 수
- * - taxLaw: 시작 세법 ('land' 토지 기반 / 'capita' 1인당)
+ * - taxLaw: 시작 세법 ('land' 토지세 / 'poll' 인두세 / 'income' 소득세, 하나만)
+ * - lawDays: 세법·투자법을 바꾸는 데 걸리는 날 수
+ * - lawPoll, lawIncome: 인두세·소득세로 바꿀 수 있는 금융가 자산 비율 (금융가 ÷ (저택 + 금융가), economy.ts ownershipAssets)
+ * - investUpper, investMiddle, investLower: 투자법을 전문가까지·기술자까지·노동자·농부까지 넓힐 수 있는 금융가 자산 비율
+ * - financeWage, financeBonus, financeStaff: 금융가 전문가의 보장 임금(하루), 성과급(금융가가 받은 배당의 비율, 인원대로), 가진 레벨 1당 전문가 자리
  * - startLumber, startFiber: 시작 민간 벌목장·섬유 농장 레벨 (지역 인구 10만 명당). 소작지가 목재·섬유를 조금만 내서 건축사무소가 첫날부터 쓸 목재가 있어야 한다
- * - peasantPoll: 1인당 과세에서 소작농이 내는 인두세 배율
  * - rawFullWealth, rawCapWealth: 원자재로 의복·생활용품을 다 채울 수 있는 부 상한, 원래 상한(max)이 되는 부 (rawMax)
  * - harvestChance: 기상 조건이 한 지역에서 한 계절(90일)에 새로 시작할 확률 (0이면 기상 조건이 없다)
  * - harvestIntensity: 강도 범위 [최소, 최대]. 강도 1당 산출 −5% (HARVEST_STEP)
@@ -367,7 +387,7 @@ export function scaleBonus(level: number): number {
 export const TUNE = {
   /** 저택의 하급 귀족 1명 몫 (귀족 1명 = 1). 0.1·0.25·0.5 비교 (10년, 20년 × 시드 1·2, 두 번): 0.1은 하급 귀족 생활수준이 가장 낮고, 0.25와 0.5는 총생산·레벨 순서가 실행마다 바뀐다. 상급 귀족 생활수준을 덜 깎는 0.25 */
   gentryShare: 0.25,
-  rentShare: 0.5,
+  rentShare: 0.05,
   patronWealth: 2,
   patronShare: 0.5,
   growthEq: { lower: 2.5, middle: 5, upper: 5 },
@@ -382,10 +402,16 @@ export const TUNE = {
   adminStart: 1,
   investWage: 0.75,
   localBias: 0.5,
+  ownerTilt: 0.5,
+  firmBufferWeeks: 2,
+  privatizeMargin: 2,
+  privatizePayback: 10,
+  crownPrivatize: 'off' as 'off' | 'all',
   taxCurve: 'hyp' as 'exp' | 'hyp',
   cashBufferDays: 10,
-  pollTax: 0.4, // 인두세: 소작농은 peasantPoll 배 (세금 수준 3단계 기준)
-  incomeTax: 0.2,
+  peasantKeepWeeks: 8,
+  pollTax: 0.6, // 인두세: 소작농을 뺀 1인당 하루 (세금 수준 3단계 기준)
+  incomeTax: 0.3,
   officeTargetDays: 30,
   officeUseFull: 0.9,
   startsPerWeek: 3,
@@ -393,31 +419,41 @@ export const TUNE = {
   luxuryQuad: 0.02,
   meatLinear: 0.3,
   meatQuad: 0.01,
-  privateShare: 0.5,
   qualSkilledL: 0.4,
   qualExpertL: 0.6,
   qualRate: 0.25,
   // 저택 상급 귀족 자리 규칙 (비교 중, DECISIONS 7-17. production.ts nobleSeatsOf, pops.ts matchNobles). 'fit' 이 지금 규칙, aristStart 는 시작 귀족 배율
-  nobleSeats: 'fit' as 'fit' | 'owned' | 'income' | 'land' | 'pop',
+  nobleSeats: 'econ' as 'fit' | 'owned' | 'income' | 'land' | 'pop' | 'econ',
+  nobleEconPer: 16000,
   nobleSeatsPerLevel: 10,
   nobleSeatsPerCell: 2,
   nobleIncome: 100,
   nobleSeatsLand: 2,
   noblePerMille: 2,
   nobleAdjust: 0.01,
-  aristStart: 1,
+  aristStart: 0.2,
   schoolValue: 0.3,
   schoolTarget: 0.6, // 0.45·0.5·0.6 비교 (DECISIONS.md 7-4): 0.6이 20년차 소작농·건물 레벨·자격자가 가장 낫다
   schoolTaxMax: 4,
-  taxLaw: 'land' as 'land' | 'capita',
-  landTax: 0.2, // 토지세: 소작지 판매 대금의 20% (지대 rentShare 와 따로)
-  peasantPoll: 0.25,
+  taxLaw: 'land' as TaxLaw,
+  landTax: 0.02, // 토지세: 소작농 1인당 하루 (세금 수준 3단계)
+  lawDays: 180,
+  lawPoll: 0.1,
+  lawIncome: 0.3,
+  investUpper: 0.05,
+  investMiddle: 0.1,
+  investLower: 0.15,
+  financeWage: 20,
+  financeBonus: 0.1,
+  financeStaff: 2,
   rawFullWealth: 5,
   rawCapWealth: 10,
   taxLevels: [0.6, 0.8, 1, 1.2, 1.4],
   govWageLevels: [0.7, 0.85, 1, 1.15, 1.3],
   researchShare: 0.045,
   researchLevels: [0.5, 0.75, 1, 1.5, 2],
+  welfareLevels: [2, 2.5, 3, 3.5, 4],
+  welfareWeeks: 40, // 26·39·52·78 (시드 1·2), 30·40·50 (시드 1~3) 비교: 40이 11~20년차 총생산·노동자 생활수준이 가장 높다. 30은 10년차 총생산이 1/3 줄고, 50은 40과 비슷하다
   treasuryLowWeeks: 26,
   treasuryHighWeeks: 52, // 1년치
   // 기술을 다 연 AI 왕국의 국영 임금 상한 단계. 3(끔)·4·5 비교 (20년 × 시드 1·2): 4가 20년차 총생산 2190→2761, 지역 격차 1.87→1.34, 기술자 생활수준 5.45→5.88. 5는 격차가 다시 커진다

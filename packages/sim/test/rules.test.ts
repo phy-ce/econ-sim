@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  REGIONS, SKILLS, WORKFORCE_RATIO, applyCommand, colonyPopulation, createWorld, playerCompany, regionById, splitKingdoms,
+  BUILDING_BY_ID, REGIONS, SKILLS, WORKFORCE_RATIO, applyCommand, colonyPopulation, createWorld, levelOwnersOf, moneyIdentity, playerCompany, regionById, splitKingdoms,
 } from '../src/index';
 import { run } from './helpers';
 
@@ -87,5 +87,44 @@ describe('명령', () => {
     expect(camp!.employed.unskilled).toBeGreaterThan(0);
     expect(camp!.last.output.timber ?? 0).toBeGreaterThan(0);
     expect(regionById(w, home.id).market.timber.supply).toBeGreaterThan(0);
+  });
+});
+
+describe('레벨 주인', () => {
+  it('민간 건물의 레벨은 모두 저택·금융가 것이고, 왕실 건물은 국가 것이다', () => {
+    const w = createWorld(1, { withPlayer: false });
+    run(w, 240);
+    for (const b of w.buildings) {
+      if (BUILDING_BY_ID[b.typeId].auto) continue;
+      const owners = levelOwnersOf(w, b);
+      expect(owners.reduce((a, x) => a + x.levels, 0), `#${b.id} ${b.typeId}`).toBe(b.level);
+      if (b.stateOwned) expect(owners.every((x) => x.owner === 'state')).toBe(true);
+      else expect(owners.every((x) => x.owner === 'manor' || x.owner === 'finance')).toBe(true);
+    }
+    // 민간 공사는 저택·금융가 금고가 낸다
+    expect(w.constructions.some((k) => k.funders && Object.keys(k.funders).length > 0)).toBe(true);
+  });
+
+  it('민영화를 켠 왕실 건물의 레벨을 저택·금융가가 사 가고, 값은 국고로 간다', () => {
+    const w = createWorld(1);
+    const me = playerCompany(w)!;
+    const home = w.regions.filter((r) => r.kingdomId === me.kingdomId).sort((a, b) => b.land.forest - a.land.forest)[0];
+    expect(applyCommand(w, me.id, { type: 'build', typeId: 'lumber', regionId: home.id, levels: 2 })).toBeNull();
+    run(w, 150);
+    const camp = w.buildings.find((b) => b.companyId === me.id && b.typeId === 'lumber')!;
+    expect(camp.level).toBe(2);
+    const firm = w.companies.find((c) => !c.state && c.kingdomId === me.kingdomId)!;
+    expect(applyCommand(w, firm.id, { type: 'setPrivatize', buildingId: camp.id, on: true })).not.toBeNull();
+    expect(applyCommand(w, me.id, { type: 'setPrivatize', buildingId: camp.id, on: true })).toBeNull();
+    // 산다는 조건을 맞춘다: 큰 이익과 넉넉한 금고 (돈을 넣은 뒤의 화폐 장부를 기준으로 본다)
+    const manor = w.buildings.find((b) => b.typeId === 'manor' && b.regionId === home.id)!;
+    manor.cash = 1e10;
+    const before = moneyIdentity(w), cash = me.cash;
+    for (let d = 0; d < 7; d++) { camp.profitEma = 50_000; run(w, 1); }
+    expect(camp.level).toBe(1);
+    const priv = w.buildings.find((b) => !b.stateOwned && b.typeId === 'lumber' && b.regionId === home.id)!;
+    expect(levelOwnersOf(w, priv).some((x) => x.owner === 'manor' && x.ownerBuildingId === manor.id)).toBe(true);
+    expect(me.cash).toBeGreaterThan(cash);
+    expect(Math.abs(moneyIdentity(w) - before)).toBeLessThan(0.01);
   });
 });

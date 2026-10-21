@@ -12,9 +12,11 @@ import { SKILLS, emptyLedger, isLowerJob } from './types';
 
 /** 민간 상회의 시작 자금 (농장 약 다섯 레벨 공사비). 왕실 국고는 startTreasury 가 정한다 */
 export const START_CASH = 30_000_000;
+/** 그중 민간 상회가 운영 자금으로 갖는 돈. 나머지는 왕국 저택·금융가 금고로 (지역 인구 비례, 저택과 금융가 반씩) */
+export const START_FIRM_CASH = 5_000_000;
 export const TRADER_CAPITAL = 100_000_000;
 /** 시작 정책 단계: 세금 수준, 국영 임금 수준, 연구비 수준 모두 보통(3) */
-const DEFAULT_BUDGET = { tax: 3, wages: 3, research: 3 };
+const DEFAULT_BUDGET = { tax: 3, wages: 3, research: 3, welfare: 3 };
 /** 플레이어 회사 id (화면이 이 값을 쓴다) */
 export const PLAYER_ID = 100;
 
@@ -163,17 +165,17 @@ export function createWorld(seed = 1, opts: CreateWorldOptions = {}): World {
   });
 
   const kingdoms: Kingdom[] = KINGDOMS.map((k) => ({
-    id: k.id, name: k.name, nameEn: k.nameEn, color: k.color, governmentId: k.gov.id, privateIds: [k.firm.id], tariff: {}, investmentPool: 0, taxLaw: TUNE.taxLaw, budget: { ...DEFAULT_BUDGET }, revenueWeek: 0,
+    id: k.id, name: k.name, nameEn: k.nameEn, color: k.color, governmentId: k.gov.id, privateIds: [k.firm.id], tariff: {}, investmentPool: 0, taxLaw: TUNE.taxLaw, investLaw: 'nobles', welfareLaw: 'none', budget: { ...DEFAULT_BUDGET }, revenueWeek: 0,
   }));
   const companies: Company[] = [];
   for (const k of KINGDOMS) {
     const player = withPlayer && k.gov.id === PLAYER_ID;
     companies.push(newCompany(k.gov.id, player && playerName ? playerName : k.gov.name, k.color, k.id, true, player, 0));
-    companies.push(newCompany(k.firm.id, k.firm.name, k.firm.color, k.id, false, false, START_CASH));
+    companies.push(newCompany(k.firm.id, k.firm.name, k.firm.color, k.id, false, false, START_FIRM_CASH));
   }
 
   const w: World = {
-    version: 7, config: { ai }, tick: 0, seed, rngState: seed | 0, nextId: 1000,
+    version: 10, config: { ai }, tick: 0, seed, rngState: seed | 0, nextId: 1000,
     regions, kingdoms, pops: [], fund: 0, metrics: [],
     traders: { cash: TRADER_CAPITAL, capital: TRADER_CAPITAL, shipments: [] },
     mint: { minted: 0, issued: 0, retired: 0, interest: 0 },
@@ -204,6 +206,24 @@ export function createWorld(seed = 1, opts: CreateWorldOptions = {}): World {
     if (firm && fiber > 0) { r.land.arable += fiber; w.buildings.push(newBuilding(w.nextId++, 'fiber_farm', r.id, firm.id, 'fiber_basic', fiber, false)); }
   }
   updateSubsistence(w);
+  // 시작 민간 건물의 레벨은 그 지역 저택(땅 건물)이나 금융가(그 밖)의 것이다
+  for (const b of w.buildings) {
+    if (b.stateOwned || BUILDING_BY_ID[b.typeId].auto) continue;
+    const land = BUILDING_BY_ID[b.typeId].land;
+    const typeId = land === 'arable' || land === 'forest' || land === 'ore' ? 'manor' : 'finance';
+    const o = w.buildings.find((x) => x.regionId === b.regionId && x.typeId === typeId)!;
+    b.owners = { [o.id]: b.level };
+  }
+  // 시작 금고: 민간 시작 돈 중 상회 운영 자금을 뺀 나머지 (왕국마다 지역 인구 비례, 저택·금융가 반씩)
+  for (const k of kingdoms) {
+    const mine = regions.filter((r) => r.kingdomId === k.id);
+    const people = (r: Region) => Object.values(starts.get(r.id)!.population).reduce((a, b) => a + b, 0);
+    const total = mine.reduce((a, r) => a + people(r), 0);
+    for (const r of mine) for (const typeId of ['manor', 'finance']) {
+      const o = w.buildings.find((x) => x.regionId === r.id && x.typeId === typeId)!;
+      o.cash = round2(total > 0 ? ((START_CASH - START_FIRM_CASH) * people(r)) / total / 2 : 0);
+    }
+  }
 
   // 시작 pop: 하층은 전부 소작농. 숙련 인력은 소작지에 있으면서 자격만 갖고 있다. 상층은 아직 자리가 없다
   for (const d of REGIONS) {
@@ -280,6 +300,13 @@ export function createWorld(seed = 1, opts: CreateWorldOptions = {}): World {
     applyStateWages(w, k);
     const gov = companies.find((c) => c.id === k.governmentId)!;
     gov.cash = gov.weekStartCash = gov.isPlayer && playerCash != null ? playerCash : startTreasury(w, gov);
+  }
+  // 금융가 시작 지분: 시작 금고를 지분 값 1로 나눠 그 지역 귀족(상급·하급)에게 인원대로 준다
+  for (const f of w.buildings.filter((x) => x.typeId === 'finance')) {
+    const nobles = w.pops.filter((p) => p.regionId === f.regionId && (p.prof === 'aristocrat' || p.prof === 'gentry') && p.size > 0);
+    const n = nobles.reduce((a, p) => a + p.size, 0);
+    f.nav = 1;
+    if (n > 0) for (const p of nobles) (p.fund ??= {})[f.id] = ((f.cash ?? 0) * p.size) / n;
   }
   aggregateHouseholds(w);
   // 저장값은 소수 둘째 자리까지 (round.ts): 시작 저축의 센트 아래는 주인 없는 돈으로

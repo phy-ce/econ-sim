@@ -203,6 +203,8 @@ export interface Pop {
   growth: number;
   /** 소작으로 직접 얻어 먹는 현물 */
   inKind: GoodBag;
+  /** 금융가 지분: 금융가 건물 id → 지분 수 (사람을 따라 옮긴다) */
+  fund?: Record<number, number>;
 }
 
 /** 100배로 저장한 값을 규칙 단위로 읽는다: 부 단계 1..99, 문해력 0..1, 교육 접근도 0..1 */
@@ -223,10 +225,19 @@ export interface Building {
   active: boolean;
   /** 가동률 0..1 */
   utilization: number;
-  /** 국영 건물: 이익은 국고에 남고, 소유 직종 자리도 임금을 받는다 */
+  /** 국영 건물: 이익은 국고에 남고, 소유 직종 자리도 임금을 받는다. 레벨은 모두 국가 것이다 */
   stateOwned?: boolean;
-  /** 국영 건물 중 민간(그 왕국 민간 상회)이 가진 지분 0..1. 이익의 이 몫은 소유 건물을 거쳐 귀족·자본가에게 배당된다 */
-  privateShare?: number;
+  /**
+   * 민간 건물의 레벨 주인: 소유 건물(저택·금융가) id → 그 건물이 가진 레벨 수 (합 = level). 주인은 공사비를 낸 곳이다.
+   * 국영 건물과 자동 건물(소작지·저택·금융가)에는 없다 (economy.ts levelOwnersOf)
+   */
+  owners?: Record<number, number>;
+  /** 소유 건물(저택·금융가)의 금고: 레벨을 사고 민간 공사비를 낸다 (돈 계정) */
+  cash?: number;
+  /** 왕실 건물의 민영화: 켜 두면 저택·금융가가 매주 1레벨씩 사 갈 수 있다 (ai.ts buyLevels) */
+  privatize?: boolean;
+  /** 금융가 지분 1개 값 = (금고 + 가진 레벨의 공사비) ÷ 지분 수 (매주, finance.ts updateFunds) */
+  nav?: number;
   /** 소작지: 일하는 소작농 (노동 인구) */
   tenants?: number;
   /** 저택: 상급 귀족 자리 (노동 인구). 저택이 가진 건물 레벨과 소작지 칸으로 정한다 (production.ts updateOwnership) */
@@ -269,16 +280,15 @@ export interface Building {
   materials?: GoodBag;
 }
 
-/** 철거로 회수한 자재: TUNE.salvageDays 동안 나눠 팔고, 대금은 지분대로 나눈다 */
+/** 철거로 회수한 자재: TUNE.salvageDays 동안 나눠 팔고, 대금은 헐린 레벨의 주인이 받는다 */
 export interface SalvageLot {
   regionId: number;
   good: GoodId;
   q: number;
   days: number;
   companyId: number;
-  /** 대금을 받을 소유 건물(저택·금융가) id 와 그 몫 (민간 건물 1, 국영 건물은 민간 지분) */
+  /** 대금을 받을 소유 건물(저택·금융가) id. null 이면 건물 주인 회사(국영 레벨은 국고) */
   ownerId: number | null;
-  ownerShare: number;
 }
 
 export interface BuildingStats {
@@ -307,9 +317,8 @@ export interface Construction {
   ticksElapsed: number;
   /** 일시정지된 공사는 건설 포인트를 받지 않는다 */
   paused?: boolean;
-  /** 왕실 공사에 민간 상회가 낸 돈과 그 돈이 사는 지분 (완공 때 건물 지분이 된다) */
-  privatePaid?: number;
-  privateShare?: number;
+  /** 민간 공사의 공사비를 내는 소유 건물(저택·금융가) id → 약정액. 날마다 공사비를 약정액 비율로 나눠 내고, 완공 레벨도 그 비율로 나눈다 */
+  funders?: Record<number, number>;
 }
 
 export interface Research {
@@ -332,8 +341,6 @@ export interface Company {
   wages: Record<Skill, number>;
   /** 지난주 직종별 고용 인원 (AI가 실제로 사람이 찼는지 보고 임금을 정한다) */
   lastEmployed?: Partial<Record<Skill, number>>;
-  /** 투자 풀에서 받은 돈 중 아직 그 지역에 쓰지 않은 몫 (민간 상회, 지역 우선 투자) */
-  regionFunds?: Record<number, number>;
   weekProfit: number;
   lastWeekProfit: number;
   weekStartCash: number;
@@ -353,10 +360,10 @@ export interface Company {
 }
 
 /**
- * 회사 장부 항목. 손익(weekProfit)에 들어가는 것: 판매, 세금, 주조, 공사 수수료(수입) / 임금, 원자재, 연구, 이자(지출).
- * 손익 밖의 자본 흐름: 배당 지급, 투자 풀 유입, 민간이 낸 공사비(건물이라는 자산으로 바뀐다)
+ * 회사 장부 항목. 손익(weekProfit)에 들어가는 것: 판매, 세금, 주조, 공사 수수료(수입) / 임금, 원자재, 연구, 이자, 복지(왕실, 지출).
+ * 손익 밖의 자본 흐름: 배당 지급, investment(왕실: 민영화로 판 레벨 대금), 낸 공사비(건물이라는 자산으로 바뀐다)
  */
-export const LEDGER_KEYS = ['sales', 'tax', 'mint', 'buildFees', 'wages', 'inputs', 'research', 'interest', 'dividends', 'investment', 'buildPaid'] as const;
+export const LEDGER_KEYS = ['sales', 'tax', 'mint', 'buildFees', 'wages', 'inputs', 'research', 'interest', 'welfare', 'dividends', 'investment', 'buildPaid'] as const;
 export type LedgerKey = (typeof LEDGER_KEYS)[number];
 export type Ledger = Record<LedgerKey, number>;
 export const emptyLedger = (): Ledger => Object.fromEntries(LEDGER_KEYS.map((k) => [k, 0])) as Ledger;
@@ -430,17 +437,27 @@ export interface Kingdom {
   privateIds: number[];
   /** 수입 관세율 (상품별, 없으면 기본값) */
   tariff: Partial<Record<GoodId, number>>;
-  /** 투자 풀: 소유 직종 배당의 일부가 모여 민간 건설 자금이 된다 */
+  /** 화면 표시용 사본 (소수 둘째 자리). sim은 읽지 않는다: 그 왕국 저택·금융가 금고의 합 (투자 풀은 없앴다, round.ts writeMirrors) */
   investmentPool: number;
-  /** 투자 풀 중 지역별로 들어온 몫 (그 지역 pop 의 재투자와 남는 현금) */
-  poolByRegion?: Record<number, number>;
-  /** 세법: 'land' = 토지 기반 과세 (소작지 수확의 토지세율만큼 걷는다, 인두세·소득세 없음), 'capita' = 1인당 과세 (인두세 + 소득세). 세율은 taxRates */
+  /** 세법 (하나만): 'land' 토지세 = 소작농 1인당 정액, 'poll' 인두세 = 소작농을 뺀 1인당 정액, 'income' 소득세 = 소작농을 뺀 소득(임금·배당) × 세율. 세율은 taxRates */
   taxLaw: TaxLaw;
-  /** 어제 걷은 토지세와 걷어야 했던 토지세 (행정청 손익용, 하루마다 비운다) */
-  landGot?: number;
-  landOwed?: number;
+  /** 투자법: 금융가 지분을 살 수 있는 계층 (INVEST_CLASSES). 시작 'nobles' */
+  investLaw: InvestLaw;
+  /** 바뀌는 중인 법 (TUNE.lawDays 일 뒤에 바뀐다. 그동안은 지금 법) */
+  lawChange?: { tax?: LawChange<TaxLaw>; invest?: LawChange<InvestLaw>; welfare?: LawChange<WelfareLaw> };
   /** 마지막으로 세법을 바꾼 틱 */
   lawTick?: number;
+  /** 법 바꾸기가 끝날 때 조건이 안 맞아 실패한 마지막 틱 (AI는 LAW_COOLDOWN 동안 다시 시작하지 않는다) */
+  lawFail?: { tax?: number; invest?: number };
+  /** 복지법 (하나만, welfare.ts): 'none' 없음 / 'poor' 구빈법(소작농·실업자) / 'wage' 임금 보조(임금 일자리) / 'universal' 보편 보장(귀족을 뺀 모두). 목표 생활수준은 복지 단계(TUNE.welfareLevels) */
+  welfareLaw: WelfareLaw;
+  /** 마지막으로 복지법을 바꾼 틱 */
+  welfareTick?: number;
+  /**
+   * 복지 필요액 (하루, 이동평균 0.9/0.1, welfare.ts): 무리(poor 소작농·실업자 / wage 임금 일자리)마다 복지 단계 1~5 각각에서
+   * 목표 소득에 모자란 돈의 합(need, 지급 규칙대로 생활수준이 목표 아래인 pop 만)과 모자란 비율로 가중한 사람 수(short, 생활수준과 상관없이)
+   */
+  welfareNeed?: { poor: number[]; wage: number[]; poorShort: number[]; wageShort: number[] };
   /** 세금을 내야 할 인구와 행정청이 감당하는 인구 (징수율 = 한도 / 인구) */
   taxDue?: number;
   taxCapacity?: number;
@@ -457,10 +474,10 @@ export interface Kingdom {
   /** 이번 주에 들어온 세입 (세금 + 관세 + 주조) */
   revenueWeek: number;
   /** 이번 주 정부 건물(행정청·건축사무소·학교)의 임금과 원료 */
-  spentWeek?: { wages: number; goods: number };
+  spentWeek?: { wages: number; goods: number; welfare?: number };
   /** 지난주 국정 수지: 세입, 민간 공사 수수료 / 정부 건물 임금, 원료, 연구비, 국채 이자 */
   /** revenue 는 세금·관세·주조를 모두 더한 값, tariffs 는 그중 관세 */
-  lastBudget?: { revenue: number; tariffs?: number; fees: number; wages: number; goods: number; research: number; interest: number };
+  lastBudget?: { revenue: number; tariffs?: number; fees: number; wages: number; goods: number; research: number; interest: number; welfare?: number };
   /** 주간 국정 지출(정부 건물 + 연구 + 이자 − 민간 공사 수수료)의 이동평균. 국고가 몇 주를 버티는지의 기준 */
   expenseEma?: number;
   /** 이번 주에 들어온 관세 (주마다 비운다) */
@@ -476,13 +493,21 @@ export interface Kingdom {
   budgetBase?: { taxBy?: number[]; mint?: number; tariffs?: number; feesWage?: number; feesOther?: number; goods?: number };
   /** AI: 지난 정책 점검 때 국고 순자산 (현금 − 빚) */
   netLast?: number;
-  /** 이번 달 착공 레벨 (지표용): '건물|s'(왕실) '건물|p'(민간) '건물|loss'(AI 손해 짓기) '건물|d'(철거) */
+  /** 이번 달 착공 레벨 (지표용): '건물|s'(왕실) '건물|p'(민간) '건물|loss'(AI 손해 짓기) '건물|d'(철거) '건물|v'(민영화로 판 레벨) */
   startsMonth?: Record<string, number>;
 }
 
-export type TaxLaw = 'land' | 'capita';
-/** 정책 손잡이: 세금 수준, 국영 임금 수준, 연구비 수준 (각각 1~5단계) */
-export const BUDGET_ITEMS = ['tax', 'wages', 'research'] as const;
+export type TaxLaw = 'land' | 'poll' | 'income';
+export const TAX_LAWS: TaxLaw[] = ['land', 'poll', 'income'];
+/** 투자법: 귀족만 → 전문가까지 → 기술자까지 → 노동자·농부까지 (소작농은 열지 않는다) */
+export type InvestLaw = 'nobles' | 'upper' | 'middle' | 'lower';
+export const INVEST_LAWS: InvestLaw[] = ['nobles', 'upper', 'middle', 'lower'];
+/** 복지법: 없음 → 구빈법(소작농·실업자) → 임금 보조(임금 일자리) → 보편 보장(귀족을 뺀 모두) */
+export type WelfareLaw = 'none' | 'poor' | 'wage' | 'universal';
+export const WELFARE_LAWS: WelfareLaw[] = ['none', 'poor', 'wage', 'universal'];
+export interface LawChange<L> { to: L; startTick: number; endTick: number }
+/** 정책 손잡이: 세금 수준, 국영 임금 수준, 연구비 수준, 복지 수준 (각각 1~5단계) */
+export const BUDGET_ITEMS = ['tax', 'wages', 'research', 'welfare'] as const;
 export const BUDGET_STEPS = 5;
 export type BudgetItem = (typeof BUDGET_ITEMS)[number];
 
@@ -526,7 +551,10 @@ export interface GameEvent {
   kind: EventKind;
   regionId?: number;
   buildingId?: number;
+  /** 소식 종류 표시: 'lawChanged' 법이 바뀜, 'lawFailed' 법 바꾸기 실패 (정책 창으로 잇는다) */
+  topic?: EventTopic;
 }
+export type EventTopic = 'lawChanged' | 'lawFailed';
 
 export interface WorldConfig {
   ai: boolean;
@@ -543,9 +571,9 @@ export interface MintLedger {
 export interface World {
   /**
    * 저장 형식 버전: 저장되는 모양이 바뀌면 올린다. 옛 저장은 compat.ts migrateWorld
-   * (6: 부·문해력·교육 접근도·숙련도·작업 인원을 100배 값으로, 모든 숫자 소수 둘째 자리. 5는 그 작업 중간 판이었다)
+   * (8: 레벨 소유·소유 건물 금고. 옛 저장은 불러오지 않는다)
    */
-  version: 7;
+  version: 10;
   config: WorldConfig;
   tick: number;
   seed: number;
@@ -554,7 +582,7 @@ export interface World {
   regions: Region[];
   kingdoms: Kingdom[];
   pops: Pop[];
-  /** 받을 사람이 없는 돈. 매주 은행 자본과 투자 풀로 돌린다 */
+  /** 받을 사람이 없는 돈. 매주 지역 금융가 금고로 돌린다 (인구 비례) */
   fund: number;
   traders: Traders;
   /** 국가가 만들고 없앤 돈의 누적 장부 (화폐 보존 검증용) */
@@ -591,9 +619,14 @@ export type Command =
   | { type: 'moveConstruction'; constructionId: number; index: number }
   | { type: 'setResearch'; techId: string | null }
   | { type: 'setResearchBudget'; budget: number }
+  /** 세법·투자법을 바꾼다 (TUNE.lawDays 일에 걸쳐. 지금 법과 같은 값이면 바뀌는 중인 것을 취소) */
   | { type: 'setTaxLaw'; law: TaxLaw }
+  | { type: 'setInvestLaw'; law: InvestLaw }
+  | { type: 'setWelfareLaw'; law: WelfareLaw }
   /** 정책 단계: 세금 수준, 국영 임금 수준, 연구비 수준 (1~5) */
-  | { type: 'setBudget'; item: BudgetItem; value: number };
+  | { type: 'setBudget'; item: BudgetItem; value: number }
+  /** 왕실 건물 민영화 켜기·끄기: 켜 두면 저택·금융가가 매주 1레벨씩 사 갈 수 있다 */
+  | { type: 'setPrivatize'; buildingId: number; on: boolean };
 
 export interface QueuedCommand {
   actor: number;

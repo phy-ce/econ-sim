@@ -1,3 +1,4 @@
+import { ownershipAssets } from './policy';
 import { BUILDING_BY_ID, GOOD_IDS, GOODS } from './data';
 import { CLASS_DEFS, WORKFORCE_RATIO } from './data';
 import { builderOf, companyById, constructionEstimate, harvestCondition, isGovernment, kingdomGdp, slots } from './economy';
@@ -40,11 +41,18 @@ export interface KingdomMetrics {
   /** 정책 단계 (세금·국영 임금·연구비 수준), 임금 지수 */
   policy: Record<BudgetItem, number>;
   wageIndex: number;
-  /** 돈: 국고, 국채, 민간 상회 현금, 투자 풀, 가계 저축 */
+  /** 돈: 국고, 국채, 민간 상회 현금, 저택·금융가 금고 합(pool = manorCash + financeCash), 가계 저축 */
   treasury: number;
   debt: number;
   privateCash: number;
   pool: number;
+  manorCash: number;
+  financeCash: number;
+  /** 저택·금융가 자산 (주간 산출 가치, policy.ts ownershipAssets) 과 세법·투자법 */
+  assetsManor: number;
+  assetsFinance: number;
+  taxLaw: string;
+  investLaw: string;
   savings: number;
   /** 건설: 사무소 레벨, 하루 포인트, 대기 포인트, 대기 일수, 공사 수 */
   officeLevels: number;
@@ -55,6 +63,9 @@ export interface KingdomMetrics {
   /** 건물 레벨 합 (소작지·소유 건물 제외): 왕실, 민간, 건물 종류별 */
   levelsState: number;
   levelsPrivate: number;
+  /** 민간 레벨 중 저택·금융가가 가진 레벨 */
+  levelsManor: number;
+  levelsFinance: number;
   levelsBy: Record<string, number>;
   /** 건물 종류별: 일꾼, 일자리, 하루 손익 합(이동평균), 적자 건물 레벨 */
   typeBy: Record<string, TypeMetrics>;
@@ -117,7 +128,9 @@ const byClass = (f: (s: PopClass) => number) => Object.fromEntries(POP_CLASSES.m
 export function recordMetrics(w: World) {
   if (w.tick % METRICS_EVERY !== 0) return;
   const kingdoms: Record<number, KingdomMetrics> = {};
+  const owned = ownershipAssets(w);
   for (const k of w.kingdoms) {
+    const assets = owned.kingdoms.find((x) => x.kingdomId === k.id);
     const gov = companyById(w, k.governmentId);
     const pops = w.pops.filter((p) => kingdomOf(w, p.regionId) === k.id);
     const n = byClass(() => 0), wealth = byClass(() => 0), sol = byClass(() => 0), food = byClass(() => 0), growth = byClass(() => 0);
@@ -135,10 +148,18 @@ export function recordMetrics(w: World) {
     const queuePoints = queue.reduce((a, x) => a + x.required - x.points, 0);
     const levelsBy: Record<string, number> = {};
     const typeBy: Record<string, TypeMetrics> = {};
-    let levelsState = 0, levelsPrivate = 0;
+    let levelsState = 0, levelsPrivate = 0, levelsManor = 0, levelsFinance = 0, manorCash = 0, financeCash = 0;
+    const ownerType = new Map<number, string>();
+    for (const b of w.buildings) {
+      if (b.typeId !== 'manor' && b.typeId !== 'finance') continue;
+      ownerType.set(b.id, b.typeId);
+      if (kingdomOf(w, b.regionId) !== k.id) continue;
+      if (b.typeId === 'manor') manorCash += b.cash ?? 0; else financeCash += b.cash ?? 0;
+    }
     for (const b of w.buildings) {
       const t = BUILDING_BY_ID[b.typeId];
       if (t.auto || kingdomOf(w, b.regionId) !== k.id) continue;
+      for (const [id, nl] of Object.entries(b.owners ?? {})) if (ownerType.get(Number(id)) === 'manor') levelsManor += nl; else levelsFinance += nl;
       levelsBy[b.typeId] = (levelsBy[b.typeId] ?? 0) + b.level;
       const tm = (typeBy[b.typeId] ??= { employed: 0, slots: 0, profit: 0, lossLevels: 0 });
       for (const sk of ['unskilled', 'farmer', 'skilled', 'expert'] as const) { tm.employed += b.employed[sk]; tm.slots += slots(b, sk); }
@@ -179,11 +200,12 @@ export function recordMetrics(w: World) {
       gdp: r0(kingdomGdp(w, k.id)), revenueWeek: r0(k.lastBudget?.revenue ?? 0), feesWeek: r0(k.lastBudget?.fees ?? 0),
       govSpendWeek: r0((k.lastBudget?.wages ?? 0) + (k.lastBudget?.goods ?? 0)), research: r0(k.lastBudget?.research ?? 0), interest: r0(k.lastBudget?.interest ?? 0),
       taxRatio: k.taxRatio ?? 0, policy: { ...k.budget }, wageIndex: k.wageIndex ?? 0,
-      treasury: r0(gov?.cash ?? 0), debt: r0(gov?.debt ?? 0), privateCash: r0(firms.reduce((a, c) => a + c!.cash, 0)), pool: r0(k.investmentPool), savings: r0(savings),
+      treasury: r0(gov?.cash ?? 0), debt: r0(gov?.debt ?? 0), privateCash: r0(firms.reduce((a, c) => a + c!.cash, 0)), pool: r0(manorCash + financeCash), manorCash: r0(manorCash), financeCash: r0(financeCash),
+      assetsManor: assets?.manor ?? 0, assetsFinance: assets?.finance ?? 0, taxLaw: k.taxLaw, investLaw: k.investLaw, savings: r0(savings),
       officeLevels: w.buildings.filter((b) => b.companyId === builder?.id && b.typeId === 'builder').reduce((a, b) => a + b.level, 0),
       pointsPerDay: round2(est?.pointsPerDay ?? 0), queuePoints: r0(queuePoints),
       backlogDays: est && est.pointsPerDay > 0 ? r0(queuePoints / est.pointsPerDay) : 0, projects: queue.length,
-      levelsState, levelsPrivate, levelsBy,
+      levelsState, levelsPrivate, levelsManor, levelsFinance, levelsBy,
       typeBy: Object.fromEntries(Object.entries(typeBy).map(([t, m]) => [t, { employed: r0(m.employed), slots: r0(m.slots), profit: r0(m.profit), lossLevels: m.lossLevels }])),
       starts: k.startsMonth ?? {},
       wageUnskilled: round2(gov?.wages.unskilled ?? 0), wageSkilled: round2(gov?.wages.skilled ?? 0), techs: gov?.research.known.length ?? 0,

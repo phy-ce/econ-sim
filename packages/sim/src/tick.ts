@@ -3,10 +3,12 @@ import { round2 } from './rng';
 import { roundAll, roundWorld } from './round';
 import { colonyPopulation, colonySol, marketWage, prospect, totalMoney, unemploymentRate } from './economy';
 import { runAi } from './ai';
+import { updateLaws } from './policy';
+import { payWelfare } from './welfare';
 import { weeklyAlerts } from './alerts';
 import { recordMetrics } from './metrics';
 import { applyCommandMsg } from './commands';
-import { chargeInterest, collectIncomeTax, distributeInvestment, doResearch, mintMoney, payDividends, spendBudget, weeklyBanking } from './finance';
+import { chargeInterest, collectIncomeTax, doResearch, updateFunds, mintMoney, payDividends, spendBudget, weeklyBanking } from './finance';
 import { laborMarket, migrate, payWages, syncEmployment } from './labor';
 import { clearMarkets, collectOrders, harvest, newBook, resetMarkets, updatePrices } from './market';
 import { aggregateHouseholds, matchNobles, prunePops, updateGrowth, updateLiteracy, updateQualifications, weekToward } from './pops';
@@ -31,6 +33,7 @@ export function step(w: World, commands: QueuedCommand[] = []): string[] {
   }
 
   prospect(w);
+  updateLaws(w);
   updateSubsistence(w);
   updateIdleOffices(w);
   applyWagePolicy(w);
@@ -55,6 +58,7 @@ export function step(w: World, commands: QueuedCommand[] = []): string[] {
   migrate(w);
   prunePops(w);
   syncEmployment(w);
+  payWelfare(w);
   aggregateHouseholds(w);
 
   w.tick += 1;
@@ -102,7 +106,7 @@ function weekly(w: World) {
   mintMoney(w);
   spendBudget(w);
   for (const c of w.companies) payDividends(w, c);
-  distributeInvestment(w);
+  updateFunds(w);
   progressDemolition(w);
   runAi(w);
   weeklyBanking(w);
