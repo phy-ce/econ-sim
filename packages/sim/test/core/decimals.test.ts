@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { GOODS, applyCommandMsg, createWorld, migrateWorld, moneyIdentity, playerCompany, recordHistory, roundWorld, roundingDrift, step } from '../../src/index';
+import { GOODS, applyCommandMsg, createWorld, migrateWorld, playerCompany, recordHistory, step } from '../../src/index';
 import type { World } from '../../src/index';
 import { PRICE_MAX, PRICE_MIN, updatePrices } from '../../src/market';
-import { round2 } from '../../src/rng';
 
-// 저장되는 값은 소수 둘째 자리까지 (CLAUDE.md). 화면이 저장하는 글(JSON.stringify(world))의 모든 숫자를 본다.
+// 반올림은 플레이어에게 보이는 값에만 한다 (CLAUDE.md). sim 이 계산하고 저장하는 값은 반올림하지 않는다 (round.ts).
+// 여기서는 화면에 그대로 나가는 값이 소수 둘째 자리인지, 반올림하지 않은 저장값이 저장/불러오기에서 그대로 돌아오는지, 옛 판 저장 변환을 본다.
 
 /** JSON.stringify 가 이 숫자를 쓰는 글자의 소수 자릿수 (1e-7 같은 지수 표기도 센다) */
 function decimals(x: number): number {
@@ -15,8 +15,8 @@ function decimals(x: number): number {
   return Math.max(0, (dot < 0 ? 0 : mant.length - dot - 1) - exp);
 }
 
-/** 저장 글에서 소수 셋째 자리 이상인 숫자: 개수와 앞의 몇 개 경로 (없으면 빈 목록) */
-function violations(json: string, limit = 8): string[] {
+/** 값 안에서 소수 셋째 자리 이상인 숫자: 개수와 앞의 몇 개 경로 (없으면 빈 목록) */
+function violations(root: unknown, label: string, limit = 8): string[] {
   const found: string[] = [];
   let count = 0;
   const walk = (v: unknown, path: string) => {
@@ -28,128 +28,114 @@ function violations(json: string, limit = 8): string[] {
     if (Array.isArray(v)) { v.forEach((x, i) => walk(x, `${path}[${i}]`)); return; }
     for (const [k, x] of Object.entries(v)) walk(x, `${path}.${k}`);
   };
-  walk(JSON.parse(json), '$');
+  walk(root, label);
   return count ? [`${count}개`, ...found] : [];
 }
 
+/** 화면에 그대로 나가는 값: 기록(history·metrics), 지난주 국정 수지, 투자 풀 칸, 회사 임금 */
+function shown(w: World) {
+  return {
+    history: w.history, metrics: w.metrics,
+    kingdoms: w.kingdoms.map((k) => ({ lastBudget: k.lastBudget, investmentPool: k.investmentPool })),
+    wages: w.companies.map((c) => c.wages),
+  };
+}
+
 const save = (w: World) => JSON.stringify(w);
-const expectClean = (w: World, label: string) => expect(violations(save(w)), label).toEqual([]);
+const expectShownClean = (w: World, label: string) => expect(violations(shown(w), '$'), label).toEqual([]);
 const runTo = (w: World, tick: number) => { while (w.tick < tick) step(w); };
 
-describe('저장값 소수 둘째 자리', () => {
-  it.each([42, 2])('시드 %i: 1·100·400일, 틱 사이 명령 뒤, 저장/불러오기 뒤에 모든 숫자가 소수 둘째 자리 이하다', (seed) => {
+describe('보이는 값은 소수 둘째 자리, 저장값은 그대로', () => {
+  it.each([42, 2])('시드 %i: 1·100·400일, 틱 사이 명령 뒤, 저장/불러오기 뒤에 보이는 값이 소수 둘째 자리 이하다', (seed) => {
     // 화면과 같은 시작: 플레이어 왕실이 있는 세계 + 첫 기록
     let w = createWorld(seed);
     recordHistory(w);
-    expectClean(w, `${seed}: 0일`);
+    expectShownClean(w, `${seed}: 0일`);
     runTo(w, 1);
-    expectClean(w, `${seed}: 1일`);
-    // 화면이 틱 사이에 넣는 명령: 짓기(민간 지분 공사비가 오간다)와 취소(남은 공사비를 돌려준다), 정책 단계
+    expectShownClean(w, `${seed}: 1일`);
     runTo(w, 50);
     const me = playerCompany(w)!;
     const home = w.regions.filter((r) => r.kingdomId === me.kingdomId).sort((a, b) => b.land.arable - a.land.arable)[0];
     expect(applyCommandMsg(w, me.id, { type: 'build', typeId: 'farm', regionId: home.id, levels: 2 })).toBeNull();
     expect(applyCommandMsg(w, me.id, { type: 'setBudget', item: 'tax', value: 4 })).toBeNull();
-    expectClean(w, `${seed}: 50일 명령 뒤`);
-    runTo(w, 70);
-    const k = w.constructions.find((x) => x.companyId === me.id && x.typeId === 'farm')!;
-    expect(applyCommandMsg(w, me.id, { type: 'cancelConstruction', constructionId: k.id })).toBeNull();
-    expectClean(w, `${seed}: 70일 취소 뒤`);
+    expectShownClean(w, `${seed}: 50일 명령 뒤`);
     runTo(w, 100);
-    expectClean(w, `${seed}: 100일`);
-    // 저장/불러오기 (화면과 같은 길: JSON 왕복 후 변환)
+    expectShownClean(w, `${seed}: 100일`);
     w = migrateWorld(JSON.parse(save(w)))!;
-    expectClean(w, `${seed}: 100일 불러온 뒤`);
+    expectShownClean(w, `${seed}: 100일 불러온 뒤`);
     runTo(w, 400);
-    expectClean(w, `${seed}: 400일`);
+    expectShownClean(w, `${seed}: 400일`);
+    // 저장값은 반올림하지 않는다: 저축·인구·부에는 소수 셋째 자리 아래가 있다
+    expect(violations(w.pops.map((p) => [p.savings, p.size, p.wealth]), 'pops').length).toBeGreaterThan(0);
   });
 
-  // round.ts 는 수가 많은 객체의 필드를 직접 적어 맞춘다. 새 필드를 빠뜨리지 않았는지: 정수가 아닌 모든 숫자에 끝수를 더한 뒤 한 번에 다 맞춰지는지 본다.
-  // (기록, 알림 상태, 쓸 때 반올림하는 출처별 수요·공급은 roundWorld 가 훑지 않으므로 건드리지 않는다)
-  // 돈 계정은 모두 센트 맞춤 길(economy.ts mapMoney)로 맞춰야 한다: 다른 길로 반올림한 돈 계정은 그 끝수가 주인 없는 돈에 가지 않아 장부가 어긋나거나
-  // 마지막 반올림이 그 끝수를 지운다 (roundingDrift)
-  it('roundWorld 가 저장값의 모든 숫자를 맞춘다 (빠진 필드가 없고, 돈 계정은 모두 장부를 지킨다)', () => {
-    const w = createWorld(3);
-    runTo(w, 300);
-    const clean = moneyIdentity(w);
-    const skip = new Set(['history', 'metrics', 'events', 'alertState', 'demandBy', 'supplyBy', 'demandByEma', 'supplyByEma']);
-    let n = 0;
-    const dirty = (o: Record<string, unknown> | unknown[]) => {
-      for (const k of Object.keys(o)) {
-        if (skip.has(k)) continue;
-        const v = (o as Record<string, unknown>)[k];
-        if (typeof v === 'number') { if (!Number.isInteger(v)) { (o as Record<string, unknown>)[k] = v + 0.003; n++; } }
-        else if (v && typeof v === 'object') dirty(v as Record<string, unknown>);
-      }
-    };
-    dirty(w as unknown as Record<string, unknown>);
-    expect(n).toBeGreaterThan(1000);
-    expect(violations(save(w)).length).toBeGreaterThan(0);
-    // 끝수는 없던 돈을 만든다: 그만큼 주인 없는 돈에서 빼서 장부를 맞춰 둔다. 그러면 반올림이 찌꺼기 말고는 지울 것이 없어야 한다
-    w.fund -= moneyIdentity(w) - clean;
-    roundWorld(w);
-    expect(violations(save(w))).toEqual([]);
-    expect(Math.abs(moneyIdentity(w) - clean)).toBeLessThan(1e-5);
-    expect(roundingDrift(w)).toBeLessThan(1e-5);
+  // 반올림하지 않은 double 은 JSON 왕복에서 그대로 돌아온다: 불러온 세계를 이어 돌려도 끊김 없이 돈 세계와 같다
+  it('저장 → 불러오기 → 이어 돌리기가 끊김 없는 실행과 같다', () => {
+    const a = createWorld(11);
+    runTo(a, 90);
+    const b = migrateWorld(JSON.parse(save(a)))!;
+    expect(save(b)).toBe(save(a));
+    runTo(a, 150); runTo(b, 150);
+    expect(save(b)).toBe(save(a));
   });
 
-  // 8판(레벨 소유)부터는 옛 저장을 바꾸지 않는다 (사용자 2026-10-21: 옛 저장은 신경 쓰지 않는다)
-  it('옛 판 저장은 불러오지 않는다', () => {
+  it('옛 판 저장: 9판 이하는 불러오지 않고, 10·11판은 12판으로 바꾼다', () => {
     const w = createWorld(7);
     runTo(w, 30);
-    const old = JSON.parse(save(w));
-    for (const v of [3, 4, 5, 6, 7, 8]) expect(migrateWorld({ ...old, version: v })).toBeNull();
+    const now = JSON.parse(save(w));
+    for (const v of [3, 4, 5, 6, 7, 8, 9]) expect(migrateWorld({ ...now, version: v })).toBeNull();
     expect(save(migrateWorld(JSON.parse(save(w)))!)).toBe(save(w));
-    // 10판: 금융가 지분이 id → 지분 수 객체였다. 불러오면 11판 배열 묶음이 된다
-    const v10 = JSON.parse(save(w));
+    // 11판: 부·문해력·교육 접근도·숙련도·작업 인원이 100배 값이었다 (사본 칸은 소수 둘째 자리)
+    const to11 = () => {
+      const o = JSON.parse(save(w));
+      o.version = 11;
+      for (const p of o.pops) { p.wealth100 = p.wealth * 100; p.literacy100 = p.literacy * 100; p.wealth = Math.round(p.wealth * 100) / 100; p.literacy = Math.round(p.literacy * 100) / 100; }
+      for (const r of o.regions) { r.education100 = r.education * 100; r.education = Math.round(r.education * 100) / 100; }
+      for (const b of o.buildings) { b.exp100 = b.exp * 100; delete b.exp; if (b.crew !== undefined) { b.crew100 = b.crew * 100; b.crew = Math.round(b.crew * 100) / 100; } }
+      return o;
+    };
+    // 100배 했다가 나누면 마지막 자리가 다를 수 있다: 바꾼 값이 원래 값과 거의 같은지 보고, 원래 값으로 맞춘 뒤 나머지가 모두 같은지 본다
+    const same = (got: World) => {
+      const close = (x: number, y: number) => Math.abs(x - y) <= 1e-12 * Math.max(1, Math.abs(y));
+      got.pops.forEach((p, i) => { expect(close(p.wealth, w.pops[i].wealth) && close(p.literacy, w.pops[i].literacy)).toBe(true); p.wealth = w.pops[i].wealth; p.literacy = w.pops[i].literacy; });
+      got.regions.forEach((r, i) => { expect(close(r.education, w.regions[i].education)).toBe(true); r.education = w.regions[i].education; });
+      got.buildings.forEach((b, i) => {
+        const x = w.buildings[i];
+        expect(close(b.exp, x.exp) && (x.crew === undefined ? b.crew === undefined : close(b.crew!, x.crew))).toBe(true);
+        b.exp = x.exp; if (x.crew !== undefined) b.crew = x.crew;
+      });
+      // 바꾼 칸은 객체 끝에 새로 생기므로 키 순서는 다를 수 있다: 값으로 비교한다
+      expect(JSON.parse(save(got))).toEqual(JSON.parse(save(w)));
+    };
+    same(migrateWorld(to11())!);
+    // 10판: 그에 더해 금융가 지분이 id → 지분 수 객체였다
+    const v10 = to11();
     v10.version = 10;
     let held = 0;
     for (const p of v10.pops) if (p.fund) { held++; p.fund = Object.fromEntries(p.fund.id.map((id: number, i: number) => [id, p.fund.u[i]])); }
     expect(held).toBeGreaterThan(0);
-    expect(save(migrateWorld(v10)!)).toBe(save(w));
+    same(migrateWorld(v10)!);
   });
 
-  // 화면 표시용 사본(Pop.wealth·literacy, Region.education, Building.crew)은 sim 이 읽지 않는다: 사본을 엉뚱한 값으로 바꿔도 다음 날 세계가 같고,
-  // 하루가 끝나면 사본이 100배 값과 맞는다. 사본이 없는 6판 저장도 불러오면 사본이 생긴다
-  it('화면 표시용 사본은 sim 이 읽지 않고, 하루 끝과 불러오기 뒤에 100배 값과 맞는다', () => {
-    const a = createWorld(5);
-    runTo(a, 60);
-    const b = migrateWorld(JSON.parse(save(a)))!;
-    for (const p of b.pops) { p.wealth = -77; p.literacy = -77; }
-    for (const r of b.regions) r.education = -77;
-    for (const x of b.buildings) x.crew = -77;
-    runTo(a, 75); runTo(b, 75);
-    expect(save(b)).toBe(save(a));
-    const synced = (w: World) =>
-      w.pops.every((p) => p.wealth === round2(p.wealth100 / 100) && p.literacy === round2(p.literacy100 / 100)) &&
-      w.regions.every((r) => r.education === round2(r.education100 / 100)) &&
-      w.buildings.every((x) => x.crew === (x.crew100 === undefined ? undefined : round2(x.crew100 / 100)));
-    expect(synced(a)).toBe(true);
-    const bare = JSON.parse(save(a));
-    for (const p of bare.pops) { delete p.wealth; delete p.literacy; }
-    for (const r of bare.regions) delete r.education;
-    for (const x of bare.buildings) delete x.crew;
-    const loaded = migrateWorld(bare)!;
-    expect(synced(loaded)).toBe(true);
-    expect(loaded).toEqual(JSON.parse(save(a)));
-  });
-
-  // 반올림 찌꺼기(0.05 이하 이동평균)는 0이 되고, 사고파는 사람이 없는 시장은 기본가에서 벗어난 쪽 끝으로 간다 (market.ts updatePrices)
-  it('흐름이 끊긴 시장: 이동평균 찌꺼기는 0, 가격은 쏠린 쪽 끝으로', () => {
+  // 흐름이 끊긴 시장: 수요·공급 이동평균이 같은 비율로 줄어 가격이 마지막 수급 비율에 머물다가, 둘 다 거의 0(1e-6 아래, priceFormula)이 되면
+  // 쏠린 쪽 끝으로 간다 (market.ts updatePrices). 처음부터 흐름이 없던 시장은 기본가 그대로다
+  it('흐름이 끊긴 시장: 가격은 쏠린 쪽 끝으로', () => {
     const w = createWorld(5);
     const [a, b] = w.regions;
     const base = GOODS.luxury_cloth.basePrice;
-    const cheap = a.market.luxury_cloth, dear = b.market.luxury_cloth, idle = b.market.electronics;
-    Object.assign(cheap, { demand: 0, supply: 0, demandEma: 0.05, supplyEma: 0.04, price: base * 0.5 });
-    Object.assign(dear, { demand: 0, supply: 0, demandEma: 0.03, supplyEma: 0, price: base * 1.5 });
+    const glut = a.market.luxury_cloth, short = b.market.luxury_cloth, idle = b.market.electronics;
+    Object.assign(glut, { demand: 0, supply: 0, demandEma: 0.04, supplyEma: 0.05, price: base });
+    Object.assign(short, { demand: 0, supply: 0, demandEma: 0.03, supplyEma: 0, price: base });
     Object.assign(idle, { demand: 0, supply: 0, demandEma: 0, supplyEma: 0, price: GOODS.electronics.basePrice });
-    for (let d = 0; d < 400; d++) {
+    for (let d = 0; d < 600; d++) {
       updatePrices(w);
-      for (const m of [cheap, dear, idle]) { m.demand = 0; m.supply = 0; }
+      // 90일: 마지막 수급 비율(수요 0.04 : 공급 0.05)의 가격 근처
+      if (d === 90) expect(Math.abs(glut.price - base * (1 - 0.75 * 0.25))).toBeLessThan(0.5);
+      for (const m of [glut, short, idle]) { m.demand = 0; m.supply = 0; }
     }
-    expect([cheap.demandEma, cheap.supplyEma, dear.demandEma, dear.supplyEma]).toEqual([0, 0, 0, 0]);
-    expect(cheap.price).toBe(base * PRICE_MIN);
-    expect(dear.price).toBe(base * PRICE_MAX);
+    expect(glut.demandEma).toBeLessThan(1e-15);
+    expect(glut.price).toBeCloseTo(base * PRICE_MIN, 4);
+    expect(short.price).toBeCloseTo(base * PRICE_MAX, 4);
     expect(idle.price).toBe(GOODS.electronics.basePrice);
   });
 });

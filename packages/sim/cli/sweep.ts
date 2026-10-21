@@ -171,7 +171,7 @@ for (let d = 0; d < years * 360; d++) {
   }
   for (const b of w.buildings) if (b.typeId === 'subsistence') { yearAcc.hG += b.last.output.grain ?? 0; yearAcc.hT += b.last.output.timber ?? 0; yearAcc.hF += b.last.output.fiber ?? 0; }
   // 소작농 묶음 충족률·부 (인구 가중, 하루 평균)
-  { let n = 0, f = 0, wl = 0; for (const p of w.pops) if (p.prof === 'peasant') { n += p.size; f += p.size * p.fulfillment; wl += p.size * p.wealth100 / 100; }
+  { let n = 0, f = 0, wl = 0; for (const p of w.pops) if (p.prof === 'peasant') { n += p.size; f += p.size * p.fulfillment; wl += p.size * p.wealth; }
     if (n > 0) { yearAcc.pFul += f / n; yearAcc.pW += wl / n; } }
   if (w.tick % 7 === 0) for (const k of w.kingdoms) welAcc += k.lastBudget?.welfare ?? 0;
   {

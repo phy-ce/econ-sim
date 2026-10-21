@@ -1,6 +1,6 @@
-import { CLASS_DEFS, TICKS_PER_WEEK, TUNE, WORKFORCE_RATIO } from './data';
+import { CLASS_DEFS, TUNE, WORKFORCE_RATIO } from './data';
 import { popSol } from './economy';
-import { clamp, round2 } from './rng';
+import { clamp } from './rng';
 import { POP_CLASSES, wealthOf } from './types';
 import type { GoodBag, Household, Pop, PopClass, Region, World } from './types';
 
@@ -50,7 +50,7 @@ export function getPop(w: World, regionId: number, prof: PopClass, work: number)
   const found = findPop(w, regionId, prof, work);
   if (found) return found;
   const p: Pop = {
-    id: w.nextId++, regionId, prof, work, size: 0, savings: 0, wealth100: 500, literacy100: 0, wealth: 5, literacy: 0, quals: {}, sol: 0, growth: 0,
+    id: w.nextId++, regionId, prof, work, size: 0, savings: 0, wealth: 5, literacy: 0, quals: {}, sol: 0, growth: 0,
     incomeEma: 0, lastIncome: 0, lastSpend: 0, fulfillment: 1, food: 1, inKind: {},
   };
   w.pops.push(p);
@@ -128,13 +128,13 @@ export function movePeople(w: World, from: Pop, to: Pop, workers: number, qualif
   // 부·문해력·충족률은 인구 가중 평균
   const before = to.size;
   if (total > 0) {
-    to.wealth100 = (to.wealth100 * before + from.wealth100 * people) / total;
-    to.literacy100 = (to.literacy100 * before + from.literacy100 * people) / total;
+    to.wealth = (to.wealth * before + from.wealth * people) / total;
+    to.literacy = (to.literacy * before + from.literacy * people) / total;
     to.food = (to.food * before + from.food * people) / total;
     to.fulfillment = (to.fulfillment * before + from.fulfillment * people) / total;
   } else {
-    to.wealth100 = from.wealth100;
-    to.literacy100 = from.literacy100;
+    to.wealth = from.wealth;
+    to.literacy = from.literacy;
     to.food = from.food;
     to.fulfillment = from.fulfillment;
   }
@@ -251,7 +251,7 @@ export function updateQualifications(w: World) {
     const wf = workforce(p);
     if (wf <= 0) continue;
     const quals = p.quals, prof = p.prof, from = PROF_INDEX[prof];
-    const L = p.literacy100 / 100, W = wealthOf(p);
+    const L = p.literacy, W = wealthOf(p);
     for (let i = 0; i < QUAL_TARGETS.length; i++) {
       const target = QUAL_TARGETS[i];
       if (target === prof) continue;
@@ -299,24 +299,21 @@ export function matchNobles(w: World) {
 
 /** 문해력 목표에 더하는 부 1단계의 몫 */
 export const LITERACY_PER_WEALTH = 0.005;
-/** 문해력과 교육 접근도가 목표로 다가가는 하루 비율 (오를 때, 내릴 때). 주 1회 7일치씩 움직인다 */
+/** 문해력과 교육 접근도가 목표로 다가가는 하루 비율 (오를 때, 내릴 때) */
 export const LITERACY_UP = 0.002;
 export const LITERACY_DOWN = 0.0005;
 
-/** value 를 target 쪽으로 7일치 움직인다 (문해력·교육 접근도, % 단위) */
-export function weekToward(value: number, target: number): number {
-  return value + (target - value) * TICKS_PER_WEEK * (target > value ? LITERACY_UP : LITERACY_DOWN);
+/** value 를 target 쪽으로 하루치 움직인다 (문해력·교육 접근도, 0..1) */
+export function toward(value: number, target: number): number {
+  return value + (target - value) * (target > value ? LITERACY_UP : LITERACY_DOWN);
 }
 
-/**
- * 문해력은 지역 교육 접근도 + 부 단계 × 0.5% 를 향해 천천히 움직인다 (오를 땐 빠르고 내릴 땐 느리다). 주 1회 7일치.
- * % 단위로 저장하므로 하루마다 움직이면 소수 둘째 자리에서 멈춘다 (하루 변화가 대개 0.005%p 미만이다)
- */
+/** 문해력은 매일 지역 교육 접근도 + 부 단계 × 0.5% 를 향해 천천히 움직인다 (오를 땐 빠르고 내릴 땐 느리다) */
 export function updateLiteracy(w: World) {
-  const edu = new Map(w.regions.map((r) => [r.id, r.education100]));
+  const edu = new Map(w.regions.map((r) => [r.id, r.education]));
   for (const p of w.pops) {
-    const target = clamp((edu.get(p.regionId) ?? 0) + 100 * LITERACY_PER_WEALTH * wealthOf(p), 0, 100);
-    p.literacy100 = weekToward(p.literacy100, target);
+    const target = clamp((edu.get(p.regionId) ?? 0) + LITERACY_PER_WEALTH * wealthOf(p), 0, 1);
+    p.literacy = toward(p.literacy, target);
   }
 }
 
@@ -355,7 +352,7 @@ function growthWith(p: Pop, sol0: number): number {
   const mild = clamp((STARVATION_LINE - p.food) / (STARVATION_LINE - SEVERE_STARVATION), 0, 1);
   const severe = clamp((SEVERE_STARVATION - p.food) / SEVERE_STARVATION, 0, 1);
   const birth = 1 - 0.35 * mild - 0.55 * severe, mortality = 1 + 0.3 * mild + 0.7 * severe;
-  return (birthRateAt(sol, p.literacy100 / 100) * birth - mortalityAt(sol) * mortality) / DAYS_PER_MONTH;
+  return (birthRateAt(sol, p.literacy) * birth - mortalityAt(sol) * mortality) / DAYS_PER_MONTH;
 }
 
 /**
@@ -370,8 +367,8 @@ export function updateGrowth(w: World) {
   for (const p of w.pops) {
     const sol = popSol(p);
     const g = growthWith(p, sol);
-    p.sol = round2(sol);
-    p.growth = round2(((1 + g) ** DAYS_PER_YEAR - 1) * 100);
+    p.sol = sol;
+    p.growth = ((1 + g) ** DAYS_PER_YEAR - 1) * 100;
     p.size = Math.max(0, p.size * (1 + g));
   }
 }

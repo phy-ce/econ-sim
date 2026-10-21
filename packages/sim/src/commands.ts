@@ -4,7 +4,7 @@ import { applyStateWages, chooseFunders } from './finance';
 import { kingdomById } from './kingdoms';
 import { buildingNameEn, landNameEn, regionNameEn, techNameEn } from './i18n';
 import { round2 } from './rng';
-import { roundWorld } from './round';
+import { writePool } from './round';
 import { BUDGET_ITEMS, BUDGET_STEPS, INVEST_LAWS, TAX_LAWS, WELFARE_LAWS } from './types';
 import { lawUnlocked, startLawChange } from './policy';
 import type { Command, World } from './types';
@@ -19,19 +19,18 @@ export const MAX_CONCURRENT_CONSTRUCTIONS = 40;
 export const MAX_LEVELS_PER_PROJECT = 50;
 
 
-/** 명령을 검증하고 적용한다. 플레이어와 AI 모두 이 경로만 거친다. 틱 안(AI)에서 쓴다 (저장값은 틱 끝에 소수 둘째 자리로 맞춘다) */
+/** 명령을 검증하고 적용한다. 플레이어와 AI 모두 이 경로만 거친다. 틱 안(AI)에서 쓴다 */
 export function applyCommand(w: World, actor: number, cmd: Command): string | null {
   return runCommand(w, actor, cmd)?.text ?? null;
 }
 
 /**
  * 틱 밖에서 넣는 명령 (applyCommand 와 같은 검증·적용): 화면이 틱 사이에 바로 넣는 명령과 step 의 명령 목록이 이 길을 쓴다.
- * 적용하면 저장값을 소수 둘째 자리로 맞춘다: 틱 사이에 저장해도 규칙을 지키고, 다음 틱은 어느 쪽으로 넣었든 같은 값에서 시작한다
- * (round.ts roundWorld, 이미 맞춘 값은 그대로다)
+ * 적용하면 화면 표시용 사본(투자 풀)을 다시 쓴다 (round.ts writePool)
  */
 export function applyCommandMsg(w: World, actor: number, cmd: Command): CommandError | null {
   const err = runCommand(w, actor, cmd);
-  if (!err) roundWorld(w);
+  if (!err) writePool(w);
   return err;
 }
 
@@ -116,7 +115,7 @@ function runCommand(w: World, actor: number, cmd: Command): CommandError | null 
       if (!knowsTech(company, method.tech)) return fail(`'${TECH_BY_ID[method.tech!].name}' 기술이 필요합니다.`, `Requires the '${techNameEn(method.tech!)}' technology.`);
       if (b.methodId !== cmd.methodId) {
         b.methodId = cmd.methodId;
-        b.exp100 *= 0.5;
+        b.exp *= 0.5;
         b.lastSwitchTick = w.tick;
       }
       return null;

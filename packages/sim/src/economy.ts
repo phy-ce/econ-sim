@@ -577,7 +577,7 @@ export function colonySol(w: World, prof: PopClass): number {
 
 /**
  * 주인 없는 돈(fund)을 뺀 돈 계정 전부를 정해진 순서로 f 에 넘기고 돌려받은 값으로 바꾼다.
- * 화폐 총량(totalMoney)과 센트 맞춤(round.ts roundWorld)이 이 목록 하나를 쓴다: 돈을 가진 계정을 새로 두면 여기에만 넣는다
+ * 화폐 총량(totalMoney)이 이 목록을 쓴다: 돈을 가진 계정을 새로 두면 여기에 넣는다
  */
 export function mapMoney(w: World, f: (x: number) => number): void {
   w.traders.cash = f(w.traders.cash);
@@ -657,7 +657,7 @@ export function goodName(g: GoodId): string {
 
 export function newBuilding(id: number, typeId: string, regionId: number, companyId: number, methodId: string, level: number, stateOwned = false): Building {
   return {
-    id, typeId, regionId, companyId, level, methodId, stateOwned, active: true, utilization: 1, lastSwitchTick: -1e9, exp100: 0, crew100: 0, crew: 0, idle: false,
+    id, typeId, regionId, companyId, level, methodId, stateOwned, active: true, utilization: 1, lastSwitchTick: -1e9, exp: 0, crew: 0, idle: false,
     employed: emptyJobs(), stock: {}, outStock: {}, unpaid: false,
     last: emptyStats(), profitEma: 0, lossWeeks: 0, pausedWeeks: 0,
   };

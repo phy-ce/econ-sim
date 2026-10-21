@@ -4,7 +4,7 @@ import { financeIdle, payRent, paySalvage, taxDue, taxRates } from './finance';
 import { borderCost, kingdomById, kingdomOf, payTariff, toTreasury } from './kingdoms';
 import { INVEST_CLASSES } from './policy';
 import { addFund, findPop, payPops, payProf, workforce } from './pops';
-import { clamp, floor2, round2 } from './rng';
+import { clamp } from './rng';
 import { POP_CLASSES, WEALTH_MAX, WEALTH_MIN, wealthOf } from './types';
 import type { Building, Company, GoodBag, GoodId, MarketGood, NeedDef, NeedId, Pop, Region, SalvageLot, Shipment, World } from './types';
 
@@ -300,7 +300,7 @@ export function collectOrders(w: World, book: Book) {
     for (const b of w.buildings) {
       if (b.companyId !== c.id || !b.active) continue;
       const method = getMethod(b.typeId, b.methodId);
-      const st = Math.max(b.last.staffing, (b.crew100 ?? 0) / 100);
+      const st = Math.max(b.last.staffing, b.crew ?? 0);
       for (const g of GOOD_IDS) {
         const per = method.inputs[g];
         if (!per) continue;
@@ -493,6 +493,8 @@ function transportOrder(w: World, regionId: number, value: number, payer: Payer,
 export const SHIP_RATE = 10;
 /** 팔리지 않은 상인 화물이 하루에 상하는 비율 */
 export const CARGO_DECAY = 0.02;
+/** 묵은 화물이 이만큼(단위) 아래로 줄면 없어진다 */
+export const CARGO_MIN = 1;
 
 /**
  * 상인 화물의 시장(mkey)별 수량 합 (화물 순서대로). 화물 목록은 이 파일만 바꾸고, updatePrices 뒤로 다음 날 addTraderOrders 까지는
@@ -658,15 +660,15 @@ export function clearMarkets(w: World, book: Book) {
       const p = mg.price;
       for (const lot of lots) {
         if (lot.kind === 'traders') {
-          // 팔리지 않은 화물은 하루 2% 상하고 시장마다 묵은 화물 하나로 합친다. 센트 아래는 버린다 (작은 화물도 늘 줄어 없어진다)
+          // 팔리지 않은 화물은 하루 2% 상하고 시장마다 묵은 화물 하나로 합친다. CARGO_MIN 아래로 줄면 없어진다
           let unsold = 0;
           for (const q0 of lot.qs) {
             const q = q0 * sellFrac, amt = q * p;
             w.traders.cash += amt;
             unsold += q0 - q;
           }
-          const left = floor2(unsold * (1 - CARGO_DECAY));
-          if (left > 0) w.traders.shipments.push({ to: r.id, good: g, q: left, stale: true });
+          const left = unsold * (1 - CARGO_DECAY);
+          if (left >= CARGO_MIN) w.traders.shipments.push({ to: r.id, good: g, q: left, stale: true });
           continue;
         }
         const q = lot.q * sellFrac, amt = q * p;
@@ -706,10 +708,6 @@ export function clearMarkets(w: World, book: Book) {
     charge(w, o.payer, cost);
     o.fill?.(q, cost);
   }
-  // 오늘 산 화물의 수량도 소수 둘째 자리 (다음 날 공급과 화면 재고가 저장되는 값과 같은 합을 본다)
-  let roundedOut = false;
-  for (const sh of w.traders.shipments) { sh.q = round2(sh.q); if (!(sh.q > 0)) roundedOut = true; }
-  if (roundedOut) w.traders.shipments = w.traders.shipments.filter((sh) => sh.q > 0);
 
   // 가계: 결제, 충족률, 부 단계
   for (const plan of book.plans) {
@@ -753,7 +751,7 @@ export const INVEST_RATE = 0.05;
 function investSurplus(w: World, p: Pop, cashCost: number) {
   const daily = Math.max(0, cashCost) + taxDue(w, p);
   if (p.prof === 'peasant') {
-    const extra = floor2(p.savings - daily * 7 * TUNE.peasantKeepWeeks);
+    const extra = p.savings - daily * 7 * TUNE.peasantKeepWeeks;
     const m = extra > 0 ? manorOf(w, p.regionId) : undefined;
     if (!m) return;
     p.savings -= extra;
@@ -864,8 +862,7 @@ function updateWealth(p: Pop, rd: RegionDay, plan: PopPlan) {
   let d = 0;
   if (L < WEALTH_MAX && income > costNext * 1.02) d = Math.min(0.03, 0.03 * (income / costNext - 1));
   else if (costCur > 0 && income < costCur * 0.98) d = -Math.min(0.03, 0.015 * (1 - income / costCur));
-  // 부는 100배 값으로 저장한다 (하루 변화가 대개 0.005 단계 미만이라, 단계 그대로 소수 둘째 자리면 멈춘다)
-  p.wealth100 = clamp(p.wealth100 + d * 100, WEALTH_MIN * 100, WEALTH_MAX * 100);
+  p.wealth = clamp(p.wealth + d, WEALTH_MIN, WEALTH_MAX);
 }
 
 // ---------------------------------------------------------------- 가격
@@ -876,40 +873,29 @@ export const PRICE_MAX = 1.75;
 export const PRICE_SPEED = 0.03;
 /** 수요·공급 평균이 하루에 따라가는 비율 */
 export const FLOW_EMA = 0.1;
-/**
- * 수요·공급 이동평균은 소수 둘째 자리로 저장해서, 흐름이 끊겨도 0.05 언저리에서 줄지 않고 남는다 (0.05 × 10% 가 반올림에 묻힌다).
- * 그런 찌꺼기는 없는 수요·공급을 있는 것처럼 보이게 한다 (가격이 기본가로 돌아가고 상인이 헛물을 나른다). 그날 흐름도 이만큼 작으면 0으로 둔다
- */
-export const FLOW_EMA_MIN = 0.05;
 
-/** 수요·공급 이동평균 하루치 (소수 둘째 자리, 0.05 이하 찌꺼기는 0) */
+/** 수요·공급 이동평균 하루치 */
 function flowEma(ema: number, cur: number): number {
-  const v = round2(ema * (1 - FLOW_EMA) + cur * FLOW_EMA) + 0;
-  return v <= FLOW_EMA_MIN && cur <= FLOW_EMA_MIN ? 0 : v;
+  return ema * (1 - FLOW_EMA) + cur * FLOW_EMA;
 }
 /** 출처별 수요·공급 이동평균의 하루 비율 (outlook.ts 가 기상 조건 되돌리기에 쓴다) */
 export const BY_EMA = 0.1;
-/** 출처별 이동평균이 이 값 이하로 내려가면 지운다. 소수 둘째 자리로 저장하므로 더 작은 값은 하루 10%씩 줄지 않고 그대로 남는다 */
+/** 출처별 이동평균이 이 값 이하로 내려가면 지운다 (사라진 출처가 목록에 끝없이 남지 않게) */
 const BY_EMA_MIN = 0.05;
 
-/**
- * 출처별 이동평균 (새 객체). 저장값이라 소수 둘째 자리로 쓴다 (round.ts 는 이 묶음을 따로 훑지 않는다).
- * 오늘 값(cur)은 여기서 마지막으로 읽으므로 읽은 뒤 제자리에서 소수 둘째 자리로 맞춘다
- */
+/** 출처별 이동평균 (새 객체) */
 function emaBy(prev: Record<string, number> | undefined, cur: Record<string, number> | undefined): Record<string, number> {
   const out: Record<string, number> = {};
   const p = prev ?? {}, c = cur ?? {};
   // 키 순서: 어제 키, 그다음 오늘 새로 생긴 키
   for (const k in p) {
     const v = (p[k] ?? 0) * (1 - BY_EMA) + (c[k] ?? 0) * BY_EMA;
-    if (v > BY_EMA_MIN) out[k] = round2(v) + 0;
+    if (v > BY_EMA_MIN) out[k] = v;
   }
   for (const k in c) {
-    const x = c[k] ?? 0;
-    c[k] = round2(x) + 0;
     if (Object.hasOwn(p, k)) continue;
-    const v = x * BY_EMA;
-    if (v > BY_EMA_MIN) out[k] = round2(v) + 0;
+    const v = (c[k] ?? 0) * BY_EMA;
+    if (v > BY_EMA_MIN) out[k] = v;
   }
   return out;
 }
@@ -927,16 +913,9 @@ export function updatePrices(w: World) {
       mg.demandByEma = emaBy(mg.demandByEma, mg.demandBy);
       mg.supplyByEma = emaBy(mg.supplyByEma, mg.supplyBy);
       mg.inventory = stockOf[mkey(r.id, g)] ?? 0;
-      // 사고파는 사람이 없는 시장(수요·공급 이동평균이 모두 0)은 마지막으로 쏠린 쪽 끝으로 간다: 기본가보다 싸면 바닥, 비싸면 천장, 기본가면 그대로
-      // (소수점 끝없이 계산하면 아주 작게 남은 이동평균이 마지막 쏠림을 지켜서 그렇게 된다. 반올림하면 그 몫이 사라지므로 규칙으로 적었다)
-      const side = round2(mg.price - base);
-      const target = mg.demandEma === 0 && mg.supplyEma === 0
-        ? (side < 0 ? base * PRICE_MIN : side > 0 ? base * PRICE_MAX : base)
-        : priceFormula(g, mg.demandEma, mg.supplyEma);
-      // 소수 2자리라 작은 차이가 0으로 반올림되지 않게, 차이가 있으면 최소 0.01은 움직인다
-      const gap = target - mg.price;
-      const move = Math.sign(gap) * Math.min(Math.abs(gap), Math.max(0.01, Math.abs(gap) * PRICE_SPEED));
-      mg.price = round2(clamp(mg.price + move, base * PRICE_MIN, base * PRICE_MAX));
+      // 흐름이 끊긴 시장은 이동평균이 둘 다 같은 비율로 줄어 마지막 쏠림이 남으므로, 가격이 쏠린 쪽 끝으로 간다
+      const target = priceFormula(g, mg.demandEma, mg.supplyEma);
+      mg.price = clamp(mg.price + (target - mg.price) * PRICE_SPEED, base * PRICE_MIN, base * PRICE_MAX);
     }
   }
 }

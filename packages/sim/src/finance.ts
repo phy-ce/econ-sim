@@ -117,7 +117,7 @@ export function updateWageIndex(w: World, k: Kingdom) {
     for (const s of LOWER_JOBS) { paid += b.employed[s] * c.wages[s]; base += b.employed[s] * SKILL_DEFS[s].baseWage; }
   }
   if (base <= 0) return;
-  k.wageIndex = round2(k.wageIndex == null ? paid / base : k.wageIndex * 0.75 + (paid / base) * 0.25);
+  k.wageIndex = k.wageIndex == null ? paid / base : k.wageIndex * 0.75 + (paid / base) * 0.25;
 }
 
 /** 국영 임금 (빅토리아3 정부 임금): 기본 임금 × 임금 지수 × 국영 임금 수준 배율. 왕실의 모든 건물이 이 임금을 준다 */
@@ -136,22 +136,23 @@ export function spendBudget(w: World) {
   for (const k of w.kingdoms) {
     const gov = companyById(w, k.governmentId);
     const week = dailyOutput(w, k.id) * TICKS_PER_WEEK;
-    k.output = round2(k.output == null ? week : k.output * 0.75 + week * 0.25);
+    k.output = k.output == null ? week : k.output * 0.75 + week * 0.25;
     const spent = k.spentWeek ?? { wages: 0, goods: 0 };
     const revenue = k.revenueWeek;
     k.revenueWeek = 0;
     k.spentWeek = { wages: 0, goods: 0, welfare: 0 };
     if (!gov) continue;
     const research = fundResearch(w, gov, k.output * TUNE.researchShare * budgetMult(k, 'research'));
-    gov.research.budget = round2(research / TICKS_PER_WEEK);
+    gov.research.budget = research / TICKS_PER_WEEK;
+    // 지난주 국정 수지 (화면에 그대로 나가는 기록이라 소수 둘째 자리)
     const b = { revenue: round2(revenue), tariffs: round2(k.tariffWeek ?? 0), fees: round2(gov.ledger.buildFees), wages: round2(spent.wages), goods: round2(spent.goods), research: round2(research), interest: round2(gov.ledger.interest), welfare: round2(spent.welfare ?? 0) };
     k.lastBudget = b;
     const net = b.wages + b.goods + b.research + b.interest + b.welfare - b.fees;
-    k.expenseEma = round2(k.expenseEma == null ? net : k.expenseEma * 0.75 + net * 0.25);
+    k.expenseEma = k.expenseEma == null ? net : k.expenseEma * 0.75 + net * 0.25;
     // 예산 미리보기 기준값 (화면 전용). 수수료는 건축사무소 임금 몫(국영 임금 배율 1로 환산)과 나머지로 나눈다
     const base = (k.budgetBase ??= {});
     const a = budgetEmaWeight(w, 0.25);
-    const ema = (old: number | undefined, x: number) => round2(old == null ? x : old * (1 - a) + x * a);
+    const ema = (old: number | undefined, x: number) => (old == null ? x : old * (1 - a) + x * a);
     const fw = k.feeWageWeek ?? 0;
     base.tariffs = ema(base.tariffs, k.tariffWeek ?? 0);
     base.feesWage = ema(base.feesWage, fw);
@@ -233,8 +234,9 @@ export function collectIncomeTax(w: World) {
     k.taxDue = n;
     k.taxCapacity = cap;
     k.taxOwed = (k.taxOwed ?? owed.get(k.id) ?? 0) * 0.9 + (owed.get(k.id) ?? 0) * 0.1;
-    k.taxRatio = round2(collectionRatio(cap, n));
-    ratio.set(k.id, collectionRatio(cap, n));
+    const cr = collectionRatio(cap, n);
+    k.taxRatio = cr;
+    ratio.set(k.id, cr);
   }
   const got = new Map<number, number>();
   for (const p of w.pops) {
@@ -258,7 +260,7 @@ export function collectIncomeTax(w: World) {
     const old = base.taxBy;
     base.taxBy = TUNE.taxLevels.map((_ms, i) => {
       const day = (arr?.[i] ?? 0) * r;
-      return round2(old?.[i] == null ? day : old[i] * (1 - a) + day * a);
+      return old?.[i] == null ? day : old[i] * (1 - a) + day * a;
     });
   }
   // 걷힌 세금은 행정청이 한도에 기여한 비율만큼 그 행정청의 매출로 잡는다 (돈은 이미 국고에 있다).
@@ -321,7 +323,7 @@ export function weeklyOutputValue(typeId: string, methodId: string): number {
 
 /** 건물 유보 자산 상한: 레벨 × 지금 방식의 레벨당 주간 산출 가치(기본가) × TUNE.reserveWeeks. 방식을 바꿔 상한이 줄면 다음 정산에서 상한까지 줄인다 */
 export function reserveCap(b: Building): number {
-  return round2(b.level * weeklyOutputValue(b.typeId, b.methodId) * TUNE.reserveWeeks);
+  return b.level * weeklyOutputValue(b.typeId, b.methodId) * TUNE.reserveWeeks;
 }
 
 /** 회사 건물 유보 자산 합 (회사 현금 중 그 몫) */
@@ -337,11 +339,11 @@ export function buildingReserves(w: World, c: Company): number {
  */
 function settleReserve(b: Building, weekProfit: number): number {
   const res = Math.min(b.reserve ?? 0, reserveCap(b));
-  if (weekProfit <= 0) { b.reserve = round2(Math.max(0, res + weekProfit)); return 0; }
+  if (weekProfit <= 0) { b.reserve = Math.max(0, res + weekProfit); return 0; }
   // 유보 자산이 찰수록 적립 비율이 줄어든다 (비었으면 RESERVE_SHARE, 가득 차면 0): 배당이 한꺼번에 뛰지 않게
   const cap = reserveCap(b);
   const keep = cap > 0 ? Math.max(0, Math.min(cap - res, weekProfit * RESERVE_SHARE * (1 - res / cap))) : 0;
-  b.reserve = round2(res + keep);
+  b.reserve = res + keep;
   return weekProfit - keep;
 }
 
@@ -416,7 +418,7 @@ export function updateFunds(w: World) {
     // TUNE.financeIdle: 쉬는 금융가는 금고에서 (금고 + 가진 레벨 값) × KEEP_SHARE 를 넘는 돈을 지분 주인에게 지분 수대로 돌려준다
     if (u > 0 && financeIdle(w, o)) {
       const out = Math.max(0, o.cash ?? 0) - assets * (KEEP_SHARE.finance ?? 0);
-      if (out > 0.01) {
+      if (out > 0) {
         const holders = w.pops.filter((p) => fundOf(p, o.id) > 0);
         o.cash = (o.cash ?? 0) - out;
         flow('idle.finance', out);
@@ -490,7 +492,7 @@ function callCapital(w: World, c: Company, mine: Building[], byId: Map<number, B
   for (const id of [...levels.keys()].sort((a, b) => a - b)) {
     const o = byId.get(id);
     if (!o) continue;
-    const amt = round2(Math.min((need * levels.get(id)!) / total, Math.max(0, treasuryFree(w, o))));
+    const amt = Math.min((need * levels.get(id)!) / total, Math.max(0, treasuryFree(w, o)));
     if (amt <= 0) continue;
     o.cash = (o.cash ?? 0) - amt;
     flow(`call.${o.typeId}`, amt);
@@ -566,20 +568,22 @@ export function chooseFunders(w: World, kingdomId: number, regionId: number, typ
     if (left <= 0) break;
     const n = Math.min(left, Math.floor(x.free / perLevel));
     if (n <= 0) continue;
-    out[x.o.id] = round2(n * perLevel);
+    out[x.o.id] = n * perLevel;
     x.free -= n * perLevel;
     left -= n;
   }
   if (left > 0) {
+    // 남은 몫이 공사비의 10억분의 1 아래면 다 모은 것으로 본다 (부동소수점 오차)
     let need = left * perLevel;
+    const done = perLevel * 1e-9;
     for (const x of cands) {
-      if (need <= 0.005) break;
+      if (need <= done) break;
       const give = Math.min(need, x.free);
-      if (give < 0.01) continue;
-      out[x.o.id] = round2((out[x.o.id] ?? 0) + give);
+      if (!(give > 0)) continue;
+      out[x.o.id] = (out[x.o.id] ?? 0) + give;
       need -= give;
     }
-    if (need > 0.005) return null;
+    if (need > done) return null;
   }
   return out;
 }
@@ -632,7 +636,7 @@ export function mintMoney(w: World) {
     if (!gov) continue;
     const amt = MINT_BASE + (kingdomGdp(w, k.id) * TICKS_PER_WEEK / 360) * MINT_RATE;
     // 예산 미리보기 기준값 (화면 전용): 이번 주 주조액 (주 1회만 바뀐다)
-    (k.budgetBase ??= {}).mint = round2(amt);
+    (k.budgetBase ??= {}).mint = amt;
     gov.cash += amt;
     gov.weekProfit += amt;
     gov.ledger.mint += amt;

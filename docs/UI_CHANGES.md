@@ -19,6 +19,7 @@
 0-2. **세법 셋·투자법·금융가 펀드·지대·귀족 자리 (2-55, DECISIONS 7-16~7-19 2~4단계).** `TaxLaw`가 `'land'|'poll'|'income'`, 새 `setInvestLaw`·`policyStatus`·`ownershipAssets`. sim 작업자가 `FinancePanel.tsx` 24의 세법 `select`를 세 값으로 고쳤다 (컴파일 맞춤). 정책 창(2-45)은 이제 sim 쪽이 준비됐다.
 0-3. **법은 기술로 열린다 + 끝날 때 조건 확인 (2-56).** `policyStatus` 선택지에 `tech`·`unlocked`, 전환에 `pendingOk`, 소식 `GameEvent.topic` `'lawChanged'`/`'lawFailed'`, 연구 트리용 `unlocksOf(techId).policies`. 2-45 정책 창(잠김 행·조건·진행 막대·실패 소식)과 2-48 연구 트리(정책 줄)에 반영. 컴파일 수정 없음.
 0-4. **복지법·복지 단계 (2-57, 사용자 요청 2026-10-22).** 정책 창(2-45)에 복지법 섹션 (없음/구빈법/임금 보조/보편 보장, 180일 전환 막대, 법마다 주간 예상액 `policyStatus().welfare.options[].weekly`). 재정 창 예산 표의 지출에 `복지` 줄 (`budgetPreview` 줄 `welfare`, 단계 1~5 버튼, 툴팁에 목표 생활수준 `TUNE.welfareLevels`). sim 작업자가 `FinancePanel.tsx` 15 `multipliers`에 `welfare` 한 칸을 넣었다 (컴파일 맞춤).
+0-5. **sim 저장값 반올림 없앰 (2-58, 2026-10-22).** `Pop.wealth`·`literacy`, `Region.education`, `Building.crew`·새 `exp`가 이제 반올림하지 않은 규칙 값이다 (사본 아님). 가격·저축·인구 등도 소수 끝자리가 길다: 화면에 숫자를 그대로 찍는 곳이 있으면 형식을 붙인다 (지금 찾은 곳은 모두 `NumericValue`). 저장 형식 12판, 저장 키는 그대로 둬도 된다 (10·11판은 `migrateWorld`가 바꾼다). 컴파일 수정 없음.
 
 아래는 사용자 요청이거나 정리다.
 1. **아래 창 버튼 토글 + 왕국 지도 버튼 없애기 (2-34, 사용자 재요청).** `WindowWorkspace.tsx` 13·59·67~70: 최소화 상태와 dock의 지도 버튼을 없앤다.
@@ -1088,6 +1089,16 @@ Cells, top row left to right, then bottom row:
   3. 정책 창 아래 읽기 전용 칩(2-45-1)에 `복지 3`을 더한다.
   4. 소식: 전환이 끝나면 sim 이벤트 `복지법이 바뀌었습니다: poor` (`topic: 'lawChanged'`) (2-45-5와 같은 처리, 법 이름으로 바꿔 보이기).
 - 문자열: `welfareLaw` 복지법 / Welfare law, `welfareNone`·`welfarePoor`·`welfareWage`·`welfareUniversal` (위 이름), `budgetLines.welfare` 복지 / Welfare, `welfareTarget` 목표 생활수준 / Target SoL.
+
+### 2-58. sim 저장값 반올림 없앰 (2026-10-22, 사용자 확인: 소수 둘째 자리는 보이는 값에만)
+- sim 이 하루 끝에 모든 숫자를 소수 둘째 자리로 맞추던 일(`roundWorld`)을 없앴다. 저장값은 계산한 double 그대로다.
+- 100배 저장 필드(`wealth100`·`literacy100`·`education100`·`exp100`·`crew100`)를 없앴다. 화면이 읽던 이름이 그대로 규칙 값이 된다:
+  `Pop.wealth` 1~99, `Pop.literacy` 0~1, `Region.education` 0~1, `Building.crew` 0~1 (없으면 충원율), `Building.exp` 0~1 (새 이름, 화면은 안 씀). `wealthOf`·`literacyOf`·`educationOf`·`crewOf`·`expOf`는 그대로 있다.
+- 여전히 소수 둘째 자리인 것: `history`·`metrics` 기록, `Kingdom.lastBudget`, `Kingdom.investmentPool`, 회사 임금(`wages`). 예산 미리보기는 둥근 수.
+- 그 밖의 숫자(가격, 저축, 인구, 생활수준 `Pop.sol`·`growth`, 시장 이동평균 등)는 끝자리가 길 수 있다. 화면에서 숫자를 그대로 문자열로 찍는 곳이 있으면 형식을 붙인다. 확인한 곳(`App.tsx` 140, `CompanyPanel.tsx` 140·600, `RegionPanel.tsx` 149, `PopTable.tsx` 37)은 이미 `NumericValue`·`toFixed`를 쓴다.
+- 없어진 export: `roundWorld`, `roundingDrift` (화면은 안 씀). 새 export: `CARGO_MIN` (market), `toward` (pops, `weekToward` 대신).
+- 저장 형식 12판. 10·11판 저장은 `migrateWorld`가 바꿔 불러온다 (저장 키 `estera-save-v7`은 바꿀 필요 없다).
+- 규칙 사전: `rounding` 항목이 "보이는 소수 자리"로, `idle-market`(거래 없는 시장)·`trade`(화물 1단위 아래면 없어짐)·`literacy`(매일 움직임) 문구가 바뀌었다.
 
 ## 3. sim 쪽 필요 사항 (Claude가 처리할 것, UI 작업자는 요청만)
 - **2-49 (선택):** 회수 자재 lot에 `buildingId`를 넣고 `salvageOf(w, b)` export.

@@ -9,7 +9,7 @@ for (const b of [...w.buildings].sort((a, b2) => b2.level - a.level)) {
   if (BUILDING_BY_ID[b.typeId].auto || !b.active || seen.has(b.methodId)) continue;
   seen.add(b.methodId);
   const c = companyById(w, b.companyId)!, r = regionById(w, b.regionId), m = getMethod(b.typeId, b.methodId);
-  const run = b.level * b.utilization * (b.crew100 !== undefined ? b.crew100 / 100 : 1);
+  const run = b.level * b.utilization * (b.crew ?? 1);
   const L = b.level;
   const v = valueMethod(w, o, r, c, b.typeId, m, 1);
   const goods = GOOD_IDS.filter((g) => m.outputs[g] || m.inputs[g]).map((g) => `${g}${m.outputs[g] ? '+' : '-'} p${r.market[g].price.toFixed(1)} oP${o.price(g).toFixed(1)} D${Math.round(o.demand[g])} S${Math.round(o.supply[g])} lD${Math.round(r.market[g].demandEma)}`).join(' ; ');
