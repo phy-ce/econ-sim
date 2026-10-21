@@ -81,8 +81,11 @@ export const CLASS_DEFS: Record<PopClass, ClassDef> = {
 
 const tech = (id: string, name: string, nameEn: string, tier: number, requires: string[], description: string, descriptionEn: string): TechDef =>
   ({ id, name, nameEn, cost: TECH_COST[tier], requires, description, descriptionEn });
-/** 단계별 연구 포인트 (예전 연구비 12:24:40:70 비율 그대로). 연구 포인트는 왕국 문해력으로 정한다 (finance.ts researchPoints) */
-export const TECH_COST = [0, 3_000, 6_000, 10_000, 17_500];
+/**
+ * 단계별 연구 포인트 (예전 연구비 12:24:40:70 비율 그대로). 연구 포인트는 왕국 문해력으로 정한다 (finance.ts researchPoints).
+ * 값 배율 ×1·×1.5 × 문해력 1%당 1·2·3 비교 (20년 × 시드 1·2, 2026-10-22-research): ×1.5와 3이 기술 전부를 23~30년(가운데 27년)에 열어 지금 속도(19~33년, 27년)와 같다
+ */
+export const TECH_COST = [0, 4_500, 9_000, 15_000, 26_250];
 
 export const TECHS: TechDef[] = [
   // 1단계: 선행 없음. 가공 산업과 기반 시설을 연다
@@ -451,12 +454,13 @@ export const TUNE = {
   taxLevels: [0.6, 0.8, 1, 1.2, 1.4],
   govWageLevels: [0.7, 0.85, 1, 1.15, 1.3],
   researchBase: 50,
-  researchPerLiteracy: 2,
+  researchPerLiteracy: 3, // 1·2·3 × 기술 값 ×1·×1.5 비교 (TECH_COST 주석, DESIGN 11)
   welfareLevels: [2, 2.5, 3, 3.5, 4],
   welfareWeeks: 40, // 26·39·52·78 (시드 1·2), 30·40·50 (시드 1~3) 비교: 40이 11~20년차 총생산·노동자 생활수준이 가장 높다. 30은 10년차 총생산이 1/3 줄고, 50은 40과 비슷하다
   treasuryLowWeeks: 26,
   treasuryHighWeeks: 52, // 1년치
-  // 기술을 다 연 AI 왕국의 국영 임금 상한 단계. 3(끔)·4·5 비교 (20년 × 시드 1·2): 4가 20년차 총생산 2190→2761, 지역 격차 1.87→1.34, 기술자 생활수준 5.45→5.88. 5는 격차가 다시 커진다
+  // 기술을 다 연 AI 왕국의 국영 임금 상한 단계. 3(끔)·4·5 비교 (20년 × 시드 1·2): 4가 20년차 총생산 2190→2761, 지역 격차 1.87→1.34, 기술자 생활수준 5.45→5.88. 5는 격차가 다시 커진다.
+  // 연구가 돈이 들지 않게 된 뒤 다시 3·4 비교 (40년 × 시드 1·2): 25~40년 총생산이 4에서 약 13% 높다 (DESIGN 11)
   doneWageMax: 4,
   startTreasuryWeeks: 26,
   shrinkWeeks: 26,

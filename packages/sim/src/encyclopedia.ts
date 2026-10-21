@@ -737,7 +737,7 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   },
   {
     id: 'literacy', category: 'people', title: t('교육과 문해력', 'Education and literacy'),
-    rule: t('교육 접근도 목표 = {0} + {1} × min(1, 학교 정원 ÷ 인구). 문해력 목표 = 교육 접근도 + {2} × 부. 둘 다 매일 오를 때 {3}, 내릴 때 {4}씩 다가간다.', 'Education target = {0} + {1} × min(1, school seats ÷ population). Literacy target = education + {2} × wealth. Both approach daily at {3} going up and {4} going down.'),
+    rule: t('교육 접근도 목표 = {0} + {1} × min(1, 학교 정원 ÷ 인구). 문해력 목표 = 교육 접근도 + {2} × 부. 둘 다 매일 오를 때 {3}, 내릴 때 {4}씩 다가간다. 왕국 문해력이 연구 속도를 정한다.', 'Education target = {0} + {1} × min(1, school seats ÷ population). Literacy target = education + {2} × wealth. Both approach daily at {3} going up and {4} going down. Kingdom literacy sets the research pace.'),
     formula: 'edu* = {0} + {1} × coverage;  lit* = edu + {2} × W',
     params: [p('교육 바닥', 'Education floor', () => EDUCATION_FLOOR), p('교육 폭', 'Education range', () => EDUCATION_RANGE), p('부 1단계당', 'Per wealth step', () => LITERACY_PER_WEALTH), p('오를 때', 'Rising', () => LITERACY_UP, 'pct'), p('내릴 때', 'Falling', () => LITERACY_DOWN, 'pct')],
     live: {
@@ -749,7 +749,7 @@ export const ENCYCLOPEDIA: EncEntry[] = [
         }),
       }),
     },
-    related: ['schools', 'qualifications', 'ai-schools'], seenIn: ['region', 'pops'], source: ['tick.ts updateEducation', 'pops.ts updateLiteracy'], design: ['3.3'],
+    related: ['schools', 'qualifications', 'ai-schools', 'research'], seenIn: ['region', 'pops'], source: ['tick.ts updateEducation', 'pops.ts updateLiteracy'], design: ['3.3'],
   },
   {
     id: 'needs', category: 'people', title: t('필요 묶음', 'Needs basket'),
@@ -1146,8 +1146,8 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   },
   {
     id: 'schools', category: 'state', title: t('학교', 'Schools'),
-    rule: t('학교는 왕실만 짓고 땅을 쓰지 않는다. 귀족 가정교사는 레벨당 {0}명, 공립 학교(인쇄술)는 {1}명을 가르친다. 정원은 교육 접근도를 올린다.', 'Only crowns build schools, which use no land. Noble tutors teach {0} per level, public schools (printing press) {1}. Seats raise education access.'),
-    params: [p('가정교사 정원', 'Tutor seats', () => getMethod('school', 'school_tutor').seats ?? 0, 'people'), p('공립 정원', 'Public seats', () => getMethod('school', 'school_basic').seats ?? 0, 'people')],
+    rule: t('학교는 왕실만 짓고 땅을 쓰지 않는다. 귀족 가정교사는 레벨당 {0}명, 공립 학교(인쇄술)는 {1}명을 가르친다. 정원은 교육 접근도를 올리고, 문해력과 연구 속도를 올린다. 왕실마다 인구가 가장 많은 지역에 귀족 가정교사 {2}레벨로 시작한다.', 'Only crowns build schools, which use no land. Noble tutors teach {0} per level, public schools (printing press) {1}. Seats raise education access, and so literacy and research. Each crown starts with {2} level(s) of noble tutors in its most populous region.'),
+    params: [p('가정교사 정원', 'Tutor seats', () => getMethod('school', 'school_tutor').seats ?? 0, 'people'), p('공립 정원', 'Public seats', () => getMethod('school', 'school_basic').seats ?? 0, 'people'), p('시작 학교', 'Starting school', () => START_SCHOOL_LEVELS, 'level')],
     live: {
       pick: [], run: (w) => ({
         bars: w.regions.map((r) => {
@@ -1157,7 +1157,7 @@ export const ENCYCLOPEDIA: EncEntry[] = [
         }),
       }),
     },
-    related: ['literacy', 'ai-schools'], seenIn: ['region', 'finance'], source: ['tick.ts updateEducation', 'data.ts school'], design: ['3.3', '7.1'],
+    related: ['literacy', 'ai-schools', 'research'], seenIn: ['region', 'finance'], source: ['tick.ts updateEducation', 'data.ts school'], design: ['3.3', '7.1'],
   },
 
   // ================================================================ AI

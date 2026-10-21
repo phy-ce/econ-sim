@@ -21,6 +21,16 @@
 4. **사용자 결정 (2026-10-21):** 흉작 대책(소작농 분담·공장 하루치 주문)은 하지 않는다. 장기 테스트 기준(4단계 기술 7년, 노동자 식량 최저 35%)은 그대로 둔다. 15년차부터 기술자 1인당 소득 하락(5.0 → 2.2) 진단과 철광산 적게 짓기는 진단 후 수치·AI로만 고친다 (진행 중, 브랜치 wt-skiron).
 5. **알려진 문제:** AI가 철광산을 적게 지음 (20년에 철 광맥 7%만 사용), 지역 간 교역 개편 (사용자 보류, "이동할 때마다 돈이 드는 방식" 선호; VIC3_REFERENCE 시장 접근성).
 
+## 0-research. wt-research (2026-10-22, main d34ecd0 위, 합치기 전, DECISIONS 7-20 사용자 결정)
+- 연구는 돈이 들지 않는다: 주간 연구 포인트 = 50(`researchBase`) + 3(`researchPerLiteracy`) × 왕국 문해력(%) (`finance.ts researchPoints`·`advanceResearch`·`kingdomLiteracy`). 기술 값 4,500 / 9,000 / 15,000 / 26,250 포인트. 고른 기술이 없으면 포인트는 사라진다.
+- 없앤 것: 연구비 손잡이(`BUDGET_ITEMS` = tax·wages·welfare), `researchShare`·`researchLevels`, 예산 줄·묶음·`drillResearch`, `ledger.research`, `lastBudget.research`, `setResearchBudget`, `MAX_RESEARCH_BUDGET`, `RESEARCHER_WEIGHT`(연구비 → 기술자·전문가 소득), `Research.budget`(→ `points`), 연구의 국고 준비금·`treasuryNeed` 몫.
+- AI: 늘 연구를 고른다. 정책 사다리 국영 임금 4 → 세금 1~5 → 국영 임금 2·1. `doneWageMax` 4는 3(끔)과 다시 비교해 그대로 (25~40년 총생산 +13%).
+- 시작 세계: 왕실마다 인구가 가장 많은 지역에 학교 1레벨(귀족 가정교사, `START_SCHOOL_LEVELS`). 저장 14판 (13판 이전은 연구비를 포인트로 비례 변환).
+- 비교 (보고서 2026-10-22-research): 문해력 1%당 1·2·3 × 기술 값 ×1·×1.5. 고른 3·×1.5는 기술 전부 23~30년(가운데 27.2, main 27.6), 4단계 첫 11.4년. 20년차 총생산 main 1,098 → 2,213, 기술자 생활수준 5·10년 6.9 / 8.4 → 4.9 / 5.0 (사용자 승인). 국고가 더 쌓인다 (20년차 488~549백만, main 200~213) — 남은 문제.
+- 테스트: `budget.test` 국영 사업 손익은 100·150·200주 세 구간 합의 오차를 총 흐름(매출 + 원료 + 임금)에 견준다 (한 구간·매출 기준은 새 궤적에서 15~28%가 나왔다. 매출 이동평균이 늘고 주는 적자 국영 사업을 늦게 따라가는 것). `decimals.test` 13 → 14 이전 확인.
+- 화면: UI_CHANGES 2-61 (0-8). 클라이언트 컴파일 맞춤 `CompanyPanel.tsx` 156·567·577, `FinancePanel.tsx` 15.
+- 다른 브랜치와 겹침: wt-chain2·wt-office 가 ai.ts·data.ts·budget.ts 를 고친다. 이 브랜치는 ai.ts adjustBudget·planResearch, data.ts TECH_COST·TUNE 연구 두 키, budget.ts 연구 줄만 고쳤다. UI_CHANGES 절 번호 2-61 이 겹치면 뒤에 합치는 쪽이 번호를 민다.
+
 ## 0-regionecon. wt-regionecon (2026-10-22, main c3d8efb 병합 뒤, 합치기 전)
 - `buildingEcon(w, b)` (지역 건물 수지·지분·배당, UI_CHANGES 2-59).
 - 재정 수지 표 (UI_CHANGES 2-60, DESIGN 9.2): `budgetPreview` 에 줄 `stateFirms`(국영 사업 손익 = 왕실 생산 건물 매출 − 원료 − 임금, 순수지에 들어감)와 손잡이별 묶음 `groups`(`BUDGET_GROUPS`).

@@ -167,9 +167,10 @@ describe('예산 미리보기', () => {
   });
 
   it('국영 사업 손익: 왕실 생산 건물이 있으면 실제 장부(lastBudget.firms)와 크게 다르지 않다', () => {
-    // 100·150·200주에서 4주씩. 매출 이동평균은 늘거나 주는 사업을 늦게 따라가 한 구간의 오차는 ±25%까지 간다: 세 구간을 합쳐 치우침을 본다
+    // 100·150·200주에서 4주씩. 매출 이동평균은 늘거나 주는 사업을 늦게 따라가 한 구간의 오차는 ±25%까지 간다: 세 구간을 합쳐 치우침을 본다.
+    // 오차는 줄의 총 흐름(매출 + 원료 + 임금)에 견준다: 적자 국영 사업은 매출이 작아 매출에만 견주면 비율이 커진다
     const v = createWorld(2);
-    let p = 0, r = 0, scale = 0;
+    let p = 0, r = 0, scale = 0, gross = 0;
     for (const start of [100, 150, 200]) {
       runTo(v, start * TICKS_PER_WEEK);
       for (let wk = 0; wk < 4; wk++) {
@@ -177,13 +178,13 @@ describe('예산 미리보기', () => {
         runTo(v, v.tick + TICKS_PER_WEEK);
         v.kingdoms.forEach((k, i) => {
           const d = budgetDrill(v, k.id, 'stateFirms');
-          if (d.key === 'stateFirms') for (const x of d.rows) scale += x.sales;
+          if (d.key === 'stateFirms') for (const x of d.rows) { scale += x.sales; gross += Math.abs(x.sales) + Math.abs(x.inputs) + Math.abs(x.wages); }
           p += pre[i]; r += k.lastBudget!.firms ?? 0;
         });
       }
     }
-    console.log(`국영 사업 3×4주: 예상 ${p} 장부 ${Math.round(r)} (매출 규모 ${Math.round(scale)})`);
+    console.log(`국영 사업 3×4주: 예상 ${p} 장부 ${Math.round(r)} (매출 ${Math.round(scale)}, 총 흐름 ${Math.round(gross)})`);
     expect(scale).toBeGreaterThan(0);
-    expect(Math.abs(p - r) / scale).toBeLessThan(0.1);
+    expect(Math.abs(p - r) / gross).toBeLessThan(0.1);
   });
 });

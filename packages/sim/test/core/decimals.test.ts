@@ -85,10 +85,10 @@ describe('보이는 값은 소수 둘째 자리, 저장값은 그대로', () => 
     const now = JSON.parse(save(w));
     for (const v of [3, 4, 5, 6, 7, 8, 9]) expect(migrateWorld({ ...now, version: v })).toBeNull();
     expect(save(migrateWorld(JSON.parse(save(w)))!)).toBe(save(w));
-    // 13판까지: 연구가 돈이었다 (연구비 수준·연구비 장부·Research.budget, 진행은 연구비, 기술 값은 지금의 4,000배)
+    // 13판까지: 연구가 돈이었다 (연구비 수준·연구비 장부·Research.budget, 진행은 연구비, 기술 값은 지금의 8,000/3배)
     const toOldResearch = (o: any) => {
       o.version = 13;
-      for (const c of o.companies) { c.research.budget = c.research.points / 7; delete c.research.points; for (const id of Object.keys(c.research.progress)) c.research.progress[id] *= 4000; c.ledger.research = 0; c.lastLedger.research = 0; }
+      for (const c of o.companies) { c.research.budget = c.research.points / 7; delete c.research.points; for (const id of Object.keys(c.research.progress)) c.research.progress[id] *= 8000 / 3; c.ledger.research = 0; c.lastLedger.research = 0; }
       for (const k of o.kingdoms) { k.budget.research = 3; if (k.lastBudget) k.lastBudget.research = 0; }
       return o;
     };
@@ -111,7 +111,7 @@ describe('보이는 값은 소수 둘째 자리, 저장값은 그대로', () => 
         expect(close(b.exp, x.exp) && (x.crew === undefined ? b.crew === undefined : close(b.crew!, x.crew))).toBe(true);
         b.exp = x.exp; if (x.crew !== undefined) b.crew = x.crew;
       });
-      // 연구 진행은 4,000배 했다가 나눈다. 지난주 연구 포인트(화면 기록)는 불러올 때 0이 되고 다음 주에 다시 찬다
+      // 연구 진행은 8,000/3배 했다가 나눈다. 지난주 연구 포인트(화면 기록)는 불러올 때 0이 되고 다음 주에 다시 찬다
       got.companies.forEach((c, i) => {
         const x = w.companies[i].research;
         for (const id of Object.keys(x.progress)) { expect(close(c.research.progress[id], x.progress[id])).toBe(true); c.research.progress[id] = x.progress[id]; }
