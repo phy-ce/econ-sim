@@ -212,10 +212,10 @@ function fullYear(w: World): Record<string, number> {
   let gov = 0, govDebt = 0, firm = 0, man = 0, fin = 0;
   for (const c of w.companies) { if (c.state) { gov += c.cash; govDebt += c.debt; } else firm += c.cash; }
   for (const b of w.buildings) { if (b.typeId === 'manor') man += b.cash ?? 0; if (b.typeId === 'finance') fin += b.cash ?? 0; }
-  const savT = Object.values(sav).reduce((a, x) => a + x, 0), pool = w.kingdoms.reduce((a, k) => a + (k.investmentPool ?? 0), 0);
+  const savT = Object.values(sav).reduce((a, x) => a + x, 0), pool = w.kingdoms.reduce((a, k) => a + (k.investmentPool ?? 0), 0); // investmentPool 은 저택·금융가 금고 합의 화면용 사본 (round.ts writePool): 총통화에 더하지 않는다
   for (const c of POP_CLASSES) o['stock.' + SAV_KEY[c]] = M(sav[c] ?? 0);
   Object.assign(o, { 'stock.savAll': M(savT), 'stock.pool': M(pool), 'stock.gov': M(gov), 'stock.govDebt': M(govDebt), 'stock.firm': M(firm), 'stock.man': M(man), 'stock.fin': M(fin),
-    'stock.traders': M(w.traders.cash), 'stock.wfund': M(w.fund), 'stock.total': M(pool + savT + gov + firm + man + fin + w.traders.cash + w.fund), 'stock.minted': M(w.mint.minted), 'stock.fundVal': M(fundVal) });
+    'stock.traders': M(w.traders.cash), 'stock.wfund': M(w.fund), 'stock.total': M(savT + gov + firm + man + fin + w.traders.cash + w.fund), 'stock.minted': M(w.mint.minted), 'stock.fundVal': M(fundVal) });
   for (const c of POP_CLASSES) {
     o['popK.' + c] = K(n[c] ?? 0); o['wfK.' + c] = K(wf[c] ?? 0);
     o['sol.' + c] = +((n[c] ?? 0) > 0 ? sol[c] / n[c] : 0).toFixed(2); o['inc.' + c] = +((n[c] ?? 0) > 0 ? inc[c] / n[c] : 0).toFixed(2);
