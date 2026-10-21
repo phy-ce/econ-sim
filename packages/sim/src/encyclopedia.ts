@@ -13,6 +13,7 @@ import {
   HARVEST_KINDS, HARVEST_MAX_SEASONS, HARVEST_SEASON_DAYS, HARVEST_SPREAD, HARVEST_STEP, LAW_TECH, MAX_POINTS_PER_LEVEL_DAY, NEEDS, OWNERSHIP_SEATS,
   OWNER_SEATS_PER_LEVEL, POINT_VALUE, REGIONS, SKILL_DEFS, SUBSISTENCE, TAX_PEOPLE_PER_LEVEL, TECHS, TECH_BY_ID, TECH_COST, TICKS_PER_WEEK, TICKS_PER_YEAR,
   TIERS, TIER_JITTER, TUNE, WORKFORCE_RATIO, getMethod, needsAt, rawMax, regionPerk, scaleBonus,
+  buildPointsOf,
 } from './data';
 import {
   BASE_CREDIT, CARTAGE_RATE, RAIL_RATE, STATE_CREDIT_GDP, collectionRatio, companyById, constructionEstimate, creditLimit, efficiencyParts,
@@ -474,7 +475,7 @@ export const ENCYCLOPEDIA: EncEntry[] = [
         const def = BUILDING_BY_ID[ctx.building];
         const fmt = (bag: Record<string, number | undefined>) => Object.entries(bag).filter(([, v]) => v).map(([k, v]) => `${k} ${v}`).join(', ') || '-';
         return {
-          rows: [row('땅', 'Land', def.land ?? '-'), row('포인트', 'Points', def.buildPoints, 'pt'),
+          rows: [row('땅', 'Land', def.land ?? '-'), row('포인트', 'Points', buildPointsOf(def.id), 'pt'),
             ...def.methods.map((m) => ({ label: t(m.name, m.nameEn ?? m.id), value: `${fmt(m.workers)} | ${fmt(m.inputs)} → ${fmt(m.outputs)}${m.construction ? ` · ${m.construction}pt` : ''}${m.seats ? ` · ${m.seats} seats` : ''}${m.taxCapacity ? ` · ${m.taxCapacity}` : ''}${m.tech ? ` [${m.tech}]` : ''}` }))],
         };
       },
@@ -549,7 +550,7 @@ export const ENCYCLOPEDIA: EncEntry[] = [
     id: 'build-points', category: 'construction', title: t('건설 포인트', 'Construction points'),
     rule: t('모든 공사는 왕실 건축사무소의 포인트로 짓는다. 포인트의 절반은 왕실 공사, 절반은 민간 공사에 순서대로 준다. 한 공사는 레벨당 하루 {0}점까지 받는다. 사무소가 {1}일 넘게 쉬면 인부를 해산한다.', 'All construction uses the crown\'s construction-office points: half to crown projects, half to private ones, in queue order. A project takes at most {0} points per level per day. An office idle for more than {1} days disbands its crew.'),
     formula: 'points = method pts × level × util × crew × eff × fill',
-    params: [p('레벨당 하루 최대', 'Max per level per day', () => MAX_POINTS_PER_LEVEL_DAY, 'pt'), tune('officeIdleDays', '쉬는 유예', 'Idle grace', 'day')],
+    params: [p('레벨당 하루 최대', 'Max per level per day', () => MAX_POINTS_PER_LEVEL_DAY, 'pt'), tune('officeIdleDays', '쉬는 유예', 'Idle grace', 'day'), tune('buildCostMult', '공사 포인트 배율', 'Build points multiplier')],
     live: {
       pick: ['kingdom'], run: (w, ctx) => {
         const k = kingdomOfCtx(w, ctx), gov = govOf(w, k);

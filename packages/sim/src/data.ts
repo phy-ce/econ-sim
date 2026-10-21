@@ -507,7 +507,16 @@ export const TUNE = {
   laborStrict: 0,
   // 국고가 조이면 복지를 끝까지 줄이고 복지법을 끈다 (빚이 없어도, 세금보다 먼저). 끈 뒤 2년은 다시 켜지 않는다 (1 = 켬, 0 = 지금 동작: 빚이 있을 때만 끈다)
   welfareCutOff: 0,
+  // 공사 포인트 배율 (회수 기간 손잡이, 2026-10-22). 모든 건물의 공사 포인트 = buildPoints × 이 값 (10 단위로 둥글게). 비용과 공사 일수가 같이 준다. 1·0.75·0.5 비교 예정
+  buildCostMult: 1,
 };
+
+/** 이 건물 1레벨의 공사 포인트: 표의 buildPoints × TUNE.buildCostMult, 10 단위 (공사·견적·자재·화면이 모두 이것을 쓴다) */
+export function buildPointsOf(typeId: string): number {
+  const base = BUILDING_BY_ID[typeId].buildPoints;
+  if (!base) return 0;
+  return Math.max(10, Math.round((base * TUNE.buildCostMult) / 10) * 10);
+}
 
 // ---------------------------------------------------------------- 기상 조건
 

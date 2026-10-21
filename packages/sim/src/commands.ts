@@ -1,4 +1,4 @@
-import { BUILDING_BY_ID, DEPOSIT_NAMES, DEPOSIT_NAMES_EN, LAND_NAMES, SKILL_DEFS, TECH_BY_ID, TUNE } from './data';
+import { BUILDING_BY_ID, buildPointsOf, DEPOSIT_NAMES, DEPOSIT_NAMES_EN, LAND_NAMES, SKILL_DEFS, TECH_BY_ID, TUNE } from './data';
 import { availableMethods, companyById, constructionEstimate, depositFree, emptyJobs, hasBuilder, isGovernment, knowsTech, landFree, logEvent, regionById, sellsShares } from './economy';
 import { applyStateWages, chooseFunders } from './finance';
 import { kingdomById } from './kingdoms';
@@ -76,7 +76,7 @@ function runCommand(w: World, actor: number, cmd: Command): CommandError | null 
     }
     w.constructions.push({
       id: w.nextId++, companyId: actor, regionId, typeId, methodId, targetBuildingId,
-      points: 0, required: def.buildPoints * levels, spent: 0, ticksElapsed: 0, ...(levels > 1 ? { levels } : {}),
+      points: 0, required: buildPointsOf(typeId) * levels, spent: 0, ticksElapsed: 0, ...(levels > 1 ? { levels } : {}),
       ...(funders ? { funders } : {}),
     });
     const starts = (kingdomById(w, company.kingdomId).startsMonth ??= {});

@@ -1,4 +1,4 @@
-import { BUILDING_BY_ID, BUILDING_TYPES, EDUCATION_FLOOR, EDUCATION_RANGE, GOOD_IDS, GOODS, SKILL_DEFS, TECH_BY_ID, TICKS_PER_WEEK, TICKS_PER_YEAR, TUNE, getMethod, regionPerk } from './data';
+import { BUILDING_BY_ID, buildPointsOf, BUILDING_TYPES, EDUCATION_FLOOR, EDUCATION_RANGE, GOOD_IDS, GOODS, SKILL_DEFS, TECH_BY_ID, TICKS_PER_WEEK, TICKS_PER_YEAR, TUNE, getMethod, regionPerk } from './data';
 import { withEstimateCache, regionAvgWealth, regionPopulation, wageCostOf,
   availableMethods, builderOf, canBuildType, kingdomGdp, paysDividend, paysShare, companyById, constructionEstimate, creditLimit, depositFree, efficiency, estimateMethod, harvestFactor, hasBuilder, isGovernment, regionById, researchableTechs, roomFor, sellsShares, slots,
 } from './economy';
@@ -652,7 +652,7 @@ function planConstruction(w: World, c: Company, o: Outlook) {
       const perLevel = est.pointsPerDay / Math.max(1, officeLevel);
       const want = Math.ceil((backlog() * est.pointsPerDay / TUNE.officeTargetDays - est.pointsPerDay) / Math.max(1e-9, perLevel));
       // 한 번에 늘리는 양은 지금 사무소가 목표 일수 안에 지을 수 있는 만큼까지 (증설 공사가 너무 길어지지 않게)
-      const byTime = Math.floor((est.pointsPerDay * TUNE.officeTargetDays) / BUILDING_BY_ID.builder.buildPoints);
+      const byTime = Math.floor((est.pointsPerDay * TUNE.officeTargetDays) / buildPointsOf('builder'));
       const levels = Math.min(Math.max(block, want), Math.max(block, byTime), MAX_LEVELS_PER_PROJECT);
       // 어디에: 늘릴 수 있는 레벨(위 levels, 남은 부지, 채울 수 있는 사람 officeStaffable 중 가장 작은 값)이 가장 큰 자기 지역.
       // 같으면 사무소가 이미 있는 지역, 그다음 부지가 넓은 지역. 어디서도 1레벨을 못 채우면 늘리지 않는다

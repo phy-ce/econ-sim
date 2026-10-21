@@ -1,6 +1,7 @@
 import {
   BUILDING_BY_ID, BUILDING_TYPES, GOOD_IDS, GOODS, HARVEST_KINDS, HARVEST_MAX_SEASONS, HARVEST_SEASON_DAYS, HARVEST_SPREAD, HARVEST_STEP, LAW_TECH, LAND_NAMES, LAND_NAMES_EN,
   MAX_POINTS_PER_LEVEL_DAY, POINT_VALUE, REGIONS, SKILL_DEFS, SUBSISTENCE, TECH_BY_ID, VEIN_NAMES, VEIN_NAMES_EN, getMethod, regionPerk, scaleBonus, TUNE,
+  buildPointsOf,
 } from './data';
 import { regionNameEn } from './i18n';
 import { borderCost } from './kingdoms';
@@ -510,7 +511,7 @@ function officeTotals(w: World, builder: Company) {
 }
 
 export function constructionEstimate(w: World, c: Company, typeId: string): ConstructionEstimate {
-  const required = BUILDING_BY_ID[typeId].buildPoints;
+  const required = buildPointsOf(typeId);
   const { pointsPerDay, costPerDay } = officeTotals(w, builderOf(w, c));
   // 한 공사는 레벨당 하루 MAX_POINTS_PER_LEVEL_DAY 까지만 받는다. 비용은 쓴 포인트만큼이다
   const days = pointsPerDay > 0 ? required / Math.min(pointsPerDay, MAX_POINTS_PER_LEVEL_DAY) : Infinity;

@@ -1,4 +1,4 @@
-import { BUILDING_BY_ID, GOODS, GOOD_IDS, TICKS_PER_WEEK, MAX_POINTS_PER_LEVEL_DAY, OWNER_SEATS_PER_LEVEL, OWNERSHIP_SEATS, TUNE, WORKFORCE_RATIO, getMethod } from './data';
+import { BUILDING_BY_ID, buildPointsOf, GOODS, GOOD_IDS, TICKS_PER_WEEK, MAX_POINTS_PER_LEVEL_DAY, OWNER_SEATS_PER_LEVEL, OWNERSHIP_SEATS, TUNE, WORKFORCE_RATIO, getMethod } from './data';
 import { addOwnerLevels, builderOf, companyById, efficiency, harvestFactor, isGovernment, landFree, logEvent, newBuilding, regionById } from './economy';
 import { SKILLS } from './types';
 import { workforce } from './pops';
@@ -291,7 +291,7 @@ export function materialsPerLevel(w: World, c: Company | undefined, typeId: stri
   const builder = c ? builderOf(w, c) : undefined;
   const office = builder ? w.buildings.find((b) => b.companyId === builder.id && b.active && getMethod(b.typeId, b.methodId).construction) : undefined;
   const m = office ? getMethod(office.typeId, office.methodId) : BUILDING_BY_ID.builder.methods[0];
-  const points = BUILDING_BY_ID[typeId].buildPoints;
+  const points = buildPointsOf(typeId);
   const out: GoodBag = {};
   for (const g of GOOD_IDS) if (m.inputs[g]) out[g] = (m.inputs[g]! / m.construction!) * points;
   return out;
