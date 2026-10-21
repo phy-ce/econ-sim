@@ -671,10 +671,10 @@ function secureGovInputs(w: World, c: Company, o: Outlook, costPerDay: number) {
 
 /**
  * 새 공사에 쓸 수 있는 돈: 현금 − 남길 돈 − 진행 중 공사에 더 들 돈 − 한 달 공사비.
- * 왕실은 국정 지출 TUNE.crownBuildWeeks 주치를 남긴다 (학교·행정청·생산 건물 모두 그 위의 여윳돈으로만 짓는다)
+ * 왕실은 국정 지출 TUNE.treasuryHighWeeks 주치를 남긴다 (학교·행정청·생산 건물 모두 그 위의 여윳돈으로만 짓는다)
  */
 function freeCash(w: World, c: Company, costPerDay: number): number {
-  const keep = c.state ? TUNE.crownBuildWeeks * (kingdomById(w, c.kingdomId).expenseEma ?? 0) : 0;
+  const keep = c.state ? TUNE.treasuryHighWeeks * (kingdomById(w, c.kingdomId).expenseEma ?? 0) : 0;
   return c.cash - Math.max(reserveOf(w, c), keep) - committedCost(w, c) - costPerDay * 30;
 }
 

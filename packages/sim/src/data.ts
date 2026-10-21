@@ -443,7 +443,6 @@ export const TUNE = {
   researchLevels: [0.5, 0.75, 1, 1.5, 2],
   treasuryLowWeeks: 26,
   treasuryHighWeeks: 52, // 1년치
-  crownBuildWeeks: 52,
   // 기술을 다 연 AI 왕국의 국영 임금 상한 단계. 3(끔)·4·5 비교 (20년 × 시드 1·2): 4가 20년차 총생산 2190→2761, 지역 격차 1.87→1.34, 기술자 생활수준 5.45→5.88. 5는 격차가 다시 커진다
   doneWageMax: 4,
   startTreasuryWeeks: 26,

@@ -1170,9 +1170,9 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   },
   {
     id: 'ai-construction', category: 'ai', title: t('착공', 'Starting construction'),
-    rule: t('주에 최대 {0}건. 연 손익 ÷ 공사비 > {1}이고 일손을 {2} 이상 ({3}일 안에) 모을 수 있는 후보 중, 덩어리({4}레벨)를 골라 점수 = 수익률 × 무작위 × (1 + {5} × 지역 자금 비율)이 가장 큰 것을 짓는다. 기상 조건이 걸린 땅은 뺀다. 왕실은 지출 {9}주치를 넘는 국고로만 짓는다.', 'Up to {0} starts a week. Candidates need yearly profit ÷ cost > {1} and {2} of jobs fillable within {3} days; chunks of {4} levels; score = return × random × (1 + {5} × local fund share). Land under a harvest condition is skipped. The crown builds only with cash above {9} weeks of its spending.'),
+    rule: t('주에 최대 {0}건. 연 손익 ÷ 공사비 > {1}이고 일손을 {2} 이상 ({3}일 안에) 모을 수 있는 후보 중, 덩어리({4}레벨)를 골라 점수 = 수익률 × 무작위 × (1 + {5} × 지역 자금 비율)이 가장 큰 것을 짓는다. 기상 조건이 걸린 땅은 뺀다.', 'Up to {0} starts a week. Candidates need yearly profit ÷ cost > {1} and {2} of jobs fillable within {3} days; chunks of {4} levels; score = return × random × (1 + {5} × local fund share). Land under a harvest condition is skipped.'),
     params: [tune('startsPerWeek', '주간 착공', 'Starts per week'), tune('minRoi', '최소 수익률', 'Minimum return', 'pct'), tune('minStaffing', '일손 기준', 'Staffing threshold', 'pct'), p('일손 기간', 'Staffing horizon', () => STAFFING_HORIZON, 'day'), p('덩어리', 'Chunks', () => CHUNKS.join(' / ')), tune('localBias', '지역 가산', 'Local bias', 'pct'),
-      tune('lossBuildsPerWeek', '손해 후보 짓기 (주간)', 'Loss builds per week'), tune('lossTolerance', '손해 허용', 'Loss tolerance'), tune('schoolTaxMax', '학교 짓는 세금 상한', 'Max tax step for schools'), tune('crownBuildWeeks', '왕실 공사 남길 국고', 'Crown build reserve', 'week')],
+      tune('lossBuildsPerWeek', '손해 후보 짓기 (주간)', 'Loss builds per week'), tune('lossTolerance', '손해 허용', 'Loss tolerance'), tune('schoolTaxMax', '학교 짓는 세금 상한', 'Max tax step for schools')],
     related: ['ai-outlook', 'owner-treasury', 'land'], seenIn: ['company'], source: ['ai.ts planConstruction', 'ai.ts pickProject'], design: ['10'],
   },
   {

@@ -130,6 +130,7 @@ function adminSnap(w: World) {
   return { admHer: her, admPro: pro, admFill: f2(need > 0 ? have / need : 0), admWage: f2(wage / 1e3), admSk: f2(sk / 1e3), admGen: f2(gen / 1e3), wIdx: f2(wIdx), wStep: f2(wStep),
     genK: f2(gn / 1e3), solGen: f2(gs / d), gAdmSh: f3(ga / d), gManSh: f3(gm / d), gTutSh: f3(gt / d), gIdleSh: f3(gi / d) };
 }
+const yearPts: MetricPoint[] = [];
 const lawY: Record<string, [number | null, number | null]>[] = [];
 const ratioY: Record<number, number>[] = [];
 const t0 = performance.now();
@@ -151,6 +152,9 @@ for (let d = 0; d < years * 360; d++) {
   { let n = 0, f = 0, wl = 0; for (const p of w.pops) if (p.prof === 'peasant') { n += p.size; f += p.size * p.fulfillment; wl += p.size * p.wealth100 / 100; }
     if (n > 0) { yearAcc.pFul += f / n; yearAcc.pW += wl / n; } }
   if (w.tick % 360 === 0) {
+    // 해마다 지표 (w.metrics 는 30년까지만 남아 따로 모은다)
+    const last = w.metrics[w.metrics.length - 1];
+    if (last?.tick === w.tick) yearPts.push(last);
     const y = w.tick / 360;
     classInc[y] = classIncome(w);
     admY[y] = adminSnap(w);
@@ -270,7 +274,7 @@ for (const m of w.metrics) {
   };
 }
 // 해마다 흐름 (cli/flowsum.py, trajchart.py): 인구, 소작농·노동자 SoL, 소작농 식량, 총생산, 레벨, 곡물값, 소작농 비율, 민간 현금(백만), 실업 비율
-out.traj = w.metrics.filter((m) => m.tick % 360 === 0 && m.tick > 0).map((m) => {
+out.traj = yearPts.map((m) => {
   const pop = sum(m, (k) => k.pop), by = (c: 'peasant' | 'unskilled' | 'skilled', f: (k: MetricPoint['kingdoms'][number]) => number) =>
     +(sum(m, (k) => f(k) * k.popBy[c]) / Math.max(1, sum(m, (k) => k.popBy[c]))).toFixed(2);
   return {
