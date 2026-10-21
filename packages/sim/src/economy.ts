@@ -457,11 +457,14 @@ export function outputCapacity(w: World, regionId: number, g: GoodId): number {
   return q;
 }
 
+/** 수요·공급 이동평균이 이 아래면 거래가 없는 것으로 본다 */
+export const FLOW_ZERO = 1e-6;
+
 /** 가격 공식 (빅토리아3): 기본가 × (1 + 0.75 × clamp((구매 − 판매) / min(구매, 판매), ±1)) */
 export function priceFormula(g: GoodId, demand: number, supply: number): number {
   const base = GOODS[g].basePrice;
   const lo = Math.min(demand, supply);
-  const x = lo > 1e-6 ? clamp((demand - supply) / lo, -1, 1) : demand > supply ? 1 : supply > demand ? -1 : 0;
+  const x = lo > FLOW_ZERO ? clamp((demand - supply) / lo, -1, 1) : demand > supply ? 1 : supply > demand ? -1 : 0;
   return base * (1 + 0.75 * x);
 }
 
@@ -577,7 +580,7 @@ export function colonySol(w: World, prof: PopClass): number {
 
 /**
  * 주인 없는 돈(fund)을 뺀 돈 계정 전부를 정해진 순서로 f 에 넘기고 돌려받은 값으로 바꾼다.
- * 화폐 총량(totalMoney)과 센트 맞춤(round.ts roundWorld)이 이 목록 하나를 쓴다: 돈을 가진 계정을 새로 두면 여기에만 넣는다
+ * 화폐 총량(totalMoney)이 이 목록을 쓴다: 돈을 가진 계정을 새로 두면 여기에 넣는다
  */
 export function mapMoney(w: World, f: (x: number) => number): void {
   w.traders.cash = f(w.traders.cash);
@@ -657,7 +660,7 @@ export function goodName(g: GoodId): string {
 
 export function newBuilding(id: number, typeId: string, regionId: number, companyId: number, methodId: string, level: number, stateOwned = false): Building {
   return {
-    id, typeId, regionId, companyId, level, methodId, stateOwned, active: true, utilization: 1, lastSwitchTick: -1e9, exp100: 0, crew100: 0, crew: 0, idle: false,
+    id, typeId, regionId, companyId, level, methodId, stateOwned, active: true, utilization: 1, lastSwitchTick: -1e9, exp: 0, crew: 0, idle: false,
     employed: emptyJobs(), stock: {}, outStock: {}, unpaid: false,
     last: emptyStats(), profitEma: 0, lossWeeks: 0, pausedWeeks: 0,
   };

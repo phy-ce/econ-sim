@@ -1,4 +1,5 @@
 // 실험 보고서 보기: data/index.json 의 목록, data/<id>.json 하나가 보고서 하나 (packages/sim/cli/report.py 가 만든다)
+// 형식 2: keys 에 지표 이름, runs[i].seeds[s] = [[y, keys[0] 값, keys[1] 값, ...], ...]. 옛 형식(점마다 {y, 지표: 값})도 읽는다
 const COLORS = ['--s0', '--s1', '--s2', '--s3', '--s4', '--s5'];
 const $ = (id) => document.getElementById(id);
 const store = {
@@ -9,6 +10,15 @@ const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&l
 
 let reports = [], R = null, selected = [], hiddenRuns = new Set(), seedMode = 'avg', view = 'chart';
 const meta = (k) => R.labels[k] || { name: k, group: '기타', unit: '' };
+const tipAttr = (k) => (meta(k).desc ? ` title="${esc(meta(k).desc)}" class="has-desc"` : '');
+// 한 줄 배열로 맞추고 시드마다 해 → 줄 찾기표를 만든다
+function normalize(R) {
+  if ((R.format ?? 1) < 2) for (const run of R.runs) for (const s in run.seeds)
+    run.seeds[s] = run.seeds[s].map((p) => [p.y, ...R.keys.map((k) => (typeof p[k] === 'number' ? p[k] : null))]);
+  R.col = Object.fromEntries(R.keys.map((k, i) => [k, i + 1]));
+  for (const run of R.runs) run.byYear = Object.fromEntries(Object.entries(run.seeds).map(([s, rows]) => [s, new Map(rows.map((row) => [row[0], row]))]));
+  return R;
+}
 
 function fmt(x) {
   if (x == null || !isFinite(x)) return '–';
@@ -29,8 +39,9 @@ function nice(min, max) {
 }
 function series(run, k) {
   const seeds = seedMode === 'avg' ? Object.keys(run.seeds) : [seedMode].filter((s) => run.seeds[s]);
+  const j = R.col[k];
   return R.years.map((y) => {
-    const v = seeds.map((s) => run.seeds[s].find((p) => p.y === y)).filter((p) => p && typeof p[k] === 'number').map((p) => p[k]);
+    const v = seeds.map((s) => run.byYear[s].get(y)?.[j]).filter((x) => typeof x === 'number');
     return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null;
   });
 }
@@ -68,7 +79,7 @@ function renderPicker() {
   }
   const order = R.groupOrder.filter((g) => groups[g]).concat(Object.keys(groups).filter((g) => !R.groupOrder.includes(g)));
   $('picker').innerHTML = order.map((g) => `<h3>${esc(g)}</h3>` + groups[g].map((k) =>
-    `<label><input type="checkbox" data-k="${esc(k)}" ${selected.includes(k) ? 'checked' : ''}> ${esc(meta(k).name)}<small>${esc(k)}</small></label>`).join('')).join('');
+    `<label><input type="checkbox" data-k="${esc(k)}" ${selected.includes(k) ? 'checked' : ''}> <span${tipAttr(k)}>${esc(meta(k).name)}</span><small>${esc(k)}</small></label>`).join('')).join('');
   $('picker').querySelectorAll('input').forEach((el) => el.onchange = () => {
     const k = el.dataset.k;
     selected = el.checked ? R.keys.filter((x) => x === k || selected.includes(x)) : selected.filter((x) => x !== k);
@@ -78,7 +89,7 @@ function renderPicker() {
 function chart(k) {
   const card = document.createElement('div'), m = meta(k);
   card.className = 'card';
-  card.innerHTML = `<h4>${esc(m.name)}<small>${esc(k)}</small><span class="unit">${esc(m.unit || '')}</span></h4>`;
+  card.innerHTML = `<h4><span${tipAttr(k)}>${esc(m.name)}</span><small>${esc(k)}</small><span class="unit">${esc(m.unit || '')}</span></h4>`;
   const runs = visibleRuns().map(({ r, i }) => ({ i, label: r.label, v: series(r, k) }));
   const all = runs.flatMap((s) => s.v).filter((x) => x != null);
   if (!all.length) { card.insertAdjacentHTML('beforeend', '<div class="empty">값 없음</div>'); return card; }
@@ -117,7 +128,7 @@ function chart(k) {
 function table(k) {
   const m = meta(k), box = document.createElement('div');
   box.className = 'tbox';
-  let h = `<h4>${esc(m.name)} <small>${esc(k)}${m.unit ? ' · ' + esc(m.unit) : ''}</small></h4><table><thead><tr><th>년</th>${R.years.map((y) => `<th>${y}</th>`).join('')}</tr></thead><tbody>`;
+  let h = `<h4><span${tipAttr(k)}>${esc(m.name)}</span> <small>${esc(k)}${m.unit ? ' · ' + esc(m.unit) : ''}</small></h4><table><thead><tr><th>년</th>${R.years.map((y) => `<th>${y}</th>`).join('')}</tr></thead><tbody>`;
   for (const { r, i } of visibleRuns()) h += `<tr><td><span class="dot" style="background:${color(i)}"></span> ${esc(r.label)}</td>${series(r, k).map((v) => `<td>${fmt(v)}</td>`).join('')}</tr>`;
   box.innerHTML = h + '</tbody></table>';
   return box;
@@ -133,7 +144,7 @@ function render() {
 async function open(id) {
   const entry = reports.find((r) => r.id === id) ?? reports[0];
   if (!entry) { $('title').textContent = '보고서가 없습니다'; return; }
-  R = await (await fetch(`./data/${entry.id}.json`)).json();
+  R = normalize(await (await fetch(`./data/${entry.id}.json`)).json());
   R.id = entry.id;
   selected = store.get(R.id + ':sel', R.defaults.filter((k) => R.keys.includes(k)));
   if (!selected.length) selected = R.keys.slice(0, 9);

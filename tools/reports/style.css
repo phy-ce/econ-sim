@@ -62,3 +62,4 @@ th:first-child, td:first-child { text-align: left; position: sticky; left: 0; ba
 thead th { color: var(--muted); font-weight: 500; }
 .empty { color: var(--muted); padding: 24px; text-align: center; }
 [hidden] { display: none !important; }
+.has-desc { text-decoration: underline dotted var(--muted); text-underline-offset: 3px; cursor: help; }

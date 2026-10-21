@@ -63,7 +63,7 @@ TITLE="High nobles 1/10" L="main,1/10" python cli/report.py 2026-10-22-arist10 o
 cd ../.. && npm run reports                                                # http://localhost:5201
 ```
 
-`report.py` also reads per-year diagnostic files (one JSON line per year with `y` and `seed`; nested objects become `stock.gov` style keys); pass `name=file` to name runs. On GitHub Pages the viewer is served at `/econ-sim/reports/`, deep links use the hash (`/reports/#2026-10-22-arist10`).
+`report.py` also reads per-year diagnostic files (one JSON line per year with `y` and `seed`; nested objects become `stock.gov` style keys); pass `name=file` to name runs. Report files (`format: 2`) list metric names once in `keys` and store one row `[year, value, ...]` per run, seed and year (3 significant digits); `python cli/report.py --convert` rewrites older reports. Every metric has a Korean name, group and unit; hovering a metric name shows its definition when it has one. On GitHub Pages the viewer is served at `/econ-sim/reports/`, deep links use the hash (`/reports/#2026-10-22-arist10`).
 
 Controls: `Space` pauses and resumes, `1`–`5` set the speed (1× = about one game day per real second, then 2×, 3×, 4× and 10× for debugging).
 
@@ -149,7 +149,7 @@ Research is paid each week from the research budget (see Money). That money beco
 - **Debt.** Only the crown borrows. When the treasury runs short it automatically issues bonds (new money) up to ƒ300,000 + 25% of yearly output, and repays them when it has spare cash. Interest is 0.025% a day. There is no bank: private companies never borrow. Short of cash, they buy fewer inputs, pay wages in proportion to what they have, and build only with manor and district treasuries.
 - **Working cash.** The private company keeps two weeks of wages and inputs before paying dividends. When it has less, the owners of its levels top it up from their treasuries, by level count.
 - **No investment pool.** Kept dividends and people's spare cash stay in manor and district treasuries, which pay for private construction and buy privatised levels. Ownerless money and excess trader cash go to the regional financial districts.
-- **Money is conserved.** Total money changes only by minting, bond issues, repayments and bond interest. The tests check this to the cent.
+- **Money is conserved.** Total money changes only by minting, bond issues, repayments and bond interest. The tests check this to floating-point precision (within 1e-12 of total money).
 
 ## AI
 

@@ -17,11 +17,11 @@ import {
 import {
   BASE_CREDIT, CARTAGE_RATE, RAIL_RATE, STATE_CREDIT_GDP, collectionRatio, companyById, constructionEstimate, creditLimit, efficiencyParts,
   harvestCondition, harvestFactor, holdingsOf, kingdomGdp, levelOwnersOf, knownVeins, landFree, landUsed, moneyIdentity, netMinted, popSol,
-  priceFormula, regionById, sellThrough, shareWage, shippingRate, staffing, totalMoney,
+  FLOW_ZERO, priceFormula, regionById, sellThrough, shareWage, shippingRate, staffing, totalMoney,
 } from './economy';
 import { borderCost, kingdomById, DEFAULT_TARIFF } from './kingdoms';
 import {
-  CARGO_DECAY, FLOW_EMA, FLOW_EMA_MIN, INVEST_RATE, PRICE_MAX, PRICE_MIN, PRICE_SPEED, SAVINGS_DRAW, SHIP_RATE, STALE_SIGNAL, SUBSTITUTION_EXP,
+  CARGO_DECAY, CARGO_MIN, FLOW_EMA, INVEST_RATE, PRICE_MAX, PRICE_MIN, PRICE_SPEED, SAVINGS_DRAW, SHIP_RATE, STALE_SIGNAL, SUBSTITUTION_EXP,
   basketCostAt, harvestShares, needSharesAt, splitHarvest, tenantIncomePerWorker,
 } from './market';
 import {
@@ -257,14 +257,14 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   {
     id: 'day-order', category: 'basics', title: t('하루 순서', 'Order of a day'),
     rule: t('임금과 세금은 시장 전에 오간다. 그래서 그날 받은 임금으로 그날 산다. 오늘 만든 산출은 내일 팔린다. {0}일마다 주간 일(배당·AI·예산)을 한다.', 'Wages and taxes move before the market, so people spend today what they earned today. Today\'s output sells tomorrow. Every {0} days the weekly steps (dividends, AI, budget) run.'),
-    formula: '명령 → 고용 → 임금 → 세금 → 수확 → 주문 → 체결 → 생산 → 완공 → 가격 → 자격 → 인구·이주 → 복지 → (주간)',
+    formula: '명령 → 고용 → 임금 → 세금 → 수확 → 주문 → 체결 → 생산 → 완공 → 가격 → 자격 → 인구·이주 → 복지 → 교육·문해력 → (주간)',
     params: [p('주간 단계 간격', 'Weekly step interval', () => TICKS_PER_WEEK, 'day')],
     related: ['time-money', 'rounding', 'clearing'], seenIn: [], source: ['tick.ts'], design: ['2'],
   },
   {
-    id: 'rounding', category: 'basics', title: t('저장 소수 자리', 'Stored decimals'),
-    rule: t('저장되는 숫자는 소수 둘째 자리까지다. 하루 변화가 작은 값(부·문해력·교육·숙련도·작업 인원)은 100배로 저장한다. 센트 아래 돈은 주인 없는 돈이 받는다.', 'Stored numbers keep two decimals. Slow values (wealth, literacy, education, experience, crew) are stored ×100. Sub-cent money goes to the ownerless fund.'),
-    params: [p('최소 단위', 'Smallest unit', () => 0.01), p('흐름 찌꺼기 기준', 'Flow residue cut-off', () => FLOW_EMA_MIN)],
+    id: 'rounding', category: 'basics', title: t('보이는 소수 자리', 'Shown decimals'),
+    rule: t('세계는 숫자를 반올림하지 않고 계산하고 저장한다. 화면과 기록(그래프·월간 지표·지난주 국정 수지)은 소수 둘째 자리까지 보인다. 임금은 센트 단위로 정한다.', 'The world computes and saves numbers without rounding. The screen and records (charts, monthly metrics, the state budget of last week) show two decimals. Wages are set in whole cents.'),
+    params: [p('보이는 최소 단위', 'Smallest shown unit', () => 0.01)],
     related: ['money-conservation', 'idle-market'], seenIn: [], source: ['round.ts', 'economy.ts'], design: ['2'],
   },
   {
@@ -320,14 +320,14 @@ export const ENCYCLOPEDIA: EncEntry[] = [
       const D = 120, S = 100, base = GOODS.grain.basePrice, target = priceFormula('grain', D, S);
       return {
         inputs: [row('상품', 'Good', GOODS.grain.name), row('기본가', 'Base price', base, 'florin'), row('수요 이동평균', 'Demand EMA', D, 'good'), row('공급 이동평균', 'Supply EMA', S, 'good')],
-        steps: [row('쏠림 (120 − 100) ÷ 100', 'Tilt (120 − 100) ÷ 100', 0.2), row('목표가', 'Target', r2(target), 'florin'), row('어제 가격이 기본가면 하루 움직임', 'One day\'s move from base', r2(Math.max(0.01, (target - base) * PRICE_SPEED)), 'florin')],
+        steps: [row('쏠림 (120 − 100) ÷ 100', 'Tilt (120 − 100) ÷ 100', 0.2), row('목표가', 'Target', r2(target), 'florin'), row('어제 가격이 기본가면 하루 움직임', 'One day\'s move from base', r2((target - base) * PRICE_SPEED), 'florin')],
         result: [row('priceFormula(grain, 120, 100)', 'priceFormula(grain, 120, 100)', r2(target), 'florin')],
       };
     },
     live: {
       pick: ['region', 'good'], run: (w, ctx) => {
         const mg = regionOf(w, ctx).market[ctx.good], base = GOODS[ctx.good].basePrice;
-        const target = mg.demandEma === 0 && mg.supplyEma === 0 ? mg.price : priceFormula(ctx.good, mg.demandEma, mg.supplyEma);
+        const target = priceFormula(ctx.good, mg.demandEma, mg.supplyEma);
         return {
           rows: [row('수요 이동평균', 'Demand EMA', mg.demandEma, 'good'), row('공급 이동평균', 'Supply EMA', mg.supplyEma, 'good'), row('목표가', 'Target', r2(target), 'florin'), row('가격', 'Price', mg.price, 'florin')],
           bars: [bar(t('하한', 'Floor'), r2(base * PRICE_MIN), 'florin', base * PRICE_MAX), bar(t('기본가', 'Base'), base, 'florin', base * PRICE_MAX), bar(t('가격', 'Price'), mg.price, 'florin', base * PRICE_MAX), bar(t('목표가', 'Target'), r2(target), 'florin', base * PRICE_MAX)],
@@ -338,15 +338,15 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   },
   {
     id: 'idle-market', category: 'market', title: t('거래 없는 시장', 'Markets with no trade'),
-    rule: t('수요·공급 이동평균이 둘 다 0이면 가격은 마지막으로 쏠린 쪽 끝으로 간다: 기본가보다 싸면 하한, 비싸면 상한, 같으면 그대로. {0} 이하의 이동평균은 0으로 본다.', 'If both demand and supply EMAs are zero, price drifts to the end it last leaned to: floor if below base, ceiling if above, unchanged at base. EMAs at or below {0} count as zero.'),
-    params: [p('찌꺼기 기준', 'Residue cut-off', () => FLOW_EMA_MIN, 'good')],
+    rule: t('사고파는 사람이 없어지면 수요·공급 이동평균이 둘 다 하루 {0}씩 같은 비율로 줄어, 가격은 마지막 수급 비율의 가격에 머문다. 작은 쪽이 {1} 아래로 줄면 쏠린 쪽 끝으로 간다: 수요가 더 컸으면 상한, 공급이 더 컸으면 하한. 처음부터 거래가 없던 시장은 기본가 그대로다.', 'When nobody trades, the demand and supply EMAs both shrink {0} a day at the same rate, so price stays at the last supply-demand ratio. Once the smaller one falls below {1}, price drifts to the end it leaned to: ceiling if demand was larger, floor if supply was larger. A market that never traded stays at base.'),
+    params: [p('이동평균 하루 비율', 'EMA daily weight', () => FLOW_EMA, 'pct'), p('거의 0', 'Near zero', () => FLOW_ZERO.toExponential(), 'good')],
     related: ['price-formula', 'rounding'], seenIn: ['market'], source: ['market.ts updatePrices'], design: ['6', '2'],
   },
   {
     id: 'trade', category: 'market', title: t('상인 교역', 'Traders'),
-    rule: t('이웃 가격 × (1 − 운임률)이 현지 가격보다 높으면 상인이 사서 다음 날 이웃에 판다. 남은 화물은 하루 {1} 상하고, 가격 신호에는 {2}만 공급으로 센다.', 'If neighbour price × (1 − freight rate) beats the local price, traders buy and sell next door the next day. Unsold cargo spoils {1} a day and counts only {2} as supply for prices.'),
+    rule: t('이웃 가격 × (1 − 운임률)이 현지 가격보다 높으면 상인이 사서 다음 날 이웃에 판다. 남은 화물은 하루 {1} 상하고 {3} 아래로 줄면 없어지며, 가격 신호에는 {2}만 공급으로 센다.', 'If neighbour price × (1 − freight rate) beats the local price, traders buy and sell next door the next day. Unsold cargo spoils {1} a day and is gone below {3}; it counts only {2} as supply for prices.'),
     formula: 'q = min({0} × gap × flow, unmet × 1.2 + flow × 5%, local supply × 90%)',
-    params: [p('가격차 1%당 유통량 배수', 'Flow multiple per 1% gap', () => SHIP_RATE), p('화물 부패 (하루)', 'Cargo spoilage (daily)', () => CARGO_DECAY, 'pct'), p('묵은 화물 신호', 'Stale cargo signal', () => STALE_SIGNAL, 'pct')],
+    params: [p('가격차 1%당 유통량 배수', 'Flow multiple per 1% gap', () => SHIP_RATE), p('화물 부패 (하루)', 'Cargo spoilage (daily)', () => CARGO_DECAY, 'pct'), p('묵은 화물 신호', 'Stale cargo signal', () => STALE_SIGNAL, 'pct'), p('남는 화물 최소', 'Smallest kept cargo', () => CARGO_MIN, 'good')],
     live: {
       pick: ['good'], run: (w, ctx) => ({ bars: w.regions.map((r) => bar(regionLabel(r), r.market[ctx.good].price, 'florin', GOODS[ctx.good].basePrice * PRICE_MAX)), rows: w.regions.map((r) => row(r.name, regionNameEn(r.id), `+${r2(r.market[ctx.good].shippedIn)} / −${r2(r.market[ctx.good].shippedOut)}`)) }),
     },
@@ -410,9 +410,9 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   },
   {
     id: 'efficiency', category: 'production', title: t('효율', 'Efficiency'),
-    rule: t('효율 = (0.4 + 0.6 × 숙련도) × 규모 × (1 + 지역 특산). 숙련도는 하루 {0}%p 오르고, 방식을 바꾸면 절반이 된다. 규모는 레벨당 +1%, 최대 {1}.', 'Efficiency = (0.4 + 0.6 × experience) × scale × (1 + regional perk). Experience rises {0} pp a day and halves on a method change. Scale is +1% per level, up to {1}.'),
+    rule: t('효율 = (0.4 + 0.6 × 숙련도) × 규모 × (1 + 지역 특산). 숙련도는 하루 {0}씩 오르고, 방식을 바꾸면 절반이 된다. 규모는 레벨당 +1%, 최대 {1}.', 'Efficiency = (0.4 + 0.6 × experience) × scale × (1 + regional perk). Experience rises {0} a day and halves on a method change. Scale is +1% per level, up to {1}.'),
     formula: 'eff = (0.4 + 0.6 × exp) × min(1.2, 1 + 0.01 × lvl) × (1 + perk)',
-    params: [p('숙련도 하루 증가 (%p)', 'Experience gain (pp/day)', () => EXP_GAIN), p('규모 최대', 'Scale cap', () => r2(scaleBonus(1000)), 'x')],
+    params: [p('숙련도 하루 증가', 'Experience gain (daily)', () => EXP_GAIN, 'pct'), p('규모 최대', 'Scale cap', () => r2(scaleBonus(1000)), 'x')],
     example: () => {
       const exp = 0.5, lvl = 5, perk = regionPerk(2, 'farm');
       const e = (0.4 + 0.6 * exp) * scaleBonus(lvl) * (1 + perk);
@@ -736,7 +736,7 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   },
   {
     id: 'literacy', category: 'people', title: t('교육과 문해력', 'Education and literacy'),
-    rule: t('교육 접근도 목표 = {0} + {1} × min(1, 학교 정원 ÷ 인구). 문해력 목표 = 교육 접근도 + {2} × 부. 둘 다 오를 때 하루 {3}, 내릴 때 {4}씩 다가가고 주 1회 움직인다.', 'Education target = {0} + {1} × min(1, school seats ÷ population). Literacy target = education + {2} × wealth. Both approach at {3} a day going up and {4} going down, updated weekly.'),
+    rule: t('교육 접근도 목표 = {0} + {1} × min(1, 학교 정원 ÷ 인구). 문해력 목표 = 교육 접근도 + {2} × 부. 둘 다 매일 오를 때 {3}, 내릴 때 {4}씩 다가간다.', 'Education target = {0} + {1} × min(1, school seats ÷ population). Literacy target = education + {2} × wealth. Both approach daily at {3} going up and {4} going down.'),
     formula: 'edu* = {0} + {1} × coverage;  lit* = edu + {2} × W',
     params: [p('교육 바닥', 'Education floor', () => EDUCATION_FLOOR), p('교육 폭', 'Education range', () => EDUCATION_RANGE), p('부 1단계당', 'Per wealth step', () => LITERACY_PER_WEALTH), p('오를 때', 'Rising', () => LITERACY_UP, 'pct'), p('내릴 때', 'Falling', () => LITERACY_DOWN, 'pct')],
     live: {

@@ -4,13 +4,13 @@ import { SKILLS } from './types';
 import { workforce } from './pops';
 import { flow, kingdomById } from './kingdoms';
 import { buildingNameEn, regionNameEn } from './i18n';
-import { clamp, round2 } from './rng';
+import { clamp } from './rng';
 import type { Building, Company, Construction, GoodBag, GoodId, World } from './types';
 import { budgetEmaWeight, weeklyOutputValue } from './finance';
 
-/** 숙련도가 하루에 오르는 양 (%, 약 한 달이면 최대) */
-export const EXP_GAIN = 3.5;
-/** 작업 인원이 실제 충원율을 따라가는 하루 비율 (작업 인원은 % 단위 소수 둘째 자리라 충원율과 0.06%p 안까지 따라간다) */
+/** 숙련도가 하루에 오르는 양 (0..1 에서 3.5%p, 약 한 달이면 최대) */
+export const EXP_GAIN = 0.035;
+/** 작업 인원이 실제 충원율을 따라가는 하루 비율 */
 export const CREW_RATE = 0.08;
 
 /**
@@ -24,7 +24,7 @@ export function updateSubsistence(w: World) {
     const owner = kingdomById(w, r.kingdomId).privateIds[0];
     if (!b) {
       b = newBuilding(w.nextId++, 'subsistence', r.id, owner, 'subsistence', level, false);
-      b.exp100 = 100; b.crew100 = 100;
+      b.exp = 1; b.crew = 1;
       w.buildings.push(b);
     }
     b.companyId = owner; b.stateOwned = false;
@@ -57,7 +57,7 @@ function nobleSeatsOf(w: World, regionId: number, b: Building, own: number): num
     }
     let prev = b.nobleSeats;
     if (prev === undefined) { prev = 0; for (const p of w.pops) if (p.regionId === regionId && p.prof === 'aristocrat') prev += workforce(p); }
-    return round2(prev + (value / TUNE.nobleEconPer - prev) * TUNE.nobleAdjust);
+    return prev + (value / TUNE.nobleEconPer - prev) * TUNE.nobleAdjust;
   }
   if (rule === 'pop') {
     let n = 0;
@@ -66,7 +66,7 @@ function nobleSeatsOf(w: World, regionId: number, b: Building, own: number): num
   }
   let prev = b.nobleSeats;
   if (prev === undefined) { prev = 0; for (const p of w.pops) if (p.regionId === regionId && p.prof === 'aristocrat') prev += workforce(p); }
-  return round2(prev + (Math.max(0, b.profitEma) / TUNE.nobleIncome - prev) * 0.01);
+  return prev + (Math.max(0, b.profitEma) / TUNE.nobleIncome - prev) * 0.01;
 }
 
 /**
@@ -86,7 +86,7 @@ export function updateOwnership(w: World) {
       let b = w.buildings.find((x) => x.regionId === r.id && x.typeId === typeId);
       if (!b) {
         b = newBuilding(w.nextId++, typeId, r.id, owner, typeId, 0, false);
-        b.exp100 = 100; b.crew100 = 100;
+        b.exp = 1; b.crew = 1;
         w.buildings.push(b);
       }
       const workers = getMethod(typeId, typeId).workers;
@@ -136,9 +136,8 @@ export function produce(w: World) {
     const c = companyById(w, b.companyId);
     if (!c) continue;
     const method = getMethod(b.typeId, b.methodId);
-    const crew = b.crew100 ?? b.last.staffing * 100;
-    b.crew100 = round2(crew + (b.last.staffing * 100 - crew) * CREW_RATE);
-    const st = b.crew100 / 100;
+    const crew = b.crew ?? b.last.staffing;
+    const st = (b.crew = crew + (b.last.staffing - crew) * CREW_RATE);
     b.last.points = 0;
     b.last.output = {};
     if (st > 1e-4) {
@@ -155,7 +154,7 @@ export function produce(w: World) {
         if (per) b.stock[g] = Math.max(0, (b.stock[g] ?? 0) - per * run * fill);
       }
       b.last.inputFill = b.idle ? 1 : fill;
-      if (!b.idle && Object.keys(method.inputs).length) b.fillEma = round2((b.fillEma ?? 1) * 0.95 + fill * 0.05);
+      if (!b.idle && Object.keys(method.inputs).length) b.fillEma = (b.fillEma ?? 1) * 0.95 + fill * 0.05;
       const scale = run * fill * efficiency(b);
       for (const g of GOOD_IDS) {
         const per = method.outputs[g];
@@ -165,12 +164,12 @@ export function produce(w: World) {
         b.outStock[g] = q;
       }
       if (method.construction && !b.idle) {
-        b.last.points = round2(method.construction * scale);
+        b.last.points = method.construction * scale;
         c.buildPoints += b.last.points;
         c.buildCost += b.last.wageCost + b.last.inputCost;
         buildWage.set(c.id, (buildWage.get(c.id) ?? 0) + b.last.wageCost);
       }
-      b.exp100 = Math.min(100, b.exp100 + EXP_GAIN);
+      b.exp = Math.min(1, b.exp + EXP_GAIN);
     } else {
       b.last.inputFill = 0;
     }
@@ -192,7 +191,7 @@ export function produce(w: World) {
       const spent = (kingdomById(w, c.kingdomId).spentWeek ??= { wages: 0, goods: 0 });
       spent.firms = (spent.firms ?? 0) + profit;
       const a = budgetEmaWeight(w, 0.05), e = b.firmEma;
-      b.firmEma = e ? { sales: round2(e.sales * (1 - a) + b.last.revenue * a), inputs: round2(e.inputs * (1 - a) + b.last.inputCost * a) } : { sales: round2(b.last.revenue), inputs: round2(b.last.inputCost) };
+      b.firmEma = e ? { sales: e.sales * (1 - a) + b.last.revenue * a, inputs: e.inputs * (1 - a) + b.last.inputCost * a } : { sales: b.last.revenue, inputs: b.last.inputCost };
     }
   }
   allocateConstruction(w);
@@ -206,7 +205,7 @@ export function produce(w: World) {
 function allocateConstruction(w: World) {
   for (const c of w.companies) {
     if (c.buildPoints <= 0) {
-      if (c.state) c.buildUsed = round2((c.buildUsed ?? 0) * 0.9);
+      if (c.state) c.buildUsed = (c.buildUsed ?? 0) * 0.9;
       continue;
     }
     const costPerPoint = c.buildCost / c.buildPoints;
@@ -231,31 +230,31 @@ function allocateConstruction(w: World) {
           if (funds) for (const [o, sh] of funds) take = Math.min(take, Math.max(0, o.cash ?? 0) / (sh * costPerPoint));
           else take = Math.min(take, Math.max(0, owner.cash) / costPerPoint);
         }
-        take = Math.floor(take * 100 + 1e-6) / 100;
-        if (take <= 0) continue;
+        if (!(take > 0)) continue;
         if (owner !== c) {
-          const fee = round2(take * costPerPoint);
+          const fee = take * costPerPoint;
           if (funds) {
+            // 마지막 금고는 남은 몫을 내서 낸 돈의 합이 수수료와 같다
             let rest = fee;
-            funds.forEach(([o, sh], i) => { const pay = i === funds.length - 1 ? rest : round2(fee * sh); o.cash = (o.cash ?? 0) - pay; flow(`build.${o.typeId}`, pay); rest = round2(rest - pay); });
+            funds.forEach(([o, sh], i) => { const pay = i === funds.length - 1 ? rest : fee * sh; o.cash = (o.cash ?? 0) - pay; flow(`build.${o.typeId}`, pay); rest -= pay; });
           } else { owner.cash -= fee; owner.ledger.buildPaid += fee; }
           c.cash += fee; c.ledger.buildFees += fee; c.weekProfit += fee;
           if (kd) kd.feeWageWeek = (kd.feeWageWeek ?? 0) + fee * wageShare;
         }
-        k.points = round2(k.points + take);
-        k.spent = round2(k.spent + take * costPerPoint);
+        k.points += take;
+        k.spent += take * costPerPoint;
         taken.set(k.id, (taken.get(k.id) ?? 0) + take);
-        budget = round2(budget - take);
+        budget -= take;
       }
       return budget;
     };
     const crown = mine.filter((k) => companyById(w, k.companyId)!.state);
     const priv = mine.filter((k) => !companyById(w, k.companyId)!.state);
-    const half = Math.floor(c.buildPoints * 50 + 1e-6) / 100;
+    const half = c.buildPoints / 2;
     const leftCrown = serve(crown, half);
-    const leftPriv = serve(priv, round2(c.buildPoints - half));
+    const leftPriv = serve(priv, c.buildPoints - half);
     const unused = serve(crown, leftPriv) + serve(priv, leftCrown);
-    c.buildUsed = round2((c.buildUsed ?? 0) * 0.9 + Math.max(0, c.buildPoints - unused) * 0.1);
+    c.buildUsed = (c.buildUsed ?? 0) * 0.9 + Math.max(0, c.buildPoints - unused) * 0.1;
   }
 }
 
@@ -272,8 +271,8 @@ export function advanceConstruction(w: World) {
     if (target) {
       const old = target.materials ?? materialsPerLevel(w, undefined, k.typeId);
       target.materials = Object.fromEntries(GOOD_IDS.filter((g) => (old[g] ?? 0) + (mats[g] ?? 0) > 0)
-        .map((g) => [g, round2(((old[g] ?? 0) * target.level + (mats[g] ?? 0) * add) / (target.level + add))]));
-      target.exp100 *= target.level / (target.level + add);
+        .map((g) => [g, ((old[g] ?? 0) * target.level + (mats[g] ?? 0) * add) / (target.level + add)]));
+      target.exp *= target.level / (target.level + add);
       if (!target.stateOwned) giveLevels(w, k, target, add);
       target.level += add;
       logEvent(w, k.companyId, `${rname} ${def.name} 증설 완료 → ${target.level}레벨`,
@@ -300,7 +299,7 @@ export function materialsPerLevel(w: World, c: Company | undefined, typeId: stri
   const m = office ? getMethod(office.typeId, office.methodId) : BUILDING_BY_ID.builder.methods[0];
   const points = BUILDING_BY_ID[typeId].buildPoints;
   const out: GoodBag = {};
-  for (const g of GOOD_IDS) if (m.inputs[g]) out[g] = round2((m.inputs[g]! / m.construction!) * points);
+  for (const g of GOOD_IDS) if (m.inputs[g]) out[g] = (m.inputs[g]! / m.construction!) * points;
   return out;
 }
 
@@ -323,7 +322,7 @@ export function progressDemolition(w: World) {
       if (ownerId !== null) addOwnerLevels(b, ownerId, -1);
     }
     for (const g of GOOD_IDS) {
-      const q = round2((mats[g] ?? 0) * TUNE.salvageShare);
+      const q = (mats[g] ?? 0) * TUNE.salvageShare;
       if (q > 0) w.salvage.push({ regionId: b.regionId, good: g, q, days: TUNE.salvageDays, companyId: b.companyId, ownerId });
     }
     if (b.level <= 0) removeBuilding(w, b);
@@ -366,11 +365,12 @@ function giveLevels(w: World, k: Construction, b: Building, add: number) {
   // 정산: 낸 돈 − 가진 레벨 몫. 음수인 쪽이 내고, 양수인 쪽이 받는다 (받는 쪽 비율대로)
   const diff = got.map((x) => ({ o: x.o, d: k.spent * x.sh - (k.spent * x.n) / add }));
   let pot = 0;
-  for (const x of diff) if (x.d < -0.005) { const pay = round2(-x.d); x.o.cash = (x.o.cash ?? 0) - pay; pot = round2(pot + pay); }
-  const takers = diff.filter((x) => x.d > 0.005);
+  for (const x of diff) if (x.d < 0) { const pay = -x.d; x.o.cash = (x.o.cash ?? 0) - pay; pot += pay; }
+  const takers = diff.filter((x) => x.d > 0);
   const want = takers.reduce((a, x) => a + x.d, 0);
+  // 마지막으로 받는 쪽이 남은 몫을 받아 받은 돈의 합이 낸 돈과 같다
   let rest = pot;
-  takers.forEach((x, i) => { const get = i === takers.length - 1 ? rest : round2((pot * x.d) / want); x.o.cash = (x.o.cash ?? 0) + get; rest = round2(rest - get); });
+  takers.forEach((x, i) => { const get = i === takers.length - 1 ? rest : (pot * x.d) / want; x.o.cash = (x.o.cash ?? 0) + get; rest -= get; });
   if (takers.length === 0 && pot > 0) funds[0][0].cash = (funds[0][0].cash ?? 0) + pot;
 }
 
@@ -391,12 +391,12 @@ export function privatizeLevel(w: World, b: Building, buyer: Building, price: nu
     const q = p;
     const old = q.materials ?? materialsPerLevel(w, undefined, q.typeId), mats = b.materials ?? materialsPerLevel(w, undefined, b.typeId);
     q.materials = Object.fromEntries(GOOD_IDS.filter((g) => (old[g] ?? 0) + (mats[g] ?? 0) > 0)
-      .map((g) => [g, round2(((old[g] ?? 0) * q.level + (mats[g] ?? 0)) / (q.level + 1))]));
-    q.exp100 = round2((q.exp100 * q.level + b.exp100) / (q.level + 1));
+      .map((g) => [g, ((old[g] ?? 0) * q.level + (mats[g] ?? 0)) / (q.level + 1)]));
+    q.exp = (q.exp * q.level + b.exp) / (q.level + 1);
     q.level += 1;
   } else {
     p = newBuilding(w.nextId++, b.typeId, b.regionId, firm.id, b.methodId, 1, false);
-    p.exp100 = b.exp100;
+    p.exp = b.exp;
     if (b.materials) p.materials = { ...b.materials };
     w.buildings.push(p);
   }

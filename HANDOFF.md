@@ -21,11 +21,34 @@
 4. **사용자 결정 (2026-10-21):** 흉작 대책(소작농 분담·공장 하루치 주문)은 하지 않는다. 장기 테스트 기준(4단계 기술 7년, 노동자 식량 최저 35%)은 그대로 둔다. 15년차부터 기술자 1인당 소득 하락(5.0 → 2.2) 진단과 철광산 적게 짓기는 진단 후 수치·AI로만 고친다 (진행 중, 브랜치 wt-skiron).
 5. **알려진 문제:** AI가 철광산을 적게 지음 (20년에 철 광맥 7%만 사용), 지역 간 교역 개편 (사용자 보류, "이동할 때마다 돈이 드는 방식" 선호; VIC3_REFERENCE 시장 접근성).
 
-## 0-regionecon. wt-regionecon (2026-10-22, 합치기 전)
-- `buildingEcon(w, b)` (지역 건물 수지·지분·배당, UI_CHANGES 2-58).
-- 재정 수지 표 (UI_CHANGES 2-59, DESIGN 9.2): `budgetPreview` 에 줄 `stateFirms`(국영 사업 손익 = 왕실 생산 건물 매출 − 원료 − 임금, 순수지에 들어감)와 손잡이별 묶음 `groups`(`BUDGET_GROUPS`).
-  줄 자세히 보기 `budgetDrill(w, kid, key, steps?)` (+ 줄마다 `drillWages` 등, `budgetLineRaw`). 화면 전용 새 저장 필드: `Building.firmEma`, `Kingdom.tariffWeekBy`·`budgetBase.tariffsBy`·`welfareNeedBy`, `lastBudget.firms`·`spentWeek.firms`. sim·AI 는 읽지 않는다.
+## 0-regionecon. wt-regionecon (2026-10-22, main 3faa68c 뒤 main 병합, 합치기 전)
+- `buildingEcon(w, b)` (지역 건물 수지·지분·배당, UI_CHANGES 2-59).
+- 재정 수지 표 (UI_CHANGES 2-60, DESIGN 9.2): `budgetPreview` 에 줄 `stateFirms`(국영 사업 손익 = 왕실 생산 건물 매출 − 원료 − 임금, 순수지에 들어감)와 손잡이별 묶음 `groups`(`BUDGET_GROUPS`).
+  줄 자세히 보기 `budgetDrill(w, kid, key, steps?)` (+ 줄마다 `drillWages` 등, `budgetLineRaw`). 화면 전용 새 저장 필드: `Building.firmEma`, `Kingdom.tariffWeekBy`·`budgetBase.tariffsBy`·`welfareNeedBy`, `lastBudget.firms`·`spentWeek.firms`. sim·AI 는 읽지 않고 반올림하지 않는다 (main 의 noround 규칙). 저장 13판 (12판은 그대로 불러온다).
   미리보기 순수지 vs 실제 주간 국고 변화(현금 − 빚), 150주차부터 8주 합: 총 흐름 대비 0.2~0.9% (국영 사업 빼면 1.3~2.2%), 시드 1·2. 열린 문제: AI 국고 판단(expenseEma)에 국영 사업 손익을 넣을지.
+
+## 0-metrics. wt-metrics (2026-10-22, main d4f95a4 위, 합치기 전, cli·보고서만)
+- 보고서 형식 2 (`format: 2`): 지표 이름은 `keys` 에 한 번, 실행·시드마다 해마다 한 줄 배열 `[y, v1, v2, ...]` (없으면 null), 값은 유효숫자 3자리 (정수·해는 그대로).
+  기존 보고서 5개를 `python cli/report.py --convert` 로 바꿈 (최대 상대 오차 0.5%): aifix 1,704→549 KB, arist10 51→19, collapse40 652→160, lawtech 130→46, welcut 746→243.
+  이유: 점마다 이름을 되풀이해 값 하나에 약 20바이트였다 (사용자: 보고서가 너무 크다). app.js 는 옛 형식도 읽는다. `--html` 은 옛 형식 그대로.
+  후보: 유효숫자 3자리(채택)·4자리(비교 안 함)·원래 값. 약점: 0.5% 안의 차이(총통화 보존, 거의 같은 실행 비교)는 보고서로 볼 수 없다. 그런 확인은 sweep jsonl 원본으로 한다.
+- 이름표: 모든 지표에 한국어 이름·묶음·단위, 뜻이 헷갈리는 지표에는 `desc` (화면에서 이름에 마우스를 올리면 보임). 남은 '기타' 0.
+- sweep traj 에 붕괴 진단(.tmp/col/collapse.ts)의 해마다 지표를 합침 (사용자: 데이터는 최대한 많이): 주인별 돈 `stock.*`, 상품마다 `price/sup/dem/sold/hh.<상품>`,
+  직종별 민간·국영 임금 `wage.<p|s><U|F|S|E|G>`, 장부 `govL/privL.*`, 소유 건물 흐름 `flows.*`, 공사 수 `cons.*`, 레벨 `lv.*`·`lvT.<건물>`, `util`, `food`,
+  계층마다 인구 `popK.*`·노동 인구 `wfK.*`·생활수준 `sol.*`·소득 `inc.*`, 직종마다 고용·실업 `emp/idle.*`. traj 지표 91 → 310. 시간 차이는 잡음 안 (10년 시드 1·2: 4.81/5.11 → 4.61/4.93 ms/일).
+- 고친 것: `genK` 가 인구(classIncome)와 노동 인구(adminSnap)로 두 번 계산되어 노동 인구가 덮었다 → `genK` 인구, `genWkK` 노동 인구. `wIdx` 도 adminSnap 평균을 traj 의 최대가 덮었다 → `wIdx` 최대 유지, 평균은 `wIdxAvg`.
+  예전 보고서의 `genK` 는 노동 인구 값이다 (이름표는 이제 인구).
+- 고친 것 (62b0e53): `stock.pool`(옛 투자 풀 칸, 10년차 약 195백만) 은 투자 풀이 되살아난 것이 아니라 저택·금융가 금고 합의 화면용 사본(round.ts writePool)이다.
+  sweep 의 `stock.total` 이 이 값을 두 번 더했으므로 뺐다. 이름표는 "저택+금융가 금고 (사본)". 그 전 보고서(aifix·arist10·collapse40·lawtech·welcut)의 `stock.total` 은 이만큼 크다. 근거: 코드 확인 (비교 실행 없음).
+
+## 0-noround. wt-noround (2026-10-22, main d4f95a4 위, 합치기 전)
+- 1단계 (동작 같음): 금융가 지분 `Pop.fund`를 id → 지분 객체(희소 정수 키라 사전형)에서 오름차순 배열 묶음 `{id, u}`로 (pops.ts `fundOf`·`addFund`). movePeople 0.6 → 0.15 ms/일, laborMarket 24% → 16%.
+  20년 × 시드 1·2 sweep 출력이 바이트까지 같다. 저장 11판 (10판 변환).
+- 2단계: 저장값 반올림(`roundWorld`)을 없앴다. 반올림은 기록(history·metrics·lastBudget)·투자 풀 사본·임금·예산 미리보기에만. 반올림 때문에만 있던 규칙을 뺐다:
+  100배 저장(`wealth100` 등 → `wealth`·`literacy`·`education`·`exp`·`crew` 규칙 값), 교육·문해력 주 1회 7일치 → 매일, 이동평균 0.05 찌꺼기와 거래 없는 시장 가격 규칙,
+  가격 최소 0.01 이동, 화물 센트 버림(→ `CARGO_MIN` 1단위), 공사·정산의 센트 맞춤. 저장 12판 (10·11판 변환). 화폐 시험은 총량 × 1e-12 허용 (실제 최대 8e-15).
+- 결과 (20년 × 시드 1~4, 보고서 `2026-10-22-noround`): 시드마다 이륙/정체가 뒤바뀌어 크게 갈린다 (시드 3 레벨 556 → 1,668, 시드 4 1,087 → 450).
+  4시드 평균 20년차 총생산 856 → 1,140, 레벨 979 → 1,060, 노동자 생활수준 2.50 → 2.68, 소작농 비율 0.65 → 0.62. 10·15년차는 조금 낮다. 하루 4.9 → 3.0 ms (perf.ts, 같은 때 번갈아 잰 중앙값).
 
 ## 0-welcut. wt-welcut (2026-10-22, main 600194d 위, 합치기 전)
 - `TUNE.welfareCutOff` (기본 0 = 지금 동작): 국고가 조이면 복지 단계를 1까지 내리고 빚이 없어도 복지법을 끈다 (세금보다 먼저, 끄는 180일 동안 빚이 없으면 다른 손잡이를 기다린다).

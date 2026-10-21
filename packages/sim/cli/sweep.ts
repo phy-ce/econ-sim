@@ -1,16 +1,17 @@
 // 조정값 비교: npx tsx cli/sweep.ts '<TUNE JSON>' [seed] [years]  (JSON 의 "subsistence" 는 SUBSISTENCE 를 바꾼다)
 // 주요 지표(w.metrics)에서 5년마다(와 마지막 해) 대륙 합계를 뽑아 한 줄 JSON으로 출력한다.
 // TIMING=1 이면 time: { ms 시뮬레이션 시간, msPerDay 하루 평균 } 을 덧붙인다 (sweepsum.py 가 따로 요약한다)
-import { BUILDING_BY_ID, GOODS, LAW_TECH, SKILL_DEFS, SUBSISTENCE, TECH_BY_ID, TECH_COST, TECHS, TUNE } from '../src/data';
+import { BUILDING_BY_ID, GOOD_IDS, GOODS, LAW_TECH, SKILL_DEFS, SUBSISTENCE, TECH_BY_ID, TECH_COST, TECHS, TUNE } from '../src/data';
 import { isGovernment, paysDividend, slots } from '../src/economy';
 import { committedCost } from '../src/finance';
 import { treasuryTight } from '../src/ai';
+import { FLOW } from '../src/kingdoms';
 import { kingdomGdp } from '../src/economy';
 import { createWorld, financeRatio, investThreshold, literacyOf, step, taxThreshold } from '../src/index';
 import type { MetricPoint } from '../src/index';
 import { workforce } from '../src/pops';
 import { applyWorld } from './worldtune';
-import { SKILLS } from '../src/types';
+import { LEDGER_KEYS, POP_CLASSES, SKILLS } from '../src/types';
 import type { World } from '../src/types';
 
 /**
@@ -121,8 +122,8 @@ function classIncome(w: World) {
     ariSk: f2(per('skilled') > 0 ? per('aristocrat') / per('skilled') : 0), ariK: Math.round((n.aristocrat ?? 0) / 1e3), genK: Math.round((n.gentry ?? 0) / 1e3) };
 }
 // 행정청·하급 귀족 (해마다 마지막 날): admHer·admPro 세습·전문 관료제 레벨, admFill 행정청 충원율(자리 가중),
-// admWage 행정청 하루 임금(천), admSk·admGen 행정청 기술자·하급 귀족 고용(천), wIdx 국영 임금 지수 평균, wStep 국영 임금 배율 평균,
-// genK 하급 귀족 노동 인구(천), solGen 생활수준, gAdmSh·gManSh·gTutSh·gIdleSh 행정청·저택·가정교사·실업 비율
+// admWage 행정청 하루 임금(천), admSk·admGen 행정청 기술자·하급 귀족 고용(천), wIdxAvg 국영 임금 지수 평균 (traj 의 wIdx 는 왕국 최대), wStep 국영 임금 배율 평균,
+// genWkK 하급 귀족 노동 인구(천, genK 는 인구), solGen 생활수준, gAdmSh·gManSh·gTutSh·gIdleSh 행정청·저택·가정교사·실업 비율
 const admY: Record<number, Record<string, number>> = {};
 function adminSnap(w: World) {
   let her = 0, pro = 0, need = 0, have = 0, wage = 0, sk = 0, gen = 0;
@@ -145,8 +146,106 @@ function adminSnap(w: World) {
   const f2 = (x: number) => +x.toFixed(2), f3 = (x: number) => +x.toFixed(3), d = Math.max(1, gn);
   const wIdx = w.kingdoms.reduce((a, k) => a + (k.wageIndex ?? 1), 0) / w.kingdoms.length;
   const wStep = w.kingdoms.reduce((a, k) => { const g = gov.get(k.governmentId); return a + (g ? g.wages.gentry / SKILL_DEFS.gentry.baseWage / (k.wageIndex ?? 1) : 1); }, 0) / w.kingdoms.length;
-  return { admHer: her, admPro: pro, admFill: f2(need > 0 ? have / need : 0), admWage: f2(wage / 1e3), admSk: f2(sk / 1e3), admGen: f2(gen / 1e3), wIdx: f2(wIdx), wStep: f2(wStep),
-    genK: f2(gn / 1e3), solGen: f2(gs / d), gAdmSh: f3(ga / d), gManSh: f3(gm / d), gTutSh: f3(gt / d), gIdleSh: f3(gi / d) };
+  return { admHer: her, admPro: pro, admFill: f2(need > 0 ? have / need : 0), admWage: f2(wage / 1e3), admSk: f2(sk / 1e3), admGen: f2(gen / 1e3), wIdxAvg: f2(wIdx), wStep: f2(wStep),
+    genWkK: f2(gn / 1e3), solGen: f2(gs / d), gAdmSh: f3(ga / d), gManSh: f3(gm / d), gTutSh: f3(gt / d), gIdleSh: f3(gi / d) };
+}
+// 모든 지표 (해마다, cli/report.py): 붕괴 진단(.tmp/col/collapse.ts)이 기록하던 것을 합쳤다. 이름은 "묶음.항목".
+// 하루 평균: price.<상품> 지역 평균 값 ÷ 기본가, sup·dem·sold.<상품> 하루 공급·수요·체결 합(천), hh.<상품> 가계 수요 합(천),
+//   util 민간 생산 건물 가동률(레벨 가중), food 식량 충족(인구 가중), cons.priv·cons.state 진행 중 민간·왕실 공사 수
+// 한 해 합: govL.<항목>·privL.<항목> 왕실·민간 장부(백만/년, 주마다 lastLedger 합), flows.<흐름>.<manor|finance> 소유 건물 금고 흐름(백만/년)
+// 마지막 날: stock.* 주인별 돈(백만), wage.<p|s><U|F|S|E|G> 민간·국영 고용 가중 임금, emp·idle.<직종> 고용·실업 노동 인구(천),
+//   popK·wfK.<계층> 인구·노동 인구(천), sol.<계층> 생활수준(인구 가중), inc.<계층> 1인 하루 소득, lv.priv·state·office, lvT.<건물> 건물 레벨
+const fullY: Record<number, Record<string, number>> = {};
+const fAcc = { util: 0, utilN: 0, food: 0, foodN: 0, priv: 0, state: 0, days: 0 };
+const gAcc: Record<string, number> = {};
+const ledG: Record<string, number> = {}, ledP: Record<string, number> = {};
+for (const k in FLOW) delete FLOW[k];
+const JOB_LETTER: Record<string, string> = { unskilled: 'U', farmer: 'F', skilled: 'S', expert: 'E', gentry: 'G' };
+const SAV_KEY: Record<string, string> = { peasant: 'savPeas', unskilled: 'savUnsk', farmer: 'savFarm', skilled: 'savSk', expert: 'savEx', gentry: 'savGen', capitalist: 'savCap', aristocrat: 'savAri' };
+function fullDay(w: World) {
+  const nReg = w.regions.length;
+  for (const g of GOOD_IDS) {
+    let p = 0, su = 0, de = 0, so = 0, hh = 0;
+    for (const r of w.regions) {
+      const m = r.market[g];
+      p += m.price; su += m.supply; de += m.demand; so += m.sold;
+      if (m.demandBy) for (const key in m.demandBy) if (key.startsWith('pop:')) hh += m.demandBy[key];
+    }
+    gAcc['price.' + g] = (gAcc['price.' + g] ?? 0) + p / nReg / GOODS[g].basePrice;
+    gAcc['sup.' + g] = (gAcc['sup.' + g] ?? 0) + su; gAcc['dem.' + g] = (gAcc['dem.' + g] ?? 0) + de;
+    gAcc['sold.' + g] = (gAcc['sold.' + g] ?? 0) + so; gAcc['hh.' + g] = (gAcc['hh.' + g] ?? 0) + hh;
+  }
+  for (const b of w.buildings) {
+    if (b.stateOwned || BUILDING_BY_ID[b.typeId].auto || isGovernment(b.typeId)) continue;
+    fAcc.util += b.utilization * b.level; fAcc.utilN += b.level;
+  }
+  for (const p of w.pops) { fAcc.food += p.food * p.size; fAcc.foodN += p.size; }
+  const stateCo = new Set(w.companies.filter((c) => c.state).map((c) => c.id));
+  for (const k of w.constructions) if (stateCo.has(k.companyId)) fAcc.state++; else fAcc.priv++;
+  fAcc.days++;
+  if (w.tick % 7 === 0) for (const c of w.companies) {
+    const t = c.state ? ledG : ledP;
+    for (const k of LEDGER_KEYS) t[k] = (t[k] ?? 0) + c.lastLedger[k];
+  }
+}
+function fullYear(w: World): Record<string, number> {
+  const M = (x: number) => +(x / 1e6).toFixed(3), K = (x: number) => +(x / 1e3).toFixed(2), f3 = (x: number) => +x.toFixed(3);
+  const o: Record<string, number> = {};
+  const d = Math.max(1, fAcc.days);
+  for (const [k, v] of Object.entries(gAcc)) o[k] = k.startsWith('price.') ? f3(v / d) : K(v / d);
+  o.util = f3(fAcc.util / Math.max(1, fAcc.utilN)); o.food = f3(fAcc.food / Math.max(1, fAcc.foodN));
+  o['cons.priv'] = +(fAcc.priv / d).toFixed(1); o['cons.state'] = +(fAcc.state / d).toFixed(1);
+  for (const k of LEDGER_KEYS) { o['govL.' + k] = M(ledG[k] ?? 0); o['privL.' + k] = M(ledP[k] ?? 0); }
+  for (const k of Object.keys(FLOW).sort()) { o['flows.' + k] = M(FLOW[k]); delete FLOW[k]; }
+  // 계층별 인구·돈·생활수준·소득, 직종별 고용·실업
+  const n: Record<string, number> = {}, wf: Record<string, number> = {}, sav: Record<string, number> = {}, sol: Record<string, number> = {}, inc: Record<string, number> = {};
+  const emp: Record<string, number> = {}, idle: Record<string, number> = {};
+  let fundVal = 0;
+  const navOf = new Map(w.buildings.filter((b) => b.typeId === 'finance').map((b) => [b.id, b.nav ?? 1] as const));
+  for (const p of w.pops) {
+    const f = workforce(p);
+    n[p.prof] = (n[p.prof] ?? 0) + p.size; wf[p.prof] = (wf[p.prof] ?? 0) + f; sav[p.prof] = (sav[p.prof] ?? 0) + p.savings;
+    sol[p.prof] = (sol[p.prof] ?? 0) + p.sol * p.size; inc[p.prof] = (inc[p.prof] ?? 0) + p.incomeEma;
+    if (p.work === 0) idle[p.prof] = (idle[p.prof] ?? 0) + f; else emp[p.prof] = (emp[p.prof] ?? 0) + f;
+    if (p.fund) p.fund.id.forEach((id, i) => { fundVal += p.fund!.u[i] * (navOf.get(id) ?? 1); });
+  }
+  let gov = 0, govDebt = 0, firm = 0, man = 0, fin = 0;
+  for (const c of w.companies) { if (c.state) { gov += c.cash; govDebt += c.debt; } else firm += c.cash; }
+  for (const b of w.buildings) { if (b.typeId === 'manor') man += b.cash ?? 0; if (b.typeId === 'finance') fin += b.cash ?? 0; }
+  const savT = Object.values(sav).reduce((a, x) => a + x, 0), pool = w.kingdoms.reduce((a, k) => a + (k.investmentPool ?? 0), 0); // investmentPool 은 저택·금융가 금고 합의 화면용 사본 (round.ts writePool): 총통화에 더하지 않는다
+  for (const c of POP_CLASSES) o['stock.' + SAV_KEY[c]] = M(sav[c] ?? 0);
+  Object.assign(o, { 'stock.savAll': M(savT), 'stock.pool': M(pool), 'stock.gov': M(gov), 'stock.govDebt': M(govDebt), 'stock.firm': M(firm), 'stock.man': M(man), 'stock.fin': M(fin),
+    'stock.traders': M(w.traders.cash), 'stock.wfund': M(w.fund), 'stock.total': M(savT + gov + firm + man + fin + w.traders.cash + w.fund), 'stock.minted': M(w.mint.minted), 'stock.fundVal': M(fundVal) });
+  for (const c of POP_CLASSES) {
+    o['popK.' + c] = K(n[c] ?? 0); o['wfK.' + c] = K(wf[c] ?? 0);
+    o['sol.' + c] = +((n[c] ?? 0) > 0 ? sol[c] / n[c] : 0).toFixed(2); o['inc.' + c] = +((n[c] ?? 0) > 0 ? inc[c] / n[c] : 0).toFixed(2);
+  }
+  for (const s of SKILLS) { o['emp.' + s] = K(emp[s] ?? 0); o['idle.' + s] = K(idle[s] ?? 0); }
+  // 임금 (고용 가중), 레벨
+  const co = new Map(w.companies.map((c) => [c.id, c] as const));
+  const pay: Record<string, number> = {}, cnt: Record<string, number> = {};
+  const lv = { priv: 0, state: 0, office: 0 }, lvT: Record<string, number> = {};
+  for (const b of w.buildings) {
+    if (BUILDING_BY_ID[b.typeId].auto) continue;
+    lvT[b.typeId] = (lvT[b.typeId] ?? 0) + b.level;
+    if (b.typeId === 'builder') lv.office += b.level;
+    if (b.stateOwned) lv.state += b.level; else lv.priv += b.level;
+    const c = co.get(b.companyId);
+    if (!c) continue;
+    for (const s in JOB_LETTER) {
+      const e = b.employed[s as keyof typeof b.employed] ?? 0;
+      if (!e) continue;
+      const key = (c.state ? 's' : 'p') + JOB_LETTER[s];
+      pay[key] = (pay[key] ?? 0) + e * c.wages[s as keyof typeof c.wages]; cnt[key] = (cnt[key] ?? 0) + e;
+    }
+  }
+  for (const s of Object.values(JOB_LETTER)) for (const side of ['p', 's']) { const key = side + s; o['wage.' + key] = +(cnt[key] ? pay[key] / cnt[key] : 0).toFixed(2); }
+  o['lv.priv'] = lv.priv; o['lv.state'] = lv.state; o['lv.office'] = lv.office;
+  for (const t of Object.keys(lvT).sort()) o['lvT.' + t] = lvT[t];
+  for (const k in gAcc) gAcc[k] = 0;
+  for (const k of Object.keys(fAcc) as (keyof typeof fAcc)[]) fAcc[k] = 0;
+  for (const t of [ledG, ledP]) for (const k in t) t[k] = 0;
+  return o;
 }
 const yearPts: MetricPoint[] = [];
 const lawY: Record<string, [number | null, number | null]>[] = [];
@@ -158,6 +257,7 @@ const failY: { tax: number[]; invest: number[] }[] = [];
 const t0 = performance.now();
 for (let d = 0; d < years * 360; d++) {
   step(w);
+  fullDay(w);
   for (const r of w.regions) {
     yearAcc.subG += r.market.grain.supplyBy?.subsistence ?? 0; yearAcc.demG += r.market.grain.demand;
     yearAcc.subT += r.market.timber.supplyBy?.subsistence ?? 0; yearAcc.demT += r.market.timber.demand;
@@ -171,7 +271,7 @@ for (let d = 0; d < years * 360; d++) {
   }
   for (const b of w.buildings) if (b.typeId === 'subsistence') { yearAcc.hG += b.last.output.grain ?? 0; yearAcc.hT += b.last.output.timber ?? 0; yearAcc.hF += b.last.output.fiber ?? 0; }
   // 소작농 묶음 충족률·부 (인구 가중, 하루 평균)
-  { let n = 0, f = 0, wl = 0; for (const p of w.pops) if (p.prof === 'peasant') { n += p.size; f += p.size * p.fulfillment; wl += p.size * p.wealth100 / 100; }
+  { let n = 0, f = 0, wl = 0; for (const p of w.pops) if (p.prof === 'peasant') { n += p.size; f += p.size * p.fulfillment; wl += p.size * p.wealth; }
     if (n > 0) { yearAcc.pFul += f / n; yearAcc.pW += wl / n; } }
   if (w.tick % 7 === 0) for (const k of w.kingdoms) welAcc += k.lastBudget?.welfare ?? 0;
   {
@@ -216,6 +316,7 @@ for (let d = 0; d < years * 360; d++) {
     if (last?.tick === w.tick) yearPts.push(last);
     const y = w.tick / 360;
     classInc[y] = classIncome(w);
+    fullY[y] = fullYear(w);
     {
       let n = 0, lo = 0, nf = 0, sf = 0;
       for (const p of w.pops) {
@@ -385,6 +486,7 @@ out.traj = yearPts.map((m) => {
     ...(ironY[m.tick / 360] ?? {}),
     ...(welY[m.tick / 360] ?? {}),
     ...(aiY[m.tick / 360] ?? {}),
+    ...(fullY[m.tick / 360] ?? {}),
   };
 });
 const after1 = w.metrics.filter((m) => m.tick > 360);

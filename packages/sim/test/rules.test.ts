@@ -53,8 +53,8 @@ describe('인구', () => {
     let emp = 0, wf = 0, n = 0;
     for (const b of w.buildings) for (const s of SKILLS) { emp += b.employed[s]; if (b.employed[s] > 0) n++; }
     for (const p of w.pops) if (p.work !== 0 && SKILLS.includes(p.prof as never)) wf += p.size * WORKFORCE_RATIO;
-    // 건물 고용은 저장값이라 소수 둘째 자리로 반올림된다 (칸마다 0.005 안)
-    expect(Math.abs(emp - wf)).toBeLessThanOrEqual(n * 0.005 + 1e-6);
+    // 건물 고용은 반올림하지 않으므로 부동소수점 오차만 남는다
+    expect(Math.abs(emp - wf)).toBeLessThanOrEqual(1e-6 * Math.max(1, wf));
     expect(emp).toBeGreaterThan(0);
   });
 });
