@@ -100,7 +100,14 @@ function roundPop(p: Pop): void {
   p.food = r(p.food);
   p.sol = r(p.sol);
   p.growth = r(p.growth);
-  if (p.fund) { for (const id in p.fund) { p.fund[id] = r(p.fund[id]); if (p.fund[id] <= 0) delete p.fund[id]; } if (Object.keys(p.fund).length === 0) delete p.fund; }
+  const f = p.fund;
+  if (f) {
+    // 반올림해 0 이하가 된 지분은 지우고, 다 지워지면 묶음도 지운다
+    let n = 0;
+    for (let i = 0; i < f.id.length; i++) { const u = r(f.u[i]); if (u > 0) { f.id[n] = f.id[i]; f.u[n] = u; n++; } }
+    f.id.length = n; f.u.length = n;
+    if (n === 0) delete p.fund;
+  }
   roundBag(p.quals);
   roundBag(p.inKind);
 }

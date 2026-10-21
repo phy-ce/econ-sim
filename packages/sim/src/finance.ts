@@ -2,7 +2,7 @@ import { BUILDING_BY_ID, GOODS, SKILL_DEFS, TECH_BY_ID, TICKS_PER_WEEK, TUNE, WO
 import { collectionRatio, companyById, regionById, constructionEstimate, efficiency, isGovernment, isOwnerBuilding, kingdomGdp, logEvent, paysDividend, repay, sellThrough, shareWeight } from './economy';
 import { techNameEn } from './i18n';
 import { flow, kingdomById, kingdomOf, toFinance, toTreasury } from './kingdoms';
-import { payPops } from './pops';
+import { fundOf, payPops } from './pops';
 import { round2 } from './rng';
 import { LOWER_JOBS, SKILLS, crewOf } from './types';
 import type { BudgetItem, Building, Company, Construction, GoodBag, GoodId, Kingdom, Pop, PopClass, Region, SalvageLot, TaxLaw, World } from './types';
@@ -385,12 +385,12 @@ function payFinance(w: World, o: Building, amount: number) {
   const rest = amount - bonus;
   const holders: Pop[] = [];
   let units = 0;
-  for (const p of w.pops) { const u = p.fund?.[o.id] ?? 0; if (u > 0) { holders.push(p); units += u; } }
+  for (const p of w.pops) { const u = fundOf(p, o.id); if (u > 0) { holders.push(p); units += u; } }
   if (units <= 0) { toTreasury(o, rest, 'noSeat'); return; }
   const keep = rest * (KEEP_SHARE.finance ?? 0);
   toTreasury(o, keep, 'keep');
   flow('toPops.finance', rest - keep);
-  payPops(w, holders, rest - keep, (p) => p.fund![o.id]);
+  payPops(w, holders, rest - keep, (p) => fundOf(p, o.id));
 }
 
 /**
@@ -399,7 +399,7 @@ function payFinance(w: World, o: Building, amount: number) {
  */
 export function updateFunds(w: World) {
   const units = new Map<number, number>();
-  for (const p of w.pops) if (p.fund) for (const id in p.fund) units.set(Number(id), (units.get(Number(id)) ?? 0) + p.fund[id]);
+  for (const p of w.pops) { const f = p.fund; if (f) for (let i = 0; i < f.id.length; i++) units.set(f.id[i], (units.get(f.id[i]) ?? 0) + f.u[i]); }
   const levelsOf = new Map<number, { typeId: string; n: number }[]>();
   for (const b of w.buildings) if (b.owners) for (const [id, n] of Object.entries(b.owners)) { const l = levelsOf.get(Number(id)) ?? []; l.push({ typeId: b.typeId, n }); levelsOf.set(Number(id), l); }
   for (const o of w.buildings) {
@@ -417,10 +417,10 @@ export function updateFunds(w: World) {
     if (u > 0 && financeIdle(w, o)) {
       const out = Math.max(0, o.cash ?? 0) - assets * (KEEP_SHARE.finance ?? 0);
       if (out > 0.01) {
-        const holders = w.pops.filter((p) => (p.fund?.[o.id] ?? 0) > 0);
+        const holders = w.pops.filter((p) => fundOf(p, o.id) > 0);
         o.cash = (o.cash ?? 0) - out;
         flow('idle.finance', out);
-        payPops(w, holders, out, (p) => p.fund![o.id]);
+        payPops(w, holders, out, (p) => fundOf(p, o.id));
         assets -= out;
       }
     }

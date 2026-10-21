@@ -203,9 +203,12 @@ export interface Pop {
   growth: number;
   /** 소작으로 직접 얻어 먹는 현물 */
   inKind: GoodBag;
-  /** 금융가 지분: 금융가 건물 id → 지분 수 (사람을 따라 옮긴다) */
-  fund?: Record<number, number>;
+  /** 금융가 지분: 금융가 건물 id (오름차순) 와 그 지분 수 (사람을 따라 옮긴다, pops.ts fundOf·addFund). 11판부터 (10판은 id → 지분 수 객체) */
+  fund?: FundUnits;
 }
+
+/** 금융가 지분 묶음: id[i] 건물의 지분 u[i]. id 는 오름차순 (객체 키 대신 배열: 사전형 객체보다 몇 배 빠르다) */
+export interface FundUnits { id: number[]; u: number[] }
 
 /** 100배로 저장한 값을 규칙 단위로 읽는다: 부 단계 1..99, 문해력 0..1, 교육 접근도 0..1 */
 export const wealthOf = (p: Pop) => p.wealth100 / 100;
@@ -573,9 +576,9 @@ export interface MintLedger {
 export interface World {
   /**
    * 저장 형식 버전: 저장되는 모양이 바뀌면 올린다. 옛 저장은 compat.ts migrateWorld
-   * (8: 레벨 소유·소유 건물 금고. 옛 저장은 불러오지 않는다)
+   * (8: 레벨 소유·소유 건물 금고. 11: 금융가 지분 Pop.fund 를 배열 묶음으로. 10판은 불러올 때 바꾼다, 그보다 옛 저장은 불러오지 않는다)
    */
-  version: 10;
+  version: 11;
   config: WorldConfig;
   tick: number;
   seed: number;

@@ -1,6 +1,6 @@
 import { BUILDING_BY_ID, GOOD_IDS, GOODS, REGIONS, SKILL_DEFS, SUBSISTENCE, TICKS_PER_WEEK, TIER_COUNTS, TIER_JITTER, TIERS, TUNE, WORKFORCE_RATIO, getMethod } from './data';
 import { collectionRatio, emptyJobs, knownVeins, isGovernment, newBuilding, paysDividend, slots, wageCostOf } from './economy';
-import { aggregateHouseholds, findPop, getPop, movePeople, workforce } from './pops';
+import { addFund, aggregateHouseholds, findPop, getPop, movePeople, workforce } from './pops';
 import { updateOwnership, updateSubsistence } from './production';
 import { syncEmployment } from './labor';
 import { affordableTenantWealth, affordableWealth } from './market';
@@ -175,7 +175,7 @@ export function createWorld(seed = 1, opts: CreateWorldOptions = {}): World {
   }
 
   const w: World = {
-    version: 10, config: { ai }, tick: 0, seed, rngState: seed | 0, nextId: 1000,
+    version: 11, config: { ai }, tick: 0, seed, rngState: seed | 0, nextId: 1000,
     regions, kingdoms, pops: [], fund: 0, metrics: [],
     traders: { cash: TRADER_CAPITAL, capital: TRADER_CAPITAL, shipments: [] },
     mint: { minted: 0, issued: 0, retired: 0, interest: 0 },
@@ -306,7 +306,7 @@ export function createWorld(seed = 1, opts: CreateWorldOptions = {}): World {
     const nobles = w.pops.filter((p) => p.regionId === f.regionId && (p.prof === 'aristocrat' || p.prof === 'gentry') && p.size > 0);
     const n = nobles.reduce((a, p) => a + p.size, 0);
     f.nav = 1;
-    if (n > 0) for (const p of nobles) (p.fund ??= {})[f.id] = ((f.cash ?? 0) * p.size) / n;
+    if (n > 0) for (const p of nobles) addFund(p, f.id, ((f.cash ?? 0) * p.size) / n);
   }
   aggregateHouseholds(w);
   // 저장값은 소수 둘째 자리까지 (round.ts): 시작 저축의 센트 아래는 주인 없는 돈으로

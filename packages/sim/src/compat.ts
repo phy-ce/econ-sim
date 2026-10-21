@@ -19,12 +19,23 @@ export function landlordJobs(_b: Building): number {
 export const MAX_RESEARCH_BUDGET = 100_000;
 
 /**
- * 저장 파일을 불러온다 (불러오기 직후에 부른다). 지금 형식(10판: 레벨 소유·저택·금융가 금고·세법 셋·투자법·금융가 지분·복지법)만 받고, 옛 판은 바꾸지 않는다 (null).
+ * 저장 파일을 불러온다 (불러오기 직후에 부른다). 지금 형식(11판, 10판은 금융가 지분 모양을 바꿔 받는다. 레벨 소유·저택·금융가 금고·세법 셋·투자법·금융가 지분·복지법)만 받고, 옛 판은 바꾸지 않는다 (null).
  * 화면 표시용 사본은 다시 쓴다
  */
 export function migrateWorld(input: unknown): World | null {
-  const w = input as World & { version: number };
-  if (!w || typeof w !== 'object' || w.version !== 10) return null;
-  writeMirrors(w);
-  return w;
+  const w = input as Omit<World, 'version'> & { version: number };
+  if (!w || typeof w !== 'object' || (w.version !== 10 && w.version !== 11)) return null;
+  if (w.version === 10) {
+    // 10판: 금융가 지분이 건물 id → 지분 수 객체였다 (정수 키는 오름차순으로 나온다)
+    for (const p of w.pops) {
+      const old = p.fund as unknown as Record<string, number> | undefined;
+      if (!old) continue;
+      const ids = Object.keys(old).map(Number).sort((a, b) => a - b);
+      p.fund = { id: ids, u: ids.map((id) => old[id]) };
+    }
+    w.version = 11;
+  }
+  const world = w as World;
+  writeMirrors(world);
+  return world;
 }

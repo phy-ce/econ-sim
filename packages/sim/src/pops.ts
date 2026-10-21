@@ -63,6 +63,26 @@ export function popsIn(w: World, regionId: number): Pop[] {
   return w.pops.filter((p) => p.regionId === regionId);
 }
 
+/** 금융가 b 의 지분 수 (없으면 0) */
+export function fundOf(p: Pop, b: number): number {
+  const f = p.fund;
+  if (!f) return 0;
+  const ids = f.id;
+  for (let i = 0; i < ids.length; i++) if (ids[i] === b) return f.u[i];
+  return 0;
+}
+
+/** 금융가 b 의 지분을 units 만큼 더한다 (없으면 id 순서 자리에 새로 넣는다) */
+export function addFund(p: Pop, b: number, units: number): void {
+  const f = (p.fund ??= { id: [], u: [] });
+  const ids = f.id;
+  let i = 0;
+  for (; i < ids.length && ids[i] < b; i++);
+  if (ids[i] === b) f.u[i] = f.u[i] + units;
+  else if (i === ids.length) { ids.push(b); f.u.push(0 + units); }
+  else { ids.splice(i, 0, b); f.u.splice(i, 0, 0 + units); }
+}
+
 /** 계층 이동 기록의 키 `출발>도착` (미리 만들어 둔다) */
 const MOBILITY_KEY = Object.fromEntries(
   POP_CLASSES.map((a) => [a, Object.fromEntries(POP_CLASSES.map((b) => [b, `${a}>${b}`]))]),
@@ -121,7 +141,8 @@ export function movePeople(w: World, from: Pop, to: Pop, workers: number, qualif
   const money = from.savings * frac, inc = from.incomeEma * frac;
   from.savings -= money; to.savings += money;
   // 금융가 지분도 사람을 따라간다
-  if (from.fund) for (const id in from.fund) { const u = from.fund[id] * frac; from.fund[id] -= u; (to.fund ??= {})[id] = (to.fund[id] ?? 0) + u; }
+  const ff = from.fund;
+  if (ff) for (let i = 0; i < ff.id.length; i++) { const u = ff.u[i] * frac; ff.u[i] -= u; addFund(to, ff.id[i], u); }
   from.incomeEma -= inc; to.incomeEma += inc;
   from.size -= people;
   to.size = total;
@@ -142,7 +163,8 @@ export function prunePops(w: World) {
       const heir = p.work !== 0 ? findPop(w, p.regionId, p.prof, 0) : undefined;
       if (heir && heir !== p && heir.size >= 1e-3) {
         heir.savings += p.savings; heir.incomeEma += p.incomeEma;
-        if (p.fund) for (const id in p.fund) (heir.fund ??= {})[id] = (heir.fund[id] ?? 0) + p.fund[id];
+        const pf = p.fund;
+        if (pf) for (let j = 0; j < pf.id.length; j++) addFund(heir, pf.id[j], pf.u[j]);
       } else w.fund += p.savings;
     }
   }

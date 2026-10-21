@@ -3,7 +3,7 @@ import { CARTAGE_RATE, RAIL_RATE, borrow, harvestFactor, priceFormula, regionByI
 import { financeIdle, payRent, paySalvage, taxDue, taxRates } from './finance';
 import { borderCost, kingdomById, kingdomOf, payTariff, toTreasury } from './kingdoms';
 import { INVEST_CLASSES } from './policy';
-import { findPop, payPops, payProf, workforce } from './pops';
+import { addFund, findPop, payPops, payProf, workforce } from './pops';
 import { clamp, floor2, round2 } from './rng';
 import { POP_CLASSES, WEALTH_MAX, WEALTH_MIN, wealthOf } from './types';
 import type { Building, Company, GoodBag, GoodId, MarketGood, NeedDef, NeedId, Pop, Region, SalvageLot, Shipment, World } from './types';
@@ -769,8 +769,7 @@ function investSurplus(w: World, p: Pop, cashCost: number) {
   if (!f || financeIdle(w, f)) return;
   p.savings -= over;
   toTreasury(f, over, 'units');
-  const fund = (p.fund ??= {});
-  fund[f.id] = (fund[f.id] ?? 0) + over / Math.max(0.01, f.nav ?? 1);
+  addFund(p, f.id, over / Math.max(0.01, f.nav ?? 1));
 }
 
 /** 소작농 저축이 가는 저택: 그 지역 저택, 없으면 그 왕국에서 id 가 가장 작은 저택 (날마다 같은 세계면 다시 찾지 않는다) */

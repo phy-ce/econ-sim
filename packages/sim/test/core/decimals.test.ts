@@ -100,6 +100,13 @@ describe('저장값 소수 둘째 자리', () => {
     const old = JSON.parse(save(w));
     for (const v of [3, 4, 5, 6, 7, 8]) expect(migrateWorld({ ...old, version: v })).toBeNull();
     expect(save(migrateWorld(JSON.parse(save(w)))!)).toBe(save(w));
+    // 10판: 금융가 지분이 id → 지분 수 객체였다. 불러오면 11판 배열 묶음이 된다
+    const v10 = JSON.parse(save(w));
+    v10.version = 10;
+    let held = 0;
+    for (const p of v10.pops) if (p.fund) { held++; p.fund = Object.fromEntries(p.fund.id.map((id: number, i: number) => [id, p.fund.u[i]])); }
+    expect(held).toBeGreaterThan(0);
+    expect(save(migrateWorld(v10)!)).toBe(save(w));
   });
 
   // 화면 표시용 사본(Pop.wealth·literacy, Region.education, Building.crew)은 sim 이 읽지 않는다: 사본을 엉뚱한 값으로 바꿔도 다음 날 세계가 같고,
