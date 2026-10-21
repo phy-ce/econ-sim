@@ -22,13 +22,9 @@ import { BottomPanel } from './views/BottomPanel';
 import { Notifications } from './views/Notifications';
 
 /** 1배 = 현실 1초에 게임 1시간 (하루 24초) */
-const HOUR = 1 / 24;
-const SPEEDS = [
-  { label: '1×', tps: HOUR },
-  { label: '10×', tps: HOUR * 10 },
-  { label: '100×', tps: HOUR * 100 },
-  { label: '500×', tps: HOUR * 500 },
-];
+// 1배속 = 하루 0.96초 (1년 약 5.8분). 10배속은 디버그용
+const BASE_TPS = 25 / 24;
+const SPEEDS = [1, 2, 3, 4, 10].map((x) => ({ label: `${x}×`, tps: BASE_TPS * x }));
 const THEME_KEY = 'estera-theme';
 const PLAYER_ID = 100;
 
@@ -95,7 +91,7 @@ export function App() {
       if (e.code === 'Space') {
         e.preventDefault();
         gameRef.current.setSpeed(gameRef.current.speed > 0 ? 0 : lastSpeed.current);
-      } else if (/^[1-4]$/.test(e.key)) {
+      } else if (/^[1-5]$/.test(e.key)) {
         gameRef.current.setSpeed(SPEEDS[Number(e.key) - 1].tps);
       }
     };
