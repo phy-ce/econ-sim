@@ -156,4 +156,4 @@ fetch('./data/index.json').then((r) => r.json()).then((idx) => {
   reports = idx.reports;
   renderList();
   open(decodeURIComponent(location.hash.slice(1)));
-});
+}).catch(() => { $('title').textContent = '보고서가 없습니다'; });

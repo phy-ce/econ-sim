@@ -2,7 +2,6 @@
 
 **Play in the browser: https://phy-ce.github.io/econ-sim/** (built from `main` on every push)
 · Rules encyclopedia: https://phy-ce.github.io/econ-sim/encyclopedia/
-· Experiment reports: https://phy-ce.github.io/econ-sim/reports/
 
 A management game about the market economy of an early-modern continent. Three kingdoms (Estera, Belonia and Karten) share seven regions. You play the crown of Estera. Each kingdom has two companies: the crown (a state company whose cash is the treasury) and one private company that invests the people's savings. About five million simulated people work, eat, save, migrate and change jobs. The economic loop is inspired by Victoria 3, but the rules and numbers are this game's own. The currency is the florin (ƒ).
 
@@ -54,7 +53,7 @@ Entries are data in `packages/sim/src/encyclopedia.ts`. Values are read from the
 
 ## Experiment reports
 
-Comparison runs of the simulation (yearly values for every metric, several rule variants and seeds) are published as a small viewer in `tools/reports`: pick a report, pick metrics, hover a chart for the year's values, or switch to yearly tables. Seeds can be averaged or shown one by one.
+Comparison runs of the simulation (yearly values for every metric, several rule variants and seeds) are viewed locally in a small viewer in `tools/reports`: pick a report, pick metrics, hover a chart for the year's values, or switch to yearly tables. Seeds can be averaged or shown one by one.
 
 ```bash
 cd packages/sim
@@ -63,7 +62,7 @@ TITLE="High nobles 1/10" L="main,1/10" python cli/report.py 2026-10-22-arist10 o
 cd ../.. && npm run reports                                                # http://localhost:5201
 ```
 
-`report.py` also reads per-year diagnostic files (one JSON line per year with `y` and `seed`; nested objects become `stock.gov` style keys); pass `name=file` to name runs. On GitHub Pages the viewer is served at `/econ-sim/reports/`, deep links use the hash (`/reports/#2026-10-22-arist10`).
+`report.py` also reads per-year diagnostic files (one JSON line per year with `y` and `seed`; nested objects become `stock.gov` style keys); pass `name=file` to name runs. Report data (`tools/reports/public/data/`) is git-ignored and stays on the machine that ran it; deep links use the hash (`http://localhost:5201/#2026-10-22-arist10`).
 
 Controls: `Space` pauses and resumes, `1`–`5` set the speed (1× = about one game day per real second, then 2×, 3×, 4× and 10× for debugging).
 

@@ -3,3 +3,4 @@ dist/
 packages/sim/out/
 .tmp/
 fromremote/
+tools/reports/public/data/
