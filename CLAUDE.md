@@ -24,7 +24,8 @@
 
 - 역할 에이전트 (`.claude/agents/`): `economist`(통계·경제 분석으로 로직 검증), `ui-ux`(UI_CHANGES·UI_DONE 기술서), `tester`(테스트·불변식). 맞는 일은 이들에게 맡긴다.
 - 사용자에게 보고할 때는 그래프가 가장 좋다. 숫자는 최소 1년 단위로 낸다 (20년차 값만 던지지 않는다).
-  `python packages/sim/cli/trajchart.py <png> out.jsonl` 로 해마다 그래프를 만든다.
+  `python packages/sim/cli/trajhtml.py <html> out.jsonl` 로 해마다 그래프 HTML(지표 고르기·마우스 값·해마다 표)을 만들어 Artifact로 올리고 링크를 준다
+  (실행 이름은 `L="기준,새 규칙"` 또는 인자 `이름=파일`, 진단 스크립트의 해마다 한 줄 파일도 읽는다). PNG는 `cli/trajchart.py`.
 
 ## 지켜야 할 것 (깨면 안 됨)
 - 화폐 보존과 결정성(저장/불러오기 포함) 테스트는 항상 통과한다.
