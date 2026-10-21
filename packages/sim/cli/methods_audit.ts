@@ -8,7 +8,7 @@
 //  5. 기본 방식은 공구 10~20 (목공구 tools_wood 만 0)
 //  6. 둥근 수: 일자리 10 단위·합 50 단위, 1,000 이상인 양은 50 단위, 그 아래는 10 단위
 // 어긋나면 줄마다 '!' 로 찍고 끝에 실패 수를 내며 종료 코드 1 로 끝난다.
-import { BUILDING_TYPES, GOODS, SKILL_DEFS, TECH_BY_ID } from '../src/data';
+import { BUILDING_TYPES, GOODS, SKILL_DEFS, STEP_PROFIT_MULT, TECH_BY_ID } from '../src/data';
 import type { GoodId, MethodDef, Skill } from '../src/types';
 
 const ADVANCED: GoodId[] = ['tools', 'fuel', 'metal', 'electronics'];
@@ -87,7 +87,7 @@ for (const t of BUILDING_TYPES) {
       }
       if (revOf(m) <= revOf(prev)) bad(`${tag}: 레벨당 산출 값이 늘지 않았다`);
       // 2. 이익 두 배
-      const p = revOf(m) - wageOf(m) - inputOf(m), target = p1 * 2 ** k;
+      const p = revOf(m) - wageOf(m) - inputOf(m), target = p1 * STEP_PROFIT_MULT ** k;
       if (Math.abs(p / target - 1) > 0.1) bad(`${tag}: 이익 ${p} 가 목표 ${target} (1단계 × ${2 ** k}) ± 10% 밖`);
     });
   }

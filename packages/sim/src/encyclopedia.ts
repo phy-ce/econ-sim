@@ -11,7 +11,7 @@
 import {
   BUILDING_BY_ID, BUILDING_TYPES, CLASS_DEFS, CONSUMPTION_PER_CAPITA, DEPENDENT_CONSUMPTION, EDUCATION_FLOOR, EDUCATION_RANGE, GOODS, GOOD_IDS,
   HARVEST_KINDS, HARVEST_MAX_SEASONS, HARVEST_SEASON_DAYS, HARVEST_SPREAD, HARVEST_STEP, LAW_TECH, MAX_POINTS_PER_LEVEL_DAY, NEEDS, OWNERSHIP_SEATS,
-  OWNER_SEATS_PER_LEVEL, POINT_VALUE, REGIONS, SKILL_DEFS, SUBSISTENCE, TAX_PEOPLE_PER_LEVEL, TECHS, TECH_BY_ID, TECH_COST, TICKS_PER_WEEK, TICKS_PER_YEAR,
+  OWNER_SEATS_PER_LEVEL, REGIONS, STEP_PROFIT_MULT, SKILL_DEFS, SUBSISTENCE, TAX_PEOPLE_PER_LEVEL, TECHS, TECH_BY_ID, TECH_COST, TICKS_PER_WEEK, TICKS_PER_YEAR,
   TIERS, TIER_JITTER, TUNE, WORKFORCE_RATIO, getMethod, needsAt, rawMax, regionPerk, scaleBonus,
   buildPointsOf,
 } from './data';
@@ -445,11 +445,14 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   },
   {
     id: 'methods-rule', category: 'production', title: t('건물 숫자 규칙', 'Building numbers rule'),
-    rule: t('기본가와 기본 임금에서 기본 방식은 이익률 20%, 한 단계 오를 때마다 레벨당 이익이 2배다. 단계가 오르면 일꾼은 줄고(기본 약 500명) 기술자·전문가 비율과 공구·석탄·철·기계 사용이 는다. 기본 방식도 공구를 조금 쓴다. 일자리는 10 단위, 양은 50·10 단위.', 'At base prices and wages the basic method has a 20% margin, and each step up doubles profit per level. Higher steps employ fewer people (about 500 at the base), a larger share of skilled workers and experts, and more tools, coal, iron and machinery. Basic methods use a few tools too. Jobs come in 10s, amounts in 50s and 10s.'),
+    rule: t('기본가와 기본 임금에서 기본 방식은 이익률 {3}, 한 단계 오를 때마다 레벨당 이익이 ×{4}다. 단계가 오르면 일꾼은 줄고(농장 기본 {5}명) 기술자·전문가 비율과 공구·석탄·철·기계 사용이 는다. 기본 방식도 공구를 조금 쓴다.', 'At base prices and wages the basic method has a {3} margin, and each step up multiplies profit per level by {4}. Higher steps employ fewer people ({5} on a basic farm), a larger share of skilled workers and experts, and more tools, coal, iron and machinery. Basic methods use a few tools too.'),
     formula: 'margin = (Σ out × base − Σ in × base − Σ jobs × baseWage) ÷ revenue',
     params: [
       p('노동자 기본 임금', 'Labourer base wage', () => SKILL_DEFS.unskilled.baseWage, 'florin'), p('기술자 기본 임금', 'Skilled base wage', () => SKILL_DEFS.skilled.baseWage, 'florin'),
       p('전문가 기본 임금', 'Expert base wage', () => SKILL_DEFS.expert.baseWage, 'florin'),
+      p('기본 방식 이익률', 'Basic method margin', () => r4(methodMarginAtBase('farm', 'farm_basic').margin), 'pct'),
+      p('단계당 이익 배율', 'Profit multiplier per step', () => STEP_PROFIT_MULT, 'x'),
+      p('농장 기본 방식 일꾼', 'Basic farm workers', () => getMethod('farm', 'farm_basic').workers.farmer ?? 0, 'people'),
     ],
     example: () => {
       const m = methodMarginAtBase('farm', 'farm_basic');
@@ -470,7 +473,7 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   {
     id: 'buildings', category: 'production', title: t('건물과 방식', 'Buildings and methods'),
     rule: t('건물은 {0}종이다. 방식마다 레벨당 일자리·원료·산출이 있다. 기술이 새 방식을 연다.', 'There are {0} building types. Each method sets jobs, inputs and outputs per level. Technologies unlock methods.'),
-    params: [p('건물 종류', 'Building types', () => BUILDING_TYPES.length), p('포인트 1점 장부가', 'Book value per point', () => POINT_VALUE, 'florin')],
+    params: [p('건물 종류', 'Building types', () => BUILDING_TYPES.length)],
     live: {
       pick: ['building'], run: (_w, ctx) => {
         const def = BUILDING_BY_ID[ctx.building];
@@ -1189,7 +1192,7 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   },
   {
     id: 'ai-methods', category: 'ai', title: t('방식 바꾸기', 'Switching methods'),
-    rule: t('생산 건물은 건물 전체의 하루 손익이 5% (최소 인건비의 1%) 넘게 큰 방식으로 바꾼다 ({0}일 쿨다운, 원료가 끊겨 멈췄으면 쿨다운 없이). 손익 = 레벨 × 기대 충원율 × (매출 × 투입 충족 × 숙련 − 원료비 × 투입 충족 − 인건비). 기대 충원율 = 지금 재직자와 그 지역에서 데려올 사람으로 채우는 비율 (임금 가중), 투입 충족 = 대륙의 남는 투입재(건물 수요는 방식 × 레벨 × 가동률 × 충원율로, 절반 넘게 지은 공사의 산출 포함)로 채우는 비율, 숙련 = 바꾸면 반으로 주는 숙련의 효과. 값은 대륙 장기 가격으로 재고 이 건물이 바꾸며 내놓는 양만큼 움직인다. 손해인 방식으로는 바꾸지 않는다. 같은 주에 바꾼 건물이 더 뽑을 사람과 원료는 다른 건물이 세지 않는다. ({2} = 0이면 옛 규칙: 산출 1단위당 이윤, 일손 {3}·공급 50% 기준.) 사무소는 자재를 구할 수 있는 방식 중 포인트 최대. 행정청은 한도 × 원료 충족이 10% 넘게 큰 방식으로, 원료 없는 방식이면 충족 기억을 매주 {1}씩 1로 되돌린다.', 'Producers switch to the method whose whole-building daily profit beats the current one by 5% (at least 1% of wages) ({0}-day cooldown; none when starved of inputs). Profit = levels × expected staffing × (revenue × input fill × skill − input cost × input fill − wages). Expected staffing = share filled by current workers plus people the region can supply (wage-weighted); input fill = share covered by spare continental inputs (building demand counted as method × levels × utilisation × staffing; output of constructions past half-way included); skill = the effect of the halved experience after a switch. Prices are long-run continental prices, moved by the output this building adds or removes. Never switches into a loss. People and inputs a switching building takes are not counted again that week. ({2} = 0 restores the old rule: profit per unit, {3} staffing and 50% supply thresholds.) Offices take the highest-point method with available materials. Administrations take the method with 10% more capacity × fill; on a no-input method the fill memory drifts back to 1 by {1} a week.'),
+    rule: t('생산 건물은 산출 1단위당 이윤이 5% + 0.01 넘게 나은 방식으로 바꾼다 ({0}일 쿨다운, 원료가 끊겨 멈췄으면 쿨다운 없이). 지금 재직자를 더해도 일손을 {3} 이상 모을 수 없는 방식, 대륙 공급이 필요의 50% 미만인 투입재를 쓰는 방식은 고르지 않고, 지금 방식이 {3} 미만으로 채워지고 일손도 없으면 이윤이 낮아도 일손을 구할 수 있는 방식으로 바꾼다. ({2} = 1이면: 건물 전체 하루 손익 = 레벨 × 기대 충원율 × (매출 × 투입 충족 × 숙련 − 원료비 × 투입 충족 − 인건비)이 5% (최소 인건비의 1%) 넘게 큰 방식으로, 대륙 장기 가격으로 재고 손해인 방식으로는 바꾸지 않는다.) 사무소는 자재를 구할 수 있는 방식 중 포인트 최대. 행정청은 한도 × 원료 충족이 10% 넘게 큰 방식으로, 원료 없는 방식이면 충족 기억을 매주 {1}씩 1로 되돌린다.', 'Producers switch when profit per unit beats the current method by 5% + 0.01 ({0}-day cooldown; none when starved of inputs). Methods that cannot be staffed to {3} (counting current workers), or that use an input whose continental supply is under 50% of need, are skipped; a building under {3} staffed with no labour for its method moves to a staffable one even at lower profit. (With {2} = 1: the method whose whole-building daily profit = levels × expected staffing × (revenue × input fill × skill − input cost × input fill − wages) beats the current one by 5% (at least 1% of wages), at long-run continental prices, never switching into a loss.) Offices take the highest-point method with available materials. Administrations take the method with 10% more capacity × fill; on a no-input method the fill memory drifts back to 1 by {1} a week.'),
     params: [p('쿨다운', 'Cooldown', () => SWITCH_COOLDOWN, 'day'), tune('adminFillRetry', '행정청 재시도', 'Administration retry', 'pct'), tune('aiSwitchV2', '손익 비교 (새 규칙)', 'Profit comparison (new rule)'), tune('minStaffing', '일손 기준', 'Staffing threshold', 'pct')],
     related: ['input-fill', 'admin-capacity', 'methods-rule'], seenIn: ['company'], source: ['ai.ts manageBuildings'], design: ['10'],
   },
