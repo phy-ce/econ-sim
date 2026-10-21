@@ -78,7 +78,10 @@ describe('예산 미리보기', () => {
     runTo(ctl, ctl.tick + TICKS_PER_WEEK); runTo(chg, chg.tick + TICKS_PER_WEEK);
     const real = realNet(chg) - realNet(ctl);
     console.log(`budgetPreview 임금 ${now}→${next}: 순수지 변화 예상 ${predicted} 실제 ${Math.round(real)}`);
-    expect(Math.abs(predicted - real) / Math.abs(real)).toBeLessThan(0.2);
+    // 민간 공사 수수료는 저택·금융가 금고가 낼 수 있는 만큼만 들어오므로(레벨 소유 1단계) 순수지 변화가 작을 때 비율 오차가 커진다:
+    // 오차를 임금 줄 변화 크기에 견준다
+    const wageDelta = Math.abs(a.lines.find((l) => l.key === 'wages')!.byLevel![next - 1] - a.lines.find((l) => l.key === 'wages')!.weekly);
+    expect(Math.abs(predicted - real) / wageDelta).toBeLessThan(0.2);
   });
 
   it('첫 주들(2~9주)도 실제 수지와 크게 다르지 않다', () => {

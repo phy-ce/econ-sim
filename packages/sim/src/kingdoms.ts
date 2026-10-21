@@ -1,4 +1,4 @@
-import type { GoodId, Kingdom, World } from './types';
+import type { Building, GoodId, Kingdom, World } from './types';
 
 /** 관세율 기본값 (도착 왕국이 따로 정하지 않은 상품) */
 export const DEFAULT_TARIFF = 0.1;
@@ -23,12 +23,22 @@ export function borderCost(w: World, from: number, to: number, good: GoodId): nu
   return kingdomById(w, b).tariff[good] ?? DEFAULT_TARIFF;
 }
 
-/** 투자 풀에 넣는다. regionId 가 있으면 그 지역 몫으로도 적는다 (지역 우선 투자) */
-export function addToPool(w: World, kingdomId: number, regionId: number | null, amount: number) {
+/** 진단용 돈 흐름 누계 (저장하지 않고 sim 이 읽지 않는다): '<흐름>.<manor|finance>' → 금액. cli 가 읽고 비운다 */
+export const FLOW: Record<string, number> = {};
+export function flow(tag: string, amount: number) { FLOW[tag] = (FLOW[tag] ?? 0) + amount; }
+
+/** 소유 건물(저택·금융가) 금고에 넣는다 (tag: 진단용 흐름 이름) */
+export function toTreasury(o: Building, amount: number, tag = 'other') {
   if (amount <= 0) return;
-  const k = kingdomById(w, kingdomId);
-  k.investmentPool += amount;
-  if (regionId != null) (k.poolByRegion ??= {})[regionId] = (k.poolByRegion[regionId] ?? 0) + amount;
+  o.cash = (o.cash ?? 0) + amount;
+  flow(`${tag}.${o.typeId}`, amount);
+}
+
+/** 지역 금융가 금고에 넣는다 (주인 없는 돈·남는 현금이 가는 곳). 금융가가 없으면 주인 없는 돈으로 */
+export function toFinance(w: World, regionId: number, amount: number, tag = 'other') {
+  if (amount <= 0) return;
+  const f = w.buildings.find((x) => x.regionId === regionId && x.typeId === 'finance');
+  if (f) toTreasury(f, amount, tag); else w.fund += amount;
 }
 
 /** 관세 수입을 받는 곳: 도착 왕국의 국고 (국영 회사 현금) */

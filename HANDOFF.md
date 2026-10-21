@@ -21,6 +21,24 @@
 4. **사용자 결정 (2026-10-21):** 흉작 대책(소작농 분담·공장 하루치 주문)은 하지 않는다. 장기 테스트 기준(4단계 기술 7년, 노동자 식량 최저 35%)은 그대로 둔다. 15년차부터 기술자 1인당 소득 하락(5.0 → 2.2) 진단과 철광산 적게 짓기는 진단 후 수치·AI로만 고친다 (진행 중, 브랜치 wt-skiron).
 5. **알려진 문제:** AI가 철광산을 적게 지음 (20년에 철 광맥 7%만 사용), 지역 간 교역 개편 (사용자 보류, "이동할 때마다 돈이 드는 방식" 선호; VIC3_REFERENCE 시장 접근성).
 
+## 0-lawpace. wt-lawpace (2026-10-22, wt-own1 위, 합치기 전)
+- 소작농 저축이 생활비 + 세금 8주치(`peasantKeepWeeks`)를 넘으면 그 지역 저택 금고로 (사용자 결정). 투자법 밖 다른 계층은 저축을 들고 있는다. 이전 "투자법 밖 남는 현금 → 금융가 금고"는 없앴다.
+- 법이 열리는 속도 곡선과 덫: DECISIONS 7-16 "법이 열리는 속도". 기준값은 게임 길이가 정해지면 고른다 (지금 값 그대로). 투자법 기술자 단계는 10% 이하가 아니면 경제가 멈춘다 → 사용자 결정 필요.
+- 40년까지 돌리면 지금 값은 25년 뒤 무너진다 (총생산 2,400 → 430, 국고 10억·금융가 금고 9억 고임). 따로 진단할 것.
+- `sweep.ts`: 법 열림·바뀜 해(`laws`), 비율 5% 칸 넘은 해(`ratioY`), 계층 저축(`savPeas` 등), 30년 넘는 실행도 해마다 traj.
+- 워크트리 클라이언트 검사: `npx tsc --noEmit -p .tmp/lp/tsconfig.client.json` (이 브랜치 sim 을 본다).
+- **법은 기술로 연다 (2026-10-22, 사용자 규칙).** `data.ts LAW_TECH`: 인두세 = 철 가공, 소득세 = 증기 철도, 투자법 전문가 = 인쇄술, 기술자 = 괴철로, 노동자·농부 = 증기기관. 시작 조건은 금융가 비율(값 그대로), 180일 뒤 끝날 때 조건을 다시 보고 안 맞으면 실패(`lawFailed` 소식, `Kingdom.lawFail`, AI 1년 대기). `policyStatus` 선택지에 `tech`·`unlocked`, `pendingOk`, `unlocksOf(techId)`, `GameEvent.topic`. 시험 `test/core/laws.test.ts`.
+  - 5안 비교와 채택 근거: DECISIONS 7-16 "기술로 여는 법". 40년 × 시드 1·2 총생산 10/20/30/40년 1,277/2,423/751/429 → 762/1,376/2,438/1,980. 기술 다 여는 해 15~19 → 17~38년. 그래프 `.tmp/reports/2026-10-22-lawtech.png`. 결과 파일 `.tmp/lt/base40.jsonl`(이전)·`final40.jsonl`·`v1`·`v2`.
+  - `sweep.ts`: 비교용 `lawTech`·`addTech` 조정값, 결과에 `techY`(기술 연 해)·`failY`(법 실패 해).
+
+## 0-own1. wt-own1 (2026-10-21, 합치기 전, DECISIONS 7-16·7-18·7-19 1단계)
+- 레벨마다 주인 하나 (`Building.owners`, 국가 = 왕실 건물). 저택·금융가 금고(`Building.cash`), 투자 풀 없앰, 민간 공사비는 금고가 냄 (`finance.ts chooseFunders`, 완공 레벨 약정 비율, `production.ts giveLevels`), 민영화 명령 `setPrivatize` + 매주 `ai.ts buyLevels`, 철거 대금은 헐린 레벨 주인, 배당은 레벨 수대로. 민간 상회 운영 자금 2주(`firmBufferWeeks`), 모자라면 주인이 채움(`callCapital`).
+- 저장 8판, 옛 저장 안 받음. 클라이언트 두 줄 지움 (UI_CHANGES 2-54).
+- 수치·비교는 DECISIONS 7-16 "1단계 구현". 그래프 `.tmp/reports/2026-10-21-own1.png`.
+- main e9304c1 을 합친 뒤(ba373c5) 다시 비교하니 1단계가 총생산·생활수준·귀족 소득에서 뚜렷이 나쁘다 (DECISIONS 7-16, 그래프 `-own1-v2.png`). 합치기 전에 진단할 것.
+- 2~4단계도 이 브랜치에 넣었다 (d5d78b3, 6e4b001, 769e98f). 묶음 평가는 DECISIONS 7-16 "2~4단계 구현과 묶음 평가". 남은 문제: 3~5년차 노동자 생활수준 하락(인두세 전환 때), 왕실 국고가 쌓임(20년 7.5억), 저택 금고 마름, 소작농 비율 25%에서 멈춤. 투자법 밖 남는 현금 → 금융가 금고(지분 없이)는 사용자 확인 필요.
+- 확인: 워크트리의 node_modules 는 main 의 것을 잇는다 → `npm run typecheck` 의 클라이언트 검사는 main 의 sim 을 본다. 이 브랜치 sim 으로 클라이언트를 보려면 paths 로 sim 을 가리키는 tsconfig 를 따로 쓴다 (`.tmp/own1/tsconfig.client.json`).
+
 ## 0-basicnoskill. wt-basicnoskill (2026-10-21, main에 합침, 사용자 결정 "1차 산업 기본 방식은 기술자 없음")
 - 기본 방식 6개를 농부·노동자 1,000명으로: farm_basic·fiber_basic 6,500 (이익률 23%), ranch_basic 곡물 3,000 → 고기 1,250 (20%), lumber_manual 목재 6,500 (23%), iron_shaft 광석 3,000 (17%), coal_shaft 석탄 4,000 (17%). 산출은 500 단위 중 가까운 값. 기술 방식은 그대로 (27~45%, 일꾼당 산출 모두 기본보다 많다).
 - 규칙 사전 farm 예시의 일꾼 문구를 데이터에서 읽게 고침. DESIGN 8.x 건물 표·유보 자산 표 갱신. sweep traj 에 `joblessSk` 추가.

@@ -1,10 +1,10 @@
 // 조정값 비교: npx tsx cli/sweep.ts '<TUNE JSON>' [seed] [years]  (JSON 의 "subsistence" 는 SUBSISTENCE 를 바꾼다)
 // 주요 지표(w.metrics)에서 5년마다(와 마지막 해) 대륙 합계를 뽑아 한 줄 JSON으로 출력한다.
 // TIMING=1 이면 time: { ms 시뮬레이션 시간, msPerDay 하루 평균 } 을 덧붙인다 (sweepsum.py 가 따로 요약한다)
-import { BUILDING_BY_ID, GOODS, SKILL_DEFS, SUBSISTENCE, TECH_COST, TECHS, TUNE } from '../src/data';
-import { isGovernment, ownerBuildingOf, paysDividend, slots } from '../src/economy';
+import { BUILDING_BY_ID, GOODS, LAW_TECH, SKILL_DEFS, SUBSISTENCE, TECH_BY_ID, TECH_COST, TECHS, TUNE } from '../src/data';
+import { isGovernment, paysDividend, slots } from '../src/economy';
 import { committedCost } from '../src/finance';
-import { createWorld, literacyOf, step } from '../src/index';
+import { createWorld, financeRatio, investThreshold, literacyOf, step, taxThreshold } from '../src/index';
 import type { MetricPoint } from '../src/index';
 import { workforce } from '../src/pops';
 import { applyWorld } from './worldtune';
@@ -36,27 +36,31 @@ function investSnapshot(w: World) {
 
 /**
  * 5년 구간 (월 기록, 대륙 합계): lossSh 생산 건물(정부 건물 제외) 레벨 중 적자(이익 이동평균 < 0) 비율의 월 평균,
- * dem 철거 레벨, bP·bS 민간·왕실 착공 레벨
+ * dem 철거 레벨, bP·bS 민간·왕실 착공 레벨, pv 민영화로 판 레벨
  */
 function investInterval(ms: MetricPoint[], from: number, to: number) {
-  let loss = 0, lv = 0, dem = 0, bP = 0, bS = 0;
+  let loss = 0, lv = 0, dem = 0, bP = 0, bS = 0, pv = 0;
   for (const m of ms) {
     if (m.tick <= from || m.tick > to) continue;
     for (const k of Object.values(m.kingdoms)) {
       for (const [t, x] of Object.entries(k.typeBy)) if (!isGovernment(t)) { loss += x.lossLevels; lv += k.levelsBy[t] ?? 0; }
       for (const [key, n] of Object.entries(k.starts)) {
-        if (key.endsWith('|d')) dem += n; else if (key.endsWith('|p')) bP += n; else if (key.endsWith('|s')) bS += n;
+        if (key.endsWith('|v')) pv += n; else if (key.endsWith('|d')) dem += n; else if (key.endsWith('|p')) bP += n; else if (key.endsWith('|s')) bS += n;
       }
     }
   }
-  return { lossSh: +(lv > 0 ? loss / lv : 0).toFixed(2), dem, bP, bS };
+  return { lossSh: +(lv > 0 ? loss / lv : 0).toFixed(2), dem, bP, bS, pv };
 }
 
 const over = JSON.parse(process.argv[2] ?? '{}');
 const seed = Number(process.argv[3] ?? 1), years = Number(process.argv[4] ?? 10);
 // "subsistence": { grainPerWorker 등 } 은 소작지 1인당 산출(SUBSISTENCE)을 바꾼다
 // "world": 상품 가격·임금·일자리·원료 배율 (cli/worldtune.ts)
-const { subsistence, world, tech4, ...tune } = over;
+const { subsistence, world, tech4, lawTech, addTech, ...tune } = over;
+// "addTech": 비교용 기술 더하기 ([{ id, cost, requires }])
+for (const t of (addTech ?? []) as { id: string; cost: number; requires: string[] }[]) { const d = { name: t.id, nameEn: t.id, description: '', descriptionEn: '', ...t }; TECHS.push(d); TECH_BY_ID[t.id] = d; }
+// "lawTech": 법을 여는 기술 바꾸기 ({ poll: 'guilds', ... })
+if (lawTech) Object.assign(LAW_TECH, lawTech);
 // "tech4": 4단계 기술 연구비
 if (tech4) for (const t of TECHS) if (t.cost === TECH_COST[4]) t.cost = tech4;
 Object.assign(TUNE, tune);
@@ -85,18 +89,21 @@ const yearly: Record<number, Record<string, number>> = {};
 const classInc: Record<number, Record<string, number>> = {};
 const ironY: Record<number, Record<string, number>> = {};
 function classIncome(w: World) {
-  const n: Record<string, number> = {}, inc: Record<string, number> = {};
-  for (const p of w.pops) { n[p.prof] = (n[p.prof] ?? 0) + p.size; inc[p.prof] = (inc[p.prof] ?? 0) + p.incomeEma; }
+  const n: Record<string, number> = {}, inc: Record<string, number> = {}, sav: Record<string, number> = {};
+  for (const p of w.pops) { n[p.prof] = (n[p.prof] ?? 0) + p.size; inc[p.prof] = (inc[p.prof] ?? 0) + p.incomeEma; sav[p.prof] = (sav[p.prof] ?? 0) + p.savings; }
   const per = (c: string) => (n[c] ?? 0) > 0 ? inc[c] / n[c] : 0;
   const f2 = (x: number) => +x.toFixed(2);
   // manOwn 저택이 가진 건물 레벨 합, cells 소작지 칸 합, ariSeat 저택 상급 귀족 자리 합(천)
   let manOwn = 0, cells = 0, ariSeat = 0;
+  const manors = new Set(w.buildings.filter((b) => b.typeId === 'manor').map((b) => b.id));
   for (const b of w.buildings) {
     if (b.typeId === 'subsistence') cells += b.level;
     else if (b.typeId === 'manor') ariSeat += slots(b, 'aristocrat');
-    else if (ownerBuildingOf(w, b)?.typeId === 'manor') manOwn += b.level;
+    for (const [id, n] of Object.entries(b.owners ?? {})) if (manors.has(Number(id))) manOwn += n;
   }
-  return { manOwn, cells, ariSeat: Math.round(ariSeat / 1e3), incAri: f2(per('aristocrat')), incGen: f2(per('gentry')), incSk: f2(per('skilled')), incUnsk: f2(per('unskilled')),
+  // savX: 계층 저축 합(백만)
+  const sv = (c: string) => +((sav[c] ?? 0) / 1e6).toFixed(2);
+  return { savPeas: sv('peasant'), savUnsk: sv('unskilled'), savFarm: sv('farmer'), savSk: sv('skilled'), savEx: sv('expert'), manOwn, cells, ariSeat: Math.round(ariSeat / 1e3), incAri: f2(per('aristocrat')), incGen: f2(per('gentry')), incSk: f2(per('skilled')), incUnsk: f2(per('unskilled')),
     ariSk: f2(per('skilled') > 0 ? per('aristocrat') / per('skilled') : 0), ariK: Math.round((n.aristocrat ?? 0) / 1e3), genK: Math.round((n.gentry ?? 0) / 1e3) };
 }
 // 행정청·하급 귀족 (해마다 마지막 날): admHer·admPro 세습·전문 관료제 레벨, admFill 행정청 충원율(자리 가중),
@@ -127,6 +134,13 @@ function adminSnap(w: World) {
   return { admHer: her, admPro: pro, admFill: f2(need > 0 ? have / need : 0), admWage: f2(wage / 1e3), admSk: f2(sk / 1e3), admGen: f2(gen / 1e3), wIdx: f2(wIdx), wStep: f2(wStep),
     genK: f2(gn / 1e3), solGen: f2(gs / d), gAdmSh: f3(ga / d), gManSh: f3(gm / d), gTutSh: f3(gt / d), gIdleSh: f3(gi / d) };
 }
+const yearPts: MetricPoint[] = [];
+const lawY: Record<string, [number | null, number | null]>[] = [];
+const ratioY: Record<number, number>[] = [];
+// 왕국마다 기술을 연 해 (0.1년)
+const techY: Record<string, number>[] = [];
+// 왕국마다 법 바꾸기가 끝날 때 실패한 해 (세법·투자법)
+const failY: { tax: number[]; invest: number[] }[] = [];
 const t0 = performance.now();
 for (let d = 0; d < years * 360; d++) {
   step(w);
@@ -142,11 +156,13 @@ for (let d = 0; d < years * 360; d++) {
     else { yearAcc.supR += gm.supply; yearAcc.demR += gm.demand; yearAcc.pR += pr / nR; }
   }
   for (const b of w.buildings) if (b.typeId === 'subsistence') { yearAcc.hG += b.last.output.grain ?? 0; yearAcc.hT += b.last.output.timber ?? 0; yearAcc.hF += b.last.output.fiber ?? 0; }
-  for (const k of w.kingdoms) yearAcc.landTax += k.landGot ?? 0;
   // 소작농 묶음 충족률·부 (인구 가중, 하루 평균)
   { let n = 0, f = 0, wl = 0; for (const p of w.pops) if (p.prof === 'peasant') { n += p.size; f += p.size * p.fulfillment; wl += p.size * p.wealth100 / 100; }
     if (n > 0) { yearAcc.pFul += f / n; yearAcc.pW += wl / n; } }
   if (w.tick % 360 === 0) {
+    // 해마다 지표 (w.metrics 는 30년까지만 남아 따로 모은다)
+    const last = w.metrics[w.metrics.length - 1];
+    if (last?.tick === w.tick) yearPts.push(last);
     const y = w.tick / 360;
     classInc[y] = classIncome(w);
     admY[y] = adminSnap(w);
@@ -203,7 +219,21 @@ for (let d = 0; d < years * 360; d++) {
   }
   if (w.tick % 28 !== 0) continue;
   w.kingdoms.forEach((k, i) => {
+    // 법이 열린 해(금융가 자산 비율이 기준을 처음 넘은 때)와 실제로 바뀐 해 (0.1년)
+    const r = financeRatio(w, k.id), yr = +(w.tick / 360).toFixed(1), L = (lawY[i] ??= {});
+    // 비율 5% 칸마다 처음 넘은 해
+    const C = (ratioY[i] ??= {});
+    for (let p = 5; p <= 95; p += 5) if (C[p] == null && r >= p / 100) C[p] = yr;
+    for (const [id, t] of [['poll', taxThreshold('poll')], ['income', taxThreshold('income')], ['upper', investThreshold('upper')], ['middle', investThreshold('middle')], ['lower', investThreshold('lower')]] as const) {
+      const e = (L[id] ??= [null, null]);
+      if (e[0] == null && t != null && r >= t) e[0] = yr;
+      if (e[1] == null && (k.taxLaw === id || ['upper', 'middle', 'lower'].indexOf(id) >= 0 && ['nobles', 'upper', 'middle', 'lower'].indexOf(k.investLaw) >= ['nobles', 'upper', 'middle', 'lower'].indexOf(id))) e[1] = yr;
+    }
     const g = w.companies.find((c) => c.id === k.governmentId)!;
+    const T = (techY[i] ??= {});
+    for (const id of g.research.known) T[id] ??= yr;
+    const F = (failY[i] ??= { tax: [], invest: [] });
+    for (const kind of ['tax', 'invest'] as const) { const ft = k.lawFail?.[kind]; if (ft != null && ft > w.tick - 28) F[kind].push(+(ft / 360).toFixed(1)); }
     trace[i].push({ tax: k.budget.tax, wages: k.budget.wages, weeks: (k.expenseEma ?? 0) > 0 ? g.cash / k.expenseEma! : Infinity, debt: g.debt > 0 });
   });
 }
@@ -256,14 +286,25 @@ for (const m of w.metrics) {
   };
 }
 // 해마다 흐름 (cli/flowsum.py, trajchart.py): 인구, 소작농·노동자 SoL, 소작농 식량, 총생산, 레벨, 곡물값, 소작농 비율, 민간 현금(백만), 실업 비율
-out.traj = w.metrics.filter((m) => m.tick % 360 === 0 && m.tick > 0).map((m) => {
+out.traj = yearPts.map((m) => {
   const pop = sum(m, (k) => k.pop), by = (c: 'peasant' | 'unskilled' | 'skilled', f: (k: MetricPoint['kingdoms'][number]) => number) =>
     +(sum(m, (k) => f(k) * k.popBy[c]) / Math.max(1, sum(m, (k) => k.popBy[c]))).toFixed(2);
   return {
     y: m.tick / 360, pop: +(pop / 1e6).toFixed(2), solPeas: by('peasant', (k) => k.solBy.peasant), solUnsk: by('unskilled', (k) => k.solBy.unskilled), solSk: by('skilled', (k) => k.solBy.skilled),
     foodPeas: by('peasant', (k) => k.foodBy.peasant), gdp: Math.round(sum(m, (k) => k.gdp) / 1e6), levels: sum(m, (k) => k.levelsState + k.levelsPrivate),
     grain: m.goods.grain.ratio, peas: +(sum(m, (k) => k.popBy.peasant) / pop).toFixed(2),
-    privCash: Math.round(sum(m, (k) => k.privateCash) / 1e6), jobless: +(sum(m, (k) => k.joblessShare * k.pop) / pop).toFixed(3),
+    privCash: Math.round(sum(m, (k) => k.privateCash) / 1e6),
+    // 레벨 주인: privSh 민간 레벨 비율, lvMan·lvFin 저택·금융가가 가진 레벨, manCash·finCash 저택·금융가 금고 합(백만)
+    privSh: +(sum(m, (k) => k.levelsPrivate) / Math.max(1, sum(m, (k) => k.levelsState + k.levelsPrivate))).toFixed(3),
+    finR: +(sum(m, (k) => k.assetsFinance ?? 0) / Math.max(1, sum(m, (k) => (k.assetsManor ?? 0) + (k.assetsFinance ?? 0)))).toFixed(3),
+    // 세법·투자법 단계 (왕국 평균: 토지 0 / 인두 1 / 소득 2, 귀족 0 … 노동자·농부 3), 주간 세입(천), 징수율
+    taxIdx: +(Object.values(m.kingdoms).reduce((a, k) => a + ['land', 'poll', 'income'].indexOf(k.taxLaw ?? 'land'), 0) / Object.keys(m.kingdoms).length).toFixed(2),
+    invIdx: +(Object.values(m.kingdoms).reduce((a, k) => a + ['nobles', 'upper', 'middle', 'lower'].indexOf(k.investLaw ?? 'nobles'), 0) / Object.keys(m.kingdoms).length).toFixed(2),
+
+    treasury: Math.round(sum(m, (k) => k.treasury - k.debt) / 1e6),
+    lvMan: sum(m, (k) => k.levelsManor ?? 0), lvFin: sum(m, (k) => k.levelsFinance ?? 0),
+    manCash: +(sum(m, (k) => k.manorCash ?? 0) / 1e6).toFixed(1), finCash: +(sum(m, (k) => k.financeCash ?? 0) / 1e6).toFixed(1),
+    jobless: +(sum(m, (k) => k.joblessShare * k.pop) / pop).toFixed(3),
     // 기술자 실업률: 기술자 실업 / (고용 + 실업)
     joblessSk: (() => {
       const lab = (k: MetricPoint['kingdoms'][number]) => (k.labor as Record<string, { employed: number; jobless: number } | undefined>).skilled;
@@ -311,5 +352,9 @@ for (const tr of trace) {
 }
 const f2 = (x: number) => +x.toFixed(2);
 out.pol = { t5: f2(t5 / n), t1: f2(t1 / n), run5: f2((run5 * 28) / 360), run1: f2((run1 * 28) / 360), chg: f2(chg / nk / yrs), flip: f2(chg ? flips / chg : 0), wchg: f2(wchg / nk / yrs), debt: f2(debt / n), hoard: f2(hoard / n) };
+out.laws = lawY;
+out.ratioY = ratioY;
+out.techY = techY;
+out.failY = failY;
 if (process.env.TIMING) out.time = { ms: Math.round(simMs), msPerDay: +(simMs / (years * 360)).toFixed(2) };
 console.log(JSON.stringify(out));
