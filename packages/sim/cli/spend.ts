@@ -19,7 +19,7 @@ for (let d = 1; d <= 360 * years; d++) {
     const pick = free > 0 ? pickProject(w, c, o, free) : null;
     const room: string[] = [];
     for (const r of w.regions.filter((x) => x.kingdomId === c.kingdomId)) for (const t of BUILDING_TYPES) if (!t.auto && t.id !== 'builder') { const n = roomFor(w, r.id, t.id); if (n >= 1) room.push(`${r.id}:${t.id}${Math.floor(n)}`); }
-    console.log(`${c.name} cash ${(c.cash / 1e6).toFixed(1)}M need ${(treasuryNeed(w, c) / 1e6).toFixed(1)}M free ${(free / 1e6).toFixed(1)}M | 공사 ${ks.length} 밀림 ${backlog.toFixed(0)}일 사무소 ${office}lv ${est.pointsPerDay.toFixed(0)}pt/d 레벨당 ${(est.cost / 1e3).toFixed(0)}k | 연구 ${c.research.current ?? '-'} ${c.research.budget.toFixed(0)}/d | 주간이익 ${(c.lastWeekProfit / 1e3).toFixed(0)}k`);
+    console.log(`${c.name} cash ${(c.cash / 1e6).toFixed(1)}M need ${(treasuryNeed(w, c) / 1e6).toFixed(1)}M free ${(free / 1e6).toFixed(1)}M | 공사 ${ks.length} 밀림 ${backlog.toFixed(0)}일 사무소 ${office}lv ${est.pointsPerDay.toFixed(0)}pt/d 레벨당 ${(est.cost / 1e3).toFixed(0)}k | 연구 ${c.research.current ?? '-'} ${c.research.points.toFixed(0)}pt/wk | 주간이익 ${(c.lastWeekProfit / 1e3).toFixed(0)}k`);
     console.log(`   pick ${pick ? `${pick.typeId} ${pick.levels}lv @${pick.regionId} roi ${pick.score.toFixed(2)}` : 'none'} | room ${room.slice(0, 14).join(' ')}`);
   }
 }

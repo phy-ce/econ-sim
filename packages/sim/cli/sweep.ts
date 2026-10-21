@@ -59,13 +59,15 @@ const over = JSON.parse(process.argv[2] ?? '{}');
 const seed = Number(process.argv[3] ?? 1), years = Number(process.argv[4] ?? 10);
 // "subsistence": { grainPerWorker 등 } 은 소작지 1인당 산출(SUBSISTENCE)을 바꾼다
 // "world": 상품 가격·임금·일자리·원료 배율 (cli/worldtune.ts)
-const { subsistence, world, tech4, lawTech, addTech, ...tune } = over;
+const { subsistence, world, tech4, techScale, lawTech, addTech, ...tune } = over;
 // "addTech": 비교용 기술 더하기 ([{ id, cost, requires }])
 for (const t of (addTech ?? []) as { id: string; cost: number; requires: string[] }[]) { const d = { name: t.id, nameEn: t.id, description: '', descriptionEn: '', ...t }; TECHS.push(d); TECH_BY_ID[t.id] = d; }
 // "lawTech": 법을 여는 기술 바꾸기 ({ poll: 'guilds', ... })
 if (lawTech) Object.assign(LAW_TECH, lawTech);
 // "tech4": 4단계 기술 연구비
 if (tech4) for (const t of TECHS) if (t.cost === TECH_COST[4]) t.cost = tech4;
+// "techScale": 모든 기술 값(연구 포인트)에 곱한다
+if (techScale) for (const t of TECHS) t.cost *= techScale;
 Object.assign(TUNE, tune);
 if (subsistence) Object.assign(SUBSISTENCE, subsistence);
 applyWorld(world);
@@ -118,7 +120,7 @@ function classIncome(w: World) {
   }
   // savX: 계층 저축 합(백만)
   const sv = (c: string) => +((sav[c] ?? 0) / 1e6).toFixed(2);
-  return { savPeas: sv('peasant'), savUnsk: sv('unskilled'), savFarm: sv('farmer'), savSk: sv('skilled'), savEx: sv('expert'), manOwn, cells, ariSeat: Math.round(ariSeat / 1e3), incAri: f2(per('aristocrat')), incGen: f2(per('gentry')), incSk: f2(per('skilled')), incUnsk: f2(per('unskilled')),
+  return { savPeas: sv('peasant'), savUnsk: sv('unskilled'), savFarm: sv('farmer'), savSk: sv('skilled'), savEx: sv('expert'), manOwn, cells, ariSeat: Math.round(ariSeat / 1e3), incAri: f2(per('aristocrat')), incGen: f2(per('gentry')), incSk: f2(per('skilled')), incEx: f2(per('expert')), incUnsk: f2(per('unskilled')),
     ariSk: f2(per('skilled') > 0 ? per('aristocrat') / per('skilled') : 0), ariK: Math.round((n.aristocrat ?? 0) / 1e3), genK: Math.round((n.gentry ?? 0) / 1e3) };
 }
 // 행정청·하급 귀족 (해마다 마지막 날): admHer·admPro 세습·전문 관료제 레벨, admFill 행정청 충원율(자리 가중),
@@ -479,6 +481,11 @@ out.traj = yearPts.map((m) => {
       return +(idle / Math.max(1, emp + idle)).toFixed(3);
     })(),
     ...(classInc[m.tick / 360] ?? {}),
+    // 연구: resPts 왕국 평균 주간 연구 포인트, lit 인구 가중 문해력, techs 왕국 평균 아는 기술 수, techsMin 가장 적은 왕국
+    resPts: +(Object.values(m.kingdoms).reduce((a, k) => a + k.researchPts, 0) / Object.keys(m.kingdoms).length).toFixed(1),
+    lit: +(sum(m, (k) => k.literacy * k.pop) / pop).toFixed(3),
+    techs: +(Object.values(m.kingdoms).reduce((a, k) => a + k.techs, 0) / Object.keys(m.kingdoms).length).toFixed(2),
+    techsMin: Math.min(...Object.values(m.kingdoms).map((k) => k.techs)),
     taxRatio: +(sum(m, (k) => k.taxRatio * k.pop) / pop).toFixed(2), revWk: Math.round(sum(m, (k) => k.revenueWeek) / 1e3),
     ...(admY[m.tick / 360] ?? {}),
     // 철: 철광석·철 값(장기 기준 대비), 철광산 레벨, 철광산 충원율(레벨 가중), 철 생산(천/일)

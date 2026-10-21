@@ -22,6 +22,7 @@
 0-5. **sim 저장값 반올림 없앰 (2-58, 2026-10-22).** `Pop.wealth`·`literacy`, `Region.education`, `Building.crew`·새 `exp`가 이제 반올림하지 않은 규칙 값이다 (사본 아님). 가격·저축·인구 등도 소수 끝자리가 길다: 화면에 숫자를 그대로 찍는 곳이 있으면 형식을 붙인다 (지금 찾은 곳은 모두 `NumericValue`). `Pop.fund` 모양 바뀜 (`{id, u}`, 2-58). 저장 형식 12판(지금은 13판, 2-60-1), 저장 키는 그대로 둬도 된다 (10·11판은 `migrateWorld`가 바꾼다). 컴파일 수정 없음.
 0-6. **지역 건물의 수지·지분·배당 (2-59, 사용자 요청 2026-10-22).** 행마다 소유 막대(`levelOwnersOf`)·수지 막대·주간 이익·레벨당 이익·유보 막대, 상세에 수지 폭포·이익 줄·유보 줄·주인 표(레벨·지분·배당/주). 값은 새 export `buildingEcon(world, b)` 하나 (wt-regionecon, main 병합 뒤). 2-42(5번) 행·상세에 얹고, 2-42의 손익·소유 막대·2-31 패널 막대·2-32 3번 칩을 대신한다.
 0-7. **재정 수지 표를 손잡이별로 묶고, 줄을 누르면 작은 창 (2-60, 사용자 요청 2026-10-22).** `FinancePanel.tsx` 17의 수입/지출 두 묶음을 `preview.groups` 다섯 묶음(세금 수준·국영 임금·연구비·복지·고정)으로, 단계 버튼은 묶음 머리에 하나. 새 줄 `stateFirms`(국영 사업 손익, 순수지에 들어감). 줄을 누르면 360px 떠 있는 창에 `budgetDrill(world, kid, key)` 표 (인건비 = 건물·직종별 인원 × 1인 임금 = 기본 × 임금 지수 × 단계). 2-30 표 구조·2-57 2번을 대신한다 (wt-regionecon, main 병합 뒤).
+0-8. **연구는 돈 대신 문해력 포인트 (2-61, 사용자 결정 2026-10-22).** 연구비 손잡이·연구비 줄·`TUNE.researchLevels`·`Research.budget`이 없어졌다. 재정 창에서 연구비 묶음을 지우고(2-60 묶음은 넷: 세금·국영 임금·복지·고정), 연구 창은 주간 포인트(`Research.points`)·왕국 문해력·남은 주 수와 기술 값(포인트)을 보인다. sim 작업자가 `CompanyPanel.tsx` 156·567·577, `FinancePanel.tsx` 15를 컴파일 맞춤으로 고쳤다.
 
 아래는 사용자 요청이거나 정리다.
 1. **아래 창 버튼 토글 + 왕국 지도 버튼 없애기 (2-34, 사용자 재요청).** `WindowWorkspace.tsx` 13·59·67~70: 최소화 상태와 dock의 지도 버튼을 없앤다.
@@ -1344,6 +1345,27 @@ Cells, top row left to right, then bottom row:
 
 - 있는 것: `T.budgetLines.*`(86·376행, `wages`는 이미 `정부 건물 인건비`), `T.budgetNet`, `T.policyLevel`, `T.weeklyBudget`, `T.taxLaw`·`landBased`·`pollTax`·`incomeTax`.
 - 화면 규칙: 설명 문구 없음. 식과 정확한 값은 툴팁에만.
+
+### 2-61. 연구는 돈 대신 문해력 포인트 (사용자 결정 2026-10-22, DECISIONS 7-20)
+sim 변경 (wt-research):
+- 연구에 돈이 들지 않는다. 주간 연구 포인트 = `TUNE.researchBase` + `TUNE.researchPerLiteracy` × 왕국 문해력(%). 왕국 문해력은 sim export `kingdomLiteracy(world, kingdomId)`(0..1), 이번 문해력 기준 주간 포인트는 `researchPoints(world, kingdomId)`.
+- `Research` = `{ points, current, progress, known }`. `points` = 지난주 쌓은 포인트(주간, 고른 기술이 없으면 0). `progress`는 포인트. `budget`은 없어졌다.
+- 기술 값 `TechDef.cost`·`TECH_COST`는 포인트다 (예전 연구비의 1/4,000, 비율 그대로).
+- 정책 손잡이 `BUDGET_ITEMS` = `tax`·`wages`·`welfare` (연구비 없음). `BudgetLineKey`에서 `research`, `BUDGET_GROUPS`에서 연구비 묶음, `drillResearch`·`ResearchDrill`, `Kingdom.lastBudget.research`, 장부 `ledger.research`, 명령 `setResearchBudget`, `MAX_RESEARCH_BUDGET`, `TUNE.researchShare`·`researchLevels`가 없어졌다.
+- 지표 `KingdomMetrics.research`(연구비) 대신 `researchPts`(지난주 포인트)와 `literacy`(왕국 문해력)가 생겼다.
+- 왕실마다 시작 학교 1레벨(귀족 가정교사, 인구가 가장 많은 지역, `START_SCHOOL_LEVELS`).
+- 저장 형식 14판 (13판은 `migrateWorld`가 바꾼다: 쌓인 연구비는 포인트로).
+
+화면:
+1. 재정 창(`FinancePanel.tsx`, 2-60): 연구비 묶음·단계 버튼·연구비 문자열(`strings.ts` 43·334 `"research"` 줄 설명, `T.dailyBudget`·`T.adjustFinance` 중 연구에만 쓰던 것)을 지운다. 묶음은 넷(세금 수준·국영 임금·복지·고정).
+2. 연구 창(`CompanyPanel.tsx` `Research`): 머리 줄에 `주간 포인트`(`me.research.points`), `문해력`(`kingdomLiteracy`, %), 진행 중 기술의 `남은 주`(⌈(값 − 진행) ÷ points⌉). 재정 창으로 가는 링크(`onFinance`)는 지운다 (연구는 재정과 상관없다). 기술 칸의 값은 `ƒ`(돈) 기호 없이 포인트로, 남은 시간은 주 단위로. 왕실 요약(156)의 `ƒ…/일`도 포인트/주로.
+3. 연구 트리(2-48)·백과 링크: 기술 값은 포인트.
+
+컴파일 맞춤으로 sim 작업자가 고친 곳 (최소한, 화면 모양은 그대로):
+- `CompanyPanel.tsx` 156: `c.research.budget` → `c.research.points/7` (하루 포인트, 라벨 `T.perDay`와 `ƒ`는 그대로라 틀린 표시: 위 2번에서 고친다).
+- `CompanyPanel.tsx` 567: `r.budget`(money) → `r.points/7`(int).
+- `CompanyPanel.tsx` 577: 남은 일수 = ⌈남은 값 ÷ (r.points/7)⌉ (값이 맞다. 주 단위로 바꾸는 것은 2번).
+- `FinancePanel.tsx` 15: `multipliers`에서 `research:TUNE.researchLevels` 칸을 지웠다. 같은 파일 17의 `'research'` 줄 필터는 컴파일되므로 남겨 두었다 (줄이 없어 빈 칸).
 
 ## 3. sim 쪽 필요 사항 (Claude가 처리할 것, UI 작업자는 요청만)
 - **2-59 주 단위 수지 (요청됨, 2026-10-22):** `BuildingEcon`에 `week: { sales, tax, inputs, wages, profit }` (건물 `revenue`·`tax`·`inputCost`·`wageCost`의 이동평균 × 7, `profitEma`와 같은 기간). 들어오면 2-59-3 폭포 라벨을 `/주`로.

@@ -6,6 +6,7 @@ import { subsistenceWage } from './labor';
 import { basketCostAt } from './market';
 import { workforce } from './pops';
 import { kingdomOf } from './kingdoms';
+import { kingdomLiteracy } from './finance';
 import { round2 } from './rng';
 import { roundAll } from './round';
 import { POP_CLASSES, wealthOf } from './types';
@@ -29,16 +30,17 @@ export interface KingdomMetrics {
   solBy: Record<PopClass, number>;
   foodBy: Record<PopClass, number>;
   growthBy: Record<PopClass, number>;
-  /** 연 GDP, 지난주 국정 수지: 세입, 민간 공사 수수료, 정부 건물 운영비(임금 + 원료), 연구비, 국채 이자 */
+  /** 연 GDP, 지난주 국정 수지: 세입, 민간 공사 수수료, 정부 건물 운영비(임금 + 원료), 국채 이자. researchPts = 지난주 연구 포인트, literacy = 왕국 문해력(인구 가중 0..1) */
   gdp: number;
   revenueWeek: number;
   feesWeek: number;
   govSpendWeek: number;
-  research: number;
+  researchPts: number;
+  literacy: number;
   interest: number;
   /** 징수율 */
   taxRatio: number;
-  /** 정책 단계 (세금·국영 임금·연구비 수준), 임금 지수 */
+  /** 정책 단계 (세금·국영 임금·복지 수준), 임금 지수 */
   policy: Record<BudgetItem, number>;
   wageIndex: number;
   /** 돈: 국고, 국채, 민간 상회 현금, 저택·금융가 금고 합(pool = manorCash + financeCash), 가계 저축 */
@@ -198,7 +200,7 @@ export function recordMetrics(w: World) {
       peasantShare: pop > 0 ? round2(n.peasant / pop) : 0, joblessShare: pop > 0 ? round2(jobless / pop) : 0,
       wealthBy: avg(wealth), solBy: avg(sol), foodBy: avg(food), growthBy: avg(growth),
       gdp: r0(kingdomGdp(w, k.id)), revenueWeek: r0(k.lastBudget?.revenue ?? 0), feesWeek: r0(k.lastBudget?.fees ?? 0),
-      govSpendWeek: r0((k.lastBudget?.wages ?? 0) + (k.lastBudget?.goods ?? 0)), research: r0(k.lastBudget?.research ?? 0), interest: r0(k.lastBudget?.interest ?? 0),
+      govSpendWeek: r0((k.lastBudget?.wages ?? 0) + (k.lastBudget?.goods ?? 0)), researchPts: round2(gov?.research.points ?? 0), literacy: round2(kingdomLiteracy(w, k.id)), interest: r0(k.lastBudget?.interest ?? 0),
       taxRatio: k.taxRatio ?? 0, policy: { ...k.budget }, wageIndex: k.wageIndex ?? 0,
       treasury: r0(gov?.cash ?? 0), debt: r0(gov?.debt ?? 0), privateCash: r0(firms.reduce((a, c) => a + c!.cash, 0)), pool: r0(manorCash + financeCash), manorCash: r0(manorCash), financeCash: r0(financeCash),
       assetsManor: assets?.manor ?? 0, assetsFinance: assets?.finance ?? 0, taxLaw: k.taxLaw, investLaw: k.investLaw, savings: r0(savings),

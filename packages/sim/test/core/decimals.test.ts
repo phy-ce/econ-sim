@@ -79,15 +79,22 @@ describe('보이는 값은 소수 둘째 자리, 저장값은 그대로', () => 
     expect(save(b)).toBe(save(a));
   });
 
-  it('옛 판 저장: 9판 이하는 불러오지 않고, 10~12판은 13판으로 바꾼다', () => {
+  it('옛 판 저장: 9판 이하는 불러오지 않고, 10~13판은 14판으로 바꾼다', () => {
     const w = createWorld(7);
     runTo(w, 30);
     const now = JSON.parse(save(w));
     for (const v of [3, 4, 5, 6, 7, 8, 9]) expect(migrateWorld({ ...now, version: v })).toBeNull();
     expect(save(migrateWorld(JSON.parse(save(w)))!)).toBe(save(w));
+    // 13판까지: 연구가 돈이었다 (연구비 수준·연구비 장부·Research.budget, 진행은 연구비, 기술 값은 지금의 4,000배)
+    const toOldResearch = (o: any) => {
+      o.version = 13;
+      for (const c of o.companies) { c.research.budget = c.research.points / 7; delete c.research.points; for (const id of Object.keys(c.research.progress)) c.research.progress[id] *= 4000; c.ledger.research = 0; c.lastLedger.research = 0; }
+      for (const k of o.kingdoms) { k.budget.research = 3; if (k.lastBudget) k.lastBudget.research = 0; }
+      return o;
+    };
     // 11판: 부·문해력·교육 접근도·숙련도·작업 인원이 100배 값이었다 (사본 칸은 소수 둘째 자리)
     const to11 = () => {
-      const o = JSON.parse(save(w));
+      const o = toOldResearch(JSON.parse(save(w)));
       o.version = 11;
       for (const p of o.pops) { p.wealth100 = p.wealth * 100; p.literacy100 = p.literacy * 100; p.wealth = Math.round(p.wealth * 100) / 100; p.literacy = Math.round(p.literacy * 100) / 100; }
       for (const r of o.regions) { r.education100 = r.education * 100; r.education = Math.round(r.education * 100) / 100; }
@@ -104,9 +111,18 @@ describe('보이는 값은 소수 둘째 자리, 저장값은 그대로', () => 
         expect(close(b.exp, x.exp) && (x.crew === undefined ? b.crew === undefined : close(b.crew!, x.crew))).toBe(true);
         b.exp = x.exp; if (x.crew !== undefined) b.crew = x.crew;
       });
+      // 연구 진행은 4,000배 했다가 나눈다. 지난주 연구 포인트(화면 기록)는 불러올 때 0이 되고 다음 주에 다시 찬다
+      got.companies.forEach((c, i) => {
+        const x = w.companies[i].research;
+        for (const id of Object.keys(x.progress)) { expect(close(c.research.progress[id], x.progress[id])).toBe(true); c.research.progress[id] = x.progress[id]; }
+        expect(c.research.points).toBe(0);
+        c.research.points = x.points;
+      });
       // 바꾼 칸은 객체 끝에 새로 생기므로 키 순서는 다를 수 있다: 값으로 비교한다
       expect(JSON.parse(save(got))).toEqual(JSON.parse(save(w)));
     };
+    expect(w.companies.some((c) => Object.values(c.research.progress).some((x) => x > 0))).toBe(true);
+    same(migrateWorld(toOldResearch(JSON.parse(save(w))))!);
     same(migrateWorld(to11())!);
     // 10판: 그에 더해 금융가 지분이 id → 지분 수 객체였다
     const v10 = to11();

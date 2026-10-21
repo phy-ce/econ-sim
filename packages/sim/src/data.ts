@@ -81,8 +81,8 @@ export const CLASS_DEFS: Record<PopClass, ClassDef> = {
 
 const tech = (id: string, name: string, nameEn: string, tier: number, requires: string[], description: string, descriptionEn: string): TechDef =>
   ({ id, name, nameEn, cost: TECH_COST[tier], requires, description, descriptionEn });
-/** 단계별 연구비. 1단계는 최대 연구비로 넉 달, 기술 전부는 최대 연구비로 약 18년 */
-export const TECH_COST = [0, 12_000_000, 24_000_000, 40_000_000, 70_000_000];
+/** 단계별 연구 포인트 (예전 연구비 12:24:40:70 비율 그대로). 연구 포인트는 왕국 문해력으로 정한다 (finance.ts researchPoints) */
+export const TECH_COST = [0, 3_000, 6_000, 10_000, 17_500];
 
 export const TECHS: TechDef[] = [
   // 1단계: 선행 없음. 가공 산업과 기반 시설을 연다
@@ -361,7 +361,7 @@ export function scaleBonus(level: number): number {
  * - schoolTarget: AI 왕실의 지역 문해력 목표. 학교 자리를 이 문해력에 닿을 만큼까지 짓는다 (기술자 자격 문턱 qualSkilledL 위여야 자격자가 나온다)
  * - schoolTaxMax: AI 왕실은 세금 수준이 이 단계 이하일 때만 새 학교를 짓는다 (운영비를 낼 세금 칸을 남긴다)
  * - govWageLevels: 국영 임금 수준 1~5단계의 배율. 국영 임금 = 기본 임금 × 왕국 임금 지수 × 이 배율
- * - researchShare, researchLevels: 주간 연구비 = 주간 경제 규모 × researchShare × 연구비 수준 배율
+ * - researchBase, researchPerLiteracy: 주간 연구 포인트 = researchBase + researchPerLiteracy × 왕국 문해력(%, 인구 가중 평균). 돈은 들지 않는다 (finance.ts researchPoints)
  * - welfareLevels: 복지 수준 1~5단계의 목표 생활수준. 복지법이 덮는 pop 중 생활수준이 이보다 낮은 pop 의 소득을 목표 소득까지 채운다 (welfare.ts)
  * - welfareWeeks: (AI) 복지를 올리거나 켜는 조건: 국고 ≥ (복지를 뺀 주간 국정 지출 + 그 복지의 주간 예상액) × 이 주 수. 이 주 수의 절반 아래로 줄면서 국고가 줄면 내린다
  * - doneWageMax: 기술을 다 연 AI 왕국이 풂 조건에서 국영 임금을 올리는 상한 단계 (임금 지수 1 이하일 때만)
@@ -450,8 +450,8 @@ export const TUNE = {
   rawCapWealth: 10,
   taxLevels: [0.6, 0.8, 1, 1.2, 1.4],
   govWageLevels: [0.7, 0.85, 1, 1.15, 1.3],
-  researchShare: 0.045,
-  researchLevels: [0.5, 0.75, 1, 1.5, 2],
+  researchBase: 50,
+  researchPerLiteracy: 2,
   welfareLevels: [2, 2.5, 3, 3.5, 4],
   welfareWeeks: 40, // 26·39·52·78 (시드 1·2), 30·40·50 (시드 1~3) 비교: 40이 11~20년차 총생산·노동자 생활수준이 가장 높다. 30은 10년차 총생산이 1/3 줄고, 50은 40과 비슷하다
   treasuryLowWeeks: 26,

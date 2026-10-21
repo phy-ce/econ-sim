@@ -39,41 +39,40 @@ function shareTechs(w: World) {
       if (!c) continue;
       c.research.known = [...gov.research.known];
       c.research.current = null;
-      c.research.budget = 0;
+      c.research.points = 0;
     }
   }
 }
-
-/** 연구비는 그 왕국 연구원(전문가·기술자) pop 의 소득이 된다 */
-export const RESEARCHER_WEIGHT: Partial<Record<PopClass, number>> = { skilled: 0.3, expert: 1 };
 
 export function doResearch(w: World) {
   shareTechs(w);
 }
 
-/** 연구비를 쓴다: 그 왕국 연구원 pop 의 소득이 되고 진행 중인 기술에 쌓인다. 쓴 돈을 돌려준다 */
-function fundResearch(w: World, c: Company, amount: number): number {
+/** 왕국 문해력 0..1: 그 왕국 pop 의 인구 가중 평균 */
+export function kingdomLiteracy(w: World, kingdomId: number): number {
+  let n = 0, lit = 0;
+  for (const p of w.pops) if (kingdomOf(w, p.regionId) === kingdomId) { n += p.size; lit += p.size * p.literacy; }
+  return n > 0 ? lit / n : 0;
+}
+
+/** 주간 연구 포인트 = TUNE.researchBase + TUNE.researchPerLiteracy × 왕국 문해력(%). 돈은 들지 않는다 */
+export function researchPoints(w: World, kingdomId: number): number {
+  return TUNE.researchBase + TUNE.researchPerLiteracy * kingdomLiteracy(w, kingdomId) * 100;
+}
+
+/** 연구 (매주, 왕실): 이번 주 포인트를 고른 기술에 쌓는다. 고른 기술이 없으면 포인트는 사라진다. 다 차면 기술이 열리고 남는 포인트도 사라진다 */
+function advanceResearch(w: World, c: Company) {
   const r = c.research;
   const tech = r.current ? TECH_BY_ID[r.current] : undefined;
-  if (!tech || r.known.includes(tech.id)) { r.current = null; return 0; }
-  const spend = Math.min(amount, Math.max(0, c.cash), tech.cost - (r.progress[tech.id] ?? 0));
-  if (spend <= 0) return 0;
-  c.cash -= spend;
-  c.weekProfit -= spend;
-  c.ledger.research += spend;
-  const mine = w.pops.filter((p) => kingdomOf(w, p.regionId) === c.kingdomId && RESEARCHER_WEIGHT[p.prof]);
-  if (!payPops(w, mine, spend, (p) => p.size * (RESEARCHER_WEIGHT[p.prof] ?? 0))) {
-    const all = w.pops.filter((p) => RESEARCHER_WEIGHT[p.prof]);
-    if (!payPops(w, all, spend, (p) => p.size * (RESEARCHER_WEIGHT[p.prof] ?? 0))) w.fund += spend;
-  }
-  r.progress[tech.id] = (r.progress[tech.id] ?? 0) + spend;
-  if (r.progress[tech.id] >= tech.cost - 1e-6) {
+  if (!tech || r.known.includes(tech.id)) { r.current = null; r.points = 0; return; }
+  r.points = researchPoints(w, c.kingdomId);
+  r.progress[tech.id] = Math.min(tech.cost, (r.progress[tech.id] ?? 0) + r.points);
+  if (r.progress[tech.id] >= tech.cost) {
     r.known.push(tech.id);
     r.current = null;
     logEvent(w, c.id, `기술 연구 완료: ${tech.name}. 보유 건물의 생산 방식에서 새 방식을 고를 수 있습니다.`,
       { kind: 'info', en: `Research complete: ${techNameEn(tech.id)}. New production methods can now be chosen for your buildings.` });
   }
-  return spend;
 }
 
 // ---------------------------------------------------------------- 국정 예산 (빅토리아3 방식)
@@ -93,9 +92,9 @@ export function dailyOutput(w: World, kingdomId: number): number {
   return v;
 }
 
-/** 정책 단계(1~5)의 배율: 세금 수준 TUNE.taxLevels, 국영 임금 수준 TUNE.govWageLevels, 연구비 수준 TUNE.researchLevels. 복지 수준은 목표 생활수준 TUNE.welfareLevels */
+/** 정책 단계(1~5)의 배율: 세금 수준 TUNE.taxLevels, 국영 임금 수준 TUNE.govWageLevels. 복지 수준은 목표 생활수준 TUNE.welfareLevels */
 export function budgetMult(k: Kingdom, item: BudgetItem): number {
-  const table = item === 'tax' ? TUNE.taxLevels : item === 'wages' ? TUNE.govWageLevels : item === 'research' ? TUNE.researchLevels : TUNE.welfareLevels;
+  const table = item === 'tax' ? TUNE.taxLevels : item === 'wages' ? TUNE.govWageLevels : TUNE.welfareLevels;
   return table[k.budget[item] - 1];
 }
 
@@ -130,8 +129,8 @@ export function applyStateWages(w: World, k: Kingdom) {
 
 /**
  * 국정 예산 (매주): 금액을 편성하지 않는다. 왕실 정부 건물(행정청·건축사무소·학교)은 늘 다 가동하고 임금과 원료를 국고에서 낸다.
- * 여기서는 연구비(주간 경제 규모 × TUNE.researchShare × 연구비 수준 배율)를 내고, 국영 임금을 다시 정하고, 지난주 국정 수지를 적는다 (복지는 매일 welfare.ts).
- * 국고가 모자라면 임금·원료는 국채로 낸다 (payWages, collectOrders). 연구비는 현금이 있는 만큼만 낸다
+ * 여기서는 연구 포인트를 쌓고(돈은 들지 않는다, advanceResearch), 국영 임금을 다시 정하고, 지난주 국정 수지를 적는다 (복지는 매일 welfare.ts).
+ * 국고가 모자라면 임금·원료는 국채로 낸다 (payWages, collectOrders)
  */
 export function spendBudget(w: World) {
   for (const k of w.kingdoms) {
@@ -143,12 +142,11 @@ export function spendBudget(w: World) {
     k.revenueWeek = 0;
     k.spentWeek = { wages: 0, goods: 0, welfare: 0 };
     if (!gov) continue;
-    const research = fundResearch(w, gov, k.output * TUNE.researchShare * budgetMult(k, 'research'));
-    gov.research.budget = research / TICKS_PER_WEEK;
+    advanceResearch(w, gov);
     // 지난주 국정 수지 (화면에 그대로 나가는 기록이라 소수 둘째 자리)
-    const b = { revenue: round2(revenue), tariffs: round2(k.tariffWeek ?? 0), fees: round2(gov.ledger.buildFees), wages: round2(spent.wages), goods: round2(spent.goods), research: round2(research), interest: round2(gov.ledger.interest), welfare: round2(spent.welfare ?? 0), firms: round2(spent.firms ?? 0) };
+    const b = { revenue: round2(revenue), tariffs: round2(k.tariffWeek ?? 0), fees: round2(gov.ledger.buildFees), wages: round2(spent.wages), goods: round2(spent.goods), interest: round2(gov.ledger.interest), welfare: round2(spent.welfare ?? 0), firms: round2(spent.firms ?? 0) };
     k.lastBudget = b;
-    const net = b.wages + b.goods + b.research + b.interest + b.welfare - b.fees;
+    const net = b.wages + b.goods + b.interest + b.welfare - b.fees;
     k.expenseEma = k.expenseEma == null ? net : k.expenseEma * 0.75 + net * 0.25;
     // 예산 미리보기 기준값 (화면 전용). 수수료는 건축사무소 임금 몫(국영 임금 배율 1로 환산)과 나머지로 나눈다
     const base = (k.budgetBase ??= {});
@@ -297,9 +295,9 @@ export function weeklyWageBill(w: World, c: Company): number {
   return bill * TICKS_PER_WEEK;
 }
 
-/** 회사가 늘 남겨 두는 현금: 기본 + 주간 임금 + 주간 연구비 + 건물 유보 자산 합 (공사·투자에 쓰지 않는다) */
+/** 회사가 늘 남겨 두는 현금: 기본 + 주간 임금 + 건물 유보 자산 합 (공사·투자에 쓰지 않는다) */
 export function reserveOf(w: World, c: Company): number {
-  return 50_000 + weeklyWageBill(w, c) + c.research.budget * TICKS_PER_WEEK + buildingReserves(w, c);
+  return 50_000 + weeklyWageBill(w, c) + buildingReserves(w, c);
 }
 
 /** 진행 중인 공사를 끝내는 데 더 들 돈 */
@@ -643,11 +641,9 @@ export function weeklyBanking(w: World) {
 export const MINT_BASE = 1_000;
 export const MINT_RATE = 0.03;
 
-/** 국고가 쓸 곳: 준비금 + 진행 중 공사 + 석 달 공사비 + 진행 중 연구의 남은 비용 */
+/** 국고가 쓸 곳: 준비금 + 진행 중 공사 + 석 달 공사비 */
 export function treasuryNeed(w: World, c: Company): number {
-  const t = c.research.current ? TECH_BY_ID[c.research.current] : undefined;
-  const research = t ? Math.max(0, t.cost - (c.research.progress[t.id] ?? 0)) : 0;
-  return reserveOf(w, c) + committedCost(w, c) + constructionEstimate(w, c, 'farm').costPerDay * 90 + research;
+  return reserveOf(w, c) + committedCost(w, c) + constructionEstimate(w, c, 'farm').costPerDay * 90;
 }
 
 export function mintMoney(w: World) {

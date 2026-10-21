@@ -34,7 +34,7 @@ for (let d = 1; d <= years * 360; d++) {
     const weeks = (k.expenseEma ?? 0) > 0 ? g.cash / k.expenseEma! : Infinity;
     const dq = qs - (lastQs.get(k.id) ?? qs);
     lastQs.set(k.id, qs);
-    parts.push(`왕국${k.id} 학교 ${lv}레벨 자리/인구 ${(seats / n).toFixed(2)} 문해 ${(lit / n).toFixed(2)} 기술자격 ${(qs / 1e3).toFixed(0)}천(+${(dq / 1e3).toFixed(1)}) 세금${k.budget.tax} 연구${k.budget.research} 국고 ${weeks.toFixed(0)}주 빚 ${Math.round(g.debt)} 학교철거 ${demolished.get(k.id) ?? 0}`);
+    parts.push(`왕국${k.id} 학교 ${lv}레벨 자리/인구 ${(seats / n).toFixed(2)} 문해 ${(lit / n).toFixed(2)} 기술자격 ${(qs / 1e3).toFixed(0)}천(+${(dq / 1e3).toFixed(1)}) 세금${k.budget.tax} 국고 ${weeks.toFixed(0)}주 빚 ${Math.round(g.debt)} 학교철거 ${demolished.get(k.id) ?? 0}`);
   }
   console.log(`${w.tick / 360}년 | ` + parts.join(' | '));
   if (w.tick % 1800 !== 0) continue;

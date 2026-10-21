@@ -153,7 +153,7 @@ export function CompanyView({ world, company: c, onView }: { world: World; compa
           return <span key={s} className="fact-item"><i className="sw" style={{ background: SKILL_COLOR[s] }} />{skillName(s)} <span className="pxnum">ƒ<NumericValue value={c.wages[s]} format="two"/></span> <span className={`pxnum small ${off >= 0 ? 'pos' : 'neg'}`}>{spct(off)}</span></span>;
         })}</dd></div>
         <div><dt>{T.research}</dt><dd>{!c.state ? <span className="fact-item"><Crown size={14}/>{T.sharedResearch}</span> : tech
-          ? <span className="fact-item">{techName(tech.id)} <Bar value={(c.research.progress[tech.id] ?? 0) / tech.cost} size="sm" label={T.researchProgress} className="fact-bar" /> <span className="pxnum small">ƒ<NumericValue value={c.research.budget} format="int"/>{T.perDay}</span></span>
+          ? <span className="fact-item">{techName(tech.id)} <Bar value={(c.research.progress[tech.id] ?? 0) / tech.cost} size="sm" label={T.researchProgress} className="fact-bar" /> <span className="pxnum small">ƒ<NumericValue value={c.research.points/7} format="int"/>{T.perDay}</span></span>
           : <span className="muted">—</span>}</dd></div>
         {research.known.length > 0 && <div><dt>{T.knownTechs}</dt><dd>{research.known.map((x) => <span key={x} className="tag-soft">{techName(x)}</span>)}</dd></div>}
       </dl>
@@ -564,7 +564,7 @@ export function Research({ game, me, onFinance }: { game: Game; me: Company; onF
   const options = researchableTechs(me);
   return (
     <div className="research">
-      <div className="budget"><span className="budget-t"><span>{T.dailyBudget}</span><NumericValue value={r.budget} format="money"/></span>{onFinance&&<button className="entity-link" onClick={onFinance}>{T.adjustFinance} ↗</button>}</div>
+      <div className="budget"><span className="budget-t"><span>{T.dailyBudget}</span><NumericValue value={r.points/7} format="int"/></span>{onFinance&&<button className="entity-link" onClick={onFinance}>{T.adjustFinance} ↗</button>}</div>
       {[...new Set(TECHS.map(x=>x.cost))].sort((a,b)=>a-b).map((cost,index)=><section className="research-stage" key={cost}><h3>{T.stage} {index+1}</h3><ul className="techs">
         {TECHS.filter(x=>x.cost===cost).map((x) => {
           const known = r.known.includes(x.id);
@@ -574,7 +574,7 @@ export function Research({ game, me, onFinance }: { game: Game; me: Company; onF
           return (
             <li key={x.id} className={`tech ${known ? 'known' : can ? '' : 'locked'} ${current ? 'current' : ''}`}>
               <div className="tech-main">
-                <strong>{techName(x.id)} <span className="pxnum small muted">ƒ<NumericValue value={x.cost} format="int"/> · {r.budget>0?T.nDays(Math.ceil(Math.max(0,x.cost-(r.progress[x.id]??0))/r.budget)):'—'}</span></strong>
+                <strong>{techName(x.id)} <span className="pxnum small muted">ƒ<NumericValue value={x.cost} format="int"/> · {r.points>0?T.nDays(Math.ceil(Math.max(0,x.cost-(r.progress[x.id]??0))/(r.points/7))):'—'}</span></strong>
                 {x.requires.length > 0 && !known && <span className="lbl">← {x.requires.map(techName).join(', ')}</span>}
                 {!known && prog > 0 && <Bar value={prog} tone="accent" size="sm" label={T.progressOf(techName(x.id))} />}
               </div>
