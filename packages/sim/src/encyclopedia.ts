@@ -103,7 +103,7 @@ export const TUNE_EXPERIMENTAL: TuneKey[] = ['subReturn', 'sellThrough', 'laborN
   // AI 왕실 민영화 (비교용, 기본 'off': 민영화는 플레이어가 켠다)
   'crownPrivatize',
   // AI 수정 비교 (2026-10-22, 기본 0 = 지금 동작)
-  'crownGdpReserve', 'financeIdle', 'laborStrict'];
+  'crownGdpReserve', 'financeIdle', 'laborStrict', 'welfareCutOff'];
 
 function showTune(v: unknown): number | string {
   if (typeof v === 'number') return Number.isFinite(v) ? v : '∞';

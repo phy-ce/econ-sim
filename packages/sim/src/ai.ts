@@ -314,10 +314,13 @@ const WELFARE_ON: WelfareLaw[] = ['poor', 'wage', 'universal'];
 function cutWelfare(w: World, c: Company, k: Kingdom): boolean {
   const pending = k.lawChange?.welfare;
   if (pending && pending.to !== 'none') { applyCommand(w, c.id, { type: 'setWelfareLaw', law: k.welfareLaw }); return true; }
+  // TUNE.welfareCutOff: 복지법을 끄는 중(180일)이고 빚이 없으면 다른 손잡이(세금 등)를 움직이지 않고 기다린다
+  if (TUNE.welfareCutOff && pending?.to === 'none' && c.debt <= 0) return true;
   if (k.welfareLaw === 'none') return false;
   if (k.budget.welfare > 1) { applyCommand(w, c.id, { type: 'setBudget', item: 'welfare', value: k.budget.welfare - 1 }); return true; }
-  // 복지법은 빚을 질 때만 끈다 (지출 몇 주치가 모자란 것만으로 끄면 180일 전환 동안 다시 켜고 끄기를 되풀이한다)
-  if (!pending && c.debt > 0) { applyCommand(w, c.id, { type: 'setWelfareLaw', law: 'none' }); return true; }
+  // 복지법은 빚을 질 때만 끈다 (지출 몇 주치가 모자란 것만으로 끄면 180일 전환 동안 다시 켜고 끄기를 되풀이한다).
+  // TUNE.welfareCutOff: 조이면 빚이 없어도 끈다 (세금보다 먼저). 다시 켜기는 끈 뒤 WELFARE_COOLDOWN 동안 막는다 (raiseWelfare)
+  if (!pending && (c.debt > 0 || TUNE.welfareCutOff)) { applyCommand(w, c.id, { type: 'setWelfareLaw', law: 'none' }); return true; }
   return false;
 }
 
@@ -334,6 +337,8 @@ export const WELFARE_COOLDOWN = 2 * TICKS_PER_YEAR;
  */
 function raiseWelfare(w: World, c: Company, k: Kingdom) {
   if (k.lawChange?.welfare) return;
+  // TUNE.welfareCutOff: 복지법을 끈 지(welfareTick: 마지막으로 법이 바뀐 날) WELFARE_COOLDOWN 이 안 지났으면 다시 켜지 않는다
+  if (TUNE.welfareCutOff && k.welfareLaw === 'none' && k.welfareTick != null && w.tick - k.welfareTick < WELFARE_COOLDOWN) return;
   const paid = k.lastBudget?.welfare ?? 0;
   const base = Math.max(0, (k.expenseEma ?? 0) - paid);
   const afford = (law: WelfareLaw, s: number) => c.cash >= TUNE.welfareWeeks * (base + welfareWeekly(k, law, s));

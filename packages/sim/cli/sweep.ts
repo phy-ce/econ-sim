@@ -97,8 +97,10 @@ let welAcc = 0;
 // 돈과 왕실 (해마다, cli/report.py 의 '돈 ÷ 총생산'·'왕실'): 재고 ÷ 연간 총생산과 절대값(백만), 세금 단계 평균, 조임 비율(날마다 왕국 평균),
 // 국고 주치(지출 몇 주치, 왕국 평균), 세금 올림 횟수, 팔린 비율(가치 기준), 한 해 주조(백만)
 const aiY: Record<number, Record<string, number>> = {};
-const aiAcc = { tight: 0, tax: 0, weeks: 0, ups: 0, soldV: 0, supV: 0, days: 0 };
+const aiAcc = { tight: 0, tax: 0, weeks: 0, ups: 0, soldV: 0, supV: 0, days: 0, welOn: 0, welStp: 0, welFlips: 0 };
 const taxPrev = w.kingdoms.map((k) => k.budget.tax);
+// 복지 (해마다): welOn 복지법이 켜진 왕국 비율(날마다 평균), welStp 복지 단계 평균(켜진 왕국), welFlips 복지법 켜기·끄기 횟수
+const welPrev = w.kingdoms.map((k) => (k.welfareLaw ?? 'none') !== 'none');
 let mintPrev = 0;
 function classIncome(w: World) {
   const n: Record<string, number> = {}, inc: Record<string, number> = {}, sav: Record<string, number> = {};
@@ -180,6 +182,10 @@ for (let d = 0; d < years * 360; d++) {
       if (treasuryTight(w, c, k)) tight++;
       tax += k.budget.tax;
       weeks += Math.min(520, (k.expenseEma ?? 0) > 0 ? c.cash / k.expenseEma! : 520);
+      const on = (k.welfareLaw ?? 'none') !== 'none';
+      if (on) { aiAcc.welOn++; aiAcc.welStp += k.budget.welfare; }
+      if (on !== welPrev[i]) aiAcc.welFlips++;
+      welPrev[i] = on;
       if (k.budget.tax > taxPrev[i]) aiAcc.ups++;
       taxPrev[i] = k.budget.tax;
     });
@@ -199,6 +205,7 @@ for (let d = 0; d < years * 360; d++) {
       mCrown: M(crown - debt), mFin: M(fin), mMan: M(man), mFirm: M(firms), mHh: M(hh),
       taxStep: +(aiAcc.tax / d).toFixed(2), tight: +(aiAcc.tight / d).toFixed(3), tWeeks: Math.round(aiAcc.weeks / d), taxUps: aiAcc.ups,
       sellThru: +(aiAcc.soldV / Math.max(1, aiAcc.supV)).toFixed(3), minted: M(w.mint.minted - mintPrev),
+      welOn: +(aiAcc.welOn / w.kingdoms.length / d).toFixed(3), welStp: +(aiAcc.welOn > 0 ? aiAcc.welStp / aiAcc.welOn : 0).toFixed(2), welFlips: aiAcc.welFlips,
     };
     mintPrev = w.mint.minted;
     for (const key of Object.keys(aiAcc) as (keyof typeof aiAcc)[]) aiAcc[key] = 0;
