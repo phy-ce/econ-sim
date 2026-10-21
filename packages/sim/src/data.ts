@@ -321,6 +321,7 @@ export function scaleBonus(level: number): number {
  * - switchRate, switchPremium, switchMax: 일하는 사람은 소득이 switchPremium 배 넘게 나은 자리로 옮긴다. 하루에 옮기는 비율은
  *   switchPremium 배일 때 switchRate 이고 소득 배율의 차이에 비례해 늘어 switchMax 에서 멈춘다 (labor.ts switchShare)
  * - cashBufferDays: 팝이 금고(저택·금융가)로 보내지 않고 들고 있는 돈 (생활비 + 세금의 며칠분)
+ * - peasantKeepWeeks: 소작농이 들고 있는 저축 상한 (생활비 + 세금의 주 수). 넘는 돈은 그 지역 저택 금고로 간다
  * - landTax, pollTax, incomeTax: 세금 수준 3단계(보통)의 토지세(소작농 1인당 하루), 인두세(소작농을 뺀 1인당 하루), 소득세율(소작농을 뺀 소득).
  *   세 세율을 같은 배율로 비교했다 (빅토리아3 보통 단계 기준 ×1·×1.5·×2·×2.5, 20년 × 시드 1~4). ×2는 ×1보다 건물 레벨이
  *   10년차 약 50%, 20년차 약 13% 많고 실업이 낮다 (×1은 세금 단계를 1~5 모두 쓰지만 건물이 가장 적다). ×2.5는 노동자 생활수준이 가장 낮다
@@ -397,6 +398,7 @@ export const TUNE = {
   crownPrivatize: 'off' as 'off' | 'all',
   taxCurve: 'hyp' as 'exp' | 'hyp',
   cashBufferDays: 10,
+  peasantKeepWeeks: 8,
   pollTax: 0.6, // 인두세: 소작농을 뺀 1인당 하루 (세금 수준 3단계 기준)
   incomeTax: 0.3,
   officeTargetDays: 30,
@@ -441,6 +443,7 @@ export const TUNE = {
   researchLevels: [0.5, 0.75, 1, 1.5, 2],
   treasuryLowWeeks: 26,
   treasuryHighWeeks: 52, // 1년치
+  crownBuildWeeks: 52,
   // 기술을 다 연 AI 왕국의 국영 임금 상한 단계. 3(끔)·4·5 비교 (20년 × 시드 1·2): 4가 20년차 총생산 2190→2761, 지역 격차 1.87→1.34, 기술자 생활수준 5.45→5.88. 5는 격차가 다시 커진다
   doneWageMax: 4,
   startTreasuryWeeks: 26,

@@ -746,20 +746,48 @@ export const INVEST_RATE = 0.05;
 /**
  * 팝의 남는 현금 (빅토리아3 투자 풀 대신 금융가 펀드): 생활비와 세금의 며칠분(TUNE.cashBufferDays)을 넘는 현금의 INVEST_RATE 가 매일
  * 그 지역 금융가 지분을 사는 데 쓰인다 (투자법이 허용한 계층만). 이것이 민간 투자의 재원이다. 쓰고 남는 소득이 꾸준하면 부 단계가 올라 쓰는 양이 는다.
+ * 투자법 밖 계층은 저축을 그대로 들고 있는다. 소작농만 예외: 생활비와 세금의 TUNE.peasantKeepWeeks 주치를 넘는 저축은 그날 그 지역 저택 금고로 간다
+ * (지분도 대가도 없다. 저택이 없는 지역이면 그 왕국에서 id 가 가장 작은 저택).
  * 세금은 걷는 쪽과 같은 계산(taxDue)이다: 토지 기반 세법이면 pop 이 현금으로 낼 세금은 없다.
  */
 function investSurplus(w: World, p: Pop, cashCost: number) {
-  const over = (p.savings - (Math.max(0, cashCost) + taxDue(w, p)) * TUNE.cashBufferDays) * INVEST_RATE;
+  const daily = Math.max(0, cashCost) + taxDue(w, p);
+  if (p.prof === 'peasant') {
+    const extra = floor2(p.savings - daily * 7 * TUNE.peasantKeepWeeks);
+    const m = extra > 0 ? manorOf(w, p.regionId) : undefined;
+    if (!m) return;
+    p.savings -= extra;
+    toTreasury(m, extra, 'skim');
+    return;
+  }
+  const k = kingdomById(w, kingdomOf(w, p.regionId));
+  if (!INVEST_CLASSES[k.investLaw].includes(p.prof)) return;
+  const over = (p.savings - daily * TUNE.cashBufferDays) * INVEST_RATE;
   if (over <= 0) return;
-  // 투자법이 허용한 계층은 그 지역 금융가 지분을 산다 (지분 가격 nav). 나머지 계층의 남는 현금은 지분 없이 금융가 금고로 간다 (돈이 고이지 않게)
+  // 투자법이 허용한 계층은 그 지역 금융가 지분을 산다 (지분 가격 nav)
   const f = financeOf(w, p.regionId);
   if (!f) return;
   p.savings -= over;
-  const k = kingdomById(w, kingdomOf(w, p.regionId));
-  if (!INVEST_CLASSES[k.investLaw].includes(p.prof)) { toTreasury(f, over, 'deposit'); return; }
   toTreasury(f, over, 'units');
   const fund = (p.fund ??= {});
   fund[f.id] = (fund[f.id] ?? 0) + over / Math.max(0.01, f.nav ?? 1);
+}
+
+/** 소작농 저축이 가는 저택: 그 지역 저택, 없으면 그 왕국에서 id 가 가장 작은 저택 (날마다 같은 세계면 다시 찾지 않는다) */
+const manorCache = new WeakMap<World, { tick: number; byRegion: Map<number, Building>; byKingdom: Map<number, Building> }>();
+function manorOf(w: World, regionId: number): Building | undefined {
+  let c = manorCache.get(w);
+  if (!c || c.tick !== w.tick) {
+    c = { tick: w.tick, byRegion: new Map(), byKingdom: new Map() };
+    for (const b of w.buildings) {
+      if (b.typeId !== 'manor') continue;
+      c.byRegion.set(b.regionId, b);
+      const kid = kingdomOf(w, b.regionId), cur = c.byKingdom.get(kid);
+      if (!cur || b.id < cur.id) c.byKingdom.set(kid, b);
+    }
+    manorCache.set(w, c);
+  }
+  return c.byRegion.get(regionId) ?? c.byKingdom.get(kingdomOf(w, regionId));
 }
 
 /** 지역의 금융가 (지역 id → 건물, 날마다 같은 세계면 다시 찾지 않는다) */

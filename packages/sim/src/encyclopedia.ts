@@ -837,8 +837,8 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   },
   {
     id: 'cash-surplus', category: 'people', title: t('남는 현금', 'Surplus cash'),
-    rule: t('pop은 저축을 쌓지 않는다. (생활비 + 세금) × {0}일을 넘는 현금의 {1}가 매일 금고로 간다: 저택·금융가에 앉은 사람은 그 금고, 나머지는 그 지역 금융가 금고.', 'Pops do not hoard. Each day {1} of cash above {0} days of (living costs + taxes) goes to a treasury: their own manor or district if seated there, otherwise the regional financial district.'),
-    params: [tune('cashBufferDays', '쥐는 일수', 'Buffer days', 'day'), p('하루 투자 비율', 'Daily investment rate', () => INVEST_RATE, 'pct')],
+    rule: t('투자법이 허용한 계층은 (생활비 + 세금) × {0}일을 넘는 현금의 {1}로 매일 그 지역 금융가 지분을 산다. 소작농은 (생활비 + 세금) × {2}주를 넘는 저축이 그 지역 저택 금고로 간다 (지분도 대가도 없다). 그 밖의 계층은 저축을 들고 있는다.', 'Classes allowed by the investment law spend {1} of cash above {0} days of (living costs + taxes) each day on units of the regional financial district. Peasant savings above {2} weeks of (living costs + taxes) go to the regional manor treasury (no units, nothing in return). Other classes keep their savings.'),
+    params: [tune('cashBufferDays', '쥐는 일수', 'Buffer days', 'day'), p('하루 투자 비율', 'Daily investment rate', () => INVEST_RATE, 'pct'), tune('peasantKeepWeeks', '소작농 저축 상한', 'Peasant savings cap', 'week')],
     related: ['owner-treasury', 'orders'], seenIn: ['finance'], source: ['market.ts investSurplus'], design: ['5', '9.3'],
   },
 
@@ -977,7 +977,7 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   },
   {
     id: 'owner-treasury', category: 'ownership', title: t('저택·금융가 금고', 'Manor and district treasuries'),
-    rule: t('저택·금융가 금고에는 배당·지대 중 남기는 몫, 앉은 사람의 남는 현금, 철거 대금이 들어온다. 그 밖 pop의 남는 현금, 상인 초과분과 주인 없는 돈은 지역 금융가 금고로 간다. 민간 공사비는 금고가 낸다: 같은 지역(마음 × (1 + {0}))과 좋아하는 종류(저택은 땅 건물, 금융가는 그 밖, 아니면 × {1})부터 레벨 단위로 맡고, 모자라면 함께 낸다. 완공 레벨은 낸 돈 비율로 나누고 나머지 레벨은 많이 낸 쪽이 가진 뒤 차액을 돌려준다.', 'Manor and district treasuries receive the kept part of dividends and rent, surplus cash of seated pops and salvage proceeds. Other pops\' surplus cash, trader excess and ownerless money go to the regional district. Treasuries pay for private construction: same region first (weight × (1 + {0})) and favoured kinds (manors: land buildings, districts: the rest, otherwise × {1}), whole levels each, pooling if short. Finished levels are split by money paid; leftover levels go to the larger payer, who refunds the difference.'),
+    rule: t('저택·금융가 금고에는 배당·지대 중 남기는 몫과 철거 대금이 들어온다. 금융가 금고에는 지분 산 돈, 상인 초과분과 주인 없는 돈이, 저택 금고에는 소작농의 넘는 저축이 들어온다. 민간 공사비는 금고가 낸다: 같은 지역(마음 × (1 + {0}))과 좋아하는 종류(저택은 땅 건물, 금융가는 그 밖, 아니면 × {1})부터 레벨 단위로 맡고, 모자라면 함께 낸다. 완공 레벨은 낸 돈 비율로 나누고 나머지 레벨은 많이 낸 쪽이 가진 뒤 차액을 돌려준다.', 'Manor and district treasuries receive the kept part of dividends and rent and salvage proceeds. Districts also receive money paid for units, trader excess and ownerless money; manors receive peasant savings above the cap. Treasuries pay for private construction: same region first (weight × (1 + {0})) and favoured kinds (manors: land buildings, districts: the rest, otherwise × {1}), whole levels each, pooling if short. Finished levels are split by money paid; leftover levels go to the larger payer, who refunds the difference.'),
     params: [tune('localBias', '같은 지역 가산', 'Same-region bonus', 'pct'), tune('ownerTilt', '좋아하지 않는 종류', 'Unfavoured kind', 'pct'), p('민간 상회 시작 운영 자금', 'Private house start cash', () => START_FIRM_CASH, 'florin')],
     live: { pick: [], run: (w) => ({ bars: w.kingdoms.map((k) => bar(t(k.name, k.nameEn), r2(k.investmentPool), 'florin')), rows: w.buildings.filter((b) => b.cash !== undefined).map((b) => row(`${regionById(w, b.regionId).name} ${BUILDING_BY_ID[b.typeId].name}`, `${regionNameEn(b.regionId)} ${BUILDING_BY_ID[b.typeId].nameEn}`, r2(b.cash ?? 0), 'florin')) }) },
     related: ['cash-surplus', 'dividends', 'privatize', 'ai-construction'], seenIn: ['finance'], source: ['finance.ts chooseFunders', 'production.ts giveLevels', 'kingdoms.ts toFinance'], design: ['9.3'],
@@ -1170,9 +1170,9 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   },
   {
     id: 'ai-construction', category: 'ai', title: t('착공', 'Starting construction'),
-    rule: t('주에 최대 {0}건. 연 손익 ÷ 공사비 > {1}이고 일손을 {2} 이상 ({3}일 안에) 모을 수 있는 후보 중, 덩어리({4}레벨)를 골라 점수 = 수익률 × 무작위 × (1 + {5} × 지역 자금 비율)이 가장 큰 것을 짓는다. 기상 조건이 걸린 땅은 뺀다.', 'Up to {0} starts a week. Candidates need yearly profit ÷ cost > {1} and {2} of jobs fillable within {3} days; chunks of {4} levels; score = return × random × (1 + {5} × local fund share). Land under a harvest condition is skipped.'),
+    rule: t('주에 최대 {0}건. 연 손익 ÷ 공사비 > {1}이고 일손을 {2} 이상 ({3}일 안에) 모을 수 있는 후보 중, 덩어리({4}레벨)를 골라 점수 = 수익률 × 무작위 × (1 + {5} × 지역 자금 비율)이 가장 큰 것을 짓는다. 기상 조건이 걸린 땅은 뺀다. 왕실은 지출 {9}주치를 넘는 국고로만 짓는다.', 'Up to {0} starts a week. Candidates need yearly profit ÷ cost > {1} and {2} of jobs fillable within {3} days; chunks of {4} levels; score = return × random × (1 + {5} × local fund share). Land under a harvest condition is skipped. The crown builds only with cash above {9} weeks of its spending.'),
     params: [tune('startsPerWeek', '주간 착공', 'Starts per week'), tune('minRoi', '최소 수익률', 'Minimum return', 'pct'), tune('minStaffing', '일손 기준', 'Staffing threshold', 'pct'), p('일손 기간', 'Staffing horizon', () => STAFFING_HORIZON, 'day'), p('덩어리', 'Chunks', () => CHUNKS.join(' / ')), tune('localBias', '지역 가산', 'Local bias', 'pct'),
-      tune('lossBuildsPerWeek', '손해 후보 짓기 (주간)', 'Loss builds per week'), tune('lossTolerance', '손해 허용', 'Loss tolerance'), tune('schoolTaxMax', '학교 짓는 세금 상한', 'Max tax step for schools')],
+      tune('lossBuildsPerWeek', '손해 후보 짓기 (주간)', 'Loss builds per week'), tune('lossTolerance', '손해 허용', 'Loss tolerance'), tune('schoolTaxMax', '학교 짓는 세금 상한', 'Max tax step for schools'), tune('crownBuildWeeks', '왕실 공사 남길 국고', 'Crown build reserve', 'week')],
     related: ['ai-outlook', 'owner-treasury', 'land'], seenIn: ['company'], source: ['ai.ts planConstruction', 'ai.ts pickProject'], design: ['10'],
   },
   {

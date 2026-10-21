@@ -4,7 +4,7 @@
 import { BUILDING_BY_ID, GOODS, SKILL_DEFS, SUBSISTENCE, TECH_COST, TECHS, TUNE } from '../src/data';
 import { isGovernment, paysDividend, slots } from '../src/economy';
 import { committedCost } from '../src/finance';
-import { createWorld, literacyOf, step } from '../src/index';
+import { createWorld, financeRatio, investThreshold, literacyOf, step, taxThreshold } from '../src/index';
 import type { MetricPoint } from '../src/index';
 import { workforce } from '../src/pops';
 import { applyWorld } from './worldtune';
@@ -85,8 +85,8 @@ const yearly: Record<number, Record<string, number>> = {};
 const classInc: Record<number, Record<string, number>> = {};
 const ironY: Record<number, Record<string, number>> = {};
 function classIncome(w: World) {
-  const n: Record<string, number> = {}, inc: Record<string, number> = {};
-  for (const p of w.pops) { n[p.prof] = (n[p.prof] ?? 0) + p.size; inc[p.prof] = (inc[p.prof] ?? 0) + p.incomeEma; }
+  const n: Record<string, number> = {}, inc: Record<string, number> = {}, sav: Record<string, number> = {};
+  for (const p of w.pops) { n[p.prof] = (n[p.prof] ?? 0) + p.size; inc[p.prof] = (inc[p.prof] ?? 0) + p.incomeEma; sav[p.prof] = (sav[p.prof] ?? 0) + p.savings; }
   const per = (c: string) => (n[c] ?? 0) > 0 ? inc[c] / n[c] : 0;
   const f2 = (x: number) => +x.toFixed(2);
   // manOwn 저택이 가진 건물 레벨 합, cells 소작지 칸 합, ariSeat 저택 상급 귀족 자리 합(천)
@@ -97,7 +97,9 @@ function classIncome(w: World) {
     else if (b.typeId === 'manor') ariSeat += slots(b, 'aristocrat');
     for (const [id, n] of Object.entries(b.owners ?? {})) if (manors.has(Number(id))) manOwn += n;
   }
-  return { manOwn, cells, ariSeat: Math.round(ariSeat / 1e3), incAri: f2(per('aristocrat')), incGen: f2(per('gentry')), incSk: f2(per('skilled')), incUnsk: f2(per('unskilled')),
+  // savX: 계층 저축 합(백만)
+  const sv = (c: string) => +((sav[c] ?? 0) / 1e6).toFixed(2);
+  return { savPeas: sv('peasant'), savUnsk: sv('unskilled'), savFarm: sv('farmer'), savSk: sv('skilled'), savEx: sv('expert'), manOwn, cells, ariSeat: Math.round(ariSeat / 1e3), incAri: f2(per('aristocrat')), incGen: f2(per('gentry')), incSk: f2(per('skilled')), incUnsk: f2(per('unskilled')),
     ariSk: f2(per('skilled') > 0 ? per('aristocrat') / per('skilled') : 0), ariK: Math.round((n.aristocrat ?? 0) / 1e3), genK: Math.round((n.gentry ?? 0) / 1e3) };
 }
 // 행정청·하급 귀족 (해마다 마지막 날): admHer·admPro 세습·전문 관료제 레벨, admFill 행정청 충원율(자리 가중),
@@ -128,6 +130,8 @@ function adminSnap(w: World) {
   return { admHer: her, admPro: pro, admFill: f2(need > 0 ? have / need : 0), admWage: f2(wage / 1e3), admSk: f2(sk / 1e3), admGen: f2(gen / 1e3), wIdx: f2(wIdx), wStep: f2(wStep),
     genK: f2(gn / 1e3), solGen: f2(gs / d), gAdmSh: f3(ga / d), gManSh: f3(gm / d), gTutSh: f3(gt / d), gIdleSh: f3(gi / d) };
 }
+const lawY: Record<string, [number | null, number | null]>[] = [];
+const ratioY: Record<number, number>[] = [];
 const t0 = performance.now();
 for (let d = 0; d < years * 360; d++) {
   step(w);
@@ -203,6 +207,16 @@ for (let d = 0; d < years * 360; d++) {
   }
   if (w.tick % 28 !== 0) continue;
   w.kingdoms.forEach((k, i) => {
+    // 법이 열린 해(금융가 자산 비율이 기준을 처음 넘은 때)와 실제로 바뀐 해 (0.1년)
+    const r = financeRatio(w, k.id), yr = +(w.tick / 360).toFixed(1), L = (lawY[i] ??= {});
+    // 비율 5% 칸마다 처음 넘은 해
+    const C = (ratioY[i] ??= {});
+    for (let p = 5; p <= 95; p += 5) if (C[p] == null && r >= p / 100) C[p] = yr;
+    for (const [id, t] of [['poll', taxThreshold('poll')], ['income', taxThreshold('income')], ['upper', investThreshold('upper')], ['middle', investThreshold('middle')], ['lower', investThreshold('lower')]] as const) {
+      const e = (L[id] ??= [null, null]);
+      if (e[0] == null && t != null && r >= t) e[0] = yr;
+      if (e[1] == null && (k.taxLaw === id || ['upper', 'middle', 'lower'].indexOf(id) >= 0 && ['nobles', 'upper', 'middle', 'lower'].indexOf(k.investLaw) >= ['nobles', 'upper', 'middle', 'lower'].indexOf(id))) e[1] = yr;
+    }
     const g = w.companies.find((c) => c.id === k.governmentId)!;
     trace[i].push({ tax: k.budget.tax, wages: k.budget.wages, weeks: (k.expenseEma ?? 0) > 0 ? g.cash / k.expenseEma! : Infinity, debt: g.debt > 0 });
   });
@@ -322,5 +336,7 @@ for (const tr of trace) {
 }
 const f2 = (x: number) => +x.toFixed(2);
 out.pol = { t5: f2(t5 / n), t1: f2(t1 / n), run5: f2((run5 * 28) / 360), run1: f2((run1 * 28) / 360), chg: f2(chg / nk / yrs), flip: f2(chg ? flips / chg : 0), wchg: f2(wchg / nk / yrs), debt: f2(debt / n), hoard: f2(hoard / n) };
+out.laws = lawY;
+out.ratioY = ratioY;
 if (process.env.TIMING) out.time = { ms: Math.round(simMs), msPerDay: +(simMs / (years * 360)).toFixed(2) };
 console.log(JSON.stringify(out));
