@@ -1,10 +1,11 @@
-import { GOODS, TICKS_PER_WEEK, TUNE } from './data';
+import { GOODS, LAW_TECH, TICKS_PER_WEEK, TUNE } from './data';
 import { logEvent } from './economy';
 import { weeklyOutputValue } from './finance';
 import { INVEST_LAWS, TAX_LAWS } from './types';
 import type { GoodId, InvestLaw, Kingdom, LawChange, PopClass, TaxLaw, World } from './types';
 
-// 세법·투자법 (DECISIONS 7-18·7-19): 법은 하나씩, 바꾸는 데 TUNE.lawDays 일. 넓은 법은 금융가 자산 비율이 기준을 넘어야 고를 수 있다.
+// 세법·투자법 (DECISIONS 7-18·7-19): 법은 하나씩. 법마다 1) 기술로 열리고(LAW_TECH) 2) 금융가 자산 비율이 기준을 넘어야 바꾸기를 시작하고
+// 3) TUNE.lawDays 일 동안 바뀌며 4) 끝날 때 조건이 아직 맞아야 바뀐다 (아니면 실패, 지금 법 그대로).
 
 /** 투자법마다 금융가 지분을 살 수 있는 계층 (소작농은 열지 않는다) */
 export const INVEST_CLASSES: Record<InvestLaw, PopClass[]> = {
@@ -58,25 +59,55 @@ export function financeRatio(w: World, kingdomId: number): number {
   return ownershipAssets(w).kingdoms.find((x) => x.kingdomId === kingdomId)?.ratio ?? 0;
 }
 
-export interface LawStatus<L> { current: L; pending?: LawChange<L>; options: { id: L; threshold: number | null; eligible: boolean }[] }
+/** 법을 여는 기술을 그 왕국 왕실이 알고 있는가 */
+export function lawUnlocked(w: World, k: Kingdom, law: TaxLaw | InvestLaw): boolean {
+  const tech = LAW_TECH[law];
+  return !tech || !!w.companies.find((c) => c.id === k.governmentId)?.research.known.includes(tech);
+}
 
-/** 정책 창용: 금융가 자산 비율, 세법·투자법의 지금 값·바뀌는 중인 값·고를 수 있는 법 */
+/** 법의 조건이 지금 맞는가: 기준이 없거나 금융가 비율이 기준 이상. 투자법을 좁히는 쪽(지금 단계 이하)은 늘 맞다 */
+function lawConditionMet(k: Kingdom, kind: 'tax' | 'invest', to: TaxLaw | InvestLaw, ratio: number): boolean {
+  if (kind === 'invest' && INVEST_LAWS.indexOf(to as InvestLaw) <= INVEST_LAWS.indexOf(k.investLaw)) return true;
+  const t = kind === 'tax' ? taxThreshold(to as TaxLaw) : investThreshold(to as InvestLaw);
+  return t === null || ratio >= t;
+}
+
+export interface LawOption<L> {
+  id: L;
+  /** 이 법을 여는 기술 (null = 처음부터) */
+  tech: string | null;
+  /** 기술이 열렸는가 */
+  unlocked: boolean;
+  /** 조건: 금융가 자산 비율 기준 (null = 조건 없음) */
+  threshold: number | null;
+  /** 지금 바꾸기를 시작할 수 있는가 (지금 법이면 true) */
+  eligible: boolean;
+}
+export interface LawStatus<L> {
+  current: L;
+  pending?: LawChange<L>;
+  /** 바뀌는 중인 법이 지금 끝나면 바뀌는가 (끝날 때 조건이 맞아야 한다) */
+  pendingOk?: boolean;
+  options: LawOption<L>[];
+}
+
+/** 정책 창용: 금융가 자산 비율(조건의 지금 값), 세법·투자법의 지금 값·바뀌는 중인 값·선택지마다 여는 기술·조건·고를 수 있는지 */
 export function policyStatus(w: World, kingdomId: number): { financeRatio: number; tax: LawStatus<TaxLaw>; invest: LawStatus<InvestLaw> } {
   const k = w.kingdoms.find((x) => x.id === kingdomId)!;
   const ratio = financeRatio(w, kingdomId);
-  const ok = (t: number | null, cur: boolean) => cur || t === null || ratio >= t;
+  const opt = <L extends TaxLaw | InvestLaw>(kind: 'tax' | 'invest', id: L, cur: L): LawOption<L> => {
+    const unlocked = lawUnlocked(w, k, id);
+    return { id, tech: LAW_TECH[id], unlocked, threshold: kind === 'tax' ? taxThreshold(id as TaxLaw) : investThreshold(id as InvestLaw), eligible: id === cur || (unlocked && lawConditionMet(k, kind, id, ratio)) };
+  };
+  const pt = k.lawChange?.tax, pi = k.lawChange?.invest;
   return {
     financeRatio: ratio,
-    tax: { current: k.taxLaw, pending: k.lawChange?.tax, options: TAX_LAWS.map((id) => ({ id, threshold: taxThreshold(id), eligible: ok(taxThreshold(id), id === k.taxLaw) })) },
-    // 좁히기는 조건 없이 고를 수 있다
-    invest: {
-      current: k.investLaw, pending: k.lawChange?.invest,
-      options: INVEST_LAWS.map((id) => ({ id, threshold: investThreshold(id), eligible: INVEST_LAWS.indexOf(id) <= INVEST_LAWS.indexOf(k.investLaw) || ok(investThreshold(id), false) })),
-    },
+    tax: { current: k.taxLaw, pending: pt, ...(pt ? { pendingOk: lawConditionMet(k, 'tax', pt.to, ratio) } : {}), options: TAX_LAWS.map((id) => opt('tax', id, k.taxLaw)) },
+    invest: { current: k.investLaw, pending: pi, ...(pi ? { pendingOk: lawConditionMet(k, 'invest', pi.to, ratio) } : {}), options: INVEST_LAWS.map((id) => opt('invest', id, k.investLaw)) },
   };
 }
 
-/** 바꾸기를 시작한다 (같은 법이면 바뀌는 중인 것을 취소). 고를 수 없으면 false */
+/** 바꾸기를 시작한다 (같은 법이면 바뀌는 중인 것을 취소). 기술이 안 열렸거나 조건이 안 맞으면 false */
 export function startLawChange(w: World, k: Kingdom, kind: 'tax' | 'invest', to: TaxLaw | InvestLaw): boolean {
   const st = policyStatus(w, k.id);
   const cur = kind === 'tax' ? k.taxLaw : k.investLaw;
@@ -88,18 +119,32 @@ export function startLawChange(w: World, k: Kingdom, kind: 'tax' | 'invest', to:
   return true;
 }
 
-/** 매일: 기간이 끝난 법을 바꾼다 */
+const LAW_NAME: Record<TaxLaw | InvestLaw, [string, string]> = {
+  land: ['토지세', 'Land tax'], poll: ['인두세', 'Poll tax'], income: ['소득세', 'Income tax'],
+  nobles: ['귀족만', 'Nobles only'], upper: ['전문가까지', 'Up to experts'], middle: ['기술자까지', 'Up to skilled'], lower: ['노동자·농부까지', 'Up to labourers and farmers'],
+};
+
+/** 매일: 기간이 끝난 법을 바꾼다. 끝날 때 조건이 안 맞으면 실패하고 지금 법이 남는다 (k.lawFail 에 그 틱, 소식 'lawFailed') */
 export function updateLaws(w: World) {
   for (const k of w.kingdoms) {
     const ch = k.lawChange;
     if (!ch) continue;
-    if (ch.tax && w.tick >= ch.tax.endTick) {
-      k.taxLaw = ch.tax.to; k.lawTick = w.tick; delete ch.tax;
-      logEvent(w, k.governmentId, `${k.name} 세법이 바뀌었습니다: ${k.taxLaw}`, { en: `${k.nameEn} tax law changed: ${k.taxLaw}` });
-    }
-    if (ch.invest && w.tick >= ch.invest.endTick) {
-      k.investLaw = ch.invest.to; delete ch.invest;
-      logEvent(w, k.governmentId, `${k.name} 투자법이 바뀌었습니다: ${k.investLaw}`, { en: `${k.nameEn} investment law changed: ${k.investLaw}` });
+    let ratio: number | undefined;
+    for (const kind of ['tax', 'invest'] as const) {
+      const c = ch[kind];
+      if (!c || w.tick < c.endTick) continue;
+      delete ch[kind];
+      const [ko, en] = kind === 'tax' ? ['세법', 'tax law'] : ['투자법', 'investment law'];
+      const [nk, ne] = LAW_NAME[c.to];
+      ratio ??= financeRatio(w, k.id);
+      if (!lawConditionMet(k, kind, c.to, ratio)) {
+        (k.lawFail ??= {})[kind] = w.tick;
+        const t = Math.round(((kind === 'tax' ? taxThreshold(c.to as TaxLaw) : investThreshold(c.to as InvestLaw)) ?? 0) * 100), r = Math.round(ratio * 100);
+        logEvent(w, k.governmentId, `${k.name} ${ko} 바꾸기 실패: ${nk} (금융가 ${r}% / 필요 ${t}%)`, { kind: 'warn', topic: 'lawFailed', en: `${k.nameEn} ${en} change failed: ${ne} (financial ${r}% / needs ${t}%)` });
+        continue;
+      }
+      if (kind === 'tax') { k.taxLaw = c.to as TaxLaw; k.lawTick = w.tick; } else k.investLaw = c.to as InvestLaw;
+      logEvent(w, k.governmentId, `${k.name} ${ko}이 바뀌었습니다: ${nk}`, { topic: 'lawChanged', en: `${k.nameEn} ${en} changed: ${ne}` });
     }
     if (!ch.tax && !ch.invest) delete k.lawChange;
   }

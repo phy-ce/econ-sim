@@ -1,7 +1,7 @@
 // 조정값 비교: npx tsx cli/sweep.ts '<TUNE JSON>' [seed] [years]  (JSON 의 "subsistence" 는 SUBSISTENCE 를 바꾼다)
 // 주요 지표(w.metrics)에서 5년마다(와 마지막 해) 대륙 합계를 뽑아 한 줄 JSON으로 출력한다.
 // TIMING=1 이면 time: { ms 시뮬레이션 시간, msPerDay 하루 평균 } 을 덧붙인다 (sweepsum.py 가 따로 요약한다)
-import { BUILDING_BY_ID, GOODS, SKILL_DEFS, SUBSISTENCE, TECH_COST, TECHS, TUNE } from '../src/data';
+import { BUILDING_BY_ID, GOODS, LAW_TECH, SKILL_DEFS, SUBSISTENCE, TECH_BY_ID, TECH_COST, TECHS, TUNE } from '../src/data';
 import { isGovernment, paysDividend, slots } from '../src/economy';
 import { committedCost } from '../src/finance';
 import { createWorld, financeRatio, investThreshold, literacyOf, step, taxThreshold } from '../src/index';
@@ -56,7 +56,11 @@ const over = JSON.parse(process.argv[2] ?? '{}');
 const seed = Number(process.argv[3] ?? 1), years = Number(process.argv[4] ?? 10);
 // "subsistence": { grainPerWorker 등 } 은 소작지 1인당 산출(SUBSISTENCE)을 바꾼다
 // "world": 상품 가격·임금·일자리·원료 배율 (cli/worldtune.ts)
-const { subsistence, world, tech4, ...tune } = over;
+const { subsistence, world, tech4, lawTech, addTech, ...tune } = over;
+// "addTech": 비교용 기술 더하기 ([{ id, cost, requires }])
+for (const t of (addTech ?? []) as { id: string; cost: number; requires: string[] }[]) { const d = { name: t.id, nameEn: t.id, description: '', descriptionEn: '', ...t }; TECHS.push(d); TECH_BY_ID[t.id] = d; }
+// "lawTech": 법을 여는 기술 바꾸기 ({ poll: 'guilds', ... })
+if (lawTech) Object.assign(LAW_TECH, lawTech);
 // "tech4": 4단계 기술 연구비
 if (tech4) for (const t of TECHS) if (t.cost === TECH_COST[4]) t.cost = tech4;
 Object.assign(TUNE, tune);
@@ -133,6 +137,10 @@ function adminSnap(w: World) {
 const yearPts: MetricPoint[] = [];
 const lawY: Record<string, [number | null, number | null]>[] = [];
 const ratioY: Record<number, number>[] = [];
+// 왕국마다 기술을 연 해 (0.1년)
+const techY: Record<string, number>[] = [];
+// 왕국마다 법 바꾸기가 끝날 때 실패한 해 (세법·투자법)
+const failY: { tax: number[]; invest: number[] }[] = [];
 const t0 = performance.now();
 for (let d = 0; d < years * 360; d++) {
   step(w);
@@ -222,6 +230,10 @@ for (let d = 0; d < years * 360; d++) {
       if (e[1] == null && (k.taxLaw === id || ['upper', 'middle', 'lower'].indexOf(id) >= 0 && ['nobles', 'upper', 'middle', 'lower'].indexOf(k.investLaw) >= ['nobles', 'upper', 'middle', 'lower'].indexOf(id))) e[1] = yr;
     }
     const g = w.companies.find((c) => c.id === k.governmentId)!;
+    const T = (techY[i] ??= {});
+    for (const id of g.research.known) T[id] ??= yr;
+    const F = (failY[i] ??= { tax: [], invest: [] });
+    for (const kind of ['tax', 'invest'] as const) { const ft = k.lawFail?.[kind]; if (ft != null && ft > w.tick - 28) F[kind].push(+(ft / 360).toFixed(1)); }
     trace[i].push({ tax: k.budget.tax, wages: k.budget.wages, weeks: (k.expenseEma ?? 0) > 0 ? g.cash / k.expenseEma! : Infinity, debt: g.debt > 0 });
   });
 }
@@ -342,5 +354,7 @@ const f2 = (x: number) => +x.toFixed(2);
 out.pol = { t5: f2(t5 / n), t1: f2(t1 / n), run5: f2((run5 * 28) / 360), run1: f2((run1 * 28) / 360), chg: f2(chg / nk / yrs), flip: f2(chg ? flips / chg : 0), wchg: f2(wchg / nk / yrs), debt: f2(debt / n), hoard: f2(hoard / n) };
 out.laws = lawY;
 out.ratioY = ratioY;
+out.techY = techY;
+out.failY = failY;
 if (process.env.TIMING) out.time = { ms: Math.round(simMs), msPerDay: +(simMs / (years * 360)).toFixed(2) };
 console.log(JSON.stringify(out));

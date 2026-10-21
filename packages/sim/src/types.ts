@@ -447,6 +447,8 @@ export interface Kingdom {
   lawChange?: { tax?: LawChange<TaxLaw>; invest?: LawChange<InvestLaw> };
   /** 마지막으로 세법을 바꾼 틱 */
   lawTick?: number;
+  /** 법 바꾸기가 끝날 때 조건이 안 맞아 실패한 마지막 틱 (AI는 LAW_COOLDOWN 동안 다시 시작하지 않는다) */
+  lawFail?: { tax?: number; invest?: number };
   /** 세금을 내야 할 인구와 행정청이 감당하는 인구 (징수율 = 한도 / 인구) */
   taxDue?: number;
   taxCapacity?: number;
@@ -537,7 +539,10 @@ export interface GameEvent {
   kind: EventKind;
   regionId?: number;
   buildingId?: number;
+  /** 소식 종류 표시: 'lawChanged' 법이 바뀜, 'lawFailed' 법 바꾸기 실패 (정책 창으로 잇는다) */
+  topic?: EventTopic;
 }
+export type EventTopic = 'lawChanged' | 'lawFailed';
 
 export interface WorldConfig {
   ai: boolean;

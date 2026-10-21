@@ -16,6 +16,7 @@
 **깨진 화면 (먼저):**
 0-1. **레벨 주인·민영화·저택·금융가 금고 (2-54, DECISIONS 7-16 1단계).** `privateShare`·`ownerBuildingOf`·투자 풀이 없어졌다. 소유 막대는 `levelOwnersOf(world, b)`로, 왕실 건물에 민영화 켜기(`setPrivatize`), `Kingdom.investmentPool` 칸 이름은 "저택·금융가 금고"로. 2-35-0 `stake` 몫은 지운다. sim 작업자가 클라이언트 두 줄을 지웠다 (컴파일 맞춤).
 0-2. **세법 셋·투자법·금융가 펀드·지대·귀족 자리 (2-55, DECISIONS 7-16~7-19 2~4단계).** `TaxLaw`가 `'land'|'poll'|'income'`, 새 `setInvestLaw`·`policyStatus`·`ownershipAssets`. sim 작업자가 `FinancePanel.tsx` 24의 세법 `select`를 세 값으로 고쳤다 (컴파일 맞춤). 정책 창(2-45)은 이제 sim 쪽이 준비됐다.
+0-3. **법은 기술로 열린다 + 끝날 때 조건 확인 (2-56).** `policyStatus` 선택지에 `tech`·`unlocked`, 전환에 `pendingOk`, 소식 `GameEvent.topic` `'lawChanged'`/`'lawFailed'`, 연구 트리용 `unlocksOf(techId).policies`. 2-45 정책 창(잠김 행·조건·진행 막대·실패 소식)과 2-48 연구 트리(정책 줄)에 반영. 컴파일 수정 없음.
 0. **창 크기 조절 없앰 + 좁은 고정 창 + 통계·소식 깨짐 (2-53, 사용자 요청).** 모서리·최대화를 지우고 창은 왼쪽/오른쪽 두 자리, 440×982 고정(1920×1080, 지도 x 530~1390을 안 가림). 분류 줄 88px을 위 탭으로, 인구 표 `min-width:1000/1100px`(`strategy.css` 66, `workspace.css` 243)을 고정 2열+보기 칩 4열로, 요약 세 칸을 세로로, 스크롤 안 스크롤 없앰.
 
 아래는 사용자 요청이거나 정리다.
@@ -697,23 +698,25 @@ Keep the exact composition, coastline and every border position of the chosen ma
   | 전환 중 (목표) | 테두리 accent + 행 바닥 진행 막대 `(tick − startTick) / (endTick − startTick)` + `n일` | 없음 |
   | 고를 수 있음 | 보통 버튼 | 전환 시작 (명령) |
   | 조건 미달 | `disabled`, 조건 숫자를 `neg` 색 | 없음 |
+  | 잠김 (2-56) | `disabled`, 흐리게, 자물쇠 아이콘(lucide `Lock`) + 여는 기술 이름 (`TECH_BY_ID[o.tech].name`) | 없음 (툴팁 `기술: 이름`, 누르면 연구 창으로 가도 된다) |
 - 전환 중에는 다른 선택지를 모두 `disabled`로 둔다 (취소만 된다). 전환 중에는 지금 법이 그대로 적용된다 (7-18).
+- 전환 중 행 (2-56): 진행 막대 옆에 지금 비율 / 필요 비율 `금융가 NN% / NN%`. `pendingOk === false`면 막대와 숫자를 `neg` 색 (지금 끝나면 실패한다는 뜻). 기간이 끝날 때 조건이 안 맞으면 바뀌지 않고 지금 법이 남는다 (소식 `lawFailed`). 다시 누르면 다시 시작한다.
 - 조건 미달 툴팁: `금융가 NN% / 필요 NN%`. 세법 선택지 툴팁: 그 법의 세율 (`taxRates(k, law)`: 토지세 = 소작농 1인당 ƒ, 인두세 = 1인당 ƒ, 소득세 = %).
 - 확인 창은 두지 않는다 (전환 중 취소가 되므로).
 
 #### 2-45-3. 세법
-- 선택지: `토지세 / Land tax`, `인두세 / Poll tax`, `소득세 / Income tax`. 시작은 토지세. 조건은 sim이 준다 (예 인두세 30%, 소득세 60%, 비교로 정함 — 화면에 숫자를 박지 않는다). 순서 상관없이 조건만 맞으면 고른다.
+- 선택지: `토지세 / Land tax`, `인두세 / Poll tax`, `소득세 / Income tax`. 시작은 토지세. 조건은 sim이 준다 (예 인두세 30%, 소득세 60%, 비교로 정함 — 화면에 숫자를 박지 않는다). 순서 상관없이 기술로 열리고(2-56) 조건이 맞으면 고른다.
 - **지금 할 수 있는 것:** 창을 만들고 `FinancePanel.tsx` 20의 `select`와 세율 문구를 이 섹션으로 옮긴다. 지금 sim은 `TaxLaw = 'land' | 'capita'` 둘이고 전환 없이 바로 바뀐다: 두 행 모두 "고를 수 있음", 조건 칸 비움. 3장 필드가 들어오면 세 행·조건·진행 막대로 바꾼다.
 - 재정 창 20행에는 세법 칩 하나만 남긴다 (`토지세` + 전환 중이면 작은 진행 막대, 누르면 `showWindow('policy')`).
 
 #### 2-45-4. 투자법 (금융가 지분을 살 수 있는 사람, sim 쪽 필요)
 - 선택지 넷 (넓어지는 순): `귀족만 / Nobles only` (시작) → `상층 평민까지 / + Upper commoners` (전문가) → `중층까지 / + Middle` (기술자) → `하층까지 / + Lower` (노동자·농부). 행 툴팁에 포함 직종 아이콘.
-- 넓히는 쪽은 조건(금융가 비율 ≥ 그 행의 값)이 맞아야 하고, 좁히는 쪽은 조건 없이 된다. 둘 다 6개월 전환.
+- 넓히는 쪽은 기술로 열린 뒤(2-56) 조건(금융가 비율 ≥ 그 행의 값)이 맞아야 하고, 좁히는 쪽은 조건 없이 된다. 둘 다 6개월 전환.
 - 조건 숫자는 행마다 `≥ NN%`, 위의 지금 비율과 비교된다 (값은 비교 실행으로 정함, sim이 준다).
 - sim에 들어오기 전에는 섹션을 그리지 않는다.
 
 #### 2-45-5. 소식
-- 전환이 끝나면 sim 알림(3장 `lawChanged`)을 소식에 띄운다: `세법: 인두세` 처럼 라벨+이름. 누르면 정책 창 (`eventDestination.ts`에 `policy` 목적지).
+- 전환이 끝나면 sim 소식 `GameEvent.topic === 'lawChanged'`(바뀜, `info`) 또는 `'lawFailed'`(실패, `warn`, 문구에 금융가 비율 / 필요 비율)를 띄운다. 누르면 정책 창 (`eventDestination.ts`에 `topic`이 있으면 `policy` 목적지).
 - 문자열: `policy` 정책 / Policies, `taxLawTitle` 세법 / Tax law, `investLaw` 투자법 / Investment law, `landTax`·`pollTax`·`incomeTax`(있는 것 재사용), `investNobles`·`investUpper`·`investMiddle`·`investLower`, `budgetSteps` 예산 단계 / Budget levels, `financeShare`(2-44).
 
 ### 2-46. 지역 창 하나로: 개요·인구·건물 (사용자 요청 2026-10-21)
@@ -761,7 +764,7 @@ Keep the exact composition, coastline and every border position of the chosen ma
 - `TECHS` (`data.ts` 87~110, 17개, `requires: string[]`), `me.research.{known, current, progress, budget}`, `researchableTechs(me)` (`economy.ts` 237).
 - 열리는 방식: `BUILDINGS`의 방식 중 `m.tech === techId` (`types.ts` 93). 레벨당 하루 값: `m.workers`(직종별 인원), `m.inputs`, `m.outputs`. 이익률: `methodMarginAtBase(typeId, m.id).margin` (`encyclopedia.ts` 125, index에서 export됨).
 - 새 건물: 그 종류의 방식이 모두 `tech`를 가지고 그중 하나가 이 기술 (`canBuildType`, `economy.ts` 233와 같은 뜻). 이미 다른 방식 기술을 알면 "새 건물" 표시 없이 방식만.
-- 정책: 아직 기술로 열리는 정책이 없다. 칸은 sim 함수가 빈 배열을 줄 때 그리지 않는다.
+- 정책 (2-56): `unlocksOf(techId).policies` (세법·투자법 선택지 id: `poll`·`income`·`upper`·`middle`·`lower`). 이름은 2-45-3·2-45-4 문자열. 빈 배열이면 줄을 그리지 않는다.
 - **sim 쪽 필요 (3장):** `unlocksOf(techId)` → `{ methods: { typeId, methodId }[]; buildings: string[]; policies: string[] }` 한 곳에서 셈하게 (사전과 같이 씀). 들어오기 전에는 위 규칙으로 client에서 셈해도 된다 (함수 하나로 두고 나중에 바꾼다).
 
 **그래프**
@@ -781,7 +784,7 @@ Keep the exact composition, coastline and every border position of the chosen ma
 **올렸을 때 툴팁 (= 아래 띠와 같은 내용)**
 - 방식 한 줄씩: 건물 그림 · `건물 이름 · 방식 이름` · 이익률 `NN%` · 레벨당 일자리(직종 아이콘 + 인원) · 원료 → 산출 (상품 아이콘 + 하루 양). 숫자는 `NumericValue`. 같은 건물의 지금 방식보다 나은지 비교는 넣지 않는다.
 - 새 건물 줄: `새 건물` 칩 + 건물 이름.
-- 정책 줄 (생기면): `정책` 칩 + 이름.
+- 정책 줄: `정책` 칩 + 법 이름 (예 `정책 · 인두세`). 누르면 정책 창.
 - 오른쪽 위 `?` 링크: 규칙 사전 `encyclopedia/#tech` (항목 id `tech`, `encyclopedia.ts` 476). 방식 줄의 건물 이름 링크는 `#buildings`. 2-40처럼 지금은 단독 앱으로 새 탭.
 - 연구 창 기본 크기를 키운다 (`WindowWorkspace.tsx` 56 최소 너비 분기에 `research` 640).
 - 문자열: `fitView` 맞춤 / Fit, `newBuilding` 새 건물 / New building, `unlockPolicy` 정책 / Policy. 지울 것: `T.stage` (단계 머리, 569)를 다른 곳에서 안 쓰면.
@@ -1066,11 +1069,23 @@ Cells, top row left to right, then bottom row:
 - sim 작업자가 고친 클라이언트: `FinancePanel.tsx` 24 세법 `select` 옵션을 `land`/`poll`/`income`으로 (문자열은 있는 `T.landBased`·`T.pollTax`·`T.incomeTax`). `T.perCapita`는 안 쓰게 됐다.
 - 화면 작업자가 할 일: 2-45 정책 창 (세법 셋·투자법·전환 막대·조건선은 그리지 않고 고를 수 있는지만), 2-44 자산 비율 막대 (`ownershipAssets`), 금융가 상세에 지분 값 `nav`·지분 주인(`Pop.fund`) 수, 자본가 계층을 목록에서 숨기기 (인구 0).
 
+### 2-56. 법은 기술로 열리고, 끝날 때 조건을 다시 본다 (2026-10-22, 사용자 규칙, DECISIONS 7-18·7-19)
+**사용자 말:** "원래 정책은 기술로 먼저 열고, 조건이 맞으면 플레이어나 AI가 바꿔서 그때 조건이 맞으면 바뀌는거임".
+- 규칙: 법 선택지마다 1) 여는 기술(`LAW_TECH`, `data.ts`) 2) 시작 조건(금융가 자산 비율 ≥ 기준) 3) 180일 전환 4) 끝날 때 조건이 아직 맞아야 바뀜, 아니면 실패하고 지금 법이 남는다. 토지세·귀족만은 처음부터 열림. 투자법 좁히기는 조건 없음.
+- sim API:
+  - `policyStatus(world, kingdomId)` 선택지(`LawOption`)에 `tech: string | null`(여는 기술 id), `unlocked: boolean`. `eligible`은 이제 `unlocked && 조건`. `LawStatus.pendingOk?: boolean` (전환 중일 때만: 지금 끝나면 바뀌는가).
+  - `lawUnlocked(world, kingdom, law)`, `LAW_TECH: Record<TaxLaw | InvestLaw, string | null>`.
+  - `unlocksOf(techId)` → `{ methods: { typeId; methodId }[]; buildings: string[]; policies: (TaxLaw | InvestLaw)[] }` (3장 2-48 요청분).
+  - 명령 오류: 잠긴 법이면 `그 세법은 아직 기술로 열리지 않았습니다.` / 조건 미달이면 지금 문구.
+  - 소식: `GameEvent.topic?: 'lawChanged' | 'lawFailed'`. 실패 소식은 `kind: 'warn'`.
+  - `Kingdom.lawFail?: { tax?: number; invest?: number }` (실패한 틱, AI 쿨다운용. 화면에 안 써도 된다).
+- 화면 (2-45-2 표의 `잠김` 행, 전환 중 행, 2-45-5 소식, 2-48 정책 줄): 위 절에 적었다. 조건 숫자는 `threshold`, 지금 값은 `financeRatio` 하나.
+- 클라이언트 컴파일 수정 없음 (화면이 `policyStatus`를 아직 안 쓴다).
+
 ## 3. sim 쪽 필요 사항 (Claude가 처리할 것, UI 작업자는 요청만)
 - **2-49 (선택):** 회수 자재 lot에 `buildingId`를 넣고 `salvageOf(w, b)` export.
 - **2-35 소유 구성 (2026-10-21, 요청됨):**
   - 순수 함수 export: `ownershipOf(world, kingdomId, regionId?)` → `Record<'royal'|'stake'|'manor'|'finance', { levels, employed, jobs, profitWeek, reserve }>` (2-35-0 규칙 그대로, 지역을 주면 그 지역만). 화면·지표가 같은 계산을 쓰게 한다.
   - 지표 기록: `KingdomMetrics`에 같은 4몫의 `levels`·`employed`·`profitWeek` (30일마다). 지금 있는 `levelsState`·`levelsPrivate`는 두 몫뿐이라 2-35-5 네 층 차트를 그릴 수 없다.
-- **2-48 연구 트리 (2026-10-21, 있으면 좋음):** 순수 함수 `unlocksOf(techId)` → `{ methods: { typeId; methodId }[]; buildings: string[]; policies: string[] }` (`buildings` = 모든 방식이 기술을 요구하고 그중 하나가 이 기술인 종류). 사전도 같이 쓴다.
 - **2-17 정리 (UI 반영 끝, 2026-10-21 확인):** 클라이언트가 `isDistressed`·`SEIZURE_WEEKS`·`DISTRESS_DEBT_RATIO`·`landlordJobs`·`setResearchBudget`·`MAX_RESEARCH_BUDGET`·`Company.distressWeeks`를 더 쓰지 않는다 (grep 0건). sim은 `compat.ts`의 이 껍데기를 지워도 된다. 100배 값 사본(2-27)은 아직 지우지 않는다.
 - 이미 export되는 것: `paysDividend`, `kingdomGdp`, `kingdomById`, `builderOf`, `companyById`, `peasantSlots`, `disbanded`, `slots`, `harvestCondition`, `harvestLabel`, `HARVEST_KINDS`, `taxRates`, `taxCapacity`, `holdingsOf`, `levelOwnersOf`, `budgetPreview`, `reserveCap`, `hasReserve`, `weeklyOutputValue`, `creditLimit`, `isGovernment`, `crewOf`, `wealthOf`, `literacyOf`, `educationOf`

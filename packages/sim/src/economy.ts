@@ -1,5 +1,5 @@
 import {
-  BUILDING_BY_ID, GOOD_IDS, GOODS, HARVEST_KINDS, HARVEST_MAX_SEASONS, HARVEST_SEASON_DAYS, HARVEST_SPREAD, HARVEST_STEP, LAND_NAMES, LAND_NAMES_EN,
+  BUILDING_BY_ID, BUILDING_TYPES, GOOD_IDS, GOODS, HARVEST_KINDS, HARVEST_MAX_SEASONS, HARVEST_SEASON_DAYS, HARVEST_SPREAD, HARVEST_STEP, LAW_TECH, LAND_NAMES, LAND_NAMES_EN,
   MAX_POINTS_PER_LEVEL_DAY, POINT_VALUE, REGIONS, SKILL_DEFS, SUBSISTENCE, TECH_BY_ID, VEIN_NAMES, VEIN_NAMES_EN, getMethod, regionPerk, scaleBonus, TUNE,
 } from './data';
 import { regionNameEn } from './i18n';
@@ -7,7 +7,7 @@ import { borderCost } from './kingdoms';
 import { clamp } from './rng';
 import { DEPOSITS, OWNERS, SKILLS, WEALTH_MIN, crewOf, expOf, wealthOf } from './types';
 import type {
-  Building, BuildingTypeDef, Company, DepositId, EventKind, GoodBag, GoodId, HarvestCondition, LandType, MethodDef, Pop, PopClass, Region, Skill, World,
+  Building, BuildingTypeDef, Company, DepositId, EventKind, EventTopic, GoodBag, GoodId, HarvestCondition, InvestLaw, LandType, MethodDef, Pop, PopClass, Region, Skill, TaxLaw, World,
 } from './types';
 
 // ---------------------------------------------------------------- 지역·시장
@@ -232,6 +232,19 @@ export function availableMethods(c: Company, typeId: string): MethodDef[] {
 
 export function canBuildType(c: Company, t: BuildingTypeDef): boolean {
   return !t.auto && (!t.stateOnly || c.state) && t.methods.some((m) => knowsTech(c, m.tech));
+}
+
+/**
+ * 기술이 여는 것 (연구 트리·사전용): methods 그 기술을 요구하는 방식, buildings 모든 방식이 기술을 요구하고 그중 하나가 이 기술인 건물,
+ * policies 이 기술이 여는 법 (LAW_TECH)
+ */
+export function unlocksOf(techId: string): { methods: { typeId: string; methodId: string }[]; buildings: string[]; policies: (TaxLaw | InvestLaw)[] } {
+  const methods: { typeId: string; methodId: string }[] = [], buildings: string[] = [];
+  for (const t of BUILDING_TYPES) {
+    for (const m of t.methods) if (m.tech === techId) methods.push({ typeId: t.id, methodId: m.id });
+    if (!t.auto && t.methods.every((m) => m.tech) && t.methods.some((m) => m.tech === techId)) buildings.push(t.id);
+  }
+  return { methods, buildings, policies: (Object.keys(LAW_TECH) as (TaxLaw | InvestLaw)[]).filter((l) => LAW_TECH[l] === techId) };
 }
 
 export function researchableTechs(c: Company): string[] {
@@ -658,9 +671,9 @@ const EVENT_CAP = 300;
 
 export function logEvent(
   w: World, companyId: number | null, text: string,
-  opts: { kind?: EventKind; regionId?: number; buildingId?: number; en?: string } = {},
+  opts: { kind?: EventKind; regionId?: number; buildingId?: number; en?: string; topic?: EventTopic } = {},
 ) {
-  w.events.push({ tick: w.tick, companyId, text, ...(opts.en ? { textEn: opts.en } : {}), kind: opts.kind ?? 'info', regionId: opts.regionId, buildingId: opts.buildingId });
+  w.events.push({ tick: w.tick, companyId, text, ...(opts.en ? { textEn: opts.en } : {}), kind: opts.kind ?? 'info', regionId: opts.regionId, buildingId: opts.buildingId, ...(opts.topic ? { topic: opts.topic } : {}) });
   if (w.events.length > EVENT_CAP) w.events.splice(0, w.events.length - EVENT_CAP);
 }
 

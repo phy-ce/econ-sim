@@ -27,6 +27,9 @@
 - 40년까지 돌리면 지금 값은 25년 뒤 무너진다 (총생산 2,400 → 430, 국고 10억·금융가 금고 9억 고임). 따로 진단할 것.
 - `sweep.ts`: 법 열림·바뀜 해(`laws`), 비율 5% 칸 넘은 해(`ratioY`), 계층 저축(`savPeas` 등), 30년 넘는 실행도 해마다 traj.
 - 워크트리 클라이언트 검사: `npx tsc --noEmit -p .tmp/lp/tsconfig.client.json` (이 브랜치 sim 을 본다).
+- **법은 기술로 연다 (2026-10-22, 사용자 규칙).** `data.ts LAW_TECH`: 인두세 = 철 가공, 소득세 = 증기 철도, 투자법 전문가 = 인쇄술, 기술자 = 괴철로, 노동자·농부 = 증기기관. 시작 조건은 금융가 비율(값 그대로), 180일 뒤 끝날 때 조건을 다시 보고 안 맞으면 실패(`lawFailed` 소식, `Kingdom.lawFail`, AI 1년 대기). `policyStatus` 선택지에 `tech`·`unlocked`, `pendingOk`, `unlocksOf(techId)`, `GameEvent.topic`. 시험 `test/core/laws.test.ts`.
+  - 5안 비교와 채택 근거: DECISIONS 7-16 "기술로 여는 법". 40년 × 시드 1·2 총생산 10/20/30/40년 1,277/2,423/751/429 → 762/1,376/2,438/1,980. 기술 다 여는 해 15~19 → 17~38년. 그래프 `.tmp/reports/2026-10-22-lawtech.png`. 결과 파일 `.tmp/lt/base40.jsonl`(이전)·`final40.jsonl`·`v1`·`v2`.
+  - `sweep.ts`: 비교용 `lawTech`·`addTech` 조정값, 결과에 `techY`(기술 연 해)·`failY`(법 실패 해).
 
 ## 0-own1. wt-own1 (2026-10-21, 합치기 전, DECISIONS 7-16·7-18·7-19 1단계)
 - 레벨마다 주인 하나 (`Building.owners`, 국가 = 왕실 건물). 저택·금융가 금고(`Building.cash`), 투자 풀 없앰, 민간 공사비는 금고가 냄 (`finance.ts chooseFunders`, 완공 레벨 약정 비율, `production.ts giveLevels`), 민영화 명령 `setPrivatize` + 매주 `ai.ts buyLevels`, 철거 대금은 헐린 레벨 주인, 배당은 레벨 수대로. 민간 상회 운영 자금 2주(`firmBufferWeeks`), 모자라면 주인이 채움(`callCapital`).

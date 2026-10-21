@@ -1,5 +1,5 @@
 import type {
-  BuildingTypeDef, ClassDef, DepositId, GoodDef, GoodId, HarvestDef, LandType, MethodDef, NeedDef, NeedId, PopClass, RegionDef, Skill, SkillDef, TaxLaw, TechDef,
+  BuildingTypeDef, ClassDef, DepositId, GoodDef, GoodId, HarvestDef, LandType, MethodDef, NeedDef, NeedId, PopClass, RegionDef, Skill, SkillDef, TaxLaw, InvestLaw, TechDef,
 } from './types';
 
 // 세계관: 근세에서 산업화로 넘어가는 가상의 대륙. 세 왕국이 땅을 나눠 갖는다. 화폐 단위는 플로린(ƒ).
@@ -109,6 +109,15 @@ export const TECHS: TechDef[] = [
 ];
 
 export const TECH_BY_ID: Record<string, TechDef> = Object.fromEntries(TECHS.map((t) => [t.id, t]));
+
+/**
+ * 법(세법·투자법 선택지)마다 그 법을 여는 기술 (null = 처음부터 열림). 열린 법도 금융가 자산 비율 조건이 맞아야 바꾸기를 시작하고,
+ * 바꾸는 기간(TUNE.lawDays)이 끝날 때 조건이 아직 맞아야 바뀐다 (policy.ts)
+ */
+export const LAW_TECH: Record<TaxLaw | InvestLaw, string | null> = {
+  land: null, poll: 'ironworking', income: 'steam_rail',
+  nobles: null, upper: 'printing', middle: 'bloomery', lower: 'steam_engine',
+};
 
 // ---------------------------------------------------------------- 건물과 생산 방식
 

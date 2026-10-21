@@ -301,18 +301,21 @@ export const LAW_COOLDOWN = TICKS_PER_YEAR;
 function chooseTaxLaw(w: World, c: Company) {
   const k = w.kingdoms.find((x) => x.governmentId === c.id);
   if (!k || w.tick % (TICKS_PER_WEEK * 4) !== 0) return;
-  if (k.lawChange?.tax || (k.lawTick != null && w.tick - k.lawTick < LAW_COOLDOWN)) return;
-  // 고를 수 있는 세법 중 예상 세입이 가장 큰 것이 지금의 LAW_SWITCH 배를 넘으면 바꾸기 시작한다
+  // 바꾸기가 끝날 때 실패했으면 LAW_COOLDOWN 동안 그 법은 다시 시작하지 않는다
+  const failed = (kind: 'tax' | 'invest') => k.lawFail?.[kind] != null && w.tick - k.lawFail[kind]! < LAW_COOLDOWN;
   const st = policyStatus(w, k.id);
-  let best: TaxLaw = k.taxLaw, top = lawRevenue(w, k, k.taxLaw) * LAW_SWITCH;
-  for (const o of st.tax.options) {
-    if (!o.eligible || o.id === k.taxLaw) continue;
-    const v = lawRevenue(w, k, o.id);
-    if (v > top) { top = v; best = o.id; }
+  // 기술로 열리고 조건이 맞는 세법 중 예상 세입이 가장 큰 것이 지금의 LAW_SWITCH 배를 넘으면 바꾸기 시작한다
+  if (!k.lawChange?.tax && !(k.lawTick != null && w.tick - k.lawTick < LAW_COOLDOWN) && !failed('tax')) {
+    let best: TaxLaw = k.taxLaw, top = lawRevenue(w, k, k.taxLaw) * LAW_SWITCH;
+    for (const o of st.tax.options) {
+      if (!o.eligible || o.id === k.taxLaw) continue;
+      const v = lawRevenue(w, k, o.id);
+      if (v > top) { top = v; best = o.id; }
+    }
+    if (best !== k.taxLaw) applyCommand(w, c.id, { type: 'setTaxLaw', law: best });
   }
-  if (best !== k.taxLaw) applyCommand(w, c.id, { type: 'setTaxLaw', law: best });
-  // 투자법: 고를 수 있으면 한 칸씩 넓힌다 (지분을 살 사람이 늘어 금융가가 커진다)
-  if (!k.lawChange?.invest) {
+  // 투자법: 열리고 조건이 맞으면 한 칸씩 넓힌다 (지분을 살 사람이 늘어 금융가가 커진다)
+  if (!k.lawChange?.invest && !failed('invest')) {
     const next = INVEST_LAWS[INVEST_LAWS.indexOf(k.investLaw) + 1];
     if (next && st.invest.options.find((o) => o.id === next)?.eligible) applyCommand(w, c.id, { type: 'setInvestLaw', law: next });
   }
