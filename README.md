@@ -106,7 +106,7 @@ Research is paid each week from the research budget (see Money). That money beco
 
 ## Construction and buildings
 
-- **One level = 1,000 jobs.** Building numbers follow one rule: at base prices and base wages a basic method makes about 20% margin, the first improved method about 30%, the second about 40%. Inputs and outputs come in steps of 500 units a day.
+- **Production methods climb a ladder.** A basic method employs about 500 people per level and makes a 20% margin at base prices and base wages. Each step up doubles profit per level (×2, ×4): it employs fewer people, a larger share of skilled workers and experts, and uses more tools, coal, iron or machinery. Even basic methods use a few tools (tenant farms make a trickle of tools, so they exist from day one). Experts appear only in steam-age and luxury methods, at most 20 per level.
 - **The crown's construction offices build everything,** for both companies. Each crown starts with 10 office levels. Offices make construction points; better methods (timber scaffolding, iron frames) make more. A project gets at most 10 points per level a day. Half of each day's points go to crown projects and half to private ones, and either side can use what the other leaves. Private projects pay a fee for the points they use. A company can run 40 projects at once, each of 1 to 50 levels. An office with no project rests, and lets its workers go after 10 days.
 - **One building per type, region and company.** Building again adds levels. The whole building uses one method.
 - **Efficiency** = (0.4 + 0.6 × experience) × (1 + 1% per level, up to +20%) × (1 + regional perk). Experience grows 3.5% a day, halves on a method switch and is diluted by new levels.
@@ -130,7 +130,7 @@ Research is paid each week from the research budget (see Money). That money beco
 | Capitalists | upper | 40 | shares in the financial district |
 | High nobility | upper | 40 | shares in the manor: dividends of the manor's levels and tenant rent |
 
-- **Tenant farms.** All free farmland is tenant land, 1,000 tenants per cell. **Rent: 5% of the harvest is taken first and sold straight away; the money goes to the regional manor** (half as much from very poor tenants, wealth below 2). Of the rest, tenants keep what they use and sell the remainder for themselves. Under the land-tax law they pay a fixed land tax per head.
+- **Tenant farms.** All free farmland is tenant land, 500 tenants per cell. **Rent: 5% of the harvest is taken first and sold straight away; the money goes to the regional manor** (half as much from very poor tenants, wealth below 2). Of the rest, tenants keep what they use and sell the remainder for themselves. Under the land-tax law they pay a fixed land tax per head.
 - **High nobles = manor seats.** Each manor's seats = its weekly economy (output value of owned levels + tenant harvest, at base prices) ÷ 16,000, approached 1% a day. Nobles beyond the seats become gentry; empty seats are filled by gentry. Starting nobles are a fifth of the tier value.
 - **Wealth** is a standard of living from 1 to 99. It rises when income covers the next consumption basket and falls when it does not cover the current one. Living standard (wealth × fulfilment) sets births and deaths, as in Victoria 3. Hunger raises deaths sharply.
 - **Qualifications.** Literacy (from schools and wealth) and wealth let people qualify for skilled, expert, gentry and noble seats. Anyone except capitalists and high nobility can take labourer and tenant seats.

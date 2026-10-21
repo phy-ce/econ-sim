@@ -29,8 +29,9 @@ const KINGDOMS = [
 const START_SAVINGS: Record<PopClass, number> = { peasant: 5, unskilled: 20, farmer: 20, skilled: 100, expert: 300, gentry: 200, capitalist: 500, aristocrat: 500 };
 /** 처음부터 아는 기술: 손베틀·손가구·목공구 등 수공업 방식 */
 export const START_TECHS = ['spinning', 'guilds'];
-/** 왕실이 갖고 시작하는 건축사무소 레벨 (목조 4 × 10레벨 = 하루 약 40포인트. 공사 하나는 레벨당 하루 10포인트까지라 농장 1레벨은 약 60일) */
-export const START_OFFICE_LEVELS = 10;
+/** 왕실이 갖고 시작하는 건축사무소 레벨 (목조 2 × 20레벨 = 하루 약 40포인트. 공사 하나는 레벨당 하루 10포인트까지라 농장 1레벨(200점)은 약 20일).
+ *  1레벨이 일꾼 500명이 되어 1,000명 시절 10레벨과 같은 인원·포인트 */
+export const START_OFFICE_LEVELS = 20;
 /** 상층의 시작 문해력 */
 const UPPER_LITERACY = 0.6;
 

@@ -21,10 +21,10 @@ import { welfareShortOf, welfareWeekly } from './welfare';
 /** 건설 판단 기준: 연간 이윤 / 공사비 (5년 안에 회수) */
 const MIN_ROI = () => TUNE.minRoi;
 export const SWITCH_COOLDOWN = TICKS_PER_WEEK * 3;
-/** 공사 하나의 레벨 수 후보 (큰 것부터) */
-export const CHUNKS = [5, 2, 1];
-/** 사무소를 한 번에 늘리는 레벨: 지금 사무소의 1/4 (최소 2) */
-export const OFFICE_BLOCK = 2;
+/** 공사 하나의 레벨 수 후보 (큰 것부터). 1레벨이 일꾼 500명이 되어(2026-10-22) 1,000명 시절 [5, 2, 1]의 두 배 (1은 남는 땅 한 칸용) */
+export const CHUNKS = [10, 4, 2, 1];
+/** 사무소를 한 번에 늘리는 레벨: 지금 사무소의 1/4 (최소 4, 1,000명 시절 2의 두 배) */
+export const OFFICE_BLOCK = 4;
 export const OFFICE_GROWTH = 0.25;
 /** 공사 기간 동안 채울 수 있는 사람을 셀 때 보는 날 수 */
 export const STAFFING_HORIZON = 60;

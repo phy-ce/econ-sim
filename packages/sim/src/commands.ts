@@ -16,7 +16,8 @@ const stateWageError = () => fail('왕실 임금은 재정의 국영 임금 수�
 const govRunError = () => fail('정부 건물은 늘 다 가동합니다.', 'Government buildings always run at full capacity.');
 
 export const MAX_CONCURRENT_CONSTRUCTIONS = 40;
-export const MAX_LEVELS_PER_PROJECT = 50;
+/** 공사 하나의 최대 레벨 (1레벨이 일꾼 500명이 되어 1,000명 시절 50의 두 배) */
+export const MAX_LEVELS_PER_PROJECT = 100;
 
 
 /** 명령을 검증하고 적용한다. 플레이어와 AI 모두 이 경로만 거친다. 틱 안(AI)에서 쓴다 */

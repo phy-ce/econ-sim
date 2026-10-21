@@ -443,7 +443,7 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   },
   {
     id: 'methods-rule', category: 'production', title: t('건물 숫자 규칙', 'Building numbers rule'),
-    rule: t('1레벨은 1,000명(100 단위), 원료·산출은 500 단위. 기본가와 기본 임금에서 이익률이 기본 방식 약 20%, 기술 1단계 30%, 2단계 40%가 되게 정한다.', 'One level employs 1,000 (in 100s); inputs and outputs come in 500s. At base prices and wages the margin is about 20% for the basic method, 30% and 40% for the next tech steps.'),
+    rule: t('기본가와 기본 임금에서 기본 방식은 이익률 20%, 한 단계 오를 때마다 레벨당 이익이 2배다. 단계가 오르면 일꾼은 줄고(기본 약 500명) 기술자·전문가 비율과 공구·석탄·철·기계 사용이 는다. 기본 방식도 공구를 조금 쓴다. 일자리는 10 단위, 양은 50·10 단위.', 'At base prices and wages the basic method has a 20% margin, and each step up doubles profit per level. Higher steps employ fewer people (about 500 at the base), a larger share of skilled workers and experts, and more tools, coal, iron and machinery. Basic methods use a few tools too. Jobs come in 10s, amounts in 50s and 10s.'),
     formula: 'margin = (Σ out × base − Σ in × base − Σ jobs × baseWage) ÷ revenue',
     params: [
       p('노동자 기본 임금', 'Labourer base wage', () => SKILL_DEFS.unskilled.baseWage, 'florin'), p('기술자 기본 임금', 'Skilled base wage', () => SKILL_DEFS.skilled.baseWage, 'florin'),
@@ -460,7 +460,7 @@ export const ENCYCLOPEDIA: EncEntry[] = [
     live: {
       pick: ['building'], run: (_w, ctx) => {
         const def = BUILDING_BY_ID[ctx.building];
-        return { bars: def.methods.filter((m) => Object.keys(m.outputs).length > 0).map((m) => bar(t(m.name, m.nameEn ?? m.id), r4(methodMarginAtBase(def.id, m.id).margin), 'pct', 0.5)) };
+        return { bars: def.methods.filter((m) => Object.keys(m.outputs).length > 0).map((m) => bar(t(m.name, m.nameEn ?? m.id), r4(methodMarginAtBase(def.id, m.id).margin), 'pct', 0.6)) };
       },
     },
     related: ['buildings', 'production', 'tech'], seenIn: ['company'], source: ['data.ts BUILDING_TYPES', 'cli/methods_audit.ts'], design: ['7.1'],
@@ -863,10 +863,10 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   },
   {
     id: 'tenant-output', category: 'tenants', title: t('소작 산출', 'Tenant output'),
-    rule: t('소작농 노동 인구 1명이 하루 곡물 {0}, 의복 {1}, 목재 {2}, 가구 {3}을 낸다. 섬유는 내지 않는다. 기상 조건 배율을 곱한다.', 'Each tenant worker produces {0} grain, {1} clothing, {2} timber and {3} furniture a day. No fibre. Harvest conditions multiply it.'),
-    params: [p('곡물', 'Grain', () => SUBSISTENCE.output.grain ?? 0, 'good'), p('의복', 'Clothing', () => SUBSISTENCE.output.cloth ?? 0, 'good'), p('목재', 'Timber', () => SUBSISTENCE.output.timber ?? 0, 'good'), p('가구', 'Furniture', () => SUBSISTENCE.output.furniture ?? 0, 'good')],
+    rule: t('소작농 노동 인구 1명이 하루 곡물 {0}, 의복 {1}, 목재 {2}, 가구 {3}, 공구 {4}를 낸다. 섬유는 내지 않는다. 기상 조건 배율을 곱한다.', 'Each tenant worker produces {0} grain, {1} clothing, {2} timber, {3} furniture and {4} tools a day. No fibre. Harvest conditions multiply it.'),
+    params: [p('곡물', 'Grain', () => SUBSISTENCE.output.grain ?? 0, 'good'), p('의복', 'Clothing', () => SUBSISTENCE.output.cloth ?? 0, 'good'), p('목재', 'Timber', () => SUBSISTENCE.output.timber ?? 0, 'good'), p('가구', 'Furniture', () => SUBSISTENCE.output.furniture ?? 0, 'good'), p('공구', 'Tools', () => SUBSISTENCE.output.tools ?? 0, 'good')],
     example: () => {
-      const farm = getMethod('farm', 'farm_basic'), perWorker = (farm.outputs.grain ?? 0) / 1000;
+      const farm = getMethod('farm', 'farm_basic'), perWorker = (farm.outputs.grain ?? 0) / (farm.workers.farmer ?? 1);
       return {
         inputs: [row('소작농 1명 곡물', 'Grain per tenant', SUBSISTENCE.output.grain ?? 0, 'good'), row('농장 1명 곡물', 'Grain per farm worker', perWorker, 'good')],
         steps: [],
