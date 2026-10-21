@@ -34,9 +34,10 @@ import {
   DAILY_INTEREST, KEEP_SHARE, MINT_BASE, MINT_RATE, RESEARCHER_WEIGHT, RESERVE_SHARE, adminCapacityOf, reserveCap, taxCapacity, taxRates,
   weeklyOutputValue,
 } from './finance';
-import { CHUNKS, LAW_COOLDOWN, LAW_SWITCH, OFFICE_BLOCK, OFFICE_GROWTH, STAFFING_HORIZON, SWITCH_COOLDOWN } from './ai';
+import { CHUNKS, LAW_COOLDOWN, LAW_SWITCH, WELFARE_COOLDOWN, WELFARE_SWITCH, OFFICE_BLOCK, OFFICE_GROWTH, STAFFING_HORIZON, SWITCH_COOLDOWN } from './ai';
 import { budgetPreview } from './budget';
 import { ownershipAssets } from './policy';
+import { welfareIncome, welfareTarget, welfareWeekly } from './welfare';
 import type { BudgetLineKey } from './budget';
 import { MAX_CONCURRENT_CONSTRUCTIONS, MAX_LEVELS_PER_PROJECT } from './commands';
 import { START_CASH, START_FIRM_CASH, START_OFFICE_LEVELS, START_TECHS, TRADER_CAPITAL, createWorld } from './world';
@@ -145,7 +146,7 @@ export function exampleWorld(): World {
 /** 예산 미리보기 줄 이름 */
 const BUDGET_LINE_LABELS: Record<BudgetLineKey, L10n> = {
   tax: t('세금', 'Taxes'), tariffs: t('관세', 'Tariffs'), mint: t('주조', 'Minting'), fees: t('민간 공사 수수료', 'Construction fees'),
-  wages: t('정부 건물 임금', 'Government wages'), goods: t('정부 건물 원료', 'Government inputs'), research: t('연구비', 'Research'), interest: t('국채 이자', 'Bond interest'),
+  wages: t('정부 건물 임금', 'Government wages'), goods: t('정부 건물 원료', 'Government inputs'), research: t('연구비', 'Research'), interest: t('국채 이자', 'Bond interest'), welfare: t('복지', 'Welfare'),
 };
 
 // ---------------------------------------------------------------- 분류·창·DESIGN 절
@@ -202,6 +203,7 @@ export const DESIGN_SECTIONS: Record<string, string> = {
   '9.2': '예산',
   '9.3': '배당·소유 건물 금고',
   '9.4': '국채·주조',
+  '9.5': '복지',
   '10': 'AI 판단 요약',
   '11': '주요 조정값',
 };
@@ -253,7 +255,7 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   {
     id: 'day-order', category: 'basics', title: t('하루 순서', 'Order of a day'),
     rule: t('임금과 세금은 시장 전에 오간다. 그래서 그날 받은 임금으로 그날 산다. 오늘 만든 산출은 내일 팔린다. {0}일마다 주간 일(배당·AI·예산)을 한다.', 'Wages and taxes move before the market, so people spend today what they earned today. Today\'s output sells tomorrow. Every {0} days the weekly steps (dividends, AI, budget) run.'),
-    formula: '명령 → 고용 → 임금 → 세금 → 수확 → 주문 → 체결 → 생산 → 완공 → 가격 → 자격 → 인구·이주 → (주간)',
+    formula: '명령 → 고용 → 임금 → 세금 → 수확 → 주문 → 체결 → 생산 → 완공 → 가격 → 자격 → 인구·이주 → 복지 → (주간)',
     params: [p('주간 단계 간격', 'Weekly step interval', () => TICKS_PER_WEEK, 'day')],
     related: ['time-money', 'rounding', 'clearing'], seenIn: [], source: ['tick.ts'], design: ['2'],
   },
@@ -1073,13 +1075,13 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   },
   {
     id: 'budget-steps', category: 'state', title: t('정책 단계', 'Policy steps'),
-    rule: t('금액 편성은 없다. 손잡이는 세금 수준·국영 임금·연구비의 세 단계(1~5, 3이 보통)다. 정부 건물(행정청·건축사무소·학교)은 늘 다 돌고 국고가 운영비를 낸다. 국고가 비면 국채로 낸다.', 'There is no line-item budget. The knobs are three steps (1–5, 3 is normal): tax level, state wages, research. Government buildings always run at full and the treasury pays; when it is empty it issues bonds.'),
-    params: [tune('taxLevels', '세금 수준', 'Tax level', 'x'), tune('govWageLevels', '국영 임금', 'State wages', 'x'), tune('researchLevels', '연구비', 'Research', 'x')],
+    rule: t('금액 편성은 없다. 손잡이는 세금 수준·국영 임금·연구비·복지의 네 단계(1~5, 3이 보통)다. 정부 건물(행정청·건축사무소·학교)은 늘 다 돌고 국고가 운영비를 낸다. 국고가 비면 국채로 낸다.', 'There is no line-item budget. The knobs are four steps (1–5, 3 is normal): tax level, state wages, research, welfare. Government buildings always run at full and the treasury pays; when it is empty it issues bonds.'),
+    params: [tune('taxLevels', '세금 수준', 'Tax level', 'x'), tune('govWageLevels', '국영 임금', 'State wages', 'x'), tune('researchLevels', '연구비', 'Research', 'x'), tune('welfareLevels', '복지 목표 생활수준', 'Welfare target SoL')],
     live: {
       pick: ['kingdom'], run: (w, ctx) => {
         const k = kingdomOfCtx(w, ctx), bp = budgetPreview(w, k.id);
         return {
-          rows: [row('세금 · 임금 · 연구', 'Tax · wages · research', `${k.budget.tax} · ${k.budget.wages} · ${k.budget.research}`), row('주간 순수지', 'Weekly net', bp.net, 'florin')],
+          rows: [row('세금 · 임금 · 연구 · 복지', 'Tax · wages · research · welfare', `${k.budget.tax} · ${k.budget.wages} · ${k.budget.research} · ${k.budget.welfare}`), row('주간 순수지', 'Weekly net', bp.net, 'florin')],
           bars: bp.lines.map((l) => bar(BUDGET_LINE_LABELS[l.key], l.weekly, 'florin')),
         };
       },
@@ -1109,6 +1111,25 @@ export const ENCYCLOPEDIA: EncEntry[] = [
       },
     },
     related: ['budget-steps', 'ai-budget', 'mint'], seenIn: ['finance'], source: ['finance.ts spendBudget'], design: ['9', '9.2'],
+  },
+  {
+    id: 'welfare', category: 'state', title: t('복지 (최저 생활수준 보장)', 'Welfare (minimum living standard)'),
+    rule: t('매일 왕실은 복지법이 덮는 pop 중 생활수준이 목표보다 낮은 pop 에게, 그날 소득이 목표 소득에 모자란 만큼을 준다. 목표 = 복지 단계의 생활수준. 목표 소득 = (목표 + 1) 부 단계 묶음의 하루 비용 (부는 소득이 다음 단계 묶음 비용을 넘어야 오른다). 복지법: 없음 / 구빈법(소작농·실업자) / 임금 보조(임금 일자리) / 보편 보장(귀족·자본가를 뺀 모두). 하나만, 바꾸는 데 {0}일. 국고 현금이 모자라면 가진 만큼 같은 비율로 준다 (복지로 빚을 지지 않는다).', 'Each day the crown pays every covered pop whose living standard is below the target the amount its day\'s income falls short of the target income. Target = the welfare step\'s living standard. Target income = daily cost of the (target + 1) wealth basket (wealth only rises when income beats the next step\'s basket). Laws: none / poor laws (tenants and jobless) / wage subsidies (wage jobs) / universal (everyone but nobles and capitalists). One at a time, {0} days to change. If cash is short it pays what it has pro rata (no borrowing for welfare).'),
+    formula: '지급 = max(0, 인구 × 목표 소득(1인) − (그날 현금 소득 + 현물 시장가))   (생활수준 < 목표인 대상 pop)',
+    params: [tune('welfareLevels', '목표 생활수준 (단계 1~5)', 'Target SoL (steps 1–5)'), tune('lawDays', '바꾸는 날 수', 'Change days', 'day')],
+    live: {
+      pick: ['kingdom', 'region'], run: (w, ctx) => {
+        const k = kingdomOfCtx(w, ctx), reg = w.regions.find((x) => x.id === ctx.regionId) ?? w.regions.find((x) => x.kingdomId === k.id)!;
+        const T = welfareTarget(k.budget.welfare);
+        return {
+          rows: [row('복지법', 'Welfare law', `${k.welfareLaw}${k.lawChange?.welfare ? ' → ' + k.lawChange.welfare.to : ''}`), row('목표 생활수준', 'Target SoL', T),
+            row('목표 소득 (1인 하루, 이 지역)', 'Target income (per head, this region)', r2(welfareIncome(reg, T)), 'florin'),
+            row('지난주 복지', 'Last week\'s welfare', Math.round(k.lastBudget?.welfare ?? 0), 'florin')],
+          bars: (['poor', 'wage', 'universal'] as const).map((l) => bar(t(l, l), -Math.round(welfareWeekly(k, l, k.budget.welfare)), 'florin')),
+        };
+      },
+    },
+    related: ['budget-steps', 'wealth', 'ai-welfare', 'treasury'], seenIn: ['finance'], source: ['welfare.ts payWelfare', 'policy.ts startLawChange'], design: ['9.5'],
   },
   {
     id: 'schools', category: 'state', title: t('학교', 'Schools'),
@@ -1144,7 +1165,13 @@ export const ENCYCLOPEDIA: EncEntry[] = [
     id: 'ai-budget', category: 'ai', title: t('정책 사다리', 'Policy ladder'),
     rule: t('4주마다 한 칸 움직인다. 빚이 있거나 국고가 지출 {0}주치 미만이고 줄었으면 긴축 쪽으로, {1}주치를 넘고 줄지 않았으면 세금을 내린다. 사다리: 국영 임금 4 → 연구비 5·4 → 세금 1~5 → 연구비 2·1 → 연구 멈춤 → 국영 임금 2·1. 기술을 다 열면 풀 때 임금 지수 1 이하에서 국영 임금을 {2}단계까지 올리고, 지수가 1을 넘으면 되돌린다.', 'Every 4 weeks one step: toward austerity if in debt or below {0} weeks of spending and falling; tax cuts above {1} weeks and not falling. Ladder: state wages 4 → research 5·4 → tax 1–5 → research 2·1 → stop research → state wages 2·1. With every tech researched, loosening raises state wages up to step {2} while the wage index is at most 1, and steps back when it exceeds 1.'),
     params: [tune('treasuryLowWeeks', '조이는 선', 'Tighten below', 'week'), tune('treasuryHighWeeks', '푸는 선', 'Loosen above', 'week'), tune('doneWageMax', '기술 완료 후 임금 상한', 'Wage cap after research')],
-    related: ['budget-steps', 'treasury', 'ai-schools'], seenIn: ['finance'], source: ['ai.ts adjustBudget'], design: ['10'],
+    related: ['budget-steps', 'treasury', 'ai-schools', 'ai-welfare'], seenIn: ['finance'], source: ['ai.ts adjustBudget'], design: ['10'],
+  },
+  {
+    id: 'ai-welfare', category: 'ai', title: t('복지 고르기', 'Choosing welfare'),
+    rule: t('조일 때는 복지를 가장 먼저 줄인다 (단계를 1까지, 빚이 있으면 그다음 복지법을 끈다). 감당 = 국고 ≥ (복지를 뺀 주간 지출 + 그 복지의 주간 예상액) × {0}주. 다른 손잡이를 움직이지 않은 점검에서, 법마다 감당할 수 있는 가장 높은 단계에서 목표 소득에 모자란 사람이 가장 많은 법을 켜고(단계 1부터) 한 칸씩 올린다. 다른 법이 {1}배 넘게 많이 도우면 바꾼다 (바꾼 뒤 {2}일은 안 바꾼다). 조이지 않아도 국고가 줄며 {0}주의 절반 아래면 한 칸 내린다.', 'When tight, welfare is cut first (step down to 1, then, if in debt, the law is switched off). Affordable = treasury ≥ (weekly spending without welfare + that welfare\'s weekly estimate) × {0} weeks. On a check where no other knob moved, the crown enables the law that helps the most people short of the target income at the highest step it can afford (starting at step 1) and raises one step at a time. It switches law when another helps more than {1}× as many (not again for {2} days). When not tight but falling below half of {0} weeks, it steps down.'),
+    params: [tune('welfareWeeks', '복지 감당 주 수', 'Welfare cover weeks', 'week'), p('법 바꾸기 배수', 'Switch factor', () => WELFARE_SWITCH, 'x'), p('바꾼 뒤 쉬는 날', 'Cooldown', () => WELFARE_COOLDOWN, 'day')],
+    related: ['welfare', 'ai-budget'], seenIn: ['finance'], source: ['ai.ts adjustBudget', 'ai.ts raiseWelfare', 'ai.ts cutWelfare'], design: ['10', '9.5'],
   },
   {
     id: 'ai-methods', category: 'ai', title: t('방식 바꾸기', 'Switching methods'),

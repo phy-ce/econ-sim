@@ -13,7 +13,8 @@ import { kingdomById } from './kingdoms';
 import { LITERACY_PER_WEALTH, workforce } from './pops';
 import { rand, round2 } from './rng';
 import { BUDGET_STEPS, INVEST_LAWS, SKILLS, isLowerJob, literacyOf } from './types';
-import type { BudgetItem, Building, Company, Kingdom, MethodDef, Region, Skill, TaxLaw, World } from './types';
+import type { BudgetItem, Building, Company, Kingdom, MethodDef, Region, Skill, TaxLaw, WelfareLaw, World } from './types';
+import { welfareShortOf, welfareWeekly } from './welfare';
 
 // AI: 국영과 민간이 같은 판단을 쓴다. 다른 점은 자금원(국고 / 저택·금융가 금고)과 자기 왕국 땅에만 짓는다는 것뿐이다.
 
@@ -249,6 +250,8 @@ function treasuryTight(c: Company, k: Kingdom): boolean {
  * - 풂 (TUNE.treasuryHighWeeks 주치 초과, 줄지 않았다): 세금을 내리고, 세금이 1단계면 연구비를 보통 위로 올린다.
  * - 기술을 다 연 왕국은 연구비가 끊긴다. 풂 조건에서 임금 지수가 1 이하면 국영 임금을 TUNE.doneWageMax 단계까지 올리고,
  *   임금 지수가 1을 넘으면 보통(3)으로 되돌린다. 그 밖에는 국영 임금을 보통 위로 올리지 않는다
+ * - 복지 (cutWelfare·raiseWelfare): 조임에서는 복지를 가장 먼저 줄인다 (단계를 1까지, 빚이 있으면 그다음 복지법을 끈다). 조이지 않는데 국고가 줄며
+ *   TUNE.welfareWeeks 의 절반 주치 아래면 복지 단계를 내린다. 다른 손잡이를 움직이지 않은 점검에서는 복지를 켜거나 올린다 (raiseWelfare)
  */
 function adjustBudget(w: World, c: Company) {
   const k = w.kingdoms.find((x) => x.governmentId === c.id);
@@ -261,7 +264,7 @@ function adjustBudget(w: World, c: Company) {
   // 기술을 다 연 왕국: 연구비가 끊기는 몫을 국영 임금으로 돌린다 (임금 지수 1 이하, 국고 넉넉할 때 보통 위로 TUNE.doneWageMax 단계까지)
   const done = !c.research.current && researchableTechs(c).length === 0;
   if (treasuryTight(c, k)) {
-    if (losing) {
+    if (losing && !cutWelfare(w, c, k)) {
       if (b.wages > 3) step = ['wages', b.wages - 1];
       else if (b.research > 3) step = ['research', b.research - 1];
       else if (b.tax < BUDGET_STEPS) step = ['tax', b.tax + 1];
@@ -278,8 +281,65 @@ function adjustBudget(w: World, c: Company) {
     else if (b.research < 3) step = ['research', b.research + 1];
     else if (rich && b.tax > 1) step = ['tax', b.tax - 1];
     else if (rich && b.research < BUDGET_STEPS) step = ['research', b.research + 1];
+    else raiseWelfare(w, c, k);
+  } else if (k.welfareLaw !== 'none' && b.welfare > 1 && c.cash < (TUNE.welfareWeeks / 2) * (k.expenseEma ?? 0)) {
+    // 조이지는 않지만 국고가 줄며 복지 기준의 절반 주치 아래: 복지를 한 칸 내린다
+    step = ['welfare', b.welfare - 1];
   }
   if (step) applyCommand(w, c.id, { type: 'setBudget', item: step[0], value: step[1] });
+}
+
+/** 복지를 받을 수 있는 법 (끄기 'none' 제외) */
+const WELFARE_ON: WelfareLaw[] = ['poor', 'wage', 'universal'];
+
+/** 조임: 바뀌는 중인 복지법을 거두고, 복지 단계를 1까지 내리고, 빚이 있으면 복지법을 끈다. 무엇을 했으면 true */
+function cutWelfare(w: World, c: Company, k: Kingdom): boolean {
+  const pending = k.lawChange?.welfare;
+  if (pending && pending.to !== 'none') { applyCommand(w, c.id, { type: 'setWelfareLaw', law: k.welfareLaw }); return true; }
+  if (k.welfareLaw === 'none') return false;
+  if (k.budget.welfare > 1) { applyCommand(w, c.id, { type: 'setBudget', item: 'welfare', value: k.budget.welfare - 1 }); return true; }
+  // 복지법은 빚을 질 때만 끈다 (지출 몇 주치가 모자란 것만으로 끄면 180일 전환 동안 다시 켜고 끄기를 되풀이한다)
+  if (!pending && c.debt > 0) { applyCommand(w, c.id, { type: 'setWelfareLaw', law: 'none' }); return true; }
+  return false;
+}
+
+/** 복지법을 바꾸는 기준: 다른 법이 모자란 사람을 이 배수 넘게 더 돕고, 마지막으로 바꾼 지 WELFARE_COOLDOWN 틱이 지났을 때 */
+export const WELFARE_SWITCH = 1.5;
+export const WELFARE_COOLDOWN = 2 * TICKS_PER_YEAR;
+
+/**
+ * 복지 켜기·올리기 (AI 왕실, 다른 손잡이를 움직이지 않은 점검에서). 감당 = 국고 ≥ (복지를 뺀 주간 국정 지출 + 그 법·단계의 주간 복지 예상액) × TUNE.welfareWeeks.
+ * 법마다 감당할 수 있는 가장 높은 단계에서 목표 소득에 모자란 사람(모자란 비율로 가중)을 세어 가장 많은 법을 고른다.
+ * - 복지법이 없으면: 가장 나은 법으로 바꾸기 시작하고 복지 단계를 1로 둔다 (켜진 뒤 한 칸씩 올린다)
+ * - 복지법이 있으면: 마지막으로 바꾼 지 WELFARE_COOLDOWN 이 지났고 다른 법이 지금 법의 WELFARE_SWITCH 배를 넘게 돕는다면 그 법으로 바꾼다.
+ *   아니면 다음 단계를 감당할 수 있고 그 단계에 모자란 사람이 있으면 한 칸 올린다
+ */
+function raiseWelfare(w: World, c: Company, k: Kingdom) {
+  if (k.lawChange?.welfare) return;
+  const paid = k.lastBudget?.welfare ?? 0;
+  const base = Math.max(0, (k.expenseEma ?? 0) - paid);
+  const afford = (law: WelfareLaw, s: number) => c.cash >= TUNE.welfareWeeks * (base + welfareWeekly(k, law, s));
+  const best = (law: WelfareLaw) => {
+    for (let s = BUDGET_STEPS; s >= 1; s--) if (afford(law, s)) return { s, v: welfareShortOf(k, law, s) };
+    return { s: 0, v: 0 };
+  };
+  let pick: WelfareLaw | null = null, top = 0;
+  for (const law of WELFARE_ON) { const x = best(law); if (x.v > top) { top = x.v; pick = law; } }
+  if (k.welfareLaw === 'none') {
+    if (!pick) return;
+    applyCommand(w, c.id, { type: 'setWelfareLaw', law: pick });
+    if (k.budget.welfare !== 1) applyCommand(w, c.id, { type: 'setBudget', item: 'welfare', value: 1 });
+    return;
+  }
+  const cooled = k.welfareTick == null || w.tick - k.welfareTick >= WELFARE_COOLDOWN;
+  if (cooled && pick && pick !== k.welfareLaw && top > best(k.welfareLaw).v * WELFARE_SWITCH) {
+    applyCommand(w, c.id, { type: 'setWelfareLaw', law: pick });
+    return;
+  }
+  const next = k.budget.welfare + 1;
+  if (next <= BUDGET_STEPS && afford(k.welfareLaw, next) && welfareShortOf(k, k.welfareLaw, next) > 0) {
+    applyCommand(w, c.id, { type: 'setBudget', item: 'welfare', value: next });
+  }
 }
 
 /** 사다리를 다 쓰고도 빚을 지며 줄 때: 가장 큰 학교를 왕실 학교 전체 레벨의 1/4(최소 1)만큼 철거 대기에 올린다 */

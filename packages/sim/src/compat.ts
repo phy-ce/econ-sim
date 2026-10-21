@@ -19,12 +19,12 @@ export function landlordJobs(_b: Building): number {
 export const MAX_RESEARCH_BUDGET = 100_000;
 
 /**
- * 저장 파일을 불러온다 (불러오기 직후에 부른다). 지금 형식(9판: 레벨 소유·저택·금융가 금고·세법 셋·투자법·금융가 지분)만 받고, 옛 판은 바꾸지 않는다 (null).
+ * 저장 파일을 불러온다 (불러오기 직후에 부른다). 지금 형식(10판: 레벨 소유·저택·금융가 금고·세법 셋·투자법·금융가 지분·복지법)만 받고, 옛 판은 바꾸지 않는다 (null).
  * 화면 표시용 사본은 다시 쓴다
  */
 export function migrateWorld(input: unknown): World | null {
   const w = input as World & { version: number };
-  if (!w || typeof w !== 'object' || w.version !== 9) return null;
+  if (!w || typeof w !== 'object' || w.version !== 10) return null;
   writeMirrors(w);
   return w;
 }

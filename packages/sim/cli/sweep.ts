@@ -88,6 +88,10 @@ const yearly: Record<number, Record<string, number>> = {};
 // ariSk 상급 귀족 ÷ 기술자, ariK 상급 귀족 인구(천), genK 하급 귀족 인구(천)
 const classInc: Record<number, Record<string, number>> = {};
 const ironY: Record<number, Record<string, number>> = {};
+// 복지 (해마다): welY 한 해 복지 지급(백만), welL0..2 왕국별 복지법 (없음 0 / 구빈 1 / 임금 2 / 보편 3), welS 복지 단계 평균,
+// below3 귀족·자본가를 뺀 인구 중 생활수준 3 미만 비율, solFarm 농부 생활수준
+const welY: Record<number, Record<string, number>> = {};
+let welAcc = 0;
 function classIncome(w: World) {
   const n: Record<string, number> = {}, inc: Record<string, number> = {}, sav: Record<string, number> = {};
   for (const p of w.pops) { n[p.prof] = (n[p.prof] ?? 0) + p.size; inc[p.prof] = (inc[p.prof] ?? 0) + p.incomeEma; sav[p.prof] = (sav[p.prof] ?? 0) + p.savings; }
@@ -159,12 +163,27 @@ for (let d = 0; d < years * 360; d++) {
   // 소작농 묶음 충족률·부 (인구 가중, 하루 평균)
   { let n = 0, f = 0, wl = 0; for (const p of w.pops) if (p.prof === 'peasant') { n += p.size; f += p.size * p.fulfillment; wl += p.size * p.wealth100 / 100; }
     if (n > 0) { yearAcc.pFul += f / n; yearAcc.pW += wl / n; } }
+  if (w.tick % 7 === 0) for (const k of w.kingdoms) welAcc += k.lastBudget?.welfare ?? 0;
   if (w.tick % 360 === 0) {
     // 해마다 지표 (w.metrics 는 30년까지만 남아 따로 모은다)
     const last = w.metrics[w.metrics.length - 1];
     if (last?.tick === w.tick) yearPts.push(last);
     const y = w.tick / 360;
     classInc[y] = classIncome(w);
+    {
+      let n = 0, lo = 0, nf = 0, sf = 0;
+      for (const p of w.pops) {
+        if (p.prof === 'aristocrat' || p.prof === 'gentry' || p.prof === 'capitalist') continue;
+        n += p.size; if (p.sol < 3) lo += p.size;
+        if (p.prof === 'farmer') { nf += p.size; sf += p.size * p.sol; }
+      }
+      const laws = ['none', 'poor', 'wage', 'universal'];
+      welY[y] = { welY: +(welAcc / 1e6).toFixed(2), welS: +(w.kingdoms.reduce((a, k) => a + k.budget.welfare, 0) / w.kingdoms.length).toFixed(2),
+        below3: +(lo / Math.max(1, n)).toFixed(3), solFarm: +(sf / Math.max(1, nf)).toFixed(2),
+        ...Object.fromEntries(w.kingdoms.map((k, i) => [`welL${i}`, laws.indexOf(k.welfareLaw ?? 'none')])),
+        ...Object.fromEntries(w.kingdoms.map((k, i) => [`tax${i}`, k.budget.tax])) };
+      welAcc = 0;
+    }
     admY[y] = adminSnap(w);
     {
       let lv = 0, st = 0;
@@ -317,6 +336,7 @@ out.traj = yearPts.map((m) => {
     // 철: 철광석·철 값(장기 기준 대비), 철광산 레벨, 철광산 충원율(레벨 가중), 철 생산(천/일)
     oreP: m.goods.ore.ratio, wIdx: Math.max(...Object.values(m.kingdoms).map((k) => k.wageIndex)), metalP: m.goods.metal.ratio, mineLv: sum(m, (k) => k.levelsBy.mine ?? 0),
     ...(ironY[m.tick / 360] ?? {}),
+    ...(welY[m.tick / 360] ?? {}),
   };
 });
 const after1 = w.metrics.filter((m) => m.tick > 360);

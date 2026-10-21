@@ -4,6 +4,7 @@ import { DAILY_INTEREST, MINT_BASE, MINT_RATE } from './finance';
 import { kingdomById } from './kingdoms';
 import { BUDGET_ITEMS, BUDGET_STEPS, SKILLS } from './types';
 import type { BudgetItem, World } from './types';
+import { welfareWeekly } from './welfare';
 
 // ---------------------------------------------------------------- 예산 미리보기 (화면 전용)
 //
@@ -11,8 +12,8 @@ import type { BudgetItem, World } from './types';
 // 매주 출렁이므로, 여기서는 천천히 움직이는 기준값(이동평균, 지금 고용)에 단계 배율만 곱한다.
 // 세계를 바꾸지 않는다 (난수·쓰기 없음). sim 은 이 값을 읽지 않는다.
 
-/** 미리보기 줄: 수입(세금·관세·주조·민간 공사 수수료)은 +, 지출(정부 건물 임금·원료·연구비·국채 이자)은 − */
-export type BudgetLineKey = 'tax' | 'tariffs' | 'mint' | 'fees' | 'wages' | 'goods' | 'research' | 'interest';
+/** 미리보기 줄: 수입(세금·관세·주조·민간 공사 수수료)은 +, 지출(정부 건물 임금·원료·연구비·국채 이자·복지)은 − */
+export type BudgetLineKey = 'tax' | 'tariffs' | 'mint' | 'fees' | 'wages' | 'goods' | 'research' | 'interest' | 'welfare';
 
 export interface BudgetLine {
   key: BudgetLineKey;
@@ -44,7 +45,7 @@ export function roundBudget(x: number): number {
 }
 
 const levelOf = (item: BudgetItem, step: number) =>
-  (item === 'tax' ? TUNE.taxLevels : item === 'wages' ? TUNE.govWageLevels : TUNE.researchLevels)[step - 1];
+  (item === 'tax' ? TUNE.taxLevels : item === 'wages' ? TUNE.govWageLevels : item === 'research' ? TUNE.researchLevels : TUNE.welfareLevels)[step - 1];
 
 /**
  * 왕국의 주간 예상 국정 수지 (steps 를 넘기면 그 단계로, 빠진 손잡이는 지금 단계).
@@ -54,6 +55,7 @@ const levelOf = (item: BudgetItem, step: number) =>
  * - 정부 건물 임금 = 지금 고용 × 기본 임금 × 임금 지수 × 국영 임금 수준 배율 × 7
  * - 연구비 = min(주간 경제 규모(이동평균) × 연구비 비율 × 연구비 수준 배율, 남은 기술 비용, 국고 현금). 연구 중인 기술이 없으면 0
  * - 국채 이자 = 지금 빚 × 일 이자율 × 7
+ * - 복지 = 지금 복지법이 덮는 무리의 그 단계 하루 필요액(이동평균) × 7 (welfare.ts welfareWeekly). 복지법이 'none' 이면 0
  * 기준값이 아직 없으면(새 게임 첫 주, 옛 저장) 지난주 장부, 그것도 없으면 이번 주 지금까지를 7일로 늘린 값을 쓴다.
  */
 export function budgetPreview(w: World, kingdomId: number, steps: Partial<Record<BudgetItem, number>> = {}): BudgetPreview {
@@ -95,14 +97,15 @@ export function budgetPreview(w: World, kingdomId: number, steps: Partial<Record
       case 'fees': return feesWage * levelOf('wages', st.wages) + feesOther;
       case 'wages': return -wageBase * levelOf('wages', st.wages);
       case 'research': return -Math.min(researchBase * levelOf('research', st.research), researchLeft);
+      case 'welfare': return -welfareWeekly(k, k.welfareLaw, st.welfare);
       default: return fixed[key];
     }
   };
-  const knobOf: Partial<Record<BudgetLineKey, BudgetItem>> = { tax: 'tax', fees: 'wages', wages: 'wages', research: 'research' };
+  const knobOf: Partial<Record<BudgetLineKey, BudgetItem>> = { tax: 'tax', fees: 'wages', wages: 'wages', research: 'research', welfare: 'welfare' };
   const levels = Array.from({ length: BUDGET_STEPS }, (_, i) => i + 1);
   const at = (item: BudgetItem, s: number) => ({ ...cur, [item]: s });
 
-  const keys: BudgetLineKey[] = ['tax', 'tariffs', 'mint', 'fees', 'wages', 'goods', 'research', 'interest'];
+  const keys: BudgetLineKey[] = ['tax', 'tariffs', 'mint', 'fees', 'wages', 'goods', 'research', 'interest', 'welfare'];
   const lines: BudgetLine[] = keys.map((key) => {
     const knob = knobOf[key];
     return knob

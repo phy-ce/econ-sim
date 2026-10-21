@@ -31,6 +31,14 @@
   - 5안 비교와 채택 근거: DECISIONS 7-16 "기술로 여는 법". 40년 × 시드 1·2 총생산 10/20/30/40년 1,277/2,423/751/429 → 762/1,376/2,438/1,980. 기술 다 여는 해 15~19 → 17~38년. 그래프 `.tmp/reports/2026-10-22-lawtech.png`. 결과 파일 `.tmp/lt/base40.jsonl`(이전)·`final40.jsonl`·`v1`·`v2`.
   - `sweep.ts`: 비교용 `lawTech`·`addTech` 조정값, 결과에 `techY`(기술 연 해)·`failY`(법 실패 해).
 
+## 0-welfare. wt-welfare (2026-10-22, wt-own1 위, 합치기 전)
+- 사용자 요청: "최저 생활수준을 타겟(예: 3)해서 보장하는 정책을 여러 개 만들어 고르게 + AI가 상황에 맞게 고르게".
+- 복지법 `welfareLaw` none/poor(소작농·실업)/wage(임금 일자리)/universal (180일 전환, 조건 없음), 정책 단계 넷째 `welfare` = 목표 생활수준 2/2.5/3/3.5/4 (`TUNE.welfareLevels`). 매일 대상 pop 중 생활수준 < 목표인 pop 의 그날 소득을 (목표+1) 부 묶음 비용까지 채움 (`welfare.ts payWelfare`, 국고 현금에서 같은 비율, 빚 없음). DESIGN 9.5.
+- AI (`ai.ts cutWelfare`·`raiseWelfare`): 조이면 복지 먼저 내림 (법은 빚일 때만 끔), 다른 손잡이를 안 움직인 점검에서 감당(국고 ≥ (복지 뺀 지출 + 예상 복지) × 40주 `welfareWeeks`)되는 가장 높은 단계에서 모자란 사람이 가장 많은 법을 켜고 한 칸씩 올림. 법 바꾸기 1.5배·2년 쉼.
+- `welfareWeeks` 26·39·52·78 (시드 1·2), 30·40·50 (시드 1~3) 비교 → 40. 11~20년차 평균 (끔 → 40): 총생산 1,972 → 2,414, 레벨 2,105 → 2,361, 노동자 SoL 3.35 → 3.59, 생활수준 3 미만 비율 0.38 → 0.25, 국고 451 → 396백만. 5~10년차 노동자 SoL은 0.1 정도 낮다. 그래프 `.tmp/reports/2026-10-22-welfare-main.png`·`-laws.png`·`-weeks.png` (이 워크트리).
+- 진단: `cli/welfdiag.ts [seed] [years]` (왕국별 국고·단계·복지법·법별 예상액).
+- 워크트리 node_modules: 루트는 실제 폴더에 main 의 패키지를 하나씩 잇고 `@econ/*`만 이 워크트리 packages 로 이었다 (클라이언트 타입 검사가 이 브랜치 sim 을 본다).
+
 ## 0-own1. wt-own1 (2026-10-21, 합치기 전, DECISIONS 7-16·7-18·7-19 1단계)
 - 레벨마다 주인 하나 (`Building.owners`, 국가 = 왕실 건물). 저택·금융가 금고(`Building.cash`), 투자 풀 없앰, 민간 공사비는 금고가 냄 (`finance.ts chooseFunders`, 완공 레벨 약정 비율, `production.ts giveLevels`), 민영화 명령 `setPrivatize` + 매주 `ai.ts buyLevels`, 철거 대금은 헐린 레벨 주인, 배당은 레벨 수대로. 민간 상회 운영 자금 2주(`firmBufferWeeks`), 모자라면 주인이 채움(`callCapital`).
 - 저장 8판, 옛 저장 안 받음. 클라이언트 두 줄 지움 (UI_CHANGES 2-54).

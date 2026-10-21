@@ -12,7 +12,7 @@ export function FinancePanel({game,world,me}:{game:Game;world:World;me:Company})
  if(!kingdom)return null;
  const rates=taxRates(kingdom);
  const preview=budgetPreview(world,kingdom.id);
- const multipliers={tax:TUNE.taxLevels,wages:TUNE.govWageLevels,research:TUNE.researchLevels};
+ const multipliers={tax:TUNE.taxLevels,wages:TUNE.govWageLevels,research:TUNE.researchLevels,welfare:TUNE.welfareLevels};
  const name=(l:BudgetLine)=>T.budgetLines[l.key]??l.key;
  const groups:[string,BudgetLine[]][]=[[T.receipts,preview.lines.filter(l=>['tax','tariffs','mint','fees'].includes(l.key))],[T.expenses,preview.lines.filter(l=>['wages','goods','research','interest'].includes(l.key))]];
  const row=(l:BudgetLine)=>{

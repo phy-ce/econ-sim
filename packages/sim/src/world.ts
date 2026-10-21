@@ -16,7 +16,7 @@ export const START_CASH = 30_000_000;
 export const START_FIRM_CASH = 5_000_000;
 export const TRADER_CAPITAL = 100_000_000;
 /** 시작 정책 단계: 세금 수준, 국영 임금 수준, 연구비 수준 모두 보통(3) */
-const DEFAULT_BUDGET = { tax: 3, wages: 3, research: 3 };
+const DEFAULT_BUDGET = { tax: 3, wages: 3, research: 3, welfare: 3 };
 /** 플레이어 회사 id (화면이 이 값을 쓴다) */
 export const PLAYER_ID = 100;
 
@@ -165,7 +165,7 @@ export function createWorld(seed = 1, opts: CreateWorldOptions = {}): World {
   });
 
   const kingdoms: Kingdom[] = KINGDOMS.map((k) => ({
-    id: k.id, name: k.name, nameEn: k.nameEn, color: k.color, governmentId: k.gov.id, privateIds: [k.firm.id], tariff: {}, investmentPool: 0, taxLaw: TUNE.taxLaw, investLaw: 'nobles', budget: { ...DEFAULT_BUDGET }, revenueWeek: 0,
+    id: k.id, name: k.name, nameEn: k.nameEn, color: k.color, governmentId: k.gov.id, privateIds: [k.firm.id], tariff: {}, investmentPool: 0, taxLaw: TUNE.taxLaw, investLaw: 'nobles', welfareLaw: 'none', budget: { ...DEFAULT_BUDGET }, revenueWeek: 0,
   }));
   const companies: Company[] = [];
   for (const k of KINGDOMS) {
@@ -175,7 +175,7 @@ export function createWorld(seed = 1, opts: CreateWorldOptions = {}): World {
   }
 
   const w: World = {
-    version: 9, config: { ai }, tick: 0, seed, rngState: seed | 0, nextId: 1000,
+    version: 10, config: { ai }, tick: 0, seed, rngState: seed | 0, nextId: 1000,
     regions, kingdoms, pops: [], fund: 0, metrics: [],
     traders: { cash: TRADER_CAPITAL, capital: TRADER_CAPITAL, shipments: [] },
     mint: { minted: 0, issued: 0, retired: 0, interest: 0 },

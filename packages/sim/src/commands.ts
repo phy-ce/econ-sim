@@ -5,7 +5,7 @@ import { kingdomById } from './kingdoms';
 import { buildingNameEn, landNameEn, regionNameEn, techNameEn } from './i18n';
 import { round2 } from './rng';
 import { roundWorld } from './round';
-import { BUDGET_ITEMS, BUDGET_STEPS, INVEST_LAWS, TAX_LAWS } from './types';
+import { BUDGET_ITEMS, BUDGET_STEPS, INVEST_LAWS, TAX_LAWS, WELFARE_LAWS } from './types';
 import { lawUnlocked, startLawChange } from './policy';
 import type { Command, World } from './types';
 
@@ -227,6 +227,13 @@ function runCommand(w: World, actor: number, cmd: Command): CommandError | null 
       if (!INVEST_LAWS.includes(cmd.law)) return fail('잘못된 투자법입니다.', 'Invalid investment law.');
       if (!lawUnlocked(w, k, cmd.law)) return fail('그 투자법은 아직 기술로 열리지 않았습니다.', 'That investment law is not unlocked by research yet.');
       if (!startLawChange(w, k, 'invest', cmd.law)) return fail('금융가 자산 비율이 모자라 그 투자법을 고를 수 없습니다.', 'The financial share is too low for that investment law.');
+      return null;
+    }
+    case 'setWelfareLaw': {
+      const k = w.kingdoms.find((x) => x.governmentId === actor);
+      if (!k) return fail('왕실만 복지법을 정할 수 있습니다.', 'Only a royal house can set the welfare law.');
+      if (!WELFARE_LAWS.includes(cmd.law)) return fail('잘못된 복지법입니다.', 'Invalid welfare law.');
+      startLawChange(w, k, 'welfare', cmd.law);
       return null;
     }
     case 'setPrivatize': {
