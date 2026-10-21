@@ -1,7 +1,6 @@
 import { TICKS_PER_WEEK, TUNE } from './data';
 import { companyById } from './economy';
 import { basketCostAt } from './market';
-import { round2 } from './rng';
 import type { Kingdom, Pop, Region, WelfareLaw, World } from './types';
 
 // ---------------------------------------------------------------- 복지 (최저 생활수준 보장)
@@ -89,7 +88,7 @@ export function payWelfare(w: World) {
     // 필요액 이동평균 (AI 판단과 예산 미리보기용)
     const old = k.welfareNeed;
     const n = need[ki];
-    const ema = (a: number[] | undefined, x: number[]) => x.map((v, i) => round2(a?.[i] == null ? v : a[i] * 0.9 + v * 0.1));
+    const ema = (a: number[] | undefined, x: number[]) => x.map((v, i) => (a?.[i] == null ? v : a[i] * 0.9 + v * 0.1));
     k.welfareNeed = { poor: ema(old?.poor, n.poor), wage: ema(old?.wage, n.wage), poorShort: ema(old?.poorShort, n.poorShort), wageShort: ema(old?.wageShort, n.wageShort) };
     if (total[ki] <= 0) return;
     const gov = companyById(w, k.governmentId);

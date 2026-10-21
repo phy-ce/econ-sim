@@ -181,13 +181,9 @@ export interface Pop {
   /** 부양가족 포함 인구 */
   size: number;
   savings: number;
-  /** 부 단계 × 100 (100..9900). 소수 둘째 자리로 저장해도 하루 0.0001 단계씩 움직일 수 있게 100배로 둔다. 규칙 단위(1..99)는 wealthOf(p) */
-  wealth100: number;
-  /** 문해력 % (0..100, 100배 값). 규칙 단위(0..1)는 literacyOf(p) */
-  literacy100: number;
-  /** 화면 표시용 사본 (소수 둘째 자리). sim은 읽지 않는다 — wealthOf(p)를 쓴다. 부 단계 (wealth100 / 100), 하루 끝 반올림(round.ts)에서 다시 쓴다 */
+  /** 부 단계 1..99 (소수, 하루에 조금씩 움직인다) */
   wealth: number;
-  /** 화면 표시용 사본 (소수 둘째 자리). sim은 읽지 않는다 — literacyOf(p)를 쓴다. 문해력 0..1 (literacy100 / 100) */
+  /** 문해력 0..1 */
   literacy: number;
   /** 다른 직종의 자격을 갖춘 노동 인구 수 */
   quals: Partial<Record<PopClass, number>>;
@@ -199,21 +195,24 @@ export interface Pop {
   food: number;
   /** 직전 틱 생활수준 */
   sol: number;
-  /** 직전 틱 인구 증감률 (연 %, 소수 2자리) */
+  /** 직전 틱 인구 증감률 (연 %) */
   growth: number;
   /** 소작으로 직접 얻어 먹는 현물 */
   inKind: GoodBag;
-  /** 금융가 지분: 금융가 건물 id → 지분 수 (사람을 따라 옮긴다) */
-  fund?: Record<number, number>;
+  /** 금융가 지분: 금융가 건물 id (오름차순) 와 그 지분 수 (사람을 따라 옮긴다, pops.ts fundOf·addFund). 11판부터 (10판은 id → 지분 수 객체) */
+  fund?: FundUnits;
 }
 
-/** 100배로 저장한 값을 규칙 단위로 읽는다: 부 단계 1..99, 문해력 0..1, 교육 접근도 0..1 */
-export const wealthOf = (p: Pop) => p.wealth100 / 100;
-export const literacyOf = (p: Pop) => p.literacy100 / 100;
-export const educationOf = (r: { education100: number }) => r.education100 / 100;
+/** 금융가 지분 묶음: id[i] 건물의 지분 u[i]. id 는 오름차순 (객체 키 대신 배열: 사전형 객체보다 몇 배 빠르다) */
+export interface FundUnits { id: number[]; u: number[] }
+
+/** 부 단계 1..99, 문해력 0..1, 교육 접근도 0..1 */
+export const wealthOf = (p: Pop) => p.wealth;
+export const literacyOf = (p: Pop) => p.literacy;
+export const educationOf = (r: { education: number }) => r.education;
 /** 건물 숙련도 0..1, 작업 인원 0..1 (작업 인원이 아직 없으면 충원율) */
-export const expOf = (b: { exp100: number }) => b.exp100 / 100;
-export const crewOf = (b: { crew100?: number; last: { staffing: number } }) => (b.crew100 !== undefined ? b.crew100 / 100 : b.last.staffing);
+export const expOf = (b: { exp: number }) => b.exp;
+export const crewOf = (b: { crew?: number; last: { staffing: number } }) => b.crew ?? b.last.staffing;
 
 export interface Building {
   id: number;
@@ -245,11 +244,9 @@ export interface Building {
   /** 저택: 상급 귀족 자리 (노동 인구). 저택이 가진 건물 레벨과 소작지 칸으로 정한다 (production.ts updateOwnership) */
   nobleSeats?: number;
   lastSwitchTick: number;
-  /** 숙련도 % (0..100, 100배 값. 하루 3.5씩 오른다). 규칙 단위(0..1)는 expOf(b) */
-  exp100: number;
-  /** 실제로 손이 맞는 작업 인원 % (0..100, 100배 값): 충원율을 하루 8%씩 따라간다. 규칙 단위(0..1)는 crewOf(b) */
-  crew100?: number;
-  /** 화면 표시용 사본 (소수 둘째 자리). sim은 읽지 않는다 — crewOf(b)를 쓴다. 작업 인원 0..1 (crew100 / 100, crew100 이 없으면 없다) */
+  /** 숙련도 0..1 (가동하는 날마다 EXP_GAIN 씩 오른다), expOf(b) */
+  exp: number;
+  /** 실제로 손이 맞는 작업 인원 0..1: 충원율을 하루 CREW_RATE 씩 따라간다. 없으면 충원율 (crewOf(b)) */
   crew?: number;
   /** 건축사무소가 할 일이 없어 인부를 해산한 상태 */
   idle: boolean;
@@ -419,9 +416,7 @@ export interface Region {
   land: Record<LandType, number>;
   /** 찾은 광맥 레벨 수 (자원별). 잠재량(RegionDef.veins)까지 탐광으로 늘어난다 */
   deposits: Record<DepositId, number>;
-  /** 교육 접근도 % (0..100, 100배 값, 학교 정원 비율). pop 의 문해력이 이것을 따라간다. 규칙 단위(0..1)는 educationOf(r) */
-  education100: number;
-  /** 화면 표시용 사본 (소수 둘째 자리). sim은 읽지 않는다 — educationOf(r)를 쓴다. 교육 접근도 0..1 (education100 / 100) */
+  /** 교육 접근도 0..1 (학교 정원 비율을 따라간다). pop 의 문해력이 이것을 따라간다 */
   education: number;
   /** pop 합산 (화면용). 매 틱 다시 채운다 */
   households: Record<PopClass, Household>;
@@ -439,7 +434,7 @@ export interface Kingdom {
   privateIds: number[];
   /** 수입 관세율 (상품별, 없으면 기본값) */
   tariff: Partial<Record<GoodId, number>>;
-  /** 화면 표시용 사본 (소수 둘째 자리). sim은 읽지 않는다: 그 왕국 저택·금융가 금고의 합 (투자 풀은 없앴다, round.ts writeMirrors) */
+  /** 화면 표시용 사본 (소수 둘째 자리). sim은 읽지 않는다: 그 왕국 저택·금융가 금고의 합 (투자 풀은 없앴다, round.ts writePool) */
   investmentPool: number;
   /** 세법 (하나만): 'land' 토지세 = 소작농 1인당 정액, 'poll' 인두세 = 소작농을 뺀 1인당 정액, 'income' 소득세 = 소작농을 뺀 소득(임금·배당) × 세율. 세율은 taxRates */
   taxLaw: TaxLaw;
@@ -573,9 +568,10 @@ export interface MintLedger {
 export interface World {
   /**
    * 저장 형식 버전: 저장되는 모양이 바뀌면 올린다. 옛 저장은 compat.ts migrateWorld
-   * (8: 레벨 소유·소유 건물 금고. 옛 저장은 불러오지 않는다)
+   * (8: 레벨 소유·소유 건물 금고. 11: 금융가 지분 Pop.fund 를 배열 묶음으로. 12: 반올림 없음, 100배 값(wealth100·literacy100·education100·exp100·crew100) 대신 규칙 단위 값.
+   * 10·11판은 불러올 때 바꾼다, 그보다 옛 저장은 불러오지 않는다)
    */
-  version: 10;
+  version: 12;
   config: WorldConfig;
   tick: number;
   seed: number;

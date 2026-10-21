@@ -11,7 +11,7 @@ import { marketOutlook, techValue, valueMethod } from './outlook';
 import type { Outlook } from './outlook';
 import { kingdomById } from './kingdoms';
 import { LITERACY_PER_WEALTH, workforce } from './pops';
-import { rand, round2 } from './rng';
+import { rand } from './rng';
 import { BUDGET_STEPS, INVEST_LAWS, SKILLS, isLowerJob, literacyOf } from './types';
 import type { BudgetItem, Building, Company, Kingdom, MethodDef, Region, Skill, TaxLaw, WelfareLaw, World } from './types';
 import { welfareShortOf, welfareWeekly } from './welfare';
@@ -56,7 +56,7 @@ export function runAi(w: World) {
 export function privatizePrice(w: World, gov: Company, b: Building): { price: number; yearProfit: number } {
   const cost = constructionEstimate(w, gov, b.typeId).cost;
   const yearProfit = b.level > 0 ? (b.profitEma * TICKS_PER_YEAR) / b.level : 0;
-  return { price: round2(Math.max(cost * 0.5, cost + yearProfit)), yearProfit };
+  return { price: Math.max(cost * 0.5, cost + yearProfit), yearProfit };
 }
 
 function buyLevels(w: World) {
@@ -276,7 +276,7 @@ function adjustBudget(w: World, c: Company) {
   if (!k || w.tick % (TICKS_PER_WEEK * 4) !== 0) return;
   const net = c.cash - c.debt;
   const losing = k.netLast != null && net < k.netLast;
-  k.netLast = round2(net);
+  k.netLast = net;
   const b = k.budget;
   let step: [BudgetItem, number] | null = null;
   // 기술을 다 연 왕국: 연구비가 끊기는 몫을 국영 임금으로 돌린다 (임금 지수 1 이하, 국고 넉넉할 때 보통 위로 TUNE.doneWageMax 단계까지)
@@ -460,7 +460,7 @@ function manageBuildings(w: World, c: Company) {
     // 행정청: 한도 × 원료 충족률이 가장 큰 방식. 원료가 있는 방식은 이 건물의 충족률 이동평균(fillEma)으로 본다.
     // 원료가 없는 방식으로 도는 동안은 fillEma 를 매주 TUNE.adminFillRetry 만큼 1로 되돌려, 원료가 다시 돌면 언젠가 다시 시도한다
     if (cur.taxCapacity) {
-      if (!Object.keys(cur.inputs).length && b.fillEma !== undefined) b.fillEma = round2(b.fillEma + (1 - b.fillEma) * TUNE.adminFillRetry);
+      if (!Object.keys(cur.inputs).length && b.fillEma !== undefined) b.fillEma = b.fillEma + (1 - b.fillEma) * TUNE.adminFillRetry;
       const ema = b.fillEma ?? 1;
       const value = (m: MethodDef) => m.taxCapacity! * (Object.keys(m.inputs).length ? ema : 1);
       let best = cur;
@@ -852,7 +852,7 @@ function reviewLevels(w: World, c: Company, o: Outlook, pointsPerDay: number) {
       continue;
     }
     if (b.negWeeks === 0) delete b.staffPeak;
-    else if (!b.idle) b.staffPeak = Math.max(b.staffPeak ?? 0, round2(b.last.staffing));
+    else if (!b.idle) b.staffPeak = Math.max(b.staffPeak ?? 0, b.last.staffing);
     if (b.negWeeks >= TUNE.officeShrinkWeeks) {
       const quarter = Math.max(1, Math.round(b.level * 0.25));
       const spare = Math.min(quarter, Math.floor(officeSpare(w, c, pointsPerDay) / (m.construction * b.utilization * efficiency(b))));

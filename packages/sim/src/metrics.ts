@@ -234,7 +234,7 @@ export function recordMetrics(w: World) {
   const regionGap = regionSol.length && Math.min(...regionSol) > 0 ? round2(Math.max(...regionSol) / Math.min(...regionSol)) : 0;
   const harvestRegions = w.regions.filter((r) => harvestCondition(w, r.id)).length;
   const point: MetricPoint = { tick: w.tick, kingdoms, goods, classGap, regionGap, traders: r0(w.traders.cash), ...(harvestRegions ? { harvestRegions } : {}) };
-  // 지표는 이미 소수 둘째 자리로 쓰지만, 기록이라 한 번 더 맞춘다 (저장값 규칙)
+  // 지표는 화면에 그대로 나가는 기록이라 모든 숫자를 소수 둘째 자리로 맞춘다 (round.ts)
   roundAll(point);
   (w.metrics ??= []).push(point);
   if (w.metrics.length > METRICS_CAP) w.metrics.splice(0, w.metrics.length - METRICS_CAP);

@@ -207,7 +207,7 @@ function fullYear(w: World): Record<string, number> {
     n[p.prof] = (n[p.prof] ?? 0) + p.size; wf[p.prof] = (wf[p.prof] ?? 0) + f; sav[p.prof] = (sav[p.prof] ?? 0) + p.savings;
     sol[p.prof] = (sol[p.prof] ?? 0) + p.sol * p.size; inc[p.prof] = (inc[p.prof] ?? 0) + p.incomeEma;
     if (p.work === 0) idle[p.prof] = (idle[p.prof] ?? 0) + f; else emp[p.prof] = (emp[p.prof] ?? 0) + f;
-    if (p.fund) for (const id in p.fund) fundVal += p.fund[id] * (navOf.get(Number(id)) ?? 1);
+    if (p.fund) p.fund.id.forEach((id, i) => { fundVal += p.fund!.u[i] * (navOf.get(id) ?? 1); });
   }
   let gov = 0, govDebt = 0, firm = 0, man = 0, fin = 0;
   for (const c of w.companies) { if (c.state) { gov += c.cash; govDebt += c.debt; } else firm += c.cash; }
@@ -271,7 +271,7 @@ for (let d = 0; d < years * 360; d++) {
   }
   for (const b of w.buildings) if (b.typeId === 'subsistence') { yearAcc.hG += b.last.output.grain ?? 0; yearAcc.hT += b.last.output.timber ?? 0; yearAcc.hF += b.last.output.fiber ?? 0; }
   // 소작농 묶음 충족률·부 (인구 가중, 하루 평균)
-  { let n = 0, f = 0, wl = 0; for (const p of w.pops) if (p.prof === 'peasant') { n += p.size; f += p.size * p.fulfillment; wl += p.size * p.wealth100 / 100; }
+  { let n = 0, f = 0, wl = 0; for (const p of w.pops) if (p.prof === 'peasant') { n += p.size; f += p.size * p.fulfillment; wl += p.size * p.wealth; }
     if (n > 0) { yearAcc.pFul += f / n; yearAcc.pW += wl / n; } }
   if (w.tick % 7 === 0) for (const k of w.kingdoms) welAcc += k.lastBudget?.welfare ?? 0;
   {
