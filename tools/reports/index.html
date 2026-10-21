@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>에스테라 실험 보고서</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="./style.css">
+</head>
+<body>
+<div class="app">
+  <nav class="reports" aria-label="보고서">
+    <div class="brand">에스테라 실험 보고서</div>
+    <input type="search" id="rq" placeholder="보고서 찾기" aria-label="보고서 찾기">
+    <ul id="list"></ul>
+  </nav>
+  <main class="wrap">
+    <header>
+      <div class="date" id="date"></div>
+      <h1 id="title">보고서를 고르세요</h1>
+      <p class="desc" id="desc"></p>
+    </header>
+    <div class="bar" id="runs" aria-label="실행"></div>
+    <div class="bar" id="controls" hidden>
+      <span class="lbl">시드</span>
+      <select id="seed" aria-label="시드"></select>
+      <button class="plain" id="viewBtn" type="button">표 보기</button>
+      <button class="plain" id="defBtn" type="button">기본 지표</button>
+    </div>
+    <div class="main" id="mainArea" hidden>
+      <aside class="side">
+        <input type="search" id="q" placeholder="지표 찾기" aria-label="지표 찾기">
+        <div id="picker"></div>
+      </aside>
+      <section>
+        <div class="grid" id="charts"></div>
+        <div class="tables" id="tables" hidden></div>
+      </section>
+    </div>
+  </main>
+</div>
+<script type="module" src="./app.js"></script>
+</body>
+</html>

@@ -10,6 +10,7 @@
     "dev": "npm run dev -w @econ/client",
     "build": "npm run build -w @econ/client",
     "encyclopedia": "npm run dev -w @econ/encyclopedia",
+    "reports": "vite tools/reports --port 5201",
     "test": "npm test -w @econ/sim",
     "test:core": "npm run test:core -w @econ/sim",
     "test:long": "npm run test:long -w @econ/sim",

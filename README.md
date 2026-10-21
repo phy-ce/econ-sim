@@ -1,6 +1,8 @@
 # Kingdom of Estera (econ-sim)
 
 **Play in the browser: https://phy-ce.github.io/econ-sim/** (built from `main` on every push)
+· Rules encyclopedia: https://phy-ce.github.io/econ-sim/encyclopedia/
+· Experiment reports: https://phy-ce.github.io/econ-sim/reports/
 
 A management game about the market economy of an early-modern continent. Three kingdoms (Estera, Belonia and Karten) share seven regions. You play the crown of Estera. Each kingdom has two companies: the crown (a state company whose cash is the treasury) and one private company that invests the people's savings. About five million simulated people work, eat, save, migrate and change jobs. The economic loop is inspired by Victoria 3, but the rules and numbers are this game's own. The currency is the florin (ƒ).
 
@@ -50,7 +52,20 @@ npm run build -w @econ/encyclopedia                    # production build (packa
 
 Entries are data in `packages/sim/src/encyclopedia.ts`. Values are read from the code (`TUNE`, `data.ts` and other constants), never copied. Deep links use the hash: `/#price-formula`. The test `packages/sim/test/core/encyclopedia.test.ts` fails when a numbered section of `docs/DESIGN.md` or a `TUNE` key has no entry, or when an entry's function throws. On GitHub Pages it is served at `/econ-sim/encyclopedia/`.
 
-Controls: `Space` pauses and resumes, `1`–`4` set the speed (1× = one game hour per real second, then 10×, 100×, 500×).
+## Experiment reports
+
+Comparison runs of the simulation (yearly values for every metric, several rule variants and seeds) are published as a small viewer in `tools/reports`: pick a report, pick metrics, hover a chart for the year's values, or switch to yearly tables. Seeds can be averaged or shown one by one.
+
+```bash
+cd packages/sim
+bash cli/sweep.sh out.jsonl '{}' '{"aristStart":0.1}'                       # 20 years x seeds 1 2
+TITLE="High nobles 1/10" L="main,1/10" python cli/report.py 2026-10-22-arist10 out.jsonl   # adds tools/reports/public/data/<id>.json
+cd ../.. && npm run reports                                                # http://localhost:5201
+```
+
+`report.py` also reads per-year diagnostic files (one JSON line per year with `y` and `seed`; nested objects become `stock.gov` style keys); pass `name=file` to name runs. On GitHub Pages the viewer is served at `/econ-sim/reports/`, deep links use the hash (`/reports/#2026-10-22-arist10`).
+
+Controls: `Space` pauses and resumes, `1`–`5` set the speed (1× = about one game day per real second, then 2×, 3×, 4× and 10× for debugging).
 
 ## Layout
 
