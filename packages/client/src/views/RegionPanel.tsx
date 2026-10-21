@@ -3,7 +3,7 @@ import { HelpText } from '../TooltipLayer';
 import { NumericValue } from '../NumericValue';
 import type { Game } from '../useGame';
 import { BuildList, Projects } from './CompanyPanel';
-import { playerCompany } from '@econ/sim';
+import { playerCompany, educationOf } from '@econ/sim';
 import { OwnerBadge } from './OwnerBadge';
 import { regionLivingStandard } from '../systemMetrics';
 import { HarvestBadge } from './HarvestBadge';
@@ -116,7 +116,7 @@ export function RegionPanel({ world, region, history, selectedGood, onSelectGood
             <span className="stat-value">{pct(unemp)}</span>
             <Bar value={unemp} tone="neg" size="sm" label={T.unemployment} />
           </div>
-          <div className="stat"><span className="stat-label"><HelpText text={T.help.education}>{T.education}</HelpText></span><span className="stat-value">{pct(r.education)}</span><Bar value={r.education} tone="pos" size="sm" label={T.education} /></div>
+          <div className="stat"><span className="stat-label"><HelpText text={T.help.education}>{T.education}</HelpText></span><span className="stat-value">{pct(educationOf(r))}</span><Bar value={educationOf(r)} tone="pos" size="sm" label={T.education} /></div>
           <div className="stat"><span className="stat-label"><HelpText text={T.help.tenants}>{T.tenants}</HelpText></span><span className="stat-value accent">{pct(tenantShare)}</span><Bar value={tenantShare} tone="accent" size="sm" label={T.tenants} /></div>
         </div>
         {tab !== 'industry' && <button className="region-buildings-link" onClick={() => { if (onViewBuildings) onViewBuildings(); else setTab('industry'); }}><Factory size={15}/>{lang === 'ko' ? '지역 건물 전체 보기' : 'All regional buildings'} <b>{allBuildings.length}</b></button>}

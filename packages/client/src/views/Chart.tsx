@@ -19,12 +19,12 @@ const tickLabel = (tick: number) => t().chartTick(Math.floor(tick / 360) + 1, Ma
 export function TimeChart({ data, series, format = (v) => v.toFixed(1), reference, height = 200 }: Props) {
   if (data.length < 2) return <p className="empty chart-empty" style={{ height }}>—</p>;
   return (
-    <ResponsiveContainer width="100%" height={height} initialDimension={{ width: 520, height }}>
+    <><ResponsiveContainer width="100%" height={height} initialDimension={{ width: 520, height }}>
       <LineChart data={data} margin={{ top: 10, right: 12, bottom: 0, left: -6 }}>
         <CartesianGrid stroke="var(--grid)" vertical={false} />
         <XAxis dataKey="tick" tickFormatter={tickLabel} stroke="var(--ink2)"
-          tick={{ fill: 'var(--ink2)', fontSize: 11 }} minTickGap={36} tickLine={false} axisLine={{ stroke: 'var(--rule)' }} />
-        <YAxis tickFormatter={format} stroke="var(--ink2)" tick={{ fill: 'var(--ink2)', fontSize: 11 }} width={52}
+          tick={{ fill: 'var(--ink2)', fontSize: 11 }} minTickGap={48} tickLine={false} axisLine={{ stroke: 'var(--rule)' }} />
+        <YAxis tickFormatter={format} stroke="var(--ink2)" tick={{ fill: 'var(--ink2)', fontSize: 11 }} width={34}
           tickLine={false} axisLine={false} />
         <Tooltip
           contentStyle={{ background: 'var(--sheet)', border: '1px solid var(--rule)', borderRadius: 6, color: 'var(--ink)', boxShadow: 'var(--pop-shadow)', fontSize: 12 }}
@@ -34,13 +34,13 @@ export function TimeChart({ data, series, format = (v) => v.toFixed(1), referenc
           cursor={{ stroke: 'var(--ink2)', strokeWidth: 1, strokeDasharray: '3 3' }}
         />
         {reference && <ReferenceLine y={reference.y} stroke={reference.color ?? 'var(--ink2)'} strokeDasharray="5 4" strokeWidth={1.2}
-          label={{ value: reference.label, fill: reference.color ?? 'var(--ink2)', fontSize: 11, position: 'insideTopRight' }} />}
+           />}
         {series.map((s) => (
           <Line key={s.key} type="monotone" dataKey={s.key} name={s.name} stroke={s.color} strokeWidth={2.4}
             dot={false} activeDot={{ r: 4, strokeWidth: 2, stroke: 'var(--sheet)' }} isAnimationActive={false} />
         ))}
       </LineChart>
-    </ResponsiveContainer>
+    </ResponsiveContainer>{reference&&<div className="chart-reference"><i style={{borderColor:reference.color??'var(--ink2)'}}/>{reference.label} {format(reference.y)}</div>}</>
   );
 }
 

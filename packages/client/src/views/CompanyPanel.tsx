@@ -1,4 +1,4 @@
-import { isGovernment } from '@econ/sim';
+import { isGovernment, crewOf } from '@econ/sim';
 import { NumericValue } from '../NumericValue';
 import { OwnerBadge } from './OwnerBadge';
 import { Workforce } from './Workforce';
@@ -43,7 +43,7 @@ function rowOf(world: World, b: Building): Row {
   const method = getMethod(b.typeId, b.methodId);
   const region = regionById(world, b.regionId);
   const run = b.level * b.utilization;
-  const crew = b.crew ?? b.last.staffing;
+  const crew = crewOf(b);
   const staff: StaffPart[] = SKILLS.filter((s) => (method.workers[s] ?? 0) > 0).map((s) => {
     const jobs = b.active ? slots(b, s) : (method.workers[s] ?? 0) * run;
     return { s, jobs, emp: Math.min(jobs, b.employed[s]) };

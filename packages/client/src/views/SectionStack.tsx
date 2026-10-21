@@ -10,7 +10,7 @@ export function SectionStack({ storageKey, items, revealId, revealKey, explorer=
   const ko = useLang() === 'ko';
   const prefix = useId();
   const root=useRef<HTMLDivElement>(null);
-  const [browse,setBrowse]=useState(explorer);
+  const browse=explorer;
   const [selected,setSelected]=useState(items[0]?.id);
   const active=items.some(i=>i.id===selected)?selected:items[0]?.id;
   const defaults = () => items.map(({ id, height }) => ({ id, height, collapsed: false }));
@@ -45,19 +45,15 @@ export function SectionStack({ storageKey, items, revealId, revealKey, explorer=
     return next;
   });
   return <div className="section-stack" ref={root}>
-    {explorer&&<div className="explorer-mode" role="group" aria-label={ko?'정보 표시 방식':'Information layout'}>
-      <button aria-pressed={browse} onClick={()=>setBrowse(true)} data-help={ko?'왼쪽 분류를 선택하면 오른쪽에 상세를 표시합니다.':'Select a category on the left to inspect its details.'}>{ko?'탐색':'Explore'}</button>
-      <button aria-pressed={!browse} onClick={()=>setBrowse(false)} data-help={ko?'모든 구역을 펼쳐 보고 순서와 높이를 조절합니다.':'Show all sections and customize their order and height.'}>{ko?'전체 보기':'Show all'}</button>
-    </div>}
     {browse?<div className="information-explorer">
       <nav className="explorer-rail" aria-label={ko?'정보 분류':'Information categories'}>
-        {prefs.map(p=>items.find(i=>i.id===p.id)).filter((item):item is Item=>!!item).map(item=><button key={item.id} aria-pressed={active===item.id} aria-controls={`${prefix}-detail`} data-help={item.title} onClick={()=>setSelected(item.id)}>{item.shortTitle??item.title}<ChevronRight size={12}/></button>)}
+        {prefs.map(p=>items.find(i=>i.id===p.id)).filter((item):item is Item=>!!item).map(item=><button key={item.id} aria-pressed={active===item.id} aria-controls={`${prefix}-detail`} data-help={item.title} onClick={()=>setSelected(item.id)}>{item.shortTitle??item.title}</button>)}
       </nav>
       <section className="explorer-detail" id={`${prefix}-detail`} aria-label={items.find(i=>i.id===active)?.title}>
         {items.map(item=><div key={item.id} hidden={active!==item.id} data-section={item.id}><h3 className="explorer-heading">{item.title}</h3>{item.content}</div>)}
       </section>
     </div>:<>
-    <div className="section-settings"><span>{ko ? '정보 구역' : 'Sections'}</span><button onClick={() => setPrefs(defaults())} title={ko ? '구역 배치·높이 초기화' : 'Reset section layout'}><RotateCcw size={12}/>{ko ? '초기화' : 'Reset'}</button></div>
+    <div className="section-settings"><button onClick={() => setPrefs(defaults())} title={ko ? '구역 순서·접기 초기화' : 'Reset section layout'}><RotateCcw size={12}/></button></div>
     {prefs.map((p, index) => {
       const item = items.find(i => i.id === p.id);
       if (!item) return null;
@@ -71,11 +67,7 @@ export function SectionStack({ storageKey, items, revealId, revealKey, explorer=
           <button disabled={index === prefs.length - 1} aria-label={`${item.title} ${ko ? '아래로 이동' : 'move down'}`} onClick={() => move(index, 1)}><ArrowDown size={13}/></button>
         </header>
         <div id={bodyId} hidden={p.collapsed}>
-          <div className="section-content" style={{ maxHeight: p.height }}>{item.content}</div>
-          <div className="section-resize" role="separator" aria-orientation="horizontal" aria-label={`${item.title} ${ko ? '높이 조절' : 'resize height'}`} aria-valuemin={96} aria-valuemax={640} aria-valuenow={p.height} tabIndex={0}
-            onKeyDown={e => { if (e.key === 'ArrowUp' || e.key === 'ArrowDown') { e.preventDefault(); e.stopPropagation(); resize(p.id, p.height + (e.key === 'ArrowUp' ? -24 : 24)); } }}
-            onPointerDown={e => { e.preventDefault(); e.stopPropagation(); const target = e.currentTarget; const y = e.clientY; const height = p.height; target.setPointerCapture(e.pointerId); target.onpointermove = event => resize(p.id, height + event.clientY - y); const end = () => { target.onpointermove = null; target.onpointerup = null; target.onpointercancel = null; target.onlostpointercapture = null; }; target.onpointerup = end; target.onpointercancel = end; target.onlostpointercapture = end; }}
-          />
+          <div className="section-content" >{item.content}</div>
         </div>
       </section>;
     })}</>}

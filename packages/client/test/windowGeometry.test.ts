@@ -1,35 +1,27 @@
 import { describe, expect, it } from 'vitest';
-import { fitWindow, resizeWindow } from '../src/windowGeometry';
-const bounds={width:1920,height:998}; // 1920×1080 minus topbar and dock
-const rect={x:110,y:90,width:460,height:560};
-describe('desktop window boundaries',()=>{
- it('keeps a moved title and all edges inside the workspace',()=>{
-  expect(fitWindow({...rect,x:3000,y:-100},bounds)).toEqual({...rect,x:1460,y:0});
+import { slotRect,placeWindows } from '../src/windowGeometry';
+const bounds={width:1920,height:998};
+describe('fixed desktop slots',()=>{
+ it('leaves the full central map visible at 1920×1080',()=>{
+  const left=slotRect('left',bounds),right=slotRect('right',bounds);
+  expect(left).toEqual({x:8,y:8,width:440,height:982});
+  expect(right).toEqual({x:1472,y:8,width:440,height:982});
+  expect(left.x+left.width).toBeLessThan(530);expect(right.x).toBeGreaterThan(1390);
  });
- it('shrinks oversized restored windows to a smaller workspace',()=>{
-  expect(fitWindow({x:400,y:200,width:1920,height:998},{width:1280,height:720})).toEqual({x:0,y:0,width:1280,height:720});
+ const defaults={region:'left',market:'right',research:'left',finance:'right'} as const;
+ it('uses the free side before replacing another window',()=>{
+  expect(placeWindows(['region','research'],{},defaults)).toEqual({opened:['region','research'],sides:{region:'left',research:'right'}});
  });
- it('preserves opposite edges and minimum size when resizing from top left',()=>{
-  const next=resizeWindow(rect,'nw',2000,2000,bounds,400);
-  expect(next.x+next.width).toBe(rect.x+rect.width);
-  expect(next.y+next.height).toBe(rect.y+rect.height);
-  expect(next.width).toBe(400);expect(next.height).toBe(280);
+ it('replaces only the preferred slot when both are occupied',()=>{
+  const result=placeWindows(['region','market','finance'],{},defaults);
+  expect(result.opened).toEqual(['region','finance']);
  });
- it('does not let any resizing edge move outside the usable desktop',()=>{
-  for(const edge of ['n','ne','e','se','s','sw','w','nw']){
-   for(const dx of [-4000,0,4000])for(const dy of [-4000,0,4000]){
-    const next=resizeWindow(rect,edge,dx,dy,bounds,400);
-    expect(next.x).toBeGreaterThanOrEqual(0);expect(next.y).toBeGreaterThanOrEqual(0);
-    expect(next.x+next.width).toBeLessThanOrEqual(bounds.width);
-    expect(next.y+next.height).toBeLessThanOrEqual(bounds.height);
-    expect(next.width).toBeGreaterThanOrEqual(400);expect(next.height).toBeGreaterThanOrEqual(280);
-   }
-  }
+ it('remembers a moved window side when reopened',()=>{
+  expect(placeWindows(['region'],{region:'right'},defaults).sides.region).toBe('right');
  });
- it('resizing one window does not alter the other window geometry',()=>{
-  const other={x:900,y:60,width:520,height:560};
-  resizeWindow(rect,'se',300,200,bounds,400);
-  expect(other).toEqual({x:900,y:60,width:520,height:560});
-  expect(rect).toEqual({x:110,y:90,width:460,height:560});
+ it('never has more than two visible windows or duplicate slots',()=>{
+  const result=placeWindows(['region','market','research','finance'],{},defaults);
+  expect(result.opened).toHaveLength(2);
+  expect(new Set(result.opened.map(id=>result.sides[id])).size).toBe(2);
  });
 });

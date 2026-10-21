@@ -14,7 +14,7 @@
 
 ## 0. 지금 할 일 (2026-10-21 기준, 위에서부터)
 **깨진 화면 (먼저):**
-0. **창 크기 조절 없앰 + 좁은 고정 창 + 통계·소식 깨짐 (2-53, 사용자 요청).** 모서리·최대화를 지우고 창은 왼쪽/오른쪽 두 자리, 440×982 고정(1920×1080, 지도 x 530~1390을 안 가림). 분류 줄 88px을 위 탭으로, 인구 표 `min-width:1000/1100px`(`strategy.css` 66, `workspace.css` 243)을 고정 2열+보기 칩 4열로, 요약 세 칸을 세로로, 스크롤 안 스크롤 없앰.
+0. **[2026-10-22 주요 구현 완료, 잔여 시각 검증은 UI_FIXED_WINDOWS_2026-10-22.md 참조] 창 크기 조절 없앰 + 좁은 고정 창 + 통계·소식 깨짐 (2-53, 사용자 요청).** 모서리·최대화를 지우고 창은 왼쪽/오른쪽 두 자리, 440×982 고정(1920×1080, 지도 x 530~1390을 안 가림). 분류 줄 88px을 위 탭으로, 인구 표 `min-width:1000/1100px`(`strategy.css` 66, `workspace.css` 243)을 고정 2열+보기 칩 4열로, 요약 세 칸을 세로로, 스크롤 안 스크롤 없앰.
 
 아래는 사용자 요청이거나 정리다.
 1. **아래 창 버튼 토글 + 왕국 지도 버튼 없애기 (2-34, 사용자 재요청).** `WindowWorkspace.tsx` 13·59·67~70: 최소화 상태와 dock의 지도 버튼을 없앤다.
@@ -30,7 +30,6 @@
 11. **저택·금융가가 무엇을 가졌는지 (2-32).** 소유 건물 창에 `holdingsOf` 표, 일반 건물 상세에 "→ 저택/금융가" 칩 (지역 패널 묶음은 2-42로 대체).
 12. **부·생활수준 지도 그라데이션 (2-33).** `RegionMap.tsx` 46~52 `wealthColor`를 OKLab 보간으로, 범례 160~162를 연속 막대로.
 13. **저택 대 금융가 자산 비율 (2-44, sim 쪽 필요).** 통계·소식 창에 왕국·지역 비율 막대와 왕국 추이. sim의 `ownershipAssets`가 들어온 뒤.
-14. **100배 값 필드로 옮기기 (2-27).** 남은 세 파일: `CompanyPanel.tsx` 46 `b.crew`, `PopTable.tsx` 23·24·28 `p.wealth`·`p.literacy`, `RegionPanel.tsx` 119 `r.education`. 끝나면 알려 달라 (sim이 사본을 지운다).
 15. **광맥은 자원별 (2-26).** 지역 땅 표시(`RegionCircles.tsx` 22~29)의 광맥을 철·석탄 두 줄로.
 16. **저택에 하급 귀족 자리 (2-29).** 저택 일자리에 하급 귀족이 보이고 둘 다 임금이 아니라 몫이다. 소유 건물 자리의 "배당" 표시는 `paysShare(b, s)`로 가린다.
 17. **농부 계층 (2-37).** 새 직종 `farmer`. 색 토큰 `--c-farmer`와 아이콘, 계층·직종 목록에 노동자 옆으로. sim이 임시로 고친 곳: `ui.tsx` 8·11, `spriteAtlas.ts` 13.
@@ -108,15 +107,6 @@
 - 넣을 곳: 지역 패널의 땅 표에서 광맥 한 줄을 철·석탄 두 줄로 (이름 `DEPOSIT_NAMES`/`DEPOSIT_NAMES_EN`, 쓴 칸/찾은 칸). 잠재량(`veins`)은 보이지 않는다 (탐광의 의미가 없어진다).
 - 알림: 광맥을 찾으면 그 지역 왕국 왕실에 `info` 알림 (`regionId` 있음): `"북부 광산지대 철광맥 +20"` / `"Northern Mining District iron veins +20"` (석탄은 `탄맥` / `coal seams`, `VEIN_NAMES`·`VEIN_NAMES_EN`).
 - 저장 형식 그대로. 옛 저장은 찾은 광맥이 적은 채로 이어서 탐광한다.
-
-### 2-27. 100배 값 필드로 옮기기 (남은 것, 2026-10-21 확인)
-- 저장 v6의 100배 값 필드(`Pop.wealth100`·`literacy100`, `Region.education100`, `Building.crew100`·`exp100`)는 sim 쪽 이야기이고, 불러오기(`sim.worker.ts` 71 `migrateWorld`)와 지역 개요(`RegionExplorer.tsx` 19·20 `literacyOf`·`educationOf`)는 이미 반영됐다.
-- 남은 것: 옛 이름 사본(`p.wealth`·`p.literacy`·`r.education`·`b.crew`)을 읽는 세 파일을 읽는 함수로 바꾼다. 사본은 sim이 하루 끝에 다시 쓰는 소수 둘째 자리 값이라 지금도 맞게 보인다.
-  - `CompanyPanel.tsx` 46 `b.crew ?? b.last.staffing` → `crewOf(b)` (작업 인원이 없으면 충원율을 돌려준다)
-  - `PopTable.tsx` 28 부·문해력 칸 `p.wealth` → `wealthOf(p)`, `p.literacy` → `literacyOf(p)`. 23·24행 정렬도 `a.p[sort]`로 `wealth`·`literacy`를 읽으므로, 두 값을 행 객체(`incomeEma`처럼)에 계산해 넣고 거기서 정렬한다.
-  - `RegionPanel.tsx` 119 교육 접근도 숫자와 막대 두 곳 `r.education` → `educationOf(r)`
-- 다 바꾸면 3장에 "사본 지워도 됨"을 적는다. 그때 sim이 사본을 없앤다.
-- 표시 규칙(그대로): 모든 저장값은 소수 둘째 자리, 0~1 비율은 소수 셋째 자리 이상을 보이지 않는다. 문해력·교육 접근도는 주 1회 바뀌어 그래프가 계단으로 보일 수 있다.
 
 ### 2-28. 금고와 대출을 한 칸으로 (사용자 요청 2026-10-21)
 - 회사는 현금(`cash`)과 빚(`debt`)을 따로 들고 있지만, 화면에서는 한 숫자로 보인다: **금고 = `cash - debt`**. 빚이 현금보다 크면 음수(`neg` 색)다.
@@ -1047,5 +1037,5 @@ Cells, top row left to right, then bottom row:
   - 순수 함수 `policyStatus(world, kingdomId)` → `{ financeRatio; tax: LawStatus<TaxLaw>; invest: LawStatus<InvestLaw> }`, `LawStatus<L> = { current: L; pending?: { to: L; startTick; endTick }; options: { id: L; threshold: number | null; eligible: boolean }[] }`. 조건 값은 5% 단위.
   - 알림: 전환이 끝나면 `lawChanged { kingdomId, law: 'tax' | 'invest', to }` (내 왕국만 소식).
 - **2-48 연구 트리 (2026-10-21, 있으면 좋음):** 순수 함수 `unlocksOf(techId)` → `{ methods: { typeId; methodId }[]; buildings: string[]; policies: string[] }` (`buildings` = 모든 방식이 기술을 요구하고 그중 하나가 이 기술인 종류). 사전도 같이 쓴다.
-- **2-17 정리 (UI 반영 끝, 2026-10-21 확인):** 클라이언트가 `isDistressed`·`SEIZURE_WEEKS`·`DISTRESS_DEBT_RATIO`·`landlordJobs`·`setResearchBudget`·`MAX_RESEARCH_BUDGET`·`Company.distressWeeks`를 더 쓰지 않는다 (grep 0건). sim은 `compat.ts`의 이 껍데기를 지워도 된다. 100배 값 사본(2-27)은 아직 지우지 않는다.
+- **2-17 정리 (UI 반영 끝, 2026-10-21 확인):** 클라이언트가 `isDistressed`·`SEIZURE_WEEKS`·`DISTRESS_DEBT_RATIO`·`landlordJobs`·`setResearchBudget`·`MAX_RESEARCH_BUDGET`·`Company.distressWeeks`를 더 쓰지 않는다 (grep 0건). sim은 `compat.ts`의 이 껍데기를 지워도 된다. 100배 값 사본(2-27)은 2026-10-22 클라이언트 전환 완료. UI_DONE의 근거 참조.
 - 이미 export되는 것: `paysDividend`, `kingdomGdp`, `kingdomById`, `builderOf`, `companyById`, `peasantSlots`, `disbanded`, `slots`, `harvestCondition`, `harvestLabel`, `HARVEST_KINDS`, `taxRates`, `taxCapacity`, `holdingsOf`, `ownerBuildingOf`, `budgetPreview`, `reserveCap`, `hasReserve`, `weeklyOutputValue`, `creditLimit`, `isGovernment`, `crewOf`, `wealthOf`, `literacyOf`, `educationOf`
