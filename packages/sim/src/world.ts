@@ -14,7 +14,7 @@ export const START_CASH = 30_000_000;
 /** 그중 민간 상회가 운영 자금으로 갖는 돈. 나머지는 왕국 저택·금융가 금고로 (지역 인구 비례, 저택과 금융가 반씩) */
 export const START_FIRM_CASH = 5_000_000;
 export const TRADER_CAPITAL = 100_000_000;
-/** 시작 정책 단계: 세금 수준, 국영 임금 수준, 연구비 수준 모두 보통(3) */
+/** 시작 정책 단계: 세금 수준, 국영 임금 수준, 복지 수준 모두 보통(3) */
 const DEFAULT_BUDGET = { tax: 3, wages: 3, welfare: 3 };
 /** 플레이어 회사 id (화면이 이 값을 쓴다) */
 export const PLAYER_ID = 100;

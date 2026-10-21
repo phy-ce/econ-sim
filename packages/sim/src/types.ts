@@ -640,7 +640,7 @@ export type Command =
   | { type: 'setTaxLaw'; law: TaxLaw }
   | { type: 'setInvestLaw'; law: InvestLaw }
   | { type: 'setWelfareLaw'; law: WelfareLaw }
-  /** 정책 단계: 세금 수준, 국영 임금 수준, 연구비 수준 (1~5) */
+  /** 정책 단계: 세금 수준, 국영 임금 수준, 복지 수준 (1~5) */
   | { type: 'setBudget'; item: BudgetItem; value: number }
   /** 왕실 건물 민영화 켜기·끄기: 켜 두면 저택·금융가가 매주 1레벨씩 사 갈 수 있다 */
   | { type: 'setPrivatize'; buildingId: number; on: boolean };

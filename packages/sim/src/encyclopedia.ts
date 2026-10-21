@@ -240,7 +240,7 @@ export const ENCYCLOPEDIA: EncEntry[] = [
       p('상인 자본', 'Trader capital', () => TRADER_CAPITAL, 'florin'),
       tune('startTreasuryWeeks', '시작 국고 (정부 건물 운영비 주 수)', 'Start treasury (weeks of government upkeep)', 'week'),
       p('시작 건축사무소', 'Starting construction office', () => START_OFFICE_LEVELS, 'level'),
-      p('시작 학교 (왕실마다, 가장 큰 지역)', 'Starting school (per crown, largest region)', () => START_SCHOOL_LEVELS, 'level'),
+      p('시작 학교 (왕실마다, 인구가 가장 많은 지역)', 'Starting school (per crown, most populous region)', () => START_SCHOOL_LEVELS, 'level'),
       p('시작 기술', 'Starting techs', () => START_TECHS.join(', ')),
       tune('startLumber', '시작 벌목장 (10만 명당)', 'Start lumber camps (per 100k)', 'level'), tune('startFiber', '시작 섬유 농장 (10만 명당)', 'Start fibre farms (per 100k)', 'level'),
     ],
@@ -1111,7 +1111,7 @@ export const ENCYCLOPEDIA: EncEntry[] = [
         return { rows: [row('문해력', 'Literacy', r2(kingdomLiteracy(w, k.id)), 'pct'), row('주간 연구 포인트', 'Points per week', r2(pts), 'pt'), row('남은 주', 'Weeks left', cur ? Math.ceil(left / pts) : '-', 'week')] };
       },
     },
-    related: ['tech', 'literacy', 'schools', 'ai-research'], seenIn: ['finance'], source: ['finance.ts researchPoints', 'finance.ts advanceResearch'], design: ['9.2'],
+    related: ['tech', 'literacy', 'schools', 'ai-research'], seenIn: ['finance'], source: ['finance.ts researchPoints', 'finance.ts advanceResearch'], design: ['3.3', '9.2'],
   },
   {
     id: 'treasury', category: 'state', title: t('국고와 수지', 'Treasury and balance'),

@@ -64,7 +64,7 @@ const { subsistence, world, tech4, techScale, lawTech, addTech, ...tune } = over
 for (const t of (addTech ?? []) as { id: string; cost: number; requires: string[] }[]) { const d = { name: t.id, nameEn: t.id, description: '', descriptionEn: '', ...t }; TECHS.push(d); TECH_BY_ID[t.id] = d; }
 // "lawTech": 법을 여는 기술 바꾸기 ({ poll: 'guilds', ... })
 if (lawTech) Object.assign(LAW_TECH, lawTech);
-// "tech4": 4단계 기술 연구비
+// "tech4": 4단계 기술 값 (연구 포인트)
 if (tech4) for (const t of TECHS) if (t.cost === TECH_COST[4]) t.cost = tech4;
 // "techScale": 모든 기술 값(연구 포인트)에 곱한다
 if (techScale) for (const t of TECHS) t.cost *= techScale;
