@@ -100,9 +100,9 @@ packages/client   React + Vite. The simulation runs in a Web Worker; the UI only
 
 ## Technology
 
-Technology belongs to the kingdom. The crown researches, and the private company uses the crown's techs. At the start the crown knows the spinning wheel and craft guilds. There are 17 techs in four tiers, costing ƒ12, 24, 40 and 70 million. Tier 1 opens processing (milling, bloomery), printing (public schools, professional bureaucrats) and wagon roads (carters). Later tiers bring ironworking, timber scaffolding, coke smelting, improved implements and the steam engine, then steam pumps, power looms, food machinery, farm machinery, steam railways and iron frames.
+Technology belongs to the kingdom. The crown researches, and the private company uses the crown's techs. At the start the crown knows the spinning wheel and craft guilds. There are 17 techs in four tiers, costing 4,500, 9,000, 15,000 and 26,250 research points. Tier 1 opens processing (milling, bloomery), printing (public schools, professional bureaucrats) and wagon roads (carters). Later tiers bring ironworking, timber scaffolding, coke smelting, improved implements and the steam engine, then steam pumps, power looms, food machinery, farm machinery, steam railways and iron frames.
 
-Research is paid each week from the research budget (see Money). That money becomes income for skilled workers and experts.
+Research costs no money. Each week the crown earns 50 + 3 × the kingdom's literacy (%) research points, so a kingdom at 30% literacy makes 140 points a week and a tier-1 tech takes about 32 weeks. Points build up on the chosen tech and stay there if you switch; with no tech chosen they are lost. Literacy comes from schools and wealth, so schools are how you speed up research. Each crown starts with one school level (noble tutors) in its most populous region.
 
 ## Construction and buildings
 
@@ -124,8 +124,8 @@ Research is paid each week from the research budget (see Money). That money beco
 | Tenant farmers | lower | – | the region's free farmland (see below) |
 | Labourers | lower | 10 | wages |
 | Farmers | lower | 10 | wages on grain farms, fibre farms and ranches (open to anyone, like labourer jobs; each company sets its own farmer wage) |
-| Skilled workers | middle | 15 | wages, research funding |
-| Experts | middle | 40 | wages, research funding |
+| Skilled workers | middle | 15 | wages |
+| Experts | middle | 40 | wages |
 | Gentry | middle | 30 | wages in hereditary administration and tutor schools, or a 0.25 share in the manor |
 | Capitalists | upper | 40 | shares in the financial district |
 | High nobility | upper | 40 | shares in the manor: dividends of the manor's levels and tenant rent |
@@ -142,7 +142,7 @@ Research is paid each week from the research budget (see Money). That money beco
 
 - **Taxes.** One tax law at a time, and a change takes 180 days. *Land tax* (the start): ƒ0.02 a day per tenant. *Poll tax*: ƒ0.6 a day per non-tenant, available once financial districts hold 10% of owner assets. *Income tax*: 30% of non-tenant wages and dividends (subsistence exempt), available at 30%. Owner assets are the weekly output value of owned levels, plus tenant harvests for manors.
 - **Investment law and the fund.** Financial districts are funds. Pops of the allowed classes buy units of their regional district with spare cash at the unit value (treasury + build cost of owned levels, per unit) and receive dividends by units. At first only nobles may buy; at a financial share of 5% / 10% / 15% the law can widen to experts / skilled / labourers and farmers. Spare cash of other classes and tenants goes to the district treasury without units. Districts employ two experts per owned level at ƒ20 a day plus 10% of the dividends received. There is no capitalist class.
-- **Policy levels** (1–5, start 3). **Tax level** multiplies every tax rate by 0.6 / 0.8 / 1 / 1.2 / 1.4. **State wages**: every crown building pays base wage × wage index × 0.7 / 0.85 / 1 / 1.15 / 1.3; the wage index follows the average private labourer wage. **Research** spends 4.5% of weekly output × 0.5 / 0.75 / 1 / 1.5 / 2. The budget preview shows the weekly balance at each level before you change it.
+- **Policy levels** (1–5, start 3). **Tax level** multiplies every tax rate by 0.6 / 0.8 / 1 / 1.2 / 1.4. **State wages**: every crown building pays base wage × wage index × 0.7 / 0.85 / 1 / 1.15 / 1.3; the wage index follows the average private labourer wage. **Welfare** sets the target standard of living 2 / 2.5 / 3 / 3.5 / 4 for those the welfare law covers. Research has no level: it costs no money. The budget preview shows the weekly balance at each level before you change it.
 - **Government buildings** (administration, offices, schools) always run at full capacity. The treasury pays their wages and inputs. Only the crown builds schools and administration.
 - **Schools.** Noble tutors (100 gentry, 20,000 places) or, with printing, public schools (1,000 workers, 100,000 places). Education moves towards 0.1 + 0.8 × places ÷ population and raises literacy.
 - **Treasury income**: taxes, tariffs, private construction fees and minting (ƒ1,000 + 3% of weekly output each week). The crown starts with 26 weeks of running costs.
@@ -158,7 +158,7 @@ The other two crowns and all three private companies are run by AI, through the 
 - **Investment.** For every good the AI forms a long-run price from continent-wide demand (including projects under construction and better methods) against supply. Each candidate is valued at that price, with transport and the best utilisation (100/75/50/25%). It builds where yearly profit ÷ construction cost is above 0.2 and it can find at least half the workers, up to three projects a week.
 - **Wages.** Raised while vacancies stay open, cut after a losing week. Kept between 1.2× what new workers earn now and 85% of value added.
 - **Methods, utilisation, demolition.** Switches to a method that earns 5% more per unit. Cuts utilisation after four weeks of heavy loss and demolishes after 26 weeks of a losing last level, but not while the reserve still covers the loss.
-- **Crown.** Picks the tax law with the higher expected revenue. Moves the policy levels by how many weeks of spending the treasury holds (tightens below 26 weeks, loosens above 52). Picks research by value ÷ cost. Adds office levels when the queue is longer than 30 days. Builds schools until regions can reach 60% literacy.
+- **Crown.** Picks the tax law with the higher expected revenue. Moves the policy levels by how many weeks of spending the treasury holds (tightens below 26 weeks, loosens above 52). Always has a research target, picked by value ÷ cost. Adds office levels when the queue is longer than 30 days. Builds schools until regions can reach 60% literacy.
 
 ## Art
 

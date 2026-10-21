@@ -1,4 +1,4 @@
-import { BUILDING_BY_ID, SKILL_DEFS, TECH_BY_ID, TICKS_PER_WEEK, TUNE, getMethod } from './data';
+import { BUILDING_BY_ID, SKILL_DEFS, TICKS_PER_WEEK, TUNE, getMethod } from './data';
 import { companyById, isBudgetFunded, kingdomGdp, regionById, slots } from './economy';
 import { DAILY_INTEREST, MINT_BASE, MINT_RATE } from './finance';
 import { kingdomById, kingdomOf } from './kingdoms';
@@ -14,11 +14,11 @@ import type { WelfareGroup } from './welfare';
 // 세계를 바꾸지 않는다 (난수·쓰기 없음). sim 은 이 값을 읽지 않는다.
 
 /**
- * 미리보기 줄: 수입(세금·관세·주조)은 +, 지출(정부 건물(행정청·학교) 임금·원료·왕실 공사·연구비·국채 이자·복지)은 −.
+ * 미리보기 줄: 수입(세금·관세·주조)은 +, 지출(정부 건물(행정청·학교) 임금·원료·왕실 공사·국채 이자·복지)은 −. 연구는 돈이 들지 않아 줄이 없다.
  * stateFirms(국영 사업 손익) = 왕실 생산 건물과 건축사무소의 매출 − 원료 − 임금. 흑자면 +, 적자면 −. 건축사무소 매출은 모든 공사(왕실 것 포함)의 수수료다.
  * build(왕실 공사) = 왕실 공사가 자기 건축사무소에 낸 수수료 (국영 사업 손익의 사무소 매출에 같은 돈이 들어 있다)
  */
-export type BudgetLineKey = 'tax' | 'tariffs' | 'mint' | 'wages' | 'stateFirms' | 'build' | 'goods' | 'research' | 'interest' | 'welfare';
+export type BudgetLineKey = 'tax' | 'tariffs' | 'mint' | 'wages' | 'stateFirms' | 'build' | 'goods' | 'interest' | 'welfare';
 
 /** 줄 묶음: 그 줄들을 움직이는 손잡이 (fixed = 손잡이 없음) */
 export type BudgetGroupKey = BudgetItem | 'fixed';
@@ -27,7 +27,6 @@ export type BudgetGroupKey = BudgetItem | 'fixed';
 export const BUDGET_GROUPS: { knob: BudgetGroupKey; lines: BudgetLineKey[] }[] = [
   { knob: 'tax', lines: ['tax'] },
   { knob: 'wages', lines: ['wages', 'stateFirms', 'build'] },
-  { knob: 'research', lines: ['research'] },
   { knob: 'welfare', lines: ['welfare'] },
   { knob: 'fixed', lines: ['tariffs', 'mint', 'goods', 'interest'] },
 ];
@@ -102,7 +101,7 @@ function firmWeek(k: Kingdom, b: Building): { fixed: number; wage: number; input
 }
 
 const levelOf = (item: BudgetItem, step: number) =>
-  (item === 'tax' ? TUNE.taxLevels : item === 'wages' ? TUNE.govWageLevels : item === 'research' ? TUNE.researchLevels : TUNE.welfareLevels)[step - 1];
+  (item === 'tax' ? TUNE.taxLevels : item === 'wages' ? TUNE.govWageLevels : TUNE.welfareLevels)[step - 1];
 
 /**
  * 왕국의 주간 예상 국정 수지 (steps 를 넘기면 그 단계로, 빠진 손잡이는 지금 단계).
@@ -110,9 +109,8 @@ const levelOf = (item: BudgetItem, step: number) =>
  * - 주조·관세·정부 건물 원료 = 주간 이동평균
  * - 왕실 공사 = −(오늘 사무소 매출 중 왕실 공사 몫) × 그 단계의 사무소 매출. 그래서 국영 임금 손잡이가 이 줄도 움직이고, 국영 사업 손익의 같은 몫과 서로 지운다
  * - 정부 건물(행정청·학교) 임금 = 지금 고용 × 기본 임금 × 임금 지수 × 국영 임금 수준 배율 × 7
- * - 연구비 = min(주간 경제 규모(이동평균) × 연구비 비율 × 연구비 수준 배율, 남은 기술 비용, 국고 현금). 연구 중인 기술이 없으면 0
  * - 국영 사업 손익 = 왕실 생산 건물·건축사무소마다 (하루 매출 − 원료비 이동평균(firmEma)) × 7 − 지금 고용 × 기본 임금 × 임금 지수 × 국영 임금 수준 배율 × 7.
- *   사무소 매출(수수료)은 (매출 ÷ 운영비 이동평균) × (원료비 이동평균 + 그 단계 임금)으로 다시 센다
+ *   사무소 매출(수수료)은 (오늘 수수료 ÷ 오늘 운영비) × (오늘 원료비 + 그 단계 임금)으로 다시 센다
  * - 국채 이자 = 지금 빚 × 일 이자율 × 7
  * - 복지 = 지금 복지법이 덮는 무리의 그 단계 하루 필요액(이동평균) × 7 (welfare.ts welfareWeekly). 복지법이 'none' 이면 0
  * 기준값이 아직 없으면(새 게임 첫 주, 옛 저장) 지난주 장부, 그것도 없으면 이번 주 지금까지를 7일로 늘린 값을 쓴다.
@@ -179,10 +177,6 @@ function budgetModel(w: World, k: Kingdom) {
       if (getMethod(b.typeId, b.methodId).construction) { officeFixed += f.fixed; officeWage += f.wage; officeSales += b.last.fee ?? 0; }
     }
   }
-  const t = gov?.research.current ? TECH_BY_ID[gov.research.current] : undefined;
-  const researchLeft = gov && t && !gov.research.known.includes(t.id)
-    ? Math.min(Math.max(0, t.cost - (gov.research.progress[t.id] ?? 0)), Math.max(0, gov.cash)) : 0;
-  const researchBase = (k.output ?? 0) * TUNE.researchShare;
   const taxPerDay = base.taxBy ?? TUNE.taxLevels.map((m) => ((last?.revenue ?? 0) / TICKS_PER_WEEK / levelOf('tax', k.budget.tax)) * m);
   // 사무소 매출 중 왕실 공사 몫 (오늘). 기록이 없으면 지난주 장부
   const crownShare = base.build != null ? (officeSales > 0 ? Math.min(1, base.build / officeSales) : 0) : null;
@@ -199,7 +193,6 @@ function budgetModel(w: World, k: Kingdom) {
       case 'build': return crownShare == null ? -buildLast : -crownShare * (officeFixed + officeWage * levelOf('wages', st.wages));
       case 'wages': return -wageBase * levelOf('wages', st.wages);
       case 'stateFirms': return firmGross + (firmSalesWage - firmBase) * levelOf('wages', st.wages);
-      case 'research': return -Math.min(researchBase * levelOf('research', st.research), researchLeft);
       case 'welfare': return -welfareWeekly(k, k.welfareLaw, st.welfare);
       default: return fixed[key as keyof typeof fixed];
     }
@@ -211,7 +204,7 @@ function budgetModel(w: World, k: Kingdom) {
 //
 // 줄마다 하나씩: 그 줄의 주간 값(budgetPreview 와 같은 단계, 반올림 전)을 무엇이 만드는지 행으로 나눈다.
 // 금액(weekly·need·sales·inputs·wages)은 모두 국고에 주는 효과다 (+ 들어옴, − 나감). 단가·비율·사람 수는 양수.
-// 행 weekly 합 + smoothing = weekly. smoothing 은 줄이 쓰는 이동평균과 지금 값으로 나눈 행의 차이다 (임금·국영 사업·연구·이자·왕실 공사는 0).
+// 행 weekly 합 + smoothing = weekly. smoothing 은 줄이 쓰는 이동평균과 지금 값으로 나눈 행의 차이다 (임금·국영 사업·이자·왕실 공사는 0).
 
 export interface BudgetDrillBase {
   key: BudgetLineKey;
@@ -249,12 +242,6 @@ export interface TaxDrill extends BudgetDrillBase {
 export interface WelfareDrillRow { regionId: number; group: WelfareGroup; covered: boolean; short: number; targetIncome: number; need: number; weekly: number }
 export interface WelfareDrill extends BudgetDrillBase { key: 'welfare'; law: WelfareLaw; target: number; rows: WelfareDrillRow[] }
 
-/** 연구비: 원하는 액 = 주간 경제 규모 × 비율 × 단계 배율, 낸 액 = min(원하는 액, 남은 기술 비용, 국고 현금) */
-export interface ResearchDrill extends BudgetDrillBase {
-  key: 'research'; tech: string | null; output: number; share: number; stepMult: number; wanted: number; left: number; cash: number;
-  rows: { part: 'research'; weekly: number }[];
-}
-
 /** 국채 이자 = 빚 × 일 이자율 × 7 */
 export interface InterestDrill extends BudgetDrillBase { key: 'interest'; debt: number; dailyRate: number; rows: { part: 'interest'; weekly: number }[] }
 
@@ -270,7 +257,7 @@ export interface MintDrill extends BudgetDrillBase { key: 'mint'; base: number; 
  */
 export interface BuildDrill extends BudgetDrillBase { key: 'build'; stepMult: number; share: number | null; officeSales: number; rows: { part: 'wage' | 'other'; weekly: number }[] }
 
-export type BudgetDrill = WageDrill | FirmDrill | GoodsDrill | TaxDrill | WelfareDrill | ResearchDrill | InterestDrill | TariffDrill | MintDrill | BuildDrill;
+export type BudgetDrill = WageDrill | FirmDrill | GoodsDrill | TaxDrill | WelfareDrill | InterestDrill | TariffDrill | MintDrill | BuildDrill;
 
 type Steps = Partial<Record<BudgetItem, number>>;
 const stepsOf = (k: Kingdom, steps: Steps) => {
@@ -388,17 +375,6 @@ export function drillWelfare(w: World, kid: number, steps: Steps = {}): WelfareD
   return { key: 'welfare', weekly: total, smoothing: total - sumW(rows), law: k.welfareLaw, target, rows };
 }
 
-/** 연구비 (그 단계) */
-export function drillResearch(w: World, kid: number, steps: Steps = {}): ResearchDrill {
-  const k = kingdomById(w, kid), st = stepsOf(k, steps), gov = companyById(w, k.governmentId), mult = levelOf('research', st.research);
-  const t = gov?.research.current ? TECH_BY_ID[gov.research.current] : undefined;
-  const active = !!(gov && t && !gov.research.known.includes(t.id));
-  const left = active ? Math.max(0, t!.cost - (gov!.research.progress[t!.id] ?? 0)) : 0;
-  const wanted = (k.output ?? 0) * TUNE.researchShare * mult;
-  const total = budgetLineRaw(w, kid, 'research', st);
-  return { key: 'research', weekly: total, smoothing: 0, tech: active ? t!.id : null, output: k.output ?? 0, share: TUNE.researchShare, stepMult: mult, wanted, left, cash: Math.max(0, gov?.cash ?? 0), rows: [{ part: 'research', weekly: total }] };
-}
-
 /** 국채 이자 */
 export function drillInterest(w: World, kid: number): InterestDrill {
   const k = kingdomById(w, kid), debt = Math.max(0, companyById(w, k.governmentId)?.debt ?? 0);
@@ -444,7 +420,6 @@ export function budgetDrill(w: World, kid: number, key: BudgetLineKey, steps: St
     case 'goods': return drillGoods(w, kid);
     case 'tax': return drillTax(w, kid, steps);
     case 'welfare': return drillWelfare(w, kid, steps);
-    case 'research': return drillResearch(w, kid, steps);
     case 'interest': return drillInterest(w, kid);
     case 'tariffs': return drillTariffs(w, kid);
     case 'mint': return drillMint(w, kid);

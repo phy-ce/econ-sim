@@ -65,7 +65,7 @@ export function step(w: World, commands: QueuedCommand[] = []): string[] {
 
   w.tick += 1;
   if (w.tick % TICKS_PER_WEEK === 0) weekly(w);
-  // 하루 소득 평균은 주간 지급(배당·지대 배당·복지·연구비)까지 받은 뒤에 갱신한다
+  // 하루 소득 평균은 주간 지급(배당·지대 배당·복지)까지 받은 뒤에 갱신한다
   for (const p of w.pops) p.incomeEma = p.incomeEma * 0.9 + p.lastIncome * 0.1;
   recordMetrics(w);
   // 화면 표시용 사본 (round.ts)

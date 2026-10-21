@@ -14,8 +14,8 @@ export const START_CASH = 30_000_000;
 /** 그중 민간 상회가 운영 자금으로 갖는 돈. 나머지는 왕국 저택·금융가 금고로 (지역 인구 비례, 저택과 금융가 반씩) */
 export const START_FIRM_CASH = 5_000_000;
 export const TRADER_CAPITAL = 100_000_000;
-/** 시작 정책 단계: 세금 수준, 국영 임금 수준, 연구비 수준 모두 보통(3) */
-const DEFAULT_BUDGET = { tax: 3, wages: 3, research: 3, welfare: 3 };
+/** 시작 정책 단계: 세금 수준, 국영 임금 수준, 복지 수준 모두 보통(3) */
+const DEFAULT_BUDGET = { tax: 3, wages: 3, welfare: 3 };
 /** 플레이어 회사 id (화면이 이 값을 쓴다) */
 export const PLAYER_ID = 100;
 
@@ -31,6 +31,8 @@ const START_SAVINGS: Record<PopClass, number> = { peasant: 5, unskilled: 20, far
 export const START_TECHS = ['spinning', 'guilds'];
 /** 왕실이 갖고 시작하는 건축사무소 레벨 (목조 4 × 10레벨 = 하루 약 40포인트. 공사 하나는 레벨당 하루 10포인트까지라 농장 1레벨은 약 60일) */
 export const START_OFFICE_LEVELS = 10;
+/** 왕실마다 시작 학교 레벨 (인구가 가장 많은 지역, 귀족 가정교사) */
+export const START_SCHOOL_LEVELS = 1;
 /** 상층의 시작 문해력 */
 const UPPER_LITERACY = 0.6;
 
@@ -90,7 +92,7 @@ function newCompany(id: number, name: string, color: string, kingdomId: number, 
     wageOffset: isPlayer && !state ? emptyJobs() : null,
     weekProfit: 0, lastWeekProfit: 0, weekStartCash: cash, debt: 0, revenueEma: 0, ledger: emptyLedger(), lastLedger: emptyLedger(),
     distressWeeks: 0, buildPoints: 0, buildCost: 0,
-    research: { budget: 0, current: null, progress: {}, known: [...START_TECHS] },
+    research: { points: 0, current: null, progress: {}, known: [...START_TECHS] },
   };
 }
 
@@ -174,7 +176,7 @@ export function createWorld(seed = 1, opts: CreateWorldOptions = {}): World {
   }
 
   const w: World = {
-    version: 13, config: { ai }, tick: 0, seed, rngState: seed | 0, nextId: 1000,
+    version: 15, config: { ai }, tick: 0, seed, rngState: seed | 0, nextId: 1000,
     regions, kingdoms, pops: [], fund: 0, metrics: [],
     traders: { cash: TRADER_CAPITAL, capital: TRADER_CAPITAL, shipments: [] },
     mint: { minted: 0, issued: 0, retired: 0, interest: 0 },
@@ -191,6 +193,10 @@ export function createWorld(seed = 1, opts: CreateWorldOptions = {}): World {
     const people = mine.reduce((a, r) => a + Object.values(starts.get(r.id)!.population).reduce((x, y) => x + y, 0), 0);
     const admin = getMethod('admin', 'admin_hereditary');
     w.buildings.push(newBuilding(w.nextId++, 'admin', home.id, c.id, admin.id, Math.max(1, Math.ceil((people * TUNE.adminStart) / (admin.taxCapacity! * TUNE.adminScale))), true));
+    // 학교 START_SCHOOL_LEVELS 레벨 (귀족 가정교사, 기술 없이 여는 방식): 왕국에서 인구가 가장 많은 지역. 문해력이 연구 속도를 정한다
+    const popOf = (r: Region) => Object.values(starts.get(r.id)!.population).reduce((x, y) => x + y, 0);
+    const capital = [...mine].sort((a, b) => popOf(b) - popOf(a) || a.id - b.id)[0];
+    w.buildings.push(newBuilding(w.nextId++, 'school', capital.id, c.id, 'school_tutor', START_SCHOOL_LEVELS, true));
   }
   // 티어에 따른 시작 민간 곡물 농장 (일꾼은 첫날부터 소작농에서 뽑는다)
   for (const r of regions) {
@@ -313,8 +319,8 @@ export function createWorld(seed = 1, opts: CreateWorldOptions = {}): World {
 }
 
 /**
- * 왕실 시작 국고 = 시작 정부 건물(행정청·건축사무소)을 다 돌리는 주간 운영비 × TUNE.startTreasuryWeeks.
- * 운영비는 시작 국영 임금과 기본가 원료로 센다 (연구비는 경제 규모가 잡히기 전이라 넣지 않는다)
+ * 왕실 시작 국고 = 시작 정부 건물(행정청·건축사무소·학교)을 다 돌리는 주간 운영비 × TUNE.startTreasuryWeeks.
+ * 운영비는 시작 국영 임금과 기본가 원료로 센다
  */
 function startTreasury(w: World, gov: Company): number {
   let daily = 0;

@@ -5,9 +5,9 @@ import type { BudgetPreview, World } from '../../src/index';
 const runTo = (w: World, tick: number) => { while (w.tick < tick) step(w); };
 const lineOf = (p: BudgetPreview, key: string) => p.lines.find((l) => l.key === key)!.weekly;
 type Ledger = NonNullable<World['kingdoms'][number]['lastBudget']>;
-/** 장부의 국고 순변화: 세입 − 정부 건물 임금·원료 − 연구 − 이자 − 복지 − 왕실 공사 + 국영 사업 손익 */
-const ledgerNet = (b: Ledger) => b.revenue - b.wages - b.goods - b.research - b.interest - (b.welfare ?? 0) - (b.build ?? 0) + (b.firms ?? 0);
-const ledgerGross = (b: Ledger) => b.revenue + b.wages + b.goods + b.research + b.interest + (b.welfare ?? 0) + (b.build ?? 0) + Math.abs(b.firms ?? 0);
+/** 장부의 국고 순변화: 세입 − 정부 건물 임금·원료 − 이자 − 복지 − 왕실 공사 + 국영 사업 손익 */
+const ledgerNet = (b: Ledger) => b.revenue - b.wages - b.goods - b.interest - (b.welfare ?? 0) - (b.build ?? 0) + (b.firms ?? 0);
+const ledgerGross = (b: Ledger) => b.revenue + b.wages + b.goods + b.interest + (b.welfare ?? 0) + (b.build ?? 0) + Math.abs(b.firms ?? 0);
 
 describe('예산 미리보기', () => {
   const w = createWorld(42);
@@ -18,7 +18,7 @@ describe('예산 미리보기', () => {
   it('세계를 바꾸지 않는다', () => {
     const before = JSON.stringify(w);
     budgetPreview(w, kid);
-    budgetPreview(w, kid, { tax: 5, wages: 1, research: 5 });
+    budgetPreview(w, kid, { tax: 5, wages: 1, welfare: 5 });
     for (const g of BUDGET_GROUPS) for (const key of g.lines) budgetDrill(w, kid, key, { wages: 5 });
     expect(JSON.stringify(w)).toBe(before);
   });
@@ -26,7 +26,7 @@ describe('예산 미리보기', () => {
   it('단계를 바꾸면 틱 없이 바로 바뀐다', () => {
     const a = budgetPreview(w, kid);
     expect(a.lines.find((l) => l.key === 'tax')!.byLevel).toHaveLength(5);
-    for (const item of ['tax', 'wages', 'research'] as const) {
+    for (const item of ['tax', 'wages', 'welfare'] as const) {
       const now = w.kingdoms.find((k) => k.id === kid)!.budget[item];
       const next = now === 5 ? 4 : now + 1;
       expect(applyCommandMsg(w, me.id, { type: 'setBudget', item, value: next })).toBeNull();
@@ -36,7 +36,7 @@ describe('예산 미리보기', () => {
       expect(applyCommandMsg(w, me.id, { type: 'setBudget', item, value: now })).toBeNull();
       expect(budgetPreview(w, kid).net).toBe(a.net);
     }
-    // 단계가 오르면 세입은 늘고, 임금·연구비 지출은 커진다 (음수가 더 작아진다)
+    // 단계가 오르면 세입은 늘고, 임금 지출은 커진다 (음수가 더 작아진다)
     const tax = a.lines.find((l) => l.key === 'tax')!.byLevel!;
     expect(tax[4]).toBeGreaterThan(tax[0]);
     const wages = a.lines.find((l) => l.key === 'wages')!.byLevel!;
@@ -121,17 +121,17 @@ describe('예산 미리보기', () => {
       sums.forEach((s, i) => {
         const p = pre[i], b = s.k.lastBudget!;
         s.pIn += lineOf(p, 'tax') + lineOf(p, 'tariffs') + lineOf(p, 'mint');
-        s.pOut += lineOf(p, 'stateFirms') + lineOf(p, 'build') + lineOf(p, 'wages') + lineOf(p, 'goods') + lineOf(p, 'research') + lineOf(p, 'interest') + lineOf(p, 'welfare');
+        s.pOut += lineOf(p, 'stateFirms') + lineOf(p, 'build') + lineOf(p, 'wages') + lineOf(p, 'goods') + lineOf(p, 'interest') + lineOf(p, 'welfare');
         s.rIn += b.revenue;
         s.rOut += ledgerNet(b) - b.revenue;
         s.gross += ledgerGross(b);
-        s.spend += b.wages + b.goods + b.research + b.interest + (b.welfare ?? 0) + (b.build ?? 0);
+        s.spend += b.wages + b.goods + b.interest + (b.welfare ?? 0) + (b.build ?? 0);
       });
     }
     TUNE.harvestChance = chance;
     const pct = (a: number, b: number) => Math.round((a / Math.abs(b)) * 1000) / 10;
     for (const s of sums) {
-      // 지출은 국영 사업 손익(건축사무소 수수료)을 뺀 순액이라 0 가까이 갈 수 있다. 오차는 총 지출(임금·원료·연구·이자·복지·왕실 공사)에 대한 비율로 잰다
+      // 지출은 국영 사업 손익(건축사무소 수수료)을 뺀 순액이라 0 가까이 갈 수 있다. 오차는 총 지출(임금·원료·이자·복지·왕실 공사)에 대한 비율로 잰다
       const e = { income: pct(s.pIn - s.rIn, s.rIn), expense: pct(s.pOut - s.rOut, s.spend), netOfGross: pct(s.pIn + s.pOut - s.rIn - s.rOut, s.gross) };
       errs.push(`왕국 ${s.k.id} ${JSON.stringify(e)}`);
       expect(Math.abs(e.income), `왕국 ${s.k.id} 수입`).toBeLessThan(15);
@@ -150,7 +150,7 @@ describe('예산 미리보기', () => {
   });
 
   it('자세히 보기: 행 합 + 보정 = 줄 값, 임금·국영 사업·이자는 보정 없이 맞는다', () => {
-    for (const k of w.kingdoms) for (const steps of [{}, { wages: 5, tax: 1, research: 4, welfare: 2 }]) {
+    for (const k of w.kingdoms) for (const steps of [{}, { wages: 5, tax: 1, welfare: 2 }]) {
       const p = budgetPreview(w, k.id, steps);
       for (const l of p.lines) {
         const d = budgetDrill(w, k.id, l.key, steps);
@@ -167,20 +167,24 @@ describe('예산 미리보기', () => {
   });
 
   it('국영 사업 손익: 왕실 생산 건물이 있으면 실제 장부(lastBudget.firms)와 크게 다르지 않다', () => {
+    // 100·150·200주에서 4주씩. 매출 이동평균은 늘거나 주는 사업을 늦게 따라가 한 구간의 오차는 ±25%까지 간다: 세 구간을 합쳐 치우침을 본다.
+    // 오차는 줄의 총 흐름(매출 + 원료 + 임금)에 견준다: 적자 국영 사업은 매출이 작아 매출에만 견주면 비율이 커진다
     const v = createWorld(2);
-    runTo(v, 150 * TICKS_PER_WEEK);
-    let p = 0, r = 0, scale = 0;
-    for (let wk = 0; wk < 4; wk++) {
-      const pre = v.kingdoms.map((k) => budgetPreview(v, k.id).lines.find((l) => l.key === 'stateFirms')!.weekly);
-      runTo(v, v.tick + TICKS_PER_WEEK);
-      v.kingdoms.forEach((k, i) => {
-        const d = budgetDrill(v, k.id, 'stateFirms');
-        if (d.key === 'stateFirms') for (const x of d.rows) scale += x.sales;
-        p += pre[i]; r += k.lastBudget!.firms ?? 0;
-      });
+    let p = 0, r = 0, scale = 0, gross = 0;
+    for (const start of [100, 150, 200]) {
+      runTo(v, start * TICKS_PER_WEEK);
+      for (let wk = 0; wk < 4; wk++) {
+        const pre = v.kingdoms.map((k) => budgetPreview(v, k.id).lines.find((l) => l.key === 'stateFirms')!.weekly);
+        runTo(v, v.tick + TICKS_PER_WEEK);
+        v.kingdoms.forEach((k, i) => {
+          const d = budgetDrill(v, k.id, 'stateFirms');
+          if (d.key === 'stateFirms') for (const x of d.rows) { scale += x.sales; gross += Math.abs(x.sales) + Math.abs(x.inputs) + Math.abs(x.wages); }
+          p += pre[i]; r += k.lastBudget!.firms ?? 0;
+        });
+      }
     }
-    console.log(`국영 사업 4주: 예상 ${p} 장부 ${Math.round(r)} (매출 규모 ${Math.round(scale)})`);
+    console.log(`국영 사업 3×4주: 예상 ${p} 장부 ${Math.round(r)} (매출 ${Math.round(scale)}, 총 흐름 ${Math.round(gross)})`);
     expect(scale).toBeGreaterThan(0);
-    expect(Math.abs(p - r) / scale).toBeLessThan(0.1);
+    expect(Math.abs(p - r) / gross).toBeLessThan(0.1);
   });
 });

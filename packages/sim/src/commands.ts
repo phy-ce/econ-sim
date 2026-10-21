@@ -204,8 +204,6 @@ function runCommand(w: World, actor: number, cmd: Command): CommandError | null 
       w.constructions = w.constructions.map((x) => (x.companyId === actor ? mine[i++] : x));
       return null;
     }
-    case 'setResearchBudget':
-      return fail('연구비는 재정의 연구비 수준으로 정합니다.', 'Research funding follows the research level in Finance.');
     case 'setBudget': {
       const k = w.kingdoms.find((x) => x.governmentId === actor);
       if (!k) return fail('왕실만 정책 단계를 정할 수 있습니다.', 'Only a royal house can set policy levels.');

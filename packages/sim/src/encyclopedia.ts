@@ -31,7 +31,7 @@ import {
 import { HIRE_RATE, MIGRATE_FULL, MIGRATE_MAX, MIGRATE_START, RATIO_GATE, UNPAID_QUIT, subsistenceWage, switchShare } from './labor';
 import { CREW_RATE, EXP_GAIN } from './production';
 import {
-  DAILY_INTEREST, KEEP_SHARE, MINT_BASE, MINT_RATE, RESEARCHER_WEIGHT, RESERVE_SHARE, adminCapacityOf, reserveCap, taxCapacity, taxRates,
+  DAILY_INTEREST, KEEP_SHARE, MINT_BASE, MINT_RATE, RESERVE_SHARE, kingdomLiteracy, researchPoints, adminCapacityOf, reserveCap, taxCapacity, taxRates,
   weeklyOutputValue,
 } from './finance';
 import { CHUNKS, LAW_COOLDOWN, LAW_SWITCH, WELFARE_COOLDOWN, WELFARE_SWITCH, OFFICE_BLOCK, OFFICE_GROWTH, STAFFING_HORIZON, SWITCH_COOLDOWN } from './ai';
@@ -40,7 +40,7 @@ import { ownershipAssets } from './policy';
 import { welfareIncome, welfareTarget, welfareWeekly } from './welfare';
 import type { BudgetLineKey } from './budget';
 import { MAX_CONCURRENT_CONSTRUCTIONS, MAX_LEVELS_PER_PROJECT } from './commands';
-import { START_CASH, START_FIRM_CASH, START_OFFICE_LEVELS, START_TECHS, TRADER_CAPITAL, createWorld } from './world';
+import { START_CASH, START_FIRM_CASH, START_OFFICE_LEVELS, START_SCHOOL_LEVELS, START_TECHS, TRADER_CAPITAL, createWorld } from './world';
 import { regionNameEn } from './i18n';
 import { POP_CLASSES, SKILLS, educationOf, literacyOf, wealthOf } from './types';
 import type { Building, Company, GoodId, Kingdom, PopClass, Region, Skill, World } from './types';
@@ -148,7 +148,7 @@ export function exampleWorld(): World {
 /** 예산 미리보기 줄 이름 */
 const BUDGET_LINE_LABELS: Record<BudgetLineKey, L10n> = {
   tax: t('세금', 'Taxes'), tariffs: t('관세', 'Tariffs'), mint: t('주조', 'Minting'), build: t('왕실 공사', 'Crown construction'),
-  wages: t('정부 건물 임금', 'Government wages'), stateFirms: t('국영 사업 손익', 'State enterprises'), goods: t('정부 건물 원료', 'Government inputs'), research: t('연구비', 'Research'), interest: t('국채 이자', 'Bond interest'), welfare: t('복지', 'Welfare'),
+  wages: t('정부 건물 임금', 'Government wages'), stateFirms: t('국영 사업 손익', 'State enterprises'), goods: t('정부 건물 원료', 'Government inputs'), interest: t('국채 이자', 'Bond interest'), welfare: t('복지', 'Welfare'),
 };
 
 // ---------------------------------------------------------------- 분류·창·DESIGN 절
@@ -240,6 +240,7 @@ export const ENCYCLOPEDIA: EncEntry[] = [
       p('상인 자본', 'Trader capital', () => TRADER_CAPITAL, 'florin'),
       tune('startTreasuryWeeks', '시작 국고 (정부 건물 운영비 주 수)', 'Start treasury (weeks of government upkeep)', 'week'),
       p('시작 건축사무소', 'Starting construction office', () => START_OFFICE_LEVELS, 'level'),
+      p('시작 학교 (왕실마다, 인구가 가장 많은 지역)', 'Starting school (per crown, most populous region)', () => START_SCHOOL_LEVELS, 'level'),
       p('시작 기술', 'Starting techs', () => START_TECHS.join(', ')),
       tune('startLumber', '시작 벌목장 (10만 명당)', 'Start lumber camps (per 100k)', 'level'), tune('startFiber', '시작 섬유 농장 (10만 명당)', 'Start fibre farms (per 100k)', 'level'),
     ],
@@ -483,8 +484,8 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   },
   {
     id: 'tech', category: 'production', title: t('기술', 'Technology'),
-    rule: t('기술은 {0}개, 4단계다. 단계별 비용 {1} / {2} / {3} / {4}. 기술은 왕국 단위이고 민간 상회는 왕실 기술을 그대로 쓴다. 기술은 생산 방식과 함께 세법·투자법 선택지도 연다.', '{0} technologies in 4 tiers costing {1} / {2} / {3} / {4}. Technology is per kingdom; private houses use the crown\'s. Technologies also unlock tax and investment law options.'),
-    params: [p('기술 수', 'Techs', () => TECHS.length), p('1단계', 'Tier 1', () => TECH_COST[1], 'florin'), p('2단계', 'Tier 2', () => TECH_COST[2], 'florin'), p('3단계', 'Tier 3', () => TECH_COST[3], 'florin'), p('4단계', 'Tier 4', () => TECH_COST[4], 'florin')],
+    rule: t('기술은 {0}개, 4단계다. 단계별 연구 포인트 {1} / {2} / {3} / {4}. 기술은 왕국 단위이고 민간 상회는 왕실 기술을 그대로 쓴다. 기술은 생산 방식과 함께 세법·투자법 선택지도 연다.', '{0} technologies in 4 tiers costing {1} / {2} / {3} / {4} research points. Technology is per kingdom; private houses use the crown\'s. Technologies also unlock tax and investment law options.'),
+    params: [p('기술 수', 'Techs', () => TECHS.length), p('1단계', 'Tier 1', () => TECH_COST[1], 'pt'), p('2단계', 'Tier 2', () => TECH_COST[2], 'pt'), p('3단계', 'Tier 3', () => TECH_COST[3], 'pt'), p('4단계', 'Tier 4', () => TECH_COST[4], 'pt')],
     live: {
       pick: ['kingdom'], run: (w, ctx) => {
         const gov = govOf(w, kingdomOfCtx(w, ctx));
@@ -496,7 +497,7 @@ export const ENCYCLOPEDIA: EncEntry[] = [
         };
       },
     },
-    related: ['research', 'ai-research', 'buildings'], seenIn: ['finance'], source: ['data.ts TECHS', 'finance.ts doResearch'], design: ['7.1'],
+    related: ['research', 'ai-research', 'buildings'], seenIn: ['finance'], source: ['data.ts TECHS', 'finance.ts advanceResearch'], design: ['7.1'],
   },
   {
     id: 'harvest-conditions', category: 'production', title: t('기상 조건', 'Harvest conditions'),
@@ -737,7 +738,7 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   },
   {
     id: 'literacy', category: 'people', title: t('교육과 문해력', 'Education and literacy'),
-    rule: t('교육 접근도 목표 = {0} + {1} × min(1, 학교 정원 ÷ 인구). 문해력 목표 = 교육 접근도 + {2} × 부. 둘 다 매일 오를 때 {3}, 내릴 때 {4}씩 다가간다.', 'Education target = {0} + {1} × min(1, school seats ÷ population). Literacy target = education + {2} × wealth. Both approach daily at {3} going up and {4} going down.'),
+    rule: t('교육 접근도 목표 = {0} + {1} × min(1, 학교 정원 ÷ 인구). 문해력 목표 = 교육 접근도 + {2} × 부. 둘 다 매일 오를 때 {3}, 내릴 때 {4}씩 다가간다. 왕국 문해력이 연구 속도를 정한다.', 'Education target = {0} + {1} × min(1, school seats ÷ population). Literacy target = education + {2} × wealth. Both approach daily at {3} going up and {4} going down. Kingdom literacy sets the research pace.'),
     formula: 'edu* = {0} + {1} × coverage;  lit* = edu + {2} × W',
     params: [p('교육 바닥', 'Education floor', () => EDUCATION_FLOOR), p('교육 폭', 'Education range', () => EDUCATION_RANGE), p('부 1단계당', 'Per wealth step', () => LITERACY_PER_WEALTH), p('오를 때', 'Rising', () => LITERACY_UP, 'pct'), p('내릴 때', 'Falling', () => LITERACY_DOWN, 'pct')],
     live: {
@@ -749,7 +750,7 @@ export const ENCYCLOPEDIA: EncEntry[] = [
         }),
       }),
     },
-    related: ['schools', 'qualifications', 'ai-schools'], seenIn: ['region', 'pops'], source: ['tick.ts updateEducation', 'pops.ts updateLiteracy'], design: ['3.3'],
+    related: ['schools', 'qualifications', 'ai-schools', 'research'], seenIn: ['region', 'pops'], source: ['tick.ts updateEducation', 'pops.ts updateLiteracy'], design: ['3.3'],
   },
   {
     id: 'needs', category: 'people', title: t('필요 묶음', 'Needs basket'),
@@ -1078,13 +1079,13 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   },
   {
     id: 'budget-steps', category: 'state', title: t('정책 단계', 'Policy steps'),
-    rule: t('금액 편성은 없다. 손잡이는 세금 수준·국영 임금·연구비·복지의 네 단계(1~5, 3이 보통)다. 정부 건물(행정청·건축사무소·학교)은 늘 다 돈다. 행정청·학교는 국고가 운영비를 내고, 건축사무소는 공사 수수료로 운영비를 낸다. 국고가 비면 국채로 낸다. 수지 표는 손잡이별로 묶는다: 세금 수준 → 세금, 국영 임금 → 정부 건물 임금·국영 사업 손익(건축사무소 포함)·왕실 공사, 연구비 → 연구비, 복지 → 복지, 나머지(관세·주조·정부 건물 원료·국채 이자)는 손잡이가 없다.', 'There is no line-item budget. The knobs are four steps (1–5, 3 is normal): tax level, state wages, research, welfare. Government buildings always run at full. The treasury pays administration and schools; construction offices pay their way from construction fees. When the treasury is empty it issues bonds. The budget table groups lines by knob: tax level → taxes; state wages → government wages, state enterprises (construction offices included) and crown construction; research → research; welfare → welfare; the rest (tariffs, minting, government inputs, bond interest) has no knob.'),
-    params: [tune('taxLevels', '세금 수준', 'Tax level', 'x'), tune('govWageLevels', '국영 임금', 'State wages', 'x'), tune('researchLevels', '연구비', 'Research', 'x'), tune('welfareLevels', '복지 목표 생활수준', 'Welfare target SoL')],
+    rule: t('금액 편성은 없다. 손잡이는 세금 수준·국영 임금·복지의 세 단계(1~5, 3이 보통)다. 연구는 돈이 들지 않는다. 정부 건물(행정청·건축사무소·학교)은 늘 다 돈다. 행정청·학교는 국고가 운영비를 내고, 건축사무소는 공사 수수료로 운영비를 낸다. 국고가 비면 국채로 낸다. 수지 표는 손잡이별로 묶는다: 세금 수준 → 세금, 국영 임금 → 정부 건물 임금·국영 사업 손익(건축사무소 포함)·왕실 공사, 복지 → 복지, 나머지(관세·주조·정부 건물 원료·국채 이자)는 손잡이가 없다.', 'There is no line-item budget. The knobs are three steps (1–5, 3 is normal): tax level, state wages, welfare. Research costs no money. Government buildings always run at full. The treasury pays administration and schools; construction offices pay their way from construction fees. When the treasury is empty it issues bonds. The budget table groups lines by knob: tax level → taxes; state wages → government wages, state enterprises (construction offices included) and crown construction; welfare → welfare; the rest (tariffs, minting, government inputs, bond interest) has no knob.'),
+    params: [tune('taxLevels', '세금 수준', 'Tax level', 'x'), tune('govWageLevels', '국영 임금', 'State wages', 'x'), tune('welfareLevels', '복지 목표 생활수준', 'Welfare target SoL')],
     live: {
       pick: ['kingdom'], run: (w, ctx) => {
         const k = kingdomOfCtx(w, ctx), bp = budgetPreview(w, k.id);
         return {
-          rows: [row('세금 · 임금 · 연구 · 복지', 'Tax · wages · research · welfare', `${k.budget.tax} · ${k.budget.wages} · ${k.budget.research} · ${k.budget.welfare}`), row('주간 순수지', 'Weekly net', bp.net, 'florin')],
+          rows: [row('세금 · 임금 · 복지', 'Tax · wages · welfare', `${k.budget.tax} · ${k.budget.wages} · ${k.budget.welfare}`), row('주간 순수지', 'Weekly net', bp.net, 'florin')],
           bars: bp.lines.map((l) => bar(BUDGET_LINE_LABELS[l.key], l.weekly, 'florin')),
         };
       },
@@ -1092,20 +1093,30 @@ export const ENCYCLOPEDIA: EncEntry[] = [
     related: ['tax-levels', 'state-wages', 'research', 'treasury', 'ai-budget'], seenIn: ['finance'], source: ['finance.ts spendBudget', 'budget.ts budgetPreview'], design: ['9.2'],
   },
   {
-    id: 'research', category: 'state', title: t('연구비', 'Research spending'),
-    rule: t('주간 연구비 = 주간 경제 규모 × {0} × 연구비 단계 배율. 현금이 있는 만큼만 내고, 그 왕국 기술자(가중 {1})·전문가({2}) 소득이 된다.', 'Weekly research = weekly economic output × {0} × research step. Paid only from cash on hand; it becomes income of the kingdom\'s skilled (weight {1}) and experts ({2}).'),
-    params: [tune('researchShare', '경제 규모 비율', 'Share of output', 'pct'), p('기술자 가중', 'Skilled weight', () => RESEARCHER_WEIGHT.skilled ?? 0), p('전문가 가중', 'Expert weight', () => RESEARCHER_WEIGHT.expert ?? 0)],
+    id: 'research', category: 'state', title: t('연구', 'Research'),
+    rule: t('연구는 돈이 들지 않는다. 주간 연구 포인트 = {0} + {1} × 왕국 문해력(%, 인구 가중 평균). 포인트는 고른 기술에 쌓이고, 기술을 바꿔도 쌓인 만큼 남는다. 고른 기술이 없으면 그 주 포인트는 사라진다. 문해력은 학교와 부로 오른다.', 'Research costs no money. Weekly research points = {0} + {1} × kingdom literacy (%, population-weighted). Points build up on the chosen tech and stay there if you switch. With no tech chosen, that week\'s points are lost. Literacy rises with schools and wealth.'),
+    formula: 'points/week = {0} + {1} × literacy%',
+    params: [tune('researchBase', '기본 포인트', 'Base points', 'pt'), tune('researchPerLiteracy', '문해력 1%당', 'Per literacy %', 'pt')],
+    example: () => {
+      const w = exampleWorld(), k = w.kingdoms[0], lit = kingdomLiteracy(w, k.id), pts = researchPoints(w, k.id);
+      return {
+        inputs: [row('시작 왕국 문해력', 'Starting kingdom literacy', r2(lit), 'pct'), row('1단계 기술', 'Tier-1 tech', TECH_COST[1], 'pt')],
+        steps: [row('주간 연구 포인트', 'Points per week', r2(pts), 'pt')],
+        result: [row('1단계 기술까지', 'Weeks to a tier-1 tech', Math.ceil(TECH_COST[1] / pts), 'week')],
+      };
+    },
     live: {
       pick: ['kingdom'], run: (w, ctx) => {
-        const k = kingdomOfCtx(w, ctx);
-        return { rows: [row('주간 경제 규모', 'Weekly output', Math.round(k.output ?? 0), 'florin'), row('지난주 연구비', 'Last week\'s research', Math.round(k.lastBudget?.research ?? 0), 'florin')] };
+        const k = kingdomOfCtx(w, ctx), gov = govOf(w, k), cur = gov?.research.current, pts = researchPoints(w, k.id);
+        const left = cur ? Math.max(0, (TECHS.find((x) => x.id === cur)?.cost ?? 0) - (gov!.research.progress[cur] ?? 0)) : 0;
+        return { rows: [row('문해력', 'Literacy', r2(kingdomLiteracy(w, k.id)), 'pct'), row('주간 연구 포인트', 'Points per week', r2(pts), 'pt'), row('남은 주', 'Weeks left', cur ? Math.ceil(left / pts) : '-', 'week')] };
       },
     },
-    related: ['tech', 'budget-steps', 'ai-research'], seenIn: ['finance'], source: ['finance.ts spendBudget', 'finance.ts fundResearch'], design: ['9.2'],
+    related: ['tech', 'literacy', 'schools', 'ai-research'], seenIn: ['finance'], source: ['finance.ts researchPoints', 'finance.ts advanceResearch'], design: ['3.3', '9.2'],
   },
   {
     id: 'treasury', category: 'state', title: t('국고와 수지', 'Treasury and balance'),
-    rule: t('주간 세입 = 세금 + 토지세 + 관세 + 주조. 지출 = 행정청·학교 임금·원료 + 연구비 + 이자 + 복지 + 왕실 공사(자기 건축사무소에 낸 수수료). 국영 사업 손익 = 왕실 생산 건물과 건축사무소의 매출 − 원료 − 임금으로, 국고에 바로 들고 난다. 사무소 매출에는 왕실 공사 수수료도 들어 있어 왕실 공사 줄과 서로 지운다. AI는 국고 ÷ 주간 지출(몇 주치)로 판단한다 (지출에서 건축사무소 손익을 빼고, 왕실 생산 건물 손익은 넣지 않는다). 시작 국고는 운영비 {0}주치다.', 'Weekly revenue = taxes + land tax + tariffs + mint. Spending = administration and school wages and inputs + research + interest + welfare + crown construction (fees paid to its own construction office). State enterprises = sales − inputs − wages of crown production buildings and construction offices; it goes straight into or out of the treasury. Office sales include the crown\'s own construction fees, which cancel against the crown construction line. AI judges the treasury in weeks of spending (spending net of the office\'s profit; production buildings left out). The start treasury is {0} weeks of upkeep.'),
+    rule: t('주간 세입 = 세금 + 토지세 + 관세 + 주조. 지출 = 행정청·학교 임금·원료 + 이자 + 복지 + 왕실 공사(자기 건축사무소에 낸 수수료). 국영 사업 손익 = 왕실 생산 건물과 건축사무소의 매출 − 원료 − 임금으로, 국고에 바로 들고 난다. 사무소 매출에는 왕실 공사 수수료도 들어 있어 왕실 공사 줄과 서로 지운다. AI는 국고 ÷ 주간 지출(몇 주치)로 판단한다 (지출에서 건축사무소 손익을 빼고, 왕실 생산 건물 손익은 넣지 않는다). 시작 국고는 운영비 {0}주치다.', 'Weekly revenue = taxes + land tax + tariffs + mint. Spending = administration and school wages and inputs + interest + welfare + crown construction (fees paid to its own construction office). State enterprises = sales − inputs − wages of crown production buildings and construction offices; it goes straight into or out of the treasury. Office sales include the crown\'s own construction fees, which cancel against the crown construction line. AI judges the treasury in weeks of spending (spending net of the office\'s profit; production buildings left out). The start treasury is {0} weeks of upkeep.'),
     params: [tune('startTreasuryWeeks', '시작 국고', 'Start treasury', 'week')],
     live: {
       pick: ['kingdom'], run: (w, ctx) => {
@@ -1136,8 +1147,8 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   },
   {
     id: 'schools', category: 'state', title: t('학교', 'Schools'),
-    rule: t('학교는 왕실만 짓고 땅을 쓰지 않는다. 귀족 가정교사는 레벨당 {0}명, 공립 학교(인쇄술)는 {1}명을 가르친다. 정원은 교육 접근도를 올린다.', 'Only crowns build schools, which use no land. Noble tutors teach {0} per level, public schools (printing press) {1}. Seats raise education access.'),
-    params: [p('가정교사 정원', 'Tutor seats', () => getMethod('school', 'school_tutor').seats ?? 0, 'people'), p('공립 정원', 'Public seats', () => getMethod('school', 'school_basic').seats ?? 0, 'people')],
+    rule: t('학교는 왕실만 짓고 땅을 쓰지 않는다. 귀족 가정교사는 레벨당 {0}명, 공립 학교(인쇄술)는 {1}명을 가르친다. 정원은 교육 접근도를 올리고, 문해력과 연구 속도를 올린다. 왕실마다 인구가 가장 많은 지역에 귀족 가정교사 {2}레벨로 시작한다.', 'Only crowns build schools, which use no land. Noble tutors teach {0} per level, public schools (printing press) {1}. Seats raise education access, and so literacy and research. Each crown starts with {2} level(s) of noble tutors in its most populous region.'),
+    params: [p('가정교사 정원', 'Tutor seats', () => getMethod('school', 'school_tutor').seats ?? 0, 'people'), p('공립 정원', 'Public seats', () => getMethod('school', 'school_basic').seats ?? 0, 'people'), p('시작 학교', 'Starting school', () => START_SCHOOL_LEVELS, 'level')],
     live: {
       pick: [], run: (w) => ({
         bars: w.regions.map((r) => {
@@ -1147,7 +1158,7 @@ export const ENCYCLOPEDIA: EncEntry[] = [
         }),
       }),
     },
-    related: ['literacy', 'ai-schools'], seenIn: ['region', 'finance'], source: ['tick.ts updateEducation', 'data.ts school'], design: ['3.3', '7.1'],
+    related: ['literacy', 'ai-schools', 'research'], seenIn: ['region', 'finance'], source: ['tick.ts updateEducation', 'data.ts school'], design: ['3.3', '7.1'],
   },
 
   // ================================================================ AI
@@ -1166,7 +1177,7 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   },
   {
     id: 'ai-budget', category: 'ai', title: t('정책 사다리', 'Policy ladder'),
-    rule: t('4주마다 한 칸 움직인다. 빚이 있거나 국고가 지출 {0}주치 미만이고 줄었으면 긴축 쪽으로, {1}주치를 넘고 줄지 않았으면 세금을 내린다. 사다리: 국영 임금 4 → 연구비 5·4 → 세금 1~5 → 연구비 2·1 → 연구 멈춤 → 국영 임금 2·1. 기술을 다 열면 풀 때 임금 지수 1 이하에서 국영 임금을 {2}단계까지 올리고, 지수가 1을 넘으면 되돌린다.', 'Every 4 weeks one step: toward austerity if in debt or below {0} weeks of spending and falling; tax cuts above {1} weeks and not falling. Ladder: state wages 4 → research 5·4 → tax 1–5 → research 2·1 → stop research → state wages 2·1. With every tech researched, loosening raises state wages up to step {2} while the wage index is at most 1, and steps back when it exceeds 1.'),
+    rule: t('4주마다 한 칸 움직인다. 빚이 있거나 국고가 지출 {0}주치 미만이고 줄었으면 긴축 쪽으로, {1}주치를 넘고 줄지 않았으면 세금을 내린다. 사다리: 국영 임금 4 → 세금 1~5 → 국영 임금 2·1. 기술을 다 열면 풀 때 임금 지수 1 이하에서 국영 임금을 {2}단계까지 올리고, 지수가 1을 넘으면 되돌린다.', 'Every 4 weeks one step: toward austerity if in debt or below {0} weeks of spending and falling; tax cuts above {1} weeks and not falling. Ladder: state wages 4 → tax 1–5 → state wages 2·1. With every tech researched, loosening raises state wages up to step {2} while the wage index is at most 1, and steps back when it exceeds 1.'),
     params: [tune('treasuryLowWeeks', '조이는 선', 'Tighten below', 'week'), tune('treasuryHighWeeks', '푸는 선', 'Loosen above', 'week'), tune('doneWageMax', '기술 완료 후 임금 상한', 'Wage cap after research')],
     related: ['budget-steps', 'treasury', 'ai-schools', 'ai-welfare'], seenIn: ['finance'], source: ['ai.ts adjustBudget'], design: ['10'],
   },
@@ -1190,7 +1201,7 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   },
   {
     id: 'ai-research', category: 'ai', title: t('연구 고르기', 'Choosing research'),
-    rule: t('국고가 조이지 않을 때 (가치 + 1) ÷ 비용 × 무작위 0.85~1.15가 가장 큰 기술을 고른다. 가치 = 여는 방식의 손익 개선(학교 기술은 모자란 자리 가치). 후속 기술 가치의 절반을 물려받는다.', 'When the treasury is not tight, pick the tech with the highest (value + 1) ÷ cost × random 0.85–1.15. Value = profit gain from unlocked methods (school techs: missing seat value), plus half of successors\' value.'),
+    rule: t('고른 기술이 없으면 늘 (가치 + 1) ÷ 비용 × 무작위 0.85~1.15가 가장 큰 기술을 고른다. 가치 = 여는 방식의 손익 개선(학교 기술은 모자란 자리 가치). 후속 기술 가치의 절반을 물려받는다.', 'Whenever no tech is chosen, pick the tech with the highest (value + 1) ÷ cost × random 0.85–1.15. Value = profit gain from unlocked methods (school techs: missing seat value), plus half of successors\' value.'),
     params: [],
     related: ['tech', 'research'], seenIn: ['finance'], source: ['ai.ts planResearch', 'outlook.ts techValue'], design: ['10'],
   },
