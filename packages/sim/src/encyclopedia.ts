@@ -17,7 +17,7 @@ import {
 import {
   BASE_CREDIT, CARTAGE_RATE, RAIL_RATE, STATE_CREDIT_GDP, collectionRatio, companyById, constructionEstimate, creditLimit, efficiencyParts,
   harvestCondition, harvestFactor, holdingsOf, kingdomGdp, levelOwnersOf, knownVeins, landFree, landUsed, moneyIdentity, netMinted, popSol,
-  priceFormula, regionById, sellThrough, shareWage, shippingRate, staffing, totalMoney,
+  FLOW_ZERO, priceFormula, regionById, sellThrough, shareWage, shippingRate, staffing, totalMoney,
 } from './economy';
 import { borderCost, kingdomById, DEFAULT_TARIFF } from './kingdoms';
 import {
@@ -320,14 +320,14 @@ export const ENCYCLOPEDIA: EncEntry[] = [
       const D = 120, S = 100, base = GOODS.grain.basePrice, target = priceFormula('grain', D, S);
       return {
         inputs: [row('상품', 'Good', GOODS.grain.name), row('기본가', 'Base price', base, 'florin'), row('수요 이동평균', 'Demand EMA', D, 'good'), row('공급 이동평균', 'Supply EMA', S, 'good')],
-        steps: [row('쏠림 (120 − 100) ÷ 100', 'Tilt (120 − 100) ÷ 100', 0.2), row('목표가', 'Target', r2(target), 'florin'), row('어제 가격이 기본가면 하루 움직임', 'One day\'s move from base', r2(Math.max(0.01, (target - base) * PRICE_SPEED)), 'florin')],
+        steps: [row('쏠림 (120 − 100) ÷ 100', 'Tilt (120 − 100) ÷ 100', 0.2), row('목표가', 'Target', r2(target), 'florin'), row('어제 가격이 기본가면 하루 움직임', 'One day\'s move from base', r2((target - base) * PRICE_SPEED), 'florin')],
         result: [row('priceFormula(grain, 120, 100)', 'priceFormula(grain, 120, 100)', r2(target), 'florin')],
       };
     },
     live: {
       pick: ['region', 'good'], run: (w, ctx) => {
         const mg = regionOf(w, ctx).market[ctx.good], base = GOODS[ctx.good].basePrice;
-        const target = mg.demandEma === 0 && mg.supplyEma === 0 ? mg.price : priceFormula(ctx.good, mg.demandEma, mg.supplyEma);
+        const target = priceFormula(ctx.good, mg.demandEma, mg.supplyEma);
         return {
           rows: [row('수요 이동평균', 'Demand EMA', mg.demandEma, 'good'), row('공급 이동평균', 'Supply EMA', mg.supplyEma, 'good'), row('목표가', 'Target', r2(target), 'florin'), row('가격', 'Price', mg.price, 'florin')],
           bars: [bar(t('하한', 'Floor'), r2(base * PRICE_MIN), 'florin', base * PRICE_MAX), bar(t('기본가', 'Base'), base, 'florin', base * PRICE_MAX), bar(t('가격', 'Price'), mg.price, 'florin', base * PRICE_MAX), bar(t('목표가', 'Target'), r2(target), 'florin', base * PRICE_MAX)],
@@ -338,8 +338,8 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   },
   {
     id: 'idle-market', category: 'market', title: t('거래 없는 시장', 'Markets with no trade'),
-    rule: t('사고파는 사람이 없어지면 수요·공급 이동평균이 둘 다 하루 {0}씩 같은 비율로 줄어, 가격은 마지막 수급 비율의 가격에 머문다. 둘 다 {1} 아래로 줄면 쏠린 쪽 끝으로 간다: 수요가 더 컸으면 상한, 공급이 더 컸으면 하한. 처음부터 거래가 없던 시장은 기본가 그대로다.', 'When nobody trades, the demand and supply EMAs both shrink {0} a day at the same rate, so price stays at the last supply-demand ratio. Once both fall below {1}, price drifts to the end it leaned to: ceiling if demand was larger, floor if supply was larger. A market that never traded stays at base.'),
-    params: [p('이동평균 하루 비율', 'EMA daily weight', () => FLOW_EMA, 'pct'), p('거의 0', 'Near zero', () => 1e-6, 'good')],
+    rule: t('사고파는 사람이 없어지면 수요·공급 이동평균이 둘 다 하루 {0}씩 같은 비율로 줄어, 가격은 마지막 수급 비율의 가격에 머문다. 작은 쪽이 {1} 아래로 줄면 쏠린 쪽 끝으로 간다: 수요가 더 컸으면 상한, 공급이 더 컸으면 하한. 처음부터 거래가 없던 시장은 기본가 그대로다.', 'When nobody trades, the demand and supply EMAs both shrink {0} a day at the same rate, so price stays at the last supply-demand ratio. Once the smaller one falls below {1}, price drifts to the end it leaned to: ceiling if demand was larger, floor if supply was larger. A market that never traded stays at base.'),
+    params: [p('이동평균 하루 비율', 'EMA daily weight', () => FLOW_EMA, 'pct'), p('거의 0', 'Near zero', () => FLOW_ZERO.toExponential(), 'good')],
     related: ['price-formula', 'rounding'], seenIn: ['market'], source: ['market.ts updatePrices'], design: ['6', '2'],
   },
   {
@@ -410,7 +410,7 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   },
   {
     id: 'efficiency', category: 'production', title: t('효율', 'Efficiency'),
-    rule: t('효율 = (0.4 + 0.6 × 숙련도) × 규모 × (1 + 지역 특산). 숙련도는 하루 {0}%p 오르고, 방식을 바꾸면 절반이 된다. 규모는 레벨당 +1%, 최대 {1}.', 'Efficiency = (0.4 + 0.6 × experience) × scale × (1 + regional perk). Experience rises {0} pp a day and halves on a method change. Scale is +1% per level, up to {1}.'),
+    rule: t('효율 = (0.4 + 0.6 × 숙련도) × 규모 × (1 + 지역 특산). 숙련도는 하루 {0}씩 오르고, 방식을 바꾸면 절반이 된다. 규모는 레벨당 +1%, 최대 {1}.', 'Efficiency = (0.4 + 0.6 × experience) × scale × (1 + regional perk). Experience rises {0} a day and halves on a method change. Scale is +1% per level, up to {1}.'),
     formula: 'eff = (0.4 + 0.6 × exp) × min(1.2, 1 + 0.01 × lvl) × (1 + perk)',
     params: [p('숙련도 하루 증가', 'Experience gain (daily)', () => EXP_GAIN, 'pct'), p('규모 최대', 'Scale cap', () => r2(scaleBonus(1000)), 'x')],
     example: () => {

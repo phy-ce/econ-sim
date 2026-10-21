@@ -149,7 +149,7 @@ Research is paid each week from the research budget (see Money). That money beco
 - **Debt.** Only the crown borrows. When the treasury runs short it automatically issues bonds (new money) up to ƒ300,000 + 25% of yearly output, and repays them when it has spare cash. Interest is 0.025% a day. There is no bank: private companies never borrow. Short of cash, they buy fewer inputs, pay wages in proportion to what they have, and build only with manor and district treasuries.
 - **Working cash.** The private company keeps two weeks of wages and inputs before paying dividends. When it has less, the owners of its levels top it up from their treasuries, by level count.
 - **No investment pool.** Kept dividends and people's spare cash stay in manor and district treasuries, which pay for private construction and buy privatised levels. Ownerless money and excess trader cash go to the regional financial districts.
-- **Money is conserved.** Total money changes only by minting, bond issues, repayments and bond interest. The tests check this to the cent.
+- **Money is conserved.** Total money changes only by minting, bond issues, repayments and bond interest. The tests check this to floating-point precision (within 1e-12 of total money).
 
 ## AI
 
