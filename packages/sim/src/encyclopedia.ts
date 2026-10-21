@@ -98,8 +98,8 @@ type TuneKey = keyof typeof TUNE;
 export const TUNE_DOCUMENTED = new Set<TuneKey>();
 /** 비교 실행용 손잡이: 기본값이 기능을 끄고 있어 규칙이 아니다 */
 export const TUNE_EXPERIMENTAL: TuneKey[] = ['subReturn', 'sellThrough', 'laborNet', 'officeRichWeeks', 'officeSelfPay', 'laborPoach', 'officeSchoolFirst', 'needMul',
-  // 저택 상급 귀족 자리 규칙 비교 중 (DECISIONS 7-17, 기본 'fit' = 지금 규칙)
-  'nobleSeats', 'nobleSeatsPerLevel', 'nobleSeatsPerCell', 'nobleIncome', 'nobleSeatsLand', 'noblePerMille', 'nobleAdjust', 'aristStart',
+  // 저택 상급 귀족 자리 규칙의 다른 후보 (DECISIONS 7-17, 기본 'econ' = 지금 규칙, 그 값들은 owner-buildings 항목에 있다)
+  'nobleSeats', 'nobleSeatsPerLevel', 'nobleSeatsPerCell', 'nobleIncome', 'nobleSeatsLand', 'noblePerMille',
   // AI 왕실 민영화 (비교용, 기본 'off': 민영화는 플레이어가 켠다)
   'crownPrivatize',
   // AI 수정 비교 (2026-10-22, 기본 0 = 지금 동작)
@@ -938,8 +938,8 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   // ================================================================ 소유·금융
   {
     id: 'owner-buildings', category: 'ownership', title: t('저택과 금융가', 'Manors and financial districts'),
-    rule: t('지역마다 저택(귀족)과 금융가(자본가)가 저절로 생긴다. 둘 다 금고를 갖고 어떤 민간 건물의 레벨이든 짓거나 사서 갖는다. 소작 지대는 그 지역 저택이 받는다. 상급 귀족 자리 = 저택의 주간 경제 규모(가진 레벨 산출 + 소작지 수확, 기본가) ÷ {2}, 하루 1%씩 다가간다. 자리를 넘는 귀족은 하급 귀족이 된다. 1레벨 자리 {0}, 가진 레벨마다 {1}자리.', 'Each region has a manor (nobles) and a financial district (capitalists). Both keep a treasury and can build or buy levels of any private building. Tenant rent goes to the regional manor. High-noble seats = the manor\'s weekly economy (owned levels\' output + tenant harvest, base prices) ÷ {2}, approached 1% a day; nobles beyond the seats become gentry. {0} seats per level; {1} seats per owned level.'),
-    params: [p('1레벨 자리', 'Seats per level', () => OWNERSHIP_SEATS, 'people'), p('소유 레벨당 자리', 'Seats per owned level', () => OWNER_SEATS_PER_LEVEL, 'people'), tune('nobleEconPer', '귀족 자리 1당 경제 규모', 'Economy per noble seat', 'florin')],
+    rule: t('지역마다 저택(귀족)과 금융가(지분을 파는 펀드)가 저절로 생긴다. 둘 다 금고를 갖고 어떤 민간 건물의 레벨이든 짓거나 사서 갖는다. 소작 지대는 그 지역 저택이 받는다. 상급 귀족 자리 = 저택의 주간 경제 규모(가진 레벨 산출 + 소작지 수확, 기본가) ÷ {2}, 하루 {3}씩 다가간다. 자리를 넘는 귀족은 하급 귀족이 된다. 저택은 1레벨 자리 {0}, 가진 레벨마다 {1}자리. 금융가는 가진 레벨마다 전문가 {4}명이 일한다. 시작 상급 귀족은 지역 티어 값 × {5}.', 'Each region has a manor (nobles) and a financial district (a fund that sells units). Both keep a treasury and can build or buy levels of any private building. Tenant rent goes to the regional manor. High-noble seats = the manor\'s weekly economy (owned levels\' output + tenant harvest, base prices) ÷ {2}, approached {3} a day; nobles beyond the seats become gentry. Manors have {0} seats per level and {1} seats per owned level. Financial districts employ {4} experts per owned level. Starting high nobles = regional tier value × {5}.'),
+    params: [p('1레벨 자리', 'Seats per level', () => OWNERSHIP_SEATS, 'people'), p('소유 레벨당 자리', 'Seats per owned level', () => OWNER_SEATS_PER_LEVEL, 'people'), tune('nobleEconPer', '귀족 자리 1당 경제 규모', 'Economy per noble seat', 'florin'), tune('nobleAdjust', '하루 조정 비율', 'Daily adjustment', 'pct'), tune('financeStaff', '금융가 레벨당 전문가', 'Experts per finance level', 'people'), tune('aristStart', '시작 귀족 배율', 'Starting noble multiple', 'x')],
     live: {
       pick: ['region'], run: (w, ctx) => {
         const r = regionOf(w, ctx), out: EncRow[] = [];

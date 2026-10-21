@@ -51,7 +51,7 @@
 - 재원: "The investment pool gains funds from pop contributions. These contributions are based on dividends paid to certain professions with ownership shares". 임금은 들어가지 않는다.
 - 남으면 쌓인다: "If investment pool contributions exceed expenses, the contributions accumulate and can be spent later."
 - 민간 공사: "Buildings constructed from the investment pool use a separate, private construction queue." 건설 부문 임금은 국고가 낸다: "the wages of construction sector employees are always paid by the national treasury."
-- 이 게임과 다른 점: 이 게임은 모든 pop의 남는 현금(생활비·세금 10일치 초과분의 하루 5%)도 투자 풀로 간다 (`DESIGN.md` 9.3). 측정한 유입의 61~93%가 이것이다 (`DECISIONS.md` 7-8).
+- 이 게임과 다른 점: 이 게임에는 투자 풀이 없다 (2026-10-22 소유 개편 4단계). 투자법이 허용한 계층의 남는 현금(생활비·세금 10일치 초과분의 하루 5%)은 그 지역 금융가 지분을 사고, 소작농의 8주치를 넘는 저축은 그 지역 저택 금고로 간다 (`DESIGN.md` 9.3). 예전 투자 풀 시절에는 이 남는 현금이 측정한 유입의 61~93%였다 (`DECISIONS.md` 7-8).
 
 ## 건물 유보 자산 (cash reserves, 2026-10-21 확인)
 출처: https://vic3.paradoxwikis.com/Treasury, https://vic3.paradoxwikis.com/Defines, https://vic3.paradoxwikis.com/Building, https://vic3.paradoxwikis.com/Patch_1.2, https://vic3.paradoxwikis.com/Patch_1.3, https://vic3.paradoxwikis.com/Patch_1.8

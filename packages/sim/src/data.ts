@@ -422,7 +422,7 @@ export const TUNE = {
   qualSkilledL: 0.4,
   qualExpertL: 0.6,
   qualRate: 0.25,
-  // 저택 상급 귀족 자리 규칙 (비교 중, DECISIONS 7-17. production.ts nobleSeatsOf, pops.ts matchNobles). 'fit' 이 지금 규칙, aristStart 는 시작 귀족 배율
+  // 저택 상급 귀족 자리 규칙 (DECISIONS 7-17. production.ts nobleSeatsOf, pops.ts matchNobles). 'econ' 이 지금 규칙(nobleEconPer, nobleAdjust), 나머지 값과 키는 비교용. aristStart 는 시작 귀족 배율
   nobleSeats: 'econ' as 'fit' | 'owned' | 'income' | 'land' | 'pop' | 'econ',
   nobleEconPer: 16000,
   nobleSeatsPerLevel: 10,
