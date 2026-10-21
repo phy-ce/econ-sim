@@ -1,10 +1,12 @@
 import { GOODS, TICKS_PER_WEEK, TUNE } from './data';
 import { logEvent } from './economy';
 import { weeklyOutputValue } from './finance';
-import { INVEST_LAWS, TAX_LAWS } from './types';
-import type { GoodId, InvestLaw, Kingdom, LawChange, PopClass, TaxLaw, World } from './types';
+import { INVEST_LAWS, TAX_LAWS, WELFARE_LAWS } from './types';
+import type { GoodId, InvestLaw, Kingdom, LawChange, PopClass, TaxLaw, WelfareLaw, World } from './types';
+import { welfareWeekly } from './welfare';
 
-// 세법·투자법 (DECISIONS 7-18·7-19): 법은 하나씩, 바꾸는 데 TUNE.lawDays 일. 넓은 법은 금융가 자산 비율이 기준을 넘어야 고를 수 있다.
+// 세법·투자법·복지법 (DECISIONS 7-18·7-19): 법은 하나씩, 바꾸는 데 TUNE.lawDays 일. 넓은 세법·투자법은 금융가 자산 비율이 기준을 넘어야 고를 수 있다.
+// 복지법은 조건 없이 고른다.
 
 /** 투자법마다 금융가 지분을 살 수 있는 계층 (소작농은 열지 않는다) */
 export const INVEST_CLASSES: Record<InvestLaw, PopClass[]> = {
@@ -60,8 +62,11 @@ export function financeRatio(w: World, kingdomId: number): number {
 
 export interface LawStatus<L> { current: L; pending?: LawChange<L>; options: { id: L; threshold: number | null; eligible: boolean }[] }
 
-/** 정책 창용: 금융가 자산 비율, 세법·투자법의 지금 값·바뀌는 중인 값·고를 수 있는 법 */
-export function policyStatus(w: World, kingdomId: number): { financeRatio: number; tax: LawStatus<TaxLaw>; invest: LawStatus<InvestLaw> } {
+/** 복지법 상태: 법마다 지금 복지 수준 단계의 주간 예상액 (weekly, 지출이라 0 이하. 'none' 은 0) */
+export interface WelfareStatus { current: WelfareLaw; pending?: LawChange<WelfareLaw>; options: { id: WelfareLaw; threshold: null; eligible: true; weekly: number }[] }
+
+/** 정책 창용: 금융가 자산 비율, 세법·투자법·복지법의 지금 값·바뀌는 중인 값·고를 수 있는 법 */
+export function policyStatus(w: World, kingdomId: number): { financeRatio: number; tax: LawStatus<TaxLaw>; invest: LawStatus<InvestLaw>; welfare: WelfareStatus } {
   const k = w.kingdoms.find((x) => x.id === kingdomId)!;
   const ratio = financeRatio(w, kingdomId);
   const ok = (t: number | null, cur: boolean) => cur || t === null || ratio >= t;
@@ -73,18 +78,32 @@ export function policyStatus(w: World, kingdomId: number): { financeRatio: numbe
       current: k.investLaw, pending: k.lawChange?.invest,
       options: INVEST_LAWS.map((id) => ({ id, threshold: investThreshold(id), eligible: INVEST_LAWS.indexOf(id) <= INVEST_LAWS.indexOf(k.investLaw) || ok(investThreshold(id), false) })),
     },
+    welfare: {
+      current: k.welfareLaw, pending: k.lawChange?.welfare,
+      options: WELFARE_LAWS.map((id) => ({ id, threshold: null, eligible: true as const, weekly: -roundWeekly(welfareWeekly(k, id, k.budget.welfare)) })),
+    },
   };
 }
 
+/** 화면에 보일 둥근 주간 금액 (budget.ts roundBudget 과 같은 규칙: 1,000 이상 100 단위, 그 아래 10 단위) */
+function roundWeekly(x: number): number {
+  const unit = Math.abs(x) >= 1000 ? 100 : 10;
+  return Math.round(x / unit) * unit + 0;
+}
+
 /** 바꾸기를 시작한다 (같은 법이면 바뀌는 중인 것을 취소). 고를 수 없으면 false */
-export function startLawChange(w: World, k: Kingdom, kind: 'tax' | 'invest', to: TaxLaw | InvestLaw): boolean {
-  const st = policyStatus(w, k.id);
-  const cur = kind === 'tax' ? k.taxLaw : k.investLaw;
-  if (to === cur) { if (k.lawChange) delete k.lawChange[kind]; return true; }
-  const opt = (kind === 'tax' ? st.tax.options : st.invest.options).find((o) => o.id === to);
-  if (!opt || !opt.eligible) return false;
+export function startLawChange(w: World, k: Kingdom, kind: 'tax' | 'invest' | 'welfare', to: TaxLaw | InvestLaw | WelfareLaw): boolean {
+  const cur = kind === 'tax' ? k.taxLaw : kind === 'invest' ? k.investLaw : k.welfareLaw;
+  if (to === cur) { if (k.lawChange) { delete k.lawChange[kind]; if (!Object.keys(k.lawChange).length) delete k.lawChange; } return true; }
+  if (kind === 'welfare') {
+    if (!WELFARE_LAWS.includes(to as WelfareLaw)) return false;
+  } else {
+    const st = policyStatus(w, k.id);
+    const opt = (kind === 'tax' ? st.tax.options : st.invest.options).find((o) => o.id === to);
+    if (!opt || !opt.eligible) return false;
+  }
   const ch = { to, startTick: w.tick, endTick: w.tick + TUNE.lawDays };
-  (k.lawChange ??= {})[kind] = ch as LawChange<TaxLaw> & LawChange<InvestLaw>;
+  (k.lawChange ??= {})[kind] = ch as LawChange<TaxLaw> & LawChange<InvestLaw> & LawChange<WelfareLaw>;
   return true;
 }
 
@@ -101,6 +120,10 @@ export function updateLaws(w: World) {
       k.investLaw = ch.invest.to; delete ch.invest;
       logEvent(w, k.governmentId, `${k.name} 투자법이 바뀌었습니다: ${k.investLaw}`, { en: `${k.nameEn} investment law changed: ${k.investLaw}` });
     }
-    if (!ch.tax && !ch.invest) delete k.lawChange;
+    if (ch.welfare && w.tick >= ch.welfare.endTick) {
+      k.welfareLaw = ch.welfare.to; k.welfareTick = w.tick; delete ch.welfare;
+      logEvent(w, k.governmentId, `${k.name} 복지법이 바뀌었습니다: ${k.welfareLaw}`, { en: `${k.nameEn} welfare law changed: ${k.welfareLaw}` });
+    }
+    if (!ch.tax && !ch.invest && !ch.welfare) delete k.lawChange;
   }
 }

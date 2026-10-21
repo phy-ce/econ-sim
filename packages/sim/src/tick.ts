@@ -4,6 +4,7 @@ import { roundAll, roundWorld } from './round';
 import { colonyPopulation, colonySol, marketWage, prospect, totalMoney, unemploymentRate } from './economy';
 import { runAi } from './ai';
 import { updateLaws } from './policy';
+import { payWelfare } from './welfare';
 import { weeklyAlerts } from './alerts';
 import { recordMetrics } from './metrics';
 import { applyCommandMsg } from './commands';
@@ -57,6 +58,7 @@ export function step(w: World, commands: QueuedCommand[] = []): string[] {
   migrate(w);
   prunePops(w);
   syncEmployment(w);
+  payWelfare(w);
   aggregateHouseholds(w);
 
   w.tick += 1;

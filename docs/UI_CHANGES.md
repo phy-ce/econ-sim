@@ -16,6 +16,7 @@
 **깨진 화면 (먼저):**
 0-1. **레벨 주인·민영화·저택·금융가 금고 (2-54, DECISIONS 7-16 1단계).** `privateShare`·`ownerBuildingOf`·투자 풀이 없어졌다. 소유 막대는 `levelOwnersOf(world, b)`로, 왕실 건물에 민영화 켜기(`setPrivatize`), `Kingdom.investmentPool` 칸 이름은 "저택·금융가 금고"로. 2-35-0 `stake` 몫은 지운다. sim 작업자가 클라이언트 두 줄을 지웠다 (컴파일 맞춤).
 0-2. **세법 셋·투자법·금융가 펀드·지대·귀족 자리 (2-55, DECISIONS 7-16~7-19 2~4단계).** `TaxLaw`가 `'land'|'poll'|'income'`, 새 `setInvestLaw`·`policyStatus`·`ownershipAssets`. sim 작업자가 `FinancePanel.tsx` 24의 세법 `select`를 세 값으로 고쳤다 (컴파일 맞춤). 정책 창(2-45)은 이제 sim 쪽이 준비됐다.
+0-3. **복지법·복지 단계 (2-56, 사용자 요청 2026-10-22).** 정책 창(2-45)에 복지법 섹션 (없음/구빈법/임금 보조/보편 보장, 180일 전환 막대, 법마다 주간 예상액 `policyStatus().welfare.options[].weekly`). 재정 창 예산 표의 지출에 `복지` 줄 (`budgetPreview` 줄 `welfare`, 단계 1~5 버튼, 툴팁에 목표 생활수준 `TUNE.welfareLevels`). sim 작업자가 `FinancePanel.tsx` 15 `multipliers`에 `welfare` 한 칸을 넣었다 (컴파일 맞춤).
 0. **창 크기 조절 없앰 + 좁은 고정 창 + 통계·소식 깨짐 (2-53, 사용자 요청).** 모서리·최대화를 지우고 창은 왼쪽/오른쪽 두 자리, 440×982 고정(1920×1080, 지도 x 530~1390을 안 가림). 분류 줄 88px을 위 탭으로, 인구 표 `min-width:1000/1100px`(`strategy.css` 66, `workspace.css` 243)을 고정 2열+보기 칩 4열로, 요약 세 칸을 세로로, 스크롤 안 스크롤 없앰.
 
 아래는 사용자 요청이거나 정리다.
@@ -1065,6 +1066,22 @@ Cells, top row left to right, then bottom row:
   - 저장 9판.
 - sim 작업자가 고친 클라이언트: `FinancePanel.tsx` 24 세법 `select` 옵션을 `land`/`poll`/`income`으로 (문자열은 있는 `T.landBased`·`T.pollTax`·`T.incomeTax`). `T.perCapita`는 안 쓰게 됐다.
 - 화면 작업자가 할 일: 2-45 정책 창 (세법 셋·투자법·전환 막대·조건선은 그리지 않고 고를 수 있는지만), 2-44 자산 비율 막대 (`ownershipAssets`), 금융가 상세에 지분 값 `nav`·지분 주인(`Pop.fund`) 수, 자본가 계층을 목록에서 숨기기 (인구 0).
+
+### 2-56. 복지법·복지 단계 (최저 생활수준 보장, 사용자 요청 2026-10-22)
+**사용자 말:** "최저 생활수준을 타겟(예: 3)해서 보장하는 정책을 여러 개 만들어서 고를 수 있게 해 줘 (+ AI가 상황에 맞게 정책을 고르도록)".
+
+- sim 변경 (DESIGN 9.5):
+  - 복지법 `WelfareLaw = 'none' | 'poor' | 'wage' | 'universal'` (`WELFARE_LAWS`), 필드 `Kingdom.welfareLaw` (시작 `'none'`), 명령 `{ type: 'setWelfareLaw', law }`. 세법·투자법처럼 `TUNE.lawDays`(180)일 전환 (`Kingdom.lawChange.welfare = { to, startTick, endTick }`), 지금 법과 같은 값을 보내면 전환 취소. 조건 없이 늘 고를 수 있다.
+  - 정책 단계 넷째 손잡이 `welfare` (`BUDGET_ITEMS = ['tax','wages','research','welfare']`, `Kingdom.budget.welfare` 1~5, 시작 3). 단계의 값은 배율이 아니라 **목표 생활수준** `TUNE.welfareLevels` = 2 / 2.5 / 3 / 3.5 / 4.
+  - `budgetPreview` 줄에 `welfare` (지출, 0 이하, `knob: 'welfare'`, `byLevel` 단계 1~5). `netByLevel.welfare`. 복지법이 `'none'`이면 0. `Kingdom.lastBudget.welfare`, 장부 `Company.ledger.welfare`(왕실).
+  - `policyStatus(w, kingdomId).welfare` = `{ current, pending?, options: { id, threshold: null, eligible: true, weekly }[] }`. `weekly` = 그 법을 지금 복지 단계로 켰을 때의 주간 예상액 (0 이하, 100·10 단위로 둥글게).
+  - export: `welfareTarget(step)`, `welfareGroup(pop)` (`'poor'|'wage'|null`), `welfareCovers(law, group)`, `welfareIncome(region, target)`, `welfareWeekly(kingdom, law, step)`. 저장 10판.
+- 화면 작업자가 할 일:
+  1. **정책 창 (2-45) 복지법 섹션** `welfareLaw`: 2-45-2 `LawPicker` 그대로. 행 넷 `없음 / None`, `구빈법 / Poor laws`, `임금 보조 / Wage subsidies`, `보편 보장 / Universal welfare`. 조건 칸 대신 그 법의 주간 예상액 (`options[].weekly`, `signedMoney`, 0이면 비움). 전환 중이면 진행 막대 + `n일`. 행 툴팁: 받는 직종 아이콘 (구빈법 = 소작농 + 실업, 임금 보조 = 노동자·농부·기술자·전문가, 보편 = 둘 다. 귀족·자본가는 없음).
+  2. **재정 창 예산 표**: `FinancePanel.tsx` 17의 지출 묶음 키 목록에 `'welfare'`를 더해 `복지 / Welfare` 줄을 그린다 (문자열 `budgetLines.welfare`). 단계 버튼 1~5 툴팁은 배율 `×` 대신 `목표 생활수준 3` 처럼 `TUNE.welfareLevels[level-1]`을 보인다 (`복지 3 · 생활수준 3 · −12,300 · 순수지 …`). 복지법이 `'none'`이면 줄은 0이고 버튼은 그대로 둔다 (법을 켜기 전에 단계를 정할 수 있다).
+  3. 정책 창 아래 읽기 전용 칩(2-45-1)에 `복지 3`을 더한다.
+  4. 소식: 전환이 끝나면 sim 이벤트 `복지법이 바뀌었습니다: poor` (2-45-5와 같은 처리, 법 이름으로 바꿔 보이기).
+- 문자열: `welfareLaw` 복지법 / Welfare law, `welfareNone`·`welfarePoor`·`welfareWage`·`welfareUniversal` (위 이름), `budgetLines.welfare` 복지 / Welfare, `welfareTarget` 목표 생활수준 / Target SoL.
 
 ## 3. sim 쪽 필요 사항 (Claude가 처리할 것, UI 작업자는 요청만)
 - **2-49 (선택):** 회수 자재 lot에 `buildingId`를 넣고 `salvageOf(w, b)` export.

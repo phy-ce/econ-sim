@@ -92,9 +92,9 @@ export function dailyOutput(w: World, kingdomId: number): number {
   return v;
 }
 
-/** 정책 단계(1~5)의 배율: 세금 수준 TUNE.taxLevels, 국영 임금 수준 TUNE.govWageLevels, 연구비 수준 TUNE.researchLevels */
+/** 정책 단계(1~5)의 배율: 세금 수준 TUNE.taxLevels, 국영 임금 수준 TUNE.govWageLevels, 연구비 수준 TUNE.researchLevels. 복지 수준은 목표 생활수준 TUNE.welfareLevels */
 export function budgetMult(k: Kingdom, item: BudgetItem): number {
-  const table = item === 'tax' ? TUNE.taxLevels : item === 'wages' ? TUNE.govWageLevels : TUNE.researchLevels;
+  const table = item === 'tax' ? TUNE.taxLevels : item === 'wages' ? TUNE.govWageLevels : item === 'research' ? TUNE.researchLevels : TUNE.welfareLevels;
   return table[k.budget[item] - 1];
 }
 
@@ -129,7 +129,7 @@ export function applyStateWages(w: World, k: Kingdom) {
 
 /**
  * 국정 예산 (매주): 금액을 편성하지 않는다. 왕실 정부 건물(행정청·건축사무소·학교)은 늘 다 가동하고 임금과 원료를 국고에서 낸다.
- * 여기서는 연구비(주간 경제 규모 × TUNE.researchShare × 연구비 수준 배율)를 내고, 국영 임금을 다시 정하고, 지난주 국정 수지를 적는다.
+ * 여기서는 연구비(주간 경제 규모 × TUNE.researchShare × 연구비 수준 배율)를 내고, 국영 임금을 다시 정하고, 지난주 국정 수지를 적는다 (복지는 매일 welfare.ts).
  * 국고가 모자라면 임금·원료는 국채로 낸다 (payWages, collectOrders). 연구비는 현금이 있는 만큼만 낸다
  */
 export function spendBudget(w: World) {
@@ -140,13 +140,13 @@ export function spendBudget(w: World) {
     const spent = k.spentWeek ?? { wages: 0, goods: 0 };
     const revenue = k.revenueWeek;
     k.revenueWeek = 0;
-    k.spentWeek = { wages: 0, goods: 0 };
+    k.spentWeek = { wages: 0, goods: 0, welfare: 0 };
     if (!gov) continue;
     const research = fundResearch(w, gov, k.output * TUNE.researchShare * budgetMult(k, 'research'));
     gov.research.budget = round2(research / TICKS_PER_WEEK);
-    const b = { revenue: round2(revenue), tariffs: round2(k.tariffWeek ?? 0), fees: round2(gov.ledger.buildFees), wages: round2(spent.wages), goods: round2(spent.goods), research: round2(research), interest: round2(gov.ledger.interest) };
+    const b = { revenue: round2(revenue), tariffs: round2(k.tariffWeek ?? 0), fees: round2(gov.ledger.buildFees), wages: round2(spent.wages), goods: round2(spent.goods), research: round2(research), interest: round2(gov.ledger.interest), welfare: round2(spent.welfare ?? 0) };
     k.lastBudget = b;
-    const net = b.wages + b.goods + b.research + b.interest - b.fees;
+    const net = b.wages + b.goods + b.research + b.interest + b.welfare - b.fees;
     k.expenseEma = round2(k.expenseEma == null ? net : k.expenseEma * 0.75 + net * 0.25);
     // 예산 미리보기 기준값 (화면 전용). 수수료는 건축사무소 임금 몫(국영 임금 배율 1로 환산)과 나머지로 나눈다
     const base = (k.budgetBase ??= {});

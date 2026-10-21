@@ -352,6 +352,8 @@ export function scaleBonus(level: number): number {
  * - schoolTaxMax: AI 왕실은 세금 수준이 이 단계 이하일 때만 새 학교를 짓는다 (운영비를 낼 세금 칸을 남긴다)
  * - govWageLevels: 국영 임금 수준 1~5단계의 배율. 국영 임금 = 기본 임금 × 왕국 임금 지수 × 이 배율
  * - researchShare, researchLevels: 주간 연구비 = 주간 경제 규모 × researchShare × 연구비 수준 배율
+ * - welfareLevels: 복지 수준 1~5단계의 목표 생활수준. 복지법이 덮는 pop 중 생활수준이 이보다 낮은 pop 의 소득을 목표 소득까지 채운다 (welfare.ts)
+ * - welfareWeeks: (AI) 복지를 올리거나 켜는 조건: 국고 ≥ (복지를 뺀 주간 국정 지출 + 그 복지의 주간 예상액) × 이 주 수. 이 주 수의 절반 아래로 줄면서 국고가 줄면 내린다
  * - doneWageMax: 기술을 다 연 AI 왕국이 풂 조건에서 국영 임금을 올리는 상한 단계 (임금 지수 1 이하일 때만)
  * - treasuryLowWeeks, treasuryHighWeeks: AI 왕실은 국고가 주간 국정 지출의 low 주치보다 적으면 조이고 high 주치를 넘으면 푼다.
  *   왕실 공사(사무소 증설 포함)도 high 주치를 넘는 돈으로만 한다. high 39·52·78·104 비교 (세율 ×2, 20년 × 시드 1~4): 52는 78보다
@@ -439,6 +441,8 @@ export const TUNE = {
   govWageLevels: [0.7, 0.85, 1, 1.15, 1.3],
   researchShare: 0.045,
   researchLevels: [0.5, 0.75, 1, 1.5, 2],
+  welfareLevels: [2, 2.5, 3, 3.5, 4],
+  welfareWeeks: 40, // 26·39·52·78 (시드 1·2), 30·40·50 (시드 1~3) 비교: 40이 11~20년차 총생산·노동자 생활수준이 가장 높다. 30은 10년차 총생산이 1/3 줄고, 50은 40과 비슷하다
   treasuryLowWeeks: 26,
   treasuryHighWeeks: 52, // 1년치
   // 기술을 다 연 AI 왕국의 국영 임금 상한 단계. 3(끔)·4·5 비교 (20년 × 시드 1·2): 4가 20년차 총생산 2190→2761, 지역 격차 1.87→1.34, 기술자 생활수준 5.45→5.88. 5는 격차가 다시 커진다

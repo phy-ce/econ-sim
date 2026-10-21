@@ -360,10 +360,10 @@ export interface Company {
 }
 
 /**
- * 회사 장부 항목. 손익(weekProfit)에 들어가는 것: 판매, 세금, 주조, 공사 수수료(수입) / 임금, 원자재, 연구, 이자(지출).
+ * 회사 장부 항목. 손익(weekProfit)에 들어가는 것: 판매, 세금, 주조, 공사 수수료(수입) / 임금, 원자재, 연구, 이자, 복지(왕실, 지출).
  * 손익 밖의 자본 흐름: 배당 지급, investment(왕실: 민영화로 판 레벨 대금), 낸 공사비(건물이라는 자산으로 바뀐다)
  */
-export const LEDGER_KEYS = ['sales', 'tax', 'mint', 'buildFees', 'wages', 'inputs', 'research', 'interest', 'dividends', 'investment', 'buildPaid'] as const;
+export const LEDGER_KEYS = ['sales', 'tax', 'mint', 'buildFees', 'wages', 'inputs', 'research', 'interest', 'welfare', 'dividends', 'investment', 'buildPaid'] as const;
 export type LedgerKey = (typeof LEDGER_KEYS)[number];
 export type Ledger = Record<LedgerKey, number>;
 export const emptyLedger = (): Ledger => Object.fromEntries(LEDGER_KEYS.map((k) => [k, 0])) as Ledger;
@@ -444,9 +444,18 @@ export interface Kingdom {
   /** 투자법: 금융가 지분을 살 수 있는 계층 (INVEST_CLASSES). 시작 'nobles' */
   investLaw: InvestLaw;
   /** 바뀌는 중인 법 (TUNE.lawDays 일 뒤에 바뀐다. 그동안은 지금 법) */
-  lawChange?: { tax?: LawChange<TaxLaw>; invest?: LawChange<InvestLaw> };
+  lawChange?: { tax?: LawChange<TaxLaw>; invest?: LawChange<InvestLaw>; welfare?: LawChange<WelfareLaw> };
   /** 마지막으로 세법을 바꾼 틱 */
   lawTick?: number;
+  /** 복지법 (하나만, welfare.ts): 'none' 없음 / 'poor' 구빈법(소작농·실업자) / 'wage' 임금 보조(임금 일자리) / 'universal' 보편 보장(귀족을 뺀 모두). 목표 생활수준은 복지 단계(TUNE.welfareLevels) */
+  welfareLaw: WelfareLaw;
+  /** 마지막으로 복지법을 바꾼 틱 */
+  welfareTick?: number;
+  /**
+   * 복지 필요액 (하루, 이동평균 0.9/0.1, welfare.ts): 무리(poor 소작농·실업자 / wage 임금 일자리)마다 복지 단계 1~5 각각에서
+   * 목표 소득에 모자란 돈의 합(need, 지급 규칙대로 생활수준이 목표 아래인 pop 만)과 모자란 비율로 가중한 사람 수(short, 생활수준과 상관없이)
+   */
+  welfareNeed?: { poor: number[]; wage: number[]; poorShort: number[]; wageShort: number[] };
   /** 세금을 내야 할 인구와 행정청이 감당하는 인구 (징수율 = 한도 / 인구) */
   taxDue?: number;
   taxCapacity?: number;
@@ -463,10 +472,10 @@ export interface Kingdom {
   /** 이번 주에 들어온 세입 (세금 + 관세 + 주조) */
   revenueWeek: number;
   /** 이번 주 정부 건물(행정청·건축사무소·학교)의 임금과 원료 */
-  spentWeek?: { wages: number; goods: number };
+  spentWeek?: { wages: number; goods: number; welfare?: number };
   /** 지난주 국정 수지: 세입, 민간 공사 수수료 / 정부 건물 임금, 원료, 연구비, 국채 이자 */
   /** revenue 는 세금·관세·주조를 모두 더한 값, tariffs 는 그중 관세 */
-  lastBudget?: { revenue: number; tariffs?: number; fees: number; wages: number; goods: number; research: number; interest: number };
+  lastBudget?: { revenue: number; tariffs?: number; fees: number; wages: number; goods: number; research: number; interest: number; welfare?: number };
   /** 주간 국정 지출(정부 건물 + 연구 + 이자 − 민간 공사 수수료)의 이동평균. 국고가 몇 주를 버티는지의 기준 */
   expenseEma?: number;
   /** 이번 주에 들어온 관세 (주마다 비운다) */
@@ -491,9 +500,12 @@ export const TAX_LAWS: TaxLaw[] = ['land', 'poll', 'income'];
 /** 투자법: 귀족만 → 전문가까지 → 기술자까지 → 노동자·농부까지 (소작농은 열지 않는다) */
 export type InvestLaw = 'nobles' | 'upper' | 'middle' | 'lower';
 export const INVEST_LAWS: InvestLaw[] = ['nobles', 'upper', 'middle', 'lower'];
+/** 복지법: 없음 → 구빈법(소작농·실업자) → 임금 보조(임금 일자리) → 보편 보장(귀족을 뺀 모두) */
+export type WelfareLaw = 'none' | 'poor' | 'wage' | 'universal';
+export const WELFARE_LAWS: WelfareLaw[] = ['none', 'poor', 'wage', 'universal'];
 export interface LawChange<L> { to: L; startTick: number; endTick: number }
-/** 정책 손잡이: 세금 수준, 국영 임금 수준, 연구비 수준 (각각 1~5단계) */
-export const BUDGET_ITEMS = ['tax', 'wages', 'research'] as const;
+/** 정책 손잡이: 세금 수준, 국영 임금 수준, 연구비 수준, 복지 수준 (각각 1~5단계) */
+export const BUDGET_ITEMS = ['tax', 'wages', 'research', 'welfare'] as const;
 export const BUDGET_STEPS = 5;
 export type BudgetItem = (typeof BUDGET_ITEMS)[number];
 
@@ -556,7 +568,7 @@ export interface World {
    * 저장 형식 버전: 저장되는 모양이 바뀌면 올린다. 옛 저장은 compat.ts migrateWorld
    * (8: 레벨 소유·소유 건물 금고. 옛 저장은 불러오지 않는다)
    */
-  version: 9;
+  version: 10;
   config: WorldConfig;
   tick: number;
   seed: number;
@@ -605,6 +617,7 @@ export type Command =
   /** 세법·투자법을 바꾼다 (TUNE.lawDays 일에 걸쳐. 지금 법과 같은 값이면 바뀌는 중인 것을 취소) */
   | { type: 'setTaxLaw'; law: TaxLaw }
   | { type: 'setInvestLaw'; law: InvestLaw }
+  | { type: 'setWelfareLaw'; law: WelfareLaw }
   /** 정책 단계: 세금 수준, 국영 임금 수준, 연구비 수준 (1~5) */
   | { type: 'setBudget'; item: BudgetItem; value: number }
   /** 왕실 건물 민영화 켜기·끄기: 켜 두면 저택·금융가가 매주 1레벨씩 사 갈 수 있다 */
