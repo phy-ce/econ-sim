@@ -54,6 +54,8 @@ export function payWelfare(w: World) {
   w.kingdoms.forEach((k, i) => kIndex.set(k.id, i));
   // 왕국별 오늘 필요액: [무리][단계]
   const need = w.kingdoms.map(() => ({ poor: new Array(STEPS).fill(0), wage: new Array(STEPS).fill(0), poorShort: new Array(STEPS).fill(0), wageShort: new Array(STEPS).fill(0) }));
+  // 화면 전용: 지역·무리별 필요액 ('지역|무리' → 단계별 [필요액, 모자란 사람])
+  const needBy = w.kingdoms.map(() => new Map<string, { need: number[]; short: number[] }>());
   const due: { p: Pop; amt: number }[][] = w.kingdoms.map(() => []);
   const total = new Array(nk).fill(0);
   const regionCost = new Map<number, number[]>();
@@ -69,13 +71,18 @@ export function payWelfare(w: World) {
     if (!cost) regionCost.set(r.id, (cost = TUNE.welfareLevels.map((t) => welfareIncome(r, t))));
     const income = dayIncome(p, r);
     const n = need[ki];
+    const key = `${r.id}|${g}`;
+    let nb = needBy[ki].get(key);
+    if (!nb) needBy[ki].set(key, (nb = { need: new Array(STEPS).fill(0), short: new Array(STEPS).fill(0) }));
     for (let s = 0; s < STEPS; s++) {
       const want = p.size * cost[s];
       const gap = Math.max(0, want - income);
       if (gap <= 0) continue;
       // 필요액은 지급 규칙대로 생활수준이 그 단계 목표 아래인 pop 만, 모자란 사람은 생활수준과 상관없이 소득으로 센다
-      if (p.sol < TUNE.welfareLevels[s]) n[g][s] += gap;
-      n[g === 'poor' ? 'poorShort' : 'wageShort'][s] += p.size * (want > 0 ? gap / want : 0);
+      if (p.sol < TUNE.welfareLevels[s]) { n[g][s] += gap; nb.need[s] += gap; }
+      const short = p.size * (want > 0 ? gap / want : 0);
+      n[g === 'poor' ? 'poorShort' : 'wageShort'][s] += short;
+      nb.short[s] += short;
     }
     if (!welfareCovers(k.welfareLaw, g)) continue;
     const step = k.budget.welfare;
@@ -91,6 +98,15 @@ export function payWelfare(w: World) {
     const n = need[ki];
     const ema = (a: number[] | undefined, x: number[]) => x.map((v, i) => round2(a?.[i] == null ? v : a[i] * 0.9 + v * 0.1));
     k.welfareNeed = { poor: ema(old?.poor, n.poor), wage: ema(old?.wage, n.wage), poorShort: ema(old?.poorShort, n.poorShort), wageShort: ema(old?.wageShort, n.wageShort) };
+    // 지역·무리별 (같은 이동평균. 처음 보는 열쇠는 0 에서 따라간다. 둘 다 거의 0 이면 지운다)
+    const ob = k.welfareNeedBy, zero = new Array(STEPS).fill(0), by: Record<string, { need: number[]; short: number[] }> = {};
+    for (const key of new Set([...Object.keys(ob ?? {}), ...needBy[ki].keys()])) {
+      const x = needBy[ki].get(key) ?? { need: zero, short: zero };
+      const prev = ob ? ob[key] ?? { need: zero, short: zero } : undefined;
+      const e = { need: ema(prev?.need, x.need), short: ema(prev?.short, x.short) };
+      if (e.need.some((v) => v >= 0.01) || e.short.some((v) => v >= 0.01)) by[key] = e;
+    }
+    k.welfareNeedBy = by;
     if (total[ki] <= 0) return;
     const gov = companyById(w, k.governmentId);
     if (!gov) return;

@@ -274,6 +274,11 @@ export interface Building {
    * 주인 없는 레벨의 몫은 그 지역 금융가 id 로 (금융가가 없으면 0). 국영 건물은 paid 가 비어 있다 (이익은 국고에 남는다). 자동 건물에는 없다
    */
   payout?: { reserve: number; paid: Record<number, number> };
+  /**
+   * 화면 표시용 (sim은 읽지 않는다): 왕실 생산 건물(정부 건물이 아닌 국영 건물)의 하루 매출·원료비 이동평균 (매일, 0.95/0.05, 처음 8주는 0.85/0.15).
+   * 예산 미리보기의 국영 사업 손익 줄(budget.ts stateFirms)이 쓴다
+   */
+  firmEma?: { sales: number; inputs: number };
   lossWeeks: number;
   pausedWeeks: number;
   /** 철거 대기 레벨: 매주 1레벨씩 헐린다 */
@@ -482,14 +487,17 @@ export interface Kingdom {
   /** 이번 주에 들어온 세입 (세금 + 관세 + 주조) */
   revenueWeek: number;
   /** 이번 주 정부 건물(행정청·건축사무소·학교)의 임금과 원료 */
-  spentWeek?: { wages: number; goods: number; welfare?: number };
+  spentWeek?: { wages: number; goods: number; welfare?: number; firms?: number };
   /** 지난주 국정 수지: 세입, 민간 공사 수수료 / 정부 건물 임금, 원료, 연구비, 국채 이자 */
   /** revenue 는 세금·관세·주조를 모두 더한 값, tariffs 는 그중 관세 */
-  lastBudget?: { revenue: number; tariffs?: number; fees: number; wages: number; goods: number; research: number; interest: number; welfare?: number };
+  /** firms = 왕실 생산 건물(정부 건물이 아닌 국영 건물)의 매출 − 원료 − 임금 (국고에 바로 들고 난다. 화면 전용, AI 는 읽지 않는다) */
+  lastBudget?: { revenue: number; tariffs?: number; fees: number; wages: number; goods: number; research: number; interest: number; welfare?: number; firms?: number };
   /** 주간 국정 지출(정부 건물 + 연구 + 이자 − 민간 공사 수수료)의 이동평균. 국고가 몇 주를 버티는지의 기준 */
   expenseEma?: number;
   /** 이번 주에 들어온 관세 (주마다 비운다) */
   tariffWeek?: number;
+  /** 이번 주 관세를 상품('g:곡물')과 출발 왕국('k:2')으로 나눈 것 (화면 전용, 주마다 비운다) */
+  tariffWeekBy?: Record<string, number>;
   /** 이번 주 민간 공사 수수료 중 건축사무소 임금 몫, 국영 임금 수준 배율 1로 환산 (주마다 비운다) */
   feeWageWeek?: number;
   /**
@@ -498,7 +506,9 @@ export interface Kingdom {
    * mint = 지난 주조액 (매주). tariffs·goods = 주간 관세·정부 건물 원료. feesWage = 민간 공사 수수료의 건축사무소 임금 몫(국영 임금 배율 1), feesOther = 나머지 (매주, 0.75/0.25).
    * 처음 8주는 가중치를 세 배로 한다
    */
-  budgetBase?: { taxBy?: number[]; mint?: number; tariffs?: number; feesWage?: number; feesOther?: number; goods?: number };
+  budgetBase?: { taxBy?: number[]; mint?: number; tariffs?: number; feesWage?: number; feesOther?: number; goods?: number; tariffsBy?: Record<string, number> };
+  /** 복지 필요액을 지역·무리('3|poor')로 나눈 것 (welfareNeed 와 같은 이동평균, 화면 전용): need = 단계 1~5 하루 필요액, short = 모자란 사람(비율 가중) */
+  welfareNeedBy?: Record<string, { need: number[]; short: number[] }>;
   /** AI: 지난 정책 점검 때 국고 순자산 (현금 − 빚) */
   netLast?: number;
   /** 이번 달 착공 레벨 (지표용): '건물|s'(왕실) '건물|p'(민간) '건물|loss'(AI 손해 짓기) '건물|d'(철거) '건물|v'(민영화로 판 레벨) */

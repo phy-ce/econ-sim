@@ -145,7 +145,7 @@ export function spendBudget(w: World) {
     if (!gov) continue;
     const research = fundResearch(w, gov, k.output * TUNE.researchShare * budgetMult(k, 'research'));
     gov.research.budget = round2(research / TICKS_PER_WEEK);
-    const b = { revenue: round2(revenue), tariffs: round2(k.tariffWeek ?? 0), fees: round2(gov.ledger.buildFees), wages: round2(spent.wages), goods: round2(spent.goods), research: round2(research), interest: round2(gov.ledger.interest), welfare: round2(spent.welfare ?? 0) };
+    const b = { revenue: round2(revenue), tariffs: round2(k.tariffWeek ?? 0), fees: round2(gov.ledger.buildFees), wages: round2(spent.wages), goods: round2(spent.goods), research: round2(research), interest: round2(gov.ledger.interest), welfare: round2(spent.welfare ?? 0), firms: round2(spent.firms ?? 0) };
     k.lastBudget = b;
     const net = b.wages + b.goods + b.research + b.interest + b.welfare - b.fees;
     k.expenseEma = round2(k.expenseEma == null ? net : k.expenseEma * 0.75 + net * 0.25);
@@ -155,6 +155,15 @@ export function spendBudget(w: World) {
     const ema = (old: number | undefined, x: number) => round2(old == null ? x : old * (1 - a) + x * a);
     const fw = k.feeWageWeek ?? 0;
     base.tariffs = ema(base.tariffs, k.tariffWeek ?? 0);
+    // 관세 나누기 (상품·출발 왕국): 이번 주에 없던 열쇠는 0 으로 따라간다. 거의 0 이 된 열쇠는 지운다
+    const by: Record<string, number> = {};
+    const wk = k.tariffWeekBy ?? {}, old = base.tariffsBy;
+    for (const key of new Set([...Object.keys(old ?? {}), ...Object.keys(wk)])) {
+      const v = !old ? round2(wk[key] ?? 0) : old[key] == null ? round2((wk[key] ?? 0) * a) : ema(old[key], wk[key] ?? 0);
+      if (v >= 0.01) by[key] = v;
+    }
+    base.tariffsBy = by;
+    k.tariffWeekBy = {};
     base.feesWage = ema(base.feesWage, fw);
     base.feesOther = ema(base.feesOther, Math.max(0, b.fees - fw * budgetMult(k, 'wages')));
     base.goods = ema(base.goods, b.goods);

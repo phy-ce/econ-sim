@@ -21,6 +21,12 @@
 4. **사용자 결정 (2026-10-21):** 흉작 대책(소작농 분담·공장 하루치 주문)은 하지 않는다. 장기 테스트 기준(4단계 기술 7년, 노동자 식량 최저 35%)은 그대로 둔다. 15년차부터 기술자 1인당 소득 하락(5.0 → 2.2) 진단과 철광산 적게 짓기는 진단 후 수치·AI로만 고친다 (진행 중, 브랜치 wt-skiron).
 5. **알려진 문제:** AI가 철광산을 적게 지음 (20년에 철 광맥 7%만 사용), 지역 간 교역 개편 (사용자 보류, "이동할 때마다 돈이 드는 방식" 선호; VIC3_REFERENCE 시장 접근성).
 
+## 0-regionecon. wt-regionecon (2026-10-22, 합치기 전)
+- `buildingEcon(w, b)` (지역 건물 수지·지분·배당, UI_CHANGES 2-58).
+- 재정 수지 표 (UI_CHANGES 2-59, DESIGN 9.2): `budgetPreview` 에 줄 `stateFirms`(국영 사업 손익 = 왕실 생산 건물 매출 − 원료 − 임금, 순수지에 들어감)와 손잡이별 묶음 `groups`(`BUDGET_GROUPS`).
+  줄 자세히 보기 `budgetDrill(w, kid, key, steps?)` (+ 줄마다 `drillWages` 등, `budgetLineRaw`). 화면 전용 새 저장 필드: `Building.firmEma`, `Kingdom.tariffWeekBy`·`budgetBase.tariffsBy`·`welfareNeedBy`, `lastBudget.firms`·`spentWeek.firms`. sim·AI 는 읽지 않는다.
+  미리보기 순수지 vs 실제 주간 국고 변화(현금 − 빚), 150주차부터 8주 합: 총 흐름 대비 0.2~0.9% (국영 사업 빼면 1.3~2.2%), 시드 1·2. 열린 문제: AI 국고 판단(expenseEma)에 국영 사업 손익을 넣을지.
+
 ## 0-welcut. wt-welcut (2026-10-22, main 600194d 위, 합치기 전)
 - `TUNE.welfareCutOff` (기본 0 = 지금 동작): 국고가 조이면 복지 단계를 1까지 내리고 빚이 없어도 복지법을 끈다 (세금보다 먼저, 끄는 180일 동안 빚이 없으면 다른 손잡이를 기다린다).
   끈 뒤 2년(WELFARE_COOLDOWN, welfareTick 재사용)은 다시 켜지 않는다. sweep traj 에 `welOn`·`welStp`·`welFlips`. 보고서 `2026-10-22-welcut`.

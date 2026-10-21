@@ -148,7 +148,7 @@ export function exampleWorld(): World {
 /** 예산 미리보기 줄 이름 */
 const BUDGET_LINE_LABELS: Record<BudgetLineKey, L10n> = {
   tax: t('세금', 'Taxes'), tariffs: t('관세', 'Tariffs'), mint: t('주조', 'Minting'), fees: t('민간 공사 수수료', 'Construction fees'),
-  wages: t('정부 건물 임금', 'Government wages'), goods: t('정부 건물 원료', 'Government inputs'), research: t('연구비', 'Research'), interest: t('국채 이자', 'Bond interest'), welfare: t('복지', 'Welfare'),
+  wages: t('정부 건물 임금', 'Government wages'), stateFirms: t('국영 사업 손익', 'State enterprises'), goods: t('정부 건물 원료', 'Government inputs'), research: t('연구비', 'Research'), interest: t('국채 이자', 'Bond interest'), welfare: t('복지', 'Welfare'),
 };
 
 // ---------------------------------------------------------------- 분류·창·DESIGN 절
@@ -1077,7 +1077,7 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   },
   {
     id: 'budget-steps', category: 'state', title: t('정책 단계', 'Policy steps'),
-    rule: t('금액 편성은 없다. 손잡이는 세금 수준·국영 임금·연구비·복지의 네 단계(1~5, 3이 보통)다. 정부 건물(행정청·건축사무소·학교)은 늘 다 돌고 국고가 운영비를 낸다. 국고가 비면 국채로 낸다.', 'There is no line-item budget. The knobs are four steps (1–5, 3 is normal): tax level, state wages, research, welfare. Government buildings always run at full and the treasury pays; when it is empty it issues bonds.'),
+    rule: t('금액 편성은 없다. 손잡이는 세금 수준·국영 임금·연구비·복지의 네 단계(1~5, 3이 보통)다. 정부 건물(행정청·건축사무소·학교)은 늘 다 돌고 국고가 운영비를 낸다. 국고가 비면 국채로 낸다. 수지 표는 손잡이별로 묶는다: 세금 수준 → 세금, 국영 임금 → 정부 건물 임금·민간 공사 수수료·국영 사업 손익, 연구비 → 연구비, 복지 → 복지, 나머지(관세·주조·정부 건물 원료·국채 이자)는 손잡이가 없다.', 'There is no line-item budget. The knobs are four steps (1–5, 3 is normal): tax level, state wages, research, welfare. Government buildings always run at full and the treasury pays; when it is empty it issues bonds. The budget table groups lines by knob: tax level → taxes; state wages → government wages, construction fees and state enterprises; research → research; welfare → welfare; the rest (tariffs, minting, government inputs, bond interest) has no knob.'),
     params: [tune('taxLevels', '세금 수준', 'Tax level', 'x'), tune('govWageLevels', '국영 임금', 'State wages', 'x'), tune('researchLevels', '연구비', 'Research', 'x'), tune('welfareLevels', '복지 목표 생활수준', 'Welfare target SoL')],
     live: {
       pick: ['kingdom'], run: (w, ctx) => {
@@ -1104,15 +1104,15 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   },
   {
     id: 'treasury', category: 'state', title: t('국고와 수지', 'Treasury and balance'),
-    rule: t('주간 세입 = 세금 + 토지세 + 관세 + 주조. 지출 = 정부 건물 임금·원료 + 연구비 + 이자 − 민간 공사 수수료. AI는 국고 ÷ 주간 지출(몇 주치)로 판단한다. 시작 국고는 운영비 {0}주치다.', 'Weekly revenue = taxes + land tax + tariffs + mint. Spending = government wages and inputs + research + interest − private construction fees. AI judges the treasury in weeks of spending. The start treasury is {0} weeks of upkeep.'),
+    rule: t('주간 세입 = 세금 + 토지세 + 관세 + 주조. 지출 = 정부 건물 임금·원료 + 연구비 + 이자 − 민간 공사 수수료. 국영 사업 손익 = 왕실 생산 건물(정부 건물이 아닌 것)의 매출 − 원료 − 임금으로, 국고에 바로 들고 나며 수지 표의 순수지에 들어간다. AI는 국고 ÷ 주간 지출(몇 주치)로 판단한다 (국영 사업 손익은 넣지 않는다). 시작 국고는 운영비 {0}주치다.', 'Weekly revenue = taxes + land tax + tariffs + mint. Spending = government wages and inputs + research + interest − private construction fees. State enterprises = sales − inputs − wages of crown production buildings (not government buildings); it goes straight into or out of the treasury and is part of the budget table\'s net. AI judges the treasury in weeks of spending (state enterprises left out). The start treasury is {0} weeks of upkeep.'),
     params: [tune('startTreasuryWeeks', '시작 국고', 'Start treasury', 'week')],
     live: {
       pick: ['kingdom'], run: (w, ctx) => {
         const k = kingdomOfCtx(w, ctx), gov = govOf(w, k), exp = k.expenseEma ?? 0;
-        return { rows: [row('국고', 'Treasury', Math.round(gov?.cash ?? 0), 'florin'), row('빚', 'Debt', Math.round(gov?.debt ?? 0), 'florin'), row('주간 지출 이동평균', 'Weekly spending EMA', Math.round(exp), 'florin'), row('몇 주치', 'Weeks covered', exp > 0 ? r2((gov?.cash ?? 0) / exp) : '-', 'week')] };
+        return { rows: [row('국고', 'Treasury', Math.round(gov?.cash ?? 0), 'florin'), row('빚', 'Debt', Math.round(gov?.debt ?? 0), 'florin'), row('주간 지출 이동평균', 'Weekly spending EMA', Math.round(exp), 'florin'), row('몇 주치', 'Weeks covered', exp > 0 ? r2((gov?.cash ?? 0) / exp) : '-', 'week'), row('지난주 국영 사업 손익', 'Last week\'s state enterprises', Math.round(k.lastBudget?.firms ?? 0), 'florin')] };
       },
     },
-    related: ['budget-steps', 'ai-budget', 'mint'], seenIn: ['finance'], source: ['finance.ts spendBudget'], design: ['9', '9.2'],
+    related: ['budget-steps', 'ai-budget', 'mint'], seenIn: ['finance'], source: ['finance.ts spendBudget', 'budget.ts budgetPreview', 'budget.ts budgetDrill'], design: ['9', '9.2'],
   },
   {
     id: 'welfare', category: 'state', title: t('복지 (최저 생활수준 보장)', 'Welfare (minimum living standard)'),

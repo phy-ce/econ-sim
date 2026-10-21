@@ -111,6 +111,7 @@ function roundBuilding(b: Building): void {
   b.profitEma = r(b.profitEma);
   if (b.fillEma !== undefined) b.fillEma = r(b.fillEma);
   if (b.reserve !== undefined) b.reserve = r(b.reserve);
+  if (b.firmEma) { b.firmEma.sales = r(b.firmEma.sales); b.firmEma.inputs = r(b.firmEma.inputs); }
   if (b.payout) { b.payout.reserve = r(b.payout.reserve); for (const id in b.payout.paid) b.payout.paid[id] = r(b.payout.paid[id]); }
   if (b.tenants !== undefined) b.tenants = r(b.tenants);
   if (b.nobleSeats !== undefined) b.nobleSeats = r(b.nobleSeats);
