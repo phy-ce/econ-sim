@@ -79,7 +79,7 @@ describe('보이는 값은 소수 둘째 자리, 저장값은 그대로', () => 
     expect(save(b)).toBe(save(a));
   });
 
-  it('옛 판 저장: 9판 이하는 불러오지 않고, 10·11판은 12판으로 바꾼다', () => {
+  it('옛 판 저장: 9판 이하는 불러오지 않고, 10~12판은 13판으로 바꾼다', () => {
     const w = createWorld(7);
     runTo(w, 30);
     const now = JSON.parse(save(w));

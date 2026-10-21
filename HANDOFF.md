@@ -21,10 +21,10 @@
 4. **사용자 결정 (2026-10-21):** 흉작 대책(소작농 분담·공장 하루치 주문)은 하지 않는다. 장기 테스트 기준(4단계 기술 7년, 노동자 식량 최저 35%)은 그대로 둔다. 15년차부터 기술자 1인당 소득 하락(5.0 → 2.2) 진단과 철광산 적게 짓기는 진단 후 수치·AI로만 고친다 (진행 중, 브랜치 wt-skiron).
 5. **알려진 문제:** AI가 철광산을 적게 지음 (20년에 철 광맥 7%만 사용), 지역 간 교역 개편 (사용자 보류, "이동할 때마다 돈이 드는 방식" 선호; VIC3_REFERENCE 시장 접근성).
 
-## 0-regionecon. wt-regionecon (2026-10-22, main 3faa68c 뒤 main 병합, 합치기 전)
+## 0-regionecon. wt-regionecon (2026-10-22, main c3d8efb 병합 뒤, 합치기 전)
 - `buildingEcon(w, b)` (지역 건물 수지·지분·배당, UI_CHANGES 2-59).
 - 재정 수지 표 (UI_CHANGES 2-60, DESIGN 9.2): `budgetPreview` 에 줄 `stateFirms`(국영 사업 손익 = 왕실 생산 건물 매출 − 원료 − 임금, 순수지에 들어감)와 손잡이별 묶음 `groups`(`BUDGET_GROUPS`).
-  줄 자세히 보기 `budgetDrill(w, kid, key, steps?)` (+ 줄마다 `drillWages` 등, `budgetLineRaw`). 화면 전용 새 저장 필드: `Building.firmEma`, `Kingdom.tariffWeekBy`·`budgetBase.tariffsBy`·`welfareNeedBy`, `lastBudget.firms`·`spentWeek.firms`. sim·AI 는 읽지 않고 반올림하지 않는다 (main 의 noround 규칙). 저장 13판 (12판은 그대로 불러온다).
+  줄 자세히 보기 `budgetDrill(w, kid, key, steps?)` (+ 줄마다 `drillWages` 등, `budgetLineRaw`). 화면 전용 새 저장 필드: `Building.payout`·`firmEma`, `Kingdom.tariffWeekBy`·`budgetBase.tariffsBy`·`welfareNeedBy`, `lastBudget.firms`·`spentWeek.firms`. sim·AI 는 읽지 않고 반올림하지 않는다 (main 의 noround 규칙). 저장 13판 (12판은 그대로 불러온다).
   미리보기 순수지 vs 실제 주간 국고 변화(현금 − 빚), 150주차부터 8주 합: 총 흐름 대비 0.2~0.9% (국영 사업 빼면 1.3~2.2%), 시드 1·2. 열린 문제: AI 국고 판단(expenseEma)에 국영 사업 손익을 넣을지.
 
 ## 0-metrics. wt-metrics (2026-10-22, main d4f95a4 위, 합치기 전, cli·보고서만)

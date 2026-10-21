@@ -481,7 +481,7 @@ export interface Kingdom {
   wageIndex?: number;
   /** 이번 주에 들어온 세입 (세금 + 관세 + 주조) */
   revenueWeek: number;
-  /** 이번 주 정부 건물(행정청·건축사무소·학교)의 임금과 원료 */
+  /** 이번 주 정부 건물(행정청·건축사무소·학교)의 임금과 원료, 복지, firms = 왕실 생산 건물(정부 건물이 아닌 국영 건물)의 매출 − 원료 − 임금 (화면 전용) */
   spentWeek?: { wages: number; goods: number; welfare?: number; firms?: number };
   /** 지난주 국정 수지: 세입, 민간 공사 수수료 / 정부 건물 임금, 원료, 연구비, 국채 이자 */
   /** revenue 는 세금·관세·주조를 모두 더한 값, tariffs 는 그중 관세 */
@@ -585,7 +585,8 @@ export interface World {
   /**
    * 저장 형식 버전: 저장되는 모양이 바뀌면 올린다. 옛 저장은 compat.ts migrateWorld
    * (8: 레벨 소유·소유 건물 금고. 11: 금융가 지분 Pop.fund 를 배열 묶음으로. 12: 반올림 없음, 100배 값(wealth100·literacy100·education100·exp100·crew100) 대신 규칙 단위 값.
-   * 10·11판은 불러올 때 바꾼다, 그보다 옛 저장은 불러오지 않는다)
+   * 13: 화면 전용 기록(Building.payout·firmEma, Kingdom.tariffWeekBy·budgetBase.tariffsBy·welfareNeedBy, lastBudget.firms·spentWeek.firms)이 생겼다, 없어도 되므로 12판은 그대로 불러온다.
+   * 10~12판은 불러올 때 바꾼다, 그보다 옛 저장은 불러오지 않는다)
    */
   version: 13;
   config: WorldConfig;
