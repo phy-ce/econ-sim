@@ -965,7 +965,7 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   {
     id: 'reserves', category: 'ownership', title: t('유보 자산', 'Building reserves'),
     rule: t('파는 건물과 건축사무소는 주간 이익의 최대 {0}를 유보 자산에 쌓는다. 찰수록 덜 쌓는다 (비었으면 {0}, 가득 차면 0). 상한 = 레벨 × 레벨당 주간 산출 가치(기본가) × {1}주. 사무소의 산출 가치는 기본 임금·기본가 자재로 센 하루 운영비 ÷ (1 − 사무소 이익률). 적자는 유보 자산에서 먼저 빠진다.', 'Selling buildings and construction offices put up to {0} of weekly profit into a reserve, less as it fills ({0} when empty, 0 when full), capped at level × weekly output value (base prices) × {1} weeks. An office\'s output value is its daily upkeep at base wages and prices ÷ (1 − office margin). Losses come out of the reserve first.'),
-    formula: 'keep = profit × {0} × (1 − reserve / cap); cap = level × Σ out × base × 7 × {1}',
+    formula: 'keep = profit × {0} × (1 − reserve / cap); cap = level × value × 7 × {1}; value = Σ out × base (office: (Σ workers × base wage + Σ inputs × base) ÷ (1 − margin))',
     params: [p('유보 비율', 'Reserve share', () => RESERVE_SHARE, 'pct'), tune('reserveWeeks', '상한 주 수', 'Cap in weeks', 'week')],
     example: () => {
       const v = weeklyOutputValue('farm', 'farm_basic');

@@ -30,7 +30,7 @@ export interface KingdomMetrics {
   solBy: Record<PopClass, number>;
   foodBy: Record<PopClass, number>;
   growthBy: Record<PopClass, number>;
-  /** 연 GDP, 지난주 국정 수지: 세입, 민간 공사 수수료, 정부 건물 운영비(임금 + 원료), 국채 이자. researchPts = 지난주 연구 포인트, literacy = 왕국 문해력(인구 가중 0..1) */
+  /** 연 GDP, 지난주 국정 수지: 세입, 민간 공사 수수료(건축사무소 매출, 국고 수입 아님, 지표용), 행정청·학교 운영비(임금 + 원료, 건축사무소 빠짐), 국채 이자. researchPts = 지난주 연구 포인트, literacy = 왕국 문해력(인구 가중 0..1) */
   gdp: number;
   revenueWeek: number;
   feesWeek: number;

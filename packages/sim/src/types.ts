@@ -375,7 +375,8 @@ export interface Company {
 
 /**
  * 회사 장부 항목. 손익(weekProfit)에 들어가는 것: 판매, 세금, 주조, 공사 수수료(수입) / 임금, 원자재, 이자, 복지(왕실, 지출).
- * 손익 밖의 자본 흐름: 배당 지급, investment(왕실: 민영화로 판 레벨 대금), 낸 공사비(건물이라는 자산으로 바뀐다)
+ * 손익 밖의 자본 흐름: 배당 지급, investment(왕실: 민영화로 판 레벨 대금), 낸 공사비(건물이라는 자산으로 바뀐다).
+ * 단, 왕실 공사가 자기 건축사무소에 낸 수수료는 buildPaid 에 적고 손익에서도 빼서, buildFees(사무소 매출) 쪽의 같은 돈과 상쇄한다
  */
 export const LEDGER_KEYS = ['sales', 'tax', 'mint', 'buildFees', 'wages', 'inputs', 'interest', 'welfare', 'dividends', 'investment', 'buildPaid'] as const;
 export type LedgerKey = (typeof LEDGER_KEYS)[number];

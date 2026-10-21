@@ -24,7 +24,7 @@ GOODS = {'grain': '곡물', 'fiber': '섬유', 'timber': '목재', 'ore': '철�
 BLDG = {'subsistence': '소작지', 'manor': '저택', 'finance': '금융가', 'farm': '곡물 농장', 'fiber_farm': '섬유 농장', 'ranch': '목장', 'lumber': '벌목장',
         'mine': '철광산', 'coal_mine': '석탄광산', 'foodplant': '식료품 공장', 'textile': '방직 공장', 'smelter': '제철소', 'workshop': '공방',
         'furniture': '가구 공방', 'paper_mill': '종이 공장', 'fab': '기계 공장', 'railway': '운송 조합', 'school': '학교', 'builder': '건축사무소', 'admin': '행정청'}
-LEDGER = {'sales': '매출', 'tax': '세금', 'mint': '주조', 'buildFees': '공사비 수입', 'wages': '임금', 'inputs': '원료', 'research': '연구',
+LEDGER = {'sales': '매출', 'tax': '세금', 'mint': '주조', 'buildFees': '공사 수수료', 'wages': '임금', 'inputs': '원료', 'research': '연구',
           'interest': '이자', 'welfare': '복지', 'dividends': '배당', 'investment': '투자', 'buildPaid': '공사비 지출'}
 FLOWS = {'divIn': ('배당 받음', '가진 건물에서 들어온 배당'), 'toPops': ('주인에게 나눔', '배당 중 귀족·지분 가진 pop 에게 나눈 몫'),
          'keep': ('금고에 남김', '배당 중 금고에 남긴 몫'), 'noSeat': ('받을 사람 없음', '나눌 pop 이 없어 금고에 남은 배당'),
