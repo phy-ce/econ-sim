@@ -81,6 +81,7 @@ data(상품·건물·기술·TUNE) · types · world(시작 상태) · tick(하�
 ## 커밋
 - 의미 있는 단위가 끝나고 typecheck와 화폐 보존·결정성 테스트가 통과하면 커밋한다.
 - main은 검증된 병합마다 바로 푸시한다 (2026-10-19 사용자 지시). 강제 푸시는 하지 않는다.
+- main에 합치기 전에 `premerge` 워크플로(`.claude/workflows/premerge.js`, args = 브랜치 이름)를 돌린다: 테스트 → 네 관점 검토(규칙 설명·사전이 코드와 같은가, 근거가 적혔는가, 없어진 것을 아직 설명하는 글, HANDOFF·UI_CHANGES·DECISIONS) → 브랜치에서 고침 → 다시 테스트. 결과가 ready일 때만 합친다.
 - 작업 브랜치는 `wt-<이름>`으로 만들고, 합치기 전 결과는 HANDOFF에 적는다. 클라우드 세션이 이어받을 브랜치는 origin에 올린다.
 - 꼬리말: `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`
 
