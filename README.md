@@ -63,7 +63,7 @@ TITLE="High nobles 1/10" L="main,1/10" python cli/report.py 2026-10-22-arist10 o
 cd ../.. && npm run reports                                                # http://localhost:5201
 ```
 
-`report.py` also reads per-year diagnostic files (one JSON line per year with `y` and `seed`; nested objects become `stock.gov` style keys); pass `name=file` to name runs. On GitHub Pages the viewer is served at `/econ-sim/reports/`, deep links use the hash (`/reports/#2026-10-22-arist10`).
+`report.py` also reads per-year diagnostic files (one JSON line per year with `y` and `seed`; nested objects become `stock.gov` style keys); pass `name=file` to name runs. Report files (`format: 2`) list metric names once in `keys` and store one row `[year, value, ...]` per run, seed and year (3 significant digits); `python cli/report.py --convert` rewrites older reports. Every metric has a Korean name, group and unit; hovering a metric name shows its definition when it has one. On GitHub Pages the viewer is served at `/econ-sim/reports/`, deep links use the hash (`/reports/#2026-10-22-arist10`).
 
 Controls: `Space` pauses and resumes, `1`–`5` set the speed (1× = about one game day per real second, then 2×, 3×, 4× and 10× for debugging).
 
