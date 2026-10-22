@@ -529,13 +529,13 @@ export const TUNE = {
   subReturn: 0,
   sellThrough: 0,
   laborNet: 0,
-  ratioGate: 0.9, // 실험: 노동자·농부 충원 상한 = 기술자·전문가 충원율 ÷ 이 값 (labor.ts ratioGate). 0 이면 끈다
+  ratioGate: 0.9, // 지금 규칙 (30년 × 시드 1~4 비교, DESIGN 11): 노동자·농부 충원 상한 = 기술자·전문가 충원율 ÷ 이 값 (labor.ts ratioGate). 0 이면 끈다
   minRoi: 0.2,
   minStaffing: 0.5,
-  // AI 방식 바꾸기와 잠재 수요 (2026-10-22, 새 방식 사다리): 1 = 새 규칙, 0 = 옛 규칙. 40년 × 시드 1~4 비교로 둘 다 0 (DESIGN 11):
-  // 둘 다 끄면 네 시드 모두 버티고(40년 평균 총생산 970), 하나라도 켜면 시드 3이 28~33년차에 민간 현금 0으로 무너진다 (평균 811~1,008)
+  // AI 방식 바꾸기와 잠재 수요 (2026-10-22, 새 방식 사다리): 1 = 새 규칙, 0 = 옛 규칙. aiSwitchV2 는 40년 × 시드 1~4 비교(c3d8efb)로 0,
+  // latentFeasible 은 산업 유형 뒤 다시 비교(ca466d8)해 1 (DESIGN 11)
   latentFeasible: 1, // 40년 × 시드 1~4 비교로 켬 (DESIGN 11).  잠재 수요에 실제로 바꿀 수 있는 몫만 센다 (지역 일손 × 다른 투입재)
-  // 잠재 수요 배율과 증설 문턱 (2026-10-22, 비교 전): 진단(30년 × 시드 1·4)에서 바꿀 수 없는 직물 공장의 섬유 잠재 수요를 보고 섬유 농장을 지어 소작지를 없앴다 (DESIGN 11)
+  // 잠재 수요 배율과 증설 문턱 (2026-10-22, 40년 × 시드 1~4 비교, DESIGN 11): 진단(30년 × 시드 1·4)에서 바꿀 수 없는 직물 공장의 섬유 잠재 수요를 보고 섬유 농장을 지어 소작지를 없앴다 (DESIGN 11)
   latentWeight: 1, // 잠재 수요에 곱하는 배율 (latentFeasible = 1 이면 바꿀 수 있는 몫에 곱한다). 1 = 지금과 같음
   expandUtilMin: 0.5, // 0.5·0.7·끔 비교로 0.5 (DESIGN 11). 0 = 끔. 왕국 안 같은 종류·같은 산출 건물의 레벨 가중 가동률(꺼진 건물 0)이 이 값 미만이거나 장기 손익(profitEma) 합이 음수이면 그 방식은 새로 짓지도 늘리지도 않는다 (ai.ts glutOf)
   aiSwitchV2: 0, // 방식 비교 = 건물 전체 하루 손익 × 기대 충원율 × 투입 충족 (옛: 산출 1단위당 이윤, 일손 50% 기준, 공급 50% 기준)
@@ -630,7 +630,7 @@ export function regionPerk(regionId: number, typeId: string): number {
  * 산림과 광맥 잠재량(veins)은 지역마다 고정(지형)이다. 광맥은 처음에 잠재량 × TUNE.prospectStart 만 알려져 있고 나머지는 탐광으로 찾는다 (economy.ts prospect). 비율은 총인구 대비, 땅은 인구 10만 명당 칸 수다.
  * - pop: 인구 범위 / aristocrat·gentry·skilled·expert: 계층 비율 (나머지는 소작농) / education: 교육 접근도
  * - plot: 부지 칸 / arableSlack: 소작농 노동 인구를 다 앉힐 칸 × 이 배율이 경작지 / farms: 시작 민간 곡물 농장 레벨
- * plot·farms 는 1레벨이 일꾼 1,000명에서 약 500명이 될 때(2026-10-22) 두 배로 했다 (같은 땅에 같은 일자리)
+ * plot·farms 는 1레벨이 일꾼 1,000명에서 약 500명이 될 때(2026-10-22) 두 배로 했다. 산업 유형 뒤 공장 1레벨은 300명이라 부지 일자리는 그보다 적다 (DESIGN 11 INDUSTRIES 약점)
  */
 export interface TierDef { pop: [number, number]; aristocrat: number; gentry: number; skilled: number; expert: number; education: number; plot: number; arableSlack: number; farms: number }
 export const TIERS: TierDef[] = [

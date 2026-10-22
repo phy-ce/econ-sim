@@ -29,13 +29,13 @@ import {
   LITERACY_DOWN, LITERACY_PER_WEALTH, LITERACY_UP, QUAL_DECAY, QUAL_FACTOR, QUAL_FROM, QUAL_RATE, SEVERE_STARVATION, STARVATION_LINE,
   birthRateAt, mortalityAt, workforce,
 } from './pops';
-import { HIRE_RATE, MIGRATE_FULL, MIGRATE_MAX, MIGRATE_START, RATIO_GATE, UNPAID_QUIT, subsistenceWage, switchShare } from './labor';
+import { HIRE_RATE, MIGRATE_FULL, MIGRATE_MAX, MIGRATE_START, UNPAID_QUIT, subsistenceWage, switchShare } from './labor';
 import { CREW_RATE, EXP_GAIN } from './production';
 import {
   DAILY_INTEREST, KEEP_SHARE, MINT_BASE, MINT_RATE, RESERVE_SHARE, kingdomLiteracy, researchPoints, adminCapacityOf, reserveCap, taxCapacity, taxRates,
   weeklyOutputValue,
 } from './finance';
-import { CHUNKS, INPUT_SUPPLY_MIN, MIXED_LEVELS, RAISE_FILL, SWITCH_MARGIN, SWITCH_MIN_WAGE_SHARE, LAW_COOLDOWN, LAW_SWITCH, WELFARE_COOLDOWN, WELFARE_SWITCH, OFFICE_BLOCK, OFFICE_GROWTH, STAFFING_HORIZON, SWITCH_COOLDOWN } from './ai';
+import { CHUNKS, INPUT_SUPPLY_MIN, MIXED_LEVELS, RAISE_FILL, STARVE_FILL, SWITCH_MARGIN, SWITCH_MIN_WAGE_SHARE, LAW_COOLDOWN, LAW_SWITCH, WELFARE_COOLDOWN, WELFARE_SWITCH, OFFICE_BLOCK, OFFICE_GROWTH, STAFFING_HORIZON, SWITCH_COOLDOWN } from './ai';
 import { budgetPreview } from './budget';
 import { ownershipAssets } from './policy';
 import { welfareIncome, welfareTarget, welfareWeekly } from './welfare';
@@ -98,7 +98,7 @@ type TuneKey = keyof typeof TUNE;
 /** 항목에 실린 TUNE 키 (시험이 모든 키가 실렸는지 본다) */
 export const TUNE_DOCUMENTED = new Set<TuneKey>();
 /** 비교 실행용 손잡이: 기본값이 기능을 끄고 있어 규칙이 아니다 */
-export const TUNE_EXPERIMENTAL: TuneKey[] = ['subReturn', 'sellThrough', 'laborNet', 'ratioGate', 'officeRichWeeks', 'officeSelfPay', 'laborPoach', 'officeSchoolFirst', 'needMul',
+export const TUNE_EXPERIMENTAL: TuneKey[] = ['subReturn', 'sellThrough', 'laborNet', 'officeRichWeeks', 'officeSelfPay', 'laborPoach', 'officeSchoolFirst', 'needMul',
   // 저택 상급 귀족 자리 규칙의 다른 후보 (DECISIONS 7-17, 기본 'econ' = 지금 규칙, 그 값들은 owner-buildings 항목에 있다)
   'nobleSeats', 'nobleSeatsPerLevel', 'nobleSeatsPerCell', 'nobleIncome', 'nobleSeatsLand', 'noblePerMille',
   // AI 왕실 민영화 (비교용, 기본 'off': 민영화는 플레이어가 켠다)
@@ -130,13 +130,13 @@ const kingdomPeople = (w: World, kid: number) => w.pops.reduce((a, x) => a + (re
 const buildingsIn = (w: World, regionId: number) => w.buildings.filter((b) => b.regionId === regionId);
 const tenantBuilding = (w: World, regionId: number) => w.buildings.find((b) => b.regionId === regionId && b.typeId === 'subsistence');
 
-/** 방식 1레벨, 기본가·기본 임금의 하루 매출·원료·임금·이익률 (methods_audit 와 같은 셈) */
 /** 산업 유형의 기본 방식 원료/매출 범위 (예: "45~55%") */
 function shareRange(id: keyof typeof INDUSTRIES): string {
   const [lo, hi] = INDUSTRIES[id].inputShare;
   return `${Math.round(lo * 100)}~${Math.round(hi * 100)}%`;
 }
 
+/** 방식 1레벨, 기본가·기본 임금의 하루 매출·원료·임금·이익률 (methods_audit 와 같은 셈) */
 export function methodMarginAtBase(typeId: string, methodId: string) {
   const m = getMethod(typeId, methodId);
   let wage = 0, input = 0, revenue = 0;
@@ -688,8 +688,8 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   },
   {
     id: 'layoffs', category: 'labour', title: t('해고와 이탈', 'Layoffs and quitting'),
-    rule: t('건물이 없어지거나 자리가 줄면 넘치는 만큼 실업이 된다. 임금을 다 못 받은 건물은 하루 {0}가 떠난다. 노동자·농부 자리는 기술자·전문가 충원율 ÷ {1}까지만 채운다.', 'When a building or its seats disappear, the excess becomes unemployed. Unpaid buildings lose {0} of workers a day. Labourer and farmer seats fill only up to skilled/expert staffing ÷ {1}.'),
-    params: [p('미지급 이탈', 'Unpaid quit', () => UNPAID_QUIT, 'pct'), p('충원 비율 문턱', 'Ratio gate', () => RATIO_GATE)],
+    rule: t('건물이 없어지거나 자리가 줄면 넘치는 만큼 실업이 된다. 임금을 다 못 받은 건물은 하루 {0}가 떠난다. 노동자·농부 자리는 기술자·전문가 충원율 ÷ {1}까지만 채운다 ({1} = 0이면 끈다).', 'When a building or its seats disappear, the excess becomes unemployed. Unpaid buildings lose {0} of workers a day. Labourer and farmer seats fill only up to skilled/expert staffing ÷ {1} ({1} = 0 turns it off).'),
+    params: [p('미지급 이탈', 'Unpaid quit', () => UNPAID_QUIT, 'pct'), tune('ratioGate', '충원 비율 문턱', 'Ratio gate')],
     related: ['best-seat', 'production'], seenIn: ['workforce'], source: ['labor.ts laborMarket'], design: ['7.2'],
   },
   {
@@ -1229,8 +1229,8 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   },
   {
     id: 'ai-utilization', category: 'ai', title: t('가동률', 'Utilisation'),
-    rule: t('유보 자산이 남아 있으면 줄이지 않는다 (투입 충족 < 0.5가 {0}주 이어진 건물은 유보 자산이 있어도 줄인다, 0이면 끔). 4주 연속 크게 적자(마진 < −20%)면 −10% (최소 10%), 마진 > 0이면 +10% ({0} > 0이면 투입 충족이 {1} 이상일 때만). 기상 조건 적자는 세지 않는다. 왕실 정부 건물은 늘 100%다.', 'No cuts while a reserve remains (a building whose input fill stayed under 0.5 for {0} weeks is cut even with a reserve; 0 = off). Four weeks of heavy losses (margin < −20%) cut 10% (min 10%); positive margin adds 10% (with {0} > 0 only when input fill is at least {1}). Weather losses do not count. Crown government buildings stay at 100%.'),
-    params: [tune('starveWeeks', '굶은 주 수', 'Starved weeks', 'week'), p('올리는 투입 충족', 'Fill needed to raise', () => RAISE_FILL, 'pct')],
+    rule: t('유보 자산이 남아 있으면 줄이지 않는다 (투입 충족 < {2}가 {0}주 이어진 건물은 유보 자산이 있어도 줄인다, 0이면 끔). 4주 연속 크게 적자(마진 < −20%)면 −10% (최소 10%), 마진 > 0이면 +10% ({0} > 0이면 투입 충족이 {1} 이상일 때만). 기상 조건 적자는 세지 않는다. 왕실 정부 건물은 늘 100%다.', 'No cuts while a reserve remains (a building whose input fill stayed under {2} for {0} weeks is cut even with a reserve; 0 = off). Four weeks of heavy losses (margin < −20%) cut 10% (min 10%); positive margin adds 10% (with {0} > 0 only when input fill is at least {1}). Weather losses do not count. Crown government buildings stay at 100%.'),
+    params: [tune('starveWeeks', '굶은 주 수', 'Starved weeks', 'week'), p('올리는 투입 충족', 'Fill needed to raise', () => RAISE_FILL, 'pct'), p('굶는 투입 충족', 'Starving fill', () => STARVE_FILL, 'pct')],
     related: ['reserves', 'profit', 'harvest-conditions'], seenIn: ['company'], source: ['ai.ts manageBuildings'], design: ['10'],
   },
   {
@@ -1256,14 +1256,14 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   },
   {
     id: 'ai-outlook', category: 'ai', title: t('장기 손익 전망', 'Long-run valuation'),
-    rule: t('가동률 1/0.75/0.5/0.25 중 손익이 가장 큰 값을 쓴다. 가격 = (장기 가격 + 현지 가격) ÷ 2. 장기 가격은 대륙 수요(공사 중 투입·대체 수요 포함)와 공급(공사 중 산출 포함)을 가격 공식에 넣은 값이다. 파는 쪽 가격에는 잠재 수요(기본가로 더 나은 방식으로 바꾸면 더 쓸 투입재) × {3}도 센다. {1} = 1이면 그중 실제로 바꿀 수 있는 몫만: 그 지역에서 데려올 사람 ÷ 그 지역 후보들이 더 필요한 사람 (직종마다, 최대 1) × 다른 새 투입재가 남는 공급으로 채워지는 비율. 민간 임금은 max(지금 임금, 기본 × {0}). {2} = 1이면 새로 짓는 레벨의 매출과 원료비에 투입 충족을 곱한다 (인건비는 그대로): 투입재마다 min(1, 남는 양 ÷ 그 가동률의 필요) 중 가장 작은 값. 남는 양 = 대륙 공급(이동평균, 절반 넘게 지은 공사의 산출 포함) − 대륙 수요(이동평균) − 공사 중 건물의 투입이고, 같은 주에 착공을 정할 때마다 그 투입을 뺀다.', 'Use the best of utilisation 1/0.75/0.5/0.25. Price = (long-run + local) ÷ 2; long-run price feeds continental demand (incl. pending inputs, substitution) and supply (incl. pending output) into the price formula. Sell-side prices also count latent demand (extra inputs of better methods at base prices) × {3}. With {1} = 1 only the feasible share counts: people the region can supply ÷ extra people its candidates need (per skill, at most 1) × how far spare supply covers the other new inputs. Private wages = max(current, base × {0}). With {2} = 1 revenue and input cost of new levels are multiplied by input fill (wages are not): the smallest of min(1, spare ÷ need at that utilisation) over inputs. Spare = continental supply (moving average, incl. output of projects more than half built) − continental demand (moving average) − inputs of buildings under construction; each start decided in the same week subtracts its inputs.'),
+    rule: t('가동률 1/0.75/0.5/0.25 중 손익이 가장 큰 값을 쓴다. 가격 = (장기 가격 + 현지 가격) ÷ 2. 장기 가격은 대륙 수요(공사 중 투입·대체 수요 포함)와 공급(공사 중 산출 포함)을 가격 공식에 넣은 값이다. 파는 쪽 가격에는 잠재 수요(기본가로 더 나은 방식으로 바꾸면 더 쓸 투입재) × {3}도 센다. {1} = 1이면 그중 실제로 바꿀 수 있는 몫만: 그 지역에서 데려올 사람 ÷ 그 지역 후보들이 더 필요한 사람 (직종마다, 최대 1) × 다른 새 투입재가 남는 공급으로 채워지는 비율. 민간 임금은 max(지금 임금, 기본 × {0}). {2} = 1이면 새로 짓는 레벨의 매출과 원료비에 투입 충족을 곱한다 (인건비는 그대로): 투입재마다 min(1, 남는 양 ÷ 그 가동률의 필요) 중 가장 작은 값. 남는 양 = 대륙 공급(이동평균, 절반 넘게 지은 공사의 산출 포함) − 대륙 수요(이동평균) − 공사 중 건물의 투입이고, 같은 주에 착공을 정할 때마다 그 투입을 뺀다. 아무도 만들지도(공사 중 포함) 쓰지도 않는 투입재는 1로 본다 (첫 공사).', 'Use the best of utilisation 1/0.75/0.5/0.25. Price = (long-run + local) ÷ 2; long-run price feeds continental demand (incl. pending inputs, substitution) and supply (incl. pending output) into the price formula. Sell-side prices also count latent demand (extra inputs of better methods at base prices) × {3}. With {1} = 1 only the feasible share counts: people the region can supply ÷ extra people its candidates need (per skill, at most 1) × how far spare supply covers the other new inputs. Private wages = max(current, base × {0}). With {2} = 1 revenue and input cost of new levels are multiplied by input fill (wages are not): the smallest of min(1, spare ÷ need at that utilisation) over inputs. Spare = continental supply (moving average, incl. output of projects more than half built) − continental demand (moving average) − inputs of buildings under construction; each start decided in the same week subtracts its inputs. An input nobody makes (incl. projects) or uses counts as fully filled (first project).'),
     params: [tune('investWage', '임금 바닥', 'Wage floor', 'x'), tune('latentFeasible', '바꿀 수 있는 몫만', 'Feasible share only'), tune('aiInputFill', '투입 충족', 'Input fill'), tune('latentWeight', '잠재 수요 배율', 'Latent demand weight', 'x')],
     related: ['price-formula', 'ai-construction', 'substitution'], seenIn: [], source: ['outlook.ts valueMethod', 'outlook.ts marketOutlook'], design: ['10'],
   },
   {
     id: 'ai-demolition', category: 'ai', title: t('철거 판단', 'Demolition review'),
-    rule: t('유보 자산으로 메우는 건물은 세지 않는다. 다만 투입 충족 < 0.5가 {1}주 이어진 건물은 세고, 마지막 1레벨 손익을 지금 투입 충족으로 잰다. 마지막 1레벨의 장기 손익이 {0}주 연속 마이너스면 레벨의 1/4(최소 1)을 철거 대기에 올린다. 다시 이익이면 취소한다. 720일이 지나도 50% 미만인 공사는 취소한다.', 'Buildings covering losses from reserves are skipped, except those whose input fill stayed under 0.5 for {1} weeks; for them the last level is valued at the current input fill. If the last level\'s long-run profit is negative for {0} weeks, a quarter of the levels (min 1) are queued for demolition; cancelled if profitable again. Projects under 50% after 720 days are cancelled.'),
-    params: [tune('shrinkWeeks', '연속 주 수', 'Weeks', 'week'), tune('starveWeeks', '굶은 주 수', 'Starved weeks', 'week')],
+    rule: t('유보 자산으로 메우는 건물은 세지 않는다. 다만 투입 충족 < {2}가 {1}주 이어진 건물은 세고, 마지막 1레벨 손익을 지금 투입 충족으로 잰다. 마지막 1레벨의 장기 손익이 {0}주 연속 마이너스면 레벨의 1/4(최소 1)을 철거 대기에 올린다. 다시 이익이면 취소한다. 720일이 지나도 50% 미만인 공사는 취소한다.', 'Buildings covering losses from reserves are skipped, except those whose input fill stayed under {2} for {1} weeks; for them the last level is valued at the current input fill. If the last level\'s long-run profit is negative for {0} weeks, a quarter of the levels (min 1) are queued for demolition; cancelled if profitable again. Projects under 50% after 720 days are cancelled.'),
+    params: [tune('shrinkWeeks', '연속 주 수', 'Weeks', 'week'), tune('starveWeeks', '굶은 주 수', 'Starved weeks', 'week'), p('굶는 투입 충족', 'Starving fill', () => STARVE_FILL, 'pct')],
     related: ['demolition', 'ai-swap', 'reserves'], seenIn: ['company'], source: ['ai.ts reviewLevels'], design: ['10'],
   },
   {

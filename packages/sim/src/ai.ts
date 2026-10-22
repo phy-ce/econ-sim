@@ -356,7 +356,10 @@ function inputsAvailable(w: World, m: MethodDef, levels: number, b?: Building): 
   return true;
 }
 
-/** 굶는 건물 (TUNE.starveWeeks): 투입 충족 < 0.5 가 그 주 수 이어졌다 */
+/** 굶는 투입 충족: 이 값 미만이면 굶은 주로 센다 (TUNE.starveWeeks, 건축사무소 자재 바꾸기). 근거 없음 */
+export const STARVE_FILL = 0.5;
+
+/** 굶는 건물 (TUNE.starveWeeks): 투입 충족 < STARVE_FILL 이 그 주 수 이어졌다 */
 function starving(b: Building): boolean {
   return TUNE.starveWeeks > 0 && (b.starvedWeeks ?? 0) >= TUNE.starveWeeks;
 }
@@ -421,7 +424,7 @@ function manageBuildings(w: World, c: Company, o: Outlook, pools: Map<string, nu
 
     // 건축사무소: 자재를 구할 수 있는 방식 중 하루 포인트가 가장 많은 것 (가동률은 늘 100%)
     if (cur.construction) {
-      const starved = b.active && !b.idle && b.last.inputFill < 0.5;
+      const starved = b.active && !b.idle && b.last.inputFill < STARVE_FILL;
       const ok = usable.filter((m) => m.construction && (m.id === b.methodId ? !starved : inputsAvailable(w, m, b.level, b)));
       const best = ok.length ? ok.reduce((x, m) => (m.construction! > x.construction! ? m : x)) : null;
       if (best && best.id !== b.methodId && (starved || w.tick - b.lastSwitchTick >= SWITCH_COOLDOWN)) applyCommand(w, c.id, { type: 'setMethod', buildingId: b.id, methodId: best.id });
@@ -456,7 +459,7 @@ function manageBuildings(w: World, c: Company, o: Outlook, pools: Map<string, nu
     // 지금 방식보다 5% (최소 인건비의 1%) 넘게 큰 방식으로 바꾼다 (3주 쿨다운, 투입재를 못 구해 멈췄으면 쿨다운 없이).
     // 기대 충원율 = 지금 재직자 + 이번 주 곳간으로 채우는 비율 (임금 가중). 투입 충족 = 대륙 전망의 남는 공급(공사 중 산출 포함)으로 채우는 비율.
     // 숙련: 바꾸면 숙련이 반으로 준다 (commands setMethod). 바꾸면 더 뽑을 사람을 곳간에서 뺀다
-    const starved = Object.keys(cur.inputs).length > 0 && Object.keys(cur.outputs).length > 0 && b.active && b.last.inputFill < 0.5 && b.last.staffing > 0;
+    const starved = Object.keys(cur.inputs).length > 0 && Object.keys(cur.outputs).length > 0 && b.active && b.last.inputFill < STARVE_FILL && b.last.staffing > 0;
     const region = regionById(w, b.regionId);
     if (TUNE.aiSwitchV2) {
       if (usable.length > 1 && (starved || w.tick - b.lastSwitchTick >= SWITCH_COOLDOWN)) {
@@ -513,7 +516,7 @@ function manageBuildings(w: World, c: Company, o: Outlook, pools: Map<string, nu
         if (best.m !== cur) applyCommand(w, c.id, { type: 'setMethod', buildingId: b.id, methodId: best.m.id });
       }
     }
-    // 굶은 주 수 (TUNE.starveWeeks): 지금 방식으로 투입 충족 < 0.5 인 주를 센다 (방식을 바꾸면 처음부터)
+    // 굶은 주 수 (TUNE.starveWeeks): 지금 방식으로 투입 충족 < STARVE_FILL 인 주를 센다 (방식을 바꾸면 처음부터)
     if (TUNE.starveWeeks > 0) {
       const n = starved && b.methodId === cur.id ? (b.starvedWeeks ?? 0) + 1 : 0;
       if (n > 0) b.starvedWeeks = n; else delete b.starvedWeeks;
