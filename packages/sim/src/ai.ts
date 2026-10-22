@@ -24,6 +24,12 @@ export { STAFFING_HORIZON, laborAvailability } from './staffing';
 /** 건설 판단 기준: 연간 이윤 / 공사비 (5년 안에 회수) */
 const MIN_ROI = () => TUNE.minRoi;
 export const SWITCH_COOLDOWN = TICKS_PER_WEEK * 3;
+/** 방식 고르기: 투입재마다 대륙 공급(이동평균)이 필요의 이 비율 미만이면 그 방식을 고르지 않는다 (근거 없음) */
+export const INPUT_SUPPLY_MIN = 0.5;
+/** aiSwitchV2: 새 방식의 건물 전체 하루 손익이 지금보다 이 비율 넘게 커야 바꾼다 */
+export const SWITCH_MARGIN = 0.05;
+/** aiSwitchV2: 바꾸기 문턱의 최소값 (레벨 × 지금 방식 하루 인건비 대비) */
+export const SWITCH_MIN_WAGE_SHARE = 0.01;
 /** 공사 하나의 레벨 수 후보 (큰 것부터). 1레벨이 일꾼 500명이 되어(2026-10-22) 1,000명 시절 [5, 2, 1]의 두 배 (1은 남는 땅 한 칸용) */
 export const CHUNKS = [10, 4, 2, 1];
 /** 사무소를 한 번에 늘리는 레벨: 지금 사무소의 1/4 (최소 4, 1,000명 시절 2의 두 배) */
@@ -338,7 +344,7 @@ function inputsAvailable(w: World, m: MethodDef, levels: number): boolean {
   for (const [g, per] of Object.entries(m.inputs) as [keyof typeof GOODS, number][]) {
     let avail = 0;
     for (const x of w.regions) avail += x.market[g].supplyEma;
-    if (avail < per * levels * 0.5) return false;
+    if (avail < per * levels * INPUT_SUPPLY_MIN) return false;
   }
   return true;
 }
@@ -460,7 +466,7 @@ function manageBuildings(w: World, c: Company, o: Outlook, pools: Map<string, nu
           return b.level * st * (revenue * fi * eff - inputCost * fi - wageCostOf(m, c.wages, c.state));
         };
         const vCur = val(cur);
-        const bar = vCur + Math.max(Math.abs(vCur) * 0.05, 0.01 * b.level * wageCostOf(cur, c.wages, c.state));
+        const bar = vCur + Math.max(Math.abs(vCur) * SWITCH_MARGIN, SWITCH_MIN_WAGE_SHARE * b.level * wageCostOf(cur, c.wages, c.state));
         let best = cur, bestV = -Infinity;
         // TUNE.aiMixedMethods: 같은 지역에 그 방식 건물이 이미 있으면 그 방식으로는 바꾸지 않는다 (방식마다 건물 하나)
         const taken = (m: MethodDef) => !!TUNE.aiMixedMethods && w.buildings.some((x) => x !== b && x.companyId === b.companyId && x.regionId === b.regionId && x.typeId === b.typeId && x.methodId === m.id);

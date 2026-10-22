@@ -279,8 +279,9 @@ export function isBudgetFunded(typeId: string): boolean {
 }
 
 /**
- * 건축사무소 방식의 이익률 (매출 대비): 건물 숫자 규칙과 같이 방식 단계에 따라 20% + 단계 × 10% (목조 20%, 목재 비계 30%, 철골 40%).
- * 고정 10·20·30%와 20년 × 시드 1~6 비교 (DESIGN 11장)
+ * 건축사무소 방식의 이익률 (매출 대비): 방식 단계에 따라 20% + 단계 × 10% (목조 20%, 목재 비계 30%, 철골 40%).
+ * 옛 건물 숫자 규칙(20/30/40%)에서 온 값이며, 지금 방식 사다리(단계마다 이익 ×2)와는 다르다.
+ * 고정 10·20·30%와 20년 × 시드 1~6 비교, 사다리 병합 전 d34ecd0 위 (DESIGN 11장)
  */
 export function officeMargin(methodId: string): number {
   const i = BUILDING_BY_ID.builder.methods.findIndex((m) => m.id === methodId);
