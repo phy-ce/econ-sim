@@ -85,10 +85,27 @@ export interface GoodDef {
   perishable?: boolean;
 }
 
+/** 산업 유형 (data.ts INDUSTRIES): 1차(노동 집약) · 가공(원료 집약) · 중공업 · 숙련(사치품). 기본 방식의 일꾼 수·숙련 비율·원료 비중을 정한다 */
+export type Industry = 'primary' | 'processing' | 'heavy' | 'luxury';
+
+export interface IndustryDef {
+  id: Industry;
+  name: string;
+  nameEn: string;
+  /** 기본 방식 레벨당 일꾼 합계 */
+  workers: number;
+  /** 기본 방식 기술자·전문가 비율 (농부만 쓰는 농장·목장은 0) */
+  skillShare: number;
+  /** 기본 방식 원료비 ÷ 매출 범위 (기본가) */
+  inputShare: [number, number];
+}
+
 export interface MethodDef {
   id: string;
   name: string;
   nameEn?: string;
+  /** 이 방식만 건물과 다른 산업 유형일 때 (방직·가구 공방의 사치품 방식) */
+  industry?: Industry;
   /** 이 방식을 쓰려면 회사가 연구해야 하는 기술. 없으면 처음부터 쓸 수 있다 */
   tech?: string;
   /** 레벨 1당 일자리 (노동 인구 기준) */
@@ -116,6 +133,8 @@ export interface BuildingTypeDef {
   methods: MethodDef[];
   /** 1레벨 완공에 필요한 건설 포인트 */
   buildPoints: number;
+  /** 산업 유형 (생산 건물만. 소작지·소유 건물·학교·건축사무소·행정청은 없다) */
+  industry?: Industry;
   /** 자동으로 생기는 건물(소작지, 저택, 금융가): 짓거나 헐 수 없다 */
   auto?: boolean;
   /** 소유 건물: 이 직종이 일하며 지역 민간 건물의 배당을 받는다 (저택 = 귀족, 금융가 = 자본가) */
@@ -284,6 +303,8 @@ export interface Building {
   swap?: boolean;
   /** 마지막 레벨의 손익이 마이너스였던 연속 주 수 (철거 판단) */
   negWeeks?: number;
+  /** 생산 건물의 투입 충족이 0.5 미만이었던 연속 주 수 (AI, TUNE.starveWeeks). 없으면 0 (16판에서 생겼다) */
+  starvedWeeks?: number;
   /** 건축사무소: 그 연속 주 동안 일하던 주의 가장 높은 충원율 (한 번도 사람이 차지 않은 레벨을 센다) */
   staffPeak?: number;
   /** 1레벨을 지을 때 들어간 자재 (철거하면 TUNE.salvageShare 만큼 돌려받는다) */
@@ -597,9 +618,10 @@ export interface World {
    * 14: 연구가 돈 대신 문해력 포인트다 (연구비 수준·연구비 장부·Research.budget 없음, Research.points, 진행은 포인트).
    * 15: 건축사무소가 공사 수수료를 매출로 받는 국영 사업이다 (BuildingStats.fee, Building.payout.crown, lastBudget.office·build, spentWeek.office·build, Kingdom.privateFeeWeek, budgetBase.build 가 생기고,
    *     Kingdom.feeWageWeek·budgetBase.feesWage·feesOther 가 없어졌다. 새 칸은 없어도 되므로 14판은 옛 칸만 지운다).
-   * 10~14판은 불러올 때 바꾼다, 그보다 옛 저장은 불러오지 않는다)
+   * 16: 생산 건물의 굶은 주 수(Building.starvedWeeks, AI)가 생겼다. 없어도 되므로 15판은 그대로 받는다.
+   * 10~15판은 불러올 때 바꾼다, 그보다 옛 저장은 불러오지 않는다)
    */
-  version: 15;
+  version: 16;
   config: WorldConfig;
   tick: number;
   seed: number;

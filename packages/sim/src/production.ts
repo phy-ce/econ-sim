@@ -207,7 +207,7 @@ export function produce(w: World) {
       b.firmEma = e ? { sales: e.sales * (1 - a) + b.last.revenue * a, inputs: e.inputs * (1 - a) + b.last.inputCost * a } : { sales: b.last.revenue, inputs: b.last.inputCost };
     }
   }
-  // 왕실 공사 줄의 기준값 (화면 전용): 오늘 왕실 공사가 사무소에 낸 수수료
+  // 오늘 왕실 공사가 사무소에 낸 수수료 (화면 전용, 저장됨). 예산 미리보기는 기록이 있는지만 본다 (값은 공사 목록으로 센다)
   for (const k of w.kingdoms) (k.budgetBase ??= {}).build = crownFee.get(k.id) ?? 0;
 }
 
@@ -366,7 +366,7 @@ function removeBuilding(w: World, b: Building) {
 }
 
 /** 공사 k 의 약정 금고와 그 비율 (소유 건물 id 순) */
-function funderShares(k: Construction, byId: Map<number, Building>): [Building, number][] {
+export function funderShares(k: Construction, byId: Map<number, Building>): [Building, number][] {
   const ids = Object.keys(k.funders!).map(Number).sort((a, b) => a - b);
   let total = 0;
   for (const id of ids) total += k.funders![id];

@@ -339,15 +339,32 @@ function unitProfit(profit: number, m: MethodDef): number {
   return out > 0 ? profit / out : profit;
 }
 
-/** 투입재를 대륙 어딘가에서 실제로 구할 수 있는가 */
-function inputsAvailable(w: World, m: MethodDef, levels: number): boolean {
+/**
+ * 투입재를 대륙 어딘가에서 실제로 구할 수 있는가: 투입재마다 대륙 공급(이동평균)이 필요의 INPUT_SUPPLY_MIN 이상.
+ * TUNE.aiInputFill: 공급 대신 남는 양 = 대륙 공급 − 대륙 수요 (이동평균) + 이 건물 b 가 지금 방식으로 쓰는 양 (레벨 × 가동률, 바꾸면 풀린다. 꺼진 건물은 0)
+ */
+function inputsAvailable(w: World, m: MethodDef, levels: number, b?: Building): boolean {
+  const own = TUNE.aiInputFill && b?.active ? getMethod(b.typeId, b.methodId) : null;
   for (const [g, per] of Object.entries(m.inputs) as [keyof typeof GOODS, number][]) {
     let avail = 0;
-    for (const x of w.regions) avail += x.market[g].supplyEma;
+    if (TUNE.aiInputFill) {
+      for (const x of w.regions) avail += x.market[g].supplyEma - x.market[g].demandEma;
+      if (own && b) avail += (own.inputs[g] ?? 0) * b.level * b.utilization;
+    } else for (const x of w.regions) avail += x.market[g].supplyEma;
     if (avail < per * levels * INPUT_SUPPLY_MIN) return false;
   }
   return true;
 }
+
+/** 굶는 투입 충족: 이 값 미만이면 굶은 주로 센다 (TUNE.starveWeeks, 건축사무소 자재 바꾸기). 근거 없음 */
+export const STARVE_FILL = 0.5;
+
+/** 굶는 건물 (TUNE.starveWeeks): 투입 충족 < STARVE_FILL 이 그 주 수 이어졌다 */
+function starving(b: Building): boolean {
+  return TUNE.starveWeeks > 0 && (b.starvedWeeks ?? 0) >= TUNE.starveWeeks;
+}
+/** TUNE.starveWeeks > 0: 투입 충족이 이 값 미만이면 가동률을 올리지 않는다 (올리면 더 모자란다). 근거 없음 */
+export const RAISE_FILL = 0.9;
 
 /** 행정청용: 그 왕국 시장들에 남는 투입재(공급 − 수요, 이동평균)가 이 방식 levels 레벨의 하루 필요의 절반 이상인가 */
 function kingdomInputs(w: World, kingdomId: number, m: MethodDef, levels: number): boolean {
@@ -407,8 +424,8 @@ function manageBuildings(w: World, c: Company, o: Outlook, pools: Map<string, nu
 
     // 건축사무소: 자재를 구할 수 있는 방식 중 하루 포인트가 가장 많은 것 (가동률은 늘 100%)
     if (cur.construction) {
-      const starved = b.active && !b.idle && b.last.inputFill < 0.5;
-      const ok = usable.filter((m) => m.construction && (m.id === b.methodId ? !starved : inputsAvailable(w, m, b.level)));
+      const starved = b.active && !b.idle && b.last.inputFill < STARVE_FILL;
+      const ok = usable.filter((m) => m.construction && (m.id === b.methodId ? !starved : inputsAvailable(w, m, b.level, b)));
       const best = ok.length ? ok.reduce((x, m) => (m.construction! > x.construction! ? m : x)) : null;
       if (best && best.id !== b.methodId && (starved || w.tick - b.lastSwitchTick >= SWITCH_COOLDOWN)) applyCommand(w, c.id, { type: 'setMethod', buildingId: b.id, methodId: best.id });
       continue;
@@ -442,7 +459,7 @@ function manageBuildings(w: World, c: Company, o: Outlook, pools: Map<string, nu
     // 지금 방식보다 5% (최소 인건비의 1%) 넘게 큰 방식으로 바꾼다 (3주 쿨다운, 투입재를 못 구해 멈췄으면 쿨다운 없이).
     // 기대 충원율 = 지금 재직자 + 이번 주 곳간으로 채우는 비율 (임금 가중). 투입 충족 = 대륙 전망의 남는 공급(공사 중 산출 포함)으로 채우는 비율.
     // 숙련: 바꾸면 숙련이 반으로 준다 (commands setMethod). 바꾸면 더 뽑을 사람을 곳간에서 뺀다
-    const starved = Object.keys(cur.inputs).length > 0 && Object.keys(cur.outputs).length > 0 && b.active && b.last.inputFill < 0.5 && b.last.staffing > 0;
+    const starved = Object.keys(cur.inputs).length > 0 && Object.keys(cur.outputs).length > 0 && b.active && b.last.inputFill < STARVE_FILL && b.last.staffing > 0;
     const region = regionById(w, b.regionId);
     if (TUNE.aiSwitchV2) {
       if (usable.length > 1 && (starved || w.tick - b.lastSwitchTick >= SWITCH_COOLDOWN)) {
@@ -480,7 +497,7 @@ function manageBuildings(w: World, c: Company, o: Outlook, pools: Map<string, nu
           applyCommand(w, c.id, { type: 'setMethod', buildingId: b.id, methodId: best.id });
           takeFromPool(w, region, best, b.level, c.state, pools, c, b);
           // 같은 주에 다른 건물이 이 바꾸기를 보고 판단하게 전망에 반영한다
-          o.add(best, b.level, perk); o.add(cur, -b.level, perk);
+          o.add(best, b.level, perk, true); o.add(cur, -b.level, perk, true);
           for (const g of GOOD_IDS) spare[g] -= ((best.inputs[g] ?? 0) - (cur.inputs[g] ?? 0)) * b.level * b.utilization;
         }
       }
@@ -492,19 +509,24 @@ function manageBuildings(w: World, c: Company, o: Outlook, pools: Map<string, nu
       if (usable.length > 1 && (starved || w.tick - b.lastSwitchTick >= SWITCH_COOLDOWN)) {
         let best = { m: cur, v: starved || understaffed ? -Infinity : unitProfit(current.profit, cur) };
         for (const m of usable) {
-          if (m.id === cur.id || !inputsAvailable(w, m, b.level) || !staffable(m)) continue;
+          if (m.id === cur.id || !inputsAvailable(w, m, b.level, b) || !staffable(m)) continue;
           const v = unitProfit(estimateMethod(w, b.regionId, b.typeId, m.id, c.wages, c.state).profit, m);
           if (v > best.v * 1.05 + 0.01) best = { m, v };
         }
         if (best.m !== cur) applyCommand(w, c.id, { type: 'setMethod', buildingId: b.id, methodId: best.m.id });
       }
     }
+    // 굶은 주 수 (TUNE.starveWeeks): 지금 방식으로 투입 충족 < STARVE_FILL 인 주를 센다 (방식을 바꾸면 처음부터)
+    if (TUNE.starveWeeks > 0) {
+      const n = starved && b.methodId === cur.id ? (b.starvedWeeks ?? 0) + 1 : 0;
+      if (n > 0) b.starvedWeeks = n; else delete b.starvedWeeks;
+    }
     // 왕실 정부 건물(행정청)은 늘 다 가동한다. 남길지는 reviewLevels 가 레벨 단위로 정한다
     if (c.state && isGovernment(b.typeId)) continue;
 
     if (!b.active) {
       b.pausedWeeks += 1;
-      if (current.margin > 0.05 && inputsAvailable(w, cur, b.level)) {
+      if (current.margin > 0.05 && inputsAvailable(w, cur, b.level, b)) {
         applyCommand(w, c.id, { type: 'setActive', buildingId: b.id, active: true });
         applyCommand(w, c.id, { type: 'setUtilization', buildingId: b.id, utilization: 0.3 });
         b.lossWeeks = 0; b.profitEma = 0;
@@ -515,13 +537,14 @@ function manageBuildings(w: World, c: Company, o: Outlook, pools: Map<string, nu
     // 기상 조건이 걸린 동안의 적자는 일시적이라 세지 않는다
     const cost = b.last.inputCost + b.last.wageCost;
     const actualMargin = cost > 0 ? (b.last.revenue - cost) / cost : 0;
-    // 유보 자산이 남아 있으면 적자를 거기서 메우고 가동률을 줄이지 않는다
-    const bleeding = !b.reserve && harvestFactor(w, b.regionId, BUILDING_BY_ID[b.typeId].land) >= 1 && b.profitEma < 0 && (current.margin < -0.2 || actualMargin < -0.2);
+    // 유보 자산이 남아 있으면 적자를 거기서 메우고 가동률을 줄이지 않는다. 다만 굶는 건물(starving)은 유보 자산이 있어도 줄인다
+    const hungry = starving(b);
+    const bleeding = (hungry || !b.reserve) && harvestFactor(w, b.regionId, BUILDING_BY_ID[b.typeId].land) >= 1 && b.profitEma < 0 && (current.margin < -0.2 || actualMargin < -0.2);
     b.lossWeeks = bleeding ? b.lossWeeks + 1 : 0;
     if (b.lossWeeks >= 4 && b.utilization > 0.1 + 1e-9) {
       applyCommand(w, c.id, { type: 'setUtilization', buildingId: b.id, utilization: Math.max(0.1, b.utilization - 0.1) });
       b.lossWeeks = 0;
-    } else if (b.utilization < 1 && current.margin > 0) {
+    } else if (b.utilization < 1 && current.margin > 0 && !(TUNE.starveWeeks > 0 && b.last.inputFill < RAISE_FILL)) {
       applyCommand(w, c.id, { type: 'setUtilization', buildingId: b.id, utilization: b.utilization + 0.1 });
     }
   }
@@ -825,7 +848,7 @@ function officeEmpty(b: Building): number {
  * 건축사무소는 손익 대신 포인트 사용량과 일손으로 본다: 빈 레벨이 있거나 그 레벨을 빼도 쓰던 포인트를 다 낼 수 있으면 −1,
  * 아니면 +1 (마지막 1레벨은 남긴다)
  */
-function levelValue(w: World, c: Company, o: Outlook, b: Building, pointsPerDay: number): number {
+function levelValue(w: World, c: Company, o: Outlook, b: Building, pointsPerDay: number, fill?: number): number {
   const m = getMethod(b.typeId, b.methodId);
   if (m.construction) {
     const perLevel = m.construction * b.utilization * efficiency(b);
@@ -834,7 +857,7 @@ function levelValue(w: World, c: Company, o: Outlook, b: Building, pointsPerDay:
   }
   const r = regionById(w, b.regionId);
   if (m.seats) return schoolValuation(w, c, r, m, 1, schoolSeats(w, r.id) - m.seats).profit;
-  return valueMethod(w, o, r, c, b.typeId, m, 1, true).profit;
+  return valueMethod(w, o, r, c, b.typeId, m, 1, true, fill).profit;
 }
 
 /**
@@ -848,15 +871,17 @@ function reviewLevels(w: World, c: Company, o: Outlook, pointsPerDay: number) {
   for (const b of w.buildings) {
     if (b.companyId !== c.id || BUILDING_BY_ID[b.typeId].auto) continue;
     if (w.constructions.some((k) => k.targetBuildingId === b.id)) { b.negWeeks = 0; delete b.staffPeak; continue; }
-    const v = levelValue(w, c, o, b, pointsPerDay);
+    // 굶는 건물은 지금 투입 충족으로 잰다 (장기 전망은 투입을 다 산다고 본다)
+    const hungry = starving(b);
+    const v = levelValue(w, c, o, b, pointsPerDay, hungry ? b.last.inputFill : undefined);
     if (b.shrinking) {
       if (v > 0 && !b.swap) b.shrinking = 0;
       delete b.staffPeak;
       continue;
     }
     b.swap = false;
-    // 적자를 유보 자산으로 메우는 동안은 철거 주 수를 세지 않는다
-    const covered = b.profitEma < 0 && !!b.reserve;
+    // 적자를 유보 자산으로 메우는 동안은 철거 주 수를 세지 않는다 (굶는 건물은 센다)
+    const covered = b.profitEma < 0 && !!b.reserve && !hungry;
     b.negWeeks = v < 0 && !covered ? (b.negWeeks ?? 0) + 1 : 0;
     const m = getMethod(b.typeId, b.methodId);
     if (!m.construction) {
@@ -907,6 +932,40 @@ function swapLand(w: World, c: Company, o: Outlook, cand: Pick) {
 interface Pick { regionId: number; typeId: string; methodId: string; levels: number; score: number; fallback?: boolean }
 
 /**
+ * TUNE.expandUtilMin (0 = 끔): 왕국 안(왕실 + 민간 상회. 왕국마다 민간 상회는 하나라 회사로 나누면 왕실 건물만 빠진다) 같은 종류이고
+ * 산출 상품이 겹치는 건물의 레벨 가중 가동률(꺼진 건물은 0)이 이 값 미만이거나 장기 손익(profitEma) 합이 음수이면, 그 방식은 새로 짓지도 늘리지도 않는다.
+ * 그런 건물이 없으면 막지 않는다 (새 산업은 시작된다). 정부 건물(행정청·학교·사무소)은 손익으로 짓지 않으므로 보지 않는다. w.buildings 순서로 더한다 (결정성)
+ */
+function glutOf(w: World, kingdomId: number): (typeId: string, m: MethodDef) => boolean {
+  const kingdomOf = new Map(w.companies.map((x) => [x.id, x.kingdomId] as const));
+  const byType = new Map<string, Building[]>();
+  for (const b of w.buildings) {
+    if (kingdomOf.get(b.companyId) !== kingdomId || BUILDING_BY_ID[b.typeId].auto || isGovernment(b.typeId)) continue;
+    const list = byType.get(b.typeId);
+    if (list) list.push(b); else byType.set(b.typeId, [b]);
+  }
+  const memo = new Map<string, boolean>();
+  return (typeId, m) => {
+    if (isGovernment(typeId)) return false;
+    const key = `${typeId}|${m.id}`;
+    const hit = memo.get(key);
+    if (hit !== undefined) return hit;
+    const outs = GOOD_IDS.filter((g) => (m.outputs[g] ?? 0) > 0);
+    let levels = 0, used = 0, profit = 0;
+    for (const b of byType.get(typeId) ?? []) {
+      const bm = getMethod(b.typeId, b.methodId);
+      if (outs.length && !outs.some((g) => (bm.outputs[g] ?? 0) > 0)) continue;
+      levels += b.level;
+      used += (b.active ? b.utilization : 0) * b.level;
+      profit += b.profitEma;
+    }
+    const glut = levels > 0 && (used / levels < TUNE.expandUtilMin || profit < 0);
+    memo.set(key, glut);
+    return glut;
+  };
+}
+
+/**
  * 모든 후보를 같은 기준으로: 장기 손익 / 공사비. 수익률이 기준의 1.25배를 넘는 가장 큰 덩어리를 고른다.
  * allowLoss: 이익이 나는 후보가 없으면 수익률이 가장 높은(가장 덜 손해 보는) 후보를 가장 작은 덩어리로 고른다.
  * 학교는 schoolFree(schoolCash)로 짓고, 공사비 + 그 레벨 인건비 TUNE.treasuryLowWeeks 주치가 있어야 한다
@@ -923,9 +982,14 @@ export function pickProject(w: World, c: Company, o: Outlook, free: number, allo
     local.get(o.regionId)!.push(o);
   }
   const localFunds = (regionId: number, typeId: string) => (local.get(regionId) ?? []).reduce((a, o) => a + freeOf.get(o.id)! * (favours(o, typeId) ? 1 : TUNE.ownerTilt), 0);
+  // TUNE.crownDebtNoBuild: 빚이 현금보다 많은 왕실은 생산 건물을 짓지 않는다 (정부 건물·학교는 그대로)
+  const inDebt = c.state && !!TUNE.crownDebtNoBuild && c.debt > c.cash;
+  // TUNE.expandUtilMin: 왕국 안 같은 종류·같은 산출 건물이 덜 돌거나 적자인 방식은 짓지도 늘리지도 않는다 (glutOf. 땅 바꾸기 후보도 뺀다)
+  const glut = TUNE.expandUtilMin > 0 ? glutOf(w, c.kingdomId) : null;
   for (const r of ownRegions(w, c)) {
     for (const t of BUILDING_TYPES) {
       if (t.id === 'builder' || !canBuildType(c, t)) continue;
+      if (inDebt && !isGovernment(t.id)) continue;
       // 기상 조건이 걸린 땅에는 짓지 않는다 (줄어든 산출과 오른 값은 일시적이다)
       if (harvestFactor(w, r.id, t.land) < 1) continue;
       const room = roomFor(w, r.id, t.id);
@@ -944,7 +1008,7 @@ export function pickProject(w: World, c: Company, o: Outlook, free: number, allo
       if (room < 1) {
         if (!blocked || (t.deposit && depositFree(w, r.id, t.deposit) < 1)) continue;
         for (const m of availableMethods(c, t.id)) {
-          if (otherMethod(m)) continue;
+          if (otherMethod(m) || glut?.(t.id, m)) continue;
           if (laborAvailability(w, r, m, 1, c.state, pools, c) < MIN_STAFFING()) continue;
           const e = m.seats ? schoolValuation(w, c, r, m, 1, schoolSeats(w, r.id)) : valueMethod(w, o, r, c, t.id, m, 1);
           const roi = (e.profit * TICKS_PER_YEAR) / perLevel;
@@ -953,7 +1017,7 @@ export function pickProject(w: World, c: Company, o: Outlook, free: number, allo
         continue;
       }
       for (const m of availableMethods(c, t.id)) {
-        if (otherMethod(m)) continue;
+        if (otherMethod(m) || glut?.(t.id, m)) continue;
         const cap = newMethod(m) ? MIXED_LEVELS : Infinity;
         let choice: { levels: number; roi: number } | null = null, top: { levels: number; roi: number } | null = null;
         for (const levels of CHUNKS) {

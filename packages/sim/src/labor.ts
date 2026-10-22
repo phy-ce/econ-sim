@@ -13,8 +13,6 @@ import type { Building, Company, MethodDef, Pop, PopClass, Region, Skill, World 
 export const HIRE_RATE = 0.01;
 /** 임금을 다 못 받으면 하루에 떠나는 비율 */
 export const UNPAID_QUIT = 0.03;
-/** 노동자는 다른 직종이 이 비율 이상 차야 다 뽑힌다 (직종 비율 유지) */
-export const RATIO_GATE = 0.9;
 
 interface Seat { b: Building; prof: PopClass; slots: number; wage: number; m: MethodDef | null }
 
@@ -257,13 +255,15 @@ function fillableWith(b: Building, m: MethodDef | null, s: Skill, n: number): nu
   return isLowerJob(s) ? n * ratioGate(b, m) : n;
 }
 
-/** 노동자·농부 충원 상한 비율: 다른 직종(기술자·전문가) 중 가장 덜 찬 쪽 / 0.9 */
+/** 노동자·농부 충원 상한 비율: 다른 직종(기술자·전문가) 중 가장 덜 찬 쪽 / TUNE.ratioGate (0 = 끔) */
 function ratioGate(b: Building, m: MethodDef | null): number {
+  const g = TUNE.ratioGate;
+  if (!(g > 0)) return 1;
   let gate = 1;
   const skilled = slotsWith(b, m, 'skilled');
-  if (skilled > 0) gate = Math.min(gate, b.employed.skilled / skilled / RATIO_GATE);
+  if (skilled > 0) gate = Math.min(gate, b.employed.skilled / skilled / g);
   const expert = slotsWith(b, m, 'expert');
-  if (expert > 0) gate = Math.min(gate, b.employed.expert / expert / RATIO_GATE);
+  if (expert > 0) gate = Math.min(gate, b.employed.expert / expert / g);
   return clamp(gate, 0, 1);
 }
 
