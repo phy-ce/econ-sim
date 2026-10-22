@@ -284,6 +284,8 @@ export interface Building {
   swap?: boolean;
   /** 마지막 레벨의 손익이 마이너스였던 연속 주 수 (철거 판단) */
   negWeeks?: number;
+  /** 생산 건물의 투입 충족이 0.5 미만이었던 연속 주 수 (AI, TUNE.starveWeeks). 없으면 0 (16판에서 생겼다) */
+  starvedWeeks?: number;
   /** 건축사무소: 그 연속 주 동안 일하던 주의 가장 높은 충원율 (한 번도 사람이 차지 않은 레벨을 센다) */
   staffPeak?: number;
   /** 1레벨을 지을 때 들어간 자재 (철거하면 TUNE.salvageShare 만큼 돌려받는다) */
@@ -597,9 +599,10 @@ export interface World {
    * 14: 연구가 돈 대신 문해력 포인트다 (연구비 수준·연구비 장부·Research.budget 없음, Research.points, 진행은 포인트).
    * 15: 건축사무소가 공사 수수료를 매출로 받는 국영 사업이다 (BuildingStats.fee, Building.payout.crown, lastBudget.office·build, spentWeek.office·build, Kingdom.privateFeeWeek, budgetBase.build 가 생기고,
    *     Kingdom.feeWageWeek·budgetBase.feesWage·feesOther 가 없어졌다. 새 칸은 없어도 되므로 14판은 옛 칸만 지운다).
-   * 10~14판은 불러올 때 바꾼다, 그보다 옛 저장은 불러오지 않는다)
+   * 16: 생산 건물의 굶은 주 수(Building.starvedWeeks, AI)가 생겼다. 없어도 되므로 15판은 그대로 받는다.
+   * 10~15판은 불러올 때 바꾼다, 그보다 옛 저장은 불러오지 않는다)
    */
-  version: 15;
+  version: 16;
   config: WorldConfig;
   tick: number;
   seed: number;

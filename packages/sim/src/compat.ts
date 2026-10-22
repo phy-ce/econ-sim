@@ -20,12 +20,12 @@ export function landlordJobs(_b: Building): number {
 const OLD_TECH_COST = [0, 12_000_000, 24_000_000, 40_000_000, 70_000_000];
 
 /**
- * 저장 파일을 불러온다 (불러오기 직후에 부른다). 지금 형식(15판)과 10~14판(레벨 소유·저택·금융가 금고·세법 셋·투자법·금융가 지분·복지법)을 받고,
+ * 저장 파일을 불러온다 (불러오기 직후에 부른다). 지금 형식(16판)과 10~15판(레벨 소유·저택·금융가 금고·세법 셋·투자법·금융가 지분·복지법)을 받고,
  * 그보다 옛 판은 받지 않는다 (null). 10판은 금융가 지분 모양을, 10·11판은 100배 값을, 13판까지는 돈 연구를, 14판까지는 옛 공사 수수료 기준값을 바꾼다. 화면 표시용 사본은 다시 쓴다
  */
 export function migrateWorld(input: unknown): World | null {
   const w = input as Omit<World, 'version'> & { version: number };
-  if (!w || typeof w !== 'object' || w.version < 10 || w.version > 15) return null;
+  if (!w || typeof w !== 'object' || w.version < 10 || w.version > 16) return null;
   if (w.version === 10) {
     // 10판: 금융가 지분이 건물 id → 지분 수 객체였다 (정수 키는 오름차순으로 나온다)
     for (const p of w.pops) {
@@ -85,6 +85,10 @@ export function migrateWorld(input: unknown): World | null {
       if (b) { delete b.feesWage; delete b.feesOther; }
     }
     w.version = 15;
+  }
+  if (w.version === 15) {
+    // 16판: 생산 건물의 굶은 주 수(Building.starvedWeeks, AI 판단)가 생겼다. 없으면 0이고 다음 주부터 센다
+    w.version = 16;
   }
   const world = w as World;
   writePool(world);
