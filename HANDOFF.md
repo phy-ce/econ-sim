@@ -33,7 +33,29 @@
 - AI: `expenseEma` = wages + goods + interest + welfare + build − office (예전 "정부 건물 운영비 − 민간 수수료"와 같은 양). `constructionEstimate.cost`는 민간 = 수수료, 왕실 = 운영비 (`feeMult`). 사무소 증설 조건은 그대로 (주석만).
 - 장부·저장: `lastBudget.fees`(민간 수수료, 지표용)·`office`·`build`, `Kingdom.privateFeeWeek`, `budgetBase.build`(오늘 왕실 공사 수수료), `spentWeek.office/build`, `BuildingStats.fee`. 저장 15판 (14판은 옛 `feeWageWeek`·`budgetBase.feesWage/feesOther` 만 지운다, compat.ts).
 - cli: `sweep.ts` traj 에 해마다 사무소 지표 `ofLevel ofPts ofUsed ofBacklog ofProfit ofFees ofBuild ofRes`, `report.py` 이름표 묶음 `건축사무소`.
-- 화면: UI_CHANGES 0-9 / 2-62. 열린 것: `metrics.govSpendWeek`(wages + goods)에 사무소 운영비가 빠졌다 (그래프 뜻이 바뀜). 이익률이 국고 수입 구실을 해서 세금 균형이 바뀌었다: 세금·복지 조정값을 다시 볼 만하다.
+- 화면: UI_CHANGES 0-9 / 2-62 (방식 사다리는 0-10 / 2-63). 열린 것: `metrics.govSpendWeek`(wages + goods)에 사무소 운영비가 빠졌다 (그래프 뜻이 바뀜). 이익률이 국고 수입 구실을 해서 세금 균형이 바뀌었다: 세금·복지 조정값을 다시 볼 만하다.
+
+## 0-chain2. wt-chain2 (2026-10-22, main afaf98c 병합 뒤, 합치기 전, DECISIONS 7-22 결정 필요)
+- d000d63 방식 사다리 (위 방식 = 사람 적고 숙련 비율·고급 투입 많음, 이익 단계마다 2배, 1레벨 500명), 813b819 `buildCostMult`.
+- Step B (AI): `latentFeasible`(잠재 수요는 바꿀 수 있는 몫만), `aiSwitchV2`(방식 비교 = 건물 전체 손익 × 기대 충원율 × 투입 충족, 대륙 장기 가격, 손해 방식 안 고름), `aiMixedMethods`(기본 0, DECISIONS 7-21). 일손 셈은 `src/staffing.ts`로 옮김 (ai·outlook 공용).
+- 8년 × 시드 1~4: 옛/새 규칙 모두 시드 3은 1~2년차부터 석탄 공급 0, 민간 상회 셋 중 둘이 현금 0 (Step A 세계 문제로 보임, 미진단). 새 규칙 첫 판(손해 방식 허용)은 시드 1·3·4에서 민간 파산 → 고침.
+- 진단: `cli/switchdiag.ts`(해마다 바꾸기·되돌아감·위 방식 레벨·공구·철·석탄).
+- (병합 전, main c3d8efb 위) 40년 × 시드 1~4 비교 (보고서 2026-10-22-chain, 원본 `.tmp/chain/c40.jsonl`·`c40off_bcm.jsonl`, 기준 main `base40.jsonl`). 40년 평균 총생산(백만/주):
+  main 1,283 · 새 방식 + AI 둘 다 0 = 970 · `latentFeasible`만 1 = 1,008 · `aiSwitchV2`만 1 = 811 · 둘 다 1 = 902. 하나라도 켜면 시드 3이 28~33년차에 민간 현금 0으로 무너짐 → 기본값 둘 다 0.
+  `buildCostMult` 0.75·0.5는 (AI 둘 다 0에서도) 네 시드 중 둘이 무너짐 → 1. 기본 방식 공구 ×2(민감도): 평균 686, 시드 3 붕괴.
+  새 데이터에서 철광산은 6~10년차(main 12~13년차), 철 수요 1천/일은 12~19년차(main 18~21년차)에 생긴다. 40년차 총생산은 main보다 낮다 (952 vs 1,509).
+  sweep traj 추가: `toolSh`(공구 쓰는 방식 레벨 비율), `upSh`(윗단 방식 비율), `slot.<직종>`·`qual.<직종>`(일자리·자격자, 천).
+- **main afaf98c(연구 = 문해력 포인트) 병합 뒤 다시 잼** (보고서 2026-10-22-chain2, 40년 × 시드 1~4, 기본값). 총생산 네 시드 평균 1 / 5 / 10 / 20 / 30 / 40년차:
+  main 424 / 542 / 1,144 / 2,266 / 2,316 / 1,746, 브랜치 398 / 270 / 505 / 743 / 424 / 291. 40년 평균 main 1,775 대 브랜치 530 (−70%, 병합 전 −24%).
+  시드 3은 5년차에 민간 현금 0, 총생산 2까지 무너진다 (병합 전에는 같은 기본값에서 버팀). 스위치(`latentFeasible`·`aiSwitchV2`) 비교는 병합 뒤 다시 안 함.
+- 20년 × 시드 1~4 값 비교 (병합 뒤, DESIGN 11, 원본 scratchpad br20·br20b): 공사 포인트 계수 0.1·0.15·0.2(`buildCostMult` 0.67·1·1.33), 소작지 공구 0.001·0.002·0.005, `startLumber` 0.6·1.8, `startFiber` 0.2. 기본값은 그대로 두었다.
+- 남은 일:
+  1. 시드 3 붕괴 진단 (병합 뒤 5년차 민간 현금 0. 병합 전 기록: 석탄 공급이 처음부터 0, 곡물값 0.4). 사용자 결정 DECISIONS 7-22 전에는 합치지 않는다.
+  2. 공구 0.005·공사 계수 0.2가 20년에서 높았다: 붕괴를 고친 뒤 40년 × 시드 1~4로 확인하고 고른다.
+  3. 비교 안 한 값 (⚠): `MAX_POINTS_PER_LEVEL_DAY` 10·5·3 (공사 포인트가 1/3이 되어 1레벨 최단 공사 60 → 20일), `START_OFFICE_LEVELS` 10·20, 행정청 공사 포인트 400.
+  4. 옛 방식 바꾸기의 되돌아감(의복 ↔ 고급 의복)은 그대로.
+  5. 사용자 메모리 building-numbers-rule.md 의 "margin 20/30/40%"를 합친 뒤 "base 20%, ×2 profit per step"으로 고친다 (저장소 밖).
+- 추적 안 한 진단 파일 `cli/coalchk.ts`·`cli/privchk.ts`는 커밋하지 않았다 (시드 3 진단에 다시 쓸 수 있게 작업 폴더에 남김).
 
 ## 0-research. wt-research (2026-10-22, main d34ecd0 위, 합치기 전, DECISIONS 7-20 사용자 결정)
 - 연구는 돈이 들지 않는다: 주간 연구 포인트 = 50(`researchBase`) + 3(`researchPerLiteracy`) × 왕국 문해력(%) (`finance.ts researchPoints`·`advanceResearch`·`kingdomLiteracy`). 기술 값 4,500 / 9,000 / 15,000 / 26,250 포인트. 고른 기술이 없으면 포인트는 사라진다.

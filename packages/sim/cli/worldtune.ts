@@ -1,6 +1,6 @@
 // 비교 실행용 세계 숫자 바꾸기 (sweep.ts 의 "world" 키). createWorld 전에 한 번 부른다. 기본 실행에는 쓰지 않는다.
 // { price: { 상품: 배율 }, wage: { 직종: 배율 }, workMul: 일자리 배율, inputMul: 원료 배율, buildMul: 공사 포인트 배율 }
-// 값을 바꾼 뒤 산출 있는 방식마다 지금 이익률(기본가·기본 임금 기준)이 그대로 남도록 산출을 다시 맞춘다 (규칙: 이익률 20/30/40%).
+// 값을 바꾼 뒤 산출 있는 방식마다 지금 이익률(기본가·기본 임금 기준)이 그대로 남도록 산출을 다시 맞춘다 (규칙: 기본 방식 이익률 20%, 단계마다 레벨당 이익 2배).
 // 필요량 배율은 TUNE.needMul 로 준다
 import { BUILDING_TYPES, GOODS, NEEDS, SKILL_DEFS } from '../src/data';
 import type { GoodId, MethodDef, Skill } from '../src/types';

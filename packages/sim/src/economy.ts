@@ -1,6 +1,7 @@
 import {
   BUILDING_BY_ID, BUILDING_TYPES, GOOD_IDS, GOODS, HARVEST_KINDS, HARVEST_MAX_SEASONS, HARVEST_SEASON_DAYS, HARVEST_SPREAD, HARVEST_STEP, LAW_TECH, LAND_NAMES, LAND_NAMES_EN,
-  MAX_POINTS_PER_LEVEL_DAY, POINT_VALUE, REGIONS, SKILL_DEFS, SUBSISTENCE, TECH_BY_ID, VEIN_NAMES, VEIN_NAMES_EN, getMethod, regionPerk, scaleBonus, TUNE,
+  MAX_POINTS_PER_LEVEL_DAY, REGIONS, SKILL_DEFS, SUBSISTENCE, TECH_BY_ID, VEIN_NAMES, VEIN_NAMES_EN, getMethod, regionPerk, scaleBonus, TUNE,
+  buildPointsOf,
 } from './data';
 import { regionNameEn } from './i18n';
 import { borderCost } from './kingdoms';
@@ -535,7 +536,7 @@ function officeTotals(w: World, builder: Company) {
 }
 
 export function constructionEstimate(w: World, c: Company, typeId: string): ConstructionEstimate {
-  const required = BUILDING_BY_ID[typeId].buildPoints;
+  const required = buildPointsOf(typeId);
   const builder = builderOf(w, c);
   const { pointsPerDay, costPerDay, feePerDay } = officeTotals(w, builder);
   // 한 공사는 레벨당 하루 MAX_POINTS_PER_LEVEL_DAY 까지만 받는다. 비용은 쓴 포인트만큼이다.
@@ -673,6 +674,15 @@ export function repay(w: World, c: Company, amount: number): number {
 }
 
 // ---------------------------------------------------------------- 기타
+
+/**
+ * 회사의 그 지역·그 종류 건물 (공사가 붙을 건물). 한 회사는 지역마다 종류마다 건물 하나다.
+ * TUNE.aiMixedMethods 이면 방식마다 하나다 (methodId 가 같은 건물만 찾는다)
+ */
+export function ownBuildingAt(w: World, companyId: number, regionId: number, typeId: string, methodId?: string): Building | undefined {
+  const mixed = !!TUNE.aiMixedMethods && methodId !== undefined;
+  return w.buildings.find((b) => b.companyId === companyId && b.regionId === regionId && b.typeId === typeId && (!mixed || b.methodId === methodId));
+}
 
 export function companyById(w: World, id: number): Company | undefined {
   return w.companies.find((c) => c.id === id);

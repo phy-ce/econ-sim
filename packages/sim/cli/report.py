@@ -135,6 +135,11 @@ for g, ko in GOODS.items():
     LABELS['hh.' + g] = L(ko + ' 가계 수요', '가계 수요', '천/일', 'pop 의 구매 주문량 합, 한 해 하루 평균')
 for b, ko in BLDG.items():
     LABELS['lvT.' + b] = L(ko, '건물 레벨')
+LABELS['toolSh'] = L('공구 쓰는 방식 비율', '경제', '', '공구를 원료로 쓰는 방식의 레벨 ÷ 생산 건물 레벨 (학교·사무소 제외)')
+LABELS['upSh'] = L('윗단 방식 비율', '경제', '', '첫 방식이 아닌 방식의 레벨 ÷ 생산 건물 레벨 (학교·사무소 제외)')
+for c in ('unskilled', 'skilled', 'expert'):
+    LABELS['slot.' + c] = L(CLS[c] + ' 일자리', '인구', '천', '건물 일자리 합 (레벨 × 가동률)')
+    LABELS['qual.' + c] = L(CLS[c] + ' 자격자', '인구', '천', '그 직종 인구 × 0.25 + 다른 pop 의 자격 (cli/skilldiag 와 같은 셈)')
 for side, nm in (('govL', '왕실'), ('privL', '민간')):
     for k, ko in LEDGER.items():
         LABELS[f'{side}.{k}'] = L(ko, nm + ' 장부', '백만/년', f'{nm} 회사 장부의 한 해 합')

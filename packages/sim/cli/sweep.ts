@@ -244,6 +244,20 @@ function fullYear(w: World): Record<string, number> {
   for (const s of Object.values(JOB_LETTER)) for (const side of ['p', 's']) { const key = side + s; o['wage.' + key] = +(cnt[key] ? pay[key] / cnt[key] : 0).toFixed(2); }
   o['lv.priv'] = lv.priv; o['lv.state'] = lv.state; o['lv.office'] = lv.office;
   for (const t of Object.keys(lvT).sort()) o['lvT.' + t] = lvT[t];
+  // 생산 방식: toolSh 공구를 쓰는 방식의 레벨 비율, upSh 첫 방식이 아닌(윗단) 방식의 레벨 비율 (학교·사무소 제외)
+  // 직종: slot.<직종> 일자리(천), qual.<직종> 자격자(천, cli/skilldiag 와 같은 셈)
+  let lvAll = 0, lvTool = 0, lvUp = 0;
+  for (const b of w.buildings) {
+    const t = BUILDING_BY_ID[b.typeId];
+    if (t.auto || b.typeId === 'school' || b.typeId === 'builder') continue;
+    const meth = t.methods.find((x) => x.id === b.methodId);
+    lvAll += b.level; if (meth?.inputs.tools) lvTool += b.level; if (t.methods[0].id !== b.methodId) lvUp += b.level;
+  }
+  o.toolSh = f3(lvTool / Math.max(1, lvAll)); o.upSh = f3(lvUp / Math.max(1, lvAll));
+  for (const s of ['unskilled', 'skilled', 'expert'] as const) {
+    o['slot.' + s] = K(w.buildings.reduce((a, b) => a + slots(b, s), 0));
+    o['qual.' + s] = K(w.pops.reduce((a, p) => a + (p.prof === s ? p.size * 0.25 : (p.quals[s] ?? 0)), 0));
+  }
   for (const k in gAcc) gAcc[k] = 0;
   for (const k of Object.keys(fAcc) as (keyof typeof fAcc)[]) fAcc[k] = 0;
   for (const t of [ledG, ledP]) for (const k in t) t[k] = 0;
