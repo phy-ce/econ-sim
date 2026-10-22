@@ -529,6 +529,7 @@ export const TUNE = {
   subReturn: 0,
   sellThrough: 0,
   laborNet: 0,
+  ratioGate: 0.9, // 실험: 노동자·농부 충원 상한 = 기술자·전문가 충원율 ÷ 이 값 (labor.ts ratioGate). 0 이면 끈다
   minRoi: 0.2,
   minStaffing: 0.5,
   // AI 방식 바꾸기와 잠재 수요 (2026-10-22, 새 방식 사다리): 1 = 새 규칙, 0 = 옛 규칙. 40년 × 시드 1~4 비교로 둘 다 0 (DESIGN 11):
