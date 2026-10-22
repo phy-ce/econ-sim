@@ -1,5 +1,5 @@
-import { BUILDING_BY_ID, DEPOSIT_NAMES, DEPOSIT_NAMES_EN, LAND_NAMES, SKILL_DEFS, TECH_BY_ID, TUNE } from './data';
-import { availableMethods, companyById, constructionEstimate, depositFree, emptyJobs, hasBuilder, isGovernment, knowsTech, landFree, logEvent, regionById, sellsShares } from './economy';
+import { BUILDING_BY_ID, buildPointsOf, DEPOSIT_NAMES, DEPOSIT_NAMES_EN, LAND_NAMES, SKILL_DEFS, TECH_BY_ID, TUNE } from './data';
+import { availableMethods, ownBuildingAt, companyById, constructionEstimate, depositFree, emptyJobs, hasBuilder, isGovernment, knowsTech, landFree, logEvent, regionById, sellsShares } from './economy';
 import { applyStateWages, chooseFunders } from './finance';
 import { kingdomById } from './kingdoms';
 import { buildingNameEn, landNameEn, regionNameEn, techNameEn } from './i18n';
@@ -16,7 +16,8 @@ const stateWageError = () => fail('왕실 임금은 재정의 국영 임금 수�
 const govRunError = () => fail('정부 건물은 늘 다 가동합니다.', 'Government buildings always run at full capacity.');
 
 export const MAX_CONCURRENT_CONSTRUCTIONS = 40;
-export const MAX_LEVELS_PER_PROJECT = 50;
+/** 공사 하나의 최대 레벨 (1레벨이 일꾼 500명이 되어 1,000명 시절 50의 두 배) */
+export const MAX_LEVELS_PER_PROJECT = 100;
 
 
 /** 명령을 검증하고 적용한다. 플레이어와 AI 모두 이 경로만 거친다. 틱 안(AI)에서 쓴다 */
@@ -75,7 +76,7 @@ function runCommand(w: World, actor: number, cmd: Command): CommandError | null 
     }
     w.constructions.push({
       id: w.nextId++, companyId: actor, regionId, typeId, methodId, targetBuildingId,
-      points: 0, required: def.buildPoints * levels, spent: 0, ticksElapsed: 0, ...(levels > 1 ? { levels } : {}),
+      points: 0, required: buildPointsOf(typeId) * levels, spent: 0, ticksElapsed: 0, ...(levels > 1 ? { levels } : {}),
       ...(funders ? { funders } : {}),
     });
     const starts = (kingdomById(w, company.kingdomId).startsMonth ??= {});
@@ -97,7 +98,7 @@ function runCommand(w: World, actor: number, cmd: Command): CommandError | null 
       if (usable.length === 0) return fail(`${t.name}을 지으려면 먼저 기술을 연구해야 합니다.`, `Research the required technology before building a ${buildingNameEn(t.id).toLowerCase()}.`);
       const methodId = cmd.methodId ?? usable[0].id;
       if (!usable.some((m) => m.id === methodId)) return fail('아직 쓸 수 없는 생산 방식입니다.', 'That production method is not available yet.');
-      const existing = w.buildings.find((b) => b.companyId === actor && b.regionId === cmd.regionId && b.typeId === cmd.typeId);
+      const existing = ownBuildingAt(w, actor, cmd.regionId, cmd.typeId, methodId);
       if (existing) return startConstruction(existing.regionId, existing.typeId, existing.methodId, existing.id, cmd.levels);
       return startConstruction(cmd.regionId, cmd.typeId, methodId, null, cmd.levels);
     }

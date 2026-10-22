@@ -244,6 +244,20 @@ function fullYear(w: World): Record<string, number> {
   for (const s of Object.values(JOB_LETTER)) for (const side of ['p', 's']) { const key = side + s; o['wage.' + key] = +(cnt[key] ? pay[key] / cnt[key] : 0).toFixed(2); }
   o['lv.priv'] = lv.priv; o['lv.state'] = lv.state; o['lv.office'] = lv.office;
   for (const t of Object.keys(lvT).sort()) o['lvT.' + t] = lvT[t];
+  // 생산 방식: toolSh 공구를 쓰는 방식의 레벨 비율, upSh 첫 방식이 아닌(윗단) 방식의 레벨 비율 (학교·사무소 제외)
+  // 직종: slot.<직종> 일자리(천), qual.<직종> 자격자(천, cli/skilldiag 와 같은 셈)
+  let lvAll = 0, lvTool = 0, lvUp = 0;
+  for (const b of w.buildings) {
+    const t = BUILDING_BY_ID[b.typeId];
+    if (t.auto || b.typeId === 'school' || b.typeId === 'builder') continue;
+    const meth = t.methods.find((x) => x.id === b.methodId);
+    lvAll += b.level; if (meth?.inputs.tools) lvTool += b.level; if (t.methods[0].id !== b.methodId) lvUp += b.level;
+  }
+  o.toolSh = f3(lvTool / Math.max(1, lvAll)); o.upSh = f3(lvUp / Math.max(1, lvAll));
+  for (const s of ['unskilled', 'skilled', 'expert'] as const) {
+    o['slot.' + s] = K(w.buildings.reduce((a, b) => a + slots(b, s), 0));
+    o['qual.' + s] = K(w.pops.reduce((a, p) => a + (p.prof === s ? p.size * 0.25 : (p.quals[s] ?? 0)), 0));
+  }
   for (const k in gAcc) gAcc[k] = 0;
   for (const k of Object.keys(fAcc) as (keyof typeof fAcc)[]) fAcc[k] = 0;
   for (const t of [ledG, ledP]) for (const k in t) t[k] = 0;
@@ -309,6 +323,24 @@ for (let d = 0; d < years * 360; d++) {
       sellThru: +(aiAcc.soldV / Math.max(1, aiAcc.supV)).toFixed(3), minted: M(w.mint.minted - mintPrev),
       welOn: +(aiAcc.welOn / w.kingdoms.length / d).toFixed(3), welStp: +(aiAcc.welOn > 0 ? aiAcc.welStp / aiAcc.welOn : 0).toFixed(2), welFlips: aiAcc.welFlips,
     };
+    {
+      // 건축사무소 (해마다, 왕국 합): ofLevel 레벨, ofPts 하루 포인트, ofUsed 쓰인 포인트(buildUsed), ofBacklog 남은 공사 ÷ 하루 포인트(일, 왕국 평균),
+      // ofProfit·ofFees·ofBuild 지난주 사무소 손익·민간 수수료·왕실 공사 수수료(천), ofRes 사무소 유보 자산(천). 옛 sim 에는 office·build 가 없어 0
+      let lv = 0, pts = 0, used = 0, back = 0, prof = 0, fees = 0, bld = 0, res = 0;
+      for (const b of w.buildings) if (b.typeId === 'builder') { lv += b.level; pts += b.last.points; res += b.reserve ?? 0; }
+      for (const k of w.kingdoms) {
+        const g = w.companies.find((c) => c.id === k.governmentId);
+        if (!g) continue;
+        used += g.buildUsed ?? 0;
+        const left = w.constructions.filter((x) => w.companies.find((c) => c.id === x.companyId)?.kingdomId === k.id).reduce((a, x) => a + x.required - x.points, 0);
+        const p = w.buildings.filter((b) => b.companyId === g.id && b.typeId === 'builder').reduce((a, b) => a + b.last.points, 0);
+        back += p > 0 ? left / p / w.kingdoms.length : 0;
+        const lb = k.lastBudget as { office?: number; fees?: number; build?: number } | undefined;
+        prof += lb?.office ?? 0; fees += lb?.fees ?? 0; bld += lb?.build ?? 0;
+      }
+      const T = (x: number) => Math.round(x / 1e3);
+      Object.assign(aiY[w.tick / 360], { ofLevel: lv, ofPts: Math.round(pts), ofUsed: Math.round(used), ofBacklog: Math.round(back), ofProfit: T(prof), ofFees: T(fees), ofBuild: T(bld), ofRes: T(res) });
+    }
     mintPrev = w.mint.minted;
     for (const key of Object.keys(aiAcc) as (keyof typeof aiAcc)[]) aiAcc[key] = 0;
   }

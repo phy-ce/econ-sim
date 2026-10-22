@@ -1,5 +1,5 @@
-import { BUILDING_BY_ID, GOODS, GOOD_IDS, TICKS_PER_WEEK, MAX_POINTS_PER_LEVEL_DAY, OWNER_SEATS_PER_LEVEL, OWNERSHIP_SEATS, TUNE, WORKFORCE_RATIO, getMethod } from './data';
-import { addOwnerLevels, builderOf, companyById, efficiency, harvestFactor, isGovernment, landFree, logEvent, newBuilding, regionById } from './economy';
+import { BUILDING_BY_ID, buildPointsOf, GOODS, GOOD_IDS, TICKS_PER_WEEK, MAX_POINTS_PER_LEVEL_DAY, OWNER_SEATS_PER_LEVEL, OWNERSHIP_SEATS, TUNE, WORKFORCE_RATIO, getMethod } from './data';
+import { addOwnerLevels, ownBuildingAt, builderOf, companyById, efficiency, harvestFactor, isBudgetFunded, isGovernment, landFree, logEvent, newBuilding, officeFeeMult, regionById } from './economy';
 import { SKILLS } from './types';
 import { workforce } from './pops';
 import { flow, kingdomById } from './kingdoms';
@@ -125,16 +125,21 @@ export function updateIdleOffices(w: World) {
   }
 }
 
-/** 오늘 건축사무소 비용 중 임금 (회사 id 별, 저장하지 않는다. 예산 미리보기용 수수료 나누기) */
-const buildWage = new Map<number, number>();
+/** 오늘 왕실 공사가 자기 사무소에 낸 수수료, 왕국 id 별 (저장하지 않는다. 예산 미리보기용) */
+const crownFee = new Map<number, number>();
+/** 오늘 사무소 운영비 × 방식별 수수료 배율의 합, 회사 id 별 (저장하지 않는다) */
+const buildFee = new Map<number, number>();
 
 export function produce(w: World) {
   for (const c of w.companies) { c.buildPoints = 0; c.buildCost = 0; }
-  buildWage.clear();
+  crownFee.clear();
+  buildFee.clear();
+  const ran: { b: Building; c: Company }[] = [];
   for (const b of w.buildings) {
     if (!b.active || BUILDING_BY_ID[b.typeId].auto) continue;
     const c = companyById(w, b.companyId);
     if (!c) continue;
+    ran.push({ b, c });
     const method = getMethod(b.typeId, b.methodId);
     const crew = b.crew ?? b.last.staffing;
     const st = (b.crew = crew + (b.last.staffing - crew) * CREW_RATE);
@@ -167,40 +172,50 @@ export function produce(w: World) {
         b.last.points = method.construction * scale;
         c.buildPoints += b.last.points;
         c.buildCost += b.last.wageCost + b.last.inputCost;
-        buildWage.set(c.id, (buildWage.get(c.id) ?? 0) + b.last.wageCost);
+        buildFee.set(c.id, (buildFee.get(c.id) ?? 0) + (b.last.wageCost + b.last.inputCost) * officeFeeMult(b.methodId));
       }
       b.exp = Math.min(1, b.exp + EXP_GAIN);
     } else {
       b.last.inputFill = 0;
     }
+  }
+  // 공사 수수료는 건축사무소의 매출이다: 포인트를 나눈 뒤 손익을 적는다
+  allocateConstruction(w);
+  for (const { b, c } of ran) {
     c.revenueEma = c.revenueEma * 0.98 + b.last.revenue * 0.02;
     const profit = b.last.revenue - b.last.inputCost - b.last.wageCost;
     b.profitEma = b.profitEma * 0.95 + profit * 0.05;
     c.weekProfit += profit;
-    c.ledger.sales += b.last.revenue - (b.last.tax ?? 0);
+    const fee = b.last.fee ?? 0;
+    c.ledger.sales += b.last.revenue - (b.last.tax ?? 0) - fee;
     c.ledger.tax += b.last.tax ?? 0;
+    c.ledger.buildFees += fee;
     c.ledger.inputs += b.last.inputCost;
     c.ledger.wages += b.last.wageCost;
-    // 왕실 정부 건물의 운영비는 국정 지출로 따로 센다 (spendBudget 이 매주 lastBudget 에 적는다)
-    if (c.state && isGovernment(b.typeId)) {
-      const spent = (kingdomById(w, c.kingdomId).spentWeek ??= { wages: 0, goods: 0 });
+    if (!c.state) continue;
+    const spent = (kingdomById(w, c.kingdomId).spentWeek ??= { wages: 0, goods: 0 });
+    if (isBudgetFunded(b.typeId)) {
+      // 왕실 정부 건물(행정청·학교)의 운영비는 국정 지출로 따로 센다 (spendBudget 이 매주 lastBudget 에 적는다)
       spent.wages += b.last.wageCost;
       spent.goods += b.last.inputCost;
-    } else if (c.state) {
-      // 왕실 생산 건물: 매출·원료·임금이 국고에 바로 들고 난다. 국정 수지의 국영 사업 손익 줄 (화면 전용, sim 은 읽지 않는다)
-      const spent = (kingdomById(w, c.kingdomId).spentWeek ??= { wages: 0, goods: 0 });
+    } else {
+      // 왕실 생산 건물과 건축사무소: 매출·원료·임금이 국고에 바로 들고 난다. 국정 수지의 국영 사업 손익 줄
       spent.firms = (spent.firms ?? 0) + profit;
+      if (getMethod(b.typeId, b.methodId).construction) spent.office = (spent.office ?? 0) + profit;
+      // 화면 전용 이동평균 (예산 미리보기)
       const a = budgetEmaWeight(w, 0.05), e = b.firmEma;
       b.firmEma = e ? { sales: e.sales * (1 - a) + b.last.revenue * a, inputs: e.inputs * (1 - a) + b.last.inputCost * a } : { sales: b.last.revenue, inputs: b.last.inputCost };
     }
   }
-  allocateConstruction(w);
+  // 왕실 공사 줄의 기준값 (화면 전용): 오늘 왕실 공사가 사무소에 낸 수수료
+  for (const k of w.kingdoms) (k.budgetBase ??= {}).build = crownFee.get(k.id) ?? 0;
 }
 
 /**
  * 건축사무소의 하루 포인트를 그 왕국 공사에 나눈다. 왕실 몫 50%, 민간 몫 50%이고, 각 몫 안에서는 공사 순서대로 쓴다.
  * 한 공사는 레벨당 하루 MAX_POINTS_PER_LEVEL_DAY 까지만 받는다 (빅토리아3). 한쪽이 다 못 쓴 몫은 다른 쪽이 쓴다.
- * 민간은 쓴 포인트만큼 사무소 주인에게 공사비를 낸다.
+ * 모든 공사(왕실 것도)는 쓴 포인트 × 포인트당 수수료(사무소마다 운영비 × 수수료 배율 officeFeeMult 의 합 ÷ 포인트)를 사무소에 낸다. 수수료는 그날 포인트를 낸 사무소들의 매출이다.
+ * 왕실 공사는 국고가 자기 사무소에 내므로 현금은 움직이지 않는다 (국정 수지에 왕실 공사 줄과 사무소 매출로 함께 적힌다)
  */
 function allocateConstruction(w: World) {
   for (const c of w.companies) {
@@ -208,14 +223,12 @@ function allocateConstruction(w: World) {
       if (c.state) c.buildUsed = (c.buildUsed ?? 0) * 0.9;
       continue;
     }
-    const costPerPoint = c.buildCost / c.buildPoints;
-    // 수수료의 임금 몫 → 왕국 기록 (국영 임금 수준 배율 1로 환산, 예산 미리보기 전용)
+    const feePerPoint = (buildFee.get(c.id) ?? 0) / c.buildPoints;
     const kd = c.state ? kingdomById(w, c.kingdomId) : undefined;
-    const wm = kd ? TUNE.govWageLevels[kd.budget.wages - 1] : 0;
-    const wageShare = c.buildCost > 0 && wm > 0 ? (buildWage.get(c.id) ?? 0) / c.buildCost / wm : 0;
     const mine = w.constructions.filter((k) => { const o = companyById(w, k.companyId); return !!o && builderOf(w, o) === c; });
     const taken = new Map<number, number>();
     const byId = new Map(w.buildings.map((b) => [b.id, b] as const));
+    let fees = 0;
     const serve = (list: typeof mine, budget: number) => {
       for (const k of list) {
         if (budget <= 1e-9) break;
@@ -226,23 +239,32 @@ function allocateConstruction(w: World) {
         // 민간 공사는 약정한 저택·금융가 금고가 약정액 비율로 낸다 (가장 모자란 금고만큼만 진행). 약정이 없으면 공사 주인 회사가 낸다
         const funds = k.funders ? funderShares(k, byId) : null;
         if (funds && funds.length === 0) continue;
-        if (owner !== c && costPerPoint > 0) {
-          if (funds) for (const [o, sh] of funds) take = Math.min(take, Math.max(0, o.cash ?? 0) / (sh * costPerPoint));
-          else take = Math.min(take, Math.max(0, owner.cash) / costPerPoint);
+        if (owner !== c && feePerPoint > 0) {
+          if (funds) for (const [o, sh] of funds) take = Math.min(take, Math.max(0, o.cash ?? 0) / (sh * feePerPoint));
+          else take = Math.min(take, Math.max(0, owner.cash) / feePerPoint);
         }
         if (!(take > 0)) continue;
+        const fee = take * feePerPoint;
         if (owner !== c) {
-          const fee = take * costPerPoint;
           if (funds) {
             // 마지막 금고는 남은 몫을 내서 낸 돈의 합이 수수료와 같다
             let rest = fee;
             funds.forEach(([o, sh], i) => { const pay = i === funds.length - 1 ? rest : fee * sh; o.cash = (o.cash ?? 0) - pay; flow(`build.${o.typeId}`, pay); rest -= pay; });
           } else { owner.cash -= fee; owner.ledger.buildPaid += fee; }
-          c.cash += fee; c.ledger.buildFees += fee; c.weekProfit += fee;
-          if (kd) kd.feeWageWeek = (kd.feeWageWeek ?? 0) + fee * wageShare;
+          c.cash += fee;
+          if (kd) kd.privateFeeWeek = (kd.privateFeeWeek ?? 0) + fee;
+        } else {
+          // 왕실 공사: 국고가 자기 사무소에 낸다 (현금은 그대로). 장부에는 공사비 지급으로 적고, 손익에서는 사무소 매출과 상쇄한다
+          c.ledger.buildPaid += fee; c.weekProfit -= fee;
+          if (kd) {
+            const sp = (kd.spentWeek ??= { wages: 0, goods: 0 });
+            sp.build = (sp.build ?? 0) + fee;
+            crownFee.set(kd.id, (crownFee.get(kd.id) ?? 0) + fee);
+          }
         }
+        fees += fee;
         k.points += take;
-        k.spent += take * costPerPoint;
+        k.spent += fee;
         taken.set(k.id, (taken.get(k.id) ?? 0) + take);
         budget -= take;
       }
@@ -255,6 +277,14 @@ function allocateConstruction(w: World) {
     const leftPriv = serve(priv, c.buildPoints - half);
     const unused = serve(crown, leftPriv) + serve(priv, leftCrown);
     c.buildUsed = (c.buildUsed ?? 0) * 0.9 + Math.max(0, c.buildPoints - unused) * 0.1;
+    // 수수료를 오늘 포인트를 낸 사무소들에 포인트 비율로 나눈다 (사무소의 매출)
+    if (fees <= 0) continue;
+    for (const b of w.buildings) {
+      if (b.companyId !== c.id || !(b.last.points > 0)) continue;
+      const amt = (fees * b.last.points) / c.buildPoints;
+      b.last.revenue += amt;
+      b.last.fee = (b.last.fee ?? 0) + amt;
+    }
   }
 }
 
@@ -266,7 +296,7 @@ export function advanceConstruction(w: World) {
     const rname = regionById(w, k.regionId).name;
     const add = k.levels ?? 1;
     const target = (k.targetBuildingId != null ? w.buildings.find((b) => b.id === k.targetBuildingId) : undefined)
-      ?? w.buildings.find((b) => b.companyId === k.companyId && b.regionId === k.regionId && b.typeId === k.typeId);
+      ?? ownBuildingAt(w, k.companyId, k.regionId, k.typeId, k.methodId);
     const mats = materialsPerLevel(w, companyById(w, k.companyId), k.typeId);
     if (target) {
       const old = target.materials ?? materialsPerLevel(w, undefined, k.typeId);
@@ -297,7 +327,7 @@ export function materialsPerLevel(w: World, c: Company | undefined, typeId: stri
   const builder = c ? builderOf(w, c) : undefined;
   const office = builder ? w.buildings.find((b) => b.companyId === builder.id && b.active && getMethod(b.typeId, b.methodId).construction) : undefined;
   const m = office ? getMethod(office.typeId, office.methodId) : BUILDING_BY_ID.builder.methods[0];
-  const points = BUILDING_BY_ID[typeId].buildPoints;
+  const points = buildPointsOf(typeId);
   const out: GoodBag = {};
   for (const g of GOOD_IDS) if (m.inputs[g]) out[g] = (m.inputs[g]! / m.construction!) * points;
   return out;
@@ -386,7 +416,7 @@ export function privatizeLevel(w: World, b: Building, buyer: Building, price: nu
   buyer.cash = (buyer.cash ?? 0) - price;
   flow(`priv.${buyer.typeId}`, price);
   gov.cash += price; gov.ledger.investment += price;
-  let p = w.buildings.find((x) => x.companyId === firm.id && x.regionId === b.regionId && x.typeId === b.typeId);
+  let p = ownBuildingAt(w, firm.id, b.regionId, b.typeId, b.methodId);
   if (p) {
     const q = p;
     const old = q.materials ?? materialsPerLevel(w, undefined, q.typeId), mats = b.materials ?? materialsPerLevel(w, undefined, b.typeId);

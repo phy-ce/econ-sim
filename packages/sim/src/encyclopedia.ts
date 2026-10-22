@@ -11,13 +11,14 @@
 import {
   BUILDING_BY_ID, BUILDING_TYPES, CLASS_DEFS, CONSUMPTION_PER_CAPITA, DEPENDENT_CONSUMPTION, EDUCATION_FLOOR, EDUCATION_RANGE, GOODS, GOOD_IDS,
   HARVEST_KINDS, HARVEST_MAX_SEASONS, HARVEST_SEASON_DAYS, HARVEST_SPREAD, HARVEST_STEP, LAW_TECH, MAX_POINTS_PER_LEVEL_DAY, NEEDS, OWNERSHIP_SEATS,
-  OWNER_SEATS_PER_LEVEL, POINT_VALUE, REGIONS, SKILL_DEFS, SUBSISTENCE, TAX_PEOPLE_PER_LEVEL, TECHS, TECH_BY_ID, TECH_COST, TICKS_PER_WEEK, TICKS_PER_YEAR,
+  OWNER_SEATS_PER_LEVEL, REGIONS, STEP_PROFIT_MULT, SKILL_DEFS, SUBSISTENCE, TAX_PEOPLE_PER_LEVEL, TECHS, TECH_BY_ID, TECH_COST, TICKS_PER_WEEK, TICKS_PER_YEAR,
   TIERS, TIER_JITTER, TUNE, WORKFORCE_RATIO, getMethod, needsAt, rawMax, regionPerk, scaleBonus,
+  buildPointsOf,
 } from './data';
 import {
   BASE_CREDIT, CARTAGE_RATE, RAIL_RATE, STATE_CREDIT_GDP, collectionRatio, companyById, constructionEstimate, creditLimit, efficiencyParts,
   harvestCondition, harvestFactor, holdingsOf, kingdomGdp, levelOwnersOf, knownVeins, landFree, landUsed, moneyIdentity, netMinted, popSol,
-  FLOW_ZERO, priceFormula, regionById, sellThrough, shareWage, shippingRate, staffing, totalMoney,
+  FLOW_ZERO, officeMargin, priceFormula, regionById, sellThrough, shareWage, shippingRate, staffing, totalMoney,
 } from './economy';
 import { borderCost, kingdomById, DEFAULT_TARIFF } from './kingdoms';
 import {
@@ -34,7 +35,7 @@ import {
   DAILY_INTEREST, KEEP_SHARE, MINT_BASE, MINT_RATE, RESERVE_SHARE, kingdomLiteracy, researchPoints, adminCapacityOf, reserveCap, taxCapacity, taxRates,
   weeklyOutputValue,
 } from './finance';
-import { CHUNKS, LAW_COOLDOWN, LAW_SWITCH, WELFARE_COOLDOWN, WELFARE_SWITCH, OFFICE_BLOCK, OFFICE_GROWTH, STAFFING_HORIZON, SWITCH_COOLDOWN } from './ai';
+import { CHUNKS, INPUT_SUPPLY_MIN, MIXED_LEVELS, SWITCH_MARGIN, SWITCH_MIN_WAGE_SHARE, LAW_COOLDOWN, LAW_SWITCH, WELFARE_COOLDOWN, WELFARE_SWITCH, OFFICE_BLOCK, OFFICE_GROWTH, STAFFING_HORIZON, SWITCH_COOLDOWN } from './ai';
 import { budgetPreview } from './budget';
 import { ownershipAssets } from './policy';
 import { welfareIncome, welfareTarget, welfareWeekly } from './welfare';
@@ -147,7 +148,7 @@ export function exampleWorld(): World {
 
 /** 예산 미리보기 줄 이름 */
 const BUDGET_LINE_LABELS: Record<BudgetLineKey, L10n> = {
-  tax: t('세금', 'Taxes'), tariffs: t('관세', 'Tariffs'), mint: t('주조', 'Minting'), fees: t('민간 공사 수수료', 'Construction fees'),
+  tax: t('세금', 'Taxes'), tariffs: t('관세', 'Tariffs'), mint: t('주조', 'Minting'), build: t('왕실 공사', 'Crown construction'),
   wages: t('정부 건물 임금', 'Government wages'), stateFirms: t('국영 사업 손익', 'State enterprises'), goods: t('정부 건물 원료', 'Government inputs'), interest: t('국채 이자', 'Bond interest'), welfare: t('복지', 'Welfare'),
 };
 
@@ -444,11 +445,14 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   },
   {
     id: 'methods-rule', category: 'production', title: t('건물 숫자 규칙', 'Building numbers rule'),
-    rule: t('1레벨은 1,000명(100 단위), 원료·산출은 500 단위. 기본가와 기본 임금에서 이익률이 기본 방식 약 20%, 기술 1단계 30%, 2단계 40%가 되게 정한다.', 'One level employs 1,000 (in 100s); inputs and outputs come in 500s. At base prices and wages the margin is about 20% for the basic method, 30% and 40% for the next tech steps.'),
+    rule: t('기본가와 기본 임금에서 기본 방식은 이익률 {3}, 한 단계 오를 때마다 레벨당 이익이 ×{4}다. 단계가 오르면 일꾼은 줄고(농장 기본 {5}명) 기술자·전문가 비율과 공구·석탄·철·기계 사용이 는다. 기본 방식도 공구를 조금 쓴다 (목공구 공방만 쓰지 않는다).', 'At base prices and wages the basic method has a {3} margin, and each step up multiplies profit per level by {4}. Higher steps employ fewer people ({5} on a basic farm), a larger share of skilled workers and experts, and more tools, coal, iron and machinery. Basic methods use a few tools too (except the wooden-tools workshop).'),
     formula: 'margin = (Σ out × base − Σ in × base − Σ jobs × baseWage) ÷ revenue',
     params: [
       p('노동자 기본 임금', 'Labourer base wage', () => SKILL_DEFS.unskilled.baseWage, 'florin'), p('기술자 기본 임금', 'Skilled base wage', () => SKILL_DEFS.skilled.baseWage, 'florin'),
       p('전문가 기본 임금', 'Expert base wage', () => SKILL_DEFS.expert.baseWage, 'florin'),
+      p('기본 방식 이익률', 'Basic method margin', () => r4(methodMarginAtBase('farm', 'farm_basic').margin), 'pct'),
+      p('단계당 이익 배율', 'Profit multiplier per step', () => STEP_PROFIT_MULT, 'x'),
+      p('농장 기본 방식 일꾼', 'Basic farm workers', () => getMethod('farm', 'farm_basic').workers.farmer ?? 0, 'people'),
     ],
     example: () => {
       const m = methodMarginAtBase('farm', 'farm_basic');
@@ -461,7 +465,7 @@ export const ENCYCLOPEDIA: EncEntry[] = [
     live: {
       pick: ['building'], run: (_w, ctx) => {
         const def = BUILDING_BY_ID[ctx.building];
-        return { bars: def.methods.filter((m) => Object.keys(m.outputs).length > 0).map((m) => bar(t(m.name, m.nameEn ?? m.id), r4(methodMarginAtBase(def.id, m.id).margin), 'pct', 0.5)) };
+        return { bars: def.methods.filter((m) => Object.keys(m.outputs).length > 0).map((m) => bar(t(m.name, m.nameEn ?? m.id), r4(methodMarginAtBase(def.id, m.id).margin), 'pct', 0.6)) };
       },
     },
     related: ['buildings', 'production', 'tech'], seenIn: ['company'], source: ['data.ts BUILDING_TYPES', 'cli/methods_audit.ts'], design: ['7.1'],
@@ -469,13 +473,13 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   {
     id: 'buildings', category: 'production', title: t('건물과 방식', 'Buildings and methods'),
     rule: t('건물은 {0}종이다. 방식마다 레벨당 일자리·원료·산출이 있다. 기술이 새 방식을 연다.', 'There are {0} building types. Each method sets jobs, inputs and outputs per level. Technologies unlock methods.'),
-    params: [p('건물 종류', 'Building types', () => BUILDING_TYPES.length), p('포인트 1점 장부가', 'Book value per point', () => POINT_VALUE, 'florin')],
+    params: [p('건물 종류', 'Building types', () => BUILDING_TYPES.length)],
     live: {
       pick: ['building'], run: (_w, ctx) => {
         const def = BUILDING_BY_ID[ctx.building];
         const fmt = (bag: Record<string, number | undefined>) => Object.entries(bag).filter(([, v]) => v).map(([k, v]) => `${k} ${v}`).join(', ') || '-';
         return {
-          rows: [row('땅', 'Land', def.land ?? '-'), row('포인트', 'Points', def.buildPoints, 'pt'),
+          rows: [row('땅', 'Land', def.land ?? '-'), row('포인트', 'Points', buildPointsOf(def.id), 'pt'),
             ...def.methods.map((m) => ({ label: t(m.name, m.nameEn ?? m.id), value: `${fmt(m.workers)} | ${fmt(m.inputs)} → ${fmt(m.outputs)}${m.construction ? ` · ${m.construction}pt` : ''}${m.seats ? ` · ${m.seats} seats` : ''}${m.taxCapacity ? ` · ${m.taxCapacity}` : ''}${m.tech ? ` [${m.tech}]` : ''}` }))],
         };
       },
@@ -550,7 +554,7 @@ export const ENCYCLOPEDIA: EncEntry[] = [
     id: 'build-points', category: 'construction', title: t('건설 포인트', 'Construction points'),
     rule: t('모든 공사는 왕실 건축사무소의 포인트로 짓는다. 포인트의 절반은 왕실 공사, 절반은 민간 공사에 순서대로 준다. 한 공사는 레벨당 하루 {0}점까지 받는다. 사무소가 {1}일 넘게 쉬면 인부를 해산한다.', 'All construction uses the crown\'s construction-office points: half to crown projects, half to private ones, in queue order. A project takes at most {0} points per level per day. An office idle for more than {1} days disbands its crew.'),
     formula: 'points = method pts × level × util × crew × eff × fill',
-    params: [p('레벨당 하루 최대', 'Max per level per day', () => MAX_POINTS_PER_LEVEL_DAY, 'pt'), tune('officeIdleDays', '쉬는 유예', 'Idle grace', 'day')],
+    params: [p('레벨당 하루 최대', 'Max per level per day', () => MAX_POINTS_PER_LEVEL_DAY, 'pt'), tune('officeIdleDays', '쉬는 유예', 'Idle grace', 'day'), tune('buildCostMult', '공사 포인트 배율', 'Build points multiplier')],
     live: {
       pick: ['kingdom'], run: (w, ctx) => {
         const k = kingdomOfCtx(w, ctx), gov = govOf(w, k);
@@ -563,19 +567,20 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   },
   {
     id: 'build-cost', category: 'construction', title: t('공사비', 'Construction cost'),
-    rule: t('포인트당 비용 = 그날 사무소 (임금 + 자재) ÷ 포인트. 민간은 받은 포인트만큼 왕실에 수수료를 내고, 낼 현금만큼만 받는다.', 'Cost per point = the office\'s daily (wages + materials) ÷ points. Private builders pay the crown a fee for the points they receive, and only get as many as they can pay for.'),
-    formula: 'cost = buildPoints × costPerDay ÷ pointsPerDay',
-    params: [],
+    rule: t('건축사무소는 모든 공사(왕실 것도)에 쓴 포인트 × 포인트당 비용 ÷ (1 − 이익률)을 수수료로 받는다. 이익률은 방식 단계에 따라 {0} / {1} / {2}다 (목조 / 목재 비계 / 철골). 포인트당 비용 = 그날 사무소 (임금 + 자재) ÷ 포인트. 수수료는 사무소의 매출이고, 사무소는 다른 왕실 건물처럼 이익을 유보 자산에 쌓고 나머지를 국고에 남긴다. 민간은 낼 현금만큼만 포인트를 받는다. 왕실 공사는 국고가 자기 사무소에 내므로 국고의 실제 공사비는 사무소 운영비다.', 'The construction office charges every project (crown ones too) points used × cost per point ÷ (1 − margin). The margin depends on the method stage: {0} / {1} / {2} (timber / scaffolding / iron frames). Cost per point = the office\'s daily (wages + materials) ÷ points. The fee is the office\'s sales; like other crown buildings it puts part of its profit into a reserve and leaves the rest in the treasury. Private builders only get as many points as they can pay for. Crown projects pay the crown\'s own office, so the treasury\'s real cost is the office\'s upkeep.'),
+    formula: 'fee per point = Σ office (wages + materials) ÷ (1 − margin) ÷ points; private cost = buildPoints × fee per point',
+    params: BUILDING_BY_ID.builder.methods.map((m) => p(`${m.name} 이익률`, `${m.nameEn ?? m.id} margin`, () => officeMargin(m.id), 'pct')),
     example: () => {
-      const w = exampleWorld(), gov = govOf(w, w.kingdoms[0])!;
-      const est = constructionEstimate(w, gov, 'farm');
+      const w = exampleWorld(), k = w.kingdoms[0], gov = govOf(w, k)!;
+      const firm = companyById(w, k.privateIds[0]) ?? gov;
+      const est = constructionEstimate(w, gov, 'farm'), priv = constructionEstimate(w, firm, 'farm');
       return {
         inputs: [row('곡물 농장 포인트', 'Grain farm points', est.required, 'pt'), row('사무소 하루 포인트', 'Office points/day', r2(est.pointsPerDay), 'pt'), row('사무소 하루 비용', 'Office cost/day', r2(est.costPerDay), 'florin')],
-        steps: [row('포인트당 비용', 'Cost per point', r2(est.costPerDay / est.pointsPerDay), 'florin'), row('공사 일수', 'Days', r2(est.days), 'day')],
-        result: [row('1레벨 공사비 (시드 1 첫날)', 'Cost of one level (seed 1, day 0)', Math.round(est.cost), 'florin')],
+        steps: [row('포인트당 비용', 'Cost per point', r2(est.costPerDay / est.pointsPerDay), 'florin'), row('포인트당 수수료', 'Fee per point', r2((est.costPerDay / est.pointsPerDay) * priv.feeMult), 'florin'), row('공사 일수', 'Days', r2(est.days), 'day')],
+        result: [row('1레벨 수수료 (민간, 시드 1 첫날)', 'Fee for one level (private, seed 1, day 0)', Math.round(priv.cost), 'florin'), row('1레벨 사무소 운영비 (왕실 실제 비용)', 'Office upkeep for one level (crown\'s real cost)', Math.round(est.cost), 'florin')],
       };
     },
-    related: ['build-points', 'privatize'], seenIn: ['company'], source: ['economy.ts constructionEstimate'], design: ['8'],
+    related: ['build-points', 'privatize', 'reserves', 'treasury'], seenIn: ['company', 'finance', 'region'], source: ['economy.ts constructionEstimate', 'economy.ts officeFeeMult', 'production.ts allocateConstruction'], design: ['8'],
   },
   {
     id: 'land', category: 'construction', title: t('땅', 'Land'),
@@ -864,10 +869,10 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   },
   {
     id: 'tenant-output', category: 'tenants', title: t('소작 산출', 'Tenant output'),
-    rule: t('소작농 노동 인구 1명이 하루 곡물 {0}, 의복 {1}, 목재 {2}, 가구 {3}을 낸다. 섬유는 내지 않는다. 기상 조건 배율을 곱한다.', 'Each tenant worker produces {0} grain, {1} clothing, {2} timber and {3} furniture a day. No fibre. Harvest conditions multiply it.'),
-    params: [p('곡물', 'Grain', () => SUBSISTENCE.output.grain ?? 0, 'good'), p('의복', 'Clothing', () => SUBSISTENCE.output.cloth ?? 0, 'good'), p('목재', 'Timber', () => SUBSISTENCE.output.timber ?? 0, 'good'), p('가구', 'Furniture', () => SUBSISTENCE.output.furniture ?? 0, 'good')],
+    rule: t('소작농 노동 인구 1명이 하루 곡물 {0}, 의복 {1}, 목재 {2}, 가구 {3}, 공구 {4}를 낸다. 섬유는 내지 않는다. 기상 조건 배율을 곱한다.', 'Each tenant worker produces {0} grain, {1} clothing, {2} timber, {3} furniture and {4} tools a day. No fibre. Harvest conditions multiply it.'),
+    params: [p('곡물', 'Grain', () => SUBSISTENCE.output.grain ?? 0, 'good'), p('의복', 'Clothing', () => SUBSISTENCE.output.cloth ?? 0, 'good'), p('목재', 'Timber', () => SUBSISTENCE.output.timber ?? 0, 'good'), p('가구', 'Furniture', () => SUBSISTENCE.output.furniture ?? 0, 'good'), p('공구', 'Tools', () => SUBSISTENCE.output.tools ?? 0, 'good')],
     example: () => {
-      const farm = getMethod('farm', 'farm_basic'), perWorker = (farm.outputs.grain ?? 0) / 1000;
+      const farm = getMethod('farm', 'farm_basic'), perWorker = (farm.outputs.grain ?? 0) / (farm.workers.farmer ?? 1);
       return {
         inputs: [row('소작농 1명 곡물', 'Grain per tenant', SUBSISTENCE.output.grain ?? 0, 'good'), row('농장 1명 곡물', 'Grain per farm worker', perWorker, 'good')],
         steps: [],
@@ -963,8 +968,8 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   },
   {
     id: 'reserves', category: 'ownership', title: t('유보 자산', 'Building reserves'),
-    rule: t('파는 건물은 주간 이익의 최대 {0}를 유보 자산에 쌓는다. 찰수록 덜 쌓는다 (비었으면 {0}, 가득 차면 0). 상한 = 레벨 × 레벨당 주간 산출 가치(기본가) × {1}주. 적자는 유보 자산에서 먼저 빠진다.', 'Selling buildings put up to {0} of weekly profit into a reserve, less as it fills ({0} when empty, 0 when full), capped at level × weekly output value (base prices) × {1} weeks. Losses come out of the reserve first.'),
-    formula: 'keep = profit × {0} × (1 − reserve / cap); cap = level × Σ out × base × 7 × {1}',
+    rule: t('파는 건물과 건축사무소는 주간 이익의 최대 {0}를 유보 자산에 쌓는다. 찰수록 덜 쌓는다 (비었으면 {0}, 가득 차면 0). 상한 = 레벨 × 레벨당 주간 산출 가치(기본가) × {1}주. 사무소의 산출 가치는 기본 임금·기본가 자재로 센 하루 운영비 ÷ (1 − 사무소 이익률). 적자는 유보 자산에서 먼저 빠진다.', 'Selling buildings and construction offices put up to {0} of weekly profit into a reserve, less as it fills ({0} when empty, 0 when full), capped at level × weekly output value (base prices) × {1} weeks. An office\'s output value is its daily upkeep at base wages and prices ÷ (1 − office margin). Losses come out of the reserve first.'),
+    formula: 'keep = profit × {0} × (1 − reserve / cap); cap = level × value × 7 × {1}; value = Σ out × base (office: (Σ workers × base wage + Σ inputs × base) ÷ (1 − margin))',
     params: [p('유보 비율', 'Reserve share', () => RESERVE_SHARE, 'pct'), tune('reserveWeeks', '상한 주 수', 'Cap in weeks', 'week')],
     example: () => {
       const v = weeklyOutputValue('farm', 'farm_basic');
@@ -978,7 +983,7 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   },
   {
     id: 'dividends', category: 'ownership', title: t('배당', 'Dividends'),
-    rule: t('민간 건물은 유보 자산을 채우고 남은 이익을 매주 레벨 주인(저택·금융가)에게 레벨 수대로 보낸다. 왕실 건물의 이익은 국고에 남는다. 받은 몫의 자본가 {0}, 귀족 {1}는 그 금고에 남긴다. 민간 상회는 먼저 임금·원료 {2}주치를 운영 자금으로 남긴다.', 'Private buildings send profit beyond their reserve to their level owners (manors and districts) by level count weekly; crown building profit stays in the treasury. Capitalists keep {0} and nobles {1} of what they receive in their treasury. The private house first keeps {2} weeks of wages and inputs as working cash.'),
+    rule: t('민간 건물은 유보 자산을 채우고 남은 이익을 매주 레벨 주인(저택·금융가)에게 레벨 수대로 보낸다. 왕실 건물(건축사무소 포함)의 이익은 국고 몫으로 국고에 남는다. 받은 몫의 자본가 {0}, 귀족 {1}는 그 금고에 남긴다. 민간 상회는 먼저 임금·원료 {2}주치를 운영 자금으로 남긴다.', 'Private buildings send profit beyond their reserve to their level owners (manors and districts) by level count weekly; crown building profit (construction offices included) stays in the treasury as its share. Capitalists keep {0} and nobles {1} of what they receive in their treasury. The private house first keeps {2} weeks of wages and inputs as working cash.'),
     params: [p('금융가 금고 몫', 'District keeps', () => KEEP_SHARE.finance, 'pct'), p('저택 금고 몫', 'Manor keeps', () => KEEP_SHARE.manor, 'pct'), tune('firmBufferWeeks', '상회 운영 자금 (주)', 'House working cash (weeks)', 'week')],
     related: ['reserves', 'owner-treasury', 'owner-buildings'], seenIn: ['company', 'finance'], source: ['finance.ts payDividends', 'finance.ts payOwners'], design: ['9.3'],
   },
@@ -1078,7 +1083,7 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   },
   {
     id: 'budget-steps', category: 'state', title: t('정책 단계', 'Policy steps'),
-    rule: t('금액 편성은 없다. 손잡이는 세금 수준·국영 임금·복지의 세 단계(1~5, 3이 보통)다. 연구는 돈이 들지 않는다. 정부 건물(행정청·건축사무소·학교)은 늘 다 돌고 국고가 운영비를 낸다. 국고가 비면 국채로 낸다. 수지 표는 손잡이별로 묶는다: 세금 수준 → 세금, 국영 임금 → 정부 건물 임금·민간 공사 수수료·국영 사업 손익, 복지 → 복지, 나머지(관세·주조·정부 건물 원료·국채 이자)는 손잡이가 없다.', 'There is no line-item budget. The knobs are three steps (1–5, 3 is normal): tax level, state wages, welfare. Research costs no money. Government buildings always run at full and the treasury pays; when it is empty it issues bonds. The budget table groups lines by knob: tax level → taxes; state wages → government wages, construction fees and state enterprises; welfare → welfare; the rest (tariffs, minting, government inputs, bond interest) has no knob.'),
+    rule: t('금액 편성은 없다. 손잡이는 세금 수준·국영 임금·복지의 세 단계(1~5, 3이 보통)다. 연구는 돈이 들지 않는다. 정부 건물(행정청·건축사무소·학교)은 늘 다 돈다. 행정청·학교는 국고가 운영비를 내고, 건축사무소는 공사 수수료로 운영비를 낸다. 국고가 비면 국채로 낸다. 수지 표는 손잡이별로 묶는다: 세금 수준 → 세금, 국영 임금 → 정부 건물 임금·국영 사업 손익(건축사무소 포함)·왕실 공사, 복지 → 복지, 나머지(관세·주조·정부 건물 원료·국채 이자)는 손잡이가 없다.', 'There is no line-item budget. The knobs are three steps (1–5, 3 is normal): tax level, state wages, welfare. Research costs no money. Government buildings always run at full. The treasury pays administration and schools; construction offices pay their way from construction fees. When the treasury is empty it issues bonds. The budget table groups lines by knob: tax level → taxes; state wages → government wages, state enterprises (construction offices included) and crown construction; welfare → welfare; the rest (tariffs, minting, government inputs, bond interest) has no knob.'),
     params: [tune('taxLevels', '세금 수준', 'Tax level', 'x'), tune('govWageLevels', '국영 임금', 'State wages', 'x'), tune('welfareLevels', '복지 목표 생활수준', 'Welfare target SoL')],
     live: {
       pick: ['kingdom'], run: (w, ctx) => {
@@ -1115,12 +1120,12 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   },
   {
     id: 'treasury', category: 'state', title: t('국고와 수지', 'Treasury and balance'),
-    rule: t('주간 세입 = 세금 + 토지세 + 관세 + 주조. 지출 = 정부 건물 임금·원료 + 이자 + 복지 − 민간 공사 수수료. 국영 사업 손익 = 왕실 생산 건물(정부 건물이 아닌 것)의 매출 − 원료 − 임금으로, 국고에 바로 들고 나며 수지 표의 순수지에 들어간다. AI는 국고 ÷ 주간 지출(몇 주치)로 판단한다 (국영 사업 손익은 넣지 않는다). 시작 국고는 운영비 {0}주치다.', 'Weekly revenue = taxes + land tax + tariffs + mint. Spending = government wages and inputs + interest + welfare − private construction fees. State enterprises = sales − inputs − wages of crown production buildings (not government buildings); it goes straight into or out of the treasury and is part of the budget table\'s net. AI judges the treasury in weeks of spending (state enterprises left out). The start treasury is {0} weeks of upkeep.'),
+    rule: t('주간 세입 = 세금 + 토지세 + 관세 + 주조. 지출 = 행정청·학교 임금·원료 + 이자 + 복지 + 왕실 공사(자기 건축사무소에 낸 수수료). 국영 사업 손익 = 왕실 생산 건물과 건축사무소의 매출 − 원료 − 임금으로, 국고에 바로 들고 난다. 사무소 매출에는 왕실 공사 수수료도 들어 있어 왕실 공사 줄과 서로 지운다. AI는 국고 ÷ 주간 지출(몇 주치)로 판단한다 (지출에서 건축사무소 손익을 빼고, 왕실 생산 건물 손익은 넣지 않는다). 시작 국고는 운영비 {0}주치다.', 'Weekly revenue = taxes + land tax + tariffs + mint. Spending = administration and school wages and inputs + interest + welfare + crown construction (fees paid to its own construction office). State enterprises = sales − inputs − wages of crown production buildings and construction offices; it goes straight into or out of the treasury. Office sales include the crown\'s own construction fees, which cancel against the crown construction line. AI judges the treasury in weeks of spending (spending net of the office\'s profit; production buildings left out). The start treasury is {0} weeks of upkeep.'),
     params: [tune('startTreasuryWeeks', '시작 국고', 'Start treasury', 'week')],
     live: {
       pick: ['kingdom'], run: (w, ctx) => {
         const k = kingdomOfCtx(w, ctx), gov = govOf(w, k), exp = k.expenseEma ?? 0;
-        return { rows: [row('국고', 'Treasury', Math.round(gov?.cash ?? 0), 'florin'), row('빚', 'Debt', Math.round(gov?.debt ?? 0), 'florin'), row('주간 지출 이동평균', 'Weekly spending EMA', Math.round(exp), 'florin'), row('몇 주치', 'Weeks covered', exp > 0 ? r2((gov?.cash ?? 0) / exp) : '-', 'week'), row('지난주 국영 사업 손익', 'Last week\'s state enterprises', Math.round(k.lastBudget?.firms ?? 0), 'florin')] };
+        return { rows: [row('국고', 'Treasury', Math.round(gov?.cash ?? 0), 'florin'), row('빚', 'Debt', Math.round(gov?.debt ?? 0), 'florin'), row('주간 지출 이동평균', 'Weekly spending EMA', Math.round(exp), 'florin'), row('몇 주치', 'Weeks covered', exp > 0 ? r2((gov?.cash ?? 0) / exp) : '-', 'week'), row('지난주 국영 사업 손익', 'Last week\'s state enterprises', Math.round(k.lastBudget?.firms ?? 0), 'florin'), row('그중 건축사무소', 'Of which construction office', Math.round(k.lastBudget?.office ?? 0), 'florin'), row('지난주 왕실 공사', 'Last week\'s crown construction', Math.round(k.lastBudget?.build ?? 0), 'florin'), row('지난주 민간 공사 수수료', 'Last week\'s private construction fees', Math.round(k.lastBudget?.fees ?? 0), 'florin')] };
       },
     },
     related: ['budget-steps', 'ai-budget', 'mint'], seenIn: ['finance'], source: ['finance.ts spendBudget', 'budget.ts budgetPreview', 'budget.ts budgetDrill'], design: ['9', '9.2'],
@@ -1188,8 +1193,9 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   },
   {
     id: 'ai-methods', category: 'ai', title: t('방식 바꾸기', 'Switching methods'),
-    rule: t('생산 건물은 산출 1단위당 이윤이 5% + 0.01 넘게 나은 방식으로 바꾼다 ({0}일 쿨다운). 지금 재직자를 더해도 일손을 {2} 이상 모을 수 없는 방식은 고르지 않고, 지금 방식이 {2} 미만으로 채워지고 일손도 없으면 이윤이 낮아도 일손을 구할 수 있는 방식으로 바꾼다. 사무소는 자재를 구할 수 있는 방식 중 포인트 최대. 행정청은 한도 × 원료 충족이 10% 넘게 큰 방식으로, 원료 없는 방식이면 충족 기억을 매주 {1}씩 1로 되돌린다.', 'Producers switch when profit per unit beats the current method by 5% + 0.01 ({0}-day cooldown). Methods that cannot be staffed to {2} (counting current workers) are skipped; a building under {2} staffed with no labour for its method moves to a staffable one even at lower profit. Offices take the highest-point method with available materials. Administrations take the method with 10% more capacity × fill; on a no-input method the fill memory drifts back to 1 by {1} a week.'),
-    params: [p('쿨다운', 'Cooldown', () => SWITCH_COOLDOWN, 'day'), tune('adminFillRetry', '행정청 재시도', 'Administration retry', 'pct'), tune('minStaffing', '일손 기준', 'Staffing threshold', 'pct')],
+    rule: t('생산 건물은 산출 1단위당 이윤이 5% + 0.01 넘게 나은 방식으로 바꾼다 ({0}일 쿨다운, 원료가 끊겨 멈췄으면 쿨다운 없이). 지금 재직자를 더해도 일손을 {3} 이상 모을 수 없는 방식, 대륙 공급이 필요의 {4} 미만인 투입재를 쓰는 방식은 고르지 않고, 지금 방식이 {3} 미만으로 채워지고 일손도 없으면 이윤이 낮아도 일손을 구할 수 있는 방식으로 바꾼다. ({2} = 1이면: 건물 전체 하루 손익 = 레벨 × 기대 충원율 × (매출 × 투입 충족 × 숙련 − 원료비 × 투입 충족 − 인건비)이 {5} (최소 인건비의 {6}) 넘게 큰 방식으로, 대륙 장기 가격으로 재고 손해인 방식으로는 바꾸지 않는다.) 사무소는 자재를 구할 수 있는 방식 중 포인트 최대. 행정청은 한도 × 원료 충족이 10% 넘게 큰 방식으로, 원료 없는 방식이면 충족 기억을 매주 {1}씩 1로 되돌린다.', 'Producers switch when profit per unit beats the current method by 5% + 0.01 ({0}-day cooldown; none when starved of inputs). Methods that cannot be staffed to {3} (counting current workers), or that use an input whose continental supply is under {4} of need, are skipped; a building under {3} staffed with no labour for its method moves to a staffable one even at lower profit. (With {2} = 1: the method whose whole-building daily profit = levels × expected staffing × (revenue × input fill × skill − input cost × input fill − wages) beats the current one by {5} (at least {6} of wages), at long-run continental prices, never switching into a loss.) Offices take the highest-point method with available materials. Administrations take the method with 10% more capacity × fill; on a no-input method the fill memory drifts back to 1 by {1} a week.'),
+    params: [p('쿨다운', 'Cooldown', () => SWITCH_COOLDOWN, 'day'), tune('adminFillRetry', '행정청 재시도', 'Administration retry', 'pct'), tune('aiSwitchV2', '손익 비교 (새 규칙)', 'Profit comparison (new rule)'), tune('minStaffing', '일손 기준', 'Staffing threshold', 'pct'),
+      p('공급 기준', 'Supply threshold', () => INPUT_SUPPLY_MIN, 'pct'), p('바꾸기 문턱', 'Switch margin', () => SWITCH_MARGIN, 'pct'), p('최소 문턱 (인건비 대비)', 'Minimum margin (of wages)', () => SWITCH_MIN_WAGE_SHARE, 'pct')],
     related: ['input-fill', 'admin-capacity', 'methods-rule'], seenIn: ['company'], source: ['ai.ts manageBuildings'], design: ['10'],
   },
   {
@@ -1206,21 +1212,22 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   },
   {
     id: 'ai-office', category: 'ai', title: t('사무소 늘리고 줄이기', 'Growing and shrinking offices'),
-    rule: t('쓰인 포인트가 능력의 {0} 이상이고 대기가 {1}일을 넘으면, 빚 없고 국고가 넉넉할 때 늘린다 (최소 max({2}, 지금의 {3})). 빈 레벨이나 남는 포인트가 {4}주 이어지면 헌다.', 'Grow when used points reach {0} of capacity and the queue exceeds {1} days, with no debt and a full treasury (at least max({2}, {3} of current)). Shrink after {4} weeks of empty levels or spare points.'),
+    rule: t('쓰인 포인트가 능력의 {0} 이상이고 대기가 {1}일을 넘으면, 빚 없고 국고가 넉넉할 때 늘린다 (사무소는 쓰지 않는 포인트에도 임금·자재를 내므로 수수료로 메워지지 않는다) (최소 max({2}, 지금의 {3})). 빈 레벨이나 남는 포인트가 {4}주 이어지면 헌다.', 'Grow when used points reach {0} of capacity and the queue exceeds {1} days, with no debt and a full treasury (unused points still cost wages and materials, which fees do not cover) (at least max({2}, {3} of current)). Shrink after {4} weeks of empty levels or spare points.'),
     params: [tune('officeUseFull', '사용률', 'Use threshold', 'pct'), tune('officeTargetDays', '대기 목표', 'Queue target', 'day'), p('최소 증설', 'Min block', () => OFFICE_BLOCK, 'level'), p('증설 비율', 'Growth share', () => OFFICE_GROWTH, 'pct'), tune('officeShrinkWeeks', '철거 주 수', 'Shrink weeks', 'week')],
     related: ['build-points', 'ai-demolition'], seenIn: ['company'], source: ['ai.ts planConstruction', 'ai.ts reviewLevels'], design: ['10'],
   },
   {
     id: 'ai-construction', category: 'ai', title: t('착공', 'Starting construction'),
-    rule: t('주에 최대 {0}건. 연 손익 ÷ 공사비 > {1}이고 일손을 {2} 이상 ({3}일 안에) 모을 수 있는 후보 중, 덩어리({4}레벨)를 골라 점수 = 수익률 × 무작위 × (1 + {5} × 지역 자금 비율)이 가장 큰 것을 짓는다. 기상 조건이 걸린 땅은 뺀다.', 'Up to {0} starts a week. Candidates need yearly profit ÷ cost > {1} and {2} of jobs fillable within {3} days; chunks of {4} levels; score = return × random × (1 + {5} × local fund share). Land under a harvest condition is skipped.'),
+    rule: t('주에 최대 {0}건. 연 손익 ÷ 공사비 > {1}이고 일손을 {2} 이상 ({3}일 안에) 모을 수 있는 후보 중, 덩어리({4}레벨)를 골라 점수 = 수익률 × 무작위 × (1 + {5} × 지역 자금 비율)이 가장 큰 것을 짓는다. 기상 조건이 걸린 땅은 뺀다. 이미 건물이 있으면 그 방식으로만 늘린다 ({9} = 1이면 그 건물이 바꾸지 못한 더 나은 방식을 옆에 새 건물로 공사 하나에 {10}레벨까지 짓는다).', 'Up to {0} starts a week. Candidates need yearly profit ÷ cost > {1} and {2} of jobs fillable within {3} days; chunks of {4} levels; score = return × random × (1 + {5} × local fund share). Land under a harvest condition is skipped. An existing building only grows in its own method ({9} = 1: a better method the building could not switch to is built next to it as a new building, up to {10} levels per project).'),
     params: [tune('startsPerWeek', '주간 착공', 'Starts per week'), tune('minRoi', '최소 수익률', 'Minimum return', 'pct'), tune('minStaffing', '일손 기준', 'Staffing threshold', 'pct'), p('일손 기간', 'Staffing horizon', () => STAFFING_HORIZON, 'day'), p('덩어리', 'Chunks', () => CHUNKS.join(' / ')), tune('localBias', '지역 가산', 'Local bias', 'pct'),
-      tune('lossBuildsPerWeek', '손해 후보 짓기 (주간)', 'Loss builds per week'), tune('lossTolerance', '손해 허용', 'Loss tolerance'), tune('schoolTaxMax', '학교 짓는 세금 상한', 'Max tax step for schools')],
+      tune('lossBuildsPerWeek', '손해 후보 짓기 (주간)', 'Loss builds per week'), tune('lossTolerance', '손해 허용', 'Loss tolerance'), tune('schoolTaxMax', '학교 짓는 세금 상한', 'Max tax step for schools'),
+      tune('aiMixedMethods', '옆에 새 방식 짓기', 'Build a better method alongside'), p('새 방식 레벨 상한', 'Alongside level cap', () => MIXED_LEVELS, 'level')],
     related: ['ai-outlook', 'owner-treasury', 'land'], seenIn: ['company'], source: ['ai.ts planConstruction', 'ai.ts pickProject'], design: ['10'],
   },
   {
     id: 'ai-outlook', category: 'ai', title: t('장기 손익 전망', 'Long-run valuation'),
-    rule: t('가동률 1/0.75/0.5/0.25 중 손익이 가장 큰 값을 쓴다. 가격 = (장기 가격 + 현지 가격) ÷ 2. 장기 가격은 대륙 수요(공사 중 투입·대체 수요 포함)와 공급(공사 중 산출 포함)을 가격 공식에 넣은 값이다. 민간 임금은 max(지금 임금, 기본 × {0}).', 'Use the best of utilisation 1/0.75/0.5/0.25. Price = (long-run + local) ÷ 2; long-run price feeds continental demand (incl. pending inputs, substitution) and supply (incl. pending output) into the price formula. Private wages = max(current, base × {0}).'),
-    params: [tune('investWage', '임금 바닥', 'Wage floor', 'x')],
+    rule: t('가동률 1/0.75/0.5/0.25 중 손익이 가장 큰 값을 쓴다. 가격 = (장기 가격 + 현지 가격) ÷ 2. 장기 가격은 대륙 수요(공사 중 투입·대체 수요 포함)와 공급(공사 중 산출 포함)을 가격 공식에 넣은 값이다. 파는 쪽 가격에는 잠재 수요(기본가로 더 나은 방식으로 바꾸면 더 쓸 투입재)도 센다. {1} = 1이면 그중 실제로 바꿀 수 있는 몫만: 그 지역에서 데려올 사람 ÷ 그 지역 후보들이 더 필요한 사람 (직종마다, 최대 1) × 다른 새 투입재가 남는 공급으로 채워지는 비율. 민간 임금은 max(지금 임금, 기본 × {0}).', 'Use the best of utilisation 1/0.75/0.5/0.25. Price = (long-run + local) ÷ 2; long-run price feeds continental demand (incl. pending inputs, substitution) and supply (incl. pending output) into the price formula. Sell-side prices also count latent demand (extra inputs of better methods at base prices). With {1} = 1 only the feasible share counts: people the region can supply ÷ extra people its candidates need (per skill, at most 1) × how far spare supply covers the other new inputs. Private wages = max(current, base × {0}).'),
+    params: [tune('investWage', '임금 바닥', 'Wage floor', 'x'), tune('latentFeasible', '바꿀 수 있는 몫만', 'Feasible share only')],
     related: ['price-formula', 'ai-construction', 'substitution'], seenIn: [], source: ['outlook.ts valueMethod', 'outlook.ts marketOutlook'], design: ['10'],
   },
   {

@@ -1,9 +1,10 @@
 import { BUILDING_BY_ID, GOOD_IDS, GOODS, NEEDS, SKILL_DEFS, TUNE, getMethod, needsAt, regionPerk } from './data';
+import { extraNeed, poolKey, poolOf } from './staffing';
 import { availableMethods, collectionRatio, harvestFactorEma, regionAvgWealth, regionById, shippingRate, wageCostOf } from './economy';
 import { BY_EMA, needSharesAt } from './market';
 import { clamp } from './rng';
 import { SKILLS } from './types';
-import type { Company, GoodId, Kingdom, MethodDef, NeedDef, Region, Skill, World } from './types';
+import type { Building, Company, GoodId, Kingdom, MethodDef, NeedDef, Region, Skill, World } from './types';
 
 /**
  * 시장 전망: AI 투자 판단의 공통 바탕. 상품마다 대륙 전체의 앞으로의 수요와 공급을 세고 그 비율로 장기 가격을 본다.
@@ -66,7 +67,10 @@ export function marketOutlook(w: World): Outlook {
       demand[g] += (m.inputs[g] ?? 0) * (k.levels ?? 1);
     }
   }
-  // 잠재 수요: 기본가로 따져 지금 방식보다 나은 방식이 있으면 그 방식이 더 쓰는 투입재
+  // 잠재 수요: 기본가로 따져 지금 방식보다 나은 방식이 있으면 그 방식이 더 쓰는 투입재.
+  // TUNE.latentFeasible: 실제로 바꿀 수 있는 몫만 센다. 일손 = 지역·직종마다 곳간 ÷ 그 지역 후보들이 더 필요한 사람 (후보 순서와 무관),
+  // 투입 = 세는 상품을 뺀 다른 새 투입재가 남는 양으로 얼마나 채워지는가 (세는 상품 자신으로 막으면 공구·금속이 시작되지 못한다)
+  const cands: { b: Building; r: Region; cur: MethodDef; best: MethodDef; state: boolean }[] = [];
   for (const b of w.buildings) {
     const c = w.companies.find((x) => x.id === b.companyId);
     if (!c || !b.active || BUILDING_BY_ID[b.typeId].auto) continue;
@@ -78,9 +82,32 @@ export function marketOutlook(w: World): Outlook {
       const v = baseValue(m, c);
       if (v > bestV * 1.05) { best = m; bestV = v; }
     }
-    if (best) for (const g of GOOD_IDS) {
-      const extra = (best.inputs[g] ?? 0) - (cur.inputs[g] ?? 0);
-      if (extra > 0) latent[g] += extra * b.level;
+    if (best) cands.push({ b, r: regionById(w, b.regionId), cur, best, state: c.state });
+  }
+  const feasible = !!TUNE.latentFeasible;
+  const need = new Map<string, number>();
+  const pools = new Map<string, number>();
+  if (feasible) for (const x of cands) for (const [s, n] of Object.entries(extraNeed(x.best, x.b.level, x.state, x.b)) as [Skill, number][]) {
+    const k = poolKey(x.r, s);
+    need.set(k, (need.get(k) ?? 0) + n);
+  }
+  const spare = {} as Record<GoodId, number>;
+  for (const g of GOOD_IDS) spare[g] = supply[g] - demand[g];
+  for (const x of cands) {
+    let fL = 1;
+    if (feasible) for (const [s] of Object.entries(extraNeed(x.best, x.b.level, x.state, x.b)) as [Skill, number][]) {
+      const n = need.get(poolKey(x.r, s)) ?? 0;
+      if (n > 0) fL = Math.min(fL, clamp(poolOf(w, x.r, s, pools) / n, 0, 1));
+    }
+    const extra = {} as Partial<Record<GoodId, number>>;
+    for (const g of GOOD_IDS) {
+      const e = ((x.best.inputs[g] ?? 0) - (x.cur.inputs[g] ?? 0)) * x.b.level;
+      if (e > 0) extra[g] = e;
+    }
+    for (const [g, e] of Object.entries(extra) as [GoodId, number][]) {
+      let fI = 1;
+      if (feasible) for (const [h, eh] of Object.entries(extra) as [GoodId, number][]) if (h !== g) fI = Math.min(fI, clamp(spare[h] / eh, 0, 1));
+      latent[g] += e * (feasible ? fL * fI : 1);
     }
   }
   // 대체 수요: 가공품이 비싸서 원자재로 버티는 가계 수요의 절반은 값이 내려가면 돌아온다 (공장의 원료 수요는 대체하지 않는다)
@@ -181,7 +208,7 @@ function returnableDemand(w: World): Map<GoodId, number[]> {
 }
 
 /** 기본가 기준 하루 이윤 (방식끼리 비교용) */
-function baseValue(m: MethodDef, c: Company): number {
+export function baseValue(m: MethodDef, c: Company): number {
   let v = 0;
   for (const g of GOOD_IDS) v += ((m.outputs[g] ?? 0) - (m.inputs[g] ?? 0)) * GOODS[g].basePrice;
   return v - wageCostOf(m, c.wages, c.state);

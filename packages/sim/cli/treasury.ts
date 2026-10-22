@@ -1,5 +1,5 @@
 // 왕실 국고 진단: npx tsx cli/treasury.ts '<TUNE JSON>' [seed] [years]
-// 해마다 왕국별 국고·빚 변화, 정책 단계와 임금 지수, 1년 국정 수지(세입·수수료 / 정부 건물 임금·원료·연구·이자)와
+// 해마다 왕국별 국고·빚 변화, 정책 단계와 임금 지수, 1년 국정 수지(lastBudget 키 그대로: 세입·관세 / 행정청·학교 임금·원료·이자·복지·왕실 공사(build) / 국영 사업 손익(firms, 그중 사무소 office)·민간 수수료(fees, 지표용))와
 // 1년 장부(세입·지출 항목), 왕실 건물 종류별 인건비+원료를 하루 평균으로 출력한다
 import { TUNE } from '../src/data';
 import { createWorld, step } from '../src/index';

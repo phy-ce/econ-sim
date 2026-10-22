@@ -18,8 +18,8 @@ export { INVEST_CLASSES, financeRatio, ownershipAssets, policyStatus, taxThresho
 export type { AssetRow, LawOption, LawStatus, WelfareStatus } from './policy';
 export { welfareGroup, welfareCovers, welfareTarget, welfareIncome, welfareWeekly } from './welfare';
 export type { WelfareGroup } from './welfare';
-export { budgetPreview, roundBudget, budgetLineRaw, budgetDrill, BUDGET_GROUPS, drillWages, drillStateFirms, drillGoods, drillTax, drillWelfare, drillInterest, drillTariffs, drillMint, drillFees } from './budget';
-export type { BudgetPreview, BudgetLine, BudgetLineKey, BudgetGroup, BudgetGroupKey, BudgetDrill, BudgetDrillBase, WageDrill, WageDrillRow, WageDrillJob, FirmDrill, FirmDrillRow, GoodsDrill, GoodsDrillRow, GoodsDrillGood, TaxDrill, TaxDrillRow, WelfareDrill, WelfareDrillRow, InterestDrill, TariffDrill, MintDrill, FeesDrill } from './budget';
+export { budgetPreview, roundBudget, budgetLineRaw, budgetDrill, BUDGET_GROUPS, drillWages, drillStateFirms, drillGoods, drillTax, drillWelfare, drillInterest, drillTariffs, drillMint, drillBuild } from './budget';
+export type { BudgetPreview, BudgetLine, BudgetLineKey, BudgetGroup, BudgetGroupKey, BudgetDrill, BudgetDrillBase, WageDrill, WageDrillRow, WageDrillJob, FirmDrill, FirmDrillRow, GoodsDrill, GoodsDrillRow, GoodsDrillGood, TaxDrill, TaxDrillRow, WelfareDrill, WelfareDrillRow, InterestDrill, TariffDrill, MintDrill, BuildDrill } from './budget';
 export { recordMetrics, METRICS_EVERY } from './metrics';
 export type { MetricPoint, KingdomMetrics, GoodMetrics } from './metrics';
 export * from './encyclopedia';

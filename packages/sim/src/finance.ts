@@ -1,5 +1,5 @@
 import { BUILDING_BY_ID, GOODS, SKILL_DEFS, TECH_BY_ID, TICKS_PER_WEEK, TUNE, WORKFORCE_RATIO, getMethod } from './data';
-import { collectionRatio, companyById, levelOwnersOf, slots, regionById, constructionEstimate, efficiency, isGovernment, isOwnerBuilding, kingdomGdp, logEvent, paysDividend, repay, sellThrough, shareWeight } from './economy';
+import { collectionRatio, companyById, levelOwnersOf, slots, regionById, constructionEstimate, efficiency, isBudgetFunded, isOwnerBuilding, kingdomGdp, logEvent, officeFeeMult, paysDividend, repay, sellThrough, shareWeight } from './economy';
 import { techNameEn } from './i18n';
 import { flow, kingdomById, kingdomOf, toFinance, toTreasury } from './kingdoms';
 import { fundOf, payPops } from './pops';
@@ -128,7 +128,7 @@ export function applyStateWages(w: World, k: Kingdom) {
 }
 
 /**
- * 국정 예산 (매주): 금액을 편성하지 않는다. 왕실 정부 건물(행정청·건축사무소·학교)은 늘 다 가동하고 임금과 원료를 국고에서 낸다.
+ * 국정 예산 (매주): 금액을 편성하지 않는다. 왕실 정부 건물(행정청·건축사무소·학교)은 늘 다 가동한다. 행정청·학교는 임금과 원료를 국고에서 내고, 건축사무소는 공사 수수료로 버는 국영 사업이다 (손익이 국고로).
  * 여기서는 연구 포인트를 쌓고(돈은 들지 않는다, advanceResearch), 국영 임금을 다시 정하고, 지난주 국정 수지를 적는다 (복지는 매일 welfare.ts).
  * 국고가 모자라면 임금·원료는 국채로 낸다 (payWages, collectOrders)
  */
@@ -144,15 +144,18 @@ export function spendBudget(w: World) {
     if (!gov) continue;
     advanceResearch(w, gov);
     // 지난주 국정 수지 (화면에 그대로 나가는 기록이라 소수 둘째 자리)
-    const b = { revenue: round2(revenue), tariffs: round2(k.tariffWeek ?? 0), fees: round2(gov.ledger.buildFees), wages: round2(spent.wages), goods: round2(spent.goods), interest: round2(gov.ledger.interest), welfare: round2(spent.welfare ?? 0), firms: round2(spent.firms ?? 0) };
+    const b = {
+      revenue: round2(revenue), tariffs: round2(k.tariffWeek ?? 0), fees: round2(k.privateFeeWeek ?? 0), wages: round2(spent.wages), goods: round2(spent.goods),
+      interest: round2(gov.ledger.interest), welfare: round2(spent.welfare ?? 0), firms: round2(spent.firms ?? 0), office: round2(spent.office ?? 0), build: round2(spent.build ?? 0),
+    };
     k.lastBudget = b;
-    const net = b.wages + b.goods + b.interest + b.welfare - b.fees;
+    // 국고가 내는 돈: 정부 건물(행정청·학교) + 이자 + 복지 + 왕실 공사 − 건축사무소 손익 (왕실 공사 수수료는 사무소 매출로 돌아오므로 둘을 함께 센다)
+    const net = b.wages + b.goods + b.interest + b.welfare + b.build - b.office;
     k.expenseEma = k.expenseEma == null ? net : k.expenseEma * 0.75 + net * 0.25;
-    // 예산 미리보기 기준값 (화면 전용). 수수료는 건축사무소 임금 몫(국영 임금 배율 1로 환산)과 나머지로 나눈다
+    // 예산 미리보기 기준값 (화면 전용)
     const base = (k.budgetBase ??= {});
     const a = budgetEmaWeight(w, 0.25);
     const ema = (old: number | undefined, x: number) => (old == null ? x : old * (1 - a) + x * a);
-    const fw = k.feeWageWeek ?? 0;
     base.tariffs = ema(base.tariffs, k.tariffWeek ?? 0);
     // 관세 나누기 (상품·출발 왕국): 이번 주에 없던 열쇠는 0 으로 따라간다. 거의 0 이 된 열쇠는 지운다
     const by: Record<string, number> = {};
@@ -163,11 +166,9 @@ export function spendBudget(w: World) {
     }
     base.tariffsBy = by;
     k.tariffWeekBy = {};
-    base.feesWage = ema(base.feesWage, fw);
-    base.feesOther = ema(base.feesOther, Math.max(0, b.fees - fw * budgetMult(k, 'wages')));
     base.goods = ema(base.goods, b.goods);
     k.tariffWeek = 0;
-    k.feeWageWeek = 0;
+    k.privateFeeWeek = 0;
     updateWageIndex(w, k);
     applyStateWages(w, k);
   }
@@ -315,17 +316,25 @@ export function committedCost(w: World, c: Company): number {
 /** 건물 이익 중 유보 자산으로 남기는 몫 (빅토리아3: 25~50%). 유보 자산이 가득 차면 이익을 모두 배당한다 */
 export const RESERVE_SHARE = 0.35;
 
-/** 유보 자산을 쌓는 건물: 파는 건물 (정부 건물·학교·건축사무소는 이익이 없어 쌓지 않는다) */
+/** 유보 자산을 쌓는 건물: 파는 건물과 건축사무소 (국고가 운영비를 내는 행정청·학교는 이익이 없어 쌓지 않는다) */
 export function hasReserve(b: Building): boolean {
-  if (BUILDING_BY_ID[b.typeId].auto || isGovernment(b.typeId)) return false;
-  const m = getMethod(b.typeId, b.methodId);
-  return !m.construction && !m.seats;
+  if (BUILDING_BY_ID[b.typeId].auto || isBudgetFunded(b.typeId)) return false;
+  return !getMethod(b.typeId, b.methodId).seats;
 }
 
-/** 방식 1레벨의 주간 산출 가치 (기본가, 만원 가동). 상품을 내지 않는 방식(건축사무소·학교·행정청)은 0 */
+/**
+ * 방식 1레벨의 주간 산출 가치 (기본가, 만원 가동). 건축사무소는 기본 임금·기본가 원료로 센 운영비 × 수수료 배율 (기본가 수수료 매출).
+ * 그 밖에 상품을 내지 않는 방식(학교·행정청)은 0
+ */
 export function weeklyOutputValue(typeId: string, methodId: string): number {
+  const m = getMethod(typeId, methodId);
   let v = 0;
-  for (const [g, q] of Object.entries(getMethod(typeId, methodId).outputs) as [GoodId, number][]) v += q * GOODS[g].basePrice;
+  if (m.construction) {
+    for (const s of SKILLS) v += (m.workers[s] ?? 0) * SKILL_DEFS[s].baseWage;
+    for (const [g, q] of Object.entries(m.inputs) as [GoodId, number][]) v += q * GOODS[g].basePrice;
+    return v * officeFeeMult(methodId) * TICKS_PER_WEEK;
+  }
+  for (const [g, q] of Object.entries(m.outputs) as [GoodId, number][]) v += q * GOODS[g].basePrice;
   return v * TICKS_PER_WEEK;
 }
 
@@ -459,11 +468,15 @@ export function payDividends(w: World, c: Company) {
   // 화면 표시용 기록 (b.payout): 주초 유보 자산과 이번 주 배당을 적는다. sim은 읽지 않는다
   const res0 = new Map(mine.map((b) => [b, b.reserve ?? 0] as const));
   const paid = new Map<Building, Record<number, number>>(mine.map((b) => [b, {}] as const));
-  const record = () => { for (const b of mine) b.payout = { reserve: (b.reserve ?? 0) - res0.get(b)!, paid: paid.get(b)! }; };
+  const record = (crown?: Map<Building, number>) => {
+    for (const b of mine) b.payout = { reserve: (b.reserve ?? 0) - res0.get(b)!, paid: paid.get(b)!, ...(crown?.has(b) ? { crown: crown.get(b)! } : {}) };
+  };
   if (c.state) {
-    for (const b of mine) if (hasReserve(b)) settleReserve(b, b.profitEma * TICKS_PER_WEEK);
+    // 왕실 건물(생산 건물·건축사무소): 유보 자산을 정산하고 남는 이익이 국고 몫(배당)이다. 돈은 이미 국고에 있다
+    const crown = new Map<Building, number>();
+    for (const b of mine) if (hasReserve(b)) crown.set(b, settleReserve(b, b.profitEma * TICKS_PER_WEEK));
     fitReserves(w, c);
-    record();
+    record(crown);
     return;
   }
   const byId = new Map(w.buildings.map((b) => [b.id, b] as const));
@@ -665,14 +678,14 @@ export function mintMoney(w: World) {
 export interface OwnerShare extends LevelOwner {
   /** 레벨 비율 0..1 (levels ÷ 건물 레벨) */
   share: number;
-  /** 지난 주간 정산에서 이 주인이 받은 배당 (국가는 0: 이익이 국고에 남는다) */
+  /** 지난 주간 정산에서 이 주인이 받은 배당 (국가: 유보 자산을 뺀 이익, 국고에 남는다) */
   dividendWeek: number;
 }
 
 /** 건물 하나의 수지·지분 (화면용 순수 함수). day = 오늘(마지막 하루) 장부, week = 주 단위 */
 export interface BuildingEcon {
-  /** 하루: 매출(행정청은 세금 몫 포함), 그중 세금 몫, 원료비, 임금(민간 건물의 소유 직종은 임금 대신 배당이라 빠진다), 이익 = 매출 − 원료비 − 임금 */
-  day: { sales: number; tax: number; inputs: number; wages: number; profit: number };
+  /** 하루: 매출(행정청은 세금 몫, 건축사무소는 공사 수수료), 그중 세금 몫, 그중 공사 수수료, 원료비, 임금(민간 건물의 소유 직종은 임금 대신 배당이라 빠진다), 이익 = 매출 − 원료비 − 임금 */
+  day: { sales: number; tax: number; fee: number; inputs: number; wages: number; profit: number };
   /** 이익률 = 하루 이익 ÷ 매출 (매출이 0이면 null) */
   margin: number | null;
   /** 주간 이익 = profitEma × 7 (이동평균), 레벨당 주간 이익 */
@@ -683,7 +696,7 @@ export interface BuildingEcon {
   reserve: number;
   reserveCap: number;
   reserveWeek: number;
-  /** 지난주 배당 합과 주인별 내역 (주인이 없는 몫은 ownerless 로) */
+  /** 지난주 배당 합과 주인별 내역 (주인이 없는 몫은 ownerless 로). 국영 건물은 국고 몫 (payout.crown) */
   dividendsWeek: number;
   owners: OwnerShare[];
   /** 주인 목록에 없는 곳(주인 없는 레벨 → 지역 금융가)으로 간 지난주 배당: 소유 건물 id(0 = 주인 없는 돈) → 금액 */
@@ -701,10 +714,10 @@ export function buildingEcon(w: World, b: Building): BuildingEcon {
   const owners: OwnerShare[] = levelOwnersOf(w, b).map((o) => ({
     ...o,
     share: b.level > 0 ? o.levels / b.level : 0,
-    dividendWeek: o.ownerBuildingId !== undefined ? round2(paid[o.ownerBuildingId] ?? 0) : 0,
+    dividendWeek: o.ownerBuildingId !== undefined ? round2(paid[o.ownerBuildingId] ?? 0) : o.owner === 'state' ? round2(b.payout?.crown ?? 0) : 0,
   }));
   const ownerless: Record<number, number> = {};
-  let dividendsWeek = 0;
+  let dividendsWeek = b.payout?.crown ?? 0;
   for (const id of Object.keys(paid).map(Number)) {
     dividendsWeek += paid[id];
     if (!owners.some((o) => o.ownerBuildingId === id)) ownerless[id] = round2(paid[id]);
@@ -713,7 +726,7 @@ export function buildingEcon(w: World, b: Building): BuildingEcon {
   for (const s of SKILLS) { employed += b.employed[s]; jobs += slots(b, s); }
   const week = b.profitEma * TICKS_PER_WEEK;
   return {
-    day: { sales: round2(L.revenue), tax: round2(L.tax ?? 0), inputs: round2(L.inputCost), wages: round2(L.wageCost), profit: round2(profit) },
+    day: { sales: round2(L.revenue), tax: round2(L.tax ?? 0), fee: round2(L.fee ?? 0), inputs: round2(L.inputCost), wages: round2(L.wageCost), profit: round2(profit) },
     margin: L.revenue > 0 ? profit / L.revenue : null,
     profitWeek: round2(week),
     profitWeekPerLevel: b.level > 0 ? round2(week / b.level) : 0,

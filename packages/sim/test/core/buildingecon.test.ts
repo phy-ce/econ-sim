@@ -14,7 +14,7 @@ describe('건물 수지·지분 (buildingEcon, b.payout)', () => {
       expect(e.day.profit).toBeCloseTo(e.day.sales - e.day.inputs - e.day.wages, 1);
       expect(e.profitWeekPerLevel * b.level).toBeCloseTo(e.profitWeek, 0);
       if (e.owners.length) expect(e.owners.reduce((a, o) => a + o.share, 0)).toBeCloseTo(1, 6);
-      if (b.stateOwned) expect(e.dividendsWeek).toBe(0);
+      if (b.stateOwned) expect(e.dividendsWeek).toBeCloseTo(b.payout?.crown ?? 0, 1);
       if (e.hasReserve) expect(e.reserve).toBeLessThanOrEqual(e.reserveCap + 0.01);
       const own = e.owners.reduce((a, o) => a + o.dividendWeek, 0) + Object.values(e.ownerless).reduce((a, x) => a + x, 0);
       expect(own).toBeCloseTo(e.dividendsWeek, 1);

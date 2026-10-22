@@ -12,12 +12,12 @@ export const DEPENDENT_CONSUMPTION = 0.5;
 /** pop 1명당 소비 단위 (노동 인구 1명 = 1) */
 export const CONSUMPTION_PER_CAPITA = WORKFORCE_RATIO + (1 - WORKFORCE_RATIO) * DEPENDENT_CONSUMPTION;
 
-/** 지역 칸 수의 단위: 지도 정의의 1칸 = 건물 1레벨 */
-export const LEVELS_PER_BLOCK = 1;
+/** 지역 칸 수의 단위: 지도 정의(산림·광맥)의 1칸 = 건물 2레벨 (기본 방식 1레벨이 일꾼 500명이라 1,000명 시절의 두 배) */
+export const LEVELS_PER_BLOCK = 2;
 
 // ---------------------------------------------------------------- 단위
 // 하루 단위. 상품 1개 = 한 사람이 하루에 쓰는 양(곡물 1 = 소비 단위 1의 하루 식량). 돈은 플로린.
-// 건물 1레벨 = 일꾼 1,000명. 정해 두는 숫자(이 파일의 값)는 둥글게 둔다.
+// 건물 1레벨 = 기본 방식 일꾼 300~500명 (단계가 오를수록 준다). 정해 두는 숫자(이 파일의 값)는 둥글게 둔다.
 /** 한 공사에 레벨당 하루 들어갈 수 있는 최대 포인트 */
 export const MAX_POINTS_PER_LEVEL_DAY = 10;
 const cells = (n: number) => Math.round(n * LEVELS_PER_BLOCK);
@@ -128,18 +128,27 @@ const m = (def: MethodDef): MethodDef => def;
 /** 행정청 1레벨이 세금을 걷을 수 있는 인구 */
 export const TAX_PEOPLE_PER_LEVEL = 500_000;
 
-/** 레벨당 일자리 (노동자, 기술자, 전문가). 합이 1,000명이 되게 쓴다 */
+/** 레벨당 일자리 (노동자, 기술자, 전문가). 10명 단위, 합은 50명 단위로 쓴다 */
 const jobs = (unskilled: number, skilled = 0, expert = 0) => ({ unskilled, skilled, expert });
 /** 농장·목장의 일자리: 노동자 자리 대신 농부 자리 (임금·자격은 노동자와 같다) */
 const farmJobs = (farmer: number, skilled = 0, expert = 0) => ({ farmer, skilled, expert });
 /** 소유 건물(저택·금융가) 1레벨의 소유주 자리 */
 export const OWNERSHIP_SEATS = 100;
-/** 소유한 건물 1레벨마다 소유 건물에 생기는 소유주 자리 */
-export const OWNER_SEATS_PER_LEVEL = 10;
+/** 소유한 건물 1레벨마다 소유 건물에 생기는 소유주 자리 (기본 방식 1레벨이 일꾼 500명이라 1,000명 시절 10의 절반) */
+export const OWNER_SEATS_PER_LEVEL = 5;
+/** 방식 사다리: 한 단계 오를 때마다 레벨당 이익 배율 (2026-10-22 사용자 결정, cli/methods_audit.ts 와 사전이 읽는다) */
+export const STEP_PROFIT_MULT = 2;
 
-// 레벨당 하루 값. 일꾼은 1,000명을 100명 단위로 나누고, 산출·원료는 500 단위(소량 사치품은 50 단위)로 맞춘다.
-// 기본가·기본 임금에서 이익률(매출 대비)은 기본 방식 약 20%, 기술 개선 1단계 약 30%, 2단계 약 40%다 (cli/methods_audit.ts 로 확인).
-// 공사비(포인트)는 목조 건설로 포인트당 약 1만이라 농장 1레벨이 약 600만, 기본 이익으로 2~3년에 회수한다.
+// 레벨당 하루 값 (2026-10-22 사용자 결정, cli/methods_audit.ts 로 확인). 1레벨은 땅 1칸이자 공사 단위다.
+// - 기본 방식(1단계)은 일꾼 300~500명 (1차 산업 500, 공장 400, 사치품·기계 공장 300; 학교·행정청은 규칙 밖)이고 기본가·기본 임금에서 이익률 20% (±1.5%p).
+// - 한 단계 오를 때마다 레벨당 이익이 2배 (2단계 = 1단계 × 2, 3단계 × 4, ±10%).
+// - 단계가 오를수록 일꾼 합계는 줄고, 기술자·전문가 비율과 공구·철·석탄·기계 같은 상위 원료는 는다. 산출(레벨당)도 는다.
+// - 전문가는 증기 시대 방식(증기기관이 선행인 기술)과 사치품 방식에만, 레벨당 20명까지 (대륙 전문가 약 1천 명, 거의 다 금융가에 있다).
+// - 기본 방식도 공구를 10~20 쓴다 (목공구 공방만 0: 공구로 공구를 만들면 시작이 막힌다). 소작지가 공구를 조금 내서 첫날부터 공구가 있다 (SUBSISTENCE).
+// - 숫자는 둥글게: 일자리 10 단위(합 50 단위), 1,000 이상인 양은 50 단위, 그 아래는 10 단위.
+// - 3단계 산출이 승인 예시(농장 3,500, 철광 2,550, 방직 매출 13,200)보다 큰 것은 임금·원료를 지키고 이익 4배를 맞추려면 산술상 피할 수 없어서다.
+// 공사 포인트 = 기본 방식 하루 이익 × 0.15 (50 단위). 목조 건설 포인트당 약 4,400이라 기본 방식은 약 1.8년에 회수한다.
+// 계수 비교는 TUNE.buildCostMult 0.67·1·1.33(= 0.1·0.15·0.2)으로 했다: 시드 1·2에서 0.15가 가장 높고 1~4에서는 0.2가 높다 (DESIGN 11 "공사 포인트 계수", 값은 그대로).
 export const BUILDING_TYPES: BuildingTypeDef[] = [
   {
     // 빈 농지에 자동으로 생긴다. 소작농이 일하고, 산출은 소작농과 지주의 현물이 된다 (SUBSISTENCE 참고)
@@ -161,108 +170,114 @@ export const BUILDING_TYPES: BuildingTypeDef[] = [
     methods: [m({ id: 'finance', name: '투자 관리', nameEn: 'Investment management', workers: { expert: OWNERSHIP_SEATS }, inputs: {}, outputs: {} })],
   },
   {
-    id: 'farm', name: '곡물 농장', nameEn: 'Grain farm', land: 'arable', buildPoints: 600,
+    id: 'farm', name: '곡물 농장', nameEn: 'Grain farm', land: 'arable', buildPoints: 200,
     methods: [
-      m({ id: 'farm_basic', name: '곡물 재배', nameEn: 'Grain farming', workers: farmJobs(1000), inputs: {}, outputs: { grain: 6500 } }),
-      m({ id: 'farm_tools', name: '쇠 농기구', nameEn: 'Iron implements', tech: 'iron_tools', workers: farmJobs(600, 200), inputs: { tools: 100 }, outputs: { grain: 7300 } }),
-      m({ id: 'farm_mech', name: '농업 기계', nameEn: 'Farm machinery', tech: 'agri_mech', workers: farmJobs(400, 100), inputs: { fuel: 300, electronics: 100 }, outputs: { grain: 7600 } }),
+      m({ id: 'farm_basic', name: '곡물 재배', nameEn: 'Grain farming', workers: farmJobs(500), inputs: { tools: 10 }, outputs: { grain: 3200 } }),
+      m({ id: 'farm_tools', name: '쇠 농기구', nameEn: 'Iron implements', tech: 'iron_tools', workers: farmJobs(350, 50), inputs: { tools: 50 }, outputs: { grain: 3650 } }),
+      m({ id: 'farm_mech', name: '농업 기계', nameEn: 'Farm machinery', tech: 'agri_mech', workers: farmJobs(200, 40, 10), inputs: { tools: 30, fuel: 100, electronics: 30 }, outputs: { grain: 4700 } }),
     ],
   },
   {
-    id: 'fiber_farm', name: '섬유 농장', nameEn: 'Fibre farm', land: 'arable', buildPoints: 600,
+    id: 'fiber_farm', name: '섬유 농장', nameEn: 'Fibre farm', land: 'arable', buildPoints: 200,
     methods: [
-      m({ id: 'fiber_basic', name: '섬유 재배', nameEn: 'Fibre farming', workers: farmJobs(1000), inputs: {}, outputs: { fiber: 6500 } }),
-      m({ id: 'fiber_tools', name: '쇠 농기구', nameEn: 'Iron implements', tech: 'iron_tools', workers: farmJobs(600, 200), inputs: { tools: 100 }, outputs: { fiber: 7300 } }),
-      m({ id: 'fiber_mech', name: '농업 기계', nameEn: 'Farm machinery', tech: 'agri_mech', workers: farmJobs(400, 100), inputs: { fuel: 300, electronics: 100 }, outputs: { fiber: 7600 } }),
+      m({ id: 'fiber_basic', name: '섬유 재배', nameEn: 'Fibre farming', workers: farmJobs(500), inputs: { tools: 10 }, outputs: { fiber: 3200 } }),
+      m({ id: 'fiber_tools', name: '쇠 농기구', nameEn: 'Iron implements', tech: 'iron_tools', workers: farmJobs(350, 50), inputs: { tools: 50 }, outputs: { fiber: 3650 } }),
+      m({ id: 'fiber_mech', name: '농업 기계', nameEn: 'Farm machinery', tech: 'agri_mech', workers: farmJobs(200, 40, 10), inputs: { tools: 30, fuel: 100, electronics: 30 }, outputs: { fiber: 4700 } }),
     ],
   },
   {
     // 곡물을 사료로 먹여 고기를 낸다. 곡물이 쌀수록 남는다
-    id: 'ranch', name: '목장', nameEn: 'Livestock ranch', land: 'arable', buildPoints: 600,
+    id: 'ranch', name: '목장', nameEn: 'Livestock ranch', land: 'arable', buildPoints: 300,
     methods: [
-      m({ id: 'ranch_basic', name: '가축 사육', nameEn: 'Livestock raising', workers: farmJobs(1000), inputs: { grain: 3000 }, outputs: { meat: 1250 } }),
+      m({ id: 'ranch_basic', name: '가축 사육', nameEn: 'Livestock raising', workers: farmJobs(500), inputs: { tools: 10, grain: 1550 }, outputs: { meat: 640 } }),
     ],
   },
   {
-    id: 'lumber', name: '벌목장', nameEn: 'Lumber camp', land: 'forest', buildPoints: 600,
+    id: 'lumber', name: '벌목장', nameEn: 'Lumber camp', land: 'forest', buildPoints: 200,
     methods: [
-      m({ id: 'lumber_manual', name: '수작업 벌목', nameEn: 'Hand felling', workers: jobs(1000), inputs: {}, outputs: { timber: 6500 } }),
-      m({ id: 'lumber_axe', name: '쇠도끼와 톱', nameEn: 'Iron axes and saws', tech: 'iron_tools', workers: jobs(700, 300), inputs: { tools: 100 }, outputs: { timber: 8900 } }),
+      m({ id: 'lumber_manual', name: '수작업 벌목', nameEn: 'Hand felling', workers: jobs(500), inputs: { tools: 10 }, outputs: { timber: 3200 } }),
+      m({ id: 'lumber_axe', name: '쇠도끼와 톱', nameEn: 'Iron axes and saws', tech: 'iron_tools', workers: jobs(300, 100), inputs: { tools: 50 }, outputs: { timber: 3800 } }),
     ],
   },
   {
-    id: 'mine', name: '철광산', nameEn: 'Iron mine', land: 'ore', deposit: 'iron', buildPoints: 800,
+    // 빅토리아3 광산: 곡괭이와 삽(공구) → 발파(폭약, 여기서는 석탄) → 증기 양수기
+    id: 'mine', name: '철광산', nameEn: 'Iron mine', land: 'ore', deposit: 'iron', buildPoints: 200,
     methods: [
-      m({ id: 'iron_shaft', name: '갱도 채굴', nameEn: 'Shaft mining', workers: jobs(1000), inputs: {}, outputs: { ore: 3000 } }),
-      m({ id: 'iron_pick', name: '쇠곡괭이', nameEn: 'Iron picks', tech: 'iron_tools', workers: jobs(800, 200), inputs: { tools: 100 }, outputs: { ore: 4200 } }),
-      m({ id: 'iron_pump', name: '증기 양수기', nameEn: 'Steam pumps', tech: 'steam_pump', workers: jobs(600, 300, 100), inputs: { tools: 200, fuel: 300 }, outputs: { ore: 7400 } }),
+      m({ id: 'iron_shaft', name: '곡괭이와 삽', nameEn: 'Picks and shovels', workers: jobs(450, 50), inputs: { tools: 20 }, outputs: { ore: 1700 } }),
+      m({ id: 'iron_pick', name: '발파', nameEn: 'Blasting', tech: 'iron_tools', workers: jobs(300, 100), inputs: { tools: 50, fuel: 100 }, outputs: { ore: 2000 } }),
+      m({ id: 'iron_pump', name: '증기 양수기', nameEn: 'Steam pumps', tech: 'steam_pump', workers: jobs(150, 130, 20), inputs: { tools: 50, fuel: 300, electronics: 10 }, outputs: { ore: 2800 } }),
     ],
   },
   {
-    id: 'coal_mine', name: '석탄광산', nameEn: 'Coal mine', land: 'ore', deposit: 'coal', buildPoints: 800,
+    id: 'coal_mine', name: '석탄광산', nameEn: 'Coal mine', land: 'ore', deposit: 'coal', buildPoints: 200,
     methods: [
-      m({ id: 'coal_shaft', name: '갱도 채굴', nameEn: 'Shaft mining', workers: jobs(1000), inputs: {}, outputs: { fuel: 4000 } }),
-      m({ id: 'coal_pick', name: '쇠곡괭이', nameEn: 'Iron picks', tech: 'iron_tools', workers: jobs(800, 200), inputs: { tools: 100 }, outputs: { fuel: 5500 } }),
-      m({ id: 'coal_pump', name: '증기 양수기', nameEn: 'Steam pumps', tech: 'steam_pump', workers: jobs(600, 300, 100), inputs: { tools: 200 }, outputs: { fuel: 9200 } }),
+      m({ id: 'coal_shaft', name: '곡괭이와 삽', nameEn: 'Picks and shovels', workers: jobs(450, 50), inputs: { tools: 20 }, outputs: { fuel: 2250 } }),
+      m({ id: 'coal_pick', name: '발파', nameEn: 'Blasting', tech: 'iron_tools', workers: jobs(300, 100), inputs: { tools: 50 }, outputs: { fuel: 2550 } }),
+      m({ id: 'coal_pump', name: '증기 양수기', nameEn: 'Steam pumps', tech: 'steam_pump', workers: jobs(150, 130, 20), inputs: { tools: 50, electronics: 10 }, outputs: { fuel: 3400 } }),
     ],
   },
   {
-    id: 'foodplant', name: '식료품 공장', nameEn: 'Grocery plant', land: 'plot', buildPoints: 1000,
+    id: 'foodplant', name: '식료품 공장', nameEn: 'Grocery plant', land: 'plot', buildPoints: 250,
     methods: [
-      m({ id: 'food_manual', name: '수작업 가공', nameEn: 'Manual processing', tech: 'milling', workers: jobs(800, 200), inputs: { grain: 3500 }, outputs: { food: 5700 } }),
-      m({ id: 'food_machine', name: '기계 가공', nameEn: 'Machine processing', tech: 'food_machinery', workers: jobs(500, 200), inputs: { grain: 3500, tools: 100 }, outputs: { food: 5600 } }),
+      m({ id: 'food_manual', name: '수작업 가공', nameEn: 'Manual processing', tech: 'milling', workers: jobs(360, 40), inputs: { tools: 10, grain: 1300 }, outputs: { food: 2150 } }),
+      m({ id: 'food_machine', name: '기계 가공', nameEn: 'Machine processing', tech: 'food_machinery', workers: jobs(100, 80, 20), inputs: { tools: 60, fuel: 100, grain: 1550 }, outputs: { food: 2600 } }),
     ],
   },
   {
-    id: 'textile', name: '방직 공장', nameEn: 'Textile mill', land: 'plot', buildPoints: 1000,
+    // 의복: 손베틀 → 방적기 → 증기 직기. 고급 의복: 맞춤 재단 → 증기 재단
+    id: 'textile', name: '방직 공장', nameEn: 'Textile mill', land: 'plot', buildPoints: 300,
     methods: [
-      m({ id: 'textile_hand', name: '손베틀', nameEn: 'Handlooms', tech: 'spinning', workers: jobs(800, 200), inputs: { fiber: 3500 }, outputs: { cloth: 3800 } }),
-      m({ id: 'textile_tailor', name: '맞춤 재단', nameEn: 'Bespoke tailoring', tech: 'spinning', workers: jobs(400, 600), inputs: { fiber: 1500 }, outputs: { luxury_cloth: 650 } }),
-      m({ id: 'textile_steam', name: '증기 직기', nameEn: 'Power looms', tech: 'power_loom', workers: jobs(500, 200), inputs: { fiber: 3500, tools: 100 }, outputs: { cloth: 3800 } }),
-      m({ id: 'textile_tailor_steam', name: '증기 재단', nameEn: 'Steam tailoring', tech: 'power_loom', workers: jobs(300, 600, 100), inputs: { fiber: 1500, tools: 100 }, outputs: { luxury_cloth: 950 } }),
+      m({ id: 'textile_hand', name: '손베틀', nameEn: 'Handlooms', tech: 'spinning', workers: jobs(360, 40), inputs: { tools: 10, fiber: 1550 }, outputs: { cloth: 1550 } }),
+      m({ id: 'textile_spin', name: '방적기', nameEn: 'Spinning jennies', tech: 'ironworking', workers: jobs(210, 90), inputs: { tools: 40, fiber: 1900 }, outputs: { cloth: 1900 } }),
+      m({ id: 'textile_steam', name: '증기 직기', nameEn: 'Power looms', tech: 'power_loom', workers: jobs(100, 80, 20), inputs: { tools: 60, fuel: 100, fiber: 2850 }, outputs: { cloth: 2850 } }),
+      m({ id: 'textile_tailor', name: '맞춤 재단', nameEn: 'Bespoke tailoring', tech: 'spinning', workers: jobs(180, 120), inputs: { tools: 10, fiber: 440 }, outputs: { luxury_cloth: 190 } }),
+      m({ id: 'textile_tailor_steam', name: '증기 재단', nameEn: 'Steam tailoring', tech: 'power_loom', workers: jobs(80, 100, 20), inputs: { tools: 60, fuel: 100, fiber: 600 }, outputs: { luxury_cloth: 250 } }),
     ],
   },
   {
-    id: 'smelter', name: '제철소', nameEn: 'Ironworks', land: 'plot', buildPoints: 1200,
+    id: 'smelter', name: '제철소', nameEn: 'Ironworks', land: 'plot', buildPoints: 300,
     methods: [
-      m({ id: 'smelt_charcoal', name: '목탄 제련', nameEn: 'Charcoal smelting', tech: 'bloomery', workers: jobs(700, 300), inputs: { ore: 2000, timber: 2000 }, outputs: { metal: 3800 } }),
-      m({ id: 'smelt_coke', name: '코크스 제련', nameEn: 'Coke smelting', tech: 'coking', workers: jobs(700, 300), inputs: { ore: 2000, fuel: 1000 }, outputs: { metal: 4200 } }),
+      m({ id: 'smelt_charcoal', name: '목탄 제련', nameEn: 'Charcoal smelting', tech: 'bloomery', workers: jobs(360, 40), inputs: { tools: 10, ore: 600, timber: 600 }, outputs: { metal: 1250 } }),
+      m({ id: 'smelt_coke', name: '코크스 제련', nameEn: 'Coke smelting', tech: 'coking', workers: jobs(210, 90), inputs: { tools: 40, ore: 780, fuel: 390 }, outputs: { metal: 1550 } }),
     ],
   },
   {
-    id: 'workshop', name: '공방', nameEn: 'Tool workshop', land: 'plot', buildPoints: 1000,
+    // 목공구는 공구를 쓰지 않는다 (공구로 공구를 만들면 공구가 없을 때 시작이 막힌다). 쇠공구는 공구 대신 석탄을 쓴다
+    id: 'workshop', name: '공방', nameEn: 'Tool workshop', land: 'plot', buildPoints: 200,
     methods: [
-      m({ id: 'tools_wood', name: '목공구', nameEn: 'Wooden tools', tech: 'guilds', workers: jobs(800, 200), inputs: { timber: 2000 }, outputs: { tools: 1900 } }),
-      m({ id: 'tools_iron', name: '쇠공구', nameEn: 'Iron tools', tech: 'ironworking', workers: jobs(700, 300), inputs: { timber: 1000, metal: 500 }, outputs: { tools: 2500 } }),
+      m({ id: 'tools_wood', name: '목공구', nameEn: 'Wooden tools', tech: 'guilds', workers: jobs(360, 40), inputs: { timber: 700 }, outputs: { tools: 700 } }),
+      m({ id: 'tools_iron', name: '쇠공구', nameEn: 'Iron tools', tech: 'ironworking', workers: jobs(210, 90), inputs: { fuel: 100, timber: 340, metal: 170 }, outputs: { tools: 860 } }),
     ],
   },
   {
-    id: 'furniture', name: '가구 공방', nameEn: 'Furniture workshop', land: 'plot', buildPoints: 1000,
+    // 가구: 손가구 → 공구 가구. 고급 가구: 장인 가구 → 공구 장인 가구
+    id: 'furniture', name: '가구 공방', nameEn: 'Furniture workshop', land: 'plot', buildPoints: 250,
     methods: [
-      m({ id: 'furniture_hand', name: '손가구', nameEn: 'Hand-made furniture', tech: 'guilds', workers: jobs(800, 200), inputs: { timber: 2000, fiber: 500 }, outputs: { furniture: 2500 } }),
-      m({ id: 'furniture_luxury', name: '장인 가구', nameEn: 'Master cabinetmakers', tech: 'guilds', workers: jobs(400, 600), inputs: { timber: 1000, cloth: 200 }, outputs: { luxury_furniture: 500 } }),
-      m({ id: 'furniture_tools', name: '공구 가구', nameEn: 'Furniture with tools', tech: 'ironworking', workers: jobs(600, 300, 100), inputs: { timber: 2000, fiber: 500, tools: 100 }, outputs: { furniture: 3600 } }),
-      m({ id: 'furniture_luxury_tools', name: '공구 장인 가구', nameEn: 'Cabinetmakers with tools', tech: 'ironworking', workers: jobs(300, 600, 100), inputs: { timber: 1000, cloth: 200, tools: 100 }, outputs: { luxury_furniture: 750 } }),
+      m({ id: 'furniture_hand', name: '손가구', nameEn: 'Hand-made furniture', tech: 'guilds', workers: jobs(360, 40), inputs: { tools: 10, timber: 800, fiber: 200 }, outputs: { furniture: 980 } }),
+      m({ id: 'furniture_tools', name: '공구 가구', nameEn: 'Furniture with tools', tech: 'ironworking', workers: jobs(210, 90), inputs: { tools: 40, timber: 920, fiber: 230 }, outputs: { furniture: 1150 } }),
+      m({ id: 'furniture_luxury', name: '장인 가구', nameEn: 'Master cabinetmakers', tech: 'guilds', workers: jobs(180, 120), inputs: { tools: 10, timber: 350, cloth: 70 }, outputs: { luxury_furniture: 150 } }),
+      m({ id: 'furniture_luxury_tools', name: '공구 장인 가구', nameEn: 'Cabinetmakers with tools', tech: 'ironworking', workers: jobs(80, 100, 20), inputs: { tools: 60, timber: 440, cloth: 90 }, outputs: { luxury_furniture: 190 } }),
     ],
   },
   {
     // 목재를 눌러 종이를 낸다 (빅토리아3 Paper Mills, Pulp Pressing: 목재 30 → 종이 40). 전문 관료제 행정청이 쓴다. 기술 없이 지을 수 있다
-    id: 'paper_mill', name: '종이 공장', nameEn: 'Paper mill', land: 'plot', buildPoints: 1000,
+    id: 'paper_mill', name: '종이 공장', nameEn: 'Paper mill', land: 'plot', buildPoints: 250,
     methods: [
-      m({ id: 'pulp_press', name: '펄프 압착', nameEn: 'Pulp pressing', workers: jobs(800, 200), inputs: { timber: 2500 }, outputs: { paper: 5000 } }),
+      m({ id: 'pulp_press', name: '펄프 압착', nameEn: 'Pulp pressing', workers: jobs(360, 40), inputs: { tools: 10, timber: 1000 }, outputs: { paper: 1950 } }),
     ],
   },
   {
-    id: 'fab', name: '기계 공장', nameEn: 'Machine works', land: 'plot', buildPoints: 1200,
+    id: 'fab', name: '기계 공장', nameEn: 'Machine works', land: 'plot', buildPoints: 300,
     methods: [
-      m({ id: 'machine_steam', name: '증기 기계 제작', nameEn: 'Steam engineering', tech: 'steam_engine', workers: jobs(600, 300, 100), inputs: { metal: 2000, fuel: 500 }, outputs: { electronics: 2000 } }),
+      m({ id: 'machine_steam', name: '증기 기계 제작', nameEn: 'Steam engineering', tech: 'steam_engine', workers: jobs(210, 80, 10), inputs: { tools: 20, metal: 550, fuel: 140 }, outputs: { electronics: 540 } }),
     ],
   },
   {
-    id: 'railway', name: '운송 조합', nameEn: 'Carters\' guild', land: 'plot', buildPoints: 600,
+    // 증기 철도는 공구 대신 기계와 석탄을 쓴다
+    id: 'railway', name: '운송 조합', nameEn: 'Carters\' guild', land: 'plot', buildPoints: 200,
     methods: [
-      m({ id: 'rail_wagon', name: '짐마차', nameEn: 'Freight wagons', tech: 'wagonway', workers: jobs(900, 100), inputs: { grain: 1000, timber: 500 }, outputs: { transport: 5800 } }),
-      m({ id: 'rail_steam', name: '증기 철도', nameEn: 'Steam railway', tech: 'steam_rail', workers: jobs(500, 400, 100), inputs: { electronics: 100, fuel: 1000 }, outputs: { transport: 9500 } }),
+      m({ id: 'rail_wagon', name: '짐마차', nameEn: 'Freight wagons', tech: 'wagonway', workers: jobs(360, 40), inputs: { tools: 10, grain: 340, timber: 220 }, outputs: { transport: 2250 } }),
+      m({ id: 'rail_steam', name: '증기 철도', nameEn: 'Steam railway', tech: 'steam_rail', workers: jobs(150, 130, 20), inputs: { electronics: 30, fuel: 280 }, outputs: { transport: 2800 } }),
     ],
   },
   {
@@ -274,12 +289,13 @@ export const BUILDING_TYPES: BuildingTypeDef[] = [
     ],
   },
   {
-    // 목조: 임금 12,000 + 목재·섬유 7,000 → 4포인트 (포인트당 약 4,750). 정부 건물 중 이것만 공장 부지를 쓴다 (빅토리아3 건설 부문만 주마다 레벨 상한이 있다)
-    id: 'builder', name: '건축사무소', nameEn: 'Construction office', land: 'plot', buildPoints: 400,
+    // 이익 규칙 밖 (포인트당 비용 = (임금 + 원료) ÷ 포인트): 목조 8,850 → 2점 (포인트당 4,425), 비계 7,700 → 4점 (1,925), 철골 8,750 → 6점 (약 1,460).
+    // 일꾼 1명당 포인트는 1,000명 시절과 같다 (500명 2점, 400명 4점, 300명 6점). 정부 건물 중 이것만 공장 부지를 쓴다 (빅토리아3 건설 부문만 주마다 레벨 상한이 있다)
+    id: 'builder', name: '건축사무소', nameEn: 'Construction office', land: 'plot', buildPoints: 200,
     methods: [
-      m({ id: 'build_manual', name: '목조 건설', nameEn: 'Timber building', workers: jobs(800, 200), inputs: { timber: 3000, fiber: 500 }, outputs: {}, construction: 4 }),
-      m({ id: 'build_scaffold', name: '목재 비계', nameEn: 'Timber scaffolding', tech: 'scaffolding', workers: jobs(700, 300), inputs: { timber: 2000, ore: 500, tools: 200 }, outputs: {}, construction: 10 }),
-      m({ id: 'build_steel', name: '철골 건축', nameEn: 'Iron frames', tech: 'steel_frame', workers: jobs(600, 400), inputs: { metal: 1500, tools: 300 }, outputs: {}, construction: 20 }),
+      m({ id: 'build_manual', name: '목조 건설', nameEn: 'Timber building', workers: jobs(450, 50), inputs: { tools: 10, timber: 1500, fiber: 250 }, outputs: {}, construction: 2 }),
+      m({ id: 'build_scaffold', name: '목재 비계', nameEn: 'Timber scaffolding', tech: 'scaffolding', workers: jobs(300, 100), inputs: { tools: 80, timber: 800, ore: 200 }, outputs: {}, construction: 4 }),
+      m({ id: 'build_steel', name: '철골 건축', nameEn: 'Iron frames', tech: 'steel_frame', workers: jobs(150, 130, 20), inputs: { tools: 90, metal: 450 }, outputs: {}, construction: 6 }),
     ],
   },
   {
@@ -302,8 +318,6 @@ export function getMethod(typeId: string, methodId: string): MethodDef {
   return method;
 }
 
-/** 건설 포인트 1점의 장부 가치 (신용 한도·경매가 계산용): 목조 건설 포인트당 비용 */
-export const POINT_VALUE = 10_000;
 
 /** 규모의 경제: 같은 지역 같은 건물 레벨당 +1%, 최대 +20% */
 export function scaleBonus(level: number): number {
@@ -448,7 +462,7 @@ export const TUNE = {
   investLower: 0.15,
   financeWage: 20,
   financeBonus: 0.1,
-  financeStaff: 2,
+  financeStaff: 1, // 가진 레벨 1당 전문가. 1레벨이 일꾼 1,000명에서 약 500명으로 줄어 2의 절반
   rawFullWealth: 5,
   rawCapWealth: 10,
   taxLevels: [0.6, 0.8, 1, 1.2, 1.4],
@@ -483,13 +497,18 @@ export const TUNE = {
   laborNet: 0,
   minRoi: 0.2,
   minStaffing: 0.5,
+  // AI 방식 바꾸기와 잠재 수요 (2026-10-22, 새 방식 사다리): 1 = 새 규칙, 0 = 옛 규칙. 40년 × 시드 1~4 비교로 둘 다 0 (DESIGN 11):
+  // 둘 다 끄면 네 시드 모두 버티고(40년 평균 총생산 970), 하나라도 켜면 시드 3이 28~33년차에 민간 현금 0으로 무너진다 (평균 811~1,008)
+  latentFeasible: 0, // 잠재 수요에 실제로 바꿀 수 있는 몫만 센다 (지역 일손 × 다른 투입재)
+  aiSwitchV2: 0, // 방식 비교 = 건물 전체 하루 손익 × 기대 충원율 × 투입 충족 (옛: 산출 1단위당 이윤, 일손 50% 기준, 공급 50% 기준)
+  aiMixedMethods: 0, // 1 = 건물 전체를 바꿀 수 없을 때 같은 지역에 더 나은 방식 1~2레벨을 따로 짓는다 (세계 규칙이 바뀌어 사용자 결정 필요, DECISIONS 7-21)
   officeRichWeeks: 52,
   officeSelfPay: 0,
   laborPoach: 0,
   officeSchoolFirst: 0,
   needMul: {} as Partial<Record<NeedId, number>>,
-  startLumber: 0.6,
-  startFiber: 0.2,
+  startLumber: 1.2, // 1레벨이 일꾼 500명이 되어 1,000명 시절 0.6·0.2의 두 배
+  startFiber: 0.4,
   // AI 수정 비교 (2026-10-22, 기본값 = 지금 동작). crownGdpReserve: 왕실이 남길 국고 = 연간 총생산 × 이 비율 (0 = 지출 treasuryHighWeeks 주치)
   crownGdpReserve: 0,
   // 금융가가 이 주 동안 공사비를 맡지 않으면 새 지분을 팔지 않고 남는 금고를 배당한다 (0 = 끔)
@@ -498,7 +517,16 @@ export const TUNE = {
   laborStrict: 0,
   // 국고가 조이면 복지를 끝까지 줄이고 복지법을 끈다 (빚이 없어도, 세금보다 먼저). 끈 뒤 2년은 다시 켜지 않는다 (1 = 켬, 0 = 지금 동작: 빚이 있을 때만 끈다)
   welfareCutOff: 0,
+  // 공사 포인트 배율 (회수 기간 손잡이, 2026-10-22). 모든 건물의 공사 포인트 = buildPoints × 이 값 (10 단위로 둥글게). 비용과 공사 일수가 같이 준다. 1·0.75·0.5 비교 (40년 × 시드 1~4): 0.75·0.5는 네 시드 중 둘이 무너져 1
+  buildCostMult: 1,
 };
+
+/** 이 건물 1레벨의 공사 포인트: 표의 buildPoints × TUNE.buildCostMult, 10 단위 (공사·견적·자재·화면이 모두 이것을 쓴다) */
+export function buildPointsOf(typeId: string): number {
+  const base = BUILDING_BY_ID[typeId].buildPoints;
+  if (!base) return 0;
+  return Math.max(10, Math.round((base * TUNE.buildCostMult) / 10) * 10);
+}
 
 // ---------------------------------------------------------------- 기상 조건
 
@@ -523,12 +551,15 @@ export const HARVEST_KINDS: HarvestDef[] = [
  * 산출 규칙 (식구 = 소비 단위 2.5, 부 5 기준, DESIGN 4장): 곡물 = 식량 필요 2.5 × 1.2 = 3,
  * 의복·목재·가구 = 의복·난방·생활용품 필요(각 하루 1.25플로린)의 절반을 기본가로 나눈 양 (의복 0.1, 목재 0.3, 가구 0.08).
  *   1/4(0.05·0.15·0.04)은 소작농 생활수준이 1.6~2로 떨어져 인구가 준다 (DECISIONS 7-15).
- * 기본 방식 건물 일꾼 1명 산출은 소작농의 곡물 2.3배, 의복 38배, 목재 23배, 가구 31배다
+ * 공구 0.002: 기본 방식이 모두 공구를 조금 써서(레벨당 10~20) 공방이 없는 첫날에도 공구가 있어야 한다 (공구가 떨어지면 목조 건설도 멈춰 공방을 못 짓는다).
+ *   첫날 수요 약 1,560에 공급 약 2,200. 0.005는 약 5,600이라 공구값을 누른다.
+ *   0.001·0.002·0.005 비교 (20년 × 시드 1~4, DESIGN 11): 20년 평균 총생산 시드 1·2 636 / 911 / 1,101, 1~4 584 / 628 / 777. 0.005가 높지만 40년 확인 전이라 그대로 (⚠, HANDOFF).
+ * 기본 방식 건물 일꾼 1명 산출은 소작농의 곡물 2.1배, 의복 39배, 목재 21배, 가구 31배다
  */
 export const SUBSISTENCE = {
-  /** 소작지 1칸 = 소작농 1,000명. 다른 건물 1레벨(일꾼 1,000명)과 같아서 경작지 1칸을 농장으로 바꿔도 일자리 수는 그대로다 */
-  workersPerCell: 1000,
-  output: { grain: 3, cloth: 0.1, timber: 0.3, furniture: 0.08 } as Partial<Record<GoodId, number>>,
+  /** 소작지 1칸 = 소작농 500명. 농장 기본 방식 1레벨(농부 500명)과 같아서 경작지 1칸을 농장으로 바꿔도 일자리 수는 그대로다 */
+  workersPerCell: 500,
+  output: { grain: 3, cloth: 0.1, timber: 0.3, furniture: 0.08, tools: 0.002 } as Partial<Record<GoodId, number>>,
 };
 
 
@@ -551,13 +582,14 @@ export function regionPerk(regionId: number, typeId: string): number {
  * 산림과 광맥 잠재량(veins)은 지역마다 고정(지형)이다. 광맥은 처음에 잠재량 × TUNE.prospectStart 만 알려져 있고 나머지는 탐광으로 찾는다 (economy.ts prospect). 비율은 총인구 대비, 땅은 인구 10만 명당 칸 수다.
  * - pop: 인구 범위 / aristocrat·gentry·skilled·expert: 계층 비율 (나머지는 소작농) / education: 교육 접근도
  * - plot: 부지 칸 / arableSlack: 소작농 노동 인구를 다 앉힐 칸 × 이 배율이 경작지 / farms: 시작 민간 곡물 농장 레벨
+ * plot·farms 는 1레벨이 일꾼 1,000명에서 약 500명이 될 때(2026-10-22) 두 배로 했다 (같은 땅에 같은 일자리)
  */
 export interface TierDef { pop: [number, number]; aristocrat: number; gentry: number; skilled: number; expert: number; education: number; plot: number; arableSlack: number; farms: number }
 export const TIERS: TierDef[] = [
-  { pop: [1_000_000, 1_300_000], aristocrat: 0.007, gentry: 0.01, skilled: 0.12, expert: 0.01, education: 0.35, plot: 150, arableSlack: 1, farms: 0.3 },
-  { pop: [700_000, 1_000_000], aristocrat: 0.015, gentry: 0.015, skilled: 0.06, expert: 0.004, education: 0.25, plot: 80, arableSlack: 1.1, farms: 0.2 },
-  { pop: [400_000, 700_000], aristocrat: 0.02, gentry: 0.02, skilled: 0.03, expert: 0.001, education: 0.15, plot: 50, arableSlack: 1.2, farms: 0.1 },
-  { pop: [200_000, 400_000], aristocrat: 0.015, gentry: 0.015, skilled: 0.02, expert: 0, education: 0.1, plot: 40, arableSlack: 1.2, farms: 0 },
+  { pop: [1_000_000, 1_300_000], aristocrat: 0.007, gentry: 0.01, skilled: 0.12, expert: 0.01, education: 0.35, plot: 300, arableSlack: 1, farms: 0.6 },
+  { pop: [700_000, 1_000_000], aristocrat: 0.015, gentry: 0.015, skilled: 0.06, expert: 0.004, education: 0.25, plot: 160, arableSlack: 1.1, farms: 0.4 },
+  { pop: [400_000, 700_000], aristocrat: 0.02, gentry: 0.02, skilled: 0.03, expert: 0.001, education: 0.15, plot: 100, arableSlack: 1.2, farms: 0.2 },
+  { pop: [200_000, 400_000], aristocrat: 0.015, gentry: 0.015, skilled: 0.02, expert: 0, education: 0.1, plot: 80, arableSlack: 1.2, farms: 0 },
 ];
 /** 티어별 지역 수 (합 = 지역 수). 각 왕국은 티어 2 이상 지역을 하나 이상 갖는다 */
 export const TIER_COUNTS = [1, 2, 3, 1];

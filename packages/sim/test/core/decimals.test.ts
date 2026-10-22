@@ -79,12 +79,17 @@ describe('보이는 값은 소수 둘째 자리, 저장값은 그대로', () => 
     expect(save(b)).toBe(save(a));
   });
 
-  it('옛 판 저장: 9판 이하는 불러오지 않고, 10~13판은 14판으로 바꾼다', () => {
+  it('옛 판 저장: 9판 이하는 불러오지 않고, 10~14판은 15판으로 바꾼다', () => {
     const w = createWorld(7);
     runTo(w, 30);
     const now = JSON.parse(save(w));
     for (const v of [3, 4, 5, 6, 7, 8, 9]) expect(migrateWorld({ ...now, version: v })).toBeNull();
     expect(save(migrateWorld(JSON.parse(save(w)))!)).toBe(save(w));
+    // 14판: 옛 공사 수수료 미리보기 기준값이 있었다
+    const o14 = JSON.parse(save(w));
+    o14.version = 14;
+    for (const k of o14.kingdoms) { k.feeWageWeek = 12.5; k.budgetBase = { ...(k.budgetBase ?? {}), feesWage: 1, feesOther: 2 }; }
+    expect(save(migrateWorld(o14)!)).toBe(save(w));
     // 13판까지: 연구가 돈이었다 (연구비 수준·연구비 장부·Research.budget, 진행은 연구비, 기술 값은 지금의 8,000/3배)
     const toOldResearch = (o: any) => {
       o.version = 13;

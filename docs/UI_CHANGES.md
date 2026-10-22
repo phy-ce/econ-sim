@@ -23,6 +23,8 @@
 0-6. **지역 건물의 수지·지분·배당 (2-59, 사용자 요청 2026-10-22).** 행마다 소유 막대(`levelOwnersOf`)·수지 막대·주간 이익·레벨당 이익·유보 막대, 상세에 수지 폭포·이익 줄·유보 줄·주인 표(레벨·지분·배당/주). 값은 새 export `buildingEcon(world, b)` 하나 (wt-regionecon, main 병합 뒤). 2-42(5번) 행·상세에 얹고, 2-42의 손익·소유 막대·2-31 패널 막대·2-32 3번 칩을 대신한다.
 0-7. **재정 수지 표를 손잡이별로 묶고, 줄을 누르면 작은 창 (2-60, 사용자 요청 2026-10-22).** `FinancePanel.tsx` 17의 수입/지출 두 묶음을 `preview.groups` 네 묶음(세금 수준·국영 임금·복지·고정, 연구비는 2-61로 없어짐)으로, 단계 버튼은 묶음 머리에 하나. 새 줄 `stateFirms`(국영 사업 손익, 순수지에 들어감). 줄을 누르면 360px 떠 있는 창에 `budgetDrill(world, kid, key)` 표 (인건비 = 건물·직종별 인원 × 1인 임금 = 기본 × 임금 지수 × 단계). 2-30 표 구조·2-57 2번을 대신한다 (wt-regionecon, main 병합 뒤).
 0-8. **연구는 돈 대신 문해력 포인트 (2-61, 사용자 결정 2026-10-22).** 연구비 손잡이·연구비 줄·`TUNE.researchLevels`·`Research.budget`이 없어졌다. 재정 창에서 연구비 묶음을 지우고(2-60 묶음은 넷: 세금·국영 임금·복지·고정), 연구 창은 주간 포인트(`Research.points`)·왕국 문해력·남은 주 수와 기술 값(포인트)을 보인다. sim 작업자가 `CompanyPanel.tsx` 156·567·577, `FinancePanel.tsx` 15를 컴파일 맞춤으로 고쳤다.
+0-9. **건축사무소가 공사 수수료로 버는 국영 사업 (2-62, 사용자 요청 2026-10-22).** 수지 표의 `fees`(민간 공사 수수료) 줄이 없어지고 새 줄 `build`(왕실 공사)가 국영 임금 묶음에 들어간다 (`wages, stateFirms, build`). 사무소의 임금·원료는 `wages`·`goods`에서 빠져 `stateFirms`(국영 사업 손익)의 사무소 행으로 간다. `drillFees` → `drillBuild`. 지역 건물 탭에서 사무소는 매출(`day.fee`)·유보·국고 몫(`payout.crown`, `dividendWeek`)이 생긴다. 2-60-2·2-60-3의 `fees` 줄 내용을 대신한다 (wt-office, main 병합 뒤). 저장 15판. 컴파일 수정 없음. 장부 문자열 strings.ts 40·73·331·364.
+0-10. **방식 사다리와 1레벨 약 500명 (2-63, 사용자 결정 2026-10-22).** 레벨당 일꾼·산출이 약 절반, 새 방식 `textile/textile_spin`, 광산 방식 이름(곡괭이와 삽·발파), 공사 포인트 200~300, 소작지 1칸 500명, 사무소 20레벨, 공사 한 건 100레벨까지. 화면이 1,000명·600점 같은 숫자를 박아 두었으면 데이터에서 읽게. 컴파일 수정 없음.
 
 아래는 사용자 요청이거나 정리다.
 1. **아래 창 버튼 토글 + 왕국 지도 버튼 없애기 (2-34, 사용자 재요청).** `WindowWorkspace.tsx` 13·59·67~70: 최소화 상태와 dock의 지도 버튼을 없앤다.
@@ -128,6 +130,7 @@
 
 ### 2-30. 재정 탭: 단계별 예산 미리보기 (사용자 요청 2026-10-21)
 > **2-60이 대신하는 부분:** 아래 "새 표"의 줄 순서, 수입/지출 두 묶음, `firmWages` 흐린 줄. 표는 2-60-2대로 손잡이별 다섯 묶음과 `stateFirms` 줄로 그린다. 나머지(즉시 반영·안정성·문자열 정리)는 이 절 그대로.
+> **2-62:** `fees` 줄과 `budgetBase.feesWage/feesOther`·`Kingdom.feeWageWeek`는 없어졌다 (저장 15판).
 사용자 말: 재정 화면이 보기 어렵다. 지난주·이번주 말고, 단계를 바꾸면 보여 주는 값(예산이 얼마 들지)이 바로 바뀌어야 한다. 숫자가 너무 막 바뀐다.
 - **없앨 것** (`FinancePanel.tsx`): 지난주 `lastLedger[key]`·이번주 `ledger[key]` 열, 바닥줄의 `lastWeekProfit`/`weekProfit`, `lastBudget.revenue`/`revenueWeek`. 이번주 값은 날마다 쌓였다가 주가 바뀌면 0이 되고, 지난주 값은 단계를 바꾸고 한 주가 지나야 바뀐다.
 - **새 표**: `budgetPreview(world, me.kingdomId)` (index에서 export, 세계를 바꾸지 않는 순수 함수). 화면은 100ms마다 world를 받으므로 매번 불러도 된다 (건물 한 번 훑기).
@@ -846,7 +849,7 @@ Keep the exact composition, coastline and every border position of the chosen ma
 | 금액 | 양 × 단가 (투입 `−`, 산출 `+`) | |
 | 투입 막대 | 묶음 전체에 `b.last.inputFill` 하나 (sim의 충족은 투입 중 가장 모자란 것 하나로 정해진다). 칩마다는 그 상품 시장의 구매 충족 `min(1, supplyEma / demandEma)`이 0.99 아래면 빨간 점 (무엇이 모자란지) | `MarketGood.supplyEma`·`demandEma` |
 | 산출 막대 | `sellThrough(region.market[g])` (그 지역 시장에서 팔리는 비율의 추정, AI 전망과 같은 값) | `sellThrough` (economy, index export) |
-| 이익률 | `(b.last.revenue − b.last.inputCost − b.last.wageCost) / b.last.revenue` (매출 0이면 `—`). `methods_audit`의 이익률(20/30/40%)과 같은 정의. `estimateMethod().margin`(이익/비용)은 쓰지 않는다 | |
+| 이익률 | `(b.last.revenue − b.last.inputCost − b.last.wageCost) / b.last.revenue` (매출 0이면 `—`). `methods_audit`의 이익률(기본 방식 20%, 단계마다 레벨당 이익 2배)과 같은 정의. `estimateMethod().margin`(이익/비용)은 쓰지 않는다 | |
 | 툴팁 | 1레벨 레시피(`method.inputs[g]`/`outputs[g]`), 효율 `efficiencyParts(b)`(경험·규모·지역 특성), 기상 배율, 구매 충족·판매율 % | `efficiencyParts` |
 
 - **산출 막대에 `cur / max`를 쓰지 않는다.** "최대"는 효율 때문에 정의가 흔들린다. 덜 만드는 이유는 충원(인력 칸)·충족(투입 막대)·가동률(손잡이)에서 따로 보인다.
@@ -1106,6 +1109,7 @@ Cells, top row left to right, then bottom row:
 - 규칙 사전: `rounding` 항목이 "보이는 소수 자리"로, `idle-market`(거래 없는 시장)·`trade`(화물 1단위 아래면 없어짐)·`literacy`(매일 움직임) 문구가 바뀌었다.
 
 ### 2-59. 지역 건물의 수지·지분·배당 (사용자 요청 2026-10-22)
+> **2-62-3이 고치는 부분:** 건축사무소는 `hasReserve: true`, 매출(`day.fee`)·유보·국고 몫이 있다.
 **사용자 말:** "지역건물탭에 수지랑 지분이랑 뭐 그런 경제적인 부분이 가구별로 표시되어야되는데 아직안된듯". "가구별"은 건물별(행마다), 주인별(상세 표 한 줄마다)로 읽는다.
 
 **지금 화면 (main `3faa68c`)**
@@ -1230,6 +1234,7 @@ Cells, top row left to right, then bottom row:
 - sim 변경: `buildingEcon`은 wt-regionecon에 있다 (main 병합 전). 주 단위 폭포만 3장 요청.
 
 ### 2-60. 재정 수지 표: 손잡이별 묶음 + 국영 사업 손익 + 줄 자세히 보기 창 (사용자 요청 2026-10-22)
+> **2-62가 대신하는 부분:** `fees` 줄·`drillFees`·`FeesDrill`이 없어지고 `build` 줄·`drillBuild`가 생겼다. 국영 임금 묶음은 `[wages, stateFirms, build]`, `wages`·`goods`는 행정청·학교만, `stateFirms`에 건축사무소가 들어간다 (2-62-1·2-62-2).
 **사용자 말:** "수지에서도 정부 건물 인건비 누르면 정확히 뭐가 어떻게 나가고 있나 등등 자세히 볼 수 있었으면 좋겠음 (작은 윈도우로 뜨게)". 왕실 벌목장 같은 국영 생산 건물의 수입이 수지에 안 잡히는 데 대해: "개헷갈리니까 플레이어가 뭘 어떻게 조절해야 되나 알기 쉽게 고쳐".
 
 **지금 화면 (main `3faa68c`, `packages/client/src/views/FinancePanel.tsx`)**
@@ -1362,6 +1367,48 @@ sim 변경 (wt-research):
 - `CompanyPanel.tsx` 567: `r.budget`(money) → `r.points/7`(int).
 - `CompanyPanel.tsx` 577: 남은 일수 = ⌈남은 값 ÷ (r.points/7)⌉ (값이 맞다. 주 단위로 바꾸는 것은 2번).
 - `FinancePanel.tsx` 15: `multipliers`에서 `research:TUNE.researchLevels` 칸을 지웠다. 같은 파일 17의 `'research'` 줄 필터는 컴파일되므로 남겨 두었다 (줄이 없어 빈 칸).
+
+### 2-62. 건축사무소는 공사 수수료로 버는 국영 사업 (사용자 요청 2026-10-22)
+**사용자 말:** "민간 공사 수수료가 직접 국고에 들어오는 게 아니라, 건축사무소에 먼저 들어가서 원래의 수익 건물처럼 작동하고, 배당으로서 국고에 들어오게 해 주삼".
+
+**규칙 (sim, wt-office):** 건축사무소는 모든 공사(왕실 것도)에 쓴 포인트 × 포인트당 운영비 ÷ (1 − 이익률)을 수수료로 받는다. 이익률은 방식 단계별로 목조 20%, 목재 비계 30%, 철골 40%다 (`officeMargin(methodId)`). 수수료는 사무소의 매출이고, 사무소는 다른 왕실 건물처럼 이익을 유보 자산에 쌓고 나머지는 국고 몫(배당)으로 국고에 남는다. 왕실 공사는 국고가 자기 사무소에 내므로 현금은 그대로다 (수지 표에는 `왕실 공사` 줄과 사무소 매출로 함께 보인다).
+
+**지금 화면 (main `d34ecd0`)**
+- 재정 창 수지 표: `fees`(민간 공사 수수료) 줄이 국영 임금 묶음에 있고, 건축사무소의 임금·원료는 `wages`(정부 건물 인건비)·`goods`(정부 건물 물자) 줄에 들어 있다 (2-60).
+- 지역 건물 탭(2-59): 건축사무소는 매출 0, 유보 없음(`hasReserve false`), 배당 없음으로 보인다.
+
+#### 2-62-1. sim API 바뀐 점 (index export)
+- `BudgetLineKey`: **`fees` 없어짐**, 새 줄 **`build`** (왕실 공사 = 왕실 공사가 자기 사무소에 낸 수수료, 지출 −). `BUDGET_GROUPS`의 국영 임금 묶음은 `[wages, stateFirms, build]`.
+  - `wages`·`goods`: 이제 행정청·학교만 (건축사무소 빠짐).
+  - `stateFirms`: 왕실 생산 건물 + **건축사무소** (매출 = 공사 수수료). `drillStateFirms` 행에 `typeId: 'builder'` 행이 생긴다.
+  - `build`의 자세히 보기 `drillBuild` (옛 `drillFees`·`FeesDrill` 대신 `BuildDrill`): `{ key: 'build', weekly, smoothing, stepMult, share, officeSales, rows: [{ part: 'wage'|'other', weekly }] }`. `share` = 오늘 사무소 매출 중 왕실 공사 몫 0..1 (기록이 없으면 `null`, 그때 행은 지난주 장부 한 줄), `officeSales` = 그 단계의 사무소 주간 매출. 행 `wage` = 사무소 임금 몫(국영 임금 단계를 따름), `other` = 자재·이익 몫.
+- `Kingdom.lastBudget`: `fees` = 사무소가 **민간** 공사에서 받은 수수료 (지표용, `firms` 안에 들어 있다). 새 `office` = 그중 건축사무소 손익, `build` = 왕실 공사. 국고 순변화 ≈ `revenue − wages − goods − interest − welfare − build + firms`.
+- `buildingEcon(world, b)`: `day.fee` 새 칸 (그날 매출 중 공사 수수료, 사무소만). 사무소는 `hasReserve: true`, `reserve`·`reserveCap` 있음. 국영 건물의 `dividendsWeek` = 지난주 국고 몫(`b.payout.crown`, 유보 자산을 뺀 이익), 주인 표의 `state` 줄 `dividendWeek`도 같은 값 (예전에는 0).
+- `Building.payout.crown` (국영 건물만, 지난주 국고 몫). `ConstructionEstimate.feeMult` (그 회사가 내는 돈 ÷ 사무소 운영비: 민간은 수수료 배율, 왕실 1).
+- 장부 `ledger.buildFees`: 왕실은 이제 모든 공사 수수료(왕실 자기 공사 포함), `ledger.buildPaid`에 왕실 자기 공사비도 들어간다. `ledgerLabels.buildFees` 이름은 `공사 수수료`/`Construction fees`로.
+  고칠 곳: `strings.ts` 73·364 `ledgerLabels.buildFees` → `공사 수수료`/`Construction fees`; 40·331 장부 툴팁 → `건축사무소가 모든 공사(왕실 공사 포함)에서 받은 수수료입니다.` / `Construction fees the crown's offices received from all projects, including the crown's own.`
+- 저장 형식 15판 (14판은 `migrateWorld`가 옛 수수료 기준값만 지운다). 저장 키는 그대로 둬도 된다.
+- 컴파일 수정 없음 (`FinancePanel.tsx` 17은 줄 이름을 문자열로 걸러서 `fees`가 그냥 빠진다).
+
+#### 2-62-2. 재정 창 수지 표 (2-60-2를 고친다)
+- 국영 임금 묶음 줄: `정부 건물 인건비`(wages) · `국영 사업 손익`(stateFirms) · `왕실 공사`(build). `민간 공사 수수료` 줄은 지운다.
+- `stateFirms` 줄은 왕실 생산 건물이 없어도 건축사무소가 있으면 보인다 (2-60-2의 "행이 0이면 숨김" 그대로).
+- `build` 줄: 값이 0이면 흐리게. 툴팁: `사무소 매출 × 왕실 몫 (share)`.
+- `stateFirms` 자세히 보기(2-60-3): 건축사무소 행은 매출 칸 툴팁에 `수수료 = 운영비 ÷ (1 − 이익률)`, 이익률은 `officeMargin(b.methodId)`. 행을 누르면 그 사무소 건물 상세(2-59-3).
+- `build` 자세히 보기: 칩 `단계 ×1.15` `왕실 몫 62%`(share), 줄 둘 `사무소 임금 몫` · `자재·이익 몫`. `share`가 `null`이면 칩 `—`.
+- 문자열: `budgetLines.build` 왕실 공사 / Crown construction, `drill.crownShare` 왕실 몫 / Crown share, `drill.feeOther` 자재·이익 몫 / Materials and margin. `budgetLines.fees`·`drill.feeWage`는 지운다 (`drill.feeWage` 이름은 `사무소 임금 몫`으로 build 행에 다시 써도 된다).
+
+#### 2-62-3. 지역 건물 탭·건물 상세 (2-59를 고친다)
+- 건축사무소 행: 수지 막대·주간 이익·레벨당 이익·유보 막대가 이제 값이 있다 (다른 국영 건물과 같게 그린다). 매출 칸 툴팁에 `공사 수수료` (`day.fee`).
+- 건물 상세 수지 폭포: 사무소는 첫 칸 이름을 `공사 수수료`로 (`day.fee === day.sales`).
+- 주인 표: 국영 건물의 `국가` 줄에 `배당/주` = `dividendWeek` (국고 몫). 바닥 합계 `dividendsWeek`.
+- 문자열: `econ.fee` 공사 수수료 / Construction fees, `econ.crownShare` 국고 몫 / To treasury.
+### 2-63. 방식 사다리와 1레벨 약 500명 (2026-10-22, 사용자 결정, DESIGN 7.1)
+- 모든 건물의 방식이 바뀌었다 (`data.ts BUILDING_TYPES`). 기본 방식 1레벨은 일꾼 약 500명(옛 1,000명)이고 산출도 약 절반이다. 단계가 오를수록 일꾼은 줄고 기술자·전문가와 공구·석탄·철·기계가 늘며, 레벨당 이익은 단계마다 2배다.
+- 새 방식: 방직 공장 `textile_spin` (방적기, 철 가공). 방직 공장 방식 순서가 손베틀·방적기·증기 직기·맞춤 재단·증기 재단으로 바뀌었다 (방식 id는 그대로). 철·석탄 광산 방식 이름: `iron_shaft`·`coal_shaft` "곡괭이와 삽 / Picks and shovels", `iron_pick`·`coal_pick` "발파 / Blasting".
+- 기본 방식 대부분이 공구를 10~20 쓴다 (투입·산출 표시 2-51에 공구가 새로 보인다). 소작지가 공구를 낸다 (`SUBSISTENCE.output.tools`).
+- 숫자가 바뀐 상수: `SUBSISTENCE.workersPerCell` 500, `OWNER_SEATS_PER_LEVEL` 5, `TUNE.financeStaff` 1, `START_OFFICE_LEVELS` 20, `MAX_LEVELS_PER_PROJECT` 100, 공사 포인트(`buildPoints`) 200~300, 건축사무소 목조 2점·비계 4점·철골 6점. 공사 레벨 입력 칸 상한이 50으로 박혀 있으면 `MAX_LEVELS_PER_PROJECT`를 읽는다.
+- 이익률 막대(사전 `methods-rule`)는 이제 최대 약 55%라 눈금 상한을 0.6으로 했다.
 
 ## 3. sim 쪽 필요 사항 (Claude가 처리할 것, UI 작업자는 요청만)
 - **2-59 주 단위 수지 (요청됨, 2026-10-22):** `BuildingEcon`에 `week: { sales, tax, inputs, wages, profit }` (건물 `revenue`·`tax`·`inputCost`·`wageCost`의 이동평균 × 7, `profitEma`와 같은 기간). 들어오면 2-59-3 폭포 라벨을 `/주`로.

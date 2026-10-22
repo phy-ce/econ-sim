@@ -4,6 +4,10 @@ import type { BudgetPreview, World } from '../../src/index';
 
 const runTo = (w: World, tick: number) => { while (w.tick < tick) step(w); };
 const lineOf = (p: BudgetPreview, key: string) => p.lines.find((l) => l.key === key)!.weekly;
+type Ledger = NonNullable<World['kingdoms'][number]['lastBudget']>;
+/** 장부의 국고 순변화: 세입 − 정부 건물 임금·원료 − 이자 − 복지 − 왕실 공사 + 국영 사업 손익 */
+const ledgerNet = (b: Ledger) => b.revenue - b.wages - b.goods - b.interest - (b.welfare ?? 0) - (b.build ?? 0) + (b.firms ?? 0);
+const ledgerGross = (b: Ledger) => b.revenue + b.wages + b.goods + b.interest + (b.welfare ?? 0) + (b.build ?? 0) + Math.abs(b.firms ?? 0);
 
 describe('예산 미리보기', () => {
   const w = createWorld(42);
@@ -60,20 +64,16 @@ describe('예산 미리보기', () => {
     console.log(`budgetPreview 세금 단계: ${out.join(' / ')}`);
   });
 
-  it('국영 임금 단계의 순수지 변화에 공사 수수료 증가가 들어간다', () => {
+  it('국영 임금 단계의 순수지 변화에 건축사무소 수수료(국영 사업·왕실 공사) 변화가 들어간다', () => {
     const v = createWorld(42);
     runTo(v, 20 * TICKS_PER_WEEK);
     const pid = playerCompany(v)!;
     const k0 = v.kingdoms.find((y) => y.id === pid.kingdomId)!;
     const now = k0.budget.wages, next = now >= 4 ? now - 2 : now + 2;
     const a = budgetPreview(v, pid.kingdomId);
-    const fees = a.lines.find((l) => l.key === 'fees')!;
-    expect(fees.knob).toBe('wages');
+    expect(a.lines.find((l) => l.key === 'build')!.knob).toBe('wages');
     const predicted = a.netByLevel.wages[next - 1] - a.net;
-    const realNet = (x: World) => {
-      const b = x.kingdoms.find((y) => y.id === pid.kingdomId)!.lastBudget!;
-      return b.revenue + b.fees - b.wages - b.goods - b.interest;
-    };
+    const realNet = (x: World) => ledgerNet(x.kingdoms.find((y) => y.id === pid.kingdomId)!.lastBudget!);
     const ctl = structuredClone(v), chg = structuredClone(v);
     expect(applyCommandMsg(chg, pid.id, { type: 'setBudget', item: 'wages', value: next })).toBeNull();
     runTo(ctl, ctl.tick + TICKS_PER_WEEK); runTo(chg, chg.tick + TICKS_PER_WEEK);
@@ -96,8 +96,8 @@ describe('예산 미리보기', () => {
       v.kingdoms.forEach((k, i) => {
         const b = k.lastBudget!;
         p += pre[i];
-        r += b.revenue + b.fees - b.wages - b.goods - b.interest + (b.firms ?? 0);
-        gross += b.revenue + b.fees + b.wages + b.goods + b.interest + Math.abs(b.firms ?? 0);
+        r += ledgerNet(b);
+        gross += ledgerGross(b);
       });
     }
     const e = Math.round(((p - r) / gross) * 1000) / 10;
@@ -121,17 +121,17 @@ describe('예산 미리보기', () => {
       sums.forEach((s, i) => {
         const p = pre[i], b = s.k.lastBudget!;
         s.pIn += lineOf(p, 'tax') + lineOf(p, 'tariffs') + lineOf(p, 'mint');
-        s.pOut += lineOf(p, 'fees') + lineOf(p, 'wages') + lineOf(p, 'goods') + lineOf(p, 'interest');
+        s.pOut += lineOf(p, 'stateFirms') + lineOf(p, 'build') + lineOf(p, 'wages') + lineOf(p, 'goods') + lineOf(p, 'interest') + lineOf(p, 'welfare');
         s.rIn += b.revenue;
-        s.rOut += b.fees - b.wages - b.goods - b.interest;
-        s.gross += b.revenue + b.fees + b.wages + b.goods + b.interest;
-        s.spend += b.wages + b.goods + b.interest;
+        s.rOut += ledgerNet(b) - b.revenue;
+        s.gross += ledgerGross(b);
+        s.spend += b.wages + b.goods + b.interest + (b.welfare ?? 0) + (b.build ?? 0);
       });
     }
     TUNE.harvestChance = chance;
     const pct = (a: number, b: number) => Math.round((a / Math.abs(b)) * 1000) / 10;
     for (const s of sums) {
-      // 지출은 공사 수수료를 뺀 순액이라 0 가까이 갈 수 있다 (행정청 임금이 작은 판). 오차는 총 지출(임금·원료·이자)에 대한 비율로 잰다
+      // 지출은 국영 사업 손익(건축사무소 수수료)을 뺀 순액이라 0 가까이 갈 수 있다. 오차는 총 지출(임금·원료·이자·복지·왕실 공사)에 대한 비율로 잰다
       const e = { income: pct(s.pIn - s.rIn, s.rIn), expense: pct(s.pOut - s.rOut, s.spend), netOfGross: pct(s.pIn + s.pOut - s.rIn - s.rOut, s.gross) };
       errs.push(`왕국 ${s.k.id} ${JSON.stringify(e)}`);
       expect(Math.abs(e.income), `왕국 ${s.k.id} 수입`).toBeLessThan(15);
