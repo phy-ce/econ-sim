@@ -929,6 +929,40 @@ function swapLand(w: World, c: Company, o: Outlook, cand: Pick) {
 interface Pick { regionId: number; typeId: string; methodId: string; levels: number; score: number; fallback?: boolean }
 
 /**
+ * TUNE.expandUtilMin (0 = 끔): 왕국 안(왕실 + 민간 상회. 왕국마다 민간 상회는 하나라 회사로 나누면 왕실 건물만 빠진다) 같은 종류이고
+ * 산출 상품이 겹치는 건물의 레벨 가중 가동률(꺼진 건물은 0)이 이 값 미만이거나 장기 손익(profitEma) 합이 음수이면, 그 방식은 새로 짓지도 늘리지도 않는다.
+ * 그런 건물이 없으면 막지 않는다 (새 산업은 시작된다). 정부 건물(행정청·학교·사무소)은 손익으로 짓지 않으므로 보지 않는다. w.buildings 순서로 더한다 (결정성)
+ */
+function glutOf(w: World, kingdomId: number): (typeId: string, m: MethodDef) => boolean {
+  const kingdomOf = new Map(w.companies.map((x) => [x.id, x.kingdomId] as const));
+  const byType = new Map<string, Building[]>();
+  for (const b of w.buildings) {
+    if (kingdomOf.get(b.companyId) !== kingdomId || BUILDING_BY_ID[b.typeId].auto || isGovernment(b.typeId)) continue;
+    const list = byType.get(b.typeId);
+    if (list) list.push(b); else byType.set(b.typeId, [b]);
+  }
+  const memo = new Map<string, boolean>();
+  return (typeId, m) => {
+    if (isGovernment(typeId)) return false;
+    const key = `${typeId}|${m.id}`;
+    const hit = memo.get(key);
+    if (hit !== undefined) return hit;
+    const outs = GOOD_IDS.filter((g) => (m.outputs[g] ?? 0) > 0);
+    let levels = 0, used = 0, profit = 0;
+    for (const b of byType.get(typeId) ?? []) {
+      const bm = getMethod(b.typeId, b.methodId);
+      if (outs.length && !outs.some((g) => (bm.outputs[g] ?? 0) > 0)) continue;
+      levels += b.level;
+      used += (b.active ? b.utilization : 0) * b.level;
+      profit += b.profitEma;
+    }
+    const glut = levels > 0 && (used / levels < TUNE.expandUtilMin || profit < 0);
+    memo.set(key, glut);
+    return glut;
+  };
+}
+
+/**
  * 모든 후보를 같은 기준으로: 장기 손익 / 공사비. 수익률이 기준의 1.25배를 넘는 가장 큰 덩어리를 고른다.
  * allowLoss: 이익이 나는 후보가 없으면 수익률이 가장 높은(가장 덜 손해 보는) 후보를 가장 작은 덩어리로 고른다.
  * 학교는 schoolFree(schoolCash)로 짓고, 공사비 + 그 레벨 인건비 TUNE.treasuryLowWeeks 주치가 있어야 한다
@@ -947,6 +981,8 @@ export function pickProject(w: World, c: Company, o: Outlook, free: number, allo
   const localFunds = (regionId: number, typeId: string) => (local.get(regionId) ?? []).reduce((a, o) => a + freeOf.get(o.id)! * (favours(o, typeId) ? 1 : TUNE.ownerTilt), 0);
   // TUNE.crownDebtNoBuild: 빚이 현금보다 많은 왕실은 생산 건물을 짓지 않는다 (정부 건물·학교는 그대로)
   const inDebt = c.state && !!TUNE.crownDebtNoBuild && c.debt > c.cash;
+  // TUNE.expandUtilMin: 왕국 안 같은 종류·같은 산출 건물이 덜 돌거나 적자인 방식은 짓지도 늘리지도 않는다 (glutOf. 땅 바꾸기 후보도 뺀다)
+  const glut = TUNE.expandUtilMin > 0 ? glutOf(w, c.kingdomId) : null;
   for (const r of ownRegions(w, c)) {
     for (const t of BUILDING_TYPES) {
       if (t.id === 'builder' || !canBuildType(c, t)) continue;
@@ -969,7 +1005,7 @@ export function pickProject(w: World, c: Company, o: Outlook, free: number, allo
       if (room < 1) {
         if (!blocked || (t.deposit && depositFree(w, r.id, t.deposit) < 1)) continue;
         for (const m of availableMethods(c, t.id)) {
-          if (otherMethod(m)) continue;
+          if (otherMethod(m) || glut?.(t.id, m)) continue;
           if (laborAvailability(w, r, m, 1, c.state, pools, c) < MIN_STAFFING()) continue;
           const e = m.seats ? schoolValuation(w, c, r, m, 1, schoolSeats(w, r.id)) : valueMethod(w, o, r, c, t.id, m, 1);
           const roi = (e.profit * TICKS_PER_YEAR) / perLevel;
@@ -978,7 +1014,7 @@ export function pickProject(w: World, c: Company, o: Outlook, free: number, allo
         continue;
       }
       for (const m of availableMethods(c, t.id)) {
-        if (otherMethod(m)) continue;
+        if (otherMethod(m) || glut?.(t.id, m)) continue;
         const cap = newMethod(m) ? MIXED_LEVELS : Infinity;
         let choice: { levels: number; roi: number } | null = null, top: { levels: number; roi: number } | null = null;
         for (const levels of CHUNKS) {

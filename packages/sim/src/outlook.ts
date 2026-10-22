@@ -88,6 +88,7 @@ export function marketOutlook(w: World): Outlook {
   // 잠재 수요: 기본가로 따져 지금 방식보다 나은 방식이 있으면 그 방식이 더 쓰는 투입재.
   // TUNE.latentFeasible: 실제로 바꿀 수 있는 몫만 센다. 일손 = 지역·직종마다 곳간 ÷ 그 지역 후보들이 더 필요한 사람 (후보 순서와 무관),
   // 투입 = 세는 상품을 뺀 다른 새 투입재가 남는 양으로 얼마나 채워지는가 (세는 상품 자신으로 막으면 공구·금속이 시작되지 못한다)
+  // TUNE.latentWeight: 센 잠재 수요(바꿀 수 있는 몫을 세면 그 몫)에 곱하는 배율 (1 = 다 센다)
   const cands: { b: Building; r: Region; cur: MethodDef; best: MethodDef; state: boolean }[] = [];
   for (const b of w.buildings) {
     const c = w.companies.find((x) => x.id === b.companyId);
@@ -125,7 +126,7 @@ export function marketOutlook(w: World): Outlook {
     for (const [g, e] of Object.entries(extra) as [GoodId, number][]) {
       let fI = 1;
       if (feasible) for (const [h, eh] of Object.entries(extra) as [GoodId, number][]) if (h !== g) fI = Math.min(fI, clamp(room[h] / eh, 0, 1));
-      latent[g] += e * (feasible ? fL * fI : 1);
+      latent[g] += e * (feasible ? fL * fI : 1) * TUNE.latentWeight;
     }
   }
   // 대체 수요: 가공품이 비싸서 원자재로 버티는 가계 수요의 절반은 값이 내려가면 돌아온다 (공장의 원료 수요는 대체하지 않는다)
