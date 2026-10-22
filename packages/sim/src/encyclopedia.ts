@@ -11,7 +11,7 @@
 import {
   BUILDING_BY_ID, BUILDING_TYPES, CLASS_DEFS, CONSUMPTION_PER_CAPITA, DEPENDENT_CONSUMPTION, EDUCATION_FLOOR, EDUCATION_RANGE, GOODS, GOOD_IDS,
   HARVEST_KINDS, HARVEST_MAX_SEASONS, HARVEST_SEASON_DAYS, HARVEST_SPREAD, HARVEST_STEP, LAW_TECH, MAX_POINTS_PER_LEVEL_DAY, NEEDS, OWNERSHIP_SEATS,
-  OWNER_SEATS_PER_LEVEL, REGIONS, STEP_PROFIT_MULT, SKILL_DEFS, SUBSISTENCE, TAX_PEOPLE_PER_LEVEL, TECHS, TECH_BY_ID, TECH_COST, TICKS_PER_WEEK, TICKS_PER_YEAR,
+  OWNER_SEATS_PER_LEVEL, REGIONS, STEP_PROFIT_MULT, BUILD_POINT_FACTOR, INDUSTRIES, INDUSTRY_SKILL_TOL, INDUSTRY_UPPER_INPUT_TOL, industryOf, SKILL_DEFS, SUBSISTENCE, TAX_PEOPLE_PER_LEVEL, TECHS, TECH_BY_ID, TECH_COST, TICKS_PER_WEEK, TICKS_PER_YEAR,
   TIERS, TIER_JITTER, TUNE, WORKFORCE_RATIO, getMethod, needsAt, rawMax, regionPerk, scaleBonus,
   buildPointsOf,
 } from './data';
@@ -131,6 +131,12 @@ const buildingsIn = (w: World, regionId: number) => w.buildings.filter((b) => b.
 const tenantBuilding = (w: World, regionId: number) => w.buildings.find((b) => b.regionId === regionId && b.typeId === 'subsistence');
 
 /** 방식 1레벨, 기본가·기본 임금의 하루 매출·원료·임금·이익률 (methods_audit 와 같은 셈) */
+/** 산업 유형의 기본 방식 원료/매출 범위 (예: "45~55%") */
+function shareRange(id: keyof typeof INDUSTRIES): string {
+  const [lo, hi] = INDUSTRIES[id].inputShare;
+  return `${Math.round(lo * 100)}~${Math.round(hi * 100)}%`;
+}
+
 export function methodMarginAtBase(typeId: string, methodId: string) {
   const m = getMethod(typeId, methodId);
   let wage = 0, input = 0, revenue = 0;
@@ -445,30 +451,52 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   },
   {
     id: 'methods-rule', category: 'production', title: t('건물 숫자 규칙', 'Building numbers rule'),
-    rule: t('기본가와 기본 임금에서 기본 방식은 이익률 {3}, 한 단계 오를 때마다 레벨당 이익이 ×{4}다. 단계가 오르면 일꾼은 줄고(농장 기본 {5}명) 기술자·전문가 비율과 공구·석탄·철·기계 사용이 는다. 기본 방식도 공구를 조금 쓴다 (목공구 공방만 쓰지 않는다).', 'At base prices and wages the basic method has a {3} margin, and each step up multiplies profit per level by {4}. Higher steps employ fewer people ({5} on a basic farm), a larger share of skilled workers and experts, and more tools, coal, iron and machinery. Basic methods use a few tools too (except the wooden-tools workshop).'),
-    formula: 'margin = (Σ out × base − Σ in × base − Σ jobs × baseWage) ÷ revenue',
+    rule: t('기본가와 기본 임금에서 기본 방식은 이익률 {3}, 한 단계 오를 때마다 레벨당 이익이 ×{4}다. 일꾼 수와 원료 비중은 산업 유형마다 다르다: 1차는 {5}명에 원료 {9} 이하, 가공은 {6}명에 원료 {10}, 중공업은 {7}명(기술자 {13})에 원료 {11}, 숙련(사치품)은 {8}명(기술자 {14})에 원료 {12}. 단계가 오르면 일꾼은 줄고 기술자·전문가 비율과 공구·석탄·철·기계 사용이 는다. 공사 포인트는 기본 방식 하루 이익 × {15}.',
+      'At base prices and wages the basic method has a {3} margin, and each step up multiplies profit per level by {4}. Headcount and input share depend on the industry type: primary {5} workers with inputs at most {9} of revenue, processing {6} workers with inputs {10}, heavy industry {7} workers ({13} skilled) with inputs {11}, skilled crafts (luxuries) {8} workers ({14} skilled) with inputs {12}. Higher steps employ fewer people, a larger share of skilled workers and experts, and more tools, coal, iron and machinery. Construction points = basic daily profit × {15}.'),
+    formula: 'margin = (Σ out × base − Σ in × base − Σ jobs × baseWage) ÷ revenue; input share = Σ in × base ÷ revenue',
     params: [
       p('노동자 기본 임금', 'Labourer base wage', () => SKILL_DEFS.unskilled.baseWage, 'florin'), p('기술자 기본 임금', 'Skilled base wage', () => SKILL_DEFS.skilled.baseWage, 'florin'),
       p('전문가 기본 임금', 'Expert base wage', () => SKILL_DEFS.expert.baseWage, 'florin'),
       p('기본 방식 이익률', 'Basic method margin', () => r4(methodMarginAtBase('farm', 'farm_basic').margin), 'pct'),
       p('단계당 이익 배율', 'Profit multiplier per step', () => STEP_PROFIT_MULT, 'x'),
-      p('농장 기본 방식 일꾼', 'Basic farm workers', () => getMethod('farm', 'farm_basic').workers.farmer ?? 0, 'people'),
+      p('1차 기본 일꾼', 'Primary basic workers', () => INDUSTRIES.primary.workers, 'people'),
+      p('가공 기본 일꾼', 'Processing basic workers', () => INDUSTRIES.processing.workers, 'people'),
+      p('중공업 기본 일꾼', 'Heavy basic workers', () => INDUSTRIES.heavy.workers, 'people'),
+      p('숙련 기본 일꾼', 'Skilled crafts basic workers', () => INDUSTRIES.luxury.workers, 'people'),
+      p('1차 원료/매출 상한', 'Primary input share max', () => INDUSTRIES.primary.inputShare[1], 'pct'),
+      p('가공 원료/매출', 'Processing input share', () => shareRange('processing')),
+      p('중공업 원료/매출', 'Heavy input share', () => shareRange('heavy')),
+      p('숙련 원료/매출', 'Skilled crafts input share', () => shareRange('luxury')),
+      p('중공업 숙련 비율', 'Heavy skilled share', () => INDUSTRIES.heavy.skillShare, 'pct'),
+      p('숙련 숙련 비율', 'Skilled crafts skilled share', () => INDUSTRIES.luxury.skillShare, 'pct'),
+      p('공사 포인트 계수', 'Construction points factor', () => BUILD_POINT_FACTOR, 'x'),
+      p('1차 숙련 비율', 'Primary skilled share', () => INDUSTRIES.primary.skillShare, 'pct'),
+      p('가공 숙련 비율', 'Processing skilled share', () => INDUSTRIES.processing.skillShare, 'pct'),
+      p('숙련 비율 허용 폭', 'Skilled share tolerance', () => INDUSTRY_SKILL_TOL, 'pct'),
+      p('윗단계 원료 비중 허용 폭', 'Upper-step input share tolerance', () => INDUSTRY_UPPER_INPUT_TOL, 'pct'),
     ],
     example: () => {
-      const m = methodMarginAtBase('farm', 'farm_basic');
+      const farm = methodMarginAtBase('farm', 'farm_basic'), food = methodMarginAtBase('foodplant', 'food_manual');
       return {
-        inputs: [row('곡물 농장 · 곡물 재배', 'Grain farm · grain farming', getMethod('farm', 'farm_basic').workers.farmer + ' 농부 → 곡물 ' + getMethod('farm', 'farm_basic').outputs.grain)],
-        steps: [row('매출', 'Revenue', m.revenue, 'florin'), row('임금', 'Wages', m.wage, 'florin'), row('원료', 'Inputs', m.input, 'florin')],
-        result: [row('이익률', 'Margin', r4(m.margin), 'pct')],
+        inputs: [row('곡물 농장 · 곡물 재배 (1차)', 'Grain farm · grain farming (primary)', getMethod('farm', 'farm_basic').workers.farmer + ' 농부 → 곡물 ' + getMethod('farm', 'farm_basic').outputs.grain),
+          row('식료품 공장 · 수작업 가공 (가공)', 'Grocery plant · manual processing (processing)', `${getMethod('foodplant', 'food_manual').workers.unskilled}+${getMethod('foodplant', 'food_manual').workers.skilled} → 식료품 ${getMethod('foodplant', 'food_manual').outputs.food}`)],
+        steps: [row('농장 매출', 'Farm revenue', farm.revenue, 'florin'), row('농장 임금', 'Farm wages', farm.wage, 'florin'), row('농장 원료', 'Farm inputs', farm.input, 'florin'),
+          row('식료품 매출', 'Grocery revenue', food.revenue, 'florin'), row('식료품 임금', 'Grocery wages', food.wage, 'florin'), row('식료품 원료', 'Grocery inputs', food.input, 'florin')],
+        result: [row('농장 이익률', 'Farm margin', r4(farm.margin), 'pct'), row('농장 원료/매출', 'Farm input share', r4(farm.input / farm.revenue), 'pct'),
+          row('식료품 이익률', 'Grocery margin', r4(food.margin), 'pct'), row('식료품 원료/매출', 'Grocery input share', r4(food.input / food.revenue), 'pct')],
       };
     },
     live: {
       pick: ['building'], run: (_w, ctx) => {
         const def = BUILDING_BY_ID[ctx.building];
-        return { bars: def.methods.filter((m) => Object.keys(m.outputs).length > 0).map((m) => bar(t(m.name, m.nameEn ?? m.id), r4(methodMarginAtBase(def.id, m.id).margin), 'pct', 0.6)) };
+        const ms = def.methods.filter((m) => Object.keys(m.outputs).length > 0);
+        return {
+          rows: ms.map((m) => { const ind = industryOf(def.id, m.id), x = methodMarginAtBase(def.id, m.id); return row(m.name, m.nameEn ?? m.id, `${ind ? INDUSTRIES[ind].name : '-'} · 원료 ${Math.round((x.input / Math.max(1, x.revenue)) * 100)}%`); }),
+          bars: ms.map((m) => bar(t(m.name, m.nameEn ?? m.id), r4(methodMarginAtBase(def.id, m.id).margin), 'pct', 0.6)),
+        };
       },
     },
-    related: ['buildings', 'production', 'tech'], seenIn: ['company'], source: ['data.ts BUILDING_TYPES', 'cli/methods_audit.ts'], design: ['7.1'],
+    related: ['buildings', 'production', 'tech'], seenIn: ['company'], source: ['data.ts BUILDING_TYPES', 'data.ts INDUSTRIES', 'cli/methods_audit.ts'], design: ['7.1'],
   },
   {
     id: 'buildings', category: 'production', title: t('건물과 방식', 'Buildings and methods'),
