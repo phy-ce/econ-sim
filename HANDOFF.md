@@ -52,7 +52,7 @@
   단계형은 6시드 중 5개가 main보다 크고 하나는 같다 (가장 낮은 시드 1,441, 고정 20%는 918). 30%는 평균이 가장 크지만 시드 차이가 크다. 민간 공사가 20~40% 비싸지는 대신 국고 수입이 늘어 세금 단계가 내려간다 (20년차 2.75 → 1.74). 보고서 `2026-10-22-office`.
   (비교는 d34ecd0 위, 연구 병합 뒤에도 사다리와 합친 wt-int2에서도 다시 돌리지 않음: 지금 코드에서는 근거 없음, DESIGN 11 officeMargin 줄에도 적음)
 - 왕실 공사도 같은 수수료: 규칙 하나로 사무소 매출 = 쓴 포인트 전부. 수지 표에는 `왕실 공사`(build) 지출과 사무소 매출이 함께 적혀 지운다 (그래서 왕실이 공사에 쓰는 돈과 사무소 손익이 따로 보인다).
-- 예산 (`budget.ts`): `fees` 줄 없앰, 새 줄 `build`. `wages`·`goods`는 행정청·학교만 (`isBudgetFunded`), 사무소는 `stateFirms`. 사무소 줄은 오늘 값 (매출 = 오늘 수수료 ÷ 오늘 운영비 × (오늘 원료 + 지금 임금 × 단계)), 이동평균은 공사가 끝날 때 15~26% 틀렸다.
+- 예산 (`budget.ts`): `fees` 줄 없앰, 새 줄 `build`. `wages`·`goods`는 행정청·학교만 (`isBudgetFunded`), 사무소는 `stateFirms`. 사무소 줄은 지금 공사 목록으로 이번 주 배분을 7일 돌려 센다 (`officeModel`, wt-ind3. 예전 오늘 수수료 방식은 주 경계에 민간 공사가 걸리면 27.6% 틀렸고, 이동평균은 공사가 끝날 때 15~26% 틀렸다).
   미리보기 순수지 vs 실제 국고 변화 8주 합 (총 흐름 대비): 시드 1·150주 −3.8/−0.3/−0.6%, 시드 2·150주 −3.0/0.4/−0.1%, 시드 42·21주 0.3/0.4/−0.3%. `drillFees` → `drillBuild`, `buildingEcon.day.fee`, 국영 건물 `dividendsWeek` = 국고 몫.
 - AI: `expenseEma` = wages + goods + interest + welfare + build − office (예전 "정부 건물 운영비 − 민간 수수료"와 같은 양). `constructionEstimate.cost`는 민간 = 수수료, 왕실 = 운영비 (`feeMult`). 사무소 증설 조건은 그대로 (주석만).
 - 장부·저장: `lastBudget.fees`(민간 수수료, 지표용)·`office`·`build`, `Kingdom.privateFeeWeek`, `budgetBase.build`(오늘 왕실 공사 수수료), `spentWeek.office/build`, `BuildingStats.fee`. 저장 15판 (14판은 옛 `feeWageWeek`·`budgetBase.feesWage/feesOther` 만 지운다, compat.ts).
