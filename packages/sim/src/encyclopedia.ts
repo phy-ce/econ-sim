@@ -13,12 +13,12 @@ import {
   HARVEST_KINDS, HARVEST_MAX_SEASONS, HARVEST_SEASON_DAYS, HARVEST_SPREAD, HARVEST_STEP, LAW_TECH, MAX_POINTS_PER_LEVEL_DAY, NEEDS, OWNERSHIP_SEATS,
   OWNER_SEATS_PER_LEVEL, REGIONS, STEP_PROFIT_MULT, BUILD_POINT_FACTOR, INDUSTRIES, INDUSTRY_SKILL_TOL, INDUSTRY_UPPER_INPUT_TOL, industryOf, SKILL_DEFS, SUBSISTENCE, TAX_PEOPLE_PER_LEVEL, TECHS, TECH_BY_ID, TECH_COST, TICKS_PER_WEEK, TICKS_PER_YEAR,
   TIERS, TIER_JITTER, TUNE, WORKFORCE_RATIO, getMethod, needsAt, rawMax, regionPerk, scaleBonus,
-  buildPointsOf,
+  buildPointsOf, TRADING_POST, TRADE_STEP_MULT, TRADE_ESCROW_SHARE, tradeReserveOf,
 } from './data';
 import {
   BASE_CREDIT, CARTAGE_RATE, RAIL_RATE, STATE_CREDIT_GDP, collectionRatio, companyById, constructionEstimate, creditLimit, efficiencyParts,
   harvestCondition, harvestFactor, holdingsOf, kingdomGdp, levelOwnersOf, knownVeins, landFree, landUsed, moneyIdentity, netMinted, popSol,
-  FLOW_ZERO, officeMargin, priceFormula, regionById, sellThrough, shareWage, shippingRate, staffing, totalMoney,
+  FLOW_ZERO, isOwnerBuilding, officeMargin, priceFormula, regionById, sellThrough, shareWage, shippingRate, staffing, totalMoney,
 } from './economy';
 import { borderCost, kingdomById, DEFAULT_TARIFF } from './kingdoms';
 import {
@@ -41,7 +41,7 @@ import { ownershipAssets } from './policy';
 import { welfareIncome, welfareTarget, welfareWeekly } from './welfare';
 import type { BudgetLineKey } from './budget';
 import { MAX_CONCURRENT_CONSTRUCTIONS, MAX_LEVELS_PER_PROJECT } from './commands';
-import { START_CASH, START_FIRM_CASH, START_OFFICE_LEVELS, START_SCHOOL_LEVELS, START_TECHS, TRADER_CAPITAL, createWorld } from './world';
+import { START_CASH, START_FIRM_CASH, START_OFFICE_LEVELS, START_SCHOOL_LEVELS, START_TECHS, START_TRADE_LEVELS, createWorld } from './world';
 import { regionNameEn } from './i18n';
 import { POP_CLASSES, SKILLS, educationOf, literacyOf, wealthOf } from './types';
 import type { Building, Company, GoodId, Kingdom, PopClass, Region, Skill, World } from './types';
@@ -241,10 +241,10 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   },
   {
     id: 'start-state', category: 'basics', title: t('시작 상태', 'Starting state'),
-    rule: t('지역 티어가 인구·계층·교육·부지·농지를 정하고 ±{0} 흔든다. 민간 상회는 {1}, 상인 {2}으로 시작한다. 은행은 없다.', 'Region tiers set population, classes, education, plots and farmland, jittered by ±{0}. Private houses start with {1}, traders {2}. There is no bank.'),
+    rule: t('지역 티어가 인구·계층·교육·부지·농지를 정하고 ±{0} 흔든다. 민간 상회는 {1}으로 시작한다. 왕국마다 인구가 가장 많은 지역에 민간 무역소 {2}가 금고를 채운 채 있다. 은행은 없다.', 'Region tiers set population, classes, education, plots and farmland, jittered by ±{0}. Private houses start with {1}. Each kingdom\'s most populous region has a private trading post of {2} with a full vault. There is no bank.'),
     params: [
       p('티어 흔들림', 'Tier jitter', () => TIER_JITTER, 'pct'), p('민간 상회 시작 현금', 'Private start cash', () => START_CASH, 'florin'),
-      p('상인 자본', 'Trader capital', () => TRADER_CAPITAL, 'florin'),
+      p('시작 무역소 (왕국마다)', 'Starting trading post (per kingdom)', () => START_TRADE_LEVELS, 'level'),
       tune('startTreasuryWeeks', '시작 국고 (정부 건물 운영비 주 수)', 'Start treasury (weeks of government upkeep)', 'week'),
       p('시작 건축사무소', 'Starting construction office', () => START_OFFICE_LEVELS, 'level'),
       p('시작 학교 (왕실마다, 인구가 가장 많은 지역)', 'Starting school (per crown, most populous region)', () => START_SCHOOL_LEVELS, 'level'),
@@ -351,14 +351,26 @@ export const ENCYCLOPEDIA: EncEntry[] = [
     related: ['price-formula', 'rounding'], seenIn: ['market'], source: ['market.ts updatePrices'], design: ['6', '2'],
   },
   {
-    id: 'trade', category: 'market', title: t('상인 교역', 'Traders'),
-    rule: t('이웃 가격 × (1 − 운임률)이 현지 가격보다 높으면 상인이 사서 다음 날 이웃에 판다. 남은 화물은 하루 {1} 상하고 {3} 아래로 줄면 없어지며, 가격 신호에는 {2}만 공급으로 센다.', 'If neighbour price × (1 − freight rate) beats the local price, traders buy and sell next door the next day. Unsold cargo spoils {1} a day and is gone below {3}; it counts only {2} as supply for prices.'),
+    id: 'trade', category: 'market', title: t('무역소 교역', 'Trading posts'),
+    rule: t('이웃 가격 × (1 − 운임률)이 현지 가격보다 높으면 그 지역 무역소가 사서 다음 날 이웃에 판다. 그날 한 지역에서 사는 돈은 그 지역 무역소 금고 × 가동률 × 작업 인원의 합까지이고, 모자라면 주문을 같은 비율로 줄인다. 무역소가 없는 지역은 내보내지 못하지만 들여올 수는 있다. 판매 대금은 화물을 산 무역소 금고로 간다. 남은 화물은 하루 {1} 상하고 {3} 아래로 줄면 없어지며, 가격 신호에는 {2}만 공급으로 센다.', 'If neighbour price × (1 − freight rate) beats the local price, the region\'s trading posts buy and sell next door the next day. A region buys at most the sum of its posts\' vault × utilisation × crew; orders shrink pro rata beyond that. Regions without a post cannot export but can import. Sale proceeds go to the vault of the post that bought the cargo. Unsold cargo spoils {1} a day and is gone below {3}; it counts only {2} as supply for prices.'),
     formula: 'q = min({0} × gap × flow, unmet × 1.2 + flow × 5%, local supply × 90%)',
     params: [p('가격차 1%당 유통량 배수', 'Flow multiple per 1% gap', () => SHIP_RATE), p('화물 부패 (하루)', 'Cargo spoilage (daily)', () => CARGO_DECAY, 'pct'), p('묵은 화물 신호', 'Stale cargo signal', () => STALE_SIGNAL, 'pct'), p('남는 화물 최소', 'Smallest kept cargo', () => CARGO_MIN, 'good')],
     live: {
       pick: ['good'], run: (w, ctx) => ({ bars: w.regions.map((r) => bar(regionLabel(r), r.market[ctx.good].price, 'florin', GOODS[ctx.good].basePrice * PRICE_MAX)), rows: w.regions.map((r) => row(r.name, regionNameEn(r.id), `+${r2(r.market[ctx.good].shippedIn)} / −${r2(r.market[ctx.good].shippedOut)}`)) }),
     },
-    related: ['freight', 'tariff', 'clearing'], seenIn: ['market', 'resource'], source: ['market.ts addTraderOrders'], design: ['6'],
+    related: ['trading-post', 'freight', 'tariff', 'clearing'], seenIn: ['market', 'resource'], source: ['market.ts addTraderOrders'], design: ['6'],
+  },
+  {
+    id: 'trading-post', category: 'market', title: t('무역소 금고', 'Trading post vault'),
+    rule: t('무역소 1레벨의 유보액은 {0}이고 방식이 한 단계 오를 때마다 {1}배다. 금고가 레벨 × 유보액을 넘으면 넘는 돈은 그날 건물 매출로 회사에 가서 임금·배당에 쓰인다. 지을 때 공사비와 따로 레벨당 유보액의 {2}를 내서 공사에 묶고, 완공되면 금고 시작 돈이 된다. 공사를 취소하면 낸 곳으로 돌아가고, 헐리는 레벨 몫의 금고는 그 레벨 주인에게 간다. 무역소는 민영화하지 않는다.', 'A trading post level holds a reserve of {0}, ×{1} per method step. Vault money above level × reserve goes to the company that day as building revenue, for wages and dividends. Building one also locks {2} of the base reserve per level, which becomes the starting vault; it is refunded if the project is cancelled, and each demolished level returns its share of the vault to that level\'s owner. Trading posts are not privatised.'),
+    params: [tune('tradeReserve', '레벨당 유보액 (기본 방식)', 'Reserve per level (base method)', 'florin'), p('방식 단계 배율', 'Per-step multiple', () => TRADE_STEP_MULT, 'x'), p('공사에 묶는 돈 (유보액 대비)', 'Locked at construction (of reserve)', () => TRADE_ESCROW_SHARE, 'pct'), p('공사 포인트 (레벨당)', 'Construction points (per level)', () => buildPointsOf(TRADING_POST), 'pt')],
+    example: () => ({
+      inputs: [row('레벨', 'Levels', 2, 'level'), row('방식 단계 (장부 상회)', 'Method step (ledger firm)', 1)],
+      steps: [row('레벨당 유보액', 'Reserve per level', r2(tradeReserveOf('trade_ledger')), 'florin')],
+      result: [row('금고 상한', 'Vault cap', r2(2 * tradeReserveOf('trade_ledger')), 'florin')],
+    }),
+    live: { pick: [], run: (w) => ({ rows: w.buildings.filter((b) => b.typeId === TRADING_POST).map((b) => row(`${regionById(w, b.regionId).name} ${BUILDING_BY_ID[b.typeId].name}`, `${regionNameEn(b.regionId)} ${BUILDING_BY_ID[b.typeId].nameEn}`, `${r2(b.cash ?? 0)} / ${r2(b.level * tradeReserveOf(b.methodId))}`)) }) },
+    related: ['trade', 'dividends', 'ai-construction'], seenIn: ['market', 'company'], source: ['data.ts tradeReserveOf', 'market.ts settlePosts', 'commands.ts startConstruction', 'production.ts progressDemolition'], design: ['6', '8'],
   },
   {
     id: 'freight', category: 'market', title: t('운송비', 'Freight cost'),
@@ -1017,9 +1029,9 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   },
   {
     id: 'owner-treasury', category: 'ownership', title: t('저택·금융가 금고', 'Manor and district treasuries'),
-    rule: t('저택·금융가 금고에는 배당·지대 중 남기는 몫과 철거 대금이 들어온다. 금융가 금고에는 지분 산 돈, 상인 초과분과 주인 없는 돈이, 저택 금고에는 소작농의 넘는 저축이 들어온다. 민간 공사비는 금고가 낸다: 같은 지역(마음 × (1 + {0}))과 좋아하는 종류(저택은 땅 건물, 금융가는 그 밖, 아니면 × {1})부터 레벨 단위로 맡고, 모자라면 함께 낸다. 완공 레벨은 낸 돈 비율로 나누고 나머지 레벨은 많이 낸 쪽이 가진 뒤 차액을 돌려준다.', 'Manor and district treasuries receive the kept part of dividends and rent and salvage proceeds. Districts also receive money paid for units, trader excess and ownerless money; manors receive peasant savings above the cap. Treasuries pay for private construction: same region first (weight × (1 + {0})) and favoured kinds (manors: land buildings, districts: the rest, otherwise × {1}), whole levels each, pooling if short. Finished levels are split by money paid; leftover levels go to the larger payer, who refunds the difference.'),
+    rule: t('저택·금융가 금고에는 배당·지대 중 남기는 몫과 철거 대금이 들어온다. 금융가 금고에는 지분 산 돈과 주인 없는 돈이, 저택 금고에는 소작농의 넘는 저축이 들어온다. 민간 공사비는 금고가 낸다: 같은 지역(마음 × (1 + {0}))과 좋아하는 종류(저택은 땅 건물, 금융가는 그 밖, 아니면 × {1})부터 레벨 단위로 맡고, 모자라면 함께 낸다. 완공 레벨은 낸 돈 비율로 나누고 나머지 레벨은 많이 낸 쪽이 가진 뒤 차액을 돌려준다.', 'Manor and district treasuries receive the kept part of dividends and rent and salvage proceeds. Districts also receive money paid for units and ownerless money; manors receive peasant savings above the cap. Treasuries pay for private construction: same region first (weight × (1 + {0})) and favoured kinds (manors: land buildings, districts: the rest, otherwise × {1}), whole levels each, pooling if short. Finished levels are split by money paid; leftover levels go to the larger payer, who refunds the difference.'),
     params: [tune('localBias', '같은 지역 가산', 'Same-region bonus', 'pct'), tune('ownerTilt', '좋아하지 않는 종류', 'Unfavoured kind', 'pct'), p('민간 상회 시작 운영 자금', 'Private house start cash', () => START_FIRM_CASH, 'florin')],
-    live: { pick: [], run: (w) => ({ bars: w.kingdoms.map((k) => bar(t(k.name, k.nameEn), r2(k.investmentPool), 'florin')), rows: w.buildings.filter((b) => b.cash !== undefined).map((b) => row(`${regionById(w, b.regionId).name} ${BUILDING_BY_ID[b.typeId].name}`, `${regionNameEn(b.regionId)} ${BUILDING_BY_ID[b.typeId].nameEn}`, r2(b.cash ?? 0), 'florin')) }) },
+    live: { pick: [], run: (w) => ({ bars: w.kingdoms.map((k) => bar(t(k.name, k.nameEn), r2(k.investmentPool), 'florin')), rows: w.buildings.filter((b) => b.cash !== undefined && isOwnerBuilding(b.typeId)).map((b) => row(`${regionById(w, b.regionId).name} ${BUILDING_BY_ID[b.typeId].name}`, `${regionNameEn(b.regionId)} ${BUILDING_BY_ID[b.typeId].nameEn}`, r2(b.cash ?? 0), 'florin')) }) },
     related: ['cash-surplus', 'dividends', 'privatize', 'ai-construction'], seenIn: ['finance'], source: ['finance.ts chooseFunders', 'production.ts giveLevels', 'kingdoms.ts toFinance'], design: ['9.3'],
   },
   {

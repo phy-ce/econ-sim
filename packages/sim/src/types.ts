@@ -250,7 +250,10 @@ export interface Building {
    * 국영 건물과 자동 건물(소작지·저택·금융가)에는 없다 (economy.ts levelOwnersOf)
    */
   owners?: Record<number, number>;
-  /** 소유 건물(저택·금융가)의 금고: 레벨을 사고 민간 공사비를 낸다 (돈 계정) */
+  /**
+   * 소유 건물(저택·금융가)의 금고: 레벨을 사고 민간 공사비를 낸다 (돈 계정).
+   * 무역소의 금고: 그날 이 지역에서 살 수 있는 돈. 레벨 × 방식의 레벨당 유보액(data.ts tradeReserveOf)을 넘는 돈은 매일 회사로 넘어간다 (market.ts)
+   */
   cash?: number;
   /** 왕실 건물의 민영화: 켜 두면 저택·금융가가 매주 1레벨씩 사 갈 수 있다 (ai.ts buyLevels) */
   privatize?: boolean;
@@ -352,6 +355,12 @@ export interface Construction {
   paused?: boolean;
   /** 민간 공사의 공사비를 내는 소유 건물(저택·금융가) id → 약정액. 날마다 공사비를 약정액 비율로 나눠 내고, 완공 레벨도 그 비율로 나눈다 */
   funders?: Record<number, number>;
+  /**
+   * 무역소 공사에 묶인 돈 (돈 계정): 착공할 때 레벨당 data.ts tradeEscrowPerLevel 을 낸다. 완공되면 무역소 금고로, 취소되면 낸 곳으로 돌아간다.
+   * escrowFrom = 낸 소유 건물(저택·금융가) id → 금액. 없으면 공사 주인 회사가 낸 것이다
+   */
+  escrow?: number;
+  escrowFrom?: Record<number, number>;
 }
 
 export interface Research {
@@ -458,6 +467,12 @@ export interface Region {
   /** pop 합산 (화면용). 매 틱 다시 채운다 */
   households: Record<PopClass, Household>;
   market: Record<GoodId, MarketGood>;
+  /**
+   * 이 지역에서 내보내는 교역 (매일, 0.95/0.05 이동평균, market.ts addTraderOrders). AI 무역소 판단용.
+   * buy = 무역소 금고로 산 하루 매입 주문액, cut = 금고가 모자라 잘린 주문액 (무역소가 없으면 내려던 주문 전부), margin = 주문의 기대 이익률 (값 차이 − 운임 − 관세, 매입액 대비).
+   * 없으면 0 (16판에서 생겼다)
+   */
+  trade?: { buy: number; cut: number; margin: number };
 }
 
 export interface Kingdom {
@@ -559,8 +574,14 @@ export interface Shipment {
   q: number;
   /** 도착했지만 팔리지 않아 다시 내놓는 화물 */
   stale?: boolean;
+  /** 화물을 산 무역소 id: 판매 대금이 그 금고로 간다. 없거나 무역소가 헐렸으면 주인 없는 돈(w.fund)으로 */
+  post?: number;
 }
 
+/**
+ * 교역 화물. 교역은 무역소(건물)가 한다 (2026-10-23). cash·capital 은 옛 상인 계정의 자리로 늘 0 이다 (저장 모양을 지키려고 남겼다.
+ * 옛 저장의 상인 현금은 불러올 때 주인 없는 돈으로 옮긴다, compat.ts)
+ */
 export interface Traders {
   cash: number;
   capital: number;

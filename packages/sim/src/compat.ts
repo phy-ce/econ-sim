@@ -90,6 +90,13 @@ export function migrateWorld(input: unknown): World | null {
     // 16판: 생산 건물의 굶은 주 수(Building.starvedWeeks, AI 판단)가 생겼다. 없으면 0이고 다음 주부터 센다
     w.version = 16;
   }
+  // 교역은 무역소가 한다 (2026-10-23, 저장 모양은 같은 16판). 옛 상인 계정의 현금은 주인 없는 돈으로 옮긴다 (매주 지역 금융가로 간다).
+  // 산 무역소가 없는 옛 화물은 그대로 팔리고 대금은 주인 없는 돈이 된다 (market.ts). 새 칸(Region.trade, Shipment.post, Construction.escrow)은 없어도 된다
+  if (w.traders.cash || w.traders.capital) {
+    w.fund += w.traders.cash;
+    w.traders.cash = 0;
+    w.traders.capital = 0;
+  }
   const world = w as World;
   writePool(world);
   return world;

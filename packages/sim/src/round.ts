@@ -12,7 +12,7 @@ const r = (x: number) => round2(x) + 0;
 export function writePool(w: World): void {
   const pool = new Map<number, number>();
   const kOf = new Map(w.regions.map((x) => [x.id, x.kingdomId] as const));
-  for (const b of w.buildings) if (b.cash !== undefined) { const k = kOf.get(b.regionId) ?? 0; pool.set(k, (pool.get(k) ?? 0) + b.cash); }
+  for (const b of w.buildings) if (b.cash !== undefined && (b.typeId === 'manor' || b.typeId === 'finance')) { const k = kOf.get(b.regionId) ?? 0; pool.set(k, (pool.get(k) ?? 0) + b.cash); }
   for (const k of w.kingdoms) k.investmentPool = r(pool.get(k.id) ?? 0);
 }
 

@@ -1,4 +1,4 @@
-import { BUILDING_BY_ID, buildPointsOf, BUILDING_TYPES, EDUCATION_FLOOR, EDUCATION_RANGE, GOOD_IDS, GOODS, SKILL_DEFS, TECH_BY_ID, TICKS_PER_WEEK, TICKS_PER_YEAR, TUNE, getMethod, regionPerk } from './data';
+import { BUILDING_BY_ID, buildPointsOf, BUILDING_TYPES, EDUCATION_FLOOR, EDUCATION_RANGE, GOOD_IDS, GOODS, SKILL_DEFS, TECH_BY_ID, TICKS_PER_WEEK, TICKS_PER_YEAR, TRADING_POST, TUNE, getMethod, regionPerk, tradeEscrowPerLevel, tradeReserveOf } from './data';
 import { withEstimateCache, regionAvgWealth, regionPopulation, wageCostOf,
   availableMethods, ownBuildingAt, builderOf, canBuildType, kingdomGdp, paysDividend, paysShare, companyById, constructionEstimate, creditLimit, depositFree, efficiency, estimateMethod, harvestFactor, hasBuilder, isGovernment, regionById, researchableTechs, roomFor, sellsShares, slots,
 } from './economy';
@@ -416,10 +416,48 @@ function inputFill(spare: Record<GoodId, number>, m: MethodDef, cur: MethodDef, 
   return f;
 }
 
+/** AI 무역소 판단: 금고 중 하루 매입에 쓰인다고 보는 비율 (산 화물은 다음 날 팔려 돈이 돌아오므로 금고 절반쯤은 늘 화물로 묶인다). 근거 없음 */
+export const TRADE_TURN = 0.5;
+
+/**
+ * 무역소 levels 레벨(방식 m)의 하루 손익 (AI): 이 지역 교역 수요(산 주문 + 금고가 모자라 잘린 주문, Region.trade 이동평균) 중
+ * 다른 무역소(self 를 뺀 그 지역 모든 무역소, 레벨 × 레벨당 유보액 × TRADE_TURN)가 다 사고 남는 몫을 이 레벨들의 하루 매입 한도까지 사서
+ * 기대 이익률(값 차이 − 운임 − 관세)만큼 번다고 본다. 거기서 인건비를 뺀다
+ */
+export function tradeValuation(w: World, c: Company, r: Region, m: MethodDef, levels: number, self?: Building): { wageCost: number; profit: number } {
+  const t = r.trade;
+  const wageCost = wageCostOf(m, c.wages, c.state) * levels;
+  if (!t) return { wageCost, profit: -wageCost };
+  let others = 0;
+  for (const x of w.buildings) if (x !== self && x.typeId === TRADING_POST && x.regionId === r.id) others += x.level * tradeReserveOf(x.methodId) * TRADE_TURN;
+  const extra = Math.min(levels * tradeReserveOf(m.id) * TRADE_TURN, Math.max(0, t.buy + t.cut - others));
+  return { wageCost, profit: extra * Math.max(0, t.margin) - wageCost };
+}
+
 function manageBuildings(w: World, c: Company, o: Outlook, pools: Map<string, number>, spare: Record<GoodId, number>) {
   for (const b of w.buildings.filter((x) => x.companyId === c.id && !BUILDING_BY_ID[x.typeId].auto)) {
     const usable = availableMethods(c, b.typeId);
     const cur = getMethod(b.typeId, b.methodId);
+
+    // 무역소: 일손을 구할 수 있는 방식 중 이 레벨 수로 하루 손익(tradeValuation)이 가장 큰 것 (지금보다 5% 넘게 나아야, 3주 쿨다운).
+    // 늘 다 가동한다 (가동률을 줄이면 살 수 있는 돈만 준다). 남길지는 reviewLevels 가 레벨 단위로 정한다
+    if (b.typeId === TRADING_POST) {
+      const r = regionById(w, b.regionId);
+      if (usable.length > 1 && w.tick - b.lastSwitchTick >= SWITCH_COOLDOWN) {
+        const val = (m: MethodDef) => tradeValuation(w, c, r, m, b.level, b).profit;
+        const vCur = val(cur);
+        let best = cur, bestV = vCur + Math.abs(vCur) * SWITCH_MARGIN;
+        for (const m of usable) {
+          if (m.id === cur.id || laborAvailability(w, r, m, b.level, c.state, pools, c, b) < MIN_STAFFING()) continue;
+          const v = val(m);
+          if (v > bestV) { best = m; bestV = v; }
+        }
+        if (best !== cur) { applyCommand(w, c.id, { type: 'setMethod', buildingId: b.id, methodId: best.id }); takeFromPool(w, r, best, b.level, c.state, pools, c, b); }
+      }
+      if (!b.active) applyCommand(w, c.id, { type: 'setActive', buildingId: b.id, active: true });
+      if (b.utilization < 1) applyCommand(w, c.id, { type: 'setUtilization', buildingId: b.id, utilization: 1 });
+      continue;
+    }
     const current = estimateMethod(w, b.regionId, b.typeId, b.methodId, c.wages, c.state);
 
     // 건축사무소: 자재를 구할 수 있는 방식 중 하루 포인트가 가장 많은 것 (가동률은 늘 100%)
@@ -857,6 +895,8 @@ function levelValue(w: World, c: Company, o: Outlook, b: Building, pointsPerDay:
   }
   const r = regionById(w, b.regionId);
   if (m.seats) return schoolValuation(w, c, r, m, 1, schoolSeats(w, r.id) - m.seats).profit;
+  // 무역소: 이 건물 전체 손익 − 한 레벨 적을 때의 손익
+  if (b.typeId === TRADING_POST) return tradeValuation(w, c, r, m, b.level, b).profit - tradeValuation(w, c, r, m, b.level - 1, b).profit;
   return valueMethod(w, o, r, c, b.typeId, m, 1, true, fill).profit;
 }
 
@@ -946,7 +986,8 @@ function glutOf(w: World, kingdomId: number): (typeId: string, m: MethodDef) => 
   }
   const memo = new Map<string, boolean>();
   return (typeId, m) => {
-    if (isGovernment(typeId)) return false;
+    // 무역소는 산출이 없고 금고가 찰 때까지 매출이 없어 손익으로 막지 않는다 (tradeValuation 이 지역 교역 수요로 본다)
+    if (isGovernment(typeId) || typeId === TRADING_POST) return false;
     const key = `${typeId}|${m.id}`;
     const hit = memo.get(key);
     if (hit !== undefined) return hit;
@@ -993,7 +1034,8 @@ export function pickProject(w: World, c: Company, o: Outlook, free: number, allo
       // 기상 조건이 걸린 땅에는 짓지 않는다 (줄어든 산출과 오른 값은 일시적이다)
       if (harvestFactor(w, r.id, t.land) < 1) continue;
       const room = roomFor(w, r.id, t.id);
-      const perLevel = constructionEstimate(w, c, t.id).cost;
+      // 무역소는 공사비에 금고에 묶는 돈(레벨당 tradeEscrowPerLevel)을 더해 센다
+      const perLevel = constructionEstimate(w, c, t.id).cost + (t.id === TRADING_POST ? tradeEscrowPerLevel() : 0);
       const budget = t.methods.some((m) => m.seats) ? schoolFree : free;
       if (!Number.isFinite(perLevel) || budget < perLevel) continue;
       const sibs = w.buildings.filter((b) => b.companyId === c.id && b.regionId === r.id && b.typeId === t.id);
@@ -1010,7 +1052,7 @@ export function pickProject(w: World, c: Company, o: Outlook, free: number, allo
         for (const m of availableMethods(c, t.id)) {
           if (otherMethod(m) || glut?.(t.id, m)) continue;
           if (laborAvailability(w, r, m, 1, c.state, pools, c) < MIN_STAFFING()) continue;
-          const e = m.seats ? schoolValuation(w, c, r, m, 1, schoolSeats(w, r.id)) : valueMethod(w, o, r, c, t.id, m, 1);
+          const e = m.seats ? schoolValuation(w, c, r, m, 1, schoolSeats(w, r.id)) : t.id === TRADING_POST ? tradeValuation(w, c, r, m, 1) : valueMethod(w, o, r, c, t.id, m, 1);
           const roi = (e.profit * TICKS_PER_YEAR) / perLevel;
           if (e.profit > 0 && roi > MIN_ROI() && (!blocked.best || roi > blocked.best.score)) blocked.best = { regionId: r.id, typeId: t.id, methodId: m.id, levels: 1, score: roi };
         }
@@ -1023,7 +1065,7 @@ export function pickProject(w: World, c: Company, o: Outlook, free: number, allo
         for (const levels of CHUNKS) {
           if (levels > room || levels > cap || budget < perLevel * levels) continue;
           if (m.seats && budget < (perLevel + wageCostOf(m, c.wages, c.state) * TICKS_PER_WEEK * TUNE.treasuryLowWeeks) * levels) continue;
-          const e = m.seats ? schoolValuation(w, c, r, m, levels, schoolSeats(w, r.id)) : valueMethod(w, o, r, c, t.id, m, levels);
+          const e = m.seats ? schoolValuation(w, c, r, m, levels, schoolSeats(w, r.id)) : t.id === TRADING_POST ? tradeValuation(w, c, r, m, levels) : valueMethod(w, o, r, c, t.id, m, levels);
           if (laborAvailability(w, r, m, levels, c.state, pools, c) < MIN_STAFFING()) continue;
           const roi = (e.profit * TICKS_PER_YEAR) / (perLevel * levels);
           if (allowLoss && levels === CHUNKS[CHUNKS.length - 1] && e.profit >= -TUNE.lossTolerance * e.wageCost) {

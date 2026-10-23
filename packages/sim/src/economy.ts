@@ -1,7 +1,7 @@
 import {
   BUILDING_BY_ID, BUILDING_TYPES, GOOD_IDS, GOODS, HARVEST_KINDS, HARVEST_MAX_SEASONS, HARVEST_SEASON_DAYS, HARVEST_SPREAD, HARVEST_STEP, LAW_TECH, LAND_NAMES, LAND_NAMES_EN,
   MAX_POINTS_PER_LEVEL_DAY, REGIONS, SKILL_DEFS, SUBSISTENCE, TECH_BY_ID, VEIN_NAMES, VEIN_NAMES_EN, getMethod, regionPerk, scaleBonus, TUNE,
-  buildPointsOf,
+  buildPointsOf, TRADING_POST,
 } from './data';
 import { regionNameEn } from './i18n';
 import { borderCost } from './kingdoms';
@@ -295,9 +295,9 @@ export function officeFeeMult(methodId: string): number {
   return 1 / (1 - officeMargin(methodId));
 }
 
-/** 민영화할 수 있는 왕실 건물: 정부 건물과 자동 건물을 뺀 모두 */
+/** 민영화할 수 있는 왕실 건물: 정부 건물, 자동 건물, 무역소(금고를 레벨마다 나누지 않는다)를 뺀 모두 */
 export function sellsShares(typeId: string): boolean {
-  return !BUILDING_BY_ID[typeId].auto && !isGovernment(typeId);
+  return !BUILDING_BY_ID[typeId].auto && !isGovernment(typeId) && typeId !== TRADING_POST;
 }
 
 /** 소작지인가 (자동 건물 중 소유 건물이 아닌 것) */
@@ -617,6 +617,7 @@ export function mapMoney(w: World, f: (x: number) => number): void {
   for (const c of w.companies) c.cash = f(c.cash);
   for (const p of w.pops) p.savings = f(p.savings);
   for (const b of w.buildings) if (b.cash !== undefined) b.cash = f(b.cash);
+  for (const k of w.constructions) if (k.escrow !== undefined) k.escrow = f(k.escrow);
 }
 
 export function totalMoney(w: World): number {

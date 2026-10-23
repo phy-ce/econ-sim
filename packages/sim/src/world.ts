@@ -1,4 +1,4 @@
-import { BUILDING_BY_ID, GOOD_IDS, GOODS, REGIONS, SKILL_DEFS, SUBSISTENCE, TICKS_PER_WEEK, TIER_COUNTS, TIER_JITTER, TIERS, TUNE, WORKFORCE_RATIO, getMethod } from './data';
+import { BUILDING_BY_ID, GOOD_IDS, GOODS, REGIONS, SKILL_DEFS, SUBSISTENCE, TICKS_PER_WEEK, TIER_COUNTS, TIER_JITTER, TIERS, TRADING_POST, TUNE, WORKFORCE_RATIO, getMethod, tradeReserveOf } from './data';
 import { collectionRatio, emptyJobs, knownVeins, isGovernment, newBuilding, paysDividend, slots, wageCostOf } from './economy';
 import { addFund, aggregateHouseholds, findPop, getPop, movePeople, workforce } from './pops';
 import { updateOwnership, updateSubsistence } from './production';
@@ -13,7 +13,8 @@ import { SKILLS, emptyLedger, isLowerJob } from './types';
 export const START_CASH = 30_000_000;
 /** 그중 민간 상회가 운영 자금으로 갖는 돈. 나머지는 왕국 저택·금융가 금고로 (지역 인구 비례, 저택과 금융가 반씩) */
 export const START_FIRM_CASH = 5_000_000;
-export const TRADER_CAPITAL = 100_000_000;
+/** 왕국마다 시작 무역소 레벨 (인구가 가장 많은 지역, 민간 상회 것). 금고는 가득(레벨 × 기본 유보액) 찬 채로 시작한다 (2026-10-23 사용자 설계) */
+export const START_TRADE_LEVELS = 1;
 /** 시작 정책 단계: 세금 수준, 국영 임금 수준, 복지 수준 모두 보통(3) */
 const DEFAULT_BUDGET = { tax: 3, wages: 3, welfare: 3 };
 /** 플레이어 회사 id (화면이 이 값을 쓴다) */
@@ -179,7 +180,7 @@ export function createWorld(seed = 1, opts: CreateWorldOptions = {}): World {
   const w: World = {
     version: 16, config: { ai }, tick: 0, seed, rngState: seed | 0, nextId: 1000,
     regions, kingdoms, pops: [], fund: 0, metrics: [],
-    traders: { cash: TRADER_CAPITAL, capital: TRADER_CAPITAL, shipments: [] },
+    traders: { cash: 0, capital: 0, shipments: [] },
     mint: { minted: 0, issued: 0, retired: 0, interest: 0 },
     companies, buildings: [], constructions: [], salvage: [],
     history: [], events: [{ tick: 0, companyId: null, text: '대륙의 시장이 열렸습니다.', textEn: 'The markets of the continent are open.', kind: 'info' }], alertState: {},
@@ -198,6 +199,13 @@ export function createWorld(seed = 1, opts: CreateWorldOptions = {}): World {
     const popOf = (r: Region) => Object.values(starts.get(r.id)!.population).reduce((x, y) => x + y, 0);
     const capital = [...mine].sort((a, b) => popOf(b) - popOf(a) || a.id - b.id)[0];
     w.buildings.push(newBuilding(w.nextId++, 'school', capital.id, c.id, 'school_tutor', START_SCHOOL_LEVELS, true));
+    // 무역소 START_TRADE_LEVELS 레벨: 같은 지역(인구가 가장 많은 지역), 그 왕국 민간 상회 것. 금고는 레벨 × 기본 유보액 (새 돈이 아니라 시작 세계의 돈이다)
+    const firm = companies.find((x) => !x.state && x.kingdomId === c.kingdomId);
+    if (firm && START_TRADE_LEVELS > 0) {
+      const post = newBuilding(w.nextId++, TRADING_POST, capital.id, firm.id, BUILDING_BY_ID[TRADING_POST].methods[0].id, START_TRADE_LEVELS, false);
+      post.cash = START_TRADE_LEVELS * tradeReserveOf(post.methodId);
+      w.buildings.push(post);
+    }
   }
   // 티어에 따른 시작 민간 곡물 농장 (일꾼은 첫날부터 소작농에서 뽑는다)
   for (const r of regions) {

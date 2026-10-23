@@ -315,6 +315,19 @@ export const BUILDING_TYPES: BuildingTypeDef[] = [
     ],
   },
   {
+    // 무역소 (2026-10-23 사용자 승인 설계): 이 지역에서 사서 이웃 지역에 판다 (market.ts addTraderOrders). 투입·산출 상품이 없고, 일꾼은 장사를 굴리는 사람들이다
+    // (운송 노동은 운송 조합이 따로 만든다). 금고(Building.cash)가 그날 이 지역에서 살 수 있는 돈이고, 레벨 × 방식의 레벨당 유보액(tradeReserveOf)을 넘는 돈은
+    // 건물 매출로 회사에 넘어가 다른 건물처럼 임금·배당에 쓰인다. 이익률 규칙 밖 (산출이 없다, cli/methods_audit.ts 예외).
+    // 공사 포인트 100: 이익 규칙(기본 방식 하루 이익 × BUILD_POINT_FACTOR)을 쓸 수 없어, 기본 방식 인건비(하급 귀족 20 × 30 + 노동자 180 × 10 = 2,400)에
+    // 이익률 20% 건물의 이익/인건비 비(0.2 ÷ 0.8 = 0.25)를 곱한 600 × 0.15 = 90 을 50 단위로 올렸다. 비교 실행은 하지 않았다 (DESIGN 11 "무역소 유보액" 행)
+    id: 'trading_post', name: '무역소', nameEn: 'Trading post', land: 'plot', buildPoints: 100,
+    methods: [
+      m({ id: 'trade_house', name: '상단', nameEn: 'Merchant house', workers: { gentry: 20, unskilled: 180 }, inputs: {}, outputs: {} }),
+      m({ id: 'trade_ledger', name: '장부 상회', nameEn: 'Ledger firm', tech: 'printing', workers: { gentry: 10, skilled: 40, unskilled: 100 }, inputs: {}, outputs: {} }),
+      m({ id: 'trade_company', name: '무역 회사', nameEn: 'Trading company', tech: 'steam_rail', workers: { expert: 10, skilled: 40, unskilled: 50 }, inputs: {}, outputs: {} }),
+    ],
+  },
+  {
     // 정부 건물: 왕실만 짓고 국고가 임금을 낸다. 땅을 쓰지 않는다 (행정청도 같다). 1인당 하루 인건비: 가정교사 3,000 ÷ 2만 = 0.15, 공립 15,000 ÷ 10만 = 0.15
     id: 'school', name: '학교', nameEn: 'School', buildPoints: 800, stateOnly: true,
     methods: [
@@ -564,7 +577,27 @@ export const TUNE = {
   starveWeeks: 8,
   // 1 = AI 왕실은 빚이 현금보다 많으면 생산 건물을 새로 짓지 않는다 (행정청·학교·사무소는 그대로). 0 = 끔
   crownDebtNoBuild: 1,
+  // 무역소 1레벨의 유보액 R (기본 방식, 장부 상회 2R, 무역 회사 4R). 금고가 이것을 넘으면 넘는 돈을 주인에게 보낸다.
+  // 5,000: b1550a5 에서 상인(자본 1억)의 하루 교역 매입액을 20년 × 시드 1로 재어 1·5·10·20년차 평균 49,901 / 97,885 / 170,275 / 211,009 (네 해 평균 약 132,000)이었고,
+  // 시작 무역소 3곳(왕국마다 1레벨)의 금고 합(3R)이 그 약 1/10 이 되게 둥글게 골랐다 (사용자 지시 규칙). 다른 값과 비교는 DESIGN 11 "무역소 유보액" 행
+  tradeReserve: 5_000,
 };
+
+/** 무역소 건물 id */
+export const TRADING_POST = 'trading_post';
+/** 무역소 방식이 한 단계 오를 때마다 레벨당 유보액 배율 (기본 R, 장부 상회 2R, 무역 회사 4R. 2026-10-23 사용자 설계) */
+export const TRADE_STEP_MULT = 2;
+/** 무역소를 지을 때 공사비와 따로 내는 돈: 레벨당 유보액(TUNE.tradeReserve)의 이 비율. 공사에 묶였다가 완공되면 금고 시작 돈이 된다 (2026-10-23 사용자 설계) */
+export const TRADE_ESCROW_SHARE = 0.5;
+/** 무역소 방식 1레벨의 유보액: TUNE.tradeReserve × TRADE_STEP_MULT^(방식 단계) */
+export function tradeReserveOf(methodId: string): number {
+  const i = BUILDING_BY_ID[TRADING_POST].methods.findIndex((m) => m.id === methodId);
+  return TUNE.tradeReserve * Math.pow(TRADE_STEP_MULT, Math.max(0, i));
+}
+/** 무역소 1레벨을 지을 때 묶는 돈 (방식과 상관없이 기본 유보액의 TRADE_ESCROW_SHARE) */
+export function tradeEscrowPerLevel(): number {
+  return TUNE.tradeReserve * TRADE_ESCROW_SHARE;
+}
 
 /** 이 건물 1레벨의 공사 포인트: 표의 buildPoints × TUNE.buildCostMult, 10 단위 (공사·견적·자재·화면이 모두 이것을 쓴다) */
 export function buildPointsOf(typeId: string): number {
