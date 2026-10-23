@@ -319,7 +319,7 @@ export const BUILDING_TYPES: BuildingTypeDef[] = [
     // (운송 노동은 운송 조합이 따로 만든다). 금고(Building.cash)가 그날 이 지역에서 살 수 있는 돈이고, 레벨 × 방식의 레벨당 유보액(tradeReserveOf)을 넘는 돈은
     // 건물 매출로 회사에 넘어가 다른 건물처럼 임금·배당에 쓰인다. 이익률 규칙 밖 (산출이 없다, cli/methods_audit.ts 예외).
     // 공사 포인트 100: 이익 규칙(기본 방식 하루 이익 × BUILD_POINT_FACTOR)을 쓸 수 없어, 기본 방식 인건비(하급 귀족 20 × 30 + 노동자 180 × 10 = 2,400)에
-    // 이익률 20% 건물의 이익/인건비 비(0.2 ÷ 0.8 = 0.25)를 곱한 600 × 0.15 = 90 을 50 단위로 올렸다. 비교 실행은 하지 않았다 (DESIGN 11 "무역소 유보액" 행)
+    // 이익률 20% 건물의 이익/인건비 비(0.2 ÷ 0.8 = 0.25)를 곱한 600 × 0.15 = 90 을 50 단위로 올렸다. 비교 실행은 하지 않았다 (DESIGN 8 무역소 공사)
     id: 'trading_post', name: '무역소', nameEn: 'Trading post', land: 'plot', buildPoints: 100,
     methods: [
       m({ id: 'trade_house', name: '상단', nameEn: 'Merchant house', workers: { gentry: 20, unskilled: 180 }, inputs: {}, outputs: {} }),
@@ -447,6 +447,7 @@ export function scaleBonus(level: number): number {
  * - prospectStart: 시작할 때 알려진 광맥 = 잠재량(REGIONS veins) × 이 비율 (10 단위로 반올림)
  * - prospectChance: 탐광. 계절(90일)마다 지역·자원마다 남은 잠재량이 있으면 이 확률로 광맥을 찾는다
  * - prospectFind: 한 번 찾을 때 늘어나는 광맥 = 잠재량 × 이 비율 (10 단위로 반올림, 최소 10, 남은 잠재량까지)
+ * - tradeReserve: 무역소 1레벨의 유보액 R (방식 단계마다 × TRADE_STEP_MULT). 금고 상한 = 레벨 × 유보액, 공사에 묶는 돈 = 레벨 × R × TRADE_ESCROW_SHARE
  */
 export const TUNE = {
   /** 저택의 하급 귀족 1명 몫 (귀족 1명 = 1). 0.1·0.25·0.5 비교 (10년, 20년 × 시드 1·2, 두 번): 0.1은 하급 귀족 생활수준이 가장 낮고, 0.25와 0.5는 총생산·레벨 순서가 실행마다 바뀐다. 상급 귀족 생활수준을 덜 깎는 0.25 */
@@ -579,7 +580,7 @@ export const TUNE = {
   crownDebtNoBuild: 1,
   // 무역소 1레벨의 유보액 R (기본 방식, 장부 상회 2R, 무역 회사 4R). 금고가 이것을 넘으면 넘는 돈을 주인에게 보낸다.
   // 5,000: b1550a5 에서 상인(자본 1억)의 하루 교역 매입액을 20년 × 시드 1로 재어 1·5·10·20년차 평균 49,901 / 97,885 / 170,275 / 211,009 (네 해 평균 약 132,000)이었고,
-  // 시작 무역소 3곳(왕국마다 1레벨)의 금고 합(3R)이 그 약 1/10 이 되게 둥글게 골랐다 (사용자 지시 규칙). 다른 값과 비교는 DESIGN 11 "무역소 유보액" 행
+  // 시작 무역소 3곳(왕국마다 1레벨)의 금고 합(3R)이 그 약 1/10 이 되게 둥글게 골랐다 (사용자 지시 규칙). 5,000·2만·5만 비교(20년 × 시드 1·2)는 DESIGN 11 `tradeReserve` 행
   tradeReserve: 5_000,
 };
 
