@@ -6,13 +6,15 @@
 //  4. 전문가는 증기 시대 방식(증기기관이거나 증기기관이 선행인 기술)과 사치품 방식에만, 레벨당 20명까지
 //     (대륙 전문가는 약 1천 명이고 거의 다 금융가에 있다. 그 전 방식이 전문가를 쓰면 아무도 바꾸지 못한다)
 //  5. 기본 방식은 공구 10~30 (광산·벌목 30: 빅토리아3 광산 기본 방식이 공구를 쓰는 1차 산업이라 원료가 공구뿐이다. 목공구 tools_wood 만 0)
-//  6. 둥근 수: 일자리 10 단위·합 50 단위, 1,000 이상인 양은 50 단위, 그 아래는 10 단위
+//  6. 둥근 수: 일자리 10 단위 (합은 되도록 50 단위, 상황에 따라 10 단위라 확인하지 않는다), 1,000 이상인 양은 50 단위, 그 아래는 10 단위
 //  7. 산업 유형 (data.ts INDUSTRIES): 기본 방식 일꾼 합계 = 유형 값, 숙련(기술자+전문가) 비율 = 유형 값 ± INDUSTRY_SKILL_TOL
 //     (농부만 쓰는 농장·목장은 0), 원료비/매출이 유형 범위 안. 윗단계 원료비/매출은 유형 범위 ± INDUSTRY_UPPER_INPUT_TOL
 //  8. 공사 포인트 = 기본 방식(건물의 첫 방식) 하루 이익 × BUILD_POINT_FACTOR, 50 단위 (산업 유형이 있는 건물)
+// 무역소(trading_post)는 산출이 없어 이익·원료·산업 유형 규칙(1·2·5·7·8)과 상위 원료·산출 규칙을 보지 않는다 (정부 건물처럼 예외).
+// 둥근 수(6), 전문가(4), 단계가 오르면 일꾼 합계는 줄고 숙련 비율은 줄지 않는다(3의 앞부분)는 본다
 // 어긋나면 줄마다 '!' 로 찍고 끝에 실패 수를 내며 종료 코드 1 로 끝난다.
 import {
-  BUILDING_TYPES, BUILD_POINT_FACTOR, GOODS, INDUSTRIES, INDUSTRY_SKILL_TOL, INDUSTRY_UPPER_INPUT_TOL, SKILL_DEFS, STEP_PROFIT_MULT, TECH_BY_ID, industryOf,
+  BUILDING_TYPES, BUILD_POINT_FACTOR, GOODS, INDUSTRIES, INDUSTRY_SKILL_TOL, INDUSTRY_UPPER_INPUT_TOL, SKILL_DEFS, STEP_PROFIT_MULT, TECH_BY_ID, TRADING_POST, industryOf,
 } from '../src/data';
 import type { GoodId, MethodDef, Skill } from '../src/types';
 
@@ -70,7 +72,6 @@ for (const t of BUILDING_TYPES) {
       const tag = `${t.id}/${m.id}`;
       // 6. 둥근 수
       for (const [s, n] of Object.entries(m.workers)) if (n % 10) bad(`${tag}: ${s} ${n} 는 10 단위가 아니다`);
-      if (headOf(m) % 50) bad(`${tag}: 일꾼 합계 ${headOf(m)} 는 50 단위가 아니다`);
       for (const [g, q] of [...Object.entries(m.inputs), ...Object.entries(m.outputs)] as [string, number][]) {
         const step = q >= 1000 ? 50 : 10;
         if (q % step) bad(`${tag}: ${g} ${q} 는 ${step} 단위가 아니다`);
@@ -79,6 +80,12 @@ for (const t of BUILDING_TYPES) {
       const ex = m.workers.expert ?? 0;
       if (ex > 0 && !steamEra(m) && !LUXURY.some((g) => m.outputs[g])) bad(`${tag}: 증기 시대·사치품 방식이 아닌데 전문가 ${ex}`);
       if (ex > 20) bad(`${tag}: 전문가 ${ex} > 20`);
+      // 무역소: 일꾼 사다리만 본다
+      if (t.id === TRADING_POST) {
+        if (k > 0 && headOf(m) >= headOf(ms[k - 1])) bad(`${tag}: 일꾼 합계 ${headOf(m)} 가 아래 단계 ${headOf(ms[k - 1])} 보다 적지 않다`);
+        if (k > 0 && skillShare(m) < skillShare(ms[k - 1]) - 1e-9) bad(`${tag}: 숙련 비율이 줄었다`);
+        return;
+      }
       // 7. 산업 유형
       const ind = industryOf(t.id, m.id);
       if (!isBuild && !ind) bad(`${tag}: 산업 유형이 없다`);

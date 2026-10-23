@@ -1,18 +1,19 @@
-import { CONSUMPTION_PER_CAPITA, GOOD_IDS, GOODS, NEEDS, SUBSISTENCE, TUNE, WORKFORCE_RATIO, getMethod, needsAt, rawMax, tenantYield } from './data';
+import { CONSUMPTION_PER_CAPITA, GOOD_IDS, GOODS, NEEDS, SUBSISTENCE, TRADING_POST, TUNE, WORKFORCE_RATIO, getMethod, needsAt, rawMax, tenantYield, tradeReserveOf } from './data';
 import { CARTAGE_RATE, RAIL_RATE, borrow, harvestFactor, priceFormula, regionById, sellThrough, shippingRate, isSubsistence } from './economy';
 import { financeIdle, payRent, paySalvage, taxDue, taxRates } from './finance';
 import { borderCost, kingdomById, kingdomOf, payTariff, toTreasury } from './kingdoms';
 import { INVEST_CLASSES } from './policy';
 import { addFund, findPop, payPops, payProf, workforce } from './pops';
 import { clamp } from './rng';
-import { POP_CLASSES, WEALTH_MAX, WEALTH_MIN, wealthOf } from './types';
+import { POP_CLASSES, WEALTH_MAX, WEALTH_MIN, crewOf, wealthOf } from './types';
 import type { Building, Company, GoodBag, GoodId, MarketGood, NeedDef, NeedId, Pop, Region, SalvageLot, Shipment, World } from './types';
 
 // 시장 (지역마다 하나): 그날 나온 구매 주문과 판매 제안을 한 가격으로 체결한다.
-// 건물 산출은 그날 못 팔면 사라진다 (재고 없음). 상인 화물만 남겨 두었다가 다음 날 다시 내놓는다 (하루 2% 상함).
+// 건물 산출은 그날 못 팔면 사라진다 (재고 없음). 무역소 화물만 남겨 두었다가 다음 날 다시 내놓는다 (하루 2% 상함).
 // 지역 밖으로 나가는 화물은 운송비를, 국경을 넘으면 관세를 더 낸다.
 
-type Payer = { kind: 'company'; c: Company } | { kind: 'trader' };
+/** 돈을 내는 쪽. posts: 한 지역의 무역소들이 금고 비율(shares, 합 1)대로 나눠 낸다 */
+type Payer = { kind: 'company'; c: Company } | { kind: 'posts'; posts: Building[]; shares: number[] };
 
 interface Order {
   src: string;
@@ -30,8 +31,8 @@ type Lot =
   | { kind: 'sub'; pop: Pop; q: number }
   /** 지대: 수확에서 떼어 바로 파는 몫. 대금은 그 지역 저택으로 */
   | { kind: 'rent'; regionId: number; q: number }
-  /** 한 시장의 상인 화물 전부 (화물 순서대로의 수량). 시장 안에서 상인 화물 제안은 건물 제안 뒤·철거 자재 앞에 이어 붙으므로 한 묶음이어도 순서가 같다 */
-  | { kind: 'traders'; qs: number[] }
+  /** 한 시장의 무역소 화물 전부 (화물 순서대로의 수량과 화물을 산 무역소 id). 시장 안에서 화물 제안은 건물 제안 뒤·철거 자재 앞에 이어 붙으므로 한 묶음이어도 순서가 같다 */
+  | { kind: 'traders'; qs: number[]; posts: (number | undefined)[] }
   | { kind: 'salvage'; lot: SalvageLot; q: number };
 
 interface PopPlan {
@@ -52,7 +53,7 @@ export interface Book {
   /** 시장(mkey)별 판매 제안 */
   lots: Map<number, Lot[]>;
   plans: PopPlan[];
-  /** 오늘 산 상인 화물: 도착 시장(mkey)마다 하나로 합친다 (출발지는 남기지 않는다) */
+  /** 오늘 산 무역소 화물: 도착 시장(mkey)·산 무역소마다 하나로 합친다 (열쇠 = mkey × 1e9 + 무역소 id) */
   fresh: Map<number, Shipment>;
 }
 
@@ -468,10 +469,20 @@ function splitShares(weights: number[], caps: number[]): number[] {
 
 // ---------------------------------------------------------------- 운송과 교역
 
-function charge(w: World, payer: Payer, amount: number) {
+function charge(_w: World, payer: Payer, amount: number) {
   switch (payer.kind) {
     case 'company': payer.c.cash -= amount; break;
-    case 'trader': w.traders.cash -= amount; break;
+    case 'posts': {
+      // 금고 비율대로 나누고, 마지막 무역소가 남은 몫을 내서 낸 돈의 합이 amount 와 같다
+      const { posts, shares } = payer;
+      let rest = amount;
+      for (let i = 0; i < posts.length; i++) {
+        const pay = i === posts.length - 1 ? rest : amount * shares[i];
+        posts[i].cash = (posts[i].cash ?? 0) - pay;
+        rest -= pay;
+      }
+      break;
+    }
   }
 }
 
@@ -491,13 +502,13 @@ function transportOrder(w: World, regionId: number, value: number, payer: Payer,
 
 /** 운송비와 관세를 넘는 가격 차 1%당 평균 유통량의 몇 %를 옮기는가 */
 export const SHIP_RATE = 10;
-/** 팔리지 않은 상인 화물이 하루에 상하는 비율 */
+/** 팔리지 않은 무역소 화물이 하루에 상하는 비율 */
 export const CARGO_DECAY = 0.02;
 /** 묵은 화물이 이만큼(단위) 아래로 줄면 없어진다 */
 export const CARGO_MIN = 1;
 
 /**
- * 상인 화물의 시장(mkey)별 수량 합 (화물 순서대로). 화물 목록은 이 파일만 바꾸고, updatePrices 뒤로 다음 날 addTraderOrders 까지는
+ * 무역소 화물의 시장(mkey)별 수량 합 (화물 순서대로). 화물 목록은 이 파일만 바꾸고, updatePrices 뒤로 다음 날 addTraderOrders 까지는
  * 그대로라 같은 목록(같은 배열·같은 길이)이면 센 것을 다시 쓴다. 세계마다 따로다 (불러오면 새로 센다)
  */
 const shipSums = new WeakMap<World, { list: Shipment[]; n: number; sums: number[] }>();
@@ -511,12 +522,42 @@ function shipmentSums(w: World): number[] {
   return sums;
 }
 
-/** 이웃 지역 값이 운송비 + 관세보다 더 비싸면 상인이 싼 쪽에서 사서 다음 날 비싼 쪽에 판다 */
+/** 지역 교역 기록(Region.trade)의 하루 이동평균 비율 */
+export const TRADE_EMA = 0.05;
+
+/** 무역소 금고 중 그날 매입에 쓸 수 있는 돈: 금고 × 가동률 × 작업 인원 (꺼졌으면 0). 일꾼이 장사를 굴린다 */
+export function postUsable(b: Building): number {
+  return b.active ? Math.max(0, b.cash ?? 0) * b.utilization * Math.min(1, Math.max(0, crewOf(b))) : 0;
+}
+
+/** 무역소 금고 상한: 레벨 × 지금 방식의 레벨당 유보액 */
+export function postCap(b: Building): number {
+  return b.level * tradeReserveOf(b.methodId);
+}
+
+/**
+ * 이웃 지역 값이 운송비 + 관세보다 더 비싸면 무역소가 싼 쪽에서 사서 다음 날 비싼 쪽에 판다.
+ * 그날 지역 a 에서 사는 돈은 a 의 무역소들이 쓸 수 있는 금고(postUsable) 합까지다: 모자라면 그 지역 주문을 같은 비율로 줄이고, 무역소가 없으면 내보내지 않는다.
+ * 대금·운임·관세는 그 지역 무역소들이 금고 비율대로 내고, 화물도 그 비율로 나눠 갖는다 (w.buildings 순서). 이웃 무역소의 화물은 무역소가 없는 지역에도 들어온다
+ */
 function addTraderOrders(w: World, book: Book, days: RegionDay[]) {
-  const pending: { o: Order; to: number; tariff: number; ship: number; ma: MarketGood }[] = [];
+  // 지역마다 무역소와 쓸 수 있는 금고 (w.buildings 순서)
+  const postsOf = new Map<number, { posts: Building[]; usable: number[]; total: number }>();
+  for (const b of w.buildings) {
+    if (b.typeId !== TRADING_POST) continue;
+    const u = postUsable(b);
+    if (!(u > 0)) continue;
+    let e = postsOf.get(b.regionId);
+    if (!e) postsOf.set(b.regionId, (e = { posts: [], usable: [], total: 0 }));
+    e.posts.push(b); e.usable.push(u); e.total += u;
+  }
   // 시장(mkey)별 합계는 mkey 위치의 배열로 센다
   const inTransitOf = shipmentSums(w);
   for (const a of w.regions) {
+    const pending: { o: Order; tariff: number; ship: number; ma: MarketGood; gap: number }[] = [];
+    const here = postsOf.get(a.id);
+    const posts = here?.posts ?? [], shares = here ? here.usable.map((u) => u / here.total) : [];
+    const payer: Payer = { kind: 'posts', posts, shares };
     // 운송비율은 출발 지역 운송 시장으로만 정해진다 (freightRate = shippingRate + borderCost)
     let ship: number | undefined;
     for (const nb of a.neighbors) {
@@ -535,47 +576,79 @@ function addTraderOrders(w: World, book: Book, days: RegionDay[]) {
         const q = Math.min(SHIP_RATE * gap * flow, unmet * 1.2 + flow * 0.05, ma.supplyEma * 0.9);
         if (q <= 1e-4) continue;
         pending.push({
-          to: b.id, tariff, ship, ma,
+          tariff, ship, ma, gap,
           o: {
-            src: 'trader', regionId: a.id, good: g, qty: q, payer: { kind: 'trader' },
+            src: 'trader', regionId: a.id, good: g, qty: q, payer,
             fill: (qq, cost) => {
-              // 같은 시장으로 가는 오늘 화물은 하나로 합친다 (팔리는 비율·공급 신호·재고가 합과 같다)
+              // 같은 시장으로 가는 오늘 화물은 산 무역소마다 하나로 합친다 (팔리는 비율·공급 신호·재고가 합과 같다)
               const k = b.id * NG + gi;
-              const sh = book.fresh.get(k);
-              if (sh) sh.q += qq;
-              else {
-                const s: Shipment = { to: b.id, good: g, q: qq };
-                book.fresh.set(k, s);
-                w.traders.shipments.push(s);
+              for (let i = 0; i < posts.length; i++) {
+                const key = k * 1e9 + posts[i].id;
+                const sh = book.fresh.get(key);
+                if (sh) sh.q += qq * shares[i];
+                else {
+                  const s: Shipment = { to: b.id, good: g, q: qq * shares[i], post: posts[i].id };
+                  book.fresh.set(key, s);
+                  w.traders.shipments.push(s);
+                }
               }
               ma.shippedOut += qq;
               // 관세는 화물가 기준으로 도착 왕국 국고에
               const duty = cost * tariff;
-              if (duty > 0) { w.traders.cash -= duty; payTariff(w, b.id, duty, g, a.id); }
+              if (duty > 0) { charge(w, payer, duty); payTariff(w, b.id, duty, g, a.id); }
             },
           },
         });
       }
     }
+    // 이 지역 주문 전체의 값(매입 + 운임 + 관세)과 기대 이익. 금고가 모자라면 같은 비율로 줄인다
+    let cost = 0, gain = 0;
+    for (const { o, tariff, ship: sr, ma, gap } of pending) { const v = o.qty * ma.price; cost = cost + v * (1 + sr + tariff); gain = gain + v * gap; }
+    const total = here?.total ?? 0;
+    const scale = cost > 0 ? Math.min(1, total / cost) : 1;
+    // AI 판단용 기록: 산 주문액, 금고가 모자라 잘린 주문액, 기대 이익률 (하루 이동평균)
+    const buy = cost * scale, cut = cost - buy;
+    const t = a.trade;
+    if (!t) a.trade = { buy, cut, margin: cost > 0 ? gain / cost : 0 };
+    else {
+      t.buy = t.buy * (1 - TRADE_EMA) + buy * TRADE_EMA;
+      t.cut = t.cut * (1 - TRADE_EMA) + cut * TRADE_EMA;
+      // 이익률은 주문이 있는 날만 따라간다
+      if (cost > 0) t.margin = t.margin * (1 - TRADE_EMA) + (gain / cost) * TRADE_EMA;
+    }
+    if (!here) continue;
+    for (const { o, ma } of pending) {
+      o.qty *= scale;
+      if (o.qty <= 1e-6) continue;
+      book.orders.push(o);
+      book.orders.push(transportOrder(w, o.regionId, o.qty * ma.price, payer, 'trader'));
+    }
   }
-  let cost = 0;
-  for (const { o, tariff, ship, ma } of pending) cost = cost + o.qty * ma.price * (1 + ship + tariff);
-  const scale = cost > 0 ? Math.min(1, Math.max(0, w.traders.cash) / cost) : 1;
-  for (const { o, ma } of pending) {
-    o.qty *= scale;
-    if (o.qty <= 1e-6) continue;
-    book.orders.push(o);
-    book.orders.push(transportOrder(w, o.regionId, o.qty * ma.price, { kind: 'trader' }, 'trader'));
+}
+
+/**
+ * 무역소 금고 정산 (매일, 체결과 결제가 끝난 뒤): 금고가 상한(postCap)을 넘으면 넘는 돈을 회사로 보낸다 (그 건물 매출, 다른 건물처럼 임금·배당에 쓰인다).
+ * 헐려서 레벨이 줄어도 같은 규칙으로 넘는 돈이 나간다
+ */
+function settlePosts(w: World, companyOf: Map<number, Company>) {
+  for (const b of w.buildings) {
+    if (b.typeId !== TRADING_POST) continue;
+    const over = (b.cash ?? 0) - postCap(b);
+    if (!(over > 0)) continue;
+    b.cash = (b.cash ?? 0) - over;
+    const c = companyOf.get(b.companyId);
+    if (c) c.cash += over; else w.fund += over;
+    b.last.revenue += over;
   }
 }
 
 // ---------------------------------------------------------------- 체결
 
-/** 팔리지 않은 상인 화물 중 가격 신호에 공급으로 세는 비율 (같은 화물을 매일 새 공급으로 세지 않게) */
+/** 팔리지 않은 무역소 화물 중 가격 신호에 공급으로 세는 비율 (같은 화물을 매일 새 공급으로 세지 않게) */
 export const STALE_SIGNAL = 0.02;
 
-/** 한 시장의 상인 화물 합계 (clearMarkets 안에서만) */
-interface TradeAcc { mk: number; mg: MarketGood; supply: number; shippedIn: number; by: number | undefined; qs: number[] }
+/** 한 시장의 무역소 화물 합계 (clearMarkets 안에서만) */
+interface TradeAcc { mk: number; mg: MarketGood; supply: number; shippedIn: number; by: number | undefined; qs: number[]; posts: (number | undefined)[] }
 
 export function clearMarkets(w: World, book: Book) {
   const days = regionDays(w);
@@ -594,7 +667,7 @@ export function clearMarkets(w: World, book: Book) {
       addLot(book, b.regionId, g, { kind: 'bld', b, q });
     }
   }
-  // 상인 화물: 시장마다 화물 순서대로 공급·도착량·출처별 공급을 더하고 (그동안 그 시장의 이 값들은 다른 데서 바뀌지 않는다),
+  // 무역소 화물: 시장마다 화물 순서대로 공급·도착량·출처별 공급을 더하고 (그동안 그 시장의 이 값들은 다른 데서 바뀌지 않는다),
   // 판매 제안은 시장마다 한 묶음으로 낸다
   const trade: TradeAcc[] = [], tradeOrder: TradeAcc[] = [];
   for (const sh of w.traders.shipments) {
@@ -602,7 +675,7 @@ export function clearMarkets(w: World, book: Book) {
     let a = trade[mk];
     if (!a) {
       const mg = dayOf(days, w, sh.to).r.market[sh.good];
-      a = trade[mk] = { mk, mg, supply: mg.supply, shippedIn: mg.shippedIn, by: undefined, qs: [] };
+      a = trade[mk] = { mk, mg, supply: mg.supply, shippedIn: mg.shippedIn, by: undefined, qs: [], posts: [] };
       tradeOrder.push(a);
     }
     const signal = sh.stale ? sh.q * STALE_SIGNAL : sh.q;
@@ -610,14 +683,14 @@ export function clearMarkets(w: World, book: Book) {
     // addBy(supplyBy, 'trader', signal) 와 같은 합
     if (signal > 0 && a.mg.supplyBy) a.by = (a.by ?? a.mg.supplyBy.trader ?? 0) + signal;
     a.shippedIn += sh.q;
-    if (sh.q > 1e-9) a.qs.push(sh.q);
+    if (sh.q > 1e-9) { a.qs.push(sh.q); a.posts.push(sh.post); }
   }
   for (const a of tradeOrder) {
     a.mg.supply = a.supply;
     a.mg.shippedIn = a.shippedIn;
     if (a.by !== undefined) a.mg.supplyBy!.trader = a.by;
     if (a.qs.length === 0) continue;
-    const list = book.lots.get(a.mk), lot: Lot = { kind: 'traders', qs: a.qs };
+    const list = book.lots.get(a.mk), lot: Lot = { kind: 'traders', qs: a.qs, posts: a.posts };
     if (list) list.push(lot); else book.lots.set(a.mk, [lot]);
   }
   w.traders.shipments = [];
@@ -641,6 +714,8 @@ export function clearMarkets(w: World, book: Book) {
   // 시장마다: 체결률, 판매 대금 분배, 남은 물건 처리
   const companyOf = new Map<number, Company>();
   for (const c of w.companies) if (!companyOf.has(c.id)) companyOf.set(c.id, c);
+  const postOf = new Map<number, Building>();
+  for (const b of w.buildings) if (b.typeId === TRADING_POST) postOf.set(b.id, b);
   const buyFill: number[] = [];
   for (const r of w.regions) {
     for (let gi = 0; gi < NG; gi++) {
@@ -660,15 +735,20 @@ export function clearMarkets(w: World, book: Book) {
       const p = mg.price;
       for (const lot of lots) {
         if (lot.kind === 'traders') {
-          // 팔리지 않은 화물은 하루 2% 상하고 시장마다 묵은 화물 하나로 합친다. CARGO_MIN 아래로 줄면 없어진다
-          let unsold = 0;
-          for (const q0 of lot.qs) {
+          // 판매 대금은 화물을 산 무역소 금고로 (헐렸으면 주인 없는 돈). 팔리지 않은 화물은 하루 2% 상하고 시장·무역소마다 묵은 화물 하나로 합친다.
+          // CARGO_MIN 아래로 줄면 없어진다
+          const unsold = new Map<number | undefined, number>();
+          lot.qs.forEach((q0, i) => {
             const q = q0 * sellFrac, amt = q * p;
-            w.traders.cash += amt;
-            unsold += q0 - q;
+            const id = lot.posts[i];
+            const post = id !== undefined ? postOf.get(id) : undefined;
+            if (post) post.cash = (post.cash ?? 0) + amt; else w.fund += amt;
+            unsold.set(id, (unsold.get(id) ?? 0) + (q0 - q));
+          });
+          for (const [id, u] of unsold) {
+            const left = u * (1 - CARGO_DECAY);
+            if (left >= CARGO_MIN) w.traders.shipments.push({ to: r.id, good: g, q: left, stale: true, ...(id !== undefined ? { post: id } : {}) });
           }
-          const left = unsold * (1 - CARGO_DECAY);
-          if (left >= CARGO_MIN) w.traders.shipments.push({ to: r.id, good: g, q: left, stale: true });
           continue;
         }
         const q = lot.q * sellFrac, amt = q * p;
@@ -708,6 +788,7 @@ export function clearMarkets(w: World, book: Book) {
     charge(w, o.payer, cost);
     o.fill?.(q, cost);
   }
+  settlePosts(w, companyOf);
 
   // 가계: 결제, 충족률, 부 단계
   for (const plan of book.plans) {

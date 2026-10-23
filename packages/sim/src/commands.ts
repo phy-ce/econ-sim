@@ -1,7 +1,7 @@
-import { BUILDING_BY_ID, buildPointsOf, DEPOSIT_NAMES, DEPOSIT_NAMES_EN, LAND_NAMES, SKILL_DEFS, TECH_BY_ID, TUNE } from './data';
+import { BUILDING_BY_ID, buildPointsOf, DEPOSIT_NAMES, DEPOSIT_NAMES_EN, LAND_NAMES, SKILL_DEFS, TECH_BY_ID, TRADING_POST, TUNE, tradeEscrowPerLevel } from './data';
 import { availableMethods, ownBuildingAt, companyById, constructionEstimate, depositFree, emptyJobs, hasBuilder, isGovernment, knowsTech, landFree, logEvent, regionById, sellsShares } from './economy';
 import { applyStateWages, chooseFunders } from './finance';
-import { kingdomById } from './kingdoms';
+import { kingdomById, toTreasury } from './kingdoms';
 import { buildingNameEn, landNameEn, regionNameEn, techNameEn } from './i18n';
 import { round2 } from './rng';
 import { writePool } from './round';
@@ -65,18 +65,42 @@ function runCommand(w: World, actor: number, cmd: Command): CommandError | null 
     if (!hasBuilder(w, company) && typeId !== 'builder') {
       return fail('건축사무소가 없습니다. 먼저 건축사무소를 지어야 다른 건물을 지을 수 있습니다.', 'You have no construction office. Build one first before building anything else.');
     }
-    // 민간 공사는 저택·금융가 금고가 공사비를 낸다 (finance.ts chooseFunders: 낼 곳과 약정액). 왕실 공사는 국고가 다 내고 레벨도 다 갖는다
+    // 민간 공사는 저택·금융가 금고가 공사비를 낸다 (finance.ts chooseFunders: 낼 곳과 약정액). 왕실 공사는 국고가 다 내고 레벨도 다 갖는다.
+    // 무역소는 공사비와 따로 레벨당 tradeEscrowPerLevel 을 착공할 때 내서 공사에 묶는다 (완공되면 금고 시작 돈). 민간이면 그 돈도 약정한 금고들이 약정 비율로 낸다
+    const escrowPer = typeId === TRADING_POST ? tradeEscrowPerLevel() : 0;
+    const escrow = escrowPer * levels;
     let funders: Record<number, number> | null = null;
+    let escrowFrom: Record<number, number> | null = null;
     if (!company.state && !company.isPlayer) {
-      funders = chooseFunders(w, company.kingdomId, regionId, typeId, levels, constructionEstimate(w, company, typeId).cost);
+      const cost = constructionEstimate(w, company, typeId).cost;
+      funders = chooseFunders(w, company.kingdomId, regionId, typeId, levels, cost + escrowPer);
       if (!funders) return fail('공사비를 낼 저택·금융가 금고가 모자랍니다.', 'The manors and financial districts lack the funds for this project.');
+      if (escrow > 0) {
+        // 약정액 중 묶는 돈의 몫을 지금 낸다 (마지막 금고가 남은 몫을 내서 합이 escrow 와 같다). 남은 약정이 공사비다
+        const ids = Object.keys(funders).map(Number).sort((a, b) => a - b);
+        const sum = ids.reduce((a, id) => a + funders![id], 0);
+        escrowFrom = {};
+        let rest = escrow;
+        ids.forEach((id, i) => {
+          const pay = i === ids.length - 1 ? rest : (escrow * funders![id]) / sum;
+          rest -= pay;
+          const o = w.buildings.find((b) => b.id === id)!;
+          o.cash = (o.cash ?? 0) - pay;
+          escrowFrom![id] = pay;
+          funders![id] -= pay;
+        });
+      }
       // TUNE.financeIdle: 금융가가 마지막으로 공사비를 맡은 날 (쉬는 금융가 판단)
       if (TUNE.financeIdle > 0) for (const id in funders) { const o = w.buildings.find((b) => b.id === Number(id)); if (o?.typeId === 'finance') o.fundedTick = w.tick; }
+    } else if (escrow > 0) {
+      // 왕실·플레이어 민간 상회는 회사 현금에서 낸다
+      if (company.cash < escrow) return fail('무역소 금고에 넣을 돈이 모자랍니다.', 'Not enough cash to fund the trading post.');
+      company.cash -= escrow;
     }
     w.constructions.push({
       id: w.nextId++, companyId: actor, regionId, typeId, methodId, targetBuildingId,
       points: 0, required: buildPointsOf(typeId) * levels, spent: 0, ticksElapsed: 0, ...(levels > 1 ? { levels } : {}),
-      ...(funders ? { funders } : {}),
+      ...(funders ? { funders } : {}), ...(escrow > 0 ? { escrow } : {}), ...(escrowFrom ? { escrowFrom } : {}),
     });
     const starts = (kingdomById(w, company.kingdomId).startsMonth ??= {});
     const key = `${typeId}|${company.state ? 's' : 'p'}`;
@@ -169,8 +193,17 @@ function runCommand(w: World, actor: number, cmd: Command): CommandError | null 
     case 'cancelConstruction': {
       const k = w.constructions.find((x) => x.id === cmd.constructionId && x.companyId === actor);
       if (!k) return fail('해당 공사가 없습니다.', 'No such project.');
-      // 약정만 하고 아직 안 낸 돈은 금고에 그대로 있다 (낸 돈은 돌려받지 못한다)
+      // 약정만 하고 아직 안 낸 돈은 금고에 그대로 있다 (낸 돈은 돌려받지 못한다). 무역소 공사에 묶인 돈은 낸 곳으로 돌아간다
       w.constructions = w.constructions.filter((x) => x.id !== k.id);
+      if (k.escrow) {
+        if (k.escrowFrom) {
+          for (const id of Object.keys(k.escrowFrom).map(Number).sort((a, b) => a - b)) {
+            const o = w.buildings.find((b) => b.id === id);
+            if (o) toTreasury(o, k.escrowFrom[id], 'tradeBack'); else w.fund += k.escrowFrom[id];
+          }
+        } else company.cash += k.escrow;
+        k.escrow = 0;
+      }
       const prog = Math.round((k.points / k.required) * 100), lost = Math.round(k.spent);
       logEvent(w, actor, `${BUILDING_BY_ID[k.typeId].name} 공사 취소 (진행 ${prog}%, 들어간 비용 ƒ${lost} 손실)`,
         { kind: 'warn', regionId: k.regionId, en: `${buildingNameEn(k.typeId)} project cancelled (${prog}% done, ƒ${lost} spent and lost)` });

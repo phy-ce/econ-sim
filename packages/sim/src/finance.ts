@@ -635,7 +635,7 @@ export function ownerFunds(w: World, kingdomId: number): number {
 }
 
 /**
- * 왕실이 남는 돈으로 국채를 갚는다. 상인 조합이 자본보다 크게 쌓은 돈과 주인 없는 돈은 지역 금융가 금고로 간다 (인구 비례).
+ * 왕실이 남는 돈으로 국채를 갚는다. 주인 없는 돈은 지역 금융가 금고로 간다 (인구 비례).
  * 돈이 어디에도 고이지 않게 하는 일반 규칙.
  */
 export function weeklyBanking(w: World) {
@@ -644,10 +644,8 @@ export function weeklyBanking(w: World) {
     const spare = c.cash - weeklyWageBill(w, c) * 2 - buildingReserves(w, c);
     if (spare > 0) repay(w, c, spare * 0.2);
   }
-  let pool = Math.max(0, w.fund);
+  const pool = Math.max(0, w.fund);
   w.fund -= pool;
-  const traderExcess = w.traders.cash - w.traders.capital * 1.2;
-  if (traderExcess > 0) { w.traders.cash -= traderExcess; pool += traderExcess; }
   if (pool <= 0) return;
   const popOf = new Map<number, number>();
   let total = 0;

@@ -31,6 +31,8 @@
 
 0-13. **술·기호품·양조장 (2-66, 사용자 요청 2026-10-23).** 새 상품 `liquor`(술), 새 필요 `intoxicants`(기호품), 새 건물 `distillery`(양조장, 방식 `liquor_pot`·`liquor_column`). 아이콘(`spriteAtlas.ts` 별칭)과 필요·상품 목록에 한 줄씩. 컴파일 수정 없음.
 
+0-14. **무역소 (2-67, 사용자 승인 설계 2026-10-23, 브랜치 wt-trade).** 1억 상인이 없어지고 교역은 새 건물 `trading_post`(무역소)가 한다. 건물 목록·건설 카드에 무역소, 건물 상세에 금고 막대(`b.cash` / `postCap(b)`), 지역 시장에 교역 수요 기록(`Region.trade`). 상인 현금 칸(`MetricPoint.traders`)은 이제 무역소 금고 합이다. 컴파일 수정 없음.
+
 아래는 사용자 요청이거나 정리다.
 1. **아래 창 버튼 토글 + 왕국 지도 버튼 없애기 (2-34, 사용자 재요청).** `WindowWorkspace.tsx` 13·59·67~70: 최소화 상태와 dock의 지도 버튼을 없앤다.
 2. **금고와 대출을 한 칸으로 (2-28).** 상단 칩 `App.tsx` 144~145, 재정 탭 `FinancePanel.tsx` 19의 `현금`·`대출` 두 칸을 `금고  순자산 / 한도` 한 칸으로. 2-35의 금고 상자도 같은 모양.
@@ -1450,6 +1452,23 @@ sim 변경 (wt-research):
   2. 상품을 `GOOD_IDS`·`GOODS`로 돌며 그리는 곳(시세 창, 지역 시장, 건설 카드 원료·산출)은 저절로 술이 나온다. 상품 목록을 손으로 적은 곳이 있으면 술을 더한다.
   3. 필요를 `NEEDS`로 돌며 그리는 곳(pop 필요·충족 막대)은 저절로 기호품이 나온다. 손으로 적은 목록이 있으면 기호품을 더한다.
   설명 문구는 넣지 않는다 (규칙은 README·사전).
+
+### 2-67. 무역소 (사용자 승인 설계 2026-10-23, DESIGN 6 교역·8, 브랜치 wt-trade)
+- 바뀐 sim:
+  - 상인(`w.traders.cash` 1억, `capital`)이 없어졌다. `w.traders.cash`·`capital`은 늘 0 (저장 모양 때문에 칸만 남았다). `world.ts TRADER_CAPITAL`은 지워지고 `START_TRADE_LEVELS`(왕국마다 시작 무역소 레벨)가 생겼다.
+  - 새 건물 `trading_post` (무역소, 공장 부지, 공사 포인트 `buildPointsOf('trading_post')`). 방식 셋: `trade_house` 상단 (하급 귀족 10·노동자 90), `trade_ledger` 장부 상회 (인쇄술, 하급 귀족 10·기술자 30·노동자 40), `trade_company` 무역 회사 (증기 철도, 전문가 10·기술자 20·노동자 20). 투입·산출 상품이 없다 (`industryOf` 는 null).
+  - 금고 `Building.cash` (저택·금융가와 같은 칸, 무역소에도 생긴다). 상한 = `postCap(b)` (`market.ts`, 레벨 × `tradeReserveOf(b.methodId)`, 기본 `TUNE.tradeReserve`, 방식 단계마다 ×`TRADE_STEP_MULT`). 상한을 넘는 돈은 그날 건물 매출(`b.last.revenue`)로 회사에 간다. 쓸 수 있는 금고 = `postUsable(b)` (금고 × 가동률 × 작업 인원).
+  - 공사: 무역소 공사는 레벨당 `tradeEscrowPerLevel()` 을 착공 때 따로 내서 `Construction.escrow`(낸 금고별 `escrowFrom`)에 묶는다. 완공되면 금고 시작 돈, 취소하면 돌려받는다. 무역소는 민영화하지 않는다 (`sellsShares` false).
+  - 지역 교역 기록 `Region.trade = { buy, cut, margin }` (하루 이동평균): 무역소가 산 주문액, 금고가 모자라 잘린 주문액(무역소가 없으면 내려던 주문 전부), 기대 이익률.
+  - 화물 `Shipment.post` = 산 무역소 id.
+  - `Kingdom.investmentPool`(저택·금융가 금고 사본)에는 무역소 금고가 들어가지 않는다. `MetricPoint.traders` = 무역소 금고 합 (이름은 그대로).
+- 화면 요청:
+  1. 건설 목록·건물 상세에 무역소가 보이는지 확인 (방식 셋, 투입·산출 칸이 비어 있다). 투입·산출이 비면 막대 대신 "–".
+  2. 무역소 상세: 금고 막대 `b.cash` / `postCap(b)` (숫자 둘), 그 아래 쓸 수 있는 금고 `postUsable(b)` 한 줄. 레벨당 유보액(`tradeReserveOf(b.methodId)`)은 방식 비교 행 하나.
+  3. 건설 카드의 공사비 칸: 무역소는 공사비 + 묶는 돈(`tradeEscrowPerLevel() × 레벨`)을 따로 한 줄.
+  4. 시장 창(지역): 교역 수요 막대 둘 (`Region.trade.buy` 산 주문, `cut` 잘린 주문) + 기대 이익률 숫자. 무역소가 없는 지역은 `buy` 0.
+  5. 상인 현금을 보이던 곳(통계의 `traders` 선 등)이 있으면 이름을 "무역소 금고"로.
+  설명 문구는 넣지 않는다 (규칙은 README·사전 `trade`·`trading-post`).
 
 ## 3. sim 쪽 필요 사항 (Claude가 처리할 것, UI 작업자는 요청만)
 - **2-59 주 단위 수지 (요청됨, 2026-10-22):** `BuildingEcon`에 `week: { sales, tax, inputs, wages, profit }` (건물 `revenue`·`tax`·`inputCost`·`wageCost`의 이동평균 × 7, `profitEma`와 같은 기간). 들어오면 2-59-3 폭포 라벨을 `/주`로.

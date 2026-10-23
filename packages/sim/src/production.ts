@@ -2,7 +2,7 @@ import { BUILDING_BY_ID, buildPointsOf, GOODS, GOOD_IDS, TICKS_PER_WEEK, MAX_POI
 import { addOwnerLevels, ownBuildingAt, builderOf, companyById, efficiency, harvestFactor, isBudgetFunded, isGovernment, landFree, logEvent, newBuilding, officeFeeMult, regionById } from './economy';
 import { SKILLS } from './types';
 import { workforce } from './pops';
-import { flow, kingdomById } from './kingdoms';
+import { flow, kingdomById, toTreasury } from './kingdoms';
 import { buildingNameEn, regionNameEn } from './i18n';
 import { clamp } from './rng';
 import type { Building, Company, Construction, GoodBag, GoodId, World } from './types';
@@ -298,7 +298,10 @@ export function advanceConstruction(w: World) {
     const target = (k.targetBuildingId != null ? w.buildings.find((b) => b.id === k.targetBuildingId) : undefined)
       ?? ownBuildingAt(w, k.companyId, k.regionId, k.typeId, k.methodId);
     const mats = materialsPerLevel(w, companyById(w, k.companyId), k.typeId);
+    // 무역소 공사에 묶인 돈은 완공되면 그 무역소 금고로 간다
+    const escrow = k.escrow ?? 0;
     if (target) {
+      if (escrow) target.cash = (target.cash ?? 0) + escrow;
       const old = target.materials ?? materialsPerLevel(w, undefined, k.typeId);
       target.materials = Object.fromEntries(GOOD_IDS.filter((g) => (old[g] ?? 0) + (mats[g] ?? 0) > 0)
         .map((g) => [g, ((old[g] ?? 0) * target.level + (mats[g] ?? 0) * add) / (target.level + add)]));
@@ -310,6 +313,7 @@ export function advanceConstruction(w: World) {
     } else {
       const state = !!companyById(w, k.companyId)?.state;
       const b = newBuilding(w.nextId++, k.typeId, k.regionId, k.companyId, k.methodId, add, state);
+      if (escrow) b.cash = escrow;
       if (!state) giveLevels(w, k, b, add);
       b.materials = mats;
       w.buildings.push(b);
@@ -351,6 +355,14 @@ export function progressDemolition(w: World) {
       for (const [id, n] of Object.entries(b.owners ?? {})) if (ownerId === null || n > b.owners![ownerId] || (n === b.owners![ownerId] && Number(id) < ownerId)) ownerId = Number(id);
       if (ownerId !== null) addOwnerLevels(b, ownerId, -1);
     }
+    // 무역소: 헐린 레벨 몫의 금고(금고 ÷ 헐리기 전 레벨)를 그 레벨 주인에게 돌려준다 (저택·금융가 레벨은 그 금고, 국영 레벨은 국고)
+    if (b.cash) {
+      const back = b.cash / (b.level + 1);
+      b.cash -= back;
+      const o = ownerId !== null ? w.buildings.find((x) => x.id === ownerId) : undefined;
+      const c = o ? undefined : companyById(w, b.companyId);
+      if (o) toTreasury(o, back, 'tradeBack'); else if (c) c.cash += back; else w.fund += back;
+    }
     for (const g of GOOD_IDS) {
       const q = (mats[g] ?? 0) * TUNE.salvageShare;
       if (q > 0) w.salvage.push({ regionId: b.regionId, good: g, q, days: TUNE.salvageDays, companyId: b.companyId, ownerId });
@@ -361,6 +373,12 @@ export function progressDemolition(w: World) {
 
 function removeBuilding(w: World, b: Building) {
   w.buildings = w.buildings.filter((x) => x.id !== b.id);
+  // 남은 금고(무역소)는 건물 주인 회사로 (헐릴 때마다 레벨 몫을 이미 돌려주므로 보통 0이다)
+  if (b.cash) {
+    const c = companyById(w, b.companyId);
+    if (c) c.cash += b.cash; else w.fund += b.cash;
+    b.cash = 0;
+  }
   logEvent(w, b.companyId, `${regionById(w, b.regionId).name} ${BUILDING_BY_ID[b.typeId].name}(#${b.id}) 철거 완료`,
     { regionId: b.regionId, en: `Demolished: ${regionNameEn(b.regionId)} ${buildingNameEn(b.typeId)} (#${b.id})` });
 }

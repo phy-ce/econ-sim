@@ -298,7 +298,7 @@ export interface Valuation { revenue: number; inputCost: number; wageCost: numbe
  * 새로 지을지 판단할 때 쓰는 장기 임금: 생산 건물은 민간·왕실 모두 지금 임금과 기본 임금 × TUNE.investWage 중 큰 값.
  * 왕실의 정부 건물(행정청 등)은 정책(국영 임금 수준)이 정하므로 지금 국영 임금 그대로 본다
  */
-function longRunWages(c: Company, typeId: string): Record<Skill, number> {
+export function longRunWages(c: Company, typeId: string): Record<Skill, number> {
   if (c.state && c.stateWages && isGovernment(typeId)) return c.stateWages;
   const out = {} as Record<Skill, number>;
   for (const s of SKILLS) out[s] = Math.max(c.wages[s], SKILL_DEFS[s].baseWage * TUNE.investWage);

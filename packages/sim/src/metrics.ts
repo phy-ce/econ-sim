@@ -1,5 +1,5 @@
 import { ownershipAssets } from './policy';
-import { BUILDING_BY_ID, GOOD_IDS, GOODS } from './data';
+import { BUILDING_BY_ID, GOOD_IDS, GOODS, TRADING_POST } from './data';
 import { CLASS_DEFS, WORKFORCE_RATIO } from './data';
 import { builderOf, companyById, constructionEstimate, harvestCondition, isGovernment, kingdomGdp, slots, wagesAt } from './economy';
 import { subsistenceWage } from './labor';
@@ -235,7 +235,9 @@ export function recordMetrics(w: World) {
   const classGap = upN > 0 && lowN > 0 && low > 0 ? round2((up / upN) / (low / lowN)) : 0;
   const regionGap = regionSol.length && Math.min(...regionSol) > 0 ? round2(Math.max(...regionSol) / Math.min(...regionSol)) : 0;
   const harvestRegions = w.regions.filter((r) => harvestCondition(w, r.id)).length;
-  const point: MetricPoint = { tick: w.tick, kingdoms, goods, classGap, regionGap, traders: r0(w.traders.cash), ...(harvestRegions ? { harvestRegions } : {}) };
+  let postCash = 0;
+  for (const b of w.buildings) if (b.typeId === TRADING_POST) postCash += b.cash ?? 0;
+  const point: MetricPoint = { tick: w.tick, kingdoms, goods, classGap, regionGap, traders: r0(postCash), ...(harvestRegions ? { harvestRegions } : {}) };
   // 지표는 화면에 그대로 나가는 기록이라 모든 숫자를 소수 둘째 자리로 맞춘다 (round.ts)
   roundAll(point);
   (w.metrics ??= []).push(point);
