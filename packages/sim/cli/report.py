@@ -136,6 +136,9 @@ for g, ko in GOODS.items():
     LABELS['sd.' + g] = L(ko + ' 공급÷수요', '공급÷수요', '', '공급 ÷ 수요 (한 해 하루 평균, sup·dem 에서 계산)')
 for b, ko in BLDG.items():
     LABELS['lvT.' + b] = L(ko, '건물 레벨')
+LABELS['buildPts'] = L('건축 포인트', '건축사무소', '/일', '건축사무소가 낸 공사 포인트 합, 열흘마다 잰 한 해 평균')
+LABELS['toolFill'] = L('공구 쓰는 건물 원료 충족', '경제', '', '공구를 원료로 쓰는 방식의 원료 충족률 (레벨 가중, 열흘마다 잰 한 해 평균)')
+LABELS['workshopLv'] = L('공방 레벨', '건물 레벨', '', '공방 레벨 합, 열흘마다 잰 한 해 평균')
 LABELS['swLv'] = L('방식 바꾼 레벨', 'AI 길', '/년', 'AI가 그해 방식을 바꾼 건물 레벨 합 (ai.ts aiTrace switchIn)')
 LABELS['pickLv'] = L('보통 후보 착공 레벨', 'AI 길', '/년', 'AI 보통 후보(pickProject)로 그해 넣은 레벨')
 LABELS['shrinkLv'] = L('철거 레벨', 'AI 길', '/년', 'AI가 그해 철거 대기에 올린 레벨 (reviewLevels)')

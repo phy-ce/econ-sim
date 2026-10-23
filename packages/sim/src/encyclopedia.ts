@@ -897,8 +897,8 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   },
   {
     id: 'tenant-output', category: 'tenants', title: t('소작 산출', 'Tenant output'),
-    rule: t('소작농 노동 인구 1명이 하루 곡물 {0}, 의복 {1}, 목재 {2}, 가구 {3}, 공구 {4}, 술 {5}를 낸다 (공구 말고는 기본 산출 × 소작 산출 배율 {6}). 섬유는 내지 않는다. 기상 조건 배율을 곱한다.', 'Each tenant worker produces {0} grain, {1} clothing, {2} timber, {3} furniture, {4} tools and {5} liquor a day (everything but tools is base output × tenant output multiplier {6}). No fibre. Harvest conditions multiply it.'),
-    params: [p('곡물', 'Grain', () => tenantYield('grain'), 'good'), p('의복', 'Clothing', () => tenantYield('cloth'), 'good'), p('목재', 'Timber', () => tenantYield('timber'), 'good'), p('가구', 'Furniture', () => tenantYield('furniture'), 'good'), p('공구', 'Tools', () => tenantYield('tools'), 'good'), p('술', 'Liquor', () => tenantYield('liquor'), 'good'), tune('tenantOutput', '소작 산출 배율', 'Tenant output multiplier', 'x')],
+    rule: t('소작농 노동 인구 1명이 하루 곡물 {0}, 의복 {1}, 목재 {2}, 술 {3}를 낸다. 가구·공구·섬유는 내지 않는다. 기상 조건 배율을 곱한다.', 'Each tenant worker produces {0} grain, {1} clothing, {2} timber and {3} liquor a day. No furniture, tools or fibre. Harvest conditions multiply it.'),
+    params: [p('곡물', 'Grain', () => tenantYield('grain'), 'good'), p('의복', 'Clothing', () => tenantYield('cloth'), 'good'), p('목재', 'Timber', () => tenantYield('timber'), 'good'), p('술', 'Liquor', () => tenantYield('liquor'), 'good')],
     example: () => {
       const farm = getMethod('farm', 'farm_basic'), perWorker = (farm.outputs.grain ?? 0) / (farm.workers.farmer ?? 1);
       return {
