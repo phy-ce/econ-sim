@@ -452,7 +452,7 @@ export const TUNE = {
   /** 저택의 하급 귀족 1명 몫 (귀족 1명 = 1). 0.1·0.25·0.5 비교 (10년, 20년 × 시드 1·2, 두 번): 0.1은 하급 귀족 생활수준이 가장 낮고, 0.25와 0.5는 총생산·레벨 순서가 실행마다 바뀐다. 상급 귀족 생활수준을 덜 깎는 0.25 */
   gentryShare: 0.25,
   rentShare: 0.05,
-  tenantOutput: 0.9, // 소작 산출 배율 (공구 제외): 소작농 1명 하루 산출 = SUBSISTENCE.output × 이 값 (tenantYield). 사용자 결정 (2026-10-23 "테스트 결과랑 상관없이 내가하라한데로 해봐", DECISIONS 7-24): 비교와 반대로 줄인다. 0.9 = 줄인 후보 중 총생산이 가장 높은 값. 약점 (wt-aibuild 993636a, aiBuildNow 1, 40년 × 시드 1~4, 보고서 2026-10-23-tenantcut, DESIGN 11): 40년 평균 총생산 ×0.9 489 / main 1,177, 소작농 생활수준 2.43 / 2.75, 술 공급÷수요 6.77
+  tenantOutput: 0.9, // 소작 산출 배율 (공구 제외): 소작농 1명 하루 산출 = SUBSISTENCE.output × 이 값 (tenantYield). 사용자 결정 (2026-10-23 "테스트 결과랑 상관없이 내가하라한데로 해봐", DECISIONS 7-24): 비교와 반대로 줄인다. 0.9 = 줄인 후보 중 총생산이 가장 높은 값. 약점 (wt-aibuild 72461ab (993636a + tenantOutput), aiBuildNow 1, 40년 × 시드 1~4, 보고서 2026-10-23-tenantcut, DESIGN 11): 40년 평균 총생산 ×0.9 489 / main 1,177, 소작농 생활수준 2.43 / 2.75, 술 공급÷수요 6.77
   patronWealth: 2,
   patronShare: 0.5,
   growthEq: { lower: 2.5, middle: 5, upper: 5 },
