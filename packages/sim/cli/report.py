@@ -266,7 +266,11 @@ if __name__ == '__main__':
         write_json(os.path.join(DATA_DIR, rid + '.json'), data)
         idx_path = os.path.join(DATA_DIR, 'index.json')
         idx = json.load(open(idx_path, encoding='utf-8')) if os.path.exists(idx_path) else {'reports': []}
-        idx['reports'] = [r for r in idx['reports'] if r['id'] != rid] + [{'id': rid, 'title': data['title'], 'desc': data['desc'], 'date': data['date']}]
-        idx['reports'].sort(key=lambda r: (r['date'], r['id']), reverse=True)
+        # created = 만든 시각(다시 만들면 갱신, 목록 정렬), code = 목록에 붙는 짧은 코드 (id 의 sha1 앞 8자리)
+        import datetime
+        created = datetime.datetime.now().isoformat(timespec='seconds')
+        idx['reports'] = [r for r in idx['reports'] if r['id'] != rid] + [{'id': rid, 'title': data['title'], 'desc': data['desc'], 'date': data['date'],
+                                                                           'created': created, 'code': hashlib.sha1(rid.encode()).hexdigest()[:8]}]
+        idx['reports'].sort(key=lambda r: (r.get('created', r['date']), r['id']), reverse=True)
         json.dump(idx, open(idx_path, 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
         print(os.path.join(DATA_DIR, rid + '.json'))

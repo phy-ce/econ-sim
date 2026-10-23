@@ -48,10 +48,13 @@ function series(run, k) {
 const visibleRuns = () => R.runs.map((r, i) => ({ r, i })).filter(({ i }) => !hiddenRuns.has(i));
 const color = (i) => `var(${COLORS[i % COLORS.length]})`;
 
+// 목록 꼬리표: 코드 · 만든 시각 (예: 4f9ede79 · 10-22 13:22)
+const stamp = (r) => [r.code, r.created ? r.created.slice(5, 16).replace('T', ' ') : r.date].filter(Boolean).join(' · ');
+const byCreated = (a, b) => (b.created || b.date || '').localeCompare(a.created || a.date || '') || b.id.localeCompare(a.id);
 function renderList() {
   const q = $('rq').value.trim().toLowerCase();
-  $('list').innerHTML = reports.filter((r) => !q || (r.title + r.desc).toLowerCase().includes(q)).map((r) =>
-    `<li><a href="#${esc(r.id)}" aria-current="${R && R.id === r.id}"><span>${esc(r.title)}</span><small>${esc(r.date)}</small></a></li>`).join('');
+  $('list').innerHTML = reports.filter((r) => !q || (r.title + r.desc + (r.code || '')).toLowerCase().includes(q)).map((r) =>
+    `<li><a href="#${esc(r.id)}" aria-current="${R && R.id === r.id}"><span>${esc(r.title)}</span><small>${esc(stamp(r))}</small></a></li>`).join('');
 }
 function renderRuns() {
   const box = $('runs');
@@ -149,7 +152,7 @@ async function open(id) {
   selected = store.get(R.id + ':sel', R.defaults.filter((k) => R.keys.includes(k)));
   if (!selected.length) selected = R.keys.slice(0, 9);
   hiddenRuns = new Set(store.get(R.id + ':hidden', []));
-  $('date').textContent = R.date || '';
+  $('date').textContent = stamp(entry);
   $('title').textContent = R.title;
   $('desc').textContent = R.desc || '';
   document.title = R.title + ' · 에스테라 실험 보고서';
@@ -164,7 +167,7 @@ $('defBtn').onclick = () => { selected = R.defaults.filter((k) => R.keys.include
 window.addEventListener('hashchange', () => open(decodeURIComponent(location.hash.slice(1))));
 
 fetch('./data/index.json').then((r) => r.json()).then((idx) => {
-  reports = idx.reports;
+  reports = idx.reports.slice().sort(byCreated);
   renderList();
   open(decodeURIComponent(location.hash.slice(1)));
 }).catch(() => { $('title').textContent = '보고서가 없습니다'; });
