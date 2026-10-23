@@ -11,7 +11,8 @@ export type GoodId =
   | 'transport'
   | 'luxury_furniture' | 'luxury_cloth'
   | 'meat'
-  | 'paper';
+  | 'paper'
+  | 'liquor';
 
 /** 소유 직종: 민간 건물에서는 배당을, 국영 건물에서는 임금을 받는 일자리 */
 export type Owner = 'capitalist' | 'aristocrat';
@@ -153,7 +154,7 @@ export interface TechDef {
   requires: string[];
 }
 
-export type NeedId = 'nourishment' | 'heating' | 'clothing' | 'standard_clothing' | 'crude_items' | 'household' | 'luxury' | 'meat';
+export type NeedId = 'nourishment' | 'heating' | 'clothing' | 'standard_clothing' | 'crude_items' | 'household' | 'luxury' | 'meat' | 'intoxicants';
 
 export interface NeedDef {
   id: NeedId;

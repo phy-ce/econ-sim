@@ -29,6 +29,8 @@
 0-11. **산업 유형 라벨과 방식 숫자 (2-64, 사용자 요청 2026-10-22).** 건물마다 산업 유형(1차·가공·중공업·숙련)이 생겼다: `industryOf(typeId, methodId)` → `INDUSTRIES[id].name`/`nameEn`. 건물 상세·건설 카드·방식 비교(2-51)에 유형 라벨 한 칸과 원료/매출 막대. 가공·중공업 공장 숫자가 크게 바뀌었다 (일꾼 300, 원료·산출 약 2배, 공사 포인트 300~550). 컴파일 수정 없음.
 0-12. **국영 임금은 정부 건물만, 왕실 생산 건물은 시장 임금 (2-65, 사용자 결정 2026-10-23).** 왕실 `Company.wages`가 이제 생산 건물 임금표이고, 국영 임금은 새 칸 `Company.stateWages`. 임금 탭(`CompanyPanel.tsx` 458)의 `!me.state` 조건을 지워 왕실도 슬라이더(`setWageOffset`)를 쓰게 하고, 국영 임금(`stateWages`) 줄을 따로 보인다. 예산 미리보기 국영 임금 단계는 사무소 임금만 움직인다. 저장 17판. 컴파일 수정 없음.
 
+0-13. **술·기호품·양조장 (2-66, 사용자 요청 2026-10-23).** 새 상품 `liquor`(술), 새 필요 `intoxicants`(기호품), 새 건물 `distillery`(양조장, 방식 `liquor_pot`·`liquor_column`). 아이콘(`spriteAtlas.ts` 별칭)과 필요·상품 목록에 한 줄씩. 컴파일 수정 없음.
+
 아래는 사용자 요청이거나 정리다.
 1. **아래 창 버튼 토글 + 왕국 지도 버튼 없애기 (2-34, 사용자 재요청).** `WindowWorkspace.tsx` 13·59·67~70: 최소화 상태와 dock의 지도 버튼을 없앤다.
 2. **금고와 대출을 한 칸으로 (2-28).** 상단 칩 `App.tsx` 144~145, 재정 탭 `FinancePanel.tsx` 19의 `현금`·`대출` 두 칸을 `금고  순자산 / 한도` 한 칸으로. 2-35의 금고 상자도 같은 모양.
@@ -1436,6 +1438,17 @@ sim 변경 (wt-research):
   3. 회사 요약의 임금 칸(`CompanyPanel.tsx` 149~153)은 그대로 `c.wages` (생산 건물 임금).
   4. 건물 상세에서 건물 임금을 보이는 곳이 있으면 `wagesAt(owner, b.typeId)[s]`로 읽는다 (정부 건물은 국영 임금).
   5. 재정 창 국영 임금 묶음 툴팁·자세히 보기: 왕실 생산 건물의 임금은 단계 버튼으로 바뀌지 않는다 (값은 `budgetDrill`이 이미 그렇게 준다).
+  설명 문구는 넣지 않는다 (규칙은 README·사전).
+
+### 2-66. 술·기호품·양조장 (사용자 요청 2026-10-23 "술을 만드는 건 괜찮은 것 같은데", DESIGN 4·5·7.1, 브랜치 wt-liquor2)
+- 새 sim 값 (`data.ts`): `GoodId`에 `'liquor'` (`GOODS.liquor`: 술 / Liquor, 기본가 3, `GOOD_IDS` 맨 끝), `NeedId`에 `'intoxicants'` (`NEEDS` 맨 끝: 기호품 / Intoxicants, 선택지 술 하나),
+  건물 `distillery` (양조장 / Distillery, 가공, 공장 부지, 포인트 300): 방식 `liquor_pot` 단식 증류 / Pot stills (기술 없음), `liquor_column` 연속식 증류 / Column stills (기술 `food_machinery`).
+  소작지 수확(`SUBSISTENCE.output`)에 술이 들어간다. 조정값 `TUNE.intoxLinear` (기호품 필요 계수, 식량 필요에서 같은 만큼 빠진다).
+- 옛 저장: `migrateWorld`가 지역 시장에 술을 기본가로 넣는다 (판 번호는 그대로).
+- 화면 요청:
+  1. 아이콘: `spriteAtlas.ts` 13의 `aliases`에 `liquor`(예: `food`)와 `distillery`(예: `foodplant`)를 넣거나 새 그림. 지금은 별칭이 없어 빈 그림일 수 있다.
+  2. 상품을 `GOOD_IDS`·`GOODS`로 돌며 그리는 곳(시세 창, 지역 시장, 건설 카드 원료·산출)은 저절로 술이 나온다. 상품 목록을 손으로 적은 곳이 있으면 술을 더한다.
+  3. 필요를 `NEEDS`로 돌며 그리는 곳(pop 필요·충족 막대)은 저절로 기호품이 나온다. 손으로 적은 목록이 있으면 기호품을 더한다.
   설명 문구는 넣지 않는다 (규칙은 README·사전).
 
 ## 3. sim 쪽 필요 사항 (Claude가 처리할 것, UI 작업자는 요청만)

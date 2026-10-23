@@ -1,4 +1,5 @@
-import { TECH_BY_ID, TECH_COST } from './data';
+import { GOOD_IDS, TECH_BY_ID, TECH_COST } from './data';
+import { newMarketGood } from './world';
 import { writePool } from './round';
 import type { Building, Company, World } from './types';
 
@@ -95,6 +96,8 @@ export function migrateWorld(input: unknown): World | null {
     for (const c of w.companies) if (c.state && !c.stateWages) c.stateWages = { ...c.wages };
     w.version = 17;
   }
+  // 나중에 더한 상품(술 등)은 옛 저장의 지역 시장에 기본가로 넣는다
+  for (const r of w.regions ?? []) for (const g of GOOD_IDS) if (!r.market[g]) r.market[g] = newMarketGood(g);
   const world = w as World;
   writePool(world);
   return world;
