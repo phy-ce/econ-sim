@@ -250,6 +250,7 @@ export const ENCYCLOPEDIA: EncEntry[] = [
       p('시작 학교 (왕실마다, 인구가 가장 많은 지역)', 'Starting school (per crown, most populous region)', () => START_SCHOOL_LEVELS, 'level'),
       p('시작 기술', 'Starting techs', () => START_TECHS.join(', ')),
       tune('startLumber', '시작 벌목장 (10만 명당)', 'Start lumber camps (per 100k)', 'level'), tune('startFiber', '시작 섬유 농장 (10만 명당)', 'Start fibre farms (per 100k)', 'level'),
+      tune('startWorkshop', '시작 목공구 공방 (왕국마다, 건축사무소 지역)', 'Start wooden-tool workshop (per kingdom, office region)', 'level'),
     ],
     example: () => {
       const tier = TIERS[0];

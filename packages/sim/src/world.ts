@@ -211,6 +211,11 @@ export function createWorld(seed = 1, opts: CreateWorldOptions = {}): World {
     const fiber = Math.round(people * TUNE.startFiber);
     if (firm && fiber > 0) { r.land.arable += fiber; w.buildings.push(newBuilding(w.nextId++, 'fiber_farm', r.id, firm.id, 'fiber_basic', fiber, false)); }
   }
+  // 시작 목공구 공방: 왕국마다 TUNE.startWorkshop 레벨, 건축사무소가 있는 지역(공장 부지가 가장 넓은 곳)의 민간 상회. 소작지가 공구를 내지 않아 첫날 공구는 이것뿐이다
+  for (const k of KINGDOMS) {
+    const home = regions.filter((r) => r.kingdomId === k.id).sort((a, b) => b.land.plot - a.land.plot || a.id - b.id)[0];
+    if (home && TUNE.startWorkshop > 0) w.buildings.push(newBuilding(w.nextId++, 'workshop', home.id, k.firm.id, 'tools_wood', TUNE.startWorkshop, false));
+  }
   updateSubsistence(w);
   // 시작 민간 건물의 레벨은 그 지역 저택(땅 건물)이나 금융가(그 밖)의 것이다
   for (const b of w.buildings) {

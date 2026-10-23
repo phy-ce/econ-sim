@@ -439,6 +439,7 @@ export function scaleBonus(level: number): number {
  * - investUpper, investMiddle, investLower: 투자법을 전문가까지·기술자까지·노동자·농부까지 넓힐 수 있는 금융가 자산 비율
  * - financeWage, financeBonus, financeStaff: 금융가 전문가의 보장 임금(하루), 성과급(금융가가 받은 배당의 비율, 인원대로), 가진 레벨 1당 전문가 자리
  * - startLumber, startFiber: 시작 민간 벌목장·섬유 농장 레벨 (지역 인구 10만 명당). 소작지가 목재·섬유를 조금만 내서 건축사무소가 첫날부터 쓸 목재가 있어야 한다
+ * - startWorkshop: 왕국마다 시작 민간 목공구 공방 레벨 (건축사무소가 있는 지역). 소작지가 공구를 내지 않아(7-25) 첫날 공구 공급원이 이것뿐이다
  * - rawFullWealth, rawCapWealth: 원자재로 의복·생활용품을 다 채울 수 있는 부 상한, 원래 상한(max)이 되는 부 (rawMax)
  * - harvestChance: 기상 조건이 한 지역에서 한 계절(90일)에 새로 시작할 확률 (0이면 기상 조건이 없다)
  * - harvestIntensity: 강도 범위 [최소, 최대]. 강도 1당 산출 −5% (HARVEST_STEP)
@@ -562,6 +563,7 @@ export const TUNE = {
   needMul: {} as Partial<Record<NeedId, number>>,
   startLumber: 1.2, // 1레벨이 일꾼 500명이 되어 1,000명 시절 0.6·0.2의 두 배
   startFiber: 0.4,
+  startWorkshop: 3, // 1·2·3 비교 (DESIGN 11)
   // AI 수정 비교 (2026-10-22, 기본값 = 지금 동작). crownGdpReserve: 왕실이 남길 국고 = 연간 총생산 × 이 비율 (0 = 지출 treasuryHighWeeks 주치)
   crownGdpReserve: 0,
   // 금융가가 이 주 동안 공사비를 맡지 않으면 새 지분을 팔지 않고 남는 금고를 배당한다 (0 = 끔)
