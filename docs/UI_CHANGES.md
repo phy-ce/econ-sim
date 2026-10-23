@@ -1411,7 +1411,7 @@ sim 변경 (wt-research):
 ### 2-63. 방식 사다리와 1레벨 약 500명 (2026-10-22, 사용자 결정, DESIGN 7.1)
 - 모든 건물의 방식이 바뀌었다 (`data.ts BUILDING_TYPES`). 기본 방식 1레벨은 일꾼 약 500명(옛 1,000명)이고 산출도 약 절반이다. 단계가 오를수록 일꾼은 줄고 기술자·전문가와 공구·석탄·철·기계가 늘며, 레벨당 이익은 단계마다 2배다.
 - 새 방식: 방직 공장 `textile_spin` (방적기, 철 가공). 방직 공장 방식 순서가 손베틀·방적기·증기 직기·맞춤 재단·증기 재단으로 바뀌었다 (방식 id는 그대로). 철·석탄 광산 방식 이름: `iron_shaft`·`coal_shaft` "곡괭이와 삽 / Picks and shovels", `iron_pick`·`coal_pick` "발파 / Blasting".
-- 기본 방식 대부분이 공구를 10~30 쓴다 (광산 30, 2-64) (투입·산출 표시 2-51에 공구가 새로 보인다). 소작지가 공구를 낸다 (`SUBSISTENCE.output.tools`).
+- 기본 방식 대부분이 공구를 10~30 쓴다 (광산 30, 2-64) (투입·산출 표시 2-51에 공구가 새로 보인다). 소작지가 공구를 낸다 (`SUBSISTENCE.output.tools`). (2026-10-23 sim 변경, DECISIONS 7-25: 소작지는 이제 곡물·술·의복·목재만 내고 가구·공구는 내지 않는다. 화면은 산출 키를 그대로 읽으면 따로 고칠 것이 없다.)
 - 숫자가 바뀐 상수: `SUBSISTENCE.workersPerCell` 500, `OWNER_SEATS_PER_LEVEL` 5, `TUNE.financeStaff` 1, `START_OFFICE_LEVELS` 20, `MAX_LEVELS_PER_PROJECT` 100, 공사 포인트(`buildPoints`) 200~550 (2-64에서 바뀜), 건축사무소 목조 2점·비계 4점·철골 6점. 공사 레벨 입력 칸 상한이 50으로 박혀 있으면 `MAX_LEVELS_PER_PROJECT`를 읽는다.
 - 이익률 막대(사전 `methods-rule`)는 이제 최대 약 55%라 눈금 상한을 0.6으로 했다.
 
