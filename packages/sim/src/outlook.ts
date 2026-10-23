@@ -1,4 +1,4 @@
-import { BUILDING_BY_ID, GOOD_IDS, GOODS, NEEDS, SKILL_DEFS, SUBSISTENCE, TUNE, getMethod, needsAt, regionPerk } from './data';
+import { BUILDING_BY_ID, GOOD_IDS, GOODS, NEEDS, SKILL_DEFS, TUNE, getMethod, needsAt, regionPerk, tenantYield } from './data';
 import { STAFFING_HORIZON, extraNeed, poolKey, poolOf } from './staffing';
 import { workforce } from './pops';
 import { availableMethods, collectionRatio, harvestFactorEma, regionAvgWealth, isGovernment, regionById, shippingRate, wageCostOf } from './economy';
@@ -26,7 +26,7 @@ export interface Outlook {
   sold(g: GoodId, dS?: number, dD?: number, withLatent?: boolean): number;
   /**
    * 소작농을 데려와 생기는 수요 (TUNE.aiBuildNow): 이 지역에 방식 m 을 levels 레벨 새로 돌리면 하급 일꾼(노동자·농부) 중 소작농 몫(peasantShare)이
-   * 소작지를 떠나 그 수확(1인당 SUBSISTENCE.output)을 시장에서 사거나 더는 팔지 않는다. 상품 g 의 (수요 − 공급) 증가를 수요로 센다.
+   * 소작지를 떠나 그 수확(1인당 tenantYield)을 시장에서 사거나 더는 팔지 않는다. 상품 g 의 (수요 − 공급) 증가를 수요로 센다.
    * aiBuildNow = 0 이면 0
    */
   freed(g: GoodId, regionId: number, m: MethodDef, levels: number): number;
@@ -77,7 +77,7 @@ export function marketOutlook(w: World): Outlook {
   const shareMemo = new Map<number, number>();
   const shareOf = (regionId: number) => { let x = shareMemo.get(regionId); if (x === undefined) shareMemo.set(regionId, (x = peasantShare(w, regionId))); return x; };
   const freed = (g: GoodId, regionId: number, m: MethodDef, levels: number) => {
-    const q = SUBSISTENCE.output[g] ?? 0;
+    const q = tenantYield(g);
     if (!q || !TUNE.aiBuildNow) return 0;
     return q * ((m.workers.unskilled ?? 0) + (m.workers.farmer ?? 0)) * levels * shareOf(regionId);
   };

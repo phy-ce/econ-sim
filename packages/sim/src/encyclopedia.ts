@@ -11,7 +11,7 @@
 import {
   BUILDING_BY_ID, BUILDING_TYPES, CLASS_DEFS, CONSUMPTION_PER_CAPITA, DEPENDENT_CONSUMPTION, EDUCATION_FLOOR, EDUCATION_RANGE, GOODS, GOOD_IDS,
   HARVEST_KINDS, HARVEST_MAX_SEASONS, HARVEST_SEASON_DAYS, HARVEST_SPREAD, HARVEST_STEP, LAW_TECH, MAX_POINTS_PER_LEVEL_DAY, NEEDS, OWNERSHIP_SEATS,
-  OWNER_SEATS_PER_LEVEL, REGIONS, STEP_PROFIT_MULT, BUILD_POINT_FACTOR, INDUSTRIES, INDUSTRY_SKILL_TOL, INDUSTRY_UPPER_INPUT_TOL, industryOf, SKILL_DEFS, SUBSISTENCE, TAX_PEOPLE_PER_LEVEL, TECHS, TECH_BY_ID, TECH_COST, TICKS_PER_WEEK, TICKS_PER_YEAR,
+  OWNER_SEATS_PER_LEVEL, REGIONS, STEP_PROFIT_MULT, BUILD_POINT_FACTOR, INDUSTRIES, INDUSTRY_SKILL_TOL, INDUSTRY_UPPER_INPUT_TOL, industryOf, SKILL_DEFS, SUBSISTENCE, tenantYield, TAX_PEOPLE_PER_LEVEL, TECHS, TECH_BY_ID, TECH_COST, TICKS_PER_WEEK, TICKS_PER_YEAR,
   TIERS, TIER_JITTER, TUNE, WORKFORCE_RATIO, getMethod, needsAt, rawMax, regionPerk, scaleBonus,
   buildPointsOf,
 } from './data';
@@ -897,14 +897,14 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   },
   {
     id: 'tenant-output', category: 'tenants', title: t('소작 산출', 'Tenant output'),
-    rule: t('소작농 노동 인구 1명이 하루 곡물 {0}, 의복 {1}, 목재 {2}, 가구 {3}, 공구 {4}, 술 {5}를 낸다. 섬유는 내지 않는다. 기상 조건 배율을 곱한다.', 'Each tenant worker produces {0} grain, {1} clothing, {2} timber, {3} furniture, {4} tools and {5} liquor a day. No fibre. Harvest conditions multiply it.'),
-    params: [p('곡물', 'Grain', () => SUBSISTENCE.output.grain ?? 0, 'good'), p('의복', 'Clothing', () => SUBSISTENCE.output.cloth ?? 0, 'good'), p('목재', 'Timber', () => SUBSISTENCE.output.timber ?? 0, 'good'), p('가구', 'Furniture', () => SUBSISTENCE.output.furniture ?? 0, 'good'), p('공구', 'Tools', () => SUBSISTENCE.output.tools ?? 0, 'good'), p('술', 'Liquor', () => SUBSISTENCE.output.liquor ?? 0, 'good')],
+    rule: t('소작농 노동 인구 1명이 하루 곡물 {0}, 의복 {1}, 목재 {2}, 가구 {3}, 공구 {4}, 술 {5}를 낸다 (공구 말고는 기본 산출 × 소작 산출 배율 {6}). 섬유는 내지 않는다. 기상 조건 배율을 곱한다.', 'Each tenant worker produces {0} grain, {1} clothing, {2} timber, {3} furniture, {4} tools and {5} liquor a day (everything but tools is base output × tenant output multiplier {6}). No fibre. Harvest conditions multiply it.'),
+    params: [p('곡물', 'Grain', () => tenantYield('grain'), 'good'), p('의복', 'Clothing', () => tenantYield('cloth'), 'good'), p('목재', 'Timber', () => tenantYield('timber'), 'good'), p('가구', 'Furniture', () => tenantYield('furniture'), 'good'), p('공구', 'Tools', () => tenantYield('tools'), 'good'), p('술', 'Liquor', () => tenantYield('liquor'), 'good'), tune('tenantOutput', '소작 산출 배율', 'Tenant output multiplier', 'x')],
     example: () => {
       const farm = getMethod('farm', 'farm_basic'), perWorker = (farm.outputs.grain ?? 0) / (farm.workers.farmer ?? 1);
       return {
-        inputs: [row('소작농 1명 곡물', 'Grain per tenant', SUBSISTENCE.output.grain ?? 0, 'good'), row('농장 1명 곡물', 'Grain per farm worker', perWorker, 'good')],
+        inputs: [row('소작농 1명 곡물', 'Grain per tenant', tenantYield('grain'), 'good'), row('농장 1명 곡물', 'Grain per farm worker', perWorker, 'good')],
         steps: [],
-        result: [row('농장 ÷ 소작', 'Farm ÷ tenant', r2(perWorker / (SUBSISTENCE.output.grain ?? 1)), 'x')],
+        result: [row('농장 ÷ 소작', 'Farm ÷ tenant', r2(perWorker / (tenantYield('grain') || 1)), 'x')],
       };
     },
     related: ['keep-what-they-use', 'tenant-farms', 'harvest-conditions'], seenIn: ['region', 'resource'], source: ['data.ts SUBSISTENCE', 'market.ts harvest'], design: ['4'],
@@ -914,7 +914,7 @@ export const ENCYCLOPEDIA: EncEntry[] = [
     rule: t('소작농은 산출에서 식구가 그날 쓸 만큼 남기고 나머지를 판다. 파는 양은 가격과 수요를 보지 않는다. 안 팔린 판매분은 사라진다.', 'Tenants keep what their household uses that day and sell the rest. The amount sold ignores price and demand; unsold produce is lost.'),
     params: [],
     example: () => {
-      const out = GOOD_IDS.map((g) => (SUBSISTENCE.output[g] ?? 0) * 1);
+      const out = GOOD_IDS.map((g) => tenantYield(g));
       const size = 1 / WORKFORCE_RATIO, wealth = 3;
       const { own, sell } = splitHarvest(size, wealth, out);
       const gi = GOOD_IDS.indexOf('grain');

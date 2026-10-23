@@ -452,6 +452,7 @@ export const TUNE = {
   /** 저택의 하급 귀족 1명 몫 (귀족 1명 = 1). 0.1·0.25·0.5 비교 (10년, 20년 × 시드 1·2, 두 번): 0.1은 하급 귀족 생활수준이 가장 낮고, 0.25와 0.5는 총생산·레벨 순서가 실행마다 바뀐다. 상급 귀족 생활수준을 덜 깎는 0.25 */
   gentryShare: 0.25,
   rentShare: 0.05,
+  tenantOutput: 1, // 소작 산출 배율 (공구 제외): 소작농 1명 하루 산출 = SUBSISTENCE.output × 이 값 (tenantYield). 0.4~1.5 비교 (aiBuildNow 1, 40년 × 시드 1~4, 보고서 2026-10-23-tenantcut, DESIGN 11): 줄인 값은 모두 총생산이 낮아 1 그대로
   patronWealth: 2,
   patronShare: 0.5,
   growthEq: { lower: 2.5, middle: 5, upper: 5 },
@@ -617,6 +618,8 @@ export const HARVEST_KINDS: HarvestDef[] = [
  *   첫날 수요 약 1,560에 공급 약 2,200. 0.005는 약 5,600이라 공구값을 누른다.
  *   0.001·0.002·0.005 비교 (20년 × 시드 1~4, DESIGN 11): 20년 평균 총생산 시드 1·2 636 / 911 / 1,101, 1~4 584 / 628 / 777. 0.005가 높지만 40년 확인 전이라 그대로 (⚠, HANDOFF).
  * 기본 방식 건물 일꾼 1명 산출은 소작농의 곡물 2.5배, 의복 58배, 목재 22배, 가구 54배다
+ * 실제 산출 = 이 값 × TUNE.tenantOutput (공구 제외, tenantYield). 2026-10-23 사용자 결정 "소작농 산출을 줄이고"로 0.4~1.5를 비교했고 (DESIGN 11 tenantOutput),
+ *   줄이면 소작농이 가난해져 부에 비례하는 필요(술·의복·난방·생활용품)를 덜 쓰고 더 팔아 공급÷수요가 오히려 올랐다. 1 그대로
  */
 export const SUBSISTENCE = {
   /**
@@ -626,6 +629,11 @@ export const SUBSISTENCE = {
   workersPerCell: 500,
   output: { grain: 2.6, cloth: 0.1, timber: 0.3, furniture: 0.08, tools: 0.002, liquor: 0.25 } as Partial<Record<GoodId, number>>,
 };
+/** 소작농 노동 인구 1명의 하루 산출 (기상 조건 전): SUBSISTENCE.output × TUNE.tenantOutput. 공구는 배율을 곱하지 않는다 (첫날 공구 공급용) */
+export function tenantYield(g: GoodId): number {
+  const q = SUBSISTENCE.output[g] ?? 0;
+  return g === 'tools' ? q : q * TUNE.tenantOutput;
+}
 
 
 export const LAND_NAMES: Record<LandType, string> = { arable: '농지', forest: '산림', ore: '광맥', plot: '공장 부지' };

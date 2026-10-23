@@ -4,7 +4,7 @@
 import { BUILDING_BY_ID, GOOD_IDS, GOODS, LAW_TECH, SKILL_DEFS, SUBSISTENCE, TECH_BY_ID, TECH_COST, TECHS, TUNE } from '../src/data';
 import { isGovernment, paysDividend, slots } from '../src/economy';
 import { committedCost } from '../src/finance';
-import { treasuryTight } from '../src/ai';
+import { aiTrace, treasuryTight } from '../src/ai';
 import { FLOW } from '../src/kingdoms';
 import { kingdomGdp } from '../src/economy';
 import { createWorld, financeRatio, investThreshold, literacyOf, step, taxThreshold } from '../src/index';
@@ -270,6 +270,14 @@ const ratioY: Record<number, number>[] = [];
 const techY: Record<string, number>[] = [];
 // 왕국마다 법 바꾸기가 끝날 때 실패한 해 (세법·투자법)
 const failY: { tax: number[]; invest: number[] }[] = [];
+// AI 길별 레벨 (해마다, ai.ts aiTrace, 시뮬레이션 상태를 바꾸지 않는다): swLv 방식을 바꾼 레벨, pickLv 보통 후보로 넣은 레벨, shrinkLv 철거 레벨
+const pathAcc = { swLv: 0, pickLv: 0, shrinkLv: 0 };
+const pathY: Record<number, typeof pathAcc> = {};
+aiTrace.on = (_w, _c, path, _t, _m, levels) => {
+  if (path === 'switchIn') pathAcc.swLv += levels;
+  else if (path === 'pick') pathAcc.pickLv += levels;
+  else if (path === 'shrink') pathAcc.shrinkLv -= levels;
+};
 const t0 = performance.now();
 for (let d = 0; d < years * 360; d++) {
   step(w);
@@ -416,6 +424,8 @@ for (let d = 0; d < years * 360; d++) {
     gent[w.tick / 360] = { gJob: f3(g.job / Math.max(1, g.n)), aJob: f3(g.ajob / Math.max(1, g.an)), gSol: +(g.sol / Math.max(1, g.n)).toFixed(2), gMan: f3(g.man / Math.max(1, g.n)), gSch: Math.round(g.sch), gAdm: Math.round(g.adm), tut: w.buildings.filter((b) => b.methodId === 'school_tutor').reduce((a, b) => a + b.level, 0) };
     edu[w.tick / 360] = { lit: +(lit / n).toFixed(3), sch, qs: Math.round(qs / 1e3), schDem, veins };
     inv[w.tick / 360] = investSnapshot(w);
+    pathY[w.tick / 360] = { ...pathAcc };
+    pathAcc.swLv = 0; pathAcc.pickLv = 0; pathAcc.shrinkLv = 0;
   }
   if (w.tick % 28 !== 0) continue;
   w.kingdoms.forEach((k, i) => {
@@ -526,6 +536,7 @@ out.traj = yearPts.map((m) => {
     ...(welY[m.tick / 360] ?? {}),
     ...(aiY[m.tick / 360] ?? {}),
     ...(fullY[m.tick / 360] ?? {}),
+    ...(pathY[m.tick / 360] ?? {}),
   };
 });
 const after1 = w.metrics.filter((m) => m.tick > 360);
