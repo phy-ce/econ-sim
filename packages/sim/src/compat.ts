@@ -1,4 +1,5 @@
-import { TECH_BY_ID, TECH_COST } from './data';
+import { GOOD_IDS, TECH_BY_ID, TECH_COST } from './data';
+import { newMarketGood } from './world';
 import { writePool } from './round';
 import type { Building, Company, World } from './types';
 
@@ -90,6 +91,8 @@ export function migrateWorld(input: unknown): World | null {
     // 16판: 생산 건물의 굶은 주 수(Building.starvedWeeks, AI 판단)가 생겼다. 없으면 0이고 다음 주부터 센다
     w.version = 16;
   }
+  // 나중에 더한 상품(술 등)은 옛 저장의 지역 시장에 기본가로 넣는다
+  for (const r of w.regions ?? []) for (const g of GOOD_IDS) if (!r.market[g]) r.market[g] = newMarketGood(g);
   const world = w as World;
   writePool(world);
   return world;

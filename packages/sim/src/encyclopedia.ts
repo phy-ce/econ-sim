@@ -786,8 +786,8 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   },
   {
     id: 'needs', category: 'people', title: t('필요 묶음', 'Needs basket'),
-    rule: t('필요는 소비 단위 1의 하루 금액(기본가)이다. 부가 오를수록 묶음이 커진다. 식량은 1.5 + 0.1 × 부(30까지), 난방·의복·생활용품은 0.1 × 부(10까지), 표준 의복·가정용품은 부 5부터, 고기는 8부터, 사치품은 10부터 생긴다.', 'Needs are the daily value (at base prices) per consumption unit. They grow with wealth: food 1.5 + 0.1 × W (to 30), heating/clothing/crude items 0.1 × W (to 10); standard clothing and household items from W 5, meat from 8, luxuries from 10.'),
-    params: [tune('luxuryLinear', '사치품 1차', 'Luxury linear'), tune('luxuryQuad', '사치품 2차', 'Luxury quadratic'), tune('meatLinear', '고기 1차', 'Meat linear'), tune('meatQuad', '고기 2차', 'Meat quadratic')],
+    rule: t('필요는 소비 단위 1의 하루 금액(기본가)이다. 부가 오를수록 묶음이 커진다. 식량과 기호품(술)을 합쳐 1.5 + 0.1 × 부(30까지)이고 그중 기호품이 {4} × 부(10까지)다. 난방·의복·생활용품은 0.1 × 부(10까지), 표준 의복·가정용품은 부 5부터, 고기는 8부터, 사치품은 10부터 생긴다.', 'Needs are the daily value (at base prices) per consumption unit. They grow with wealth: food plus intoxicants (liquor) 1.5 + 0.1 × W (to 30), of which intoxicants are {4} × W (to 10); heating/clothing/crude items 0.1 × W (to 10); standard clothing and household items from W 5, meat from 8, luxuries from 10.'),
+    params: [tune('luxuryLinear', '사치품 1차', 'Luxury linear'), tune('luxuryQuad', '사치품 2차', 'Luxury quadratic'), tune('meatLinear', '고기 1차', 'Meat linear'), tune('meatQuad', '고기 2차', 'Meat quadratic'), tune('intoxLinear', '기호품 1차', 'Intoxicants linear')],
     example: () => {
       const n = needsAt(5), units = 4 * CONSUMPTION_PER_CAPITA;
       const total = Object.values(n).reduce((a, x) => a + x, 0);
