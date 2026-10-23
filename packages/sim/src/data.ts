@@ -318,13 +318,13 @@ export const BUILDING_TYPES: BuildingTypeDef[] = [
     // 무역소 (2026-10-23 사용자 승인 설계): 이 지역에서 사서 이웃 지역에 판다 (market.ts addTraderOrders). 투입·산출 상품이 없고, 일꾼은 장사를 굴리는 사람들이다
     // (운송 노동은 운송 조합이 따로 만든다). 금고(Building.cash)가 그날 이 지역에서 살 수 있는 돈이고, 레벨 × 방식의 레벨당 유보액(tradeReserveOf)을 넘는 돈은
     // 건물 매출로 회사에 넘어가 다른 건물처럼 임금·배당에 쓰인다. 이익률 규칙 밖 (산출이 없다, cli/methods_audit.ts 예외).
-    // 공사 포인트 100: 이익 규칙(기본 방식 하루 이익 × BUILD_POINT_FACTOR)을 쓸 수 없어, 기본 방식 인건비(하급 귀족 20 × 30 + 노동자 180 × 10 = 2,400)에
-    // 이익률 20% 건물의 이익/인건비 비(0.2 ÷ 0.8 = 0.25)를 곱한 600 × 0.15 = 90 을 50 단위로 올렸다. 비교 실행은 하지 않았다 (DESIGN 8 무역소 공사)
-    id: 'trading_post', name: '무역소', nameEn: 'Trading post', land: 'plot', buildPoints: 100,
+    // 공사 포인트 50: 이익 규칙(기본 방식 하루 이익 × BUILD_POINT_FACTOR)을 쓸 수 없어, 기본 방식 인건비(하급 귀족 10 × 30 + 노동자 90 × 10 = 1,200)에
+    // 이익률 20% 건물의 이익/인건비 비(0.2 ÷ 0.8 = 0.25)를 곱한 300 × 0.15 = 45 를 50 단위로 올렸다. 비교 실행은 하지 않았다 (DESIGN 8 무역소 공사)
+    id: 'trading_post', name: '무역소', nameEn: 'Trading post', land: 'plot', buildPoints: 50,
     methods: [
-      m({ id: 'trade_house', name: '상단', nameEn: 'Merchant house', workers: { gentry: 20, unskilled: 180 }, inputs: {}, outputs: {} }),
-      m({ id: 'trade_ledger', name: '장부 상회', nameEn: 'Ledger firm', tech: 'printing', workers: { gentry: 10, skilled: 40, unskilled: 100 }, inputs: {}, outputs: {} }),
-      m({ id: 'trade_company', name: '무역 회사', nameEn: 'Trading company', tech: 'steam_rail', workers: { expert: 10, skilled: 40, unskilled: 50 }, inputs: {}, outputs: {} }),
+      m({ id: 'trade_house', name: '상단', nameEn: 'Merchant house', workers: { gentry: 10, unskilled: 90 }, inputs: {}, outputs: {} }),
+      m({ id: 'trade_ledger', name: '장부 상회', nameEn: 'Ledger firm', tech: 'printing', workers: { gentry: 10, skilled: 30, unskilled: 40 }, inputs: {}, outputs: {} }),
+      m({ id: 'trade_company', name: '무역 회사', nameEn: 'Trading company', tech: 'steam_rail', workers: { expert: 10, skilled: 20, unskilled: 20 }, inputs: {}, outputs: {} }),
     ],
   },
   {

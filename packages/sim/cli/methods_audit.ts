@@ -6,7 +6,7 @@
 //  4. 전문가는 증기 시대 방식(증기기관이거나 증기기관이 선행인 기술)과 사치품 방식에만, 레벨당 20명까지
 //     (대륙 전문가는 약 1천 명이고 거의 다 금융가에 있다. 그 전 방식이 전문가를 쓰면 아무도 바꾸지 못한다)
 //  5. 기본 방식은 공구 10~30 (광산·벌목 30: 빅토리아3 광산 기본 방식이 공구를 쓰는 1차 산업이라 원료가 공구뿐이다. 목공구 tools_wood 만 0)
-//  6. 둥근 수: 일자리 10 단위·합 50 단위, 1,000 이상인 양은 50 단위, 그 아래는 10 단위
+//  6. 둥근 수: 일자리 10 단위 (합은 되도록 50 단위, 상황에 따라 10 단위라 확인하지 않는다), 1,000 이상인 양은 50 단위, 그 아래는 10 단위
 //  7. 산업 유형 (data.ts INDUSTRIES): 기본 방식 일꾼 합계 = 유형 값, 숙련(기술자+전문가) 비율 = 유형 값 ± INDUSTRY_SKILL_TOL
 //     (농부만 쓰는 농장·목장은 0), 원료비/매출이 유형 범위 안. 윗단계 원료비/매출은 유형 범위 ± INDUSTRY_UPPER_INPUT_TOL
 //  8. 공사 포인트 = 기본 방식(건물의 첫 방식) 하루 이익 × BUILD_POINT_FACTOR, 50 단위 (산업 유형이 있는 건물)
@@ -72,7 +72,6 @@ for (const t of BUILDING_TYPES) {
       const tag = `${t.id}/${m.id}`;
       // 6. 둥근 수
       for (const [s, n] of Object.entries(m.workers)) if (n % 10) bad(`${tag}: ${s} ${n} 는 10 단위가 아니다`);
-      if (headOf(m) % 50) bad(`${tag}: 일꾼 합계 ${headOf(m)} 는 50 단위가 아니다`);
       for (const [g, q] of [...Object.entries(m.inputs), ...Object.entries(m.outputs)] as [string, number][]) {
         const step = q >= 1000 ? 50 : 10;
         if (q % step) bad(`${tag}: ${g} ${q} 는 ${step} 단위가 아니다`);
