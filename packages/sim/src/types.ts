@@ -11,7 +11,8 @@ export type GoodId =
   | 'transport'
   | 'luxury_furniture' | 'luxury_cloth'
   | 'meat'
-  | 'paper';
+  | 'paper'
+  | 'liquor';
 
 /** 소유 직종: 민간 건물에서는 배당을, 국영 건물에서는 임금을 받는 일자리 */
 export type Owner = 'capitalist' | 'aristocrat';
@@ -153,7 +154,7 @@ export interface TechDef {
   requires: string[];
 }
 
-export type NeedId = 'nourishment' | 'heating' | 'clothing' | 'standard_clothing' | 'crude_items' | 'household' | 'luxury' | 'meat';
+export type NeedId = 'nourishment' | 'heating' | 'clothing' | 'standard_clothing' | 'crude_items' | 'household' | 'luxury' | 'meat' | 'intoxicants';
 
 export interface NeedDef {
   id: NeedId;
@@ -382,7 +383,10 @@ export interface Company {
   /** 국영(왕국 정부) 회사인가. 국영 회사의 현금이 그 왕국의 국고다 */
   state: boolean;
   cash: number;
+  /** 회사 임금표: 민간 상회와 왕실 생산 건물. 매주 AI(adjustWages)가 시장을 보고 정하거나, 플레이어가 정한다 (setWage·setWageOffset) */
   wages: Record<Skill, number>;
+  /** 국영 임금표 (왕실만): 정부 건물(행정청·건축사무소·학교)의 임금 = 기본 임금 × 임금 지수 × 국영 임금 수준 배율 (finance.ts applyStateWages) */
+  stateWages?: Record<Skill, number>;
   /** 지난주 직종별 고용 인원 (AI가 실제로 사람이 찼는지 보고 임금을 정한다) */
   lastEmployed?: Partial<Record<Skill, number>>;
   weekProfit: number;
@@ -397,6 +401,9 @@ export interface Company {
   buildCost: number;
   /** 건축사무소 포인트 중 공사에 실제로 쓰인 하루 양의 이동평균 (왕실, AI가 사무소 크기를 정한다) */
   buildUsed?: number;
+  /** AI 착공 공사비의 52주 이동 합 (보통 + 발전 투자)과 그중 발전 투자 몫 (TUNE.devShare) */
+  startCost?: number;
+  devCost?: number;
   research: Research;
   /** 이번 주 수입·지출 내역과 지난주 내역 (재정 화면용) */
   ledger: Ledger;
@@ -640,9 +647,10 @@ export interface World {
    * 15: 건축사무소가 공사 수수료를 매출로 받는 국영 사업이다 (BuildingStats.fee, Building.payout.crown, lastBudget.office·build, spentWeek.office·build, Kingdom.privateFeeWeek, budgetBase.build 가 생기고,
    *     Kingdom.feeWageWeek·budgetBase.feesWage·feesOther 가 없어졌다. 새 칸은 없어도 되므로 14판은 옛 칸만 지운다).
    * 16: 생산 건물의 굶은 주 수(Building.starvedWeeks, AI)가 생겼다. 없어도 되므로 15판은 그대로 받는다.
-   * 10~15판은 불러올 때 바꾼다, 그보다 옛 저장은 불러오지 않는다)
+   * 17: 왕실 국영 임금표(Company.stateWages)가 따로 생겼다. 국영 임금은 정부 건물에만, 왕실 생산 건물은 회사 임금표(wages)다. 16판까지는 wages 를 stateWages 로 베낀다.
+   * 10~16판은 불러올 때 바꾼다, 그보다 옛 저장은 불러오지 않는다)
    */
-  version: 16;
+  version: 17;
   config: WorldConfig;
   tick: number;
   seed: number;

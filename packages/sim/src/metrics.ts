@@ -1,7 +1,7 @@
 import { ownershipAssets } from './policy';
 import { BUILDING_BY_ID, GOOD_IDS, GOODS, TRADING_POST } from './data';
 import { CLASS_DEFS, WORKFORCE_RATIO } from './data';
-import { builderOf, companyById, constructionEstimate, harvestCondition, isGovernment, kingdomGdp, slots } from './economy';
+import { builderOf, companyById, constructionEstimate, harvestCondition, isGovernment, kingdomGdp, slots, wagesAt } from './economy';
 import { subsistenceWage } from './labor';
 import { basketCostAt } from './market';
 import { workforce } from './pops';
@@ -73,7 +73,7 @@ export interface KingdomMetrics {
   typeBy: Record<string, TypeMetrics>;
   /** 이번 달 착공 레벨: '건물|s'(왕실) '건물|p'(민간) '건물|loss'(AI 손해 짓기) '건물|d'(철거) */
   starts: Record<string, number>;
-  /** 왕실 임금 (노동자, 기술자), 아는 기술 수 */
+  /** 국영 임금 (정부 건물의 노동자, 기술자), 아는 기술 수 */
   wageUnskilled: number;
   wageSkilled: number;
   techs: number;
@@ -176,7 +176,7 @@ export function recordMetrics(w: World) {
       for (const b of w.buildings) {
         if (kingdomOf(w, b.regionId) !== k.id || BUILDING_BY_ID[b.typeId].auto) continue;
         const c = companyById(w, b.companyId);
-        emp += b.employed[s]; cap += slots(b, s); paid += b.employed[s] * (c?.wages[s] ?? 0);
+        emp += b.employed[s]; cap += slots(b, s); paid += b.employed[s] * (c ? wagesAt(c, b.typeId)[s] : 0);
       }
       const idle = pops.filter((p) => p.prof === s && p.work === 0).reduce((a, p) => a + workforce(p), 0);
       labor[s] = { wage: emp > 0 ? round2(paid / emp) : 0, employed: r0(emp), slots: r0(cap), jobless: r0(idle) };
@@ -210,7 +210,7 @@ export function recordMetrics(w: World) {
       levelsState, levelsPrivate, levelsManor, levelsFinance, levelsBy,
       typeBy: Object.fromEntries(Object.entries(typeBy).map(([t, m]) => [t, { employed: r0(m.employed), slots: r0(m.slots), profit: r0(m.profit), lossLevels: m.lossLevels }])),
       starts: k.startsMonth ?? {},
-      wageUnskilled: round2(gov?.wages.unskilled ?? 0), wageSkilled: round2(gov?.wages.skilled ?? 0), techs: gov?.research.known.length ?? 0,
+      wageUnskilled: round2(gov?.stateWages?.unskilled ?? 0), wageSkilled: round2(gov?.stateWages?.skilled ?? 0), techs: gov?.research.known.length ?? 0,
     };
   }
   for (const k of w.kingdoms) k.startsMonth = {};

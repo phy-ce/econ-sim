@@ -20,7 +20,7 @@ CLS = {'peasant': '소작농', 'unskilled': '노동자', 'farmer': '농부', 'sk
        'capitalist': '자본가', 'aristocrat': '상급 귀족'}
 GOODS = {'grain': '곡물', 'fiber': '섬유', 'timber': '목재', 'ore': '철광석', 'fuel': '석탄', 'food': '식료품', 'cloth': '의복', 'metal': '철',
          'tools': '공구', 'furniture': '가구', 'electronics': '기계', 'transport': '운송', 'luxury_furniture': '고급 가구', 'luxury_cloth': '고급 의복',
-         'meat': '고기', 'paper': '종이'}
+         'meat': '고기', 'paper': '종이', 'liquor': '술'}
 BLDG = {'subsistence': '소작지', 'manor': '저택', 'finance': '금융가', 'farm': '곡물 농장', 'fiber_farm': '섬유 농장', 'ranch': '목장', 'lumber': '벌목장',
         'mine': '철광산', 'coal_mine': '석탄광산', 'foodplant': '식료품 공장', 'textile': '방직 공장', 'smelter': '제철소', 'workshop': '공방',
         'furniture': '가구 공방', 'paper_mill': '종이 공장', 'fab': '기계 공장', 'railway': '운송 조합', 'school': '학교', 'builder': '건축사무소', 'admin': '행정청'}
@@ -133,8 +133,15 @@ for g, ko in GOODS.items():
     LABELS['dem.' + g] = L(ko + ' 수요', '수요', '천/일', '구매 주문량 합, 한 해 하루 평균')
     LABELS['sold.' + g] = L(ko + ' 거래량', '거래량', '천/일', '체결량 합, 한 해 하루 평균')
     LABELS['hh.' + g] = L(ko + ' 가계 수요', '가계 수요', '천/일', 'pop 의 구매 주문량 합, 한 해 하루 평균')
+    LABELS['sd.' + g] = L(ko + ' 공급÷수요', '공급÷수요', '', '공급 ÷ 수요 (한 해 하루 평균, sup·dem 에서 계산)')
 for b, ko in BLDG.items():
     LABELS['lvT.' + b] = L(ko, '건물 레벨')
+LABELS['buildPts'] = L('건축 포인트', '건축사무소', '/일', '건축사무소가 낸 공사 포인트 합, 열흘마다 잰 한 해 평균')
+LABELS['toolFill'] = L('공구 쓰는 건물 원료 충족', '경제', '', '공구를 원료로 쓰는 방식의 원료 충족률 (레벨 가중, 열흘마다 잰 한 해 평균)')
+LABELS['workshopLv'] = L('공방 레벨', '건물 레벨', '', '공방 레벨 합, 열흘마다 잰 한 해 평균')
+LABELS['swLv'] = L('방식 바꾼 레벨', 'AI 길', '/년', 'AI가 그해 방식을 바꾼 건물 레벨 합 (ai.ts aiTrace switchIn)')
+LABELS['pickLv'] = L('보통 후보 착공 레벨', 'AI 길', '/년', 'AI 보통 후보(pickProject)로 그해 넣은 레벨')
+LABELS['shrinkLv'] = L('철거 레벨', 'AI 길', '/년', 'AI가 그해 철거 대기에 올린 레벨 (reviewLevels)')
 LABELS['toolSh'] = L('공구 쓰는 방식 비율', '경제', '', '공구를 원료로 쓰는 방식의 레벨 ÷ 생산 건물 레벨 (학교·사무소 제외)')
 LABELS['upSh'] = L('윗단 방식 비율', '경제', '', '첫 방식이 아닌 방식의 레벨 ÷ 생산 건물 레벨 (학교·사무소 제외)')
 for c in ('unskilled', 'skilled', 'expert'):
@@ -148,7 +155,7 @@ for f, (ko, desc) in FLOWS.items():
         LABELS[f'flows.{f}.{o}'] = L(f'{oko}: {ko}', '소유 건물 흐름', '백만/년', desc)
 
 GROUPS = ['경제', '생활수준', '소득', '인구', '계층 인구', '계층 노동 인구', '일자리', '임금', '돈', '돈 ÷ 총생산', '왕실', '연구', '건축사무소', '복지', '왕실 장부', '민간 장부',
-          '소유 건물 흐름', '시장', '값 (기본가 대비)', '공급', '수요', '거래량', '가계 수요', '건물 레벨', '소유', '정부', '하급 귀족 일자리', '기타']
+          '소유 건물 흐름', '시장', '값 (기본가 대비)', '공급', '수요', '공급÷수요', '거래량', '가계 수요', '건물 레벨', 'AI 길', '소유', '정부', '하급 귀족 일자리', '기타']
 # 해마다 한 줄 진단 파일(.tmp/col/collapse.ts)에서만 뜻이 다른 이름
 FLAT = {'peas': L('소작농 수', '인구', '백만')}
 FLAT_DEFAULTS = ['gdp', 'pop', 'peas', 'food', 'stock.savAll', 'stock.gov', 'stock.fin', 'stock.total', 'wage.pU', 'price.grain', 'sellThru', 'util']
@@ -211,6 +218,10 @@ def build(files):
             if seeds_only and r.get('seed') not in seeds_only: continue
             if 'traj' in r:
                 t = name or json.dumps(r['tune'], ensure_ascii=False)
+                for p in r['traj']:  # 공급÷수요 (sup·dem 이 있으면)
+                    for k in [k for k in p if k.startswith('sup.')]:
+                        d = p.get('dem.' + k[4:])
+                        if d: p['sd.' + k[4:]] = round(p[k] / d, 3)
                 runs.setdefault(t, {})[str(r['seed'])] = r['traj']
             elif 'y' in r:
                 flat_mode = True

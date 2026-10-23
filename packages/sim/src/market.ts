@@ -1,4 +1,4 @@
-import { CONSUMPTION_PER_CAPITA, GOOD_IDS, GOODS, NEEDS, SUBSISTENCE, TRADING_POST, TUNE, WORKFORCE_RATIO, getMethod, needsAt, rawMax, tradeReserveOf } from './data';
+import { CONSUMPTION_PER_CAPITA, GOOD_IDS, GOODS, NEEDS, SUBSISTENCE, TRADING_POST, TUNE, WORKFORCE_RATIO, getMethod, needsAt, rawMax, tenantYield, tradeReserveOf } from './data';
 import { CARTAGE_RATE, RAIL_RATE, borrow, harvestFactor, priceFormula, regionById, sellThrough, shippingRate, isSubsistence } from './economy';
 import { financeIdle, payRent, paySalvage, taxDue, taxRates } from './finance';
 import { borderCost, kingdomById, kingdomOf, payTariff, toTreasury } from './kingdoms';
@@ -183,7 +183,7 @@ export function resetMarkets(w: World) {
 /** 소작지 노동 인구 wf 의 하루 수확 */
 function harvestOutput(wf: number): GoodBag {
   const bag: GoodBag = {};
-  for (const [g, q] of Object.entries(SUBSISTENCE.output) as [GoodId, number][]) bag[g] = wf * q;
+  for (const g of Object.keys(SUBSISTENCE.output) as GoodId[]) bag[g] = wf * tenantYield(g);
   return bag;
 }
 

@@ -269,8 +269,22 @@ export function slots(b: Building, skill: Skill): number {
 
 /** 정부 건물: 행정청, 건축사무소, 학교 (왕국 운영에 쓰는 건물). 왕실 것은 늘 다 가동하고, 민영화하지 않는다 */
 export function isGovernment(typeId: string): boolean {
-  const t = BUILDING_BY_ID[typeId];
-  return !!t.stateOnly || t.methods.some((m) => m.construction);
+  let v = GOV_TYPES.get(typeId);
+  if (v === undefined) {
+    const t = BUILDING_BY_ID[typeId];
+    v = !!t.stateOnly || t.methods.some((m) => m.construction);
+    GOV_TYPES.set(typeId, v);
+  }
+  return v;
+}
+const GOV_TYPES = new Map<string, boolean>();
+
+/**
+ * 회사가 그 건물(유형)에 주는 임금표: 왕실의 정부 건물(행정청·건축사무소·학교)은 국영 임금(stateWages),
+ * 나머지(왕실 생산 건물 포함)는 회사 임금(wages, 민간처럼 시장에서 정한다)
+ */
+export function wagesAt(c: Company, typeId: string): Record<Skill, number> {
+  return c.state && c.stateWages && isGovernment(typeId) ? c.stateWages : c.wages;
 }
 
 /** 국고가 운영비(임금·원료)를 내는 정부 건물: 행정청·학교. 건축사무소는 공사 수수료를 받는 국영 사업이다 (이익·손실이 국고로) */
@@ -526,7 +540,7 @@ function officeTotals(w: World, builder: Company) {
     if (!m.construction) continue;
     const st = b.idle ? 1 : Math.max(0.3, b.last.staffing);
     pointsPerDay += m.construction * b.level * b.utilization * st * efficiency(b);
-    const e = estimateMethod(w, b.regionId, b.typeId, b.methodId, builder.wages);
+    const e = estimateMethod(w, b.regionId, b.typeId, b.methodId, wagesAt(builder, b.typeId));
     const cost = (e.wageCost + e.inputCost) * b.level * b.utilization * st;
     costPerDay += cost;
     feePerDay += cost * officeFeeMult(b.methodId);
@@ -561,7 +575,7 @@ export function marketWage(w: World, skill: Skill, excludeCompanyId?: number): n
     if (b.companyId === excludeCompanyId || b.employed[skill] <= 0) continue;
     const c = companyById(w, b.companyId);
     if (!c) continue;
-    paid += b.employed[skill] * c.wages[skill];
+    paid += b.employed[skill] * wagesAt(c, b.typeId)[skill];
     n += b.employed[skill];
   }
   return n > 0 ? paid / n : SKILL_DEFS[skill].baseWage;

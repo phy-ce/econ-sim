@@ -90,8 +90,8 @@ function newCompany(id: number, name: string, color: string, kingdomId: number, 
   const wages = Object.fromEntries(SKILLS.map((s) => [s, SKILL_DEFS[s].baseWage * (isPlayer ? 1 : 0.8)])) as Record<Skill, number>;
   return {
     id, name, color, isPlayer, kingdomId, state, cash, wages,
-    // 왕실 임금은 정책(국영 임금 수준)이 정한다. 시장임금 정책은 민간 플레이어만 쓴다
-    wageOffset: isPlayer && !state ? emptyJobs() : null,
+    // 플레이어는 시장임금 정책(시장 임금 + 0%)으로 시작한다. 왕실도 생산 건물 임금은 이것으로 정하고, 정부 건물 임금은 국영 임금 단계가 정한다
+    wageOffset: isPlayer ? emptyJobs() : null,
     weekProfit: 0, lastWeekProfit: 0, weekStartCash: cash, debt: 0, revenueEma: 0, ledger: emptyLedger(), lastLedger: emptyLedger(),
     distressWeeks: 0, buildPoints: 0, buildCost: 0,
     research: { points: 0, current: null, progress: {}, known: [...START_TECHS] },
@@ -178,7 +178,7 @@ export function createWorld(seed = 1, opts: CreateWorldOptions = {}): World {
   }
 
   const w: World = {
-    version: 16, config: { ai }, tick: 0, seed, rngState: seed | 0, nextId: 1000,
+    version: 17, config: { ai }, tick: 0, seed, rngState: seed | 0, nextId: 1000,
     regions, kingdoms, pops: [], fund: 0, metrics: [],
     traders: { cash: 0, capital: 0, shipments: [] },
     mint: { minted: 0, issued: 0, retired: 0, interest: 0 },
@@ -218,6 +218,11 @@ export function createWorld(seed = 1, opts: CreateWorldOptions = {}): World {
     if (firm && lumber > 0) w.buildings.push(newBuilding(w.nextId++, 'lumber', r.id, firm.id, 'lumber_manual', lumber, false));
     const fiber = Math.round(people * TUNE.startFiber);
     if (firm && fiber > 0) { r.land.arable += fiber; w.buildings.push(newBuilding(w.nextId++, 'fiber_farm', r.id, firm.id, 'fiber_basic', fiber, false)); }
+  }
+  // 시작 목공구 공방: 왕국마다 TUNE.startWorkshop 레벨, 건축사무소가 있는 지역(공장 부지가 가장 넓은 곳)의 민간 상회. 소작지가 공구를 내지 않아 첫날 공구는 이것뿐이다
+  for (const k of KINGDOMS) {
+    const home = regions.filter((r) => r.kingdomId === k.id).sort((a, b) => b.land.plot - a.land.plot || a.id - b.id)[0];
+    if (home && TUNE.startWorkshop > 0) w.buildings.push(newBuilding(w.nextId++, 'workshop', home.id, k.firm.id, 'tools_wood', TUNE.startWorkshop, false));
   }
   updateSubsistence(w);
   // 시작 민간 건물의 레벨은 그 지역 저택(땅 건물)이나 금융가(그 밖)의 것이다
@@ -313,6 +318,8 @@ export function createWorld(seed = 1, opts: CreateWorldOptions = {}): World {
     updateWageIndex(w, k);
     applyStateWages(w, k);
     const gov = companies.find((c) => c.id === k.governmentId)!;
+    // 왕실 생산 건물의 시작 임금은 시작 국영 임금과 같다. 그다음은 민간처럼 시장을 보고 움직인다 (ai.ts adjustWages)
+    gov.wages = { ...gov.stateWages! };
     gov.cash = gov.weekStartCash = gov.isPlayer && playerCash != null ? playerCash : startTreasury(w, gov);
   }
   // 금융가 시작 지분: 시작 금고를 지분 값 1로 나눠 그 지역 귀족(상급·하급)에게 인원대로 준다
@@ -338,7 +345,7 @@ function startTreasury(w: World, gov: Company): number {
     const m = getMethod(b.typeId, b.methodId);
     let inputs = 0;
     for (const g of GOOD_IDS) inputs += (m.inputs[g] ?? 0) * GOODS[g].basePrice;
-    daily += (wageCostOf(m, gov.wages, true) + inputs) * b.level;
+    daily += (wageCostOf(m, gov.stateWages ?? gov.wages, true) + inputs) * b.level;
   }
   return daily * TICKS_PER_WEEK * TUNE.startTreasuryWeeks;
 }
