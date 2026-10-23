@@ -1,5 +1,5 @@
 import { BUILDING_BY_ID, MAX_POINTS_PER_LEVEL_DAY, SKILL_DEFS, TICKS_PER_WEEK, TUNE, getMethod } from './data';
-import { builderOf, companyById, isBudgetFunded, kingdomGdp, officeFeeMult, regionById, slots } from './economy';
+import { builderOf, companyById, isBudgetFunded, kingdomGdp, officeFeeMult, paysDividend, regionById, slots } from './economy';
 import { DAILY_INTEREST, MINT_BASE, MINT_RATE } from './finance';
 import { kingdomById, kingdomOf } from './kingdoms';
 import { funderShares } from './production';
@@ -17,6 +17,7 @@ import type { WelfareGroup } from './welfare';
 /**
  * 미리보기 줄: 수입(세금·관세·주조)은 +, 지출(정부 건물(행정청·학교) 임금·원료·왕실 공사·국채 이자·복지)은 −. 연구는 돈이 들지 않아 줄이 없다.
  * stateFirms(국영 사업 손익) = 왕실 생산 건물과 건축사무소의 매출 − 원료 − 임금. 흑자면 +, 적자면 −. 건축사무소 매출은 모든 공사(왕실 것 포함)의 수수료다.
+ * 국영 임금 단계는 건축사무소 임금(과 수수료)만 움직인다. 왕실 생산 건물 임금은 회사 임금표(시장 임금)라 단계와 상관없다
  * build(왕실 공사) = 왕실 공사가 자기 건축사무소에 낸 수수료 (국영 사업 손익의 사무소 매출에 같은 돈이 들어 있다)
  */
 export type BudgetLineKey = 'tax' | 'tariffs' | 'mint' | 'wages' | 'stateFirms' | 'build' | 'goods' | 'interest' | 'welfare';
@@ -24,7 +25,7 @@ export type BudgetLineKey = 'tax' | 'tariffs' | 'mint' | 'wages' | 'stateFirms' 
 /** 줄 묶음: 그 줄들을 움직이는 손잡이 (fixed = 손잡이 없음) */
 export type BudgetGroupKey = BudgetItem | 'fixed';
 
-/** 손잡이별 줄 묶음 (화면 순서). 국영 임금은 정부 건물 임금·국영 사업 손익(임금, 사무소 수수료)·왕실 공사(수수료의 사무소 임금 몫)를 함께 움직인다 */
+/** 손잡이별 줄 묶음 (화면 순서). 국영 임금은 정부 건물 임금·국영 사업 손익(건축사무소 임금과 수수료)·왕실 공사(수수료의 사무소 임금 몫)를 함께 움직인다 */
 export const BUDGET_GROUPS: { knob: BudgetGroupKey; lines: BudgetLineKey[] }[] = [
   { knob: 'tax', lines: ['tax'] },
   { knob: 'wages', lines: ['wages', 'stateFirms', 'build'] },
@@ -62,7 +63,7 @@ export interface BudgetPreview {
   netByLevel: Record<BudgetItem, number[]>;
   /** 손잡이별 줄 묶음 (BUDGET_GROUPS 순서). 묶음 합을 모두 더하면 net */
   groups: BudgetGroup[];
-  /** 왕실 생산 건물과 건축사무소의 주간 임금. 국영 사업 손익 줄(stateFirms)에 들어 있다. 옛 화면용 사본 */
+  /** 왕실 생산 건물(시장 임금, 단계와 상관없음)과 건축사무소(국영 임금)의 주간 임금. 국영 사업 손익 줄(stateFirms)에 들어 있다. 옛 화면용 사본 */
   firmWages: { weekly: number; byLevel: number[] };
 }
 
@@ -83,6 +84,15 @@ function wageDayAt1(k: Kingdom, b: Building): number {
   let day = 0;
   for (const s of SKILLS) day += b.employed[s] * SKILL_DEFS[s].baseWage * (k.wageIndex ?? 1);
   return day;
+}
+
+/** 왕실 생산 건물의 주간 임금 (지금 고용 × 왕실 회사 임금표 × 7, 국영 임금 단계와 상관없다) */
+function prodWageWeek(w: World, b: Building): number {
+  const c = companyById(w, b.companyId);
+  if (!c) return 0;
+  let day = 0;
+  for (const s of SKILLS) if (!paysDividend(b.stateOwned, s)) day += b.employed[s] * c.wages[s];
+  return day * TICKS_PER_WEEK;
 }
 
 /** 왕실 생산 건물의 주간 매출·원료비 (이동평균 firmEma × 7, 기록이 없으면 어제 값). 국영 임금 단계와 상관없다 */
@@ -178,7 +188,8 @@ const levelOf = (item: BudgetItem, step: number) =>
  * - 주조·관세·정부 건물 원료 = 주간 이동평균
  * - 왕실 공사 = −(이번 주 왕실 공사에 쓰일 포인트 × 그 단계의 포인트당 수수료) (officeModel). 그래서 국영 임금 손잡이가 이 줄도 움직이고, 국영 사업 손익의 같은 몫과 서로 지운다
  * - 정부 건물(행정청·학교) 임금 = 지금 고용 × 기본 임금 × 임금 지수 × 국영 임금 수준 배율 × 7
- * - 국영 사업 손익 = 왕실 생산 건물마다 (하루 매출 − 원료비 이동평균(firmEma)) × 7, 건축사무소마다 (이번 주 예상 수수료 − 오늘 원료비 × 7), 둘 다 − 지금 고용 × 기본 임금 × 임금 지수 × 국영 임금 수준 배율 × 7.
+ * - 국영 사업 손익 = 왕실 생산 건물마다 (하루 매출 − 원료비 이동평균(firmEma)) × 7 − 지금 고용 × 왕실 회사 임금 × 7 (시장 임금, 단계와 상관없음),
+ *   건축사무소마다 (이번 주 예상 수수료 − 오늘 원료비 × 7) − 지금 고용 × 기본 임금 × 임금 지수 × 국영 임금 수준 배율 × 7.
  *   사무소 수수료는 지금 공사 목록으로 7일 배분을 돌려 센다 (officeModel)
  * - 국채 이자 = 지금 빚 × 일 이자율 × 7
  * - 복지 = 지금 복지법이 덮는 무리의 그 단계 하루 필요액(이동평균) × 7 (welfare.ts welfareWeekly). 복지법이 'none' 이면 0
@@ -188,7 +199,7 @@ export function budgetPreview(w: World, kingdomId: number, steps: Partial<Record
   const k = kingdomById(w, kingdomId);
   const cur = {} as Record<BudgetItem, number>;
   for (const item of BUDGET_ITEMS) cur[item] = steps[item] ?? k.budget[item];
-  const { value, firmBase } = budgetModel(w, k);
+  const { value, firmBase, prodWages } = budgetModel(w, k);
   const knobOf: Partial<Record<BudgetLineKey, BudgetItem>> = {};
   for (const g of BUDGET_GROUPS) if (g.knob !== 'fixed') for (const l of g.lines) knobOf[l] = g.knob;
   const levels = Array.from({ length: BUDGET_STEPS }, (_, i) => i + 1);
@@ -216,7 +227,7 @@ export function budgetPreview(w: World, kingdomId: number, steps: Partial<Record
   });
   return {
     steps: cur, lines, income, expense, net, netByLevel, groups,
-    firmWages: { weekly: roundBudget(-firmBase * levelOf('wages', cur.wages)), byLevel: levels.map((s) => roundBudget(-firmBase * levelOf('wages', s))) },
+    firmWages: { weekly: roundBudget(-prodWages - firmBase * levelOf('wages', cur.wages)), byLevel: levels.map((s) => roundBudget(-prodWages - firmBase * levelOf('wages', s))) },
   };
 }
 
@@ -237,14 +248,17 @@ function budgetModel(w: World, k: Kingdom) {
   const days = w.tick % TICKS_PER_WEEK;
   const soFar = (x: number | undefined) => (days > 0 ? ((x ?? 0) * TICKS_PER_WEEK) / days : 0);
   const office = officeModel(w, k);
-  let wageBase = 0, firmBase = 0, firmGross = 0, officeInputs = 0;
+  // firmBase: 건축사무소 임금 (국영 임금, 단계 배율 1). 왕실 생산 건물의 임금(시장 임금)은 firmGross 에 뺀 채로 들어 있다 (prodWages)
+  let wageBase = 0, firmBase = 0, firmGross = 0, officeInputs = 0, prodWages = 0;
   for (const b of govBuildings(w, k)) {
-    const day = wageDayAt1(k, b);
-    if (isBudgetFunded(b.typeId)) wageBase += day * TICKS_PER_WEEK;
-    else {
-      firmBase += day * TICKS_PER_WEEK;
-      if (getMethod(b.typeId, b.methodId).construction) officeInputs += office.row(b, 1).inputs;
-      else { const f = firmWeek(b); firmGross += f.sales - f.inputs; }
+    if (isBudgetFunded(b.typeId)) wageBase += wageDayAt1(k, b) * TICKS_PER_WEEK;
+    else if (getMethod(b.typeId, b.methodId).construction) {
+      firmBase += wageDayAt1(k, b) * TICKS_PER_WEEK;
+      officeInputs += office.row(b, 1).inputs;
+    } else {
+      const f = firmWeek(b), pw = prodWageWeek(w, b);
+      prodWages += pw;
+      firmGross += f.sales - f.inputs - pw;
     }
   }
   const taxPerDay = base.taxBy ?? TUNE.taxLevels.map((m) => ((last?.revenue ?? 0) / TICKS_PER_WEEK / levelOf('tax', k.budget.tax)) * m);
@@ -268,7 +282,7 @@ function budgetModel(w: World, k: Kingdom) {
       default: return fixed[key as keyof typeof fixed];
     }
   };
-  return { value, firmBase, office, hasRecord };
+  return { value, firmBase, prodWages, office, hasRecord };
 }
 
 // ---------------------------------------------------------------- 줄 자세히 보기 (화면 전용, 작은 창)
@@ -290,7 +304,7 @@ export interface WageDrillJob { skill: Skill; employed: number; jobs: number; ba
 export interface WageDrillRow { buildingId: number; typeId: string; regionId: number; level: number; employed: number; jobs: number; weekly: number; jobsBy: WageDrillJob[] }
 export interface WageDrill extends BudgetDrillBase { key: 'wages'; wageIndex: number; stepMult: number; rows: WageDrillRow[] }
 
-/** 왕실 생산 건물·건축사무소 한 곳: 매출(+, 사무소는 공사 수수료이고 그 단계로 다시 센다)·원료(−)·임금(−, 그 단계)·손익(weekly) */
+/** 왕실 생산 건물·건축사무소 한 곳: 매출(+, 사무소는 공사 수수료이고 그 단계로 다시 센다)·원료(−)·임금(−, 사무소는 그 단계의 국영 임금, 생산 건물은 시장 임금)·손익(weekly) */
 export interface FirmDrillRow { buildingId: number; typeId: string; regionId: number; level: number; employed: number; sales: number; inputs: number; wages: number; weekly: number }
 export interface FirmDrill extends BudgetDrillBase { key: 'stateFirms'; stepMult: number; rows: FirmDrillRow[] }
 
@@ -367,8 +381,9 @@ export function drillStateFirms(w: World, kid: number, steps: Steps = {}): FirmD
   const rows: FirmDrillRow[] = [];
   for (const b of govBuildings(w, k)) {
     if (isBudgetFunded(b.typeId)) continue;
-    const f = getMethod(b.typeId, b.methodId).construction ? office.row(b, mult) : firmWeek(b);
-    const sales = f.sales, inputs = -f.inputs, wages = -wageDayAt1(k, b) * mult * TICKS_PER_WEEK;
+    const isOffice = !!getMethod(b.typeId, b.methodId).construction;
+    const f = isOffice ? office.row(b, mult) : firmWeek(b);
+    const sales = f.sales, inputs = -f.inputs, wages = isOffice ? -wageDayAt1(k, b) * mult * TICKS_PER_WEEK : -prodWageWeek(w, b);
     let employed = 0;
     for (const s of SKILLS) employed += b.employed[s];
     rows.push({ buildingId: b.id, typeId: b.typeId, regionId: b.regionId, level: b.level, employed, sales, inputs, wages, weekly: sales + inputs + wages });

@@ -18,7 +18,7 @@ import {
 import {
   BASE_CREDIT, CARTAGE_RATE, RAIL_RATE, STATE_CREDIT_GDP, collectionRatio, companyById, constructionEstimate, creditLimit, efficiencyParts,
   harvestCondition, harvestFactor, holdingsOf, kingdomGdp, levelOwnersOf, knownVeins, landFree, landUsed, moneyIdentity, netMinted, popSol,
-  FLOW_ZERO, officeMargin, priceFormula, regionById, sellThrough, shareWage, shippingRate, staffing, totalMoney,
+  FLOW_ZERO, officeMargin, priceFormula, regionById, sellThrough, shareWage, shippingRate, staffing, totalMoney, wagesAt,
 } from './economy';
 import { borderCost, kingdomById, DEFAULT_TARIFF } from './kingdoms';
 import {
@@ -664,7 +664,7 @@ export const ENCYCLOPEDIA: EncEntry[] = [
           if (def.auto && !def.ownership) continue;
           const c = companyById(w, b.companyId), m = getMethod(b.typeId, b.methodId);
           for (const s of SKILLS) if ((m.workers[s] ?? 0) > 0) {
-            const wage = def.ownership ? shareWage(b, s) : c?.wages[s] ?? 0;
+            const wage = def.ownership ? shareWage(b, s) : c ? wagesAt(c, b.typeId)[s] : 0;
             bars.push(bar(t(`${def.name} · ${SKILL_DEFS[s].name}`, `${def.nameEn} · ${SKILL_DEFS[s].nameEn}`), r2(wage), 'florin'));
           }
         }

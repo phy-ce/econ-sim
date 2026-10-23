@@ -1,5 +1,5 @@
 import { BUILDING_BY_ID, CLASS_DEFS, SKILL_DEFS, TUNE, getMethod } from './data';
-import { borrow, disbanded, emptyJobs, emptyStats, isSubsistence, paysDividend, paysShare, peasantSlots, shareWage } from './economy';
+import { borrow, disbanded, emptyJobs, emptyStats, isSubsistence, paysDividend, paysShare, peasantSlots, shareWage, wagesAt } from './economy';
 import { tenantIncomePerWorker } from './market';
 import { findPop, getPop, movePeople, workforce } from './pops';
 import { clamp } from './rng';
@@ -117,7 +117,7 @@ function seatsIn(w: World, r: Region, local: Building[], comp: Map<number, Compa
     const c = comp.get(b.companyId);
     for (const s of SKILLS) {
       const n = slotsWith(b, m, s);
-      if (n > 0) out.push({ b, prof: s, slots: n, wage: paysShare(b, s) ? dividendWage(b, s) : c?.wages[s] ?? 0, m });
+      if (n > 0) out.push({ b, prof: s, slots: n, wage: paysShare(b, s) ? dividendWage(b, s) : c ? wagesAt(c, b.typeId)[s] : 0, m });
     }
   }
   return out;
@@ -310,10 +310,10 @@ export function payWages(w: World) {
   const mineOf = groupBuildings(w, (b) => b.companyId);
   for (const c of w.companies) {
     const mine = mineOf.get(c.id) ?? NO_BUILDINGS;
-    const wages = c.wages;
     let bill = 0;
     for (const b of mine) {
       const list = workersOf.get(b.id);
+      const wages = wagesAt(c, b.typeId);
       if (list) for (const p of list) bill += workforce(p) * wages[p.prof as Skill];
     }
     // 왕실만 빌린다. 민간은 가진 현금만큼 비례로 준다
@@ -322,6 +322,7 @@ export function payWages(w: World) {
     for (const b of mine) {
       let paid = 0;
       const list = workersOf.get(b.id);
+      const wages = wagesAt(c, b.typeId);
       if (list) for (const p of list) {
         const amt = workforce(p) * wages[p.prof as Skill] * ratio;
         p.savings += amt;
@@ -364,6 +365,8 @@ export function migrate(w: World) {
   const comp = companyMap(w);
   const byId = buildingMap(w);
   const localOf = groupBuildings(w, (b) => b.regionId);
+  /** 건물 주인이 그 자리에 주는 임금 (왕실 정부 건물은 국영 임금) */
+  const seatPay = (b: Building, s: Skill): number => { const c = comp.get(b.companyId); return c ? wagesAt(c, b.typeId)[s] : 0; };
   const regionPops = new RegionPops(w);
   const subWage = new Map<number, number>();
   const subsistence = (r: Region): number => {
@@ -392,7 +395,7 @@ export function migrate(w: World) {
       for (const s of kinds) {
         const jobs = slotsWith(b, m, s);
         const n = fillableWith(b, m, s, jobs) - b.employed[s];
-        if (n > 0) open.push({ wage: paysShare(b, s) ? dividendWage(b, s) : comp.get(b.companyId)?.wages[s] ?? 0, n });
+        if (n > 0) open.push({ wage: paysShare(b, s) ? dividendWage(b, s) : seatPay(b, s), n });
       }
     }
     regionPops.catchUp();
@@ -427,7 +430,7 @@ export function migrate(w: World) {
     if (!b) return 0;
     if (isSubsistence(b.typeId)) return subsistence(r);
     const s = p.prof as Skill;
-    return paysShare(b, s) ? dividendWage(b, s) : comp.get(b.companyId)?.wages[s] ?? 0;
+    return paysShare(b, s) ? dividendWage(b, s) : seatPay(b, s);
   };
 
   const foodOf = new Map<number, number>();

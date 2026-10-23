@@ -177,7 +177,7 @@ export function createWorld(seed = 1, opts: CreateWorldOptions = {}): World {
   }
 
   const w: World = {
-    version: 16, config: { ai }, tick: 0, seed, rngState: seed | 0, nextId: 1000,
+    version: 17, config: { ai }, tick: 0, seed, rngState: seed | 0, nextId: 1000,
     regions, kingdoms, pops: [], fund: 0, metrics: [],
     traders: { cash: TRADER_CAPITAL, capital: TRADER_CAPITAL, shipments: [] },
     mint: { minted: 0, issued: 0, retired: 0, interest: 0 },
@@ -305,6 +305,8 @@ export function createWorld(seed = 1, opts: CreateWorldOptions = {}): World {
     updateWageIndex(w, k);
     applyStateWages(w, k);
     const gov = companies.find((c) => c.id === k.governmentId)!;
+    // 왕실 생산 건물의 시작 임금은 시작 국영 임금과 같다. 그다음은 민간처럼 시장을 보고 움직인다 (ai.ts adjustWages)
+    gov.wages = { ...gov.stateWages! };
     gov.cash = gov.weekStartCash = gov.isPlayer && playerCash != null ? playerCash : startTreasury(w, gov);
   }
   // 금융가 시작 지분: 시작 금고를 지분 값 1로 나눠 그 지역 귀족(상급·하급)에게 인원대로 준다
@@ -330,7 +332,7 @@ function startTreasury(w: World, gov: Company): number {
     const m = getMethod(b.typeId, b.methodId);
     let inputs = 0;
     for (const g of GOOD_IDS) inputs += (m.inputs[g] ?? 0) * GOODS[g].basePrice;
-    daily += (wageCostOf(m, gov.wages, true) + inputs) * b.level;
+    daily += (wageCostOf(m, gov.stateWages ?? gov.wages, true) + inputs) * b.level;
   }
   return daily * TICKS_PER_WEEK * TUNE.startTreasuryWeeks;
 }
