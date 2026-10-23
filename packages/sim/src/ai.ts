@@ -726,33 +726,51 @@ function planConstruction(w: World, c: Company, o: Outlook) {
   }
   reviewLevels(w, c, o, est.pointsPerDay);
   if (c.state) secureGovInputs(w, c, o, est.costPerDay);
-  let fallbacks = 0;
-  let blocked: { best: Pick | null } | undefined;
-  for (let started = 0; started < TUNE.startsPerWeek; started++) {
-    const own = w.constructions.filter((k) => k.companyId === c.id).length;
-    if (own >= MAX_CONCURRENT_CONSTRUCTIONS) break;
-    if (c.debt > creditLimit(w, c) * 0.3) break;
-    // 민간 상회는 저택·금융가 금고(약정 뺀 돈)로 짓는다
-    const free = c.state || c.isPlayer ? freeCash(w, c, est.costPerDay) : ownerFunds(w, c.kingdomId);
-    const school = schoolCash(w, c, est.costPerDay);
-    if (free <= 0 && school <= 0) break;
-    const out = { best: null as Pick | null };
-    const pick = pickProject(w, c, o, free, fallbacks < TUNE.lossBuildsPerWeek, out, school);
-    blocked ??= out;
-    if (!pick) break;
-    if (pick.fallback) fallbacks++;
+  // 착공 공사비 52주 이동 합 (발전 투자 몫을 재는 바탕, TUNE.devShare)
+  c.startCost = (c.startCost ?? 0) * (1 - 1 / 52);
+  c.devCost = (c.devCost ?? 0) * (1 - 1 / 52);
+  const free = () => (c.state || c.isPlayer ? freeCash(w, c, est.costPerDay) : ownerFunds(w, c.kingdomId));
+  const canStart = () => w.constructions.filter((k) => k.companyId === c.id).length < MAX_CONCURRENT_CONSTRUCTIONS && c.debt <= creditLimit(w, c) * 0.3;
+  const start = (pick: Pick, path: string): boolean => {
     const existing = ownBuildingAt(w, c.id, pick.regionId, pick.typeId, pick.methodId);
     const err = existing
       ? applyCommand(w, c.id, { type: 'expand', buildingId: existing.id, levels: pick.levels })
       : applyCommand(w, c.id, { type: 'build', typeId: pick.typeId, regionId: pick.regionId, methodId: pick.methodId, levels: pick.levels });
-    if (err) break;
-    aiTrace.on?.(w, c, pick.fallback ? 'loss' : 'pick', pick.typeId, pick.methodId, pick.levels, o, pick.regionId);
+    if (err) return false;
+    aiTrace.on?.(w, c, path, pick.typeId, pick.methodId, pick.levels, o, pick.regionId);
+    const cost = constructionEstimate(w, c, pick.typeId).cost * pick.levels;
+    if (!isGovernment(pick.typeId)) c.startCost = (c.startCost ?? 0) + cost;
+    if (path === 'dev') c.devCost = (c.devCost ?? 0) + cost;
+    if (isGovernment(pick.typeId)) toFront(w, c);
+    o.add(getMethod(pick.typeId, pick.methodId), pick.levels, 1 + regionPerk(pick.regionId, pick.typeId), false, pick.regionId);
+    return true;
+  };
+  // 발전 투자 (TUNE.devShare): 주에 1건까지, 잠재 수요를 보고 짓는 공사비가 52주 착공 공사비의 devShare 를 넘지 않을 만큼.
+  // devCost + x <= devShare × (startCost + x) → x <= (devShare × startCost − devCost) ÷ (1 − devShare)
+  if (TUNE.aiBuildNow && TUNE.devShare > 0 && TUNE.devShare < 1 && canStart()) {
+    const room = (TUNE.devShare * (c.startCost ?? 0) - (c.devCost ?? 0)) / (1 - TUNE.devShare);
+    const budget = Math.min(free(), room);
+    const pick = budget > 0 ? pickProject(w, c, o, budget, false, undefined, 0, true) : null;
+    if (pick) start(pick, 'dev');
+  }
+  let fallbacks = 0;
+  let blocked: { best: Pick | null } | undefined;
+  for (let started = 0; started < TUNE.startsPerWeek; started++) {
+    if (!canStart()) break;
+    // 민간 상회는 저택·금융가 금고(약정 뺀 돈)로 짓는다
+    const cash = free();
+    const school = schoolCash(w, c, est.costPerDay);
+    if (cash <= 0 && school <= 0) break;
+    const out = { best: null as Pick | null };
+    const pick = pickProject(w, c, o, cash, fallbacks < TUNE.lossBuildsPerWeek, out, school);
+    blocked ??= out;
+    if (!pick) break;
+    if (pick.fallback) fallbacks++;
+    if (!start(pick, pick.fallback ? 'loss' : 'pick')) break;
     if (pick.fallback) {
       const starts = (kingdomById(w, c.kingdomId).startsMonth ??= {});
       starts[`${pick.typeId}|loss`] = (starts[`${pick.typeId}|loss`] ?? 0) + pick.levels;
     }
-    if (isGovernment(pick.typeId)) toFront(w, c);
-    o.add(getMethod(pick.typeId, pick.methodId), pick.levels, 1 + regionPerk(pick.regionId, pick.typeId));
   }
   if (blocked?.best) swapLand(w, c, o, blocked.best);
 }
@@ -799,7 +817,7 @@ function secureGovInputs(w: World, c: Company, o: Outlook, costPerDay: number) {
       const err = existing
         ? applyCommand(w, c.id, { type: 'expand', buildingId: existing.id, levels: fit })
         : applyCommand(w, c.id, { type: 'build', typeId: t.id, regionId: r.id, methodId: m.id, levels: fit });
-      if (!err) { aiTrace.on?.(w, c, 'govInputs', t.id, m.id, fit, o, r.id); toFront(w, c); o.add(m, fit, 1 + regionPerk(r.id, t.id)); levels = 0; }
+      if (!err) { aiTrace.on?.(w, c, 'govInputs', t.id, m.id, fit, o, r.id); toFront(w, c); o.add(m, fit, 1 + regionPerk(r.id, t.id), false, r.id); levels = 0; }
       break;
     }
   }
@@ -983,8 +1001,11 @@ function glutOf(w: World, kingdomId: number): (typeId: string, m: MethodDef) => 
  * allowLoss: 이익이 나는 후보가 없으면 수익률이 가장 높은(가장 덜 손해 보는) 후보를 가장 작은 덩어리로 고른다.
  * 학교는 schoolFree(schoolCash)로 짓고, 공사비 + 그 레벨 인건비 TUNE.treasuryLowWeeks 주치가 있어야 한다
  */
-export function pickProject(w: World, c: Company, o: Outlook, free: number, allowLoss = false, blocked?: { best: Pick | null }, schoolFree = 0): Pick | null {
+export function pickProject(w: World, c: Company, o: Outlook, free: number, allowLoss = false, blocked?: { best: Pick | null }, schoolFree = 0, dev = false): Pick | null {
   let best: Pick | null = null, least: Pick | null = null;
+  // 발전 투자 대상: 잠재 수요(바꿀 수 있는 몫)가 있고 공급(공사 중 포함)이 지금 수요 + 잠재 수요에 못 미치는 상품
+  const devGood = (g: GoodId) => o.latent[g] > 1e-6 && o.supply[g] < o.demand[g] + o.latent[g];
+  const devOuts = (m: MethodDef) => GOOD_IDS.filter((g) => (m.outputs[g] ?? 0) > 0 && devGood(g));
   const pools = new Map<string, number>();
   // 지역 우선 투자 (민간): 그 지역 저택·금융가 금고(약정 뺀 돈). 좋아하지 않는 종류의 건물에는 TUNE.ownerTilt 배로 센다
   const local = new Map<number, Building[]>();
@@ -1003,6 +1024,7 @@ export function pickProject(w: World, c: Company, o: Outlook, free: number, allo
     for (const t of BUILDING_TYPES) {
       if (t.id === 'builder' || !canBuildType(c, t)) continue;
       if (inDebt && !isGovernment(t.id)) continue;
+      if (dev && isGovernment(t.id)) continue;
       // 기상 조건이 걸린 땅에는 짓지 않는다 (줄어든 산출과 오른 값은 일시적이다)
       if (harvestFactor(w, r.id, t.land) < 1) continue;
       const room = roomFor(w, r.id, t.id);
@@ -1019,7 +1041,7 @@ export function pickProject(w: World, c: Company, o: Outlook, free: number, allo
       const otherMethod = (m: MethodDef) => newMethod(m) && !(m === topBase && sibs.every((b) => baseValue(getMethod(b.typeId, b.methodId), c) * 1.05 < baseValue(m, c)));
       // 땅이 없으면 1레벨 기준 수익률만 재 둔다 (땅 바꾸기 후보). 매장량이 없는 것은 땅을 비워도 못 지으므로 뺀다
       if (room < 1) {
-        if (!blocked || (t.deposit && depositFree(w, r.id, t.deposit) < 1)) continue;
+        if (!blocked || dev || (t.deposit && depositFree(w, r.id, t.deposit) < 1)) continue;
         for (const m of availableMethods(c, t.id)) {
           if (otherMethod(m) || glut?.(t.id, m)) continue;
           if (laborAvailability(w, r, m, 1, c.state, pools, c) < MIN_STAFFING()) continue;
@@ -1031,14 +1053,23 @@ export function pickProject(w: World, c: Company, o: Outlook, free: number, allo
       }
       for (const m of availableMethods(c, t.id)) {
         if (otherMethod(m) || glut?.(t.id, m)) continue;
+        const outs = dev ? devOuts(m) : [];
+        if (dev && !outs.length) continue;
         const cap = newMethod(m) ? MIXED_LEVELS : Infinity;
         let choice: { levels: number; roi: number } | null = null, top: { levels: number; roi: number } | null = null;
         for (const levels of CHUNKS) {
           if (levels > room || levels > cap || budget < perLevel * levels) continue;
           if (m.seats && budget < (perLevel + wageCostOf(m, c.wages, c.state) * TICKS_PER_WEEK * TUNE.treasuryLowWeeks) * levels) continue;
-          const e = m.seats ? schoolValuation(w, c, r, m, levels, schoolSeats(w, r.id)) : valueMethod(w, o, r, c, t.id, m, levels);
+          // 발전 투자: 공급(공사 중 포함) + 이 공사의 산출이 지금 수요 + 잠재 수요를 넘는 덩어리는 짓지 않는다
+          if (dev && outs.some((g) => o.supply[g] + (m.outputs[g] ?? 0) * levels * (1 + regionPerk(r.id, t.id)) > o.demand[g] + o.latent[g])) continue;
+          const e = m.seats ? schoolValuation(w, c, r, m, levels, schoolSeats(w, r.id)) : valueMethod(w, o, r, c, t.id, m, levels, false, undefined, dev);
           if (laborAvailability(w, r, m, levels, c.state, pools, c) < MIN_STAFFING()) continue;
           const roi = (e.profit * TICKS_PER_YEAR) / (perLevel * levels);
+          // 발전 투자: 잠재 수요까지 센 손익이 −인건비 × TUNE.devLoss 이상인 가장 큰 덩어리
+          if (dev) {
+            if (e.profit >= -TUNE.devLoss * e.wageCost && !choice) choice = { levels, roi };
+            continue;
+          }
           if (allowLoss && levels === CHUNKS[CHUNKS.length - 1] && e.profit >= -TUNE.lossTolerance * e.wageCost) {
             const s = roi + Math.abs(roi) * (rand(w) - 0.5) * 0.3;
             if (!least || s > least.score) least = { regionId: r.id, typeId: t.id, methodId: m.id, levels, score: s, fallback: true };

@@ -388,6 +388,9 @@ export interface Company {
   buildCost: number;
   /** 건축사무소 포인트 중 공사에 실제로 쓰인 하루 양의 이동평균 (왕실, AI가 사무소 크기를 정한다) */
   buildUsed?: number;
+  /** AI 착공 공사비의 52주 이동 합 (보통 + 발전 투자)과 그중 발전 투자 몫 (TUNE.devShare) */
+  startCost?: number;
+  devCost?: number;
   research: Research;
   /** 이번 주 수입·지출 내역과 지난주 내역 (재정 화면용) */
   ledger: Ledger;
