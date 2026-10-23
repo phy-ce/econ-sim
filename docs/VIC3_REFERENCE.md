@@ -171,6 +171,17 @@
 - 행정청 방식 이름: Simple Organization, Filing Cabinets, Standardized Filing System, Telephone Switchboards, Hereditary/Professional Bureaucrats 등 (https://vic3.paradoxwikis.com/Government_Administration). Filing Cabinets 줄에 "Paper 10"이 있으나 투입인지는 평탄화된 표에서 **확인 못 함**.
 - 이 게임: 목재 2,500 → 종이 5,000 (기본가 목재 2, 종이 4, 이익률 20%). 기술 없이 짓는다. 전문 관료제가 종이 200을 쓴다 (가구 100과 같은 값).
 
+## 술과 기호품 (2026-10-23 확인, 위키 1.13)
+- 술(Liquor) 기본가 30 (곡물 20의 1.5배). 만드는 곳: 식품 공업(Food Industries), 호밀 농장(Rye Farms), 자급 농장(Subsistence). 쓰는 곳: pop 필요, 동원 선택지 둘 (https://vic3.paradoxwikis.com/Liquor, Goods 문서로 넘어간다).
+- 식품 공업의 증류 방식 묶음 (https://vic3.paradoxwikis.com/List_of_production_methods, 평탄화된 표라 건물 이름 줄은 못 읽었다):
+  - Pot Stills (기술 Distillation): 상점주 100·기계공 250, 설탕 25 → 술 60, 식료품 −30 (식료품 산출을 줄이고 술을 낸다).
+  - Patent Stills (기술 Fractional Distillation): 상점주 200·기계공 500·기술자 200, 설탕 25·유리 10 → 술 100 (나머지 산출은 표가 잘려 확인 못 함).
+- 호밀 농장 Potatoes 줄에 곡물 10 → 술 10이 보이나, 이것이 투입·산출인지는 평탄화된 표에서 **확인 못 함** (같은 문서).
+- 자급 농장 가내수공업 방식이 clothes·furniture·liquor를 각 0.25 낸다 (위 "소작농 소득", G production_methods/12_subsistence.txt).
+- 기호품(Intoxicants) 필요 (https://vic3.paradoxwikis.com/Needs): 술(기본, 공급 상한 0.75), 담배(무게 ×0.9), 아편(×0.75), 와인(×0.25, 상한 0.25).
+  부 10의 구매 묶음 popneed_intoxicants = 50, 같은 부의 기본 식량 131 (기호품이 식량 값의 약 38%). 부 30에서 216으로 멈춘다. 기호품이 생기는 부와 다른 부의 값은 표가 깨져 **확인 못 함** (1.10 기준 절).
+- 이 게임: 술 기본가 3 (곡물 2의 1.5배), 기호품은 술 하나로만 채운다. 양조장은 곡물을 쓴다 (설탕·유리가 없다). DESIGN 4장·5장·11장 "기호품".
+
 ## 대출과 신용 (2026-10-21 확인, 위키 1.13)
 출처: https://vic3.paradoxwikis.com/Treasury
 - 금 보유고가 비면 재정 적자는 자동으로 국가 신용 대출이 된다. 흑자는 자동으로 원금을 갚는다.

@@ -89,6 +89,12 @@ describe('보이는 값은 소수 둘째 자리, 저장값은 그대로', () => 
     const o15 = JSON.parse(save(w));
     o15.version = 15;
     expect(save(migrateWorld(o15)!)).toBe(save(w));
+    // 술이 없던 저장: 지역 시장에 술이 기본가로 들어가고 이어 돌릴 수 있다
+    const noLiquor = JSON.parse(save(w));
+    for (const r of noLiquor.regions) delete r.market.liquor;
+    const nl = migrateWorld(noLiquor)!;
+    for (const r of nl.regions) expect(r.market.liquor.price).toBe(GOODS.liquor.basePrice);
+    runTo(nl, 40);
     // 14판: 옛 공사 수수료 미리보기 기준값이 있었다
     const o14 = JSON.parse(save(w));
     o14.version = 14;

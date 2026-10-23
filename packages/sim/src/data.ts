@@ -30,6 +30,7 @@ export const GOOD_IDS: GoodId[] = [
   'luxury_furniture', 'luxury_cloth',
   'meat',
   'paper',
+  'liquor',
 ];
 
 export const GOODS: Record<GoodId, GoodDef> = {
@@ -49,6 +50,8 @@ export const GOODS: Record<GoodId, GoodDef> = {
   luxury_cloth: { id: 'luxury_cloth', name: '고급 의복', nameEn: 'Fine clothes', basePrice: 30 },
   meat: { id: 'meat', name: '고기', nameEn: 'Meat', basePrice: 16 },
   paper: { id: 'paper', name: '종이', nameEn: 'Paper', basePrice: 4 },
+  // 빅토리아3 술 기본가 30 = 곡물 20의 1.5배 (vic3.paradoxwikis.com/Goods). 여기서도 곡물 2의 1.5배
+  liquor: { id: 'liquor', name: '술', nameEn: 'Liquor', basePrice: 3 },
 };
 
 /**
@@ -257,6 +260,15 @@ export const BUILDING_TYPES: BuildingTypeDef[] = [
     ],
   },
   {
+    // 곡물을 빚어 술을 낸다 (빅토리아3 식품 공업의 증류 방식, 호밀 농장의 곡물 → 술. VIC3_REFERENCE "술과 기호품").
+    // 숫자는 식료품 공장과 같은 꼴(가공: 300명, 원료가 매출의 절반)이고 산출만 술 기본가 3에 맞췄다. 단식 증류는 기술 없이 짓는다
+    id: 'distillery', name: '양조장', nameEn: 'Distillery', land: 'plot', buildPoints: 300, industry: 'processing',
+    methods: [
+      m({ id: 'liquor_pot', name: '단식 증류', nameEn: 'Pot stills', workers: jobs(270, 30), inputs: { tools: 10, grain: 2600 }, outputs: { liquor: 3500 } }),
+      m({ id: 'liquor_column', name: '연속식 증류', nameEn: 'Column stills', tech: 'food_machinery', workers: jobs(120, 60, 20), inputs: { tools: 30, fuel: 100, grain: 3300 }, outputs: { liquor: 4800 } }),
+    ],
+  },
+  {
     // 의복: 손베틀 → 방적기 → 증기 직기 (가공). 고급 의복: 맞춤 재단 → 증기 재단 (숙련)
     id: 'textile', name: '방직 공장', nameEn: 'Textile mill', land: 'plot', buildPoints: 300, industry: 'processing',
     methods: [
@@ -391,6 +403,7 @@ export function scaleBonus(level: number): number {
  * - startsPerWeek: AI 회사 하나가 한 주에 새로 넣는 공사 수 상한
  * - luxuryLinear, luxuryQuad: 사치품 필요 = linear × (부 − 10) + quad × (부 − 10)²
  * - meatLinear, meatQuad: 고기 필요 = linear × (부 − 8) + quad × (부 − 8)²
+ * - intoxLinear: 기호품(술) 필요 = intoxLinear × min(부, 10). 식량 필요는 같은 만큼 줄어 묶음 합은 그대로다
  * - shrinkWeeks: 마지막 레벨의 손익이 이 주 수 동안 계속 마이너스면 AI가 철거를 시작한다
  * - reserveWeeks: 건물 유보 자산 상한 = 레벨 × 지금 방식의 레벨당 주간 산출 가치(기본가) × 이 주 수. 이익의 35%를 여기까지 쌓고, 적자는 여기서 먼저 뺀다 (finance.ts settleReserve).
  *   레벨당 고정 50,000(농지 0.5주, 공장 0.2~0.3주치)과 0.25·0.5·1·2·4주 비교 (10년 거름, 20년 × 시드 1·2·3): 0.5주가 산출 비례 중 20년차 연 총생산(2,580 / 1주 2,423 / 고정 2,745)·
@@ -470,6 +483,7 @@ export const TUNE = {
   luxuryQuad: 0.02,
   meatLinear: 0.3,
   meatQuad: 0.01,
+  intoxLinear: 0.05, // 기호품(술) 필요 = 이 값 × min(부, 10). 식량 필요에서 같은 만큼 뺀다 (DESIGN 11 "기호품")
   qualSkilledL: 0.4,
   qualExpertL: 0.6,
   qualRate: 0.25,
@@ -594,13 +608,15 @@ export const HARVEST_KINDS: HarvestDef[] = [
 /**
  * 소작: 소작지 1칸(레벨)에서 일할 수 있는 소작농(노동 인구)과 노동 인구 1명당 하루 산출.
  * 한 줄 규칙: 소작농은 산출에서 식구가 그날 쓸 만큼 남기고 나머지를 판다 (market.ts splitHarvest). 판 돈의 절반은 지대, 토지세율만큼은 세금.
- * 산출 규칙 (식구 = 소비 단위 2.5, 부 5 기준, DESIGN 4장): 곡물 = 식량 필요 2.5 × 1.2 = 3,
+ * 산출 규칙 (식구 = 소비 단위 2.5, 부 5 기준, DESIGN 4장): 곡물·술 = 식량·기호품 필요 × 2.5 × 1.2.
+ *   부 5의 식량 1.75플로린(곡물 0.875) → 곡물 2.625 ≈ 2.6, 기호품 0.25플로린 → 술 0.25 (술이 생기기 전 곡물 3과 기본가 합이 같다).
+ *   술 0.1(곡물 2.85)·0.25(2.6)·0.5(기호품 0.1, 곡물 2.25) 비교 (DESIGN 11 "기호품", 보고서 2026-10-23-liquor). 빅토리아3 자급 농장도 술을 낸다 (VIC3_REFERENCE "술과 기호품").
  * 의복·목재·가구 = 의복·난방·생활용품 필요(각 하루 1.25플로린)의 절반을 기본가로 나눈 양 (의복 0.1, 목재 0.3, 가구 0.08).
  *   1/4(0.05·0.15·0.04)은 소작농 생활수준이 1.6~2로 떨어져 인구가 준다 (DECISIONS 7-15).
  * 공구 0.002: 기본 방식이 모두 공구를 조금 써서(레벨당 10~30) 공방이 없는 첫날에도 공구가 있어야 한다 (공구가 떨어지면 목조 건설도 멈춰 공방을 못 짓는다).
  *   첫날 수요 약 1,560에 공급 약 2,200. 0.005는 약 5,600이라 공구값을 누른다.
  *   0.001·0.002·0.005 비교 (20년 × 시드 1~4, DESIGN 11): 20년 평균 총생산 시드 1·2 636 / 911 / 1,101, 1~4 584 / 628 / 777. 0.005가 높지만 40년 확인 전이라 그대로 (⚠, HANDOFF).
- * 기본 방식 건물 일꾼 1명 산출은 소작농의 곡물 2.1배, 의복 58배, 목재 22배, 가구 54배다
+ * 기본 방식 건물 일꾼 1명 산출은 소작농의 곡물 2.5배, 의복 58배, 목재 22배, 가구 54배다
  */
 export const SUBSISTENCE = {
   /**
@@ -608,7 +624,7 @@ export const SUBSISTENCE = {
    * 그 방식의 농장이 들어서면 그 칸의 일자리가 준다. 가동률·충원율이 1보다 낮으면 실제 일자리는 더 적다 (가동률 24~61%인 기본 방식 섬유 농장은 칸마다 120~300명)
    */
   workersPerCell: 500,
-  output: { grain: 3, cloth: 0.1, timber: 0.3, furniture: 0.08, tools: 0.002 } as Partial<Record<GoodId, number>>,
+  output: { grain: 2.6, cloth: 0.1, timber: 0.3, furniture: 0.08, tools: 0.002, liquor: 0.25 } as Partial<Record<GoodId, number>>,
 };
 
 
@@ -699,6 +715,7 @@ export const NEEDS: NeedDef[] = [
   { id: 'household', name: '가정용품', nameEn: 'Household items', options: [opt('furniture')] },
   { id: 'luxury', name: '사치품', nameEn: 'Luxury goods', options: [opt('luxury_furniture'), opt('luxury_cloth')] },
   { id: 'meat', name: '고기', nameEn: 'Meat', options: [opt('meat')] },
+  { id: 'intoxicants', name: '기호품', nameEn: 'Intoxicants', options: [opt('liquor')] },
 ];
 
 /**
@@ -713,13 +730,16 @@ export function rawMax(max: number | undefined, wealth: number): number {
 
 /**
  * 부 단계별 필요 묶음 (소비 단위 1의 하루 금액). 묶음 값은 대략 부 × 0.75.
- * 식량은 부 1에서 1.6, 부 5에서 2(곡물 1), 부 30까지 늘고 멈춘다. 난방·의복·생활용품은 부 10까지 늘고 멈춘다.
+ * 식량과 기호품(술)을 합치면 부 1에서 1.6, 부 5에서 2, 부 30까지 늘고 멈춘다. 그중 기호품은 TUNE.intoxLinear × 부(10까지)이고 나머지가 식량이다.
+ * 난방·의복·생활용품은 부 10까지 늘고 멈춘다.
  * 표준 의복과 가정용품은 부 5부터 생기고, 가정용품은 부가 오를수록 더 빨리 는다. 고기는 부 8부터, 사치품(고급 가구·고급 의복)은 부 10부터 생긴다
  */
 export function needsAt(wealth: number): Record<NeedId, number> {
   const L = wealth, up = Math.max(0, L - 5), rich = Math.max(0, L - 10), fed = Math.max(0, L - 8);
   const out: Record<NeedId, number> = {
-    nourishment: 1.5 + 0.1 * Math.min(L, 30),
+    // 식량 + 기호품 = 예전 식량 1.5 + 0.1 × min(부, 30): 부 10까지 늘던 식량 몫 중 intoxLinear 만큼이 술이 된다 (묶음 합은 그대로)
+    nourishment: 1.5 + (0.1 - TUNE.intoxLinear) * Math.min(L, 10) + 0.1 * Math.min(Math.max(L - 10, 0), 20),
+    intoxicants: TUNE.intoxLinear * Math.min(L, 10),
     heating: 0.1 * Math.min(L, 10),
     clothing: 0.1 * Math.min(L, 10),
     standard_clothing: 0.2 * up,
