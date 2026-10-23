@@ -1,5 +1,5 @@
 import { BUILDING_BY_ID, GOODS, SKILL_DEFS, TECH_BY_ID, TICKS_PER_WEEK, TUNE, WORKFORCE_RATIO, getMethod } from './data';
-import { collectionRatio, companyById, levelOwnersOf, slots, regionById, constructionEstimate, efficiency, isBudgetFunded, isOwnerBuilding, kingdomGdp, logEvent, officeFeeMult, paysDividend, repay, sellThrough, shareWeight } from './economy';
+import { collectionRatio, companyById, levelOwnersOf, slots, regionById, constructionEstimate, efficiency, isBudgetFunded, isOwnerBuilding, kingdomGdp, logEvent, officeFeeMult, paysDividend, repay, wagesAt, sellThrough, shareWeight } from './economy';
 import { techNameEn } from './i18n';
 import { flow, kingdomById, kingdomOf, toFinance, toTreasury } from './kingdoms';
 import { fundOf, payPops } from './pops';
@@ -120,11 +120,15 @@ export function updateWageIndex(w: World, k: Kingdom) {
   k.wageIndex = k.wageIndex == null ? paid / base : k.wageIndex * 0.75 + (paid / base) * 0.25;
 }
 
-/** 국영 임금 (빅토리아3 정부 임금): 기본 임금 × 임금 지수 × 국영 임금 수준 배율. 왕실의 모든 건물이 이 임금을 준다 */
+/**
+ * 국영 임금 (빅토리아3 정부 임금): 기본 임금 × 임금 지수 × 국영 임금 수준 배율. 왕실의 정부 건물(행정청·건축사무소·학교)만 이 임금을 준다.
+ * 왕실 생산 건물은 민간 상회처럼 회사 임금표(wages)를 쓴다 (2026-10-23 사용자 결정, DECISIONS 6-2)
+ */
 export function applyStateWages(w: World, k: Kingdom) {
   const gov = companyById(w, k.governmentId);
   if (!gov) return;
-  for (const s of SKILLS) gov.wages[s] = round2(SKILL_DEFS[s].baseWage * (k.wageIndex ?? 1) * budgetMult(k, 'wages'));
+  const t = (gov.stateWages ??= { ...gov.wages });
+  for (const s of SKILLS) t[s] = round2(SKILL_DEFS[s].baseWage * (k.wageIndex ?? 1) * budgetMult(k, 'wages'));
 }
 
 /**
@@ -292,7 +296,11 @@ export const KEEP_SHARE: Record<string, number> = { manor: 0.2, finance: 0.3 };
 
 export function weeklyWageBill(w: World, c: Company): number {
   let bill = 0;
-  for (const b of w.buildings) if (b.companyId === c.id && !BUILDING_BY_ID[b.typeId].auto) for (const s of SKILLS) if (!paysDividend(b.stateOwned, s)) bill += b.employed[s] * c.wages[s];
+  for (const b of w.buildings) {
+    if (b.companyId !== c.id || BUILDING_BY_ID[b.typeId].auto) continue;
+    const wages = wagesAt(c, b.typeId);
+    for (const s of SKILLS) if (!paysDividend(b.stateOwned, s)) bill += b.employed[s] * wages[s];
+  }
   return bill * TICKS_PER_WEEK;
 }
 

@@ -26,7 +26,17 @@
 - 비교 (보고서 2026-10-23-liquor, DESIGN 11 "기호품"): 40년 × 시드 1~4 평균 총생산 main 5d188dc 1,004 / 고른 값 1,160 / 소작 술 0.1 1,131 / 기호품 0.1·술 0.5 1,141. 소작농 생활수준 평균 2.59 / 2.68 / 2.56 / 2.37.
 - 약점 (40년 × 시드 1~4): 술 공급이 수요의 약 2배, 술값 기본가의 0.3~0.8배; 양조장 20년차 542레벨 → 40년차 228; 노동자 생활수준 3.11 (main 3.37); 40년차 인구 4.61 (main 4.93), 실업 16% (9%). 계수 0도 main과 시드 1 20년차 총생산이 882 / 1,279로 달라 흔들림이 크다.
 - 테스트: typecheck, test:core, vitest 전체 (15파일 56개), methods_audit 통과. 옛 저장(술 없음) 불러오기 테스트를 decimals.test.ts에 더했다.
-- 화면: UI_CHANGES 0-12, 2-65 (아이콘 별칭 liquor·distillery).
+- 화면: UI_CHANGES 0-13, 2-66 (아이콘 별칭 liquor·distillery).
+
+## 0-statewage. wt-statewage (2026-10-23, main 1c051bd 위, 합치기 전, 사용자 결정 DECISIONS 6-2 나)
+- 바꾼 것: 국영 임금은 왕실 정부 건물(행정청·건축사무소·학교)만 준다 (새 칸 `Company.stateWages`, `applyStateWages`). 왕실 생산 건물은 회사 임금표 `Company.wages`를 쓰고, AI 왕실은 민간과 같은 `adjustWages`로 정한다 (정부 건물은 뺌). 건물별 임금은 `economy.ts wagesAt(c, typeId)`: payWages·노동시장 자리·이주 매력·시장임금·임금 합계·사무소 비용·지표·사전.
+- AI 투자: `outlook.ts longRunWages`가 왕실 생산 건물도 max(지금 임금, 기본 × `investWage`), 정부 유형(행정청)은 국영 임금. 학교 비용·사무소 채용 가능 레벨은 국영 임금.
+- 플레이어 왕실: `setWage`·`setWageOffset` 허용 (생산 건물), 시작은 시장임금 정책 +0%. 정부 건물은 국영 임금 단계.
+- 예산 미리보기: 국영 임금 단계는 사무소 임금만 움직이고, 왕실 생산 건물 임금은 지금 임금으로 `stateFirms`에 들어간다 (`prodWageWeek`). 실제 장부(`spentWeek.firms`)는 그대로 실제 임금(`b.last.wageCost`)이라 바뀐 것 없음.
+- 저장 17판 (16판까지 wages → stateWages 복사). 화면: UI_CHANGES 0-12·2-65.
+- 검증: `npm run typecheck`, `npm run test:core` (11파일 38개 통과), `methods_audit` 종료 0. 전체 vitest·비교 실행은 하지 않음 (2026-10-23 사용자: 테스트 없이 바로 합침). 그래서 총생산·왕실 생산 건물 손익·섬유 공급 변화는 확인 못 함.
+- 관찰: `budget.test` 출력 "임금 3→5 순수지 변화 예상 2800 실제 5118" (통과). main 값과 비교하지 않았다.
+- 약점: `poachable`(TUNE.laborPoach, 지금 0)과 `baseValue`는 왕실 정부 유형에도 회사 임금표를 본다. 임금 지수(`updateWageIndex`)는 지금처럼 민간 건물만 센다.
 
 ## 0-judg. wt-judg (2026-10-23, main b1550a5 위, 문서만, 합치기 전)
 - 바꾼 것: 확인할 조건(커밋·기간·시드·숫자·보고서 id)이 없는 판단 문장과 조건을 넘는 일반화("항상", "원인이 아니다", 숫자 없는 "가장 낫다")를 지웠다. DESIGN 35줄, DECISIONS 28줄, HANDOFF 13줄, NUMBERS_SPEC 4줄. 규칙 설명, 사용자 결정, 출처가 있는 사실, 조건이 붙은 결과는 남겼다. 코드와 값은 그대로.
