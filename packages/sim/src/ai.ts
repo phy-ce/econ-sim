@@ -41,6 +41,13 @@ export const MIXED_LEVELS = 2;
 // TUNE.laborStrict: 일손이 다 차야(1) 짓는다
 const MIN_STAFFING = () => (TUNE.laborStrict ? 1 : TUNE.minStaffing);
 
+/**
+ * 진단용 (cli/builddiag.ts): AI가 공사를 넣고(levels > 0), 헐고(< 0), 방식을 바꿀 때 그 길(path)과 함께 부른다.
+ * path: pick 보통 후보, loss 손해 후보(allowLoss), govInputs 왕실 원료 확보, office 건축사무소, shrink 철거, swap 땅 바꾸기 철거, switchIn·switchOut 방식 바꾸기.
+ * 시뮬레이션 상태를 바꾸지 않는다 (비어 있으면 아무것도 하지 않는다)
+ */
+export const aiTrace: { on?: (w: World, c: Company, path: string, typeId: string, methodId: string, levels: number, o?: Outlook, regionId?: number) => void } = {};
+
 export function runAi(w: World) {
   if (!w.config.ai) return;
   const outlook = marketOutlook(w);
@@ -495,6 +502,7 @@ function manageBuildings(w: World, c: Company, o: Outlook, pools: Map<string, nu
         }
         if (best !== cur) {
           applyCommand(w, c.id, { type: 'setMethod', buildingId: b.id, methodId: best.id });
+          if (aiTrace.on) { aiTrace.on(w, c, 'switchIn', b.typeId, best.id, b.level, o); aiTrace.on(w, c, 'switchOut', b.typeId, cur.id, -b.level, o); }
           takeFromPool(w, region, best, b.level, c.state, pools, c, b);
           // 같은 주에 다른 건물이 이 바꾸기를 보고 판단하게 전망에 반영한다
           o.add(best, b.level, perk, true); o.add(cur, -b.level, perk, true);
@@ -513,7 +521,9 @@ function manageBuildings(w: World, c: Company, o: Outlook, pools: Map<string, nu
           const v = unitProfit(estimateMethod(w, b.regionId, b.typeId, m.id, c.wages, c.state).profit, m);
           if (v > best.v * 1.05 + 0.01) best = { m, v };
         }
-        if (best.m !== cur) applyCommand(w, c.id, { type: 'setMethod', buildingId: b.id, methodId: best.m.id });
+        if (best.m !== cur && !applyCommand(w, c.id, { type: 'setMethod', buildingId: b.id, methodId: best.m.id }) && aiTrace.on) {
+          aiTrace.on(w, c, 'switchIn', b.typeId, best.m.id, b.level, o); aiTrace.on(w, c, 'switchOut', b.typeId, cur.id, -b.level, o);
+        }
       }
     }
     // 굶은 주 수 (TUNE.starveWeeks): 지금 방식으로 투입 충족 < STARVE_FILL 인 주를 센다 (방식을 바꾸면 처음부터)
@@ -711,6 +721,7 @@ function planConstruction(w: World, c: Company, o: Outlook) {
         : here ? applyCommand(w, c.id, { type: 'expand', buildingId: here.id, levels: spot.fit })
         : applyCommand(w, c.id, { type: 'build', typeId: 'builder', regionId: spot.regionId, methodId: m.id, levels: spot.fit });
       if (!err) toFront(w, c);
+      if (!err && spot) aiTrace.on?.(w, c, 'office', 'builder', m.id, spot.fit);
     }
   }
   reviewLevels(w, c, o, est.pointsPerDay);
@@ -735,6 +746,7 @@ function planConstruction(w: World, c: Company, o: Outlook) {
       ? applyCommand(w, c.id, { type: 'expand', buildingId: existing.id, levels: pick.levels })
       : applyCommand(w, c.id, { type: 'build', typeId: pick.typeId, regionId: pick.regionId, methodId: pick.methodId, levels: pick.levels });
     if (err) break;
+    aiTrace.on?.(w, c, pick.fallback ? 'loss' : 'pick', pick.typeId, pick.methodId, pick.levels, o, pick.regionId);
     if (pick.fallback) {
       const starts = (kingdomById(w, c.kingdomId).startsMonth ??= {});
       starts[`${pick.typeId}|loss`] = (starts[`${pick.typeId}|loss`] ?? 0) + pick.levels;
@@ -787,7 +799,7 @@ function secureGovInputs(w: World, c: Company, o: Outlook, costPerDay: number) {
       const err = existing
         ? applyCommand(w, c.id, { type: 'expand', buildingId: existing.id, levels: fit })
         : applyCommand(w, c.id, { type: 'build', typeId: t.id, regionId: r.id, methodId: m.id, levels: fit });
-      if (!err) { toFront(w, c); o.add(m, fit, 1 + regionPerk(r.id, t.id)); levels = 0; }
+      if (!err) { aiTrace.on?.(w, c, 'govInputs', t.id, m.id, fit, o, r.id); toFront(w, c); o.add(m, fit, 1 + regionPerk(r.id, t.id)); levels = 0; }
       break;
     }
   }
@@ -886,7 +898,8 @@ function reviewLevels(w: World, c: Company, o: Outlook, pointsPerDay: number) {
     const m = getMethod(b.typeId, b.methodId);
     if (!m.construction) {
       if (b.negWeeks >= TUNE.shrinkWeeks) {
-        applyCommand(w, c.id, { type: 'demolish', buildingId: b.id, levels: Math.max(1, Math.round(b.level * 0.25)) });
+        const n = Math.max(1, Math.round(b.level * 0.25));
+        if (!applyCommand(w, c.id, { type: 'demolish', buildingId: b.id, levels: n })) aiTrace.on?.(w, c, 'shrink', b.typeId, b.methodId, -n);
         b.negWeeks = 0;
       }
       continue;
@@ -926,7 +939,7 @@ function swapLand(w: World, c: Company, o: Outlook, cand: Pick) {
   }
   if (!worst || cand.score <= Math.max(MIN_ROI(), worst.roi) * TUNE.swapMult) return;
   const n = Math.min(worst.b.level, cand.levels);
-  if (!applyCommand(w, c.id, { type: 'demolish', buildingId: worst.b.id, levels: n })) worst.b.swap = true;
+  if (!applyCommand(w, c.id, { type: 'demolish', buildingId: worst.b.id, levels: n })) { worst.b.swap = true; aiTrace.on?.(w, c, 'swap', worst.b.typeId, worst.b.methodId, -n); }
 }
 
 interface Pick { regionId: number; typeId: string; methodId: string; levels: number; score: number; fallback?: boolean }
