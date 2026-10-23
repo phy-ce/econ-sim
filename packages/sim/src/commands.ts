@@ -12,7 +12,6 @@ import type { Command, World } from './types';
 /** 명령 오류: 한국어 문장과 같은 내용의 영어 문장 */
 export interface CommandError { text: string; textEn: string }
 const fail = (text: string, textEn: string): CommandError => ({ text, textEn });
-const stateWageError = () => fail('왕실 임금은 재정의 국영 임금 수준으로 정합니다.', 'Royal wages follow the government wage level in Finance.');
 const govRunError = () => fail('정부 건물은 늘 다 가동합니다.', 'Government buildings always run at full capacity.');
 
 export const MAX_CONCURRENT_CONSTRUCTIONS = 40;
@@ -121,8 +120,8 @@ function runCommand(w: World, actor: number, cmd: Command): CommandError | null 
       }
       return null;
     }
+    // 회사 임금표(생산 건물). 왕실도 생산 건물 임금은 이것으로 정한다. 왕실 정부 건물은 국영 임금(정책 단계 'wages')이다
     case 'setWage': {
-      if (company.state) return stateWageError();
       const base = SKILL_DEFS[cmd.skill]?.baseWage;
       if (!base || !Number.isFinite(cmd.wage)) return fail('잘못된 임금입니다.', 'Invalid wage.');
       company.wages[cmd.skill] = round2(Math.min(base * 10, Math.max(base * 0.1, cmd.wage)));
@@ -130,7 +129,6 @@ function runCommand(w: World, actor: number, cmd: Command): CommandError | null 
       return null;
     }
     case 'setWageOffset': {
-      if (company.state) return stateWageError();
       if (!SKILL_DEFS[cmd.skill] || !Number.isFinite(cmd.offset)) return fail('잘못된 임금 비율입니다.', 'Invalid wage ratio.');
       if (!company.wageOffset) company.wageOffset = emptyJobs();
       company.wageOffset[cmd.skill] = Math.min(1, Math.max(-0.5, cmd.offset));

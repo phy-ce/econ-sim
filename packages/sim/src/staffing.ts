@@ -1,5 +1,5 @@
 import { BUILDING_BY_ID, SKILL_DEFS, TUNE, getMethod } from './data';
-import { companyById, paysDividend, paysShare, slots } from './economy';
+import { companyById, paysDividend, paysShare, slots, wagesAt } from './economy';
 import { workforce } from './pops';
 import { SKILLS, isLowerJob } from './types';
 import type { Building, Company, MethodDef, Region, Skill, World } from './types';
@@ -40,7 +40,7 @@ export function poachable(w: World, r: Region, s: Skill, c: Company): number {
   for (const b of w.buildings) {
     if (b.regionId !== r.id || b.companyId === c.id || paysShare(b, s) || !(b.employed[s] > 0)) continue;
     const o = companyById(w, b.companyId);
-    if (o && o.wages[s] * TUNE.switchPremium < c.wages[s]) n += b.employed[s] * reach;
+    if (o && wagesAt(o, b.typeId)[s] * TUNE.switchPremium < c.wages[s]) n += b.employed[s] * reach;
   }
   return n;
 }

@@ -18,7 +18,7 @@ import {
 import {
   BASE_CREDIT, CARTAGE_RATE, RAIL_RATE, STATE_CREDIT_GDP, collectionRatio, companyById, constructionEstimate, creditLimit, efficiencyParts,
   harvestCondition, harvestFactor, holdingsOf, kingdomGdp, levelOwnersOf, knownVeins, landFree, landUsed, moneyIdentity, netMinted, popSol,
-  FLOW_ZERO, officeMargin, priceFormula, regionById, sellThrough, shareWage, shippingRate, staffing, totalMoney,
+  FLOW_ZERO, officeMargin, priceFormula, regionById, sellThrough, shareWage, shippingRate, staffing, totalMoney, wagesAt,
 } from './economy';
 import { borderCost, kingdomById, DEFAULT_TARIFF } from './kingdoms';
 import {
@@ -664,7 +664,7 @@ export const ENCYCLOPEDIA: EncEntry[] = [
           if (def.auto && !def.ownership) continue;
           const c = companyById(w, b.companyId), m = getMethod(b.typeId, b.methodId);
           for (const s of SKILLS) if ((m.workers[s] ?? 0) > 0) {
-            const wage = def.ownership ? shareWage(b, s) : c?.wages[s] ?? 0;
+            const wage = def.ownership ? shareWage(b, s) : c ? wagesAt(c, b.typeId)[s] : 0;
             bars.push(bar(t(`${def.name} · ${SKILL_DEFS[s].name}`, `${def.nameEn} · ${SKILL_DEFS[s].nameEn}`), r2(wage), 'florin'));
           }
         }
@@ -693,8 +693,8 @@ export const ENCYCLOPEDIA: EncEntry[] = [
     related: ['best-seat', 'production'], seenIn: ['workforce'], source: ['labor.ts laborMarket'], design: ['7.2'],
   },
   {
-    id: 'ai-wages', category: 'labour', title: t('민간 임금', 'Private wages'),
-    rule: t('AI 회사는 매주 직종별 임금을 움직인다. 바닥 = 옮겨 올 사람의 지금 소득 × {0}. 천장 = 부가가치 × {1}를 기본 임금 비율로 나눈 몫. 바닥이 천장보다 우선한다. 최저임금은 없다.', 'AI firms adjust wages weekly per job. Floor = current income of people who would move in × {0}. Ceiling = value added × {1}, split by base-wage weight. The floor wins. There is no minimum wage.'),
+    id: 'ai-wages', category: 'labour', title: t('시장 임금', 'Market wages'),
+    rule: t('회사마다 생산 건물 임금표가 하나다 (왕실의 생산 건물 포함). AI 회사(민간 상회와 왕실)는 매주 직종별 임금을 움직인다. 바닥 = 옮겨 올 사람의 지금 소득 × {0}. 천장 = 부가가치 × {1}를 기본 임금 비율로 나눈 몫. 바닥이 천장보다 우선한다. 최저임금은 없다.', 'Each company has one wage table for its producing buildings (crown producers included). AI companies (private houses and crowns) adjust wages weekly per job. Floor = current income of people who would move in × {0}. Ceiling = value added × {1}, split by base-wage weight. The floor wins. There is no minimum wage.'),
     formula: 'loss → ×0.98; vacancies > 5% & slow hiring → ×1.03; vacancies < 2% → ×0.99',
     params: [tune('wageOutside', '바닥 배율', 'Floor multiple', 'x'), tune('wageCeil', '천장 (부가가치 중)', 'Ceiling (share of value added)', 'pct'), tune('wageLossCut', '적자면 깎기', 'Cut on loss')],
     live: {
@@ -708,16 +708,16 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   },
   {
     id: 'state-wages', category: 'labour', title: t('국영 임금과 임금 지수', 'State wages and the wage index'),
-    rule: t('왕실의 모든 건물은 국영 임금을 준다: 기본 임금 × 임금 지수 × 국영 임금 단계 배율({0}). 임금 지수는 민간 노동자·농부 평균 임금 ÷ 기본 임금의 주간 이동평균이다.', 'Every crown building pays the state wage: base wage × wage index × state-wage step ({0}). The wage index is the weekly moving average of private labourer and farmer wages ÷ base wage.'),
+    rule: t('왕실의 정부 건물(행정청·건축사무소·학교)은 국영 임금을 준다: 기본 임금 × 임금 지수 × 국영 임금 단계 배율({0}). 왕실 생산 건물은 시장 임금이다. 임금 지수는 민간 노동자·농부 평균 임금 ÷ 기본 임금의 주간 이동평균이다.', 'Crown government buildings (administration, construction office, school) pay the state wage: base wage × wage index × state-wage step ({0}). Crown producers pay market wages. The wage index is the weekly moving average of private labourer and farmer wages ÷ base wage.'),
     formula: 'wage_s = baseWage_s × index × level',
     params: [tune('govWageLevels', '국영 임금 단계', 'State wage steps', 'x')],
     live: {
       pick: ['kingdom'], run: (w, ctx) => {
         const k = kingdomOfCtx(w, ctx), gov = govOf(w, k);
-        return { rows: [row('임금 지수', 'Wage index', k.wageIndex ?? 1, 'x'), row('국영 임금 단계', 'State wage step', k.budget.wages), row('국영 노동자 임금', 'State labourer wage', gov?.wages.unskilled ?? 0, 'florin'), row('국영 기술자 임금', 'State skilled wage', gov?.wages.skilled ?? 0, 'florin')] };
+        return { rows: [row('임금 지수', 'Wage index', k.wageIndex ?? 1, 'x'), row('국영 임금 단계', 'State wage step', k.budget.wages), row('국영 노동자 임금', 'State labourer wage', gov?.stateWages?.unskilled ?? 0, 'florin'), row('국영 기술자 임금', 'State skilled wage', gov?.stateWages?.skilled ?? 0, 'florin'), row('왕실 생산 노동자 임금', 'Crown producer labourer wage', gov?.wages.unskilled ?? 0, 'florin')] };
       },
     },
-    related: ['budget-steps', 'ai-wages'], seenIn: ['finance'], source: ['finance.ts updateWageIndex', 'finance.ts applyStateWages'], design: ['9.2', '7.3'],
+    related: ['budget-steps', 'ai-wages'], seenIn: ['finance'], source: ['finance.ts updateWageIndex', 'finance.ts applyStateWages', 'economy.ts wagesAt'], design: ['9.2', '7.3'],
   },
   {
     id: 'migration', category: 'labour', title: t('이주', 'Migration'),
@@ -1111,7 +1111,7 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   },
   {
     id: 'budget-steps', category: 'state', title: t('정책 단계', 'Policy steps'),
-    rule: t('금액 편성은 없다. 손잡이는 세금 수준·국영 임금·복지의 세 단계(1~5, 3이 보통)다. 연구는 돈이 들지 않는다. 정부 건물(행정청·건축사무소·학교)은 늘 다 돈다. 행정청·학교는 국고가 운영비를 내고, 건축사무소는 공사 수수료로 운영비를 낸다. 국고가 비면 국채로 낸다. 수지 표는 손잡이별로 묶는다: 세금 수준 → 세금, 국영 임금 → 정부 건물 임금·국영 사업 손익(건축사무소 포함)·왕실 공사, 복지 → 복지, 나머지(관세·주조·정부 건물 원료·국채 이자)는 손잡이가 없다.', 'There is no line-item budget. The knobs are three steps (1–5, 3 is normal): tax level, state wages, welfare. Research costs no money. Government buildings always run at full. The treasury pays administration and schools; construction offices pay their way from construction fees. When the treasury is empty it issues bonds. The budget table groups lines by knob: tax level → taxes; state wages → government wages, state enterprises (construction offices included) and crown construction; welfare → welfare; the rest (tariffs, minting, government inputs, bond interest) has no knob.'),
+    rule: t('금액 편성은 없다. 손잡이는 세금 수준·국영 임금·복지의 세 단계(1~5, 3이 보통)다. 연구는 돈이 들지 않는다. 정부 건물(행정청·건축사무소·학교)은 늘 다 돈다. 행정청·학교는 국고가 운영비를 내고, 건축사무소는 공사 수수료로 운영비를 낸다. 국고가 비면 국채로 낸다. 수지 표는 손잡이별로 묶는다: 세금 수준 → 세금, 국영 임금 → 정부 건물 임금·국영 사업 손익의 건축사무소 임금·왕실 공사 (왕실 생산 건물 임금은 시장 임금이라 손잡이와 상관없다), 복지 → 복지, 나머지(관세·주조·정부 건물 원료·국채 이자)는 손잡이가 없다.', 'There is no line-item budget. The knobs are three steps (1–5, 3 is normal): tax level, state wages, welfare. Research costs no money. Government buildings always run at full. The treasury pays administration and schools; construction offices pay their way from construction fees. When the treasury is empty it issues bonds. The budget table groups lines by knob: tax level → taxes; state wages → government wages, construction-office wages inside state enterprises, and crown construction (crown producers pay market wages, outside the knob); welfare → welfare; the rest (tariffs, minting, government inputs, bond interest) has no knob.'),
     params: [tune('taxLevels', '세금 수준', 'Tax level', 'x'), tune('govWageLevels', '국영 임금', 'State wages', 'x'), tune('welfareLevels', '복지 목표 생활수준', 'Welfare target SoL')],
     live: {
       pick: ['kingdom'], run: (w, ctx) => {
@@ -1256,7 +1256,7 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   },
   {
     id: 'ai-outlook', category: 'ai', title: t('장기 손익 전망', 'Long-run valuation'),
-    rule: t('가동률 1/0.75/0.5/0.25 중 손익이 가장 큰 값을 쓴다. 가격 = (장기 가격 + 현지 가격) ÷ 2. 장기 가격은 대륙 수요(공사 중 투입·대체 수요 포함)와 공급(공사 중 산출 포함)을 가격 공식에 넣은 값이다. 파는 쪽 가격에는 잠재 수요(기본가로 더 나은 방식으로 바꾸면 더 쓸 투입재) × {3}도 센다. {1} = 1이면 그중 실제로 바꿀 수 있는 몫만: 그 지역에서 데려올 사람 ÷ 그 지역 후보들이 더 필요한 사람 (직종마다, 최대 1) × 다른 새 투입재가 남는 공급으로 채워지는 비율. 민간 임금은 max(지금 임금, 기본 × {0}). {2} = 1이면 새로 짓는 레벨의 매출과 원료비에 투입 충족을 곱한다 (인건비는 그대로): 투입재마다 min(1, 남는 양 ÷ 그 가동률의 필요) 중 가장 작은 값. 남는 양 = 대륙 공급(이동평균, 절반 넘게 지은 공사의 산출 포함) − 대륙 수요(이동평균) − 공사 중 건물의 투입이고, 같은 주에 착공을 정할 때마다 그 투입을 뺀다. 아무도 만들지도(공사 중 포함) 쓰지도 않는 투입재는 1로 본다 (첫 공사).', 'Use the best of utilisation 1/0.75/0.5/0.25. Price = (long-run + local) ÷ 2; long-run price feeds continental demand (incl. pending inputs, substitution) and supply (incl. pending output) into the price formula. Sell-side prices also count latent demand (extra inputs of better methods at base prices) × {3}. With {1} = 1 only the feasible share counts: people the region can supply ÷ extra people its candidates need (per skill, at most 1) × how far spare supply covers the other new inputs. Private wages = max(current, base × {0}). With {2} = 1 revenue and input cost of new levels are multiplied by input fill (wages are not): the smallest of min(1, spare ÷ need at that utilisation) over inputs. Spare = continental supply (moving average, incl. output of projects more than half built) − continental demand (moving average) − inputs of buildings under construction; each start decided in the same week subtracts its inputs. An input nobody makes (incl. projects) or uses counts as fully filled (first project).'),
+    rule: t('가동률 1/0.75/0.5/0.25 중 손익이 가장 큰 값을 쓴다. 가격 = (장기 가격 + 현지 가격) ÷ 2. 장기 가격은 대륙 수요(공사 중 투입·대체 수요 포함)와 공급(공사 중 산출 포함)을 가격 공식에 넣은 값이다. 파는 쪽 가격에는 잠재 수요(기본가로 더 나은 방식으로 바꾸면 더 쓸 투입재) × {3}도 센다. {1} = 1이면 그중 실제로 바꿀 수 있는 몫만: 그 지역에서 데려올 사람 ÷ 그 지역 후보들이 더 필요한 사람 (직종마다, 최대 1) × 다른 새 투입재가 남는 공급으로 채워지는 비율. 생산 건물 임금은 민간·왕실 모두 max(지금 임금, 기본 × {0}) (왕실 행정청은 국영 임금). {2} = 1이면 새로 짓는 레벨의 매출과 원료비에 투입 충족을 곱한다 (인건비는 그대로): 투입재마다 min(1, 남는 양 ÷ 그 가동률의 필요) 중 가장 작은 값. 남는 양 = 대륙 공급(이동평균, 절반 넘게 지은 공사의 산출 포함) − 대륙 수요(이동평균) − 공사 중 건물의 투입이고, 같은 주에 착공을 정할 때마다 그 투입을 뺀다. 아무도 만들지도(공사 중 포함) 쓰지도 않는 투입재는 1로 본다 (첫 공사).', 'Use the best of utilisation 1/0.75/0.5/0.25. Price = (long-run + local) ÷ 2; long-run price feeds continental demand (incl. pending inputs, substitution) and supply (incl. pending output) into the price formula. Sell-side prices also count latent demand (extra inputs of better methods at base prices) × {3}. With {1} = 1 only the feasible share counts: people the region can supply ÷ extra people its candidates need (per skill, at most 1) × how far spare supply covers the other new inputs. Producer wages = max(current, base × {0}) for private houses and crowns alike (crown administrations use the state wage). With {2} = 1 revenue and input cost of new levels are multiplied by input fill (wages are not): the smallest of min(1, spare ÷ need at that utilisation) over inputs. Spare = continental supply (moving average, incl. output of projects more than half built) − continental demand (moving average) − inputs of buildings under construction; each start decided in the same week subtracts its inputs. An input nobody makes (incl. projects) or uses counts as fully filled (first project).'),
     params: [tune('investWage', '임금 바닥', 'Wage floor', 'x'), tune('latentFeasible', '바꿀 수 있는 몫만', 'Feasible share only'), tune('aiInputFill', '투입 충족', 'Input fill'), tune('latentWeight', '잠재 수요 배율', 'Latent demand weight', 'x')],
     related: ['price-formula', 'ai-construction', 'substitution'], seenIn: [], source: ['outlook.ts valueMethod', 'outlook.ts marketOutlook'], design: ['10'],
   },
