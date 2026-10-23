@@ -1,7 +1,8 @@
 export * from './types';
 export * from './data';
 export * from './economy';
-export { createWorld, splitKingdoms, START_CASH, PLAYER_ID } from './world';
+export { createWorld, splitKingdoms, START_CASH, START_TRADE_LEVELS, PLAYER_ID } from './world';
+export { postCap, postUsable } from './market';
 export type { CreateWorldOptions } from './world';
 export { step, recordHistory, needSplit, birthRateAt, mortalityAt, growthAt, STARVATION_LINE } from './tick';
 export { isDistressed, SEIZURE_WEEKS, DISTRESS_DEBT_RATIO, landlordJobs, migrateWorld } from './compat';

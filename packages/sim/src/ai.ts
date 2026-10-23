@@ -7,7 +7,7 @@ import { committedCost, favours, funderWeight, lawRevenue, ownerBuildings, owner
 import { privatizeLevel } from './production';
 import { policyStatus } from './policy';
 import { subsistenceWage } from './labor';
-import { baseValue, marketOutlook, techValue, valueMethod } from './outlook';
+import { baseValue, longRunWages, marketOutlook, techValue, valueMethod } from './outlook';
 import type { Outlook } from './outlook';
 import { kingdomById } from './kingdoms';
 import { STAFFING_HORIZON, expectedStaffing, labourPool, laborAvailability, takeFromPool } from './staffing';
@@ -421,15 +421,17 @@ export const TRADE_TURN = 0.5;
 
 /**
  * 무역소 levels 레벨(방식 m)의 하루 손익 (AI): 이 지역 교역 수요(산 주문 + 금고가 모자라 잘린 주문, Region.trade 이동평균) 중
- * 다른 무역소(self 를 뺀 그 지역 모든 무역소, 레벨 × 레벨당 유보액 × TRADE_TURN)가 다 사고 남는 몫을 이 레벨들의 하루 매입 한도까지 사서
- * 기대 이익률(값 차이 − 운임 − 관세)만큼 번다고 본다. 거기서 인건비를 뺀다
+ * 다른 무역소(self 를 뺀 그 지역 모든 무역소와 공사 중인 무역소, 레벨 × 레벨당 유보액 × TRADE_TURN)가 다 사고 남는 몫을 이 레벨들의 하루 매입 한도까지 사서
+ * 기대 이익률(값 차이 − 운임 − 관세)만큼 번다고 본다. 거기서 인건비를 뺀다 (짓기 판단과 같은 장기 임금, outlook.ts longRunWages)
  */
 export function tradeValuation(w: World, c: Company, r: Region, m: MethodDef, levels: number, self?: Building): { wageCost: number; profit: number } {
   const t = r.trade;
-  const wageCost = wageCostOf(m, c.wages, c.state) * levels;
+  const wageCost = wageCostOf(m, longRunWages(c), c.state) * levels;
   if (!t) return { wageCost, profit: -wageCost };
   let others = 0;
   for (const x of w.buildings) if (x !== self && x.typeId === TRADING_POST && x.regionId === r.id) others += x.level * tradeReserveOf(x.methodId) * TRADE_TURN;
+  // 공사 중인 무역소도 곧 살 몫으로 센다 (같은 주에 여러 공사를 넣거나, 잘린 주문 기록이 공사가 끝나기 전까지 줄지 않아 겹쳐 짓지 않게)
+  for (const k of w.constructions) if (k.typeId === TRADING_POST && k.regionId === r.id) others += (k.levels ?? 1) * tradeReserveOf(k.methodId) * TRADE_TURN;
   const extra = Math.min(levels * tradeReserveOf(m.id) * TRADE_TURN, Math.max(0, t.buy + t.cut - others));
   return { wageCost, profit: extra * Math.max(0, t.margin) - wageCost };
 }
