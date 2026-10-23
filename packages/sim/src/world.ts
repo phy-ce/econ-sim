@@ -89,8 +89,8 @@ function newCompany(id: number, name: string, color: string, kingdomId: number, 
   const wages = Object.fromEntries(SKILLS.map((s) => [s, SKILL_DEFS[s].baseWage * (isPlayer ? 1 : 0.8)])) as Record<Skill, number>;
   return {
     id, name, color, isPlayer, kingdomId, state, cash, wages,
-    // 왕실 임금은 정책(국영 임금 수준)이 정한다. 시장임금 정책은 민간 플레이어만 쓴다
-    wageOffset: isPlayer && !state ? emptyJobs() : null,
+    // 플레이어는 시장임금 정책(시장 임금 + 0%)으로 시작한다. 왕실도 생산 건물 임금은 이것으로 정하고, 정부 건물 임금은 국영 임금 단계가 정한다
+    wageOffset: isPlayer ? emptyJobs() : null,
     weekProfit: 0, lastWeekProfit: 0, weekStartCash: cash, debt: 0, revenueEma: 0, ledger: emptyLedger(), lastLedger: emptyLedger(),
     distressWeeks: 0, buildPoints: 0, buildCost: 0,
     research: { points: 0, current: null, progress: {}, known: [...START_TECHS] },
