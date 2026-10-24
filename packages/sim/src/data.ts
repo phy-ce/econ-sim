@@ -678,7 +678,10 @@ export const SUBSISTENCE = {
    * 그 방식의 농장이 들어서면 그 칸의 일자리가 준다. 가동률·충원율이 1보다 낮으면 실제 일자리는 더 적다 (가동률 24~61%인 기본 방식 섬유 농장은 칸마다 120~300명)
    */
   workersPerCell: 500,
-  output: { grain: 2.34, cloth: 0.2, timber: 0.2, liquor: 0.225 } as Partial<Record<GoodId, number>>,
+  // 의복·술 0.05 (2026-10-25 사용자 "1은 진행", 그 전 0.2·0.225). 비교: wt-reserveai d7e1735, 20년 × 시드 1·2 (보고서 2026-10-25-tenant20).
+  // 20년 평균 연 총생산(시드 1/2) 지금 130/131, 0.15 125/133, 0.1 127/141, 0.05 162/187. 평균 레벨 552/500, 513/521, 552/482, 587/613.
+  // 0.05에서 의복·술 값이 1~3년차 기본가 0.8~1.3배(지금 0.25배 하한). 약점: 모든 후보에서 인구가 20년에 4.97 → 4.2M, 소작농 생활수준 1.0(하한)
+  output: { grain: 2.34, cloth: 0.05, timber: 0.2, liquor: 0.05 } as Partial<Record<GoodId, number>>,
 };
 /** 소작농 노동 인구 1명의 하루 산출 (기상 조건 전) = SUBSISTENCE.output, 없는 상품은 0 */
 export function tenantYield(g: GoodId): number {
