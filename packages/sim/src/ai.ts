@@ -1,6 +1,6 @@
 import { BUILDING_BY_ID, buildPointsOf, BUILDING_TYPES, EDUCATION_FLOOR, EDUCATION_RANGE, GOOD_IDS, GOODS, SKILL_DEFS, TECH_BY_ID, TICKS_PER_WEEK, TICKS_PER_YEAR, TRADING_POST, TUNE, getMethod, regionPerk, tradeEscrowPerLevel, tradeReserveOf } from './data';
 import { withEstimateCache, regionAvgWealth, regionPopulation, wageCostOf,
-  availableMethods, ownBuildingAt, builderOf, canBuildType, kingdomGdp, paysDividend, paysShare, companyById, constructionEstimate, creditLimit, depositFree, efficiency, estimateMethod, harvestFactor, hasBuilder, isGovernment, regionById, wagesAt, researchableTechs, roomFor, sellsShares, slots,
+  availableMethods, ownBuildingAt, builderOf, canBuildType, kingdomGdp, paysDividend, paysShare, companyById, constructionEstimate, creditLimit, depositFree, efficiency, estimateMethod, harvestFactor, hasBuilder, isGovernment, regionById, wagesAt, researchableTechs, roomFor, sellsShares, slots, hash01,
 } from './economy';
 import { MAX_CONCURRENT_CONSTRUCTIONS, MAX_LEVELS_PER_PROJECT, applyCommand } from './commands';
 import { committedCost, favours, funderWeight, hasReserve, lawRevenue, ownerBuildings, ownerFunds, reserveCap, reserveOf, treasuryFree } from './finance';
@@ -12,7 +12,7 @@ import type { Outlook } from './outlook';
 import { kingdomById } from './kingdoms';
 import { STAFFING_HORIZON, expectedStaffing, labourPool, laborAvailability, takeFromPool } from './staffing';
 import { LITERACY_PER_WEALTH, workforce } from './pops';
-import { rand } from './rng';
+import { clamp, rand } from './rng';
 import { BUDGET_STEPS, INVEST_LAWS, SKILLS, expOf, isLowerJob, literacyOf } from './types';
 import type { BudgetItem, Building, Company, GoodId, Kingdom, MethodDef, Region, Skill, TaxLaw, WelfareLaw, World } from './types';
 import { welfareShortOf, welfareWeekly } from './welfare';
@@ -1114,8 +1114,11 @@ function reserveLevels(w: World, c: Company, canStart: () => boolean, free: () =
   for (const b of [...w.buildings]) {
     if (b.companyId !== c.id || !reserveRuled(b)) continue;
     if (b.shrinking || w.constructions.some((k) => k.targetBuildingId === b.id)) { delete b.richWeeks; delete b.brokeWeeks; continue; }
-    const res = b.reserve ?? 0;
-    const rich = res >= reserveCap(b) * RESERVE_FULL;
+    const res = b.reserve ?? 0, cap = reserveCap(b);
+    // 증설은 확률로 (2026-10-25 사용자 "확률분포로"): 유보 자산이 상한의 TUNE.reserveGrowFrom 을 넘은 만큼 확률이 오르고, 가득 차면 주에 TUNE.reserveGrowMax
+    const fillR = cap > 0 ? res / cap : 0;
+    const pGrow = TUNE.reserveGrowMax * clamp((fillR - TUNE.reserveGrowFrom) / Math.max(1e-9, 1 - TUNE.reserveGrowFrom), 0, 1);
+    const rich = TUNE.reserveGrowMax > 0 ? hash01(w.seed, b.id, Math.floor(w.tick / TICKS_PER_WEEK), 77) < pGrow : res >= cap * RESERVE_FULL;
     // 새 건물(시작 건물은 0일에 생긴 것으로 본다)은 RAMP_WEEKS 동안 사람을 뽑으며 내는 적자를 세지 않는다
     const ramping = w.tick - (b.builtTick ?? 0) < RAMP_WEEKS * TICKS_PER_WEEK;
     const broke = res <= 0 && b.profitEma * TICKS_PER_WEEK < 0 && !ramping && harvestFactor(w, b.regionId, BUILDING_BY_ID[b.typeId].land) >= 1;
@@ -1127,7 +1130,7 @@ function reserveLevels(w: World, c: Company, canStart: () => boolean, free: () =
       delete b.brokeWeeks;
       continue;
     }
-    if (nr < RESERVE_STREAK || inDebt || !canStart() || roomFor(w, b.regionId, b.typeId) < 1) continue;
+    if ((TUNE.reserveGrowMax > 0 ? !rich : nr < RESERVE_STREAK) || inDebt || !canStart() || roomFor(w, b.regionId, b.typeId) < 1) continue;
     const cost = constructionEstimate(w, c, b.typeId).cost;
     if (!Number.isFinite(cost) || free() < cost) continue;
     if (start({ regionId: b.regionId, typeId: b.typeId, methodId: b.methodId, levels: 1, score: 0 }, 'reserve')) delete b.richWeeks;

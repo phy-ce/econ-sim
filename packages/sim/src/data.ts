@@ -580,6 +580,10 @@ export const TUNE = {
   aiReserveRule: 1,
   // 유보 기준 AI: 유보 0·적자가 이 주 수 이어지면 1레벨 철거 (2026-10-25 사용자 "26주로 늘려서", 그 전 4주)
   reserveShrinkWeeks: 26,
+  // 유보 기준 AI 증설 확률 (2026-10-25 사용자 "확률분포로"): 주마다 확률 = reserveGrowMax × (유보 ÷ 상한 − reserveGrowFrom) ÷ (1 − reserveGrowFrom), 0~reserveGrowMax.
+  // 가득 차면 주에 25% (평균 4주에 1레벨, 그 전 규칙 "90% 4주"와 비슷하게), 절반 아래면 0. reserveGrowMax 0 이면 그 전 규칙. 값은 비교 안 함 (근거 없음)
+  reserveGrowMax: 0.25,
+  reserveGrowFrom: 0.5,
   aiMixedMethods: 0, // 1 = 건물 전체를 바꿀 수 없을 때 같은 지역에 더 나은 방식 1~2레벨을 따로 짓는다 (세계 규칙이 바뀌어 사용자 결정 필요, DECISIONS 7-21)
   officeRichWeeks: 52,
   officeSelfPay: 0,

@@ -93,7 +93,7 @@ export function roomFor(w: World, regionId: number, typeId: string): number {
 //   같은 계절이면 자기 진원지가 이웃보다 먼저다
 
 /** 정수 4개 → 0..1 (같은 입력이면 늘 같은 값) */
-function hash01(a: number, b: number, c: number, d: number): number {
+export function hash01(a: number, b: number, c: number, d: number): number {
   let h = Math.imul(a ^ 0x9e3779b9, 0x85ebca6b) ^ Math.imul(b + 0x632be59b, 0xc2b2ae35) ^ Math.imul(c + 0x27d4eb2f, 0x165667b1) ^ Math.imul(d + 0x7f4a7c15, 0x9e3779b1);
   h ^= h >>> 16; h = Math.imul(h, 0x85ebca6b); h ^= h >>> 13; h = Math.imul(h, 0xc2b2ae35); h ^= h >>> 16;
   return (h >>> 0) / 4294967296;
