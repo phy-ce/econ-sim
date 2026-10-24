@@ -34,7 +34,9 @@ export const GOOD_IDS: GoodId[] = [
 ];
 
 export const GOODS: Record<GoodId, GoodDef> = {
-  grain: { id: 'grain', name: '곡물', nameEn: 'Grain', basePrice: 2 },
+  // 곡물 기본가 1 (2026-10-25 사용자 결정 "1로 하고 농장 생산량을 거기 맞춰볼까", DECISIONS 7-27): 그 전 2. 곡물 시장가가 기본가의 0.35~0.6배에 머물렀다.
+  // 농장 산출과 곡물을 쓰는 방식의 곡물 투입은 2배로 맞춰 기본가 기준 이익률·원료 비중을 지켰다. 식량 필요에서 곡물 1개는 그대로 2를 채운다 (NEEDS fill)
+  grain: { id: 'grain', name: '곡물', nameEn: 'Grain', basePrice: 1 },
   fiber: { id: 'fiber', name: '섬유', nameEn: 'Fibre', basePrice: 2 },
   timber: { id: 'timber', name: '목재', nameEn: 'Timber', basePrice: 2 },
   ore: { id: 'ore', name: '철광석', nameEn: 'Iron ore', basePrice: 4 },
@@ -50,7 +52,7 @@ export const GOODS: Record<GoodId, GoodDef> = {
   luxury_cloth: { id: 'luxury_cloth', name: '고급 의복', nameEn: 'Fine clothes', basePrice: 30 },
   meat: { id: 'meat', name: '고기', nameEn: 'Meat', basePrice: 16 },
   paper: { id: 'paper', name: '종이', nameEn: 'Paper', basePrice: 4 },
-  // 빅토리아3 술 기본가 30 = 곡물 20의 1.5배 (vic3.paradoxwikis.com/Goods). 여기서도 곡물 2의 1.5배
+  // 빅토리아3 술 기본가 30 = 곡물 20의 1.5배 (vic3.paradoxwikis.com/Goods). 곡물 2였을 때 그 1.5배로 정했다 (2026-10-25 곡물 1로 내린 뒤에도 그대로)
   liquor: { id: 'liquor', name: '술', nameEn: 'Liquor', basePrice: 3 },
 };
 
@@ -153,12 +155,15 @@ export const BUILD_POINT_FACTOR = 0.15;
  * - 가공: 원료가 매출의 절반 (목장은 농부만 쓴다)
  * - 중공업: 원료가 매출의 60%, 기술자가 많다
  * - 숙련(사치품): 원료가 적고 기술자가 많다
+ * - 운송 (2026-10-25 사용자 "철도는 그냥 숫자를 조절하면 되는거아님?"): 가공처럼 원료가 매출의 절반이고 1레벨이 100명이다.
+ *   300명이던 짐마차 1레벨이 운송 3,550을 내서 5년 실행의 대륙 운송 수요(하루 600~1,600)보다 컸다 (운송은 지역 밖으로 못 나가 한 레벨이 시장을 넘친다)
  */
 export const INDUSTRIES: Record<Industry, IndustryDef> = {
   primary: { id: 'primary', name: '1차 산업', nameEn: 'Primary', workers: 500, skillShare: 0.1, inputShare: [0, 0.05] },
   processing: { id: 'processing', name: '가공', nameEn: 'Processing', workers: 300, skillShare: 0.1, inputShare: [0.45, 0.55] },
   heavy: { id: 'heavy', name: '중공업', nameEn: 'Heavy industry', workers: 300, skillShare: 0.3, inputShare: [0.55, 0.65] },
   luxury: { id: 'luxury', name: '숙련', nameEn: 'Skilled crafts', workers: 300, skillShare: 0.4, inputShare: [0.15, 0.25] },
+  transport: { id: 'transport', name: '운송', nameEn: 'Transport', workers: 100, skillShare: 0.1, inputShare: [0.45, 0.55] },
 };
 /** 산업 유형 규칙의 허용 폭: 기본 방식 숙련 비율 ±5%p, 윗단계 원료 비중은 유형 범위 ±10%p (cli/methods_audit.ts) */
 export const INDUSTRY_SKILL_TOL = 0.05;
@@ -207,9 +212,9 @@ export const BUILDING_TYPES: BuildingTypeDef[] = [
   {
     id: 'farm', name: '곡물 농장', nameEn: 'Grain farm', land: 'arable', buildPoints: 200, industry: 'primary',
     methods: [
-      m({ id: 'farm_basic', name: '곡물 재배', nameEn: 'Grain farming', workers: farmJobs(500), inputs: { tools: 10 }, outputs: { grain: 3200 } }),
-      m({ id: 'farm_tools', name: '쇠 농기구', nameEn: 'Iron implements', tech: 'iron_tools', workers: farmJobs(300, 50), inputs: { tools: 50 }, outputs: { grain: 3450 } }),
-      m({ id: 'farm_mech', name: '농업 기계', nameEn: 'Farm machinery', tech: 'agri_mech', workers: farmJobs(150, 40, 10), inputs: { tools: 30, fuel: 100, electronics: 30 }, outputs: { grain: 4450 } }),
+      m({ id: 'farm_basic', name: '곡물 재배', nameEn: 'Grain farming', workers: farmJobs(500), inputs: { tools: 10 }, outputs: { grain: 6400 } }),
+      m({ id: 'farm_tools', name: '쇠 농기구', nameEn: 'Iron implements', tech: 'iron_tools', workers: farmJobs(300, 50), inputs: { tools: 50 }, outputs: { grain: 6900 } }),
+      m({ id: 'farm_mech', name: '농업 기계', nameEn: 'Farm machinery', tech: 'agri_mech', workers: farmJobs(150, 40, 10), inputs: { tools: 30, fuel: 100, electronics: 30 }, outputs: { grain: 8900 } }),
     ],
   },
   {
@@ -224,7 +229,7 @@ export const BUILDING_TYPES: BuildingTypeDef[] = [
     // 곡물을 사료로 먹여 고기를 낸다. 곡물이 쌀수록 남는다. 가공 유형이지만 농부만 쓴다 (숙련 0)
     id: 'ranch', name: '목장', nameEn: 'Livestock ranch', land: 'arable', buildPoints: 300, industry: 'processing',
     methods: [
-      m({ id: 'ranch_basic', name: '가축 사육', nameEn: 'Livestock raising', workers: farmJobs(300), inputs: { tools: 10, grain: 2450 }, outputs: { meat: 630 } }),
+      m({ id: 'ranch_basic', name: '가축 사육', nameEn: 'Livestock raising', workers: farmJobs(300), inputs: { tools: 10, grain: 4900 }, outputs: { meat: 630 } }),
     ],
   },
   {
@@ -255,8 +260,8 @@ export const BUILDING_TYPES: BuildingTypeDef[] = [
   {
     id: 'foodplant', name: '식료품 공장', nameEn: 'Grocery plant', land: 'plot', buildPoints: 300, industry: 'processing',
     methods: [
-      m({ id: 'food_manual', name: '수작업 가공', nameEn: 'Manual processing', tech: 'milling', workers: jobs(270, 30), inputs: { tools: 10, grain: 2600 }, outputs: { food: 2650 } }),
-      m({ id: 'food_machine', name: '기계 가공', nameEn: 'Machine processing', tech: 'food_machinery', workers: jobs(120, 60, 20), inputs: { tools: 30, fuel: 100, grain: 3300 }, outputs: { food: 3600 } }),
+      m({ id: 'food_manual', name: '수작업 가공', nameEn: 'Manual processing', tech: 'milling', workers: jobs(270, 30), inputs: { tools: 10, grain: 5200 }, outputs: { food: 2650 } }),
+      m({ id: 'food_machine', name: '기계 가공', nameEn: 'Machine processing', tech: 'food_machinery', workers: jobs(120, 60, 20), inputs: { tools: 30, fuel: 100, grain: 6600 }, outputs: { food: 3600 } }),
     ],
   },
   {
@@ -264,8 +269,8 @@ export const BUILDING_TYPES: BuildingTypeDef[] = [
     // 숫자는 식료품 공장과 같은 꼴(가공: 300명, 원료가 매출의 절반)이고 산출만 술 기본가 3에 맞췄다. 단식 증류는 기술 없이 짓는다
     id: 'distillery', name: '양조장', nameEn: 'Distillery', land: 'plot', buildPoints: 300, industry: 'processing',
     methods: [
-      m({ id: 'liquor_pot', name: '단식 증류', nameEn: 'Pot stills', workers: jobs(270, 30), inputs: { tools: 10, grain: 2600 }, outputs: { liquor: 3500 } }),
-      m({ id: 'liquor_column', name: '연속식 증류', nameEn: 'Column stills', tech: 'food_machinery', workers: jobs(120, 60, 20), inputs: { tools: 30, fuel: 100, grain: 3300 }, outputs: { liquor: 4800 } }),
+      m({ id: 'liquor_pot', name: '단식 증류', nameEn: 'Pot stills', workers: jobs(270, 30), inputs: { tools: 10, grain: 5200 }, outputs: { liquor: 3500 } }),
+      m({ id: 'liquor_column', name: '연속식 증류', nameEn: 'Column stills', tech: 'food_machinery', workers: jobs(120, 60, 20), inputs: { tools: 30, fuel: 100, grain: 6600 }, outputs: { liquor: 4800 } }),
     ],
   },
   {
@@ -319,11 +324,12 @@ export const BUILDING_TYPES: BuildingTypeDef[] = [
     ],
   },
   {
-    // 짐마차는 말 먹이(곡물)와 마차(목재)를, 증기 철도는 공구 대신 기계와 석탄을 쓴다
-    id: 'railway', name: '운송 조합', nameEn: 'Carters\' guild', land: 'plot', buildPoints: 350, industry: 'processing',
+    // 짐마차는 말 먹이(곡물)와 마차(목재)를, 증기 철도는 공구 대신 기계와 석탄을 쓴다.
+    // 산업 유형 운송(100명, 2026-10-25): 옛 가공 300명 숫자(짐마차 270/30, 곡물 2,600·목재 1,300 → 운송 3,550)의 약 1/3
+    id: 'railway', name: '운송 조합', nameEn: 'Carters\' guild', land: 'plot', buildPoints: 100, industry: 'transport',
     methods: [
-      m({ id: 'rail_wagon', name: '짐마차', nameEn: 'Freight wagons', tech: 'wagonway', workers: jobs(270, 30), inputs: { tools: 10, grain: 1300, timber: 1300 }, outputs: { transport: 3550 } }),
-      m({ id: 'rail_steam', name: '증기 철도', nameEn: 'Steam railway', tech: 'steam_rail', workers: jobs(120, 60, 20), inputs: { electronics: 100, fuel: 1750 }, outputs: { transport: 4850 } }),
+      m({ id: 'rail_wagon', name: '짐마차', nameEn: 'Freight wagons', tech: 'wagonway', workers: jobs(90, 10), inputs: { tools: 10, grain: 800, timber: 400 }, outputs: { transport: 1150 } }),
+      m({ id: 'rail_steam', name: '증기 철도', nameEn: 'Steam railway', tech: 'steam_rail', workers: jobs(40, 20, 10), inputs: { electronics: 30, fuel: 610 }, outputs: { transport: 1650 } }),
     ],
   },
   {
@@ -414,7 +420,7 @@ export function scaleBonus(level: number): number {
  * - officeTargetDays: 건축사무소를 늘려 공사 대기를 이 일수 안으로 맞춘다
  * - officeUseFull: 사무소 포인트 중 이 비율 이상을 공사에 실제로 쓰고 있어야 사무소를 늘린다
  * - startsPerWeek: AI 회사 하나가 한 주에 새로 넣는 공사 수 상한
- * - luxuryLinear, luxuryQuad: 사치품 필요 = linear × (부 − 10) + quad × (부 − 10)²
+ * - luxuryLinear, luxuryQuad: 사치품 필요 = linear × (부 − 6) + quad × (부 − 6)², 고급 의복·고급 가구가 반씩
  * - meatLinear, meatQuad: 고기 필요 = linear × (부 − 8) + quad × (부 − 8)²
  * - intoxLinear: 기호품(술) 필요 = intoxLinear × min(부, 10). 식량 필요는 같은 만큼 줄어 묶음 합은 그대로다
  * - shrinkWeeks: 마지막 레벨의 손익이 이 주 수 동안 계속 마이너스면 AI가 철거를 시작한다
@@ -494,11 +500,11 @@ export const TUNE = {
   officeTargetDays: 30,
   officeUseFull: 0.9,
   startsPerWeek: 3,
-  luxuryLinear: 0.3,
-  luxuryQuad: 0.02,
+  luxuryLinear: 0.5,
+  luxuryQuad: 0.03,
   meatLinear: 0.3,
   meatQuad: 0.01,
-  intoxLinear: 0.05, // 기호품(술) 필요 = 이 값 × min(부, 10). 식량 필요에서 같은 만큼 뺀다 (DESIGN 11 "기호품", 재검증 필요 (조건 바뀜: 소작 산출 ×0.9, aiBuildNow 1, 2026-10-23))
+  intoxLinear: 0.1, // 기호품(술) 필요 = 이 값 × min(부, 10). 식량 필요에서 같은 만큼 뺀다 (DESIGN 11 "기호품", 재검증 필요 (조건 바뀜: 소작 산출 ×0.9, aiBuildNow 1, 2026-10-23))
   qualSkilledL: 0.4,
   qualExpertL: 0.6,
   qualRate: 0.25,
@@ -569,12 +575,26 @@ export const TUNE = {
   devLoss: 0.25, // 0·0.25 비교 (DESIGN 11). 발전 투자가 감수하는 손실: 잠재 수요까지 센 장기 손익 ≥ −인건비 × 이 값
   expandUtilMin: 0.5, // 0.5·0.7·끔 비교로 0.5 (DESIGN 11). 0 = 끔. 왕국 안 같은 종류·같은 산출 건물의 레벨 가중 가동률(꺼진 건물 0)이 이 값 미만이거나 장기 손익(profitEma) 합이 음수이면 그 방식은 새로 짓지도 늘리지도 않는다 (ai.ts glutOf)
   aiSwitchV2: 0, // 방식 비교 = 건물 전체 하루 손익 × 기대 충원율 × 투입 충족 (옛: 산출 1단위당 이윤, 일손 50% 기준, 공급 50% 기준)
+  // 유보 기준 AI (2026-10-25 사용자 요청 "유보액을 기준으로 건물을 늘리고 줄였으면 좋겠는데. + 신규투자", DECISIONS 7-27, DESIGN 10·11): 1 = 생산 건물은 유보 자산이 4주 차면 1레벨 증설, 바닥난 채 4주 적자면 1레벨 철거,
+  // 새 투자는 값이 기본가 1.25배 이상 4주(가)이거나 굶는 건물의 투입재(나)인 상품을 내는 건물이 없는 곳에 1레벨 (ai.ts reserveLevels·planTrials). 0 = 옛 전망 AI (pickProject·reviewLevels·발전 투자)
+  aiReserveRule: 1,
+  // 유보 기준 AI: 유보 0·적자가 이 주 수 이어지면 1레벨 철거 (2026-10-25 사용자 "26주로 늘려서", 그 전 4주)
+  reserveShrinkWeeks: 26,
+  // 1 = 부마다 묶음 합계를 그 전 곡선의 합으로 고정하고 구성만 바꾼다 (needsAt), 0 = 늘린 곡선 그대로
+  needFixedTotal: 1,
+  // 유보 기준 AI 증설 확률 (2026-10-25 사용자 "확률분포로"): 주마다 확률 = reserveGrowMax × (유보 ÷ 상한 − reserveGrowFrom) ÷ (1 − reserveGrowFrom), 0~reserveGrowMax.
+  // 가득 차면 주에 25% (평균 4주에 1레벨, 그 전 규칙 "90% 4주"와 비슷하게), 절반 아래면 0. reserveGrowMax 0 이면 그 전 규칙. 값은 비교 안 함 (근거 없음)
+  reserveGrowMax: 0.25,
+  reserveGrowFrom: 0.5,
   aiMixedMethods: 0, // 1 = 건물 전체를 바꿀 수 없을 때 같은 지역에 더 나은 방식 1~2레벨을 따로 짓는다 (세계 규칙이 바뀌어 사용자 결정 필요, DECISIONS 7-21)
   officeRichWeeks: 52,
   officeSelfPay: 0,
   laborPoach: 0,
   officeSchoolFirst: 0,
   needMul: {} as Partial<Record<NeedId, number>>,
+  // 비교용 가격 공식: 0 = 빅토리아3 공식(기본가 0.25~1.75배), > 0 = 기본가 × (구매 ÷ 판매)^priceExp 를 priceRange 로 자른다
+  priceExp: 0,
+  priceRange: [0.01, 10] as [number, number],
   startLumber: 1.2, // 1레벨이 일꾼 500명이 되어 1,000명 시절 0.6·0.2의 두 배
   startFiber: 0.4,
   startWorkshop: 3, // 1·2·3 비교 (DESIGN 11)
@@ -660,7 +680,10 @@ export const SUBSISTENCE = {
    * 그 방식의 농장이 들어서면 그 칸의 일자리가 준다. 가동률·충원율이 1보다 낮으면 실제 일자리는 더 적다 (가동률 24~61%인 기본 방식 섬유 농장은 칸마다 120~300명)
    */
   workersPerCell: 500,
-  output: { grain: 2.34, cloth: 0.2, timber: 0.2, liquor: 0.225 } as Partial<Record<GoodId, number>>,
+  // 의복·술 0.05 (2026-10-25 사용자 "1은 진행", 그 전 0.2·0.225). 비교: wt-reserveai d7e1735, 20년 × 시드 1·2 (보고서 2026-10-25-tenant20).
+  // 20년 평균 연 총생산(시드 1/2) 지금 130/131, 0.15 125/133, 0.1 127/141, 0.05 162/187. 평균 레벨 552/500, 513/521, 552/482, 587/613.
+  // 0.05에서 의복·술 값이 1~3년차 기본가 0.8~1.3배(지금 0.25배 하한). 약점: 모든 후보에서 인구가 20년에 4.97 → 4.2M, 소작농 생활수준 1.0(하한)
+  output: { grain: 2.34, cloth: 0.05, timber: 0.2, liquor: 0.05 } as Partial<Record<GoodId, number>>,
 };
 /** 소작농 노동 인구 1명의 하루 산출 (기상 조건 전) = SUBSISTENCE.output, 없는 상품은 0 */
 export function tenantYield(g: GoodId): number {
@@ -742,18 +765,25 @@ export const REGIONS: RegionDef[] = [
 // ---------------------------------------------------------------- 필요
 
 /**
- * 필요. 필요량은 소비 단위 1의 하루 금액(기본가)이고, 상품 1개는 기본가만큼 채운다.
+ * 필요. 필요량은 소비 단위 1의 하루 금액(기본가)이고, 상품 1개는 기본가만큼 채운다 (fill 을 주면 그만큼).
  * max: 그 상품이 채울 수 있는 최대 비중. appeal > 1 은 가공품(값이 내려가면 원자재 대신 돌아오는 수요)
+ * 예외 하나: 곡물 1개는 식량 2를 채운다 (기본가 1). 곡물 기본가를 2에서 1로 내리면서 먹는 양은 그대로 두었다 (2026-10-25, DECISIONS 7-27)
  */
-const opt = (good: GoodId, extra: { max?: number; appeal?: number } = {}) => ({ good, units: 1 / GOODS[good].basePrice, ...extra });
+const opt = (good: GoodId, extra: { max?: number; appeal?: number; fill?: number } = {}) => {
+  const { fill, ...rest } = extra;
+  return { good, units: 1 / (fill ?? GOODS[good].basePrice), ...rest };
+};
 export const NEEDS: NeedDef[] = [
-  { id: 'nourishment', name: '식량', nameEn: 'Basic food', options: [opt('grain'), opt('food', { appeal: 2 })] },
+  { id: 'nourishment', name: '식량', nameEn: 'Basic food', options: [opt('grain', { fill: 2 }), opt('food', { appeal: 2 })] },
   { id: 'heating', name: '난방', nameEn: 'Heating', options: [opt('timber'), opt('fuel', { appeal: 2 })] },
   { id: 'clothing', name: '의복', nameEn: 'Simple clothing', options: [opt('fiber', { max: 0.5 }), opt('cloth', { appeal: 2 })] },
   { id: 'standard_clothing', name: '표준 의복', nameEn: 'Standard clothing', options: [opt('cloth')] },
   { id: 'crude_items', name: '생활용품', nameEn: 'Crude items', options: [opt('timber', { max: 0.5 }), opt('furniture', { appeal: 2 })] },
   { id: 'household', name: '가정용품', nameEn: 'Household items', options: [opt('furniture')] },
-  { id: 'luxury', name: '사치품', nameEn: 'Luxury goods', options: [opt('luxury_furniture'), opt('luxury_cloth')] },
+  // 사치품은 고급 의복·고급 가구 두 필요로 나눈다 (2026-10-25 사용자 "이걸 합치면안되지"). 한 필요에 두면 대체 지수 10 때문에 싼 쪽이 거의 다 가져가,
+  // 공급이 없는 쪽은 값이 상한에 붙고 수요가 0이 되어 AI가 짓지 않았다. 빅토리아3는 한 필요(Luxury Items)지만 상품마다 최대 몫 0.5·최소 0.1이 있다 (VIC3_REFERENCE)
+  { id: 'fine_clothing', name: '고급 의복', nameEn: 'Fine clothing', options: [opt('luxury_cloth')] },
+  { id: 'fine_furniture', name: '고급 가구', nameEn: 'Fine furniture', options: [opt('luxury_furniture')] },
   { id: 'meat', name: '고기', nameEn: 'Meat', options: [opt('meat')] },
   { id: 'intoxicants', name: '기호품', nameEn: 'Intoxicants', options: [opt('liquor')] },
 ];
@@ -772,22 +802,36 @@ export function rawMax(max: number | undefined, wealth: number): number {
  * 부 단계별 필요 묶음 (소비 단위 1의 하루 금액). 묶음 값은 대략 부 × 0.75.
  * 식량과 기호품(술)을 합치면 부 1에서 1.6, 부 5에서 2, 부 30까지 늘고 멈춘다. 그중 기호품은 TUNE.intoxLinear × 부(10까지)이고 나머지가 식량이다.
  * 난방·의복·생활용품은 부 10까지 늘고 멈춘다.
- * 표준 의복과 가정용품은 부 5부터 생기고, 가정용품은 부가 오를수록 더 빨리 는다. 고기는 부 8부터, 사치품(고급 가구·고급 의복)은 부 10부터 생긴다
+ * 표준 의복과 가정용품은 부 3부터 생기고, 가정용품은 부가 오를수록 더 빨리 는다. 고기와 사치품(고급 의복·고급 가구, 반씩)은 부 6부터 생긴다
  */
 export function needsAt(wealth: number): Record<NeedId, number> {
-  const L = wealth, up = Math.max(0, L - 5), rich = Math.max(0, L - 10), fed = Math.max(0, L - 8);
+  const L = wealth, up = Math.max(0, L - 3), rich = Math.max(0, L - 6), fed = Math.max(0, L - 6), over10 = Math.min(Math.max(L - 10, 0), 20);
   const out: Record<NeedId, number> = {
-    // 식량 + 기호품 = 예전 식량 1.5 + 0.1 × min(부, 30): 부 10까지 늘던 식량 몫 중 intoxLinear 만큼이 술이 된다 (묶음 합은 그대로)
-    nourishment: 1.5 + (0.1 - TUNE.intoxLinear) * Math.min(L, 10) + 0.1 * Math.min(Math.max(L - 10, 0), 20),
+    // 2026-10-25 사용자 요청 (부가 오를 때 식량 외 수요가 너무 천천히 는다): 식량은 부 10 뒤 0.1 → 0.05씩, 술은 식량에서 떼지 않고 따로 더한다
+    nourishment: 1.5 + 0.05 * Math.min(L, 10) + 0.05 * over10,
+    // 술은 부 10에서 멈춘다. 부자의 술 수요는 나중에 고급 주류(와인 등)로 맡긴다 (사용자 2026-10-25)
     intoxicants: TUNE.intoxLinear * Math.min(L, 10),
-    heating: 0.1 * Math.min(L, 10),
-    clothing: 0.1 * Math.min(L, 10),
+    // 난방은 위 단계 상품이 없어 부 10 뒤에도 천천히 는다 (부 30에서 1.5)
+    heating: 0.1 * Math.min(L, 10) + 0.025 * over10,
+    clothing: 0.15 * Math.min(L, 10),
     standard_clothing: 0.2 * up,
-    crude_items: 0.1 * Math.min(L, 10),
+    crude_items: 0.15 * Math.min(L, 10),
     household: 0.2 * up + 0.01 * up * up,
-    luxury: TUNE.luxuryLinear * rich + TUNE.luxuryQuad * rich * rich,
+    // 사치품 필요 (linear·quad 곡선)를 고급 의복과 고급 가구가 반씩 나눈다
+    fine_clothing: 0.5 * (TUNE.luxuryLinear * rich + TUNE.luxuryQuad * rich * rich),
+    fine_furniture: 0.5 * (TUNE.luxuryLinear * rich + TUNE.luxuryQuad * rich * rich),
     meat: TUNE.meatLinear * fed + TUNE.meatQuad * fed * fed,
   };
+  // 묶음 합계는 부마다 정해져 있다 (2026-10-25 사용자 "그렇게 해봐": 합계는 그대로, 구성만 바꾼다). 합계 = 그 전(main) 곡선의 합.
+  // 식량은 위 값 그대로 두고, 나머지 필요를 위 비율대로 늘리거나 줄여 합계를 맞춘다. 잘살수록 식량 몫이 줄고 나머지 몫이 는다
+  if (TUNE.needFixedTotal) {
+    const u5 = Math.max(0, L - 5), r10 = Math.max(0, L - 10), f8 = Math.max(0, L - 8);
+    const total = 1.5 + 0.1 * Math.min(L, 10) + 0.1 * over10 + 0.3 * Math.min(L, 10) + 0.4 * u5 + 0.01 * u5 * u5 + 0.3 * r10 + 0.02 * r10 * r10 + 0.3 * f8 + 0.01 * f8 * f8;
+    let rest = 0;
+    for (const k in out) if (k !== 'nourishment') rest += out[k as NeedId];
+    const room = Math.max(0, total - out.nourishment);
+    if (rest > 0) for (const k in out) if (k !== 'nourishment') out[k as NeedId] *= room / rest;
+  }
   // 비교 실행용 필요량 배율 (기본은 비어 있다)
   for (const k in TUNE.needMul) out[k as NeedId] *= TUNE.needMul[k as NeedId]!;
   return out;

@@ -21,12 +21,12 @@ export function landlordJobs(_b: Building): number {
 const OLD_TECH_COST = [0, 12_000_000, 24_000_000, 40_000_000, 70_000_000];
 
 /**
- * 저장 파일을 불러온다 (불러오기 직후에 부른다). 지금 형식(17판)과 10~16판(레벨 소유·저택·금융가 금고·세법 셋·투자법·금융가 지분·복지법·국영 임금표)을 받고,
+ * 저장 파일을 불러온다 (불러오기 직후에 부른다). 지금 형식(18판)과 10~17판(레벨 소유·저택·금융가 금고·세법 셋·투자법·금융가 지분·복지법·국영 임금표)을 받고,
  * 그보다 옛 판은 받지 않는다 (null). 10판은 금융가 지분 모양을, 10·11판은 100배 값을, 13판까지는 돈 연구를, 14판까지는 옛 공사 수수료 기준값을, 16판까지는 왕실 국영 임금표를 바꾼다. 화면 표시용 사본은 다시 쓴다
  */
 export function migrateWorld(input: unknown): World | null {
   const w = input as Omit<World, 'version'> & { version: number };
-  if (!w || typeof w !== 'object' || w.version < 10 || w.version > 17) return null;
+  if (!w || typeof w !== 'object' || w.version < 10 || w.version > 18) return null;
   if (w.version === 10) {
     // 10판: 금융가 지분이 건물 id → 지분 수 객체였다 (정수 키는 오름차순으로 나온다)
     for (const p of w.pops) {
@@ -96,9 +96,13 @@ export function migrateWorld(input: unknown): World | null {
     for (const c of w.companies) if (c.state && !c.stateWages) c.stateWages = { ...c.wages };
     w.version = 17;
   }
+  if (w.version === 17) {
+    // 18판: 유보 기준 AI 의 연속 주 수(Building.richWeeks·brokeWeeks·builtTick, Region.hotWeeks)가 생겼다. 없으면 0이고 다음 주부터 센다
+    w.version = 18;
+  }
   // 나중에 더한 상품(술 등)은 옛 저장의 지역 시장에 기본가로 넣는다
   for (const r of w.regions ?? []) for (const g of GOOD_IDS) if (!r.market[g]) r.market[g] = newMarketGood(g);
-  // 교역은 무역소가 한다 (2026-10-23, 저장 모양은 같은 17판). 옛 상인 계정의 현금은 주인 없는 돈으로 옮긴다 (매주 지역 금융가로 간다).
+  // 교역은 무역소가 한다 (2026-10-23, 저장 모양은 17판부터 같다). 옛 상인 계정의 현금은 주인 없는 돈으로 옮긴다 (매주 지역 금융가로 간다).
   // 산 무역소가 없는 옛 화물은 그대로 팔리고 대금은 주인 없는 돈이 된다 (market.ts). 새 칸(Region.trade, Shipment.post, Construction.escrow)은 없어도 된다
   if (w.traders.cash || w.traders.capital) {
     w.fund += w.traders.cash;

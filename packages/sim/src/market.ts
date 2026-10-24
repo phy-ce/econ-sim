@@ -1,5 +1,5 @@
 import { CONSUMPTION_PER_CAPITA, GOOD_IDS, GOODS, NEEDS, SUBSISTENCE, TRADING_POST, TUNE, WORKFORCE_RATIO, getMethod, needsAt, rawMax, tenantYield, tradeReserveOf } from './data';
-import { CARTAGE_RATE, RAIL_RATE, borrow, harvestFactor, priceFormula, regionById, sellThrough, shippingRate, isSubsistence } from './economy';
+import { CARTAGE_RATE, RAIL_RATE, borrow, harvestFactor, priceBounds, priceFormula, regionById, sellThrough, shippingRate, isSubsistence } from './economy';
 import { financeIdle, payRent, paySalvage, taxDue, taxRates } from './finance';
 import { borderCost, kingdomById, kingdomOf, payTariff, toTreasury } from './kingdoms';
 import { INVEST_CLASSES } from './policy';
@@ -948,6 +948,7 @@ function updateWealth(p: Pop, rd: RegionDay, plan: PopPlan) {
 
 // ---------------------------------------------------------------- 가격
 
+/** 빅토리아3 가격 범위 (지금 규칙). 비교용 공식(TUNE.priceExp)은 TUNE.priceRange 를 쓴다 (economy.ts priceBounds) */
 export const PRICE_MIN = 0.25;
 export const PRICE_MAX = 1.75;
 /** 하루에 목표 가격으로 다가가는 비율 */
@@ -996,7 +997,8 @@ export function updatePrices(w: World) {
       mg.inventory = stockOf[mkey(r.id, g)] ?? 0;
       // 흐름이 끊긴 시장은 이동평균이 둘 다 같은 비율로 줄어 마지막 쏠림이 남으므로, 가격이 쏠린 쪽 끝으로 간다
       const target = priceFormula(g, mg.demandEma, mg.supplyEma);
-      mg.price = clamp(mg.price + (target - mg.price) * PRICE_SPEED, base * PRICE_MIN, base * PRICE_MAX);
+      const [mn, mx] = priceBounds();
+      mg.price = clamp(mg.price + (target - mg.price) * PRICE_SPEED, base * mn, base * mx);
     }
   }
 }

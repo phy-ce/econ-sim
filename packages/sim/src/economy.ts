@@ -93,7 +93,7 @@ export function roomFor(w: World, regionId: number, typeId: string): number {
 //   같은 계절이면 자기 진원지가 이웃보다 먼저다
 
 /** 정수 4개 → 0..1 (같은 입력이면 늘 같은 값) */
-function hash01(a: number, b: number, c: number, d: number): number {
+export function hash01(a: number, b: number, c: number, d: number): number {
   let h = Math.imul(a ^ 0x9e3779b9, 0x85ebca6b) ^ Math.imul(b + 0x632be59b, 0xc2b2ae35) ^ Math.imul(c + 0x27d4eb2f, 0x165667b1) ^ Math.imul(d + 0x7f4a7c15, 0x9e3779b1);
   h ^= h >>> 16; h = Math.imul(h, 0x85ebca6b); h ^= h >>> 13; h = Math.imul(h, 0xc2b2ae35); h ^= h >>> 16;
   return (h >>> 0) / 4294967296;
@@ -497,9 +497,21 @@ export function outputCapacity(w: World, regionId: number, g: GoodId): number {
 /** 수요·공급 이동평균이 이 아래면 거래가 없는 것으로 본다 */
 export const FLOW_ZERO = 1e-6;
 
+/** 가격 범위 (기본가 배수): 시장 가격과 AI 장기 가격 모두 여기서 읽는다 */
+export function priceBounds(): readonly [number, number] {
+  return TUNE.priceExp > 0 ? TUNE.priceRange : [0.25, 1.75];
+}
+
 /** 가격 공식 (빅토리아3): 기본가 × (1 + 0.75 × clamp((구매 − 판매) / min(구매, 판매), ±1)) */
 export function priceFormula(g: GoodId, demand: number, supply: number): number {
   const base = GOODS[g].basePrice;
+  // 비교용 (TUNE.priceExp > 0): 기본가 × (구매 ÷ 판매)^priceExp, 범위 TUNE.priceRange
+  if (TUNE.priceExp > 0) {
+    const [mn, mx] = TUNE.priceRange;
+    if (supply <= FLOW_ZERO) return base * (demand > FLOW_ZERO ? mx : 1);
+    if (demand <= FLOW_ZERO) return base * mn;
+    return base * clamp((demand / supply) ** TUNE.priceExp, mn, mx);
+  }
   const lo = Math.min(demand, supply);
   const x = lo > FLOW_ZERO ? clamp((demand - supply) / lo, -1, 1) : demand > supply ? 1 : supply > demand ? -1 : 0;
   return base * (1 + 0.75 * x);
