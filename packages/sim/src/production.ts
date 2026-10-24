@@ -314,6 +314,7 @@ export function advanceConstruction(w: World) {
       const state = !!companyById(w, k.companyId)?.state;
       const b = newBuilding(w.nextId++, k.typeId, k.regionId, k.companyId, k.methodId, add, state);
       if (escrow) b.cash = escrow;
+      b.builtTick = w.tick;
       if (!state) giveLevels(w, k, b, add);
       b.materials = mats;
       w.buildings.push(b);
