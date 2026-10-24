@@ -496,11 +496,11 @@ export const TUNE = {
   officeTargetDays: 30,
   officeUseFull: 0.9,
   startsPerWeek: 3,
-  luxuryLinear: 0.3,
-  luxuryQuad: 0.02,
+  luxuryLinear: 0.5,
+  luxuryQuad: 0.03,
   meatLinear: 0.3,
   meatQuad: 0.01,
-  intoxLinear: 0.05, // 기호품(술) 필요 = 이 값 × min(부, 10). 식량 필요에서 같은 만큼 뺀다 (DESIGN 11 "기호품", 재검증 필요 (조건 바뀜: 소작 산출 ×0.9, aiBuildNow 1, 2026-10-23))
+  intoxLinear: 0.1, // 기호품(술) 필요 = 이 값 × min(부, 10). 식량 필요에서 같은 만큼 뺀다 (DESIGN 11 "기호품", 재검증 필요 (조건 바뀜: 소작 산출 ×0.9, aiBuildNow 1, 2026-10-23))
   qualSkilledL: 0.4,
   qualExpertL: 0.6,
   qualRate: 0.25,
@@ -781,15 +781,17 @@ export function rawMax(max: number | undefined, wealth: number): number {
  * 표준 의복과 가정용품은 부 5부터 생기고, 가정용품은 부가 오를수록 더 빨리 는다. 고기는 부 8부터, 사치품(고급 가구·고급 의복)은 부 10부터 생긴다
  */
 export function needsAt(wealth: number): Record<NeedId, number> {
-  const L = wealth, up = Math.max(0, L - 5), rich = Math.max(0, L - 10), fed = Math.max(0, L - 8);
+  const L = wealth, up = Math.max(0, L - 3), rich = Math.max(0, L - 6), fed = Math.max(0, L - 6), over10 = Math.min(Math.max(L - 10, 0), 20);
   const out: Record<NeedId, number> = {
-    // 식량 + 기호품 = 예전 식량 1.5 + 0.1 × min(부, 30): 부 10까지 늘던 식량 몫 중 intoxLinear 만큼이 술이 된다 (묶음 합은 그대로)
-    nourishment: 1.5 + (0.1 - TUNE.intoxLinear) * Math.min(L, 10) + 0.1 * Math.min(Math.max(L - 10, 0), 20),
+    // 2026-10-25 사용자 요청 (부가 오를 때 식량 외 수요가 너무 천천히 는다): 식량은 부 10 뒤 0.1 → 0.05씩, 술은 식량에서 떼지 않고 따로 더한다
+    nourishment: 1.5 + 0.05 * Math.min(L, 10) + 0.05 * over10,
+    // 술은 부 10에서 멈춘다. 부자의 술 수요는 나중에 고급 주류(와인 등)로 맡긴다 (사용자 2026-10-25)
     intoxicants: TUNE.intoxLinear * Math.min(L, 10),
-    heating: 0.1 * Math.min(L, 10),
-    clothing: 0.1 * Math.min(L, 10),
+    // 난방은 위 단계 상품이 없어 부 10 뒤에도 천천히 는다 (부 30에서 1.5)
+    heating: 0.1 * Math.min(L, 10) + 0.025 * over10,
+    clothing: 0.15 * Math.min(L, 10),
     standard_clothing: 0.2 * up,
-    crude_items: 0.1 * Math.min(L, 10),
+    crude_items: 0.15 * Math.min(L, 10),
     household: 0.2 * up + 0.01 * up * up,
     luxury: TUNE.luxuryLinear * rich + TUNE.luxuryQuad * rich * rich,
     meat: TUNE.meatLinear * fed + TUNE.meatQuad * fed * fed,
