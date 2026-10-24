@@ -34,7 +34,9 @@ export const GOOD_IDS: GoodId[] = [
 ];
 
 export const GOODS: Record<GoodId, GoodDef> = {
-  grain: { id: 'grain', name: '곡물', nameEn: 'Grain', basePrice: 2 },
+  // 곡물 기본가 1 (2026-10-25 사용자 결정 "1로 하고 농장 생산량을 거기 맞춰볼까", DECISIONS 7-27): 그 전 2. 곡물 시장가가 기본가의 0.35~0.6배에 머물렀다.
+  // 농장 산출과 곡물을 쓰는 방식의 곡물 투입은 2배로 맞춰 기본가 기준 이익률·원료 비중을 지켰다. 식량 필요에서 곡물 1개는 그대로 2를 채운다 (NEEDS fill)
+  grain: { id: 'grain', name: '곡물', nameEn: 'Grain', basePrice: 1 },
   fiber: { id: 'fiber', name: '섬유', nameEn: 'Fibre', basePrice: 2 },
   timber: { id: 'timber', name: '목재', nameEn: 'Timber', basePrice: 2 },
   ore: { id: 'ore', name: '철광석', nameEn: 'Iron ore', basePrice: 4 },
@@ -50,7 +52,7 @@ export const GOODS: Record<GoodId, GoodDef> = {
   luxury_cloth: { id: 'luxury_cloth', name: '고급 의복', nameEn: 'Fine clothes', basePrice: 30 },
   meat: { id: 'meat', name: '고기', nameEn: 'Meat', basePrice: 16 },
   paper: { id: 'paper', name: '종이', nameEn: 'Paper', basePrice: 4 },
-  // 빅토리아3 술 기본가 30 = 곡물 20의 1.5배 (vic3.paradoxwikis.com/Goods). 여기서도 곡물 2의 1.5배
+  // 빅토리아3 술 기본가 30 = 곡물 20의 1.5배 (vic3.paradoxwikis.com/Goods). 곡물 2였을 때 그 1.5배로 정했다 (2026-10-25 곡물 1로 내린 뒤에도 그대로)
   liquor: { id: 'liquor', name: '술', nameEn: 'Liquor', basePrice: 3 },
 };
 
@@ -207,9 +209,9 @@ export const BUILDING_TYPES: BuildingTypeDef[] = [
   {
     id: 'farm', name: '곡물 농장', nameEn: 'Grain farm', land: 'arable', buildPoints: 200, industry: 'primary',
     methods: [
-      m({ id: 'farm_basic', name: '곡물 재배', nameEn: 'Grain farming', workers: farmJobs(500), inputs: { tools: 10 }, outputs: { grain: 3200 } }),
-      m({ id: 'farm_tools', name: '쇠 농기구', nameEn: 'Iron implements', tech: 'iron_tools', workers: farmJobs(300, 50), inputs: { tools: 50 }, outputs: { grain: 3450 } }),
-      m({ id: 'farm_mech', name: '농업 기계', nameEn: 'Farm machinery', tech: 'agri_mech', workers: farmJobs(150, 40, 10), inputs: { tools: 30, fuel: 100, electronics: 30 }, outputs: { grain: 4450 } }),
+      m({ id: 'farm_basic', name: '곡물 재배', nameEn: 'Grain farming', workers: farmJobs(500), inputs: { tools: 10 }, outputs: { grain: 6400 } }),
+      m({ id: 'farm_tools', name: '쇠 농기구', nameEn: 'Iron implements', tech: 'iron_tools', workers: farmJobs(300, 50), inputs: { tools: 50 }, outputs: { grain: 6900 } }),
+      m({ id: 'farm_mech', name: '농업 기계', nameEn: 'Farm machinery', tech: 'agri_mech', workers: farmJobs(150, 40, 10), inputs: { tools: 30, fuel: 100, electronics: 30 }, outputs: { grain: 8900 } }),
     ],
   },
   {
@@ -224,7 +226,7 @@ export const BUILDING_TYPES: BuildingTypeDef[] = [
     // 곡물을 사료로 먹여 고기를 낸다. 곡물이 쌀수록 남는다. 가공 유형이지만 농부만 쓴다 (숙련 0)
     id: 'ranch', name: '목장', nameEn: 'Livestock ranch', land: 'arable', buildPoints: 300, industry: 'processing',
     methods: [
-      m({ id: 'ranch_basic', name: '가축 사육', nameEn: 'Livestock raising', workers: farmJobs(300), inputs: { tools: 10, grain: 2450 }, outputs: { meat: 630 } }),
+      m({ id: 'ranch_basic', name: '가축 사육', nameEn: 'Livestock raising', workers: farmJobs(300), inputs: { tools: 10, grain: 4900 }, outputs: { meat: 630 } }),
     ],
   },
   {
@@ -255,8 +257,8 @@ export const BUILDING_TYPES: BuildingTypeDef[] = [
   {
     id: 'foodplant', name: '식료품 공장', nameEn: 'Grocery plant', land: 'plot', buildPoints: 300, industry: 'processing',
     methods: [
-      m({ id: 'food_manual', name: '수작업 가공', nameEn: 'Manual processing', tech: 'milling', workers: jobs(270, 30), inputs: { tools: 10, grain: 2600 }, outputs: { food: 2650 } }),
-      m({ id: 'food_machine', name: '기계 가공', nameEn: 'Machine processing', tech: 'food_machinery', workers: jobs(120, 60, 20), inputs: { tools: 30, fuel: 100, grain: 3300 }, outputs: { food: 3600 } }),
+      m({ id: 'food_manual', name: '수작업 가공', nameEn: 'Manual processing', tech: 'milling', workers: jobs(270, 30), inputs: { tools: 10, grain: 5200 }, outputs: { food: 2650 } }),
+      m({ id: 'food_machine', name: '기계 가공', nameEn: 'Machine processing', tech: 'food_machinery', workers: jobs(120, 60, 20), inputs: { tools: 30, fuel: 100, grain: 6600 }, outputs: { food: 3600 } }),
     ],
   },
   {
@@ -264,8 +266,8 @@ export const BUILDING_TYPES: BuildingTypeDef[] = [
     // 숫자는 식료품 공장과 같은 꼴(가공: 300명, 원료가 매출의 절반)이고 산출만 술 기본가 3에 맞췄다. 단식 증류는 기술 없이 짓는다
     id: 'distillery', name: '양조장', nameEn: 'Distillery', land: 'plot', buildPoints: 300, industry: 'processing',
     methods: [
-      m({ id: 'liquor_pot', name: '단식 증류', nameEn: 'Pot stills', workers: jobs(270, 30), inputs: { tools: 10, grain: 2600 }, outputs: { liquor: 3500 } }),
-      m({ id: 'liquor_column', name: '연속식 증류', nameEn: 'Column stills', tech: 'food_machinery', workers: jobs(120, 60, 20), inputs: { tools: 30, fuel: 100, grain: 3300 }, outputs: { liquor: 4800 } }),
+      m({ id: 'liquor_pot', name: '단식 증류', nameEn: 'Pot stills', workers: jobs(270, 30), inputs: { tools: 10, grain: 5200 }, outputs: { liquor: 3500 } }),
+      m({ id: 'liquor_column', name: '연속식 증류', nameEn: 'Column stills', tech: 'food_machinery', workers: jobs(120, 60, 20), inputs: { tools: 30, fuel: 100, grain: 6600 }, outputs: { liquor: 4800 } }),
     ],
   },
   {
@@ -322,7 +324,7 @@ export const BUILDING_TYPES: BuildingTypeDef[] = [
     // 짐마차는 말 먹이(곡물)와 마차(목재)를, 증기 철도는 공구 대신 기계와 석탄을 쓴다
     id: 'railway', name: '운송 조합', nameEn: 'Carters\' guild', land: 'plot', buildPoints: 350, industry: 'processing',
     methods: [
-      m({ id: 'rail_wagon', name: '짐마차', nameEn: 'Freight wagons', tech: 'wagonway', workers: jobs(270, 30), inputs: { tools: 10, grain: 1300, timber: 1300 }, outputs: { transport: 3550 } }),
+      m({ id: 'rail_wagon', name: '짐마차', nameEn: 'Freight wagons', tech: 'wagonway', workers: jobs(270, 30), inputs: { tools: 10, grain: 2600, timber: 1300 }, outputs: { transport: 3550 } }),
       m({ id: 'rail_steam', name: '증기 철도', nameEn: 'Steam railway', tech: 'steam_rail', workers: jobs(120, 60, 20), inputs: { electronics: 100, fuel: 1750 }, outputs: { transport: 4850 } }),
     ],
   },
@@ -742,12 +744,16 @@ export const REGIONS: RegionDef[] = [
 // ---------------------------------------------------------------- 필요
 
 /**
- * 필요. 필요량은 소비 단위 1의 하루 금액(기본가)이고, 상품 1개는 기본가만큼 채운다.
+ * 필요. 필요량은 소비 단위 1의 하루 금액(기본가)이고, 상품 1개는 기본가만큼 채운다 (fill 을 주면 그만큼).
  * max: 그 상품이 채울 수 있는 최대 비중. appeal > 1 은 가공품(값이 내려가면 원자재 대신 돌아오는 수요)
+ * 예외 하나: 곡물 1개는 식량 2를 채운다 (기본가 1). 곡물 기본가를 2에서 1로 내리면서 먹는 양은 그대로 두었다 (2026-10-25, DECISIONS 7-27)
  */
-const opt = (good: GoodId, extra: { max?: number; appeal?: number } = {}) => ({ good, units: 1 / GOODS[good].basePrice, ...extra });
+const opt = (good: GoodId, extra: { max?: number; appeal?: number; fill?: number } = {}) => {
+  const { fill, ...rest } = extra;
+  return { good, units: 1 / (fill ?? GOODS[good].basePrice), ...rest };
+};
 export const NEEDS: NeedDef[] = [
-  { id: 'nourishment', name: '식량', nameEn: 'Basic food', options: [opt('grain'), opt('food', { appeal: 2 })] },
+  { id: 'nourishment', name: '식량', nameEn: 'Basic food', options: [opt('grain', { fill: 2 }), opt('food', { appeal: 2 })] },
   { id: 'heating', name: '난방', nameEn: 'Heating', options: [opt('timber'), opt('fuel', { appeal: 2 })] },
   { id: 'clothing', name: '의복', nameEn: 'Simple clothing', options: [opt('fiber', { max: 0.5 }), opt('cloth', { appeal: 2 })] },
   { id: 'standard_clothing', name: '표준 의복', nameEn: 'Standard clothing', options: [opt('cloth')] },

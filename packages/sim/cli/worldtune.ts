@@ -26,7 +26,8 @@ export function applyWorld(spec: WorldSpec | undefined) {
   for (const [g, k] of Object.entries(spec.price ?? {}) as [GoodId, number][]) GOODS[g].basePrice *= k;
   for (const [s, k] of Object.entries(spec.wage ?? {}) as [Skill, number][]) SKILL_DEFS[s].baseWage *= k;
   if (spec.buildMul) for (const t of BUILDING_TYPES) if (!t.auto) t.buildPoints *= spec.buildMul;
-  for (const n of NEEDS) for (const o of n.options) o.units = 1 / GOODS[o.good].basePrice;
+  // 기본가가 k배면 같은 금액을 채우는 개수는 1/k배 (곡물 fill 같은 예외 비율은 그대로)
+  for (const n of NEEDS) for (const o of n.options) o.units /= spec.price?.[o.good] ?? 1;
   for (const m of methods) {
     if (spec.workMul) for (const s of Object.keys(m.workers) as Skill[]) m.workers[s] = (m.workers[s] ?? 0) * spec.workMul;
     if (spec.inputMul) for (const g of Object.keys(m.inputs) as GoodId[]) m.inputs[g] = (m.inputs[g] ?? 0) * spec.inputMul;

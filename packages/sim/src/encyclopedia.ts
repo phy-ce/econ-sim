@@ -824,10 +824,10 @@ export const ENCYCLOPEDIA: EncEntry[] = [
     formula: 'share_i ∝ (min c ÷ c_i)^{0}',
     params: [p('대체 지수', 'Substitution exponent', () => SUBSTITUTION_EXP), tune('rawFullWealth', '원자재로 다 채우는 부', 'Raw fills all up to'), tune('rawCapWealth', '상한이 max가 되는 부', 'Raw cap reached at')],
     example: () => {
-      const s = needSharesAt('nourishment', [2.2, 4], 5);
+      const s = needSharesAt('nourishment', [1.1, 4], 5);
       return {
-        inputs: [row('곡물 가격', 'Grain price', 2.2, 'florin'), row('식료품 가격', 'Groceries price', 4, 'florin')],
-        steps: [row('곡물 단위 비용', 'Grain unit cost', r2(2.2 / GOODS.grain.basePrice), 'x'), row('식료품 단위 비용', 'Groceries unit cost', r2(4 / GOODS.food.basePrice), 'x')],
+        inputs: [row('곡물 가격', 'Grain price', 1.1, 'florin'), row('식료품 가격', 'Groceries price', 4, 'florin')],
+        steps: [row('곡물 단위 비용', 'Grain unit cost', r2(1.1 * NEEDS[0].options[0].units), 'x'), row('식료품 단위 비용', 'Groceries unit cost', r2(4 / GOODS.food.basePrice), 'x')],
         result: [row('곡물 몫', 'Grain share', r4(s[0]), 'pct'), row('식료품 몫', 'Groceries share', r4(s[1]), 'pct'), row('rawMax(0.5, 7.5)', 'rawMax(0.5, 7.5)', rawMax(0.5, 7.5), 'pct')],
       };
     },
