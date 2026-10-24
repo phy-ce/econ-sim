@@ -154,7 +154,7 @@ export interface TechDef {
   requires: string[];
 }
 
-export type NeedId = 'nourishment' | 'heating' | 'clothing' | 'standard_clothing' | 'crude_items' | 'household' | 'luxury' | 'meat' | 'intoxicants';
+export type NeedId = 'nourishment' | 'heating' | 'clothing' | 'standard_clothing' | 'crude_items' | 'household' | 'fine_clothing' | 'fine_furniture' | 'meat' | 'intoxicants';
 
 export interface NeedDef {
   id: NeedId;

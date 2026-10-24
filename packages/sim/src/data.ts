@@ -416,7 +416,7 @@ export function scaleBonus(level: number): number {
  * - officeTargetDays: 건축사무소를 늘려 공사 대기를 이 일수 안으로 맞춘다
  * - officeUseFull: 사무소 포인트 중 이 비율 이상을 공사에 실제로 쓰고 있어야 사무소를 늘린다
  * - startsPerWeek: AI 회사 하나가 한 주에 새로 넣는 공사 수 상한
- * - luxuryLinear, luxuryQuad: 사치품 필요 = linear × (부 − 10) + quad × (부 − 10)²
+ * - luxuryLinear, luxuryQuad: 사치품 필요 = linear × (부 − 6) + quad × (부 − 6)², 고급 의복·고급 가구가 반씩
  * - meatLinear, meatQuad: 고기 필요 = linear × (부 − 8) + quad × (부 − 8)²
  * - intoxLinear: 기호품(술) 필요 = intoxLinear × min(부, 10). 식량 필요는 같은 만큼 줄어 묶음 합은 그대로다
  * - shrinkWeeks: 마지막 레벨의 손익이 이 주 수 동안 계속 마이너스면 AI가 철거를 시작한다
@@ -762,7 +762,10 @@ export const NEEDS: NeedDef[] = [
   { id: 'standard_clothing', name: '표준 의복', nameEn: 'Standard clothing', options: [opt('cloth')] },
   { id: 'crude_items', name: '생활용품', nameEn: 'Crude items', options: [opt('timber', { max: 0.5 }), opt('furniture', { appeal: 2 })] },
   { id: 'household', name: '가정용품', nameEn: 'Household items', options: [opt('furniture')] },
-  { id: 'luxury', name: '사치품', nameEn: 'Luxury goods', options: [opt('luxury_furniture'), opt('luxury_cloth')] },
+  // 사치품은 고급 의복·고급 가구 두 필요로 나눈다 (2026-10-25 사용자 "이걸 합치면안되지"). 한 필요에 두면 대체 지수 10 때문에 싼 쪽이 거의 다 가져가,
+  // 공급이 없는 쪽은 값이 상한에 붙고 수요가 0이 되어 AI가 짓지 않았다. 빅토리아3는 한 필요(Luxury Items)지만 상품마다 최대 몫 0.5·최소 0.1이 있다 (VIC3_REFERENCE)
+  { id: 'fine_clothing', name: '고급 의복', nameEn: 'Fine clothing', options: [opt('luxury_cloth')] },
+  { id: 'fine_furniture', name: '고급 가구', nameEn: 'Fine furniture', options: [opt('luxury_furniture')] },
   { id: 'meat', name: '고기', nameEn: 'Meat', options: [opt('meat')] },
   { id: 'intoxicants', name: '기호품', nameEn: 'Intoxicants', options: [opt('liquor')] },
 ];
@@ -781,7 +784,7 @@ export function rawMax(max: number | undefined, wealth: number): number {
  * 부 단계별 필요 묶음 (소비 단위 1의 하루 금액). 묶음 값은 대략 부 × 0.75.
  * 식량과 기호품(술)을 합치면 부 1에서 1.6, 부 5에서 2, 부 30까지 늘고 멈춘다. 그중 기호품은 TUNE.intoxLinear × 부(10까지)이고 나머지가 식량이다.
  * 난방·의복·생활용품은 부 10까지 늘고 멈춘다.
- * 표준 의복과 가정용품은 부 5부터 생기고, 가정용품은 부가 오를수록 더 빨리 는다. 고기는 부 8부터, 사치품(고급 가구·고급 의복)은 부 10부터 생긴다
+ * 표준 의복과 가정용품은 부 3부터 생기고, 가정용품은 부가 오를수록 더 빨리 는다. 고기와 사치품(고급 의복·고급 가구, 반씩)은 부 6부터 생긴다
  */
 export function needsAt(wealth: number): Record<NeedId, number> {
   const L = wealth, up = Math.max(0, L - 3), rich = Math.max(0, L - 6), fed = Math.max(0, L - 6), over10 = Math.min(Math.max(L - 10, 0), 20);
@@ -796,7 +799,9 @@ export function needsAt(wealth: number): Record<NeedId, number> {
     standard_clothing: 0.2 * up,
     crude_items: 0.15 * Math.min(L, 10),
     household: 0.2 * up + 0.01 * up * up,
-    luxury: TUNE.luxuryLinear * rich + TUNE.luxuryQuad * rich * rich,
+    // 사치품 필요 (linear·quad 곡선)를 고급 의복과 고급 가구가 반씩 나눈다
+    fine_clothing: 0.5 * (TUNE.luxuryLinear * rich + TUNE.luxuryQuad * rich * rich),
+    fine_furniture: 0.5 * (TUNE.luxuryLinear * rich + TUNE.luxuryQuad * rich * rich),
     meat: TUNE.meatLinear * fed + TUNE.meatQuad * fed * fed,
   };
   // 비교 실행용 필요량 배율 (기본은 비어 있다)
