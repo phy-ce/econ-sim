@@ -32,7 +32,7 @@ import {
 import { HIRE_RATE, MIGRATE_FULL, MIGRATE_MAX, MIGRATE_START, UNPAID_QUIT, subsistenceWage, switchShare } from './labor';
 import { CREW_RATE, EXP_GAIN } from './production';
 import {
-  DAILY_INTEREST, KEEP_SHARE, MINT_BASE, MINT_RATE, RESERVE_SHARE, kingdomLiteracy, researchPoints, adminCapacityOf, reserveCap, taxCapacity, taxRates,
+  DAILY_INTEREST, KEEP_SHARE, TREASURY_RELEASE, MINT_BASE, MINT_RATE, RESERVE_SHARE, kingdomLiteracy, researchPoints, adminCapacityOf, reserveCap, taxCapacity, taxRates,
   weeklyOutputValue,
 } from './finance';
 import { CHUNKS, INPUT_SUPPLY_MIN, MIXED_LEVELS, RAISE_FILL, RESERVE_FULL, RESERVE_STREAK, STARVE_FILL, TRIAL_PRICE, SWITCH_MARGIN, SWITCH_MIN_WAGE_SHARE, LAW_COOLDOWN, LAW_SWITCH, WELFARE_COOLDOWN, WELFARE_SWITCH, OFFICE_BLOCK, OFFICE_GROWTH, STAFFING_HORIZON, SWITCH_COOLDOWN } from './ai';
@@ -1033,8 +1033,8 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   },
   {
     id: 'owner-treasury', category: 'ownership', title: t('저택·금융가 금고', 'Manor and district treasuries'),
-    rule: t('저택·금융가 금고에는 배당·지대 중 남기는 몫과 철거 대금이 들어온다. 금융가 금고에는 지분 산 돈과 주인 없는 돈이, 저택 금고에는 소작농의 넘는 저축이 들어온다. 민간 공사비는 금고가 낸다: 같은 지역(마음 × (1 + {0}))과 좋아하는 종류(저택은 땅 건물, 금융가는 그 밖, 아니면 × {1})부터 레벨 단위로 맡고, 모자라면 함께 낸다. 완공 레벨은 낸 돈 비율로 나누고 나머지 레벨은 많이 낸 쪽이 가진 뒤 차액을 돌려준다.', 'Manor and district treasuries receive the kept part of dividends and rent and salvage proceeds. Districts also receive money paid for units and ownerless money; manors receive peasant savings above the cap. Treasuries pay for private construction: same region first (weight × (1 + {0})) and favoured kinds (manors: land buildings, districts: the rest, otherwise × {1}), whole levels each, pooling if short. Finished levels are split by money paid; leftover levels go to the larger payer, who refunds the difference.'),
-    params: [tune('localBias', '같은 지역 가산', 'Same-region bonus', 'pct'), tune('ownerTilt', '좋아하지 않는 종류', 'Unfavoured kind', 'pct'), p('민간 상회 시작 운영 자금', 'Private house start cash', () => START_FIRM_CASH, 'florin')],
+    rule: t('저택·금융가 금고에는 배당·지대 중 남기는 몫과 철거 대금이 들어온다. 금융가 금고에는 지분 산 돈과 주인 없는 돈이, 저택 금고에는 소작농의 넘는 저축이 들어온다. 민간 공사비는 금고가 낸다: 같은 지역(마음 × (1 + {0}))과 좋아하는 종류(저택은 땅 건물, 금융가는 그 밖, 아니면 × {1})부터 레벨 단위로 맡고, 모자라면 함께 낸다. 완공 레벨은 낸 돈 비율로 나누고 나머지 레벨은 많이 낸 쪽이 가진 뒤 차액을 돌려준다. 금고가 아직 낼 공사 약정액 + 주간 배당 수입 × {3}주를 넘으면 매주 넘는 돈의 {4}를 저택은 앉은 귀족에게, 금융가는 지분 주인에게 배당처럼 나눠 준다.', 'Manor and district treasuries receive the kept part of dividends and rent and salvage proceeds. Districts also receive money paid for units and ownerless money; manors receive peasant savings above the cap. Treasuries pay for private construction: same region first (weight × (1 + {0})) and favoured kinds (manors: land buildings, districts: the rest, otherwise × {1}), whole levels each, pooling if short. Finished levels are split by money paid; leftover levels go to the larger payer, who refunds the difference. When a treasury holds more than its unpaid construction pledges plus {3} weeks of dividend income, {4} of the excess goes out each week, to seated nobles (manors) or unit holders (districts), split like dividends.'),
+    params: [tune('localBias', '같은 지역 가산', 'Same-region bonus', 'pct'), tune('ownerTilt', '좋아하지 않는 종류', 'Unfavoured kind', 'pct'), p('민간 상회 시작 운영 자금', 'Private house start cash', () => START_FIRM_CASH, 'florin'), tune('treasuryKeepWeeks', '금고 목표 (주)', 'Treasury target (weeks)', 'week'), p('넘는 돈 내보내기 (주마다)', 'Excess paid out weekly', () => TREASURY_RELEASE, 'pct')],
     live: { pick: [], run: (w) => ({ bars: w.kingdoms.map((k) => bar(t(k.name, k.nameEn), r2(k.investmentPool), 'florin')), rows: w.buildings.filter((b) => b.cash !== undefined && isOwnerBuilding(b.typeId)).map((b) => row(`${regionById(w, b.regionId).name} ${BUILDING_BY_ID[b.typeId].name}`, `${regionNameEn(b.regionId)} ${BUILDING_BY_ID[b.typeId].nameEn}`, r2(b.cash ?? 0), 'florin')) }) },
     related: ['cash-surplus', 'dividends', 'privatize', 'ai-construction'], seenIn: ['finance'], source: ['finance.ts chooseFunders', 'production.ts giveLevels', 'kingdoms.ts toFinance'], design: ['9.3'],
   },
@@ -1219,8 +1219,8 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   },
   {
     id: 'ai-tax-law', category: 'ai', title: t('세법 고르기', 'Choosing a tax law'),
-    rule: t('4주마다, 기술로 열리고 조건이 맞는 세법 중 예상 세입이 지금의 {0}배를 넘는 것으로 바꾸기 시작한다. 바꾼 뒤 {1}일은 안 바꾼다. 투자법은 열리고 조건이 맞으면 한 칸씩 넓힌다. 바꾸기가 끝날 때 실패하면 그 법은 {1}일 동안 다시 시작하지 않는다.', 'Every 4 weeks, start switching to an unlocked law whose condition holds and whose expected revenue exceeds {0}× the current one. No switch again for {1} days. The investment law widens one step when unlocked and its condition holds. After a failed change the AI waits {1} days before trying that law again.'),
-    params: [p('바꾸는 배율', 'Switch ratio', () => LAW_SWITCH, 'x'), p('쿨다운', 'Cooldown', () => LAW_COOLDOWN, 'day')],
+    rule: t('4주마다, 기술로 열리고 조건이 맞는 세법 중 예상 세입이 지금의 {0}배를 넘는 것으로 바꾸기 시작한다. 바꾼 뒤 {1}일은 안 바꾼다. 인두세(1인당 하루)가 소작농을 뺀 1인당 하루 소득의 {2}를 넘는 세법은 고르지 않고, 지금 그 세법이면 세입을 0으로 본다. 투자법은 열리고 조건이 맞으면 한 칸씩 넓힌다. 바꾸기가 끝날 때 실패하면 그 법은 {1}일 동안 다시 시작하지 않는다.', 'Every 4 weeks, start switching to an unlocked law whose condition holds and whose expected revenue exceeds {0}× the current one. No switch again for {1} days. A law whose poll tax per person exceeds {2} of the daily income per non-peasant person is never picked, and counts as zero revenue if it is the current one. The investment law widens one step when unlocked and its condition holds. After a failed change the AI waits {1} days before trying that law again.'),
+    params: [p('바꾸는 배율', 'Switch ratio', () => LAW_SWITCH, 'x'), p('쿨다운', 'Cooldown', () => LAW_COOLDOWN, 'day'), tune('pollTaxIncomeCap', '인두세 상한 (소득 대비)', 'Poll tax cap (share of income)', 'pct')],
     related: ['tax-laws'], seenIn: ['finance'], source: ['ai.ts chooseTaxLaw', 'finance.ts lawRevenue'], design: ['10'],
   },
   {
