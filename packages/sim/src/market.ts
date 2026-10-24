@@ -996,7 +996,8 @@ export function updatePrices(w: World) {
       mg.inventory = stockOf[mkey(r.id, g)] ?? 0;
       // 흐름이 끊긴 시장은 이동평균이 둘 다 같은 비율로 줄어 마지막 쏠림이 남으므로, 가격이 쏠린 쪽 끝으로 간다
       const target = priceFormula(g, mg.demandEma, mg.supplyEma);
-      mg.price = clamp(mg.price + (target - mg.price) * PRICE_SPEED, base * PRICE_MIN, base * PRICE_MAX);
+      const [mn, mx] = TUNE.priceExp > 0 ? TUNE.priceRange : [PRICE_MIN, PRICE_MAX];
+      mg.price = clamp(mg.price + (target - mg.price) * PRICE_SPEED, base * mn, base * mx);
     }
   }
 }

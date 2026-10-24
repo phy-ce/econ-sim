@@ -577,6 +577,9 @@ export const TUNE = {
   laborPoach: 0,
   officeSchoolFirst: 0,
   needMul: {} as Partial<Record<NeedId, number>>,
+  // 비교용 가격 공식: 0 = 빅토리아3 공식(기본가 0.25~1.75배), > 0 = 기본가 × (구매 ÷ 판매)^priceExp 를 priceRange 로 자른다
+  priceExp: 0,
+  priceRange: [0.01, 10] as [number, number],
   startLumber: 1.2, // 1레벨이 일꾼 500명이 되어 1,000명 시절 0.6·0.2의 두 배
   startFiber: 0.4,
   startWorkshop: 3, // 1·2·3 비교 (DESIGN 11)
