@@ -155,12 +155,15 @@ export const BUILD_POINT_FACTOR = 0.15;
  * - 가공: 원료가 매출의 절반 (목장은 농부만 쓴다)
  * - 중공업: 원료가 매출의 60%, 기술자가 많다
  * - 숙련(사치품): 원료가 적고 기술자가 많다
+ * - 운송 (2026-10-25 사용자 "철도는 그냥 숫자를 조절하면 되는거아님?"): 가공처럼 원료가 매출의 절반이고 1레벨이 100명이다.
+ *   300명이던 짐마차 1레벨이 운송 3,550을 내서 5년 실행의 대륙 운송 수요(하루 600~1,600)보다 컸다 (운송은 지역 밖으로 못 나가 한 레벨이 시장을 넘친다)
  */
 export const INDUSTRIES: Record<Industry, IndustryDef> = {
   primary: { id: 'primary', name: '1차 산업', nameEn: 'Primary', workers: 500, skillShare: 0.1, inputShare: [0, 0.05] },
   processing: { id: 'processing', name: '가공', nameEn: 'Processing', workers: 300, skillShare: 0.1, inputShare: [0.45, 0.55] },
   heavy: { id: 'heavy', name: '중공업', nameEn: 'Heavy industry', workers: 300, skillShare: 0.3, inputShare: [0.55, 0.65] },
   luxury: { id: 'luxury', name: '숙련', nameEn: 'Skilled crafts', workers: 300, skillShare: 0.4, inputShare: [0.15, 0.25] },
+  transport: { id: 'transport', name: '운송', nameEn: 'Transport', workers: 100, skillShare: 0.1, inputShare: [0.45, 0.55] },
 };
 /** 산업 유형 규칙의 허용 폭: 기본 방식 숙련 비율 ±5%p, 윗단계 원료 비중은 유형 범위 ±10%p (cli/methods_audit.ts) */
 export const INDUSTRY_SKILL_TOL = 0.05;
@@ -321,11 +324,12 @@ export const BUILDING_TYPES: BuildingTypeDef[] = [
     ],
   },
   {
-    // 짐마차는 말 먹이(곡물)와 마차(목재)를, 증기 철도는 공구 대신 기계와 석탄을 쓴다
-    id: 'railway', name: '운송 조합', nameEn: 'Carters\' guild', land: 'plot', buildPoints: 350, industry: 'processing',
+    // 짐마차는 말 먹이(곡물)와 마차(목재)를, 증기 철도는 공구 대신 기계와 석탄을 쓴다.
+    // 산업 유형 운송(100명, 2026-10-25): 옛 가공 300명 숫자(짐마차 270/30, 곡물 2,600·목재 1,300 → 운송 3,550)의 약 1/3
+    id: 'railway', name: '운송 조합', nameEn: 'Carters\' guild', land: 'plot', buildPoints: 100, industry: 'transport',
     methods: [
-      m({ id: 'rail_wagon', name: '짐마차', nameEn: 'Freight wagons', tech: 'wagonway', workers: jobs(270, 30), inputs: { tools: 10, grain: 2600, timber: 1300 }, outputs: { transport: 3550 } }),
-      m({ id: 'rail_steam', name: '증기 철도', nameEn: 'Steam railway', tech: 'steam_rail', workers: jobs(120, 60, 20), inputs: { electronics: 100, fuel: 1750 }, outputs: { transport: 4850 } }),
+      m({ id: 'rail_wagon', name: '짐마차', nameEn: 'Freight wagons', tech: 'wagonway', workers: jobs(90, 10), inputs: { tools: 10, grain: 800, timber: 400 }, outputs: { transport: 1150 } }),
+      m({ id: 'rail_steam', name: '증기 철도', nameEn: 'Steam railway', tech: 'steam_rail', workers: jobs(40, 20, 10), inputs: { electronics: 30, fuel: 610 }, outputs: { transport: 1650 } }),
     ],
   },
   {
@@ -571,6 +575,9 @@ export const TUNE = {
   devLoss: 0.25, // 0·0.25 비교 (DESIGN 11). 발전 투자가 감수하는 손실: 잠재 수요까지 센 장기 손익 ≥ −인건비 × 이 값
   expandUtilMin: 0.5, // 0.5·0.7·끔 비교로 0.5 (DESIGN 11). 0 = 끔. 왕국 안 같은 종류·같은 산출 건물의 레벨 가중 가동률(꺼진 건물 0)이 이 값 미만이거나 장기 손익(profitEma) 합이 음수이면 그 방식은 새로 짓지도 늘리지도 않는다 (ai.ts glutOf)
   aiSwitchV2: 0, // 방식 비교 = 건물 전체 하루 손익 × 기대 충원율 × 투입 충족 (옛: 산출 1단위당 이윤, 일손 50% 기준, 공급 50% 기준)
+  // 유보 기준 AI (2026-10-25 사용자 요청 "유보액을 기준으로 건물을 늘리고 줄였으면 좋겠는데. + 신규투자", DECISIONS 7-27, DESIGN 10·11): 1 = 생산 건물은 유보 자산이 4주 차면 1레벨 증설, 바닥난 채 4주 적자면 1레벨 철거,
+  // 새 투자는 값이 기본가 1.25배 이상 4주(가)이거나 굶는 건물의 투입재(나)인 상품을 내는 건물이 없는 곳에 1레벨 (ai.ts reserveLevels·planTrials). 0 = 옛 전망 AI (pickProject·reviewLevels·발전 투자)
+  aiReserveRule: 1,
   aiMixedMethods: 0, // 1 = 건물 전체를 바꿀 수 없을 때 같은 지역에 더 나은 방식 1~2레벨을 따로 짓는다 (세계 규칙이 바뀌어 사용자 결정 필요, DECISIONS 7-21)
   officeRichWeeks: 52,
   officeSelfPay: 0,

@@ -86,8 +86,8 @@ export interface GoodDef {
   perishable?: boolean;
 }
 
-/** 산업 유형 (data.ts INDUSTRIES): 1차(노동 집약) · 가공(원료 집약) · 중공업 · 숙련(사치품). 기본 방식의 일꾼 수·숙련 비율·원료 비중을 정한다 */
-export type Industry = 'primary' | 'processing' | 'heavy' | 'luxury';
+/** 산업 유형 (data.ts INDUSTRIES): 1차(노동 집약) · 가공(원료 집약) · 중공업 · 숙련(사치품) · 운송(1레벨 100명). 기본 방식의 일꾼 수·숙련 비율·원료 비중을 정한다 */
+export type Industry = 'primary' | 'processing' | 'heavy' | 'luxury' | 'transport';
 
 export interface IndustryDef {
   id: Industry;
@@ -309,6 +309,12 @@ export interface Building {
   negWeeks?: number;
   /** 생산 건물의 투입 충족이 0.5 미만이었던 연속 주 수 (AI, TUNE.starveWeeks). 없으면 0 (16판에서 생겼다) */
   starvedWeeks?: number;
+  /** TUNE.aiReserveRule (AI): 유보 자산이 상한의 90% 이상이었던 연속 주 수 (증설 판단). 없으면 0 (18판에서 생겼다) */
+  richWeeks?: number;
+  /** TUNE.aiReserveRule (AI): 유보 자산이 0이고 주간 손익이 음수였던 연속 주 수 (철거 판단). 없으면 0 (18판에서 생겼다) */
+  brokeWeeks?: number;
+  /** 공사로 새로 생긴 날 (AI: 사람을 뽑는 동안의 적자를 철거 판단에서 빼는 데 쓴다). 시작 건물에는 없다 (0으로 본다, 18판에서 생겼다) */
+  builtTick?: number;
   /** 건축사무소: 그 연속 주 동안 일하던 주의 가장 높은 충원율 (한 번도 사람이 차지 않은 레벨을 센다) */
   staffPeak?: number;
   /** 1레벨을 지을 때 들어간 자재 (철거하면 TUNE.salvageShare 만큼 돌려받는다) */
@@ -474,6 +480,8 @@ export interface Region {
   /** pop 합산 (화면용). 매 틱 다시 채운다 */
   households: Record<PopClass, Household>;
   market: Record<GoodId, MarketGood>;
+  /** TUNE.aiReserveRule (AI 새 투자): 상품 값이 기본가의 1.25배 이상이었던 연속 주 수 (0인 상품은 없다). 없으면 모두 0 (18판에서 생겼다) */
+  hotWeeks?: Partial<Record<GoodId, number>>;
   /**
    * 이 지역에서 내보내는 교역 (매일, 0.95/0.05 이동평균, market.ts addTraderOrders). AI 무역소 판단용.
    * buy = 무역소 금고로 산 하루 매입 주문액, cut = 금고가 모자라 잘린 주문액 (무역소가 없으면 내려던 주문 전부), margin = 주문의 기대 이익률 (값 차이 − 운임 − 관세, 매입액 대비).
@@ -648,9 +656,10 @@ export interface World {
    *     Kingdom.feeWageWeek·budgetBase.feesWage·feesOther 가 없어졌다. 새 칸은 없어도 되므로 14판은 옛 칸만 지운다).
    * 16: 생산 건물의 굶은 주 수(Building.starvedWeeks, AI)가 생겼다. 없어도 되므로 15판은 그대로 받는다.
    * 17: 왕실 국영 임금표(Company.stateWages)가 따로 생겼다. 국영 임금은 정부 건물에만, 왕실 생산 건물은 회사 임금표(wages)다. 16판까지는 wages 를 stateWages 로 베낀다.
-   * 10~16판은 불러올 때 바꾼다, 그보다 옛 저장은 불러오지 않는다)
+   * 18: 유보 기준 AI 의 연속 주 수(Building.richWeeks·brokeWeeks, Region.hotWeeks)와 건물이 생긴 날(Building.builtTick)이 생겼다. 없어도 되므로 17판은 그대로 받는다.
+   * 10~17판은 불러올 때 바꾼다, 그보다 옛 저장은 불러오지 않는다)
    */
-  version: 17;
+  version: 18;
   config: WorldConfig;
   tick: number;
   seed: number;

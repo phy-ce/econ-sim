@@ -35,7 +35,7 @@ import {
   DAILY_INTEREST, KEEP_SHARE, MINT_BASE, MINT_RATE, RESERVE_SHARE, kingdomLiteracy, researchPoints, adminCapacityOf, reserveCap, taxCapacity, taxRates,
   weeklyOutputValue,
 } from './finance';
-import { CHUNKS, INPUT_SUPPLY_MIN, MIXED_LEVELS, RAISE_FILL, STARVE_FILL, SWITCH_MARGIN, SWITCH_MIN_WAGE_SHARE, LAW_COOLDOWN, LAW_SWITCH, WELFARE_COOLDOWN, WELFARE_SWITCH, OFFICE_BLOCK, OFFICE_GROWTH, STAFFING_HORIZON, SWITCH_COOLDOWN } from './ai';
+import { CHUNKS, INPUT_SUPPLY_MIN, MIXED_LEVELS, RAISE_FILL, RESERVE_FULL, RESERVE_STREAK, STARVE_FILL, TRIAL_PRICE, SWITCH_MARGIN, SWITCH_MIN_WAGE_SHARE, LAW_COOLDOWN, LAW_SWITCH, WELFARE_COOLDOWN, WELFARE_SWITCH, OFFICE_BLOCK, OFFICE_GROWTH, STAFFING_HORIZON, SWITCH_COOLDOWN } from './ai';
 import { budgetPreview } from './budget';
 import { ownershipAssets } from './policy';
 import { welfareIncome, welfareTarget, welfareWeekly } from './welfare';
@@ -465,8 +465,8 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   },
   {
     id: 'methods-rule', category: 'production', title: t('건물 숫자 규칙', 'Building numbers rule'),
-    rule: t('기본가와 기본 임금에서 기본 방식은 이익률 {3}, 한 단계 오를 때마다 레벨당 이익이 ×{4}다. 일꾼 수와 원료 비중은 산업 유형마다 다르다: 1차는 {5}명에 원료 {9} 이하, 가공은 {6}명에 원료 {10}, 중공업은 {7}명(기술자 {13})에 원료 {11}, 숙련(사치품)은 {8}명(기술자 {14})에 원료 {12}. 단계가 오르면 일꾼은 줄고 기술자·전문가 비율과 공구·석탄·철·기계 사용이 는다. 공사 포인트는 기본 방식 하루 이익 × {15}.',
-      'At base prices and wages the basic method has a {3} margin, and each step up multiplies profit per level by {4}. Headcount and input share depend on the industry type: primary {5} workers with inputs at most {9} of revenue, processing {6} workers with inputs {10}, heavy industry {7} workers ({13} skilled) with inputs {11}, skilled crafts (luxuries) {8} workers ({14} skilled) with inputs {12}. Higher steps employ fewer people, a larger share of skilled workers and experts, and more tools, coal, iron and machinery. Construction points = basic daily profit × {15}.'),
+    rule: t('기본가와 기본 임금에서 기본 방식은 이익률 {3}, 한 단계 오를 때마다 레벨당 이익이 ×{4}다. 일꾼 수와 원료 비중은 산업 유형마다 다르다: 1차는 {5}명에 원료 {9} 이하, 가공은 {6}명에 원료 {10}, 중공업은 {7}명(기술자 {13})에 원료 {11}, 숙련(사치품)은 {8}명(기술자 {14})에 원료 {12}, 운송은 {20}명에 원료 {21}. 단계가 오르면 일꾼은 줄고 기술자·전문가 비율과 공구·석탄·철·기계 사용이 는다. 공사 포인트는 기본 방식 하루 이익 × {15}.',
+      'At base prices and wages the basic method has a {3} margin, and each step up multiplies profit per level by {4}. Headcount and input share depend on the industry type: primary {5} workers with inputs at most {9} of revenue, processing {6} workers with inputs {10}, heavy industry {7} workers ({13} skilled) with inputs {11}, skilled crafts (luxuries) {8} workers ({14} skilled) with inputs {12}, transport {20} workers with inputs {21}. Higher steps employ fewer people, a larger share of skilled workers and experts, and more tools, coal, iron and machinery. Construction points = basic daily profit × {15}.'),
     formula: 'margin = (Σ out × base − Σ in × base − Σ jobs × baseWage) ÷ revenue; input share = Σ in × base ÷ revenue',
     params: [
       p('노동자 기본 임금', 'Labourer base wage', () => SKILL_DEFS.unskilled.baseWage, 'florin'), p('기술자 기본 임금', 'Skilled base wage', () => SKILL_DEFS.skilled.baseWage, 'florin'),
@@ -488,6 +488,8 @@ export const ENCYCLOPEDIA: EncEntry[] = [
       p('가공 숙련 비율', 'Processing skilled share', () => INDUSTRIES.processing.skillShare, 'pct'),
       p('숙련 비율 허용 폭', 'Skilled share tolerance', () => INDUSTRY_SKILL_TOL, 'pct'),
       p('윗단계 원료 비중 허용 폭', 'Upper-step input share tolerance', () => INDUSTRY_UPPER_INPUT_TOL, 'pct'),
+      p('운송 기본 일꾼', 'Transport basic workers', () => INDUSTRIES.transport.workers, 'people'),
+      p('운송 원료/매출', 'Transport input share', () => shareRange('transport')),
     ],
     example: () => {
       const farm = methodMarginAtBase('farm', 'farm_basic'), food = methodMarginAtBase('foodplant', 'food_manual');
@@ -1279,6 +1281,13 @@ export const ENCYCLOPEDIA: EncEntry[] = [
     rule: t('유보 자산으로 메우는 건물은 세지 않는다. 다만 투입 충족 < {2}가 {1}주 이어진 건물은 세고, 마지막 1레벨 손익을 지금 투입 충족으로 잰다. 마지막 1레벨의 장기 손익이 {0}주 연속 마이너스면 레벨의 1/4(최소 1)을 철거 대기에 올린다. 다시 이익이면 취소한다. 720일이 지나도 50% 미만인 공사는 취소한다.', 'Buildings covering losses from reserves are skipped, except those whose input fill stayed under {2} for {1} weeks; for them the last level is valued at the current input fill. If the last level\'s long-run profit is negative for {0} weeks, a quarter of the levels (min 1) are queued for demolition; cancelled if profitable again. Projects under 50% after 720 days are cancelled.'),
     params: [tune('shrinkWeeks', '연속 주 수', 'Weeks', 'week'), tune('starveWeeks', '굶은 주 수', 'Starved weeks', 'week'), p('굶는 투입 충족', 'Starving fill', () => STARVE_FILL, 'pct')],
     related: ['demolition', 'ai-swap', 'reserves'], seenIn: ['company'], source: ['ai.ts reviewLevels'], design: ['10'],
+  },
+  {
+    id: 'ai-reserve', category: 'ai', title: t('유보 자산으로 늘리고 줄이기', 'Growing and shrinking by reserves'),
+    rule: t('{0} = 1이면 생산 건물은 전망을 보지 않는다. 유보 자산이 상한의 {1} 이상인 주가 {2}주 이어지면 1레벨 늘리고 (땅과 돈이 있을 때), 유보 자산이 0이고 주간 손익이 마이너스인 주가 {2}주 이어지면 1레벨 헌다 (마지막 레벨이면 건물이 없어진다). 새 투자: 지역 값이 기본가의 {3}배 이상인 주가 {2}주 이어진 상품을 그 지역에서 아무도 만들지 않거나, 투입 충족이 {4} 미만인 주가 {2}주 이어진 건물의 가장 모자란 투입재를 왕국에서 아무도 만들지 않으면 그 상품을 내는 건물을 1레벨 짓는다. 행정청·학교·사무소·무역소는 옛 판단을 쓴다.', 'With {0} = 1 producers ignore forecasts. After {2} weeks with the reserve at {1} of its cap or more, a building grows one level (if land and funds allow); after {2} weeks with an empty reserve and a weekly loss, it loses one level (the last level removes the building). New investment: a good whose regional price stayed at {3}× base or more for {2} weeks with no producer in that region, or the scarcest input of a building whose input fill stayed under {4} for {2} weeks with no producer in the kingdom, gets a one-level producer. Administrations, schools, offices and trading posts keep the old rules.'),
+    params: [tune('aiReserveRule', '유보 기준 AI', 'Reserve-based AI'), p('찬 유보 자산', 'Full reserve', () => RESERVE_FULL, 'pct'), p('연속 주 수', 'Weeks in a row', () => RESERVE_STREAK, 'week'),
+      p('새 투자 값 배수', 'Trial price multiple', () => TRIAL_PRICE, 'x'), p('굶는 투입 충족', 'Starving fill', () => STARVE_FILL, 'pct')],
+    related: ['reserves', 'ai-construction', 'ai-demolition'], seenIn: ['company'], source: ['ai.ts reserveLevels', 'ai.ts planTrials'], design: ['10'],
   },
   {
     id: 'ai-swap', category: 'ai', title: t('땅 바꾸기', 'Swapping land'),
