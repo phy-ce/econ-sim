@@ -1,7 +1,7 @@
 import { BUILDING_BY_ID, GOOD_IDS, GOODS, NEEDS, SKILL_DEFS, TUNE, getMethod, needsAt, regionPerk, tenantYield } from './data';
 import { STAFFING_HORIZON, extraNeed, poolKey, poolOf } from './staffing';
 import { workforce } from './pops';
-import { availableMethods, collectionRatio, harvestFactorEma, regionAvgWealth, isGovernment, regionById, shippingRate, wageCostOf } from './economy';
+import { FLOW_ZERO, availableMethods, collectionRatio, priceBounds, priceFormula, harvestFactorEma, regionAvgWealth, isGovernment, regionById, shippingRate, wageCostOf } from './economy';
 import { BY_EMA, needSharesAt } from './market';
 import { clamp } from './rng';
 import { SKILLS } from './types';
@@ -50,10 +50,9 @@ const PRODUCIBLE = new Set<GoodId>(Object.values(BUILDING_BY_ID).flatMap((t) => 
 
 /** 장기 가격: 가격 공식과 같은 모양 (수요/공급 비율) */
 function longRunPrice(g: GoodId, D: number, S: number): number {
-  const base = GOODS[g].basePrice;
-  const lo = Math.min(D, S);
-  const x = lo > 1e-6 ? clamp((D - S) / lo, -1, 1) : D > S ? 1 : -1;
-  return base * (1 + 0.75 * x);
+  // 시장과 같은 공식 (economy.ts priceFormula). 사고파는 양이 둘 다 없으면 범위 아래 끝으로 본다
+  if (Math.min(D, S) <= FLOW_ZERO && D <= S) return GOODS[g].basePrice * priceBounds()[0];
+  return priceFormula(g, D, S);
 }
 
 /**
@@ -215,8 +214,8 @@ export function marketOutlook(w: World): Outlook {
       const back = sub?.get(g);
       if (back) {
         const x = this.price(g, dS) / GOODS[g].basePrice;
-        const i = Math.min(SUB_GRID.length - 2, Math.max(0, Math.floor((x - SUB_GRID[0]) / 0.05)));
-        const t = clamp((x - SUB_GRID[i]) / 0.05, 0, 1);
+        const i = Math.min(SUB_GRID.length - 2, Math.max(0, Math.floor((x - SUB_GRID[0]) / GRID_STEP)));
+        const t = clamp((x - SUB_GRID[i]) / GRID_STEP, 0, 1);
         D += back[i] * (1 - t) + back[i + 1] * t;
       }
       return Math.min(1, D / S);
@@ -238,8 +237,14 @@ export function marketOutlook(w: World): Outlook {
   };
 }
 
-/** 돌아오는 수요를 셀 가공품 값 격자 (기본가 배율, 장기 가격의 범위 0.25~1.75) */
-const SUB_GRID = Array.from({ length: 31 }, (_, i) => 0.25 + 0.05 * i);
+/** 돌아오는 수요를 셀 가공품 값 격자 (기본가 배율, 가격 범위 priceBounds 를 30칸으로 고르게 나눈다. 지금 범위 0.25~1.75면 0.05씩) */
+const GRID_STEPS = 30;
+let gridKey = '', SUB_GRID: number[] = [], GRID_STEP = 0.05;
+function subGrid(): number[] {
+  const [mn, mx] = priceBounds(), key = mn + ':' + mx;
+  if (key !== gridKey) { gridKey = key; GRID_STEP = (mx - mn) / GRID_STEPS; SUB_GRID = Array.from({ length: GRID_STEPS + 1 }, (_, i) => mn + GRID_STEP * i); }
+  return SUB_GRID;
+}
 
 /**
  * 돌아오는 수요 (TUNE.subReturn): 가공품 값이 격자의 값일 때, 지금 원자재로 그 필요를 채우는 가계 수요 중 가공품으로 옮겨 올 양.
@@ -247,6 +252,7 @@ const SUB_GRID = Array.from({ length: 31 }, (_, i) => 0.25 + 0.05 * i);
  * (목재는 난방과 생활용품: 지역 평균 부의 필요량 × 지금 비중으로). 이미 가공품을 사는 수요는 지금 수요에 들어 있으므로 더하지 않는다
  */
 function returnableDemand(w: World): Map<GoodId, number[]> {
+  subGrid();
   const out = new Map<GoodId, number[]>();
   for (const r of w.regions) {
     const L = regionAvgWealth(r), amount = needsAt(L);
