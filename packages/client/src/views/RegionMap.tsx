@@ -1,9 +1,10 @@
 import { HarvestBadge } from './HarvestBadge';
 import { NumericValue } from '../NumericValue';
 import { regionLivingStandard } from '../systemMetrics';
-import { Crown, BriefcaseBusiness } from 'lucide-react';
 import { SortHeader } from './SortHeader';
-import { useMemo, useState, useRef } from 'react';
+import { useState, useRef } from 'react';
+import mapData from '../map/regions.json';
+import '../map/atlas.css';
 import { regionPopulation , regionAvgWealth } from '@econ/sim';
 import type { World } from '@econ/sim';
 import { Sprite, SvgSprite } from '../sprites';
@@ -12,35 +13,10 @@ import { regionName, t, useLang, useT } from '../i18n';
 
 const PLAYER_ID = 100;
 
-/** 지역 중심 (0..100 좌표). 벨마르 항이 북서쪽 바닷가 관문, 회색 협곡이 동쪽 끝 */
-const POS: Record<number, [number, number]> = {
-  1: [20, 20], 2: [18, 60], 3: [48, 42], 4: [44, 82], 5: [76, 70], 6: [66, 16], 7: [90, 44],
-};
-
-/** 왕국 땅 (서쪽·북서쪽이 바다) */
-const LAND: [number, number][] = [
-  [20, 0], [100, 0], [100, 100], [0, 100], [0, 72], [6, 64], [9, 52], [8, 40], [11, 30], [13, 18], [17, 8],
-];
-
-type Pt = [number, number];
-
-/** 다각형을 반평면 a·p ≤ c 로 자른다 (Sutherland–Hodgman) */
-function clip(poly: Pt[], a: Pt, c: number): Pt[] {
-  const out: Pt[] = [];
-  const inside = (p: Pt) => a[0] * p[0] + a[1] * p[1] <= c + 1e-9;
-  for (let i = 0; i < poly.length; i++) {
-    const p = poly[i], q = poly[(i + 1) % poly.length];
-    const ip = inside(p), iq = inside(q);
-    if (ip) out.push(p);
-    if (ip !== iq) {
-      const dp = a[0] * p[0] + a[1] * p[1] - c, dq = a[0] * q[0] + a[1] * q[1] - c;
-      const t = dp / (dp - dq);
-      out.push([p[0] + (q[0] - p[0]) * t, p[1] + (q[1] - p[1]) * t]);
-    }
-  }
-  return out;
-}
-const toPath = (poly: Pt[]) => `M${poly.map((p) => `${p[0].toFixed(2)},${p[1].toFixed(2)}`).join('L')}Z`;
+const WIDTH=2896, HEIGHT=1504;
+const geometry=new Map(mapData.regions.map(r=>[r.id,r]));
+const fallback=(id:number,index:number)=>{const x=600+(index%4)*220,y=220+Math.floor(index/4)*220;return {id,d:`M${x-70},${y}a70,70 0 1,0 140,0a70,70 0 1,0 -140,0`,label:[x,y],icon:[x,y-60],anchors:{rail:[x,y+30]}};};
+const clampCamera=(c:{x:number;y:number;zoom:number})=>({...c,x:Math.max(-WIDTH*.1,Math.min(WIDTH-WIDTH/c.zoom+WIDTH*.1,c.x)),y:Math.max(-HEIGHT*.1,Math.min(HEIGHT-HEIGHT/c.zoom+HEIGHT*.1,c.y))});
 
 /** 지역 1인당 평균 부 → 4단계 색 (이름표는 그릴 때 언어에 맞춰 만든다) */
 export const WEALTH_STEPS = [
@@ -55,7 +31,7 @@ export function RegionMap({ world, selected, onSelect }: { world: World; selecte
   const [camera,setCamera]=useState({x:0,y:0,zoom:1});
   const drag=useRef<{x:number;y:number;cx:number;cy:number;scale:number;moved:boolean}|null>(null);
   const suppressClick=useRef(false);
-  const zoom=(delta:number)=>setCamera(c=>{const next=Math.max(.65,Math.min(3,c.zoom+delta));return {x:c.x+74/next-74/c.zoom,y:c.y+58/next-58/c.zoom,zoom:next};});
+  const zoom=(delta:number)=>setCamera(c=>{const next=Math.max(1,Math.min(3,c.zoom+delta));return clampCamera({x:c.x+WIDTH/2/c.zoom-WIDTH/2/next,y:c.y+HEIGHT/2/c.zoom-HEIGHT/2/next,zoom:next});});
   const T = useT();
   const ko = useLang() === 'ko';
   const [layer,setLayer]=useState<'kingdom'|'wealth'|'sol'>('kingdom');
@@ -65,37 +41,8 @@ export function RegionMap({ world, selected, onSelect }: { world: World; selecte
   const [sort,setSort] = useState('population');
   const [direction,setDirection] = useState(-1);
   const regions = [...world.regions].sort((a,b)=>(sort==='name'?regionName(a).localeCompare(regionName(b)):sort==='sol'?regionLivingStandard(a)-regionLivingStandard(b):sort==='wealth'?regionAvgWealth(a)-regionAvgWealth(b):regionPopulation(a)-regionPopulation(b))*direction);
-  const cells = useMemo(() => {
-    const ids = Object.keys(POS).map(Number);
-    const out: Record<number, string> = {};
-    const polygons:Record<number,Pt[]>={};
-    for (const i of ids) {
-      let poly: Pt[] = LAND;
-      const [xi, yi] = POS[i];
-      for (const j of ids) {
-        if (j === i) continue;
-        const [xj, yj] = POS[j];
-        poly = clip(poly, [xj - xi, yj - yi], (xj * xj + yj * yj - xi * xi - yi * yi) / 2);
-      }
-      out[i] = toPath(poly);
-      polygons[i]=poly;
-    }
-    return {paths:out,polygons};
-  }, []);
-  const borders=useMemo(()=>{
-    const seen=new Map<string,{a:Pt;b:Pt;regions:number[]}>();
-    for(const [id,poly] of Object.entries(cells.polygons)) for(let i=0;i<poly.length;i++){
-      const a=poly[i],b=poly[(i+1)%poly.length];
-      const key=[a,b].map(p=>p.map(n=>n.toFixed(2)).join(',')).sort().join('|');
-      const edge=seen.get(key);if(edge)edge.regions.push(Number(id));else seen.set(key,{a,b,regions:[Number(id)]});
-    }
-    return [...seen.values()].filter(e=>e.regions.length===2&&world.regions.find(r=>r.id===e.regions[0])?.kingdomId!==world.regions.find(r=>r.id===e.regions[1])?.kingdomId);
-  },[cells,world.regions]);
-  const coast = useMemo(() => {
-    const pts = LAND.slice(3); // 바닷가 쪽 꼭짓점들 (0,100)→(17,8)
-    return `M${pts.map((p) => `${p[0]},${p[1]}`).join('L')}L20,0`;
-  }, []);
-
+  const shape=(id:number)=>geometry.get(id)??fallback(id,world.regions.findIndex(r=>r.id===id));
+  const borders=mapData.borders.filter(b=>world.regions.find(r=>r.id===b.a)?.kingdomId!==world.regions.find(r=>r.id===b.b)?.kingdomId);
   const edges: [number, number][] = [];
   for (const r of world.regions) for (const nb of r.neighbors) if (r.id < nb) edges.push([r.id, nb]);
   const order = [...world.regions].sort((a, b) => (a.id === selected ? 1 : 0) - (b.id === selected ? 1 : 0));
@@ -104,56 +51,38 @@ export function RegionMap({ world, selected, onSelect }: { world: World; selecte
     <>
       <div className="map-title"><h2>{T.paneMap}</h2></div><div className="map-layers segmented" role="group" aria-label={T.mapLayers}>{(['kingdom','wealth','sol'] as const).map(id=><button key={id} aria-pressed={layer===id} onClick={()=>setLayer(id)}>{id==='kingdom'?T.territory:id==='wealth'?T.wealthLevel:T.standardOfLiving}</button>)}</div>
       <div className="map-camera-tools"><button aria-label={ko?'지도 축소':'Zoom out'} onClick={()=>zoom(-.15)}>−</button><button aria-label={ko?'지도 위치 초기화':'Reset map view'} onClick={()=>setCamera({x:0,y:0,zoom:1})}>{Math.round(camera.zoom*100)}%</button><button aria-label={ko?'지도 확대':'Zoom in'} onClick={()=>zoom(.15)}>+</button></div>
-      <svg className="map" viewBox={`${-24-camera.x} ${-8-camera.y} ${148/camera.zoom} ${116/camera.zoom}`} role="group" aria-label={T.mapAria}
+      <svg className="map atlas-map" viewBox={`${camera.x-680} ${camera.y-240} ${WIDTH/camera.zoom} ${HEIGHT/camera.zoom}`} role="group" aria-label={T.mapAria}
        onWheel={e=>zoom(e.deltaY<0?.1:-.1)}
-       onPointerDown={e=>{if(e.button!==0)return;const box=e.currentTarget.getBoundingClientRect();suppressClick.current=false;drag.current={x:e.clientX,y:e.clientY,cx:camera.x,cy:camera.y,scale:Math.min(box.width/(148/camera.zoom),box.height/(116/camera.zoom)),moved:false};}}
-       onPointerMove={e=>{const d=drag.current;if(!d)return;const dx=e.clientX-d.x,dy=e.clientY-d.y;if(Math.hypot(dx,dy)>4){d.moved=true;suppressClick.current=true;e.currentTarget.setPointerCapture(e.pointerId);}if(d.moved)setCamera(c=>({...c,x:Math.max(-150,Math.min(150,d.cx+dx/d.scale)),y:Math.max(-100,Math.min(100,d.cy+dy/d.scale))}));}}
+       onPointerDown={e=>{if(e.button!==0)return;const box=e.currentTarget.getBoundingClientRect();suppressClick.current=false;drag.current={x:e.clientX,y:e.clientY,cx:camera.x,cy:camera.y,scale:Math.min(box.width/(WIDTH/camera.zoom),box.height/(HEIGHT/camera.zoom)),moved:false};}}
+       onPointerMove={e=>{const d=drag.current;if(!d)return;const dx=e.clientX-d.x,dy=e.clientY-d.y;if(Math.hypot(dx,dy)>4){d.moved=true;suppressClick.current=true;e.currentTarget.setPointerCapture(e.pointerId);}if(d.moved)setCamera(c=>clampCamera({...c,x:d.cx-dx/d.scale,y:d.cy-dy/d.scale}));}}
        onPointerUp={()=>{drag.current=null;}} onPointerCancel={()=>{drag.current=null;}}
-       tabIndex={0} onKeyDown={e=>{if(e.target!==e.currentTarget)return;const dirs:Record<string,[number,number]>={ArrowLeft:[5,0],ArrowRight:[-5,0],ArrowUp:[0,5],ArrowDown:[0,-5]};if(dirs[e.key]){e.preventDefault();const [x,y]=dirs[e.key];setCamera(c=>({...c,x:c.x+x,y:c.y+y}));}}}>
-
-        <rect x="0" y="0" width="100" height="100" className="map-bg" />
-        <path d="M0,0H20L17,8L13,18L11,30L8,40L9,52L6,64L0,72Z" className="sea" />
-        {order.map((r) => {
-          const pop = regionPopulation(r);
-          const peasants = r.households.peasant.population / Math.max(1, pop);
-          return (
-            <g key={r.id} className={`map-cell ${selected === r.id ? 'selected' : ''}`} onClick={() => {if(!suppressClick.current)onSelect(r.id);}}
-              tabIndex={0} role="button" aria-pressed={selected === r.id}
-              aria-label={`${kingdomName(r.kingdomId)} · ${T.mapCellAria(regionName(r), int(pop), regionAvgWealth(r).toFixed(1), pct(peasants))}`}
-              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect(r.id); } }}>
-              <path d={cells.paths[r.id]} fill={regionColor(r)} className="cell-fill" />
-            </g>
-          );
-        })}
-        <g className="kingdom-borders" aria-hidden="true">{borders.map((e,i)=><g key={i}><line x1={e.a[0]} y1={e.a[1]} x2={e.b[0]} y2={e.b[1]} stroke="#fff5dc" strokeWidth="1.5"/><line x1={e.a[0]} y1={e.a[1]} x2={e.b[0]} y2={e.b[1]} stroke="#30281f" strokeWidth=".55"/></g>)}</g>
-        <path d={coast} className="coast-line" transform="translate(-1.2,0)" />
-        {edges.map(([a, b]) => {
-          const [x1, y1] = POS[a], [x2, y2] = POS[b];
-          return <line key={`${a}-${b}`} x1={x1} y1={y1 + 3} x2={x2} y2={y2 + 3} className="rail" />;
-        })}
-
-        {world.regions.map((r) => {
-          const [x, y] = POS[r.id];
-          const local = world.buildings.filter(b=>b.regionId===r.id);
-          const royal = local.filter(b=>b.stateOwned).reduce((n,b)=>n+b.level,0);
-          const total = local.reduce((n,b)=>n+b.level,0);
-          const royalShare = total ? royal/total : 0;
-          const mine = world.buildings.filter((b) => b.regionId === r.id && b.companyId === PLAYER_ID).reduce((a, b) => a + b.level, 0);
-          return (
-            <g key={`l${r.id}`} className="map-label-g" aria-hidden="true">
-              <SvgSprite name={`region-${r.id}`} x={x - 7.5} y={y - 2} size={15} />
-              <text x={x-7} y={y+7} className="kingdom-symbol" fill={kingdomOf(r.kingdomId)?.color}>{['●','◆','▲'][world.kingdoms.findIndex(k=>k.id===r.kingdomId)]}</text>
-              <text x={x} y={y - 1} className="map-label">{regionName(r)}</text>
-              {total > 0 && <g className="map-ownership"><rect x={x-7} y={y+9} width={14} height={1.8} fill="var(--private-owner)"/><rect x={x-7} y={y+9} width={14*royalShare} height={1.8} fill="var(--royal-owner)"/><rect x={x-7} y={y+9} width={14} height={1.8} fill="none" stroke="var(--ink)" strokeWidth=".25"/></g>}
-              {mine > 0 && (
-                <g className="badge-mine">
-                  <rect x={x + 6} y={y + 1.2} width={5.4} height={4} rx={1} />
-                  <text x={x + 8.7} y={y + 4.2}>{mine}</text>
-                </g>
-              )}
-            </g>
-          );
-        })}
+       tabIndex={0} onKeyDown={e=>{if(e.target!==e.currentTarget)return;const dirs:Record<string,[number,number]>={ArrowLeft:[-40,0],ArrowRight:[40,0],ArrowUp:[0,-40],ArrowDown:[0,40]};if(dirs[e.key]){e.preventDefault();const [x,y]=dirs[e.key];setCamera(c=>clampCamera({...c,x:c.x+x/c.zoom,y:c.y+y/c.zoom}));}}}>
+        <rect className="atlas-ocean" x={-WIDTH} y={-HEIGHT} width={WIDTH*3} height={HEIGHT*3} fill="#93afb3"/>
+        <g pointerEvents="none">{[
+          [3,'M950,0L930,-150L1000,-300L975,-1504H1150V0Z'],
+          [6,'M1150,-1504H4432V400H1535V0H1150Z'],
+          [7,'M1535,400H4432V2528H1400V1023H1535Z'],
+          [5,'M950,1023H1400V2528H950Z'],
+          [4,'M510,1023L520,1090L450,1150L475,1220L380,1350L430,1460L300,1620L340,2528H950V1023Z'],
+        ].map(([id,d])=>{const r=world.regions.find(r=>r.id===id);return <g key={id}><path d={String(d)} fill="#eee4cc" className="atlas-base"/></g>;})}</g>
+        <image className="atlas-base" href={`${import.meta.env.BASE_URL}${mapData.image.light}`} x="0" y="0" width={1536} height={1024} preserveAspectRatio="none" pointerEvents="none"/>
+        <g className="atlas-data" style={{fillOpacity:layer==='kingdom'?.35:.55}} pointerEvents="none">{world.regions.map(r=><path key={r.id} d={shape(r.id).d} fill={regionColor(r)}/>)}</g>
+        <g className="atlas-provinces" pointerEvents="none">{mapData.borders.map(b=><path key={`${b.a}-${b.b}`} d={b.d}/>)}</g>
+        <g className="atlas-unclaimed" pointerEvents="none">{mapData.unclaimed.map(p=><path key={p.id} d={p.d} fill={p.id==='lake'?'#93afb3':'#c5bea9'}/>)}</g>
+        <g className="atlas-rivers" pointerEvents="none">{mapData.rivers.map((d,i)=><path key={i} d={d}/>)}</g>
+        <g className="kingdom-borders" aria-hidden="true">{borders.map(b=><g key={`${b.a}-${b.b}`}><path d={b.d} fill="none" stroke="#fff5dc" strokeWidth="7"/><path d={b.d} fill="none" stroke="#403629" strokeWidth="3"/></g>)}</g>
+        {edges.map(([a,b])=>{const [x1,y1]=shape(a).anchors.rail,[x2,y2]=shape(b).anchors.rail;return <path key={`${a}-${b}`} d={`M${x1},${y1}Q${(x1+x2)/2+18},${(y1+y2)/2-20} ${x2},${y2}`} className="atlas-rail"/>;})}
+        {order.map(r=><g key={r.id} className={`map-cell ${selected===r.id?'selected':''}`} onClick={()=>{if(!suppressClick.current)onSelect(r.id);}} tabIndex={0} role="button" aria-pressed={selected===r.id}
+          aria-label={`${kingdomName(r.kingdomId)} · ${T.mapCellAria(regionName(r),int(regionPopulation(r)),regionAvgWealth(r).toFixed(1),pct(r.households.peasant.population/Math.max(1,regionPopulation(r))))}`}
+          onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();onSelect(r.id);}}}>
+          <title>{`${regionName(r)} · ${kingdomName(r.kingdomId)}\n${T.population} ${int(regionPopulation(r))} · ${T.standardOfLiving} ${regionLivingStandard(r).toFixed(1)}`}</title>
+          <path d={shape(r.id).d} className="atlas-hit"/>
+        </g>)}
+        {world.regions.map(r=>{const [x,y]=shape(r.id).label;const mine=world.buildings.filter(b=>b.regionId===r.id&&b.companyId===PLAYER_ID).reduce((n,b)=>n+b.level,0);return <g key={`l${r.id}`} className="map-label-g" transform={`translate(${x} ${y}) scale(${1/camera.zoom})`} aria-hidden="true">
+          <SvgSprite name={`region-${r.id}`} x={-42} y={-90} size={84}/>
+          <text x="0" y="0" className="atlas-label">{regionName(r)}</text>
+          <text x="0" y="27" className="atlas-owner" fill={kingdomOf(r.kingdomId)?.color}>{['●','◆','▲'][world.kingdoms.findIndex(k=>k.id===r.kingdomId)]} {kingdomName(r.kingdomId)}{mine>0?` · ★ ${int(mine)}`:''}</text>
+        </g>;})}
       </svg>
       <div className="map-legend">
         <div className="kingdom-legend">{world.kingdoms.map((k,i)=><span key={k.id}><b style={{color:k.color}}>{['●','◆','▲'][i]}</b>{ko?k.name:k.nameEn}{world.companies.some(c=>c.kingdomId===k.id&&c.isPlayer)&&<strong title={T.playerOwner}>★</strong>}</span>)}</div>
@@ -162,8 +91,8 @@ export function RegionMap({ world, selected, onSelect }: { world: World; selecte
         <div className="scale-ticks lbl">{WEALTH_STEPS.map((s) => <span key={s.color}>{s.label()}</span>)}</div>
         </>}<div className="map-keys lbl">
           <span><i className="key-rail" /> {T.keyRail}</span>
-          <span><i className="key-mine" /> {T.keyMine}</span>
-          <span><Crown size={13}/><i className="ownership-key royal"/>{T.stateOwner}</span><span><BriefcaseBusiness size={13}/><i className="ownership-key private"/>{T.privateOwner}</span>
+          <span>★ {T.keyMine}</span>
+          
           <span><Sprite name="m-wheat" size={16} /><Sprite name="m-tree" size={16} /><Sprite name="m-mine" size={16} /> {T.keyLand}</span>
         </div>
       </div>

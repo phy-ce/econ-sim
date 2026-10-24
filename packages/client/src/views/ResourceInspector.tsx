@@ -1,3 +1,5 @@
+import { BuildingEconomics } from './BuildingEconomics';
+import { isOwnerBuilding } from '@econ/sim';
 import { HelpText } from '../TooltipLayer';
 import { HarvestBadge } from './HarvestBadge';
 import { NumericValue } from '../NumericValue';
@@ -6,7 +8,7 @@ import { BuildingControls } from './CompanyPanel';
 import { OwnerBadge } from './OwnerBadge';
 import { Workforce } from './Workforce';
 import { ListTools } from './ListTools';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ArrowDownToLine, ArrowUpFromLine, ArrowRight, Factory, Pause, ChevronRight } from 'lucide-react';
 import { TUNE, getMethod, companyById } from '@econ/sim';
 import type { Building, GoodBag, GoodId, Region, World } from '@econ/sim';
@@ -14,9 +16,12 @@ import { BuildingSprite, GoodSprite } from '../sprites';
 import { buildingName, goodName, companyName, methodName, useLang, useT } from '../i18n';
 import { compact, money, pct } from '../format';
 
-export function BuildingInspector({ building: b, world, onGood, onCompany, game }: {
+export function BuildingInspector({ building: input, world, onGood, onCompany, game }: {
   game?:Game; building: Building; world: World; onGood: (g: GoodId) => void; onCompany: (id: number) => void;
 }) {
+  const [ownerId,setOwnerId]=useState<number|null>(null);
+  useEffect(()=>setOwnerId(null),[input.id]);
+  const b=world.buildings.find(b=>b.id===ownerId)??input;
   const ko = useLang() === 'ko';
   const T = useT();
   const method = getMethod(b.typeId, b.methodId);
@@ -29,8 +34,8 @@ export function BuildingInspector({ building: b, world, onGood, onCompany, game 
     <div className="inspector-heading"><BuildingSprite typeId={b.typeId} size={88} /><div><h3>{buildingName(b.typeId)} ×{b.level}</h3><p>{methodName(getMethod(b.typeId, b.methodId))}</p>
       <button className="link-btn" onClick={() => onCompany(b.companyId)}><OwnerBadge company={owner} world={world}/> <ChevronRight size={14} /></button></div></div>
     {(b.shrinking??0)>0&&<div className="demolition-status"><strong>{T.demolitionQueue(b.shrinking!)}</strong><div className="demolition-levels" role="img" aria-label={T.demolitionQueue(b.shrinking!)}><i style={{flex:b.level-(b.shrinking??0)}}/><i className="pending" style={{flex:b.shrinking}}/></div></div>}
-    <div className="inspector-metrics"><span><HelpText text={T.help.utilization}>{ko ? '가동률' : 'Utilization'}</HelpText><b>{b.active && !b.idle ? pct(b.utilization) : '0%'}</b></span><span><HelpText text={T.help.staffing}>{ko ? '충원율' : 'Staffing'}</HelpText><b>{pct(b.last.staffing)}</b></span><span><HelpText text={T.help.inputFill}>{ko ? '원료 충족' : 'Input coverage'}</HelpText><b>{pct(b.last.inputFill)}</b></span></div>
-    <Workforce building={b}/><div className="recipe" data-help={T.help.recipe} tabIndex={0}><div><h4><ArrowDownToLine size={16} />{ko ? '투입' : 'Inputs'}</h4>{bag(method.inputs)}</div><ArrowRight className="recipe-arrow" /><div><h4><ArrowUpFromLine size={16} />{ko ? '산출' : 'Outputs'}<HarvestBadge world={world} regionId={b.regionId} typeId={b.typeId}/></h4>{method.taxCapacity ? <span className="service-output">{T.taxCapacity} <b><NumericValue value={method.taxCapacity*b.level*TUNE.adminScale} format="compact"/></b></span> : bag(method.outputs)}{method.construction && <span className="service-output"><Factory size={18}/>{ko ? '건설력' : 'Construction'} <b><NumericValue value={method.construction*b.level} format="compact"/> pt</b></span>}{method.seats && <span className="service-output"><HelpText text={T.help.schoolSeats}>{T.schoolSeats}</HelpText> <b><NumericValue value={method.seats*b.level} format="compact"/></b></span>}</div></div>
+    <div className="inspector-metrics">{!isOwnerBuilding(b.typeId)&&<span><HelpText text={T.help.utilization}>{ko ? '가동률' : 'Utilization'}</HelpText><b>{b.active && !b.idle ? pct(b.utilization) : '0%'}</b></span>}<span><HelpText text={T.help.staffing}>{ko ? '충원율' : 'Staffing'}</HelpText><b>{pct(b.last.staffing)}</b></span>{!isOwnerBuilding(b.typeId)&&<span><HelpText text={T.help.inputFill}>{ko ? '원료 충족' : 'Input coverage'}</HelpText><b>{pct(b.last.inputFill)}</b></span>}</div>
+    <BuildingEconomics world={world} building={b} game={game} onBuilding={setOwnerId}/><Workforce building={b}/><div className="recipe" data-help={T.help.recipe} tabIndex={0}><div><h4><ArrowDownToLine size={16} />{ko ? '투입' : 'Inputs'}</h4>{bag(method.inputs)}</div><ArrowRight className="recipe-arrow" /><div><h4><ArrowUpFromLine size={16} />{ko ? '산출' : 'Outputs'}<HarvestBadge world={world} regionId={b.regionId} typeId={b.typeId}/></h4>{method.taxCapacity ? <span className="service-output">{T.taxCapacity} <b><NumericValue value={method.taxCapacity*b.level*TUNE.adminScale} format="compact"/></b></span> : bag(method.outputs)}{method.construction && <span className="service-output"><Factory size={18}/>{ko ? '건설력' : 'Construction'} <b><NumericValue value={method.construction*b.level} format="compact"/> pt</b></span>}{method.seats && <span className="service-output"><HelpText text={T.help.schoolSeats}>{T.schoolSeats}</HelpText> <b><NumericValue value={method.seats*b.level} format="compact"/></b></span>}</div></div>
 
     {game&&<BuildingControls building={b} game={game} world={world}/>}
   </section>;

@@ -1,5 +1,5 @@
 import { NumericValue } from '../NumericValue';
-import { BUILDING_BY_ID, SKILLS, getMethod, paysDividend, peasantSlots, slots } from '@econ/sim';
+import { BUILDING_BY_ID, SKILLS, getMethod, paysShare, peasantSlots, slots } from '@econ/sim';
 import type { Building } from '@econ/sim';
 import { Coins } from 'lucide-react';
 import { Bar, CLASS_COLOR } from '../ui';
@@ -11,7 +11,7 @@ export function Workforce({ building: b }: { building: Building }) {
   const method = getMethod(b.typeId, b.methodId);
   const rows = b.typeId === 'subsistence'
     ? [{ id: 'peasant' as const, emp: b.tenants ?? 0, jobs: peasantSlots(b), dividend: false }]
-    : SKILLS.filter(s => (method.workers[s] ?? 0) > 0).map(s => ({ id: s, emp: b.employed[s], jobs: slots(b, s), dividend: paysDividend(b.stateOwned, s) }));
+    : SKILLS.filter(s => (method.workers[s] ?? 0) > 0).map(s => ({ id: s, emp: b.employed[s], jobs: slots(b, s), dividend: paysShare(b, s) }));
   return <div className="workforce-list">{rows.map(r => <div key={r.id} className="workforce-row" data-help={T.help.workforce} tabIndex={0}>
     <span>{className(r.id)} {r.dividend && <span title={T.dividend} aria-label={T.dividend}><Coins size={13}/></span>}</span>
     <Bar value={r.jobs > 0 ? r.emp / r.jobs : 0} color={CLASS_COLOR[r.id]} vac label={className(r.id)}/>

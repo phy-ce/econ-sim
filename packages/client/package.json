@@ -5,9 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "npm run assets:check && vite build",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit -p ."
+    "typecheck": "tsc --noEmit -p .",
+    "assets:check": "tsx scripts/build-map.ts && tsx scripts/icons/list.ts"
   },
   "dependencies": {
     "@econ/sim": "*",

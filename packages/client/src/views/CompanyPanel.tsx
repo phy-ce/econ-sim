@@ -138,7 +138,7 @@ export function CompanyView({ world, company: c, onView }: { world: World; compa
       </div>
       <div className="stats">
         <div className="stat"><span className="stat-label">{T.cash}</span><span className="stat-value"><NumericValue value={c.cash} format="compactMoney"/></span></div>
-        <div className="stat">
+        <div className="stat" hidden={!c.state}>
           <span className="stat-label">{T.loanLimit}</span>
           <span className="stat-value"><NumericValue value={c.debt} format="compactMoney"/></span>
           <Bar value={limit > 0 ? c.debt / limit : 0} tone={limit > 0 && c.debt / limit >= 0.7 ? 'neg' : 'gold'} size="sm" label={T.loanLimit} />
@@ -153,7 +153,7 @@ export function CompanyView({ world, company: c, onView }: { world: World; compa
           return <span key={s} className="fact-item"><i className="sw" style={{ background: SKILL_COLOR[s] }} />{skillName(s)} <span className="pxnum">ƒ<NumericValue value={c.wages[s]} format="two"/></span> <span className={`pxnum small ${off >= 0 ? 'pos' : 'neg'}`}>{spct(off)}</span></span>;
         })}</dd></div>
         <div><dt>{T.research}</dt><dd>{!c.state ? <span className="fact-item"><Crown size={14}/>{T.sharedResearch}</span> : tech
-          ? <span className="fact-item">{techName(tech.id)} <Bar value={(c.research.progress[tech.id] ?? 0) / tech.cost} size="sm" label={T.researchProgress} className="fact-bar" /> <span className="pxnum small">ƒ<NumericValue value={c.research.points/7} format="int"/>{T.perDay}</span></span>
+          ? <span className="fact-item">{techName(tech.id)} <Bar value={(c.research.progress[tech.id] ?? 0) / tech.cost} size="sm" label={T.researchProgress} className="fact-bar" /> <span className="pxnum small"><NumericValue value={c.research.points} format="two"/> pt / {T.system.week}</span></span>
           : <span className="muted">—</span>}</dd></div>
         {research.known.length > 0 && <div><dt>{T.knownTechs}</dt><dd>{research.known.map((x) => <span key={x} className="tag-soft">{techName(x)}</span>)}</dd></div>}
       </dl>
@@ -444,7 +444,7 @@ function Controls({ r, game, world, owner }: { r: Row; game: Game; world: World;
 export function Wages({ game, world, me }: { game: Game; world: World; me: Company }) {
   const T = useT();
   return (
-    <div className="wages">
+    <div className="wages"><h3>{T.system.marketWages}</h3>{me.state&&<div className="system-facts"><span>{T.system.wages}</span>{SKILLS.map(skill=><span key={skill}>{skillName(skill)} <NumericValue value={me.stateWages?.[skill]??0} format="money"/></span>)}</div>}
       {SKILLS.map((s) => {
         const market = marketWage(world, s, me.id);
         const offset = me.wageOffset ? me.wageOffset[s] : me.wages[s] / market - 1;
@@ -455,7 +455,7 @@ export function Wages({ game, world, me }: { game: Game; world: World; me: Compa
               <span className="wage-name"><i className="sw" style={{ background: SKILL_COLOR[s] }} />{skillName(s)}</span>
               <output className="wage-out">ƒ<NumericValue value={me.wages[s]} format="two"/> <small className={offset >= 0 ? 'pos' : 'neg'}>{spct(offset)}</small></output>
             </div>
-            {!me.state && <input type="range" min={-50} max={100} step={5} value={Math.round(offset * 100)}
+            {<input type="range" min={-50} max={100} step={5} value={Math.round(offset * 100)}
               aria-label={T.wageAria(skillName(s))}
               onChange={(e) => game.command({ type: 'setWageOffset', skill: s, offset: Number(e.target.value) / 100 })} />}
             <div className="wage-meta">

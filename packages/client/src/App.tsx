@@ -1,3 +1,6 @@
+import { RegionWindow } from './views/RegionWindow';
+import { PolicyPanel } from './views/PolicyPanel';
+import { ResearchPanel } from './views/ResearchPanel';
 import type { PopRequest } from './views/PopTable';
 import { eventDestination } from './eventDestination';
 import { NumericValue } from './NumericValue';
@@ -59,6 +62,8 @@ export function App() {
   const showWindow = (id: WindowId) => { setOpened(current=>id==='map'?current:[...current.filter(w=>w!==id),id]); setRevealRequest(v=>v+1); };
   const [popRequest,setPopRequest]=useState<PopRequest|null>(null);
   const [buildingRequest,setBuildingRequest]=useState<{id:number;sequence:number}|null>(null);
+  const [regionTabRequest,setRegionTabRequest]=useState({tab:'overview' as 'overview'|'industry',sequence:0});
+  const showRegionBuildings=()=>{setRegionTabRequest(r=>({tab:'industry',sequence:r.sequence+1}));showWindow('region');};
   const [regionId, setRegionId] = useState(1);
   const [good, setGood] = useState<GoodId>('food');
   /** 다른 상회를 들여다보는 중이면 그 회사 id (내 회사면 null) */
@@ -104,13 +109,13 @@ export function App() {
   const region = regionById(world, regionId);
   const viewed = viewId != null ? companyById(world, viewId) : undefined;
   const viewCompany = (id: number) => { setPopRequest(null);setViewId(id); showWindow('trends'); };
-  const selectRegion = (id: number) => { setRegionId(id); showWindow('industry'); };
-  const openPops=(regionId:number,prof:PopClass)=>{setViewId(null);setPopRequest(p=>({regionId,prof,sequence:(p?.sequence??0)+1}));showWindow('trends');};
-  const openBuilding=(id:number)=>{const b=world.buildings.find(b=>b.id===id);if(b){setRegionId(b.regionId);setBuildingRequest(p=>({id,sequence:(p?.sequence??0)+1}));showWindow('industry');}};
+  const selectRegion = (id: number) => { setRegionId(id);setRegionTabRequest(r=>({tab:'overview',sequence:r.sequence+1})); showWindow('region'); };
+  const openPops=(regionId:number,prof:PopClass)=>{setRegionId(regionId);setViewId(null);setPopRequest(p=>({regionId,prof,sequence:(p?.sequence??0)+1}));showWindow('region');};
+  const openBuilding=(id:number)=>{const b=world.buildings.find(b=>b.id===id);if(b){setRegionId(b.regionId);setBuildingRequest(p=>({id,sequence:(p?.sequence??0)+1}));showWindow('region');}};
   const openEvent=(event:GameEvent)=>{
     const destination=eventDestination(world,event);
     if(!destination)return;
-    if(destination.kind==='building'){setRegionId(destination.regionId);setBuildingRequest(previous=>({id:destination.id,sequence:(previous?.sequence??0)+1}));showWindow('industry');}
+    if(destination.kind==='building'){setRegionId(destination.regionId);setBuildingRequest(previous=>({id:destination.id,sequence:(previous?.sequence??0)+1}));showWindow('region');}
     else if(destination.kind==='region')selectRegion(destination.id);
     else if(destination.kind==='company')viewCompany(destination.id);
     else showWindow(destination.kind);
@@ -137,8 +142,7 @@ export function App() {
 
         {me && (
           <div className="ledger">
-            <dl className="chip"><dt><Sprite name="coin" size={16} /> {T.treasury}</dt><dd><NumericValue value={me.cash} format="money"/></dd></dl>
-            <button className={`chip loan-chip ${debtRatio >= .9 ? 'bad' : debtRatio >= .7 ? 'warn' : ''}`} onClick={()=>showWindow('finance')} aria-label={T.finance}><span className="chip-label"><Landmark size={16}/> {T.loan}</span><span className="chip-value"><NumericValue value={me.debt} format="money"/> / <NumericValue value={limit} format="money"/></span></button>
+            <button className="chip loan-chip" onClick={()=>showWindow('finance')} aria-label={T.finance} data-help={`${T.system.netTreasury}\n${T.cash}: ${me.cash.toFixed(2)} · ${T.loan}: ${me.debt.toFixed(2)}`}><span className="chip-label"><Sprite name="coin" size={16}/>{T.treasury}</span><span className="chip-value"><NumericValue value={me.cash-me.debt} format="money"/> / <NumericValue value={limit} format="money"/></span></button>
             <dl className={`chip ${me.lastWeekProfit >= 0 ? 'good' : 'bad'}`}><dt>{T.lastWeekPL}</dt><dd><NumericValue value={me.lastWeekProfit} format="signedMoney"/></dd></dl>
             <dl className={`chip ${collection < .8 ? 'warn' : ''}`}><dt>{T.taxCollection}</dt><dd>{Math.round(collection*100)}%</dd><Bar value={collection} tone={collection < .8 ? 'gold' : 'pos'} size="sm" label={T.taxCollection}/></dl>
           </div>
@@ -193,9 +197,11 @@ export function App() {
 
       <WindowWorkspace revealRequest={revealRequest} opened={opened} onOpened={setOpened} windows={[
         { id:'map', title:T.paneMap, icon:<Map size={18}/>, content:<RegionMap world={world} selected={regionId} onSelect={selectRegion}/> },
-        ...(['overview','market','industry'] as const).map(mode => ({id:mode, title:mode==='overview'?(lang==='ko'?'지역 개요':'Region'):mode==='market'?T.market:(lang==='ko'?'지역 건물':'Regional buildings'), icon:mode==='overview'?<Users size={18}/>:mode==='market'?<Package size={18}/>:<Factory size={18}/>,content:<RegionPanel onViewPops={openPops} buildingRequest={mode==='industry'?buildingRequest:null} game={game} key={`${regionId}-${mode}`} mode={mode} world={world} region={region} history={game.history} selectedGood={good} onSelectGood={selectGood} onViewCompany={viewCompany} onViewBuildings={()=>showWindow('industry')}/>})),
-        { id:'finance', title:T.finance, icon:<Landmark size={18}/>, content:me?<FinancePanel game={game} world={world} me={me}/>:null },
-        { id:'research', title:T.research, icon:<FlaskConical size={18}/>, content:me?<Research game={game} me={me} onFinance={()=>showWindow('finance')}/>:null },
+        {id:'region',title:T.system.region,icon:<Users size={18}/>,content:<RegionWindow tabRequest={regionTabRequest} game={game} world={world} region={region} history={game.history} selectedGood={good} onSelectGood={selectGood} onViewCompany={viewCompany} onViewPops={openPops} buildingRequest={buildingRequest} popRequest={popRequest} onOpenBuilding={openBuilding}/>},
+        {id:'market',title:T.market,icon:<Package size={18}/>,content:<RegionPanel game={game} mode="market" world={world} region={region} history={game.history} selectedGood={good} onSelectGood={selectGood} onViewCompany={viewCompany} onViewBuildings={showRegionBuildings}/>},
+        {id:'policies',title:T.system.policies,icon:<Landmark size={18}/>,content:me?<PolicyPanel world={world} game={game} kingdomId={me.kingdomId} onResearch={()=>showWindow('research')}/>:null},
+        { id:'finance', title:T.finance, icon:<Landmark size={18}/>, content:me?<FinancePanel active={opened.includes('finance')} game={game} world={world} me={me} onBuilding={openBuilding} onPolicies={()=>showWindow('policies')}/>:null },
+        { id:'research', title:T.research, icon:<FlaskConical size={18}/>, content:me?<ResearchPanel game={game} world={world} me={me}/>:null },
         { id:'construction', title:T.construct, icon:<HardHat size={18}/>, content:me?<Projects game={game} world={world} owner={me} projects={world.constructions}/>:null },
         { id:'trends', title:lang==='ko'?'통계 · 소식':'Statistics', icon:<ChartNoAxesCombined size={18}/>, content:<BottomPanel popRequest={popRequest} onBuilding={openBuilding} onEvent={openEvent} game={game} world={world} history={game.history} lastReadTick={game.lastReadTick} onRead={game.markRead} onJump={selectRegion} viewedId={viewId} onViewCompany={viewCompany}/> },
       ]}/>

@@ -6,6 +6,7 @@ import { particle } from './format';
 type S = string;
 
 export const KO = {
+ system: {"goods":"상품", "kingdom":"왕국", "policies": "정책", "item": "항목", "details": "상세", "week": "주", "day": "일", "tax": "세금 수준", "wages": "국영 임금", "welfare": "복지 수준", "fixed": "고정 항목", "target": "목표 생활수준", "formula": "계산 내역", "sales": "매출", "inputs": "원료", "covered": "대상", "excluded": "제외", "base": "기본", "gdp": "총생산", "other": "원료·이익", "smoothing": "평활 차이", "smoothingHelp": "이동평균 예산과 현재 구성 내역 합의 차이입니다.", "financeRatio": "금융가 자산 비율", "ownerTreasury": "저택·금융가 금고", "manor": "저택", "finance": "금융가", "taxLaw": "세법", "investLaw": "투자법", "welfareLaw": "복지법", "land": "토지세", "poll": "인두세", "income": "소득세", "nobles": "귀족만", "upper": "전문가까지", "middle": "기술자까지", "lower": "노동자·농부까지", "none": "없음", "poor": "구빈법", "wage": "임금 보조", "universal": "보편 보장", "days": "일", "transition": "전환 중", "conditionLost": "완료 조건 미충족", "conditionHelp": "세법·투자법은 완료 시점에도 금융가 자산 비율 조건을 충족해야 합니다.", "cancel": "취소", "failed": "이전 전환 실패", "current": "시행 중", "enact": "전환", "weekProfit": "주간 이익", "perLevel": "레벨당 주간 이익", "reserve": "유보 자산", "profit": "이익", "owner": "소유주", "state": "왕실", "dividend": "배당/주", "privatize": "민영화 허용", "region": "지역", "overview": "개요", "population": "인구", "industry": "건물", "weekPoints": "주간 연구", "literacy": "왕국 문해력", "weeks": "주", "all": "전체", "private": "민영", "holdings": "보유 건물", "marketWages": "생산 건물 임금", "netTreasury": "순금고 / 대출 한도"},
  ringUsed:'사용', ringFree:'여유', ringLevels:'건물 레벨 기준', ringOpenBuildings:'클릭하면 이 지역의 전체 건물 창을 엽니다.', ringOpenPops:'클릭하면 이 계층의 인구 상세 창을 엽니다.',
 
   "windowMove": "창 이동",
@@ -83,7 +84,7 @@ export const KO = {
   treasury: '금고',
   loanLimit: '대출 / 한도',
   lastWeekPL: '지난주 손익',
-  budgetLines: {tax:'세금',tariffs:'관세',mint:'주조',fees:'민간 공사 수수료',wages:'정부 건물 인건비',goods:'정부 건물 물자',research:'연구',interest:'국채 이자'} as Record<string,string>,
+  budgetLines: {stateFirms:'국영 사업 손익',build:'왕실 공사',welfare:'복지',tax:'세금',tariffs:'관세',mint:'주조',fees:'민간 공사 수수료',wages:'정부 건물 인건비',goods:'정부 건물 물자',research:'연구',interest:'국채 이자'} as Record<string,string>,
   weeklyBudget: '주간 예산 (예상)', budgetNet: '순수지',
   speedGroup: '게임 속도',
   pause: '일시정지 (Space)',
@@ -297,6 +298,7 @@ export const KO = {
 export type Dict = typeof KO;
 
 export const EN: Dict = {
+ system: {"goods":"Goods", "kingdom":"Kingdom", "policies": "Policies", "item": "Item", "details": "Details", "week": "week", "day": "day", "tax": "Tax level", "wages": "State wages", "welfare": "Welfare level", "fixed": "Fixed", "target": "Target living standard", "formula": "Calculation", "sales": "Sales", "inputs": "Inputs", "covered": "Covered", "excluded": "Excluded", "base": "Base", "gdp": "GDP", "other": "Inputs / profit", "smoothing": "Smoothing difference", "smoothingHelp": "Difference between the smoothed budget and the current component total.", "financeRatio": "Financial ownership", "ownerTreasury": "Manor / finance treasury", "manor": "Manor", "finance": "Finance house", "taxLaw": "Tax law", "investLaw": "Investment law", "welfareLaw": "Welfare law", "land": "Land tax", "poll": "Poll tax", "income": "Income tax", "nobles": "Nobles", "upper": "Experts and above", "middle": "Skilled and above", "lower": "Labourers and farmers", "none": "None", "poor": "Poor relief", "wage": "Wage support", "universal": "Universal coverage", "days": "days", "transition": "Transition", "conditionLost": "Completion condition unmet", "conditionHelp": "Tax and investment laws must still meet the ownership threshold on completion.", "cancel": "Cancel", "failed": "Previous transition failed", "current": "Current", "enact": "Enact", "weekProfit": "Weekly profit", "perLevel": "Weekly profit per level", "reserve": "Reserves", "profit": "Profit", "owner": "Owner", "state": "Crown", "dividend": "Dividend/week", "privatize": "Allow privatization", "region": "Region", "overview": "Overview", "population": "Population", "industry": "Buildings", "weekPoints": "Weekly research", "literacy": "Kingdom literacy", "weeks": "weeks", "all": "All", "private": "Private", "holdings": "Holdings", "marketWages": "Production wages", "netTreasury": "Net treasury / credit limit"},
  ringUsed:'Used', ringFree:'Free', ringLevels:'By building levels', ringOpenBuildings:'Click to open all buildings in this region.', ringOpenPops:'Click to open population details for this class.',
 
   "windowMove": "Move window",
@@ -373,7 +375,7 @@ export const EN: Dict = {
   treasury: 'Treasury',
   loanLimit: 'Loans / limit',
   lastWeekPL: 'Last week',
-  budgetLines: {tax:'Taxes',tariffs:'Tariffs',mint:'Minting',fees:'Private construction fees',wages:'Government building staff',goods:'Government building supplies',research:'Research',interest:'Bond interest'} as Record<string,string>,
+  budgetLines: {stateFirms:'State enterprise balance',build:'Crown construction',welfare:'Welfare',tax:'Taxes',tariffs:'Tariffs',mint:'Minting',fees:'Private construction fees',wages:'Government building staff',goods:'Government building supplies',research:'Research',interest:'Bond interest'} as Record<string,string>,
   weeklyBudget: 'Weekly budget (expected)', budgetNet: 'Net',
   speedGroup: 'Game speed',
   pause: 'Pause (Space)',

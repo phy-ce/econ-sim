@@ -10,13 +10,14 @@ export interface PopRequest { regionId:number; prof:PopClass; sequence:number }
 type Column='region'|'prof'|'size'|'wealth'|'sol'|'food'|'fulfillment'|'incomeEma'|'kind'|'literacy'|'growth';
 type View='living'|'income'|'education';
 const VIEW_COLUMNS:Record<View,Column[]>={living:['size','sol','food','fulfillment'],income:['size','wealth','incomeEma','kind'],education:['size','literacy','growth']};
-export function PopTable({world,request,onRegion,onBuilding}:{world:World;request?:PopRequest|null;onRegion:(id:number)=>void;onBuilding:(id:number)=>void}) {
+export function PopTable({world,request,onRegion,onBuilding,fixedRegion}:{world:World;fixedRegion?:number;request?:PopRequest|null;onRegion:(id:number)=>void;onBuilding:(id:number)=>void}) {
  const T=useT(),ko=useLang()==='ko';
- const [region,setRegion]=useState(0),[prof,setProf]=useState<PopClass|''>(''),[unemployed,setUnemployed]=useState(false);
+ const [region,setRegion]=useState(fixedRegion??0),[prof,setProf]=useState<PopClass|''>(''),[unemployed,setUnemployed]=useState(false);
  const [view,setView]=useState<View>(()=>{try{const v=localStorage.getItem('estera.popView');return v==='income'||v==='education'?v:'living';}catch{return 'living';}});
  const [sort,setSort]=useState<Column>('size'),[direction,setDirection]=useState(-1);
  useEffect(()=>{try{localStorage.setItem('estera.popView',view);}catch{}},[view]);
  useEffect(()=>{if(request){setRegion(request.regionId);setProf(request.prof);setUnemployed(false);}},[request]);
+ useEffect(()=>{if(fixedRegion!==undefined)setRegion(fixedRegion);},[fixedRegion]);
  const buildings=useMemo(()=>new Map(world.buildings.map(b=>[b.id,b])),[world.buildings]);
  const regions=useMemo(()=>new Map(world.regions.map(r=>[r.id,r])),[world.regions]);
  const names:Record<Column,string>={region:T.popRegion,prof:T.popProfession,size:T.popSize,wealth:T.wealthLevel,sol:T.standardOfLiving,food:T.popFood,fulfillment:T.popNeeds,incomeEma:T.popIncome,kind:T.popKind,literacy:T.popLiteracy,growth:T.popGrowth};
@@ -27,7 +28,7 @@ export function PopTable({world,request,onRegion,onBuilding}:{world:World;reques
  }).sort((a,b)=>{const av=a[sort],bv=b[sort];return (typeof av==='string'?av.localeCompare(String(bv)):Number(av)-Number(bv))*direction||a.p.id-b.p.id;});
  const hints:Partial<Record<Column,keyof typeof T.help>>={size:'population',wealth:'wealth',sol:'sol',food:'food',fulfillment:'fulfillment',incomeEma:'cashIncome',kind:'kind',literacy:'literacy',growth:'growth'};
  return <div className="pop-directory"><div className="pop-filters">
-  <select aria-label={T.popRegion} value={region} onChange={e=>setRegion(Number(e.target.value))}><option value={0}>{T.allRegions}</option>{world.regions.map(r=><option key={r.id} value={r.id}>{regionName(r)}</option>)}</select>
+  <select aria-label={T.popRegion} disabled={fixedRegion!==undefined} value={region} onChange={e=>setRegion(Number(e.target.value))}><option value={0}>{T.allRegions}</option>{world.regions.map(r=><option key={r.id} value={r.id}>{regionName(r)}</option>)}</select>
   <select aria-label={T.popProfession} value={prof} onChange={e=>setProf(e.target.value as PopClass|'')}><option value="">{T.allProfessions}</option>{POP_CLASSES.map(c=><option key={c} value={c}>{className(c)}</option>)}</select>
   <label><input type="checkbox" checked={unemployed} onChange={e=>setUnemployed(e.target.checked)}/>{T.unemployedOnly}</label><span>{rows.length}</span>
  </div><div className="pxseg pop-views" role="group" aria-label={ko?'인구 보기':'Population view'}>{(['living','income','education'] as View[]).map(v=><button key={v} aria-pressed={view===v} onClick={()=>{setView(v);if(!['region','prof',...VIEW_COLUMNS[v]].includes(sort)){setSort('size');setDirection(-1);}}}>{({living:ko?'생활':'Living',income:ko?'소득':'Income',education:ko?'교육':'Education'})[v]}</button>)}</div>

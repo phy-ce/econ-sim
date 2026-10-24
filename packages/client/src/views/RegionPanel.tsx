@@ -1,3 +1,4 @@
+import { BuildingEconomics } from './BuildingEconomics';
 import { RegionExplorer } from './RegionExplorer';
 import { HelpText } from '../TooltipLayer';
 import { NumericValue } from '../NumericValue';
@@ -53,8 +54,9 @@ export function RegionPanel({ world, region, history, selectedGood, onSelectGood
   const [industrySort, setIndustrySort] = useState('level');
   const [industryDirection, setIndustryDirection] = useState(-1);
   const [industrySearch, setIndustrySearch] = useState('');
+  const [ownership,setOwnership]=useState<'all'|'private'|'state'>('all');
   const allBuildings = world.buildings.filter(b => b.regionId === r.id);
-  const buildings = allBuildings.filter(b => `${buildingName(b.typeId)} ${companyById(world,b.companyId) ? companyName(companyById(world,b.companyId)!) : ''}`.toLocaleLowerCase().includes(industrySearch.toLocaleLowerCase())).sort((a,b) => {
+  const buildings = allBuildings.filter(b=>ownership==='all'||(ownership==='state'?b.stateOwned:!b.stateOwned)).filter(b => `${buildingName(b.typeId)} ${companyById(world,b.companyId) ? companyName(companyById(world,b.companyId)!) : ''}`.toLocaleLowerCase().includes(industrySearch.toLocaleLowerCase())).sort((a,b) => {
     const value = (b: typeof a) => industrySort === 'level' ? b.level : industrySort === 'utilization' ? (b.active && !b.idle ? b.utilization : 0) : b.profitEma;
     const label = (b: typeof a) => industrySort === 'name' ? buildingName(b.typeId) : companyById(world,b.companyId) ? companyName(companyById(world,b.companyId)!) : '';
     return (['name','owner'].includes(industrySort) ? label(a).localeCompare(label(b)) : value(a)-value(b))*industryDirection || a.id-b.id;
@@ -100,7 +102,7 @@ export function RegionPanel({ world, region, history, selectedGood, onSelectGood
             </span>
           )}
         </div>
-        <div className="stats region-stats">
+        {tab==='overview'&&<div className="stats region-stats">
           <div className="stat"><span className="stat-label"><HelpText text={T.help.sol}>{T.standardOfLiving}</HelpText></span><span className="stat-value">{regionLivingStandard(r).toFixed(1)}</span><Bar value={regionLivingStandard(r)/30} size="sm" label={T.standardOfLiving}/></div>
           <div className="stat"><span className="stat-label"><HelpText text={T.help.population}>{T.population}</HelpText></span><span className="stat-value"><NumericValue value={pop} format="compact"/></span></div>
           <div className="stat">
@@ -118,7 +120,7 @@ export function RegionPanel({ world, region, history, selectedGood, onSelectGood
           </div>
           <div className="stat"><span className="stat-label"><HelpText text={T.help.education}>{T.education}</HelpText></span><span className="stat-value">{pct(educationOf(r))}</span><Bar value={educationOf(r)} tone="pos" size="sm" label={T.education} /></div>
           <div className="stat"><span className="stat-label"><HelpText text={T.help.tenants}>{T.tenants}</HelpText></span><span className="stat-value accent">{pct(tenantShare)}</span><Bar value={tenantShare} tone="accent" size="sm" label={T.tenants} /></div>
-        </div>
+        </div>}
         {tab !== 'industry' && <button className="region-buildings-link" onClick={() => { if (onViewBuildings) onViewBuildings(); else setTab('industry'); }}><Factory size={15}/>{lang === 'ko' ? '지역 건물 전체 보기' : 'All regional buildings'} <b>{allBuildings.length}</b></button>}
         {tab === 'industry' && <p className="lbl">{lang === 'ko' ? `모든 상회 · 건물 ${allBuildings.length}개 · 총 ${allBuildings.reduce((sum,b)=>sum+b.level,0)}레벨` : `All companies · ${allBuildings.length} buildings`}</p>}
       </header>
@@ -176,6 +178,7 @@ export function RegionPanel({ world, region, history, selectedGood, onSelectGood
         {world.constructions.some(k=>k.regionId===r.id)&&<Projects game={game} world={world} owner={world.companies.find(c=>c.kingdomId===r.kingdomId&&c.state)??me} regionId={r.id} projects={world.constructions.filter(k=>k.regionId===r.id)}/>}</>}
 
         {allBuildings.find(b => b.id === buildingId) && <div ref={inspectorRef}><BuildingInspector game={game} building={allBuildings.find(b => b.id === buildingId)!} world={world} onGood={selectGood} onCompany={onViewCompany}/></div>}
+        <div className="system-tabs">{(['all','private','state'] as const).map(id=><button key={id} aria-pressed={ownership===id} onClick={()=>setOwnership(id)}>{T.system[id]}</button>)}</div>
         <ListTools value={industrySort} onChange={setIndustrySort} direction={industryDirection} onDirection={() => setIndustryDirection(-industryDirection)} search={industrySearch} onSearch={setIndustrySearch} count={buildings.length} options={lang === 'ko' ? [['level','규모'],['name','이름'],['owner','소유 회사'],['utilization','가동률'],['profit','손익']] : [['level','Levels'],['name','Name'],['owner','Owner'],['utilization','Utilization'],['profit','Profit']]}/>
         <h3>{T.buildings} <span className="count-pill">{buildings.length}</span> </h3>
         {buildings.length === 0 ? <p className="empty">{lang === 'ko' ? (allBuildings.length === 0 ? T.noBuildings : T.noMatches) : (allBuildings.length === 0 ? T.noBuildings : T.noMatches)}</p> : (
@@ -189,7 +192,7 @@ export function RegionPanel({ world, region, history, selectedGood, onSelectGood
                     <span className="b-chip-icon" style={{ borderColor: c?.color }}><BuildingSprite typeId={b.typeId} size={48} /></span>
                     <span className="b-chip-name">{buildingName(b.typeId)}<HarvestBadge world={world} regionId={b.regionId} typeId={b.typeId}/><OwnerBadge company={c} world={world}/></span>
                     <span className="b-chip-count">×{b.level}{(b.shrinking??0)>0&&<small className="demolition-badge">{T.demolitionQueue(b.shrinking!)}</small>}</span>
-                  </button>
+                  </button><BuildingEconomics compact world={world} building={b}/>
                 </li>
               );
             })}

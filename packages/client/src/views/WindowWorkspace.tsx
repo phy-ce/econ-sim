@@ -4,9 +4,9 @@ import { X } from 'lucide-react';
 import { useT, useLang } from '../i18n';
 import { slotRect, placeWindows } from '../windowGeometry';
 import type { WindowSide } from '../windowGeometry';
-export type WindowId = 'map' | 'overview' | 'market' | 'industry' | 'finance' | 'research' | 'trends' | 'construction';
+export type WindowId = 'region' | 'policies' | 'map' | 'overview' | 'market' | 'industry' | 'finance' | 'research' | 'trends' | 'construction';
 export interface WindowDefinition { id:WindowId; title:string; icon:ReactNode; content:ReactNode }
-const DEFAULT_SIDE:Record<WindowId,WindowSide>={map:'left',overview:'left',industry:'left',research:'left',construction:'left',market:'right',finance:'right',trends:'right'};
+const DEFAULT_SIDE:Record<WindowId,WindowSide>={region:'left',policies:'right',map:'left',overview:'left',industry:'left',research:'left',construction:'left',market:'right',finance:'right',trends:'right'};
 export function WindowWorkspace({windows,opened,onOpened,revealRequest}:{windows:WindowDefinition[];opened:WindowId[];onOpened:(ids:WindowId[])=>void;revealRequest?:number}) {
  const T=useT(),ko=useLang()==='ko',area=useRef<HTMLElement>(null);
  const [bounds,setBounds]=useState({width:1920,height:998});
