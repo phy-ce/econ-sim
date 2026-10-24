@@ -578,6 +578,8 @@ export const TUNE = {
   // 유보 기준 AI (2026-10-25 사용자 요청 "유보액을 기준으로 건물을 늘리고 줄였으면 좋겠는데. + 신규투자", DECISIONS 7-27, DESIGN 10·11): 1 = 생산 건물은 유보 자산이 4주 차면 1레벨 증설, 바닥난 채 4주 적자면 1레벨 철거,
   // 새 투자는 값이 기본가 1.25배 이상 4주(가)이거나 굶는 건물의 투입재(나)인 상품을 내는 건물이 없는 곳에 1레벨 (ai.ts reserveLevels·planTrials). 0 = 옛 전망 AI (pickProject·reviewLevels·발전 투자)
   aiReserveRule: 1,
+  // 유보 기준 AI: 유보 0·적자가 이 주 수 이어지면 1레벨 철거 (2026-10-25 사용자 "26주로 늘려서", 그 전 4주)
+  reserveShrinkWeeks: 26,
   aiMixedMethods: 0, // 1 = 건물 전체를 바꿀 수 없을 때 같은 지역에 더 나은 방식 1~2레벨을 따로 짓는다 (세계 규칙이 바뀌어 사용자 결정 필요, DECISIONS 7-21)
   officeRichWeeks: 52,
   officeSelfPay: 0,
