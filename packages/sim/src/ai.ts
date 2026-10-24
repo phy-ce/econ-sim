@@ -526,9 +526,9 @@ function manageBuildings(w: World, c: Company, o: Outlook, pools: Map<string, nu
             const out = m.outputs[g] ?? 0, inp = m.inputs[g] ?? 0;
             if (out) {
               const dS = (out - (cur.outputs[g] ?? 0)) * perk * b.level;
-              revenue += out * perk * o.price(g, dS) * o.sellRate(g, dS);
+              revenue += out * perk * o.price(g, dS, 0, true, b.regionId) * o.sellRate(g, dS, b.regionId);
             }
-            if (inp) inputCost += inp * o.price(g, 0, (inp - (cur.inputs[g] ?? 0)) * b.level, false);
+            if (inp) inputCost += inp * o.price(g, 0, (inp - (cur.inputs[g] ?? 0)) * b.level, false, b.regionId);
           }
           return b.level * st * (revenue * fi * eff - inputCost * fi - wageCostOf(m, wages, c.state));
         };
@@ -548,7 +548,7 @@ function manageBuildings(w: World, c: Company, o: Outlook, pools: Map<string, nu
           if (aiTrace.on) { aiTrace.on(w, c, 'switchIn', b.typeId, best.id, b.level, o); aiTrace.on(w, c, 'switchOut', b.typeId, cur.id, -b.level, o); }
           takeFromPool(w, region, best, b.level, c.state, pools, c, b);
           // 같은 주에 다른 건물이 이 바꾸기를 보고 판단하게 전망에 반영한다
-          o.add(best, b.level, perk, true); o.add(cur, -b.level, perk, true);
+          o.add(best, b.level, perk, true, b.regionId); o.add(cur, -b.level, perk, true, b.regionId);
           for (const g of GOOD_IDS) spare[g] -= ((best.inputs[g] ?? 0) - (cur.inputs[g] ?? 0)) * b.level * b.utilization;
         }
       }
@@ -1066,6 +1066,12 @@ export function pickProject(w: World, c: Company, o: Outlook, free: number, allo
   const inDebt = c.state && !!TUNE.crownDebtNoBuild && c.debt > c.cash;
   // TUNE.expandUtilMin: 왕국 안 같은 종류·같은 산출 건물이 덜 돌거나 적자인 방식은 짓지도 늘리지도 않는다 (glutOf. 땅 바꾸기 후보도 뺀다)
   const glut = TUNE.expandUtilMin > 0 ? glutOf(w, c.kingdomId) : null;
+  const overLocal = (regionId: number, typeId: string, m: MethodDef, levels: number) => GOOD_IDS.some((g) => {
+    const out = m.outputs[g] ?? 0;
+    if (!(out > 0) || !GOODS[g].perishable) return false;
+    const x = o.local(g, regionId);
+    return out * levels * (1 + regionPerk(regionId, typeId)) > x.demand + (dev ? x.latent : 0) - x.supply;
+  });
   for (const r of ownRegions(w, c)) {
     for (const t of BUILDING_TYPES) {
       if (t.id === 'builder' || !canBuildType(c, t)) continue;
@@ -1109,6 +1115,8 @@ export function pickProject(w: World, c: Company, o: Outlook, free: number, allo
           if (m.seats && budget < (perLevel + wageCostOf(m, c.stateWages ?? c.wages, c.state) * TICKS_PER_WEEK * TUNE.treasuryLowWeeks) * levels) continue;
           // 발전 투자: 공급(공사 중 포함) + 이 공사의 산출이 지금 수요 + 잠재 수요를 넘는 덩어리는 짓지 않는다
           if (dev && outs.some((g) => o.supply[g] + (m.outputs[g] ?? 0) * levels * (1 + regionPerk(r.id, t.id)) > o.demand[g] + o.latent[g])) continue;
+          // 지역 밖으로 못 나가는 상품(운송): 2레벨 이상 덩어리는 산출이 그 지역의 모자란 양(수요(발전 투자는 잠재 수요까지) − 공급, 공사 중 포함)을 넘지 않을 때만
+          if (levels > 1 && overLocal(r.id, t.id, m, levels)) continue;
           const e = m.seats ? schoolValuation(w, c, r, m, levels, schoolSeats(w, r.id)) : t.id === TRADING_POST ? tradeValuation(w, c, r, m, levels) : valueMethod(w, o, r, c, t.id, m, levels, false, undefined, dev);
           if (laborAvailability(w, r, m, levels, c.state, pools, c) < MIN_STAFFING()) continue;
           const roi = (e.profit * TICKS_PER_YEAR) / (perLevel * levels);
