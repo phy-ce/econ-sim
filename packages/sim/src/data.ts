@@ -580,6 +580,8 @@ export const TUNE = {
   aiReserveRule: 1,
   // 유보 기준 AI: 유보 0·적자가 이 주 수 이어지면 1레벨 철거 (2026-10-25 사용자 "26주로 늘려서", 그 전 4주)
   reserveShrinkWeeks: 26,
+  // 1 = 부마다 묶음 합계를 그 전 곡선의 합으로 고정하고 구성만 바꾼다 (needsAt), 0 = 늘린 곡선 그대로
+  needFixedTotal: 1,
   // 유보 기준 AI 증설 확률 (2026-10-25 사용자 "확률분포로"): 주마다 확률 = reserveGrowMax × (유보 ÷ 상한 − reserveGrowFrom) ÷ (1 − reserveGrowFrom), 0~reserveGrowMax.
   // 가득 차면 주에 25% (평균 4주에 1레벨, 그 전 규칙 "90% 4주"와 비슷하게), 절반 아래면 0. reserveGrowMax 0 이면 그 전 규칙. 값은 비교 안 함 (근거 없음)
   reserveGrowMax: 0.25,
@@ -820,6 +822,16 @@ export function needsAt(wealth: number): Record<NeedId, number> {
     fine_furniture: 0.5 * (TUNE.luxuryLinear * rich + TUNE.luxuryQuad * rich * rich),
     meat: TUNE.meatLinear * fed + TUNE.meatQuad * fed * fed,
   };
+  // 묶음 합계는 부마다 정해져 있다 (2026-10-25 사용자 "그렇게 해봐": 합계는 그대로, 구성만 바꾼다). 합계 = 그 전(main) 곡선의 합.
+  // 식량은 위 값 그대로 두고, 나머지 필요를 위 비율대로 늘리거나 줄여 합계를 맞춘다. 잘살수록 식량 몫이 줄고 나머지 몫이 는다
+  if (TUNE.needFixedTotal) {
+    const u5 = Math.max(0, L - 5), r10 = Math.max(0, L - 10), f8 = Math.max(0, L - 8);
+    const total = 1.5 + 0.1 * Math.min(L, 10) + 0.1 * over10 + 0.3 * Math.min(L, 10) + 0.4 * u5 + 0.01 * u5 * u5 + 0.3 * r10 + 0.02 * r10 * r10 + 0.3 * f8 + 0.01 * f8 * f8;
+    let rest = 0;
+    for (const k in out) if (k !== 'nourishment') rest += out[k as NeedId];
+    const room = Math.max(0, total - out.nourishment);
+    if (rest > 0) for (const k in out) if (k !== 'nourishment') out[k as NeedId] *= room / rest;
+  }
   // 비교 실행용 필요량 배율 (기본은 비어 있다)
   for (const k in TUNE.needMul) out[k as NeedId] *= TUNE.needMul[k as NeedId]!;
   return out;
