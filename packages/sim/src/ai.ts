@@ -3,7 +3,7 @@ import { withEstimateCache, regionAvgWealth, regionPopulation, wageCostOf,
   availableMethods, ownBuildingAt, builderOf, canBuildType, kingdomGdp, paysDividend, paysShare, companyById, constructionEstimate, creditLimit, depositFree, efficiency, estimateMethod, harvestFactor, hasBuilder, isGovernment, regionById, wagesAt, researchableTechs, roomFor, sellsShares, slots, hash01,
 } from './economy';
 import { MAX_CONCURRENT_CONSTRUCTIONS, MAX_LEVELS_PER_PROJECT, applyCommand } from './commands';
-import { committedCost, favours, funderWeight, hasReserve, lawRevenue, ownerBuildings, ownerFunds, reserveCap, reserveOf, treasuryFree } from './finance';
+import { committedCost, favours, funderWeight, hasReserve, lawRevenue, ownerBuildings, ownerFunds, reserveCap, reserveOf, taxRates, treasuryFree } from './finance';
 import { privatizeLevel } from './production';
 import { policyStatus } from './policy';
 import { subsistenceWage } from './labor';
@@ -320,6 +320,16 @@ function shrinkSchools(w: World, c: Company) {
 export const LAW_SWITCH = 1.2;
 export const LAW_COOLDOWN = TICKS_PER_YEAR;
 
+/** 왕국에서 소작농을 뺀 1인당 하루 소득 (incomeEma 합 ÷ 인원 합) */
+function perCapitaIncome(w: World, kingdomId: number): number {
+  let inc = 0, n = 0;
+  for (const p of w.pops) {
+    if (p.prof === 'peasant' || p.size <= 0 || regionById(w, p.regionId).kingdomId !== kingdomId) continue;
+    inc += Math.max(0, p.incomeEma); n += p.size;
+  }
+  return n > 0 ? inc / n : 0;
+}
+
 /** 세법 (AI 왕국, 4주마다): 지금 세금 수준으로 두 세법이 걷을 세금(lawRevenue)을 비교해 더 걷히는 쪽으로 바꾼다 */
 function chooseTaxLaw(w: World, c: Company) {
   const k = w.kingdoms.find((x) => x.governmentId === c.id);
@@ -329,9 +339,11 @@ function chooseTaxLaw(w: World, c: Company) {
   const st = policyStatus(w, k.id);
   // 기술로 열리고 조건이 맞는 세법 중 예상 세입이 가장 큰 것이 지금의 LAW_SWITCH 배를 넘으면 바꾸기 시작한다
   if (!k.lawChange?.tax && !(k.lawTick != null && w.tick - k.lawTick < LAW_COOLDOWN) && !failed('tax')) {
-    let best: TaxLaw = k.taxLaw, top = lawRevenue(w, k, k.taxLaw) * LAW_SWITCH;
+    // TUNE.pollTaxIncomeCap: 인두세가 1인당 소득의 그 비율을 넘는 세법은 고르지 않고, 지금 그 세법이면 세입을 0으로 본다 (저축에서 걷히지 않게)
+    const tooHeavy = (law: TaxLaw) => TUNE.pollTaxIncomeCap > 0 && taxRates(k, law).poll > TUNE.pollTaxIncomeCap * perCapitaIncome(w, k.id);
+    let best: TaxLaw = k.taxLaw, top = tooHeavy(k.taxLaw) ? 0 : lawRevenue(w, k, k.taxLaw) * LAW_SWITCH;
     for (const o of st.tax.options) {
-      if (!o.eligible || o.id === k.taxLaw) continue;
+      if (!o.eligible || o.id === k.taxLaw || tooHeavy(o.id)) continue;
       const v = lawRevenue(w, k, o.id);
       if (v > top) { top = v; best = o.id; }
     }

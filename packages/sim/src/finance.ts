@@ -425,6 +425,7 @@ function payFinance(w: World, o: Building, amount: number) {
  * 지분 값 = (금고 + 가진 레벨 × 그 건물 1레벨 공사비 추정) ÷ 지분 수 (지분이 없으면 1)
  */
 export function updateFunds(w: World) {
+  releaseTreasuries(w);
   const units = new Map<number, number>();
   for (const p of w.pops) { const f = p.fund; if (f) for (let i = 0; i < f.id.length; i++) units.set(f.id[i], (units.get(f.id[i]) ?? 0) + f.u[i]); }
   const levelsOf = new Map<number, { typeId: string; n: number }[]>();
@@ -452,6 +453,49 @@ export function updateFunds(w: World) {
       }
     }
     o.nav = u > 0 ? Math.max(0.01, assets / u) : 1;
+  }
+}
+
+/** 금고가 목표를 넘으면 매주 넘는 돈의 이 비율을 주인에게 돌려준다 (TUNE.treasuryKeepWeeks). 근거 없음 */
+export const TREASURY_RELEASE = 0.25;
+
+/** 소유 건물 금고 목표: 아직 낼 공사 약정액 + 주간 배당·지대 수입(profitEma × 7) × TUNE.treasuryKeepWeeks */
+export function treasuryTarget(w: World, o: Building): number {
+  return (o.cash ?? 0) - treasuryFree(w, o) + Math.max(0, o.profitEma) * TICKS_PER_WEEK * TUNE.treasuryKeepWeeks;
+}
+
+/**
+ * 넘는 금고 돌려주기 (매주, TUNE.treasuryKeepWeeks 주, 0 이면 끔): 저택·금융가 금고가 목표(treasuryTarget)를 넘으면 넘는 돈의 TREASURY_RELEASE 를
+ * 저택은 앉은 귀족·하급 귀족에게 몫(shareWeight × 인원)대로, 금융가는 지분 주인에게 지분 수대로 준다 (배당과 같은 나눔). 받을 사람이 없으면 그대로 둔다.
+ * 진단: main ca544ed 5년 × 시드 1·2에서 두 금고 합이 7,500만 → 1억 9,400만~2억 2,700만(전체 돈의 약 65%)으로 쌓였다
+ */
+/**
+ * 금고가 목표를 넘은 금융가 (TUNE.treasuryKeepWeeks > 0): 새 지분을 팔지 않는다 (market.ts investSurplus: 투자자는 현금을 그대로 든다).
+ * 팔면 돌려준 돈이 그날 바로 지분 값으로 되돌아와 돌고, 그때마다 소득으로 잡힌다. 틱마다 처음 물을 때의 금고로 정한다
+ */
+const overCache = new WeakMap<World, { tick: number; over: Map<number, boolean> }>();
+export function treasuryOver(w: World, o: Building): boolean {
+  if (!(TUNE.treasuryKeepWeeks > 0)) return false;
+  let c = overCache.get(w);
+  if (!c || c.tick !== w.tick) { c = { tick: w.tick, over: new Map() }; overCache.set(w, c); }
+  let v = c.over.get(o.id);
+  if (v === undefined) { v = (o.cash ?? 0) > treasuryTarget(w, o); c.over.set(o.id, v); }
+  return v;
+}
+
+function releaseTreasuries(w: World) {
+  if (!(TUNE.treasuryKeepWeeks > 0)) return;
+  for (const o of w.buildings) {
+    if (o.typeId !== 'manor' && o.typeId !== 'finance') continue;
+    const out = (Math.max(0, o.cash ?? 0) - treasuryTarget(w, o)) * TREASURY_RELEASE;
+    if (!(out > 0)) continue;
+    const fin = o.typeId === 'finance';
+    const pops = fin ? w.pops.filter((p) => fundOf(p, o.id) > 0) : w.pops.filter((p) => p.work === o.id && p.size > 0);
+    const weight = fin ? (p: Pop) => fundOf(p, o.id) : (p: Pop) => p.size * shareWeight(p.prof);
+    if (!pops.some((p) => weight(p) > 0)) continue;
+    o.cash = (o.cash ?? 0) - out;
+    flow(`release.${o.typeId}`, out);
+    payPops(w, pops, out, weight);
   }
 }
 
