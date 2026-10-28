@@ -1,3 +1,5 @@
+import {memo, useCallback} from 'react';
+import { RegionIndustry } from './RegionIndustry';
 import { BuildingEconomics } from './BuildingEconomics';
 import { RegionExplorer } from './RegionExplorer';
 import { HelpText } from '../TooltipLayer';
@@ -30,7 +32,8 @@ import { buildingName, companyName, goodName, landName, regionName, useLang, use
 
 type SortKey = 'value' | 'name' | 'price' | 'ratio' | 'balance';
 
-export function RegionPanel({ world, region, history, selectedGood, onSelectGood, onViewCompany, mode, onViewBuildings, game, buildingRequest, onViewPops }: {
+function RegionPanelView({ world, region, history, selectedGood, onSelectGood, onViewCompany, mode, onViewBuildings, game, buildingRequest, onViewPops, onOpenBuilding }: {
+  onOpenBuilding?:(id:number)=>void;
   onViewPops?:(regionId:number,prof:PopClass)=>void;
   buildingRequest?:{id:number;sequence:number}|null; game:Game;
   onViewBuildings?: () => void;
@@ -39,28 +42,14 @@ export function RegionPanel({ world, region, history, selectedGood, onSelectGood
 }) {
   const [localTab, setTab] = useState<'overview' | 'market' | 'industry'>('market');
   const tab = mode ?? localTab;
-  const inspectorRef=useRef<HTMLDivElement>(null);
-  const [buildingId, setBuildingId] = useState<number | null>(null);
-  useEffect(()=>{if(buildingRequest){setBuildingId(buildingRequest.id);setIndustrySearch('');}},[buildingRequest]);
-  useEffect(()=>{if(buildingId!==null)inspectorRef.current?.scrollIntoView({block:'nearest'});},[buildingId]);
   const [resourceRequest,setResourceRequest]=useState<number|null>(null);
   const selectGood = (g: GoodId) => { onSelectGood(g); setTab('market'); setResourceRequest(v=>(v??0)+1); };
-  const [buildingMenu,setBuildingMenu]=useState(false);
   const me=playerCompany(world);
   const r = region;
   const lang = useLang();
   const T = useT();
   const pop = regionPopulation(r);
-  const [industrySort, setIndustrySort] = useState('level');
-  const [industryDirection, setIndustryDirection] = useState(-1);
-  const [industrySearch, setIndustrySearch] = useState('');
-  const [ownership,setOwnership]=useState<'all'|'private'|'state'>('all');
   const allBuildings = world.buildings.filter(b => b.regionId === r.id);
-  const buildings = allBuildings.filter(b=>ownership==='all'||(ownership==='state'?b.stateOwned:!b.stateOwned)).filter(b => `${buildingName(b.typeId)} ${companyById(world,b.companyId) ? companyName(companyById(world,b.companyId)!) : ''}`.toLocaleLowerCase().includes(industrySearch.toLocaleLowerCase())).sort((a,b) => {
-    const value = (b: typeof a) => industrySort === 'level' ? b.level : industrySort === 'utilization' ? (b.active && !b.idle ? b.utilization : 0) : b.profitEma;
-    const label = (b: typeof a) => industrySort === 'name' ? buildingName(b.typeId) : companyById(world,b.companyId) ? companyName(companyById(world,b.companyId)!) : '';
-    return (['name','owner'].includes(industrySort) ? label(a).localeCompare(label(b)) : value(a)-value(b))*industryDirection || a.id-b.id;
-  });
   const lower = r.households.peasant.population + r.households.unskilled.population;
   const laborer = r.households.unskilled;
   const unemp = regionUnemployment(world, r.id, 'unskilled');
@@ -122,13 +111,13 @@ export function RegionPanel({ world, region, history, selectedGood, onSelectGood
           <div className="stat"><span className="stat-label"><HelpText text={T.help.tenants}>{T.tenants}</HelpText></span><span className="stat-value accent">{pct(tenantShare)}</span><Bar value={tenantShare} tone="accent" size="sm" label={T.tenants} /></div>
         </div>}
         {tab !== 'industry' && <button className="region-buildings-link" onClick={() => { if (onViewBuildings) onViewBuildings(); else setTab('industry'); }}><Factory size={15}/>{lang === 'ko' ? '지역 건물 전체 보기' : 'All regional buildings'} <b>{allBuildings.length}</b></button>}
-        {tab === 'industry' && <p className="lbl">{lang === 'ko' ? `모든 상회 · 건물 ${allBuildings.length}개 · 총 ${allBuildings.reduce((sum,b)=>sum+b.level,0)}레벨` : `All companies · ${allBuildings.length} buildings`}</p>}
+
       </header>
 
       {!mode && <nav className="region-tabs" aria-label={lang === 'ko' ? '지역 정보' : 'Region views'}>
         <button aria-pressed={tab === 'overview'} onClick={() => setTab('overview')}><Users size={18}/>{lang === 'ko' ? '지역 개요' : 'Overview'}</button>
         <button aria-pressed={tab === 'market'} onClick={() => setTab('market')}><Package size={18}/>{T.market}</button>
-        <button aria-pressed={tab === 'industry'} onClick={() => setTab('industry')}><Factory size={18}/>{T.buildings}<span className="count-pill">{buildings.length}</span></button>
+        <button aria-pressed={tab === 'industry'} onClick={() => setTab('industry')}><Factory size={18}/>{T.buildings}<span className="count-pill">{allBuildings.length}</span></button>
       </nav>}
       {tab === 'overview' && <RegionExplorer world={world} region={r} onBuildings={()=>{if(onViewBuildings)onViewBuildings();else setTab('industry');}} onPops={prof=>onViewPops?.(r.id,prof)}/>}
       {tab === 'market' && <section className="block market-workspace">
@@ -173,32 +162,10 @@ export function RegionPanel({ world, region, history, selectedGood, onSelectGood
       </section>
 
       }
-      {tab === 'industry' && <section className="block">
-        {me&&<><button className="primary sm-btn" aria-expanded={buildingMenu} onClick={()=>setBuildingMenu(v=>!v)}>{T.construct}</button>{buildingMenu&&<BuildList game={game} world={world} me={me} region={r} projects={world.constructions.filter(k=>k.companyId===me.id).length}/>}
-        {world.constructions.some(k=>k.regionId===r.id)&&<Projects game={game} world={world} owner={world.companies.find(c=>c.kingdomId===r.kingdomId&&c.state)??me} regionId={r.id} projects={world.constructions.filter(k=>k.regionId===r.id)}/>}</>}
+      {tab === 'industry' && <RegionIndustry world={world} region={r} game={game} request={buildingRequest} onOpenBuilding={onOpenBuilding} onGood={selectGood} onCompany={onViewCompany}/>}
 
-        {allBuildings.find(b => b.id === buildingId) && <div ref={inspectorRef}><BuildingInspector game={game} building={allBuildings.find(b => b.id === buildingId)!} world={world} onGood={selectGood} onCompany={onViewCompany}/></div>}
-        <div className="system-tabs">{(['all','private','state'] as const).map(id=><button key={id} aria-pressed={ownership===id} onClick={()=>setOwnership(id)}>{T.system[id]}</button>)}</div>
-        <ListTools value={industrySort} onChange={setIndustrySort} direction={industryDirection} onDirection={() => setIndustryDirection(-industryDirection)} search={industrySearch} onSearch={setIndustrySearch} count={buildings.length} options={lang === 'ko' ? [['level','규모'],['name','이름'],['owner','소유 회사'],['utilization','가동률'],['profit','손익']] : [['level','Levels'],['name','Name'],['owner','Owner'],['utilization','Utilization'],['profit','Profit']]}/>
-        <h3>{T.buildings} <span className="count-pill">{buildings.length}</span> </h3>
-        {buildings.length === 0 ? <p className="empty">{lang === 'ko' ? (allBuildings.length === 0 ? T.noBuildings : T.noMatches) : (allBuildings.length === 0 ? T.noBuildings : T.noMatches)}</p> : (
-          <ul className="chips-grid">
-            {buildings.map((b) => {
-              const c = companyById(world, b.companyId);
-              return (
-                <li key={b.id}>
-                  <button className={`b-chip ${b.active ? '' : 'off'}`} aria-pressed={buildingId === b.id} onClick={() => setBuildingId(b.id === buildingId ? null : b.id)}
-                    title={c?.isPlayer ? T.myHouse : c ? companyName(c) : undefined}>
-                    <span className="b-chip-icon" style={{ borderColor: c?.color }}><BuildingSprite typeId={b.typeId} size={48} /></span>
-                    <span className="b-chip-name">{buildingName(b.typeId)}<HarvestBadge world={world} regionId={b.regionId} typeId={b.typeId}/><OwnerBadge company={c} world={world}/></span>
-                    <span className="b-chip-count">×{b.level}{(b.shrinking??0)>0&&<small className="demolition-badge">{T.demolitionQueue(b.shrinking!)}</small>}</span>
-                  </button><BuildingEconomics compact world={world} building={b}/>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </section>}
     </>
   );
 }
+
+export const RegionPanel=memo(RegionPanelView);

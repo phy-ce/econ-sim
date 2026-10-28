@@ -1,3 +1,4 @@
+import {useNavigationState} from '../NavigationHistory';
 import { Wages } from './CompanyPanel';
 import { SortHeader } from './SortHeader';
 import { useState, useEffect } from 'react';
@@ -11,9 +12,9 @@ import '../system-ui.css';
 
 export function FinancePanel({game,world,me,onBuilding,onPolicies,active=true}:{active?:boolean;game:Game;world:World;me:Company;onBuilding?:(id:number)=>void;onPolicies?:()=>void}) {
  const T=useT(),S=T.system;
- const [detail,setDetail]=useState<BudgetLineKey|null>(null);
+ const [detail,setDetail]=useNavigationState<BudgetLineKey|null>('views/FinancePanel.tsx:detail',null);
  const [direction,setDirection]=useState(-1);
- const [breakdown,setBreakdown]=useState(false);
+ const [breakdown,setBreakdown]=useNavigationState('views/FinancePanel.tsx:breakdown',false);
  useEffect(()=>setBreakdown(false),[detail]);
  useEffect(()=>{if(!active){setDetail(null);setHover(null);}},[active]);
  const [popup,setPopup]=useState({left:456,top:100});

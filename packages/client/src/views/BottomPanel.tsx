@@ -1,3 +1,5 @@
+import {memo, useCallback} from 'react';
+import {useNavigationState} from '../NavigationHistory';
 import { PopTable, type PopRequest } from './PopTable';
 import { NumericValue } from '../NumericValue';
 import type { Game } from '../useGame';
@@ -16,7 +18,7 @@ import { CLASS_COLOR } from '../ui';
 import { compactMoney, signedCompactMoney } from '../format';
 import { className, companyName, useT, useLang } from '../i18n';
 
-export function BottomPanel({ world, history, lastReadTick, onRead, onJump, viewedId, onViewCompany, game, onEvent, popRequest, onBuilding }: {
+function BottomPanelView({ world, history, lastReadTick, onRead, onJump, viewedId, onViewCompany, game, onEvent, popRequest, onBuilding }: {
   popRequest:PopRequest|null; onBuilding:(id:number)=>void;
   onEvent:(event:GameEvent)=>void; game:Game; world: World; history: HistoryPoint[];
   lastReadTick: number; onRead: () => void; onJump: (regionId: number) => void;
@@ -26,8 +28,8 @@ export function BottomPanel({ world, history, lastReadTick, onRead, onJump, view
   const me=playerCompany(world);
   const viewed=viewedId!==null?companyById(world,viewedId):me;
   const lang = useLang();
-  const [sort,setSort] = useState('net');
-  const [dir,setDir] = useState(-1);
+  const [sort,setSort] = useNavigationState('views/BottomPanel.tsx:sort','net');
+  const [dir,setDir] = useNavigationState('views/BottomPanel.tsx:dir',-1);
   const wealthData = useMemo(() => history.map((p) => ({ tick: p.tick, ...p.sol })), [history]);
   const series = POP_CLASSES.map((c) => ({ key: c, name: className(c), color: CLASS_COLOR[c] }));
   const rows = world.companies
@@ -74,3 +76,5 @@ export function BottomPanel({ world, history, lastReadTick, onRead, onJump, view
       </> }]} />
   );
 }
+
+export const BottomPanel=memo(BottomPanelView);

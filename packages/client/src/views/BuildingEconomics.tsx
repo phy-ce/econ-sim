@@ -1,3 +1,5 @@
+import {OwnerSummary} from './OwnerSummary';
+import {OwnershipBar} from './OwnershipBar';
 import { buildingEcon, BUILDING_BY_ID, holdingsOf, industryOf, INDUSTRIES, isOwnerBuilding, postCap } from '@econ/sim';
 import type { World, Building } from '@econ/sim';
 import type { Game } from '../useGame';
@@ -9,8 +11,9 @@ export function BuildingEconomics({world,building:b,game,onBuilding,compact=fals
  const T=useT(),S=T.system,ko=useLang()==='ko',e=buildingEcon(world,b);
  const industry=industryOf(b.typeId,b.methodId),owner=world.companies.find(c=>c.id===b.companyId);
  const names={state:S.state,manor:S.manor,finance:S.finance};
+ if(isOwnerBuilding(b.typeId))return <><OwnerSummary buildings={[b]}/><OwnershipBar world={world} buildings={[b]}/></>;
  return <div className={`building-economics ${compact?'compact':''}`}>
-  <div className="ownership-split" role="img" aria-label={e.owners.map(o=>`${names[o.owner]} ${pct(o.share)}`).join(' · ')||'—'}>{e.owners.map((o,i)=><i key={i} title={`${names[o.owner]} ${o.levels} · ${pct(o.share)}`} style={{width:`${o.share*100}%`,background:o.owner==='state'?'#bd6150':o.owner==='manor'?'#bd914b':'#4d8eaf'}}/>)}</div>
+  <OwnershipBar world={world} buildings={[b]}/>
   <div className="econ-profit"><span>{S.weekProfit} <b className={e.profitWeek<0?'neg':'pos'}><NumericValue value={e.profitWeek} format="signedMoney"/></b></span><span data-help={S.perLevel}><NumericValue value={e.profitWeekPerLevel} format="signedMoney"/> / L</span></div>
   {e.hasReserve&&<div title={`${S.reserve}: ${e.reserve.toFixed(2)} / ${e.reserveCap.toFixed(2)}`}><Bar value={e.reserveCap?e.reserve/e.reserveCap:0} label={S.reserve}/></div>}
   {!compact&&<>

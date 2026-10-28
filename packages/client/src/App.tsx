@@ -1,3 +1,7 @@
+import {GameWindow,type ScreenRequest,type ScreenRoute} from './views/GameWindow';
+
+import { regionName } from './i18n';
+import { MarketWindow, useMarketScope } from './views/MarketWindow';
 import { RegionWindow } from './views/RegionWindow';
 import { PolicyPanel } from './views/PolicyPanel';
 import { ResearchPanel } from './views/ResearchPanel';
@@ -59,6 +63,8 @@ export function App() {
   const game = useGame();
   const [opened, setOpened] = useState<WindowId[]>(['map']);
   const [revealRequest,setRevealRequest] = useState(0);
+  const [screenRequest,setScreenRequest]=useState<ScreenRequest|null>(null);
+  const requestScreen=(target:WindowId,route:ScreenRoute)=>setScreenRequest(p=>({target,route,sequence:(p?.sequence??0)+1}));
   const showWindow = (id: WindowId) => { setOpened(current=>id==='map'?current:[...current.filter(w=>w!==id),id]); setRevealRequest(v=>v+1); };
   const [popRequest,setPopRequest]=useState<PopRequest|null>(null);
   const [buildingRequest,setBuildingRequest]=useState<{id:number;sequence:number}|null>(null);
@@ -70,6 +76,7 @@ export function App() {
   const [viewId, setViewId] = useState<number | null>(null);
   const [theme, setTheme] = useState<'light' | 'dark'>(loadTheme);
   const { world } = game;
+  const marketScope='world' as const;
   const lang = useLang();
   const T = useT();
 
@@ -108,14 +115,14 @@ export function App() {
   const me = playerCompany(world);
   const region = regionById(world, regionId);
   const viewed = viewId != null ? companyById(world, viewId) : undefined;
-  const viewCompany = (id: number) => { setPopRequest(null);setViewId(id); showWindow('trends'); };
-  const selectRegion = (id: number) => { setRegionId(id);setRegionTabRequest(r=>({tab:'overview',sequence:r.sequence+1})); showWindow('region'); };
+  const viewCompany = (id: number) => { requestScreen('trends',{kind:'trends',companyId:id}); setPopRequest(null);setViewId(id); showWindow('trends'); };
+  const selectRegion = (id: number) => { requestScreen('region',{kind:'region',regionId:id}); setRegionId(id);setRegionTabRequest(r=>({tab:'overview',sequence:r.sequence+1})); showWindow('region'); };
   const openPops=(regionId:number,prof:PopClass)=>{setRegionId(regionId);setViewId(null);setPopRequest(p=>({regionId,prof,sequence:(p?.sequence??0)+1}));showWindow('region');};
-  const openBuilding=(id:number)=>{const b=world.buildings.find(b=>b.id===id);if(b){setRegionId(b.regionId);setBuildingRequest(p=>({id,sequence:(p?.sequence??0)+1}));showWindow('region');}};
+  const openBuilding=(id:number)=>{const b=world.buildings.find(b=>b.id===id);if(b){requestScreen('region',{kind:'region',regionId:b.regionId,buildingId:id});setRegionId(b.regionId);setBuildingRequest(p=>({id,sequence:(p?.sequence??0)+1}));showWindow('region');}};
   const openEvent=(event:GameEvent)=>{
     const destination=eventDestination(world,event);
     if(!destination)return;
-    if(destination.kind==='building'){setRegionId(destination.regionId);setBuildingRequest(previous=>({id:destination.id,sequence:(previous?.sequence??0)+1}));showWindow('region');}
+    if(destination.kind==='building'){requestScreen('region',{kind:'region',regionId:destination.regionId,buildingId:destination.id});setRegionId(destination.regionId);setBuildingRequest(previous=>({id:destination.id,sequence:(previous?.sequence??0)+1}));showWindow('region');}
     else if(destination.kind==='region')selectRegion(destination.id);
     else if(destination.kind==='company')viewCompany(destination.id);
     else showWindow(destination.kind);
@@ -195,15 +202,9 @@ export function App() {
         </div>
       </header>
 
-      <WindowWorkspace revealRequest={revealRequest} opened={opened} onOpened={setOpened} windows={[
-        { id:'map', title:T.paneMap, icon:<Map size={18}/>, content:<RegionMap world={world} selected={regionId} onSelect={selectRegion}/> },
-        {id:'region',title:T.system.region,icon:<Users size={18}/>,content:<RegionWindow tabRequest={regionTabRequest} game={game} world={world} region={region} history={game.history} selectedGood={good} onSelectGood={selectGood} onViewCompany={viewCompany} onViewPops={openPops} buildingRequest={buildingRequest} popRequest={popRequest} onOpenBuilding={openBuilding}/>},
-        {id:'market',title:T.market,icon:<Package size={18}/>,content:<RegionPanel game={game} mode="market" world={world} region={region} history={game.history} selectedGood={good} onSelectGood={selectGood} onViewCompany={viewCompany} onViewBuildings={showRegionBuildings}/>},
-        {id:'policies',title:T.system.policies,icon:<Landmark size={18}/>,content:me?<PolicyPanel world={world} game={game} kingdomId={me.kingdomId} onResearch={()=>showWindow('research')}/>:null},
-        { id:'finance', title:T.finance, icon:<Landmark size={18}/>, content:me?<FinancePanel active={opened.includes('finance')} game={game} world={world} me={me} onBuilding={openBuilding} onPolicies={()=>showWindow('policies')}/>:null },
-        { id:'research', title:T.research, icon:<FlaskConical size={18}/>, content:me?<ResearchPanel game={game} world={world} me={me}/>:null },
-        { id:'construction', title:T.construct, icon:<HardHat size={18}/>, content:me?<Projects game={game} world={world} owner={me} projects={world.constructions}/>:null },
-        { id:'trends', title:lang==='ko'?'통계 · 소식':'Statistics', icon:<ChartNoAxesCombined size={18}/>, content:<BottomPanel popRequest={popRequest} onBuilding={openBuilding} onEvent={openEvent} game={game} world={world} history={game.history} lastReadTick={game.lastReadTick} onRead={game.markRead} onJump={selectRegion} viewedId={viewId} onViewCompany={viewCompany}/> },
+      <WindowWorkspace opened={opened} onOpened={setOpened} windows={[
+        {id:'map',title:T.paneMap,icon:<Map size={18}/>,content:<RegionMap world={world} selected={regionId} onSelect={selectRegion}/>},
+        ...([{id:'region',title:T.system.region,icon:<Users size={18}/>},{id:'market',title:T.market,icon:<Package size={18}/>},{id:'policies',title:T.system.policies,icon:<Landmark size={18}/>},{id:'finance',title:T.finance,icon:<Landmark size={18}/>},{id:'research',title:T.research,icon:<FlaskConical size={18}/>},{id:'construction',title:T.construct,icon:<HardHat size={18}/>},{id:'trends',title:lang==='ko'?'통계 · 소식':'Statistics',icon:<ChartNoAxesCombined size={18}/>} ] as const).map(w=>({...w,content:<GameWindow id={w.id} game={game} mapRegionId={regionId} request={screenRequest}/>}))
       ]}/>
 
 

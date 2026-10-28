@@ -1,4 +1,4 @@
-import { isGovernment, crewOf } from '@econ/sim';
+import { isGovernment, crewOf, depositFree } from '@econ/sim';
 import { NumericValue } from '../NumericValue';
 import { OwnerBadge } from './OwnerBadge';
 import { Workforce } from './Workforce';
@@ -39,7 +39,7 @@ interface Row {
   staffShort: boolean; inShort: boolean; loss: boolean;
 }
 
-function rowOf(world: World, b: Building): Row {
+export function rowOf(world: World, b: Building): Row {
   const method = getMethod(b.typeId, b.methodId);
   const region = regionById(world, b.regionId);
   const run = b.level * b.utilization;
@@ -295,8 +295,8 @@ export function Projects({game,world,owner,projects,regionId}:{game?:Game;world:
     const entries=activity?.entries.filter(e=>ids.has(e.companyId)&&(regionId===undefined||e.regionId===regionId));
     return <section className="construction-lane" key={String(state)}><header><OwnerBadge company={companies[0]} world={world}/><b title={T.receivedToday}>{entries?one(entries.reduce((sum,e)=>sum+e.points,0)):'—'} pt{T.perDay}</b></header>
       {lane.map((k,i)=>{
-        const own=world.constructions.filter(x=>x.companyId===owner.id),position=own.findIndex(x=>x.id===k.id);
-        return <article className={`project ${k.paused?'project-paused':''}`} key={k.id}><span className="pxnum">{i+1}</span><BuildingSprite typeId={k.typeId} size={64}/><div className="project-main"><div className="project-top"><strong>{buildingName(k.typeId)} +{k.levels??1} {k.paused&&<Pause size={14}/>}</strong><span className="lbl">{regionName(regionById(world,k.regionId))} · {k.targetBuildingId?T.expansion:T.newConstruction}</span>{entries?.find(e=>e.id===k.id)?.capped&&<span title={T.dailyCap} aria-label={T.dailyCap}>◆</span>}</div><Bar value={k.points/k.required} label={T.projectProgress(buildingName(k.typeId))}/><span className="project-nums"><span><NumericValue value={k.points} format="one"/>/<NumericValue value={k.required} format="int"/> pt</span><span><NumericValue value={k.spent} format="money"/></span><span>{T.nDays(k.ticksElapsed)}</span></span></div>{game&&owner.isPlayer&&k.companyId===owner.id&&<div className="project-actions"><button className="icon-btn sm" title={T.moveProjectUp} aria-label={T.moveProjectUp} disabled={position<=0} onClick={()=>game.command({type:'moveConstruction',constructionId:k.id,index:position-1})}><ArrowUp size={14}/></button><button className="icon-btn sm" title={T.moveProjectDown} aria-label={T.moveProjectDown} disabled={position===own.length-1} onClick={()=>game.command({type:'moveConstruction',constructionId:k.id,index:position+1})}><ArrowDown size={14}/></button><button className="icon-btn sm" title={k.paused?T.resumeProject:T.pauseProject} aria-label={k.paused?T.resumeProject:T.pauseProject} onClick={()=>game.command({type:'pauseConstruction',constructionId:k.id,paused:!k.paused})}>{k.paused?<Play size={14}/>:<Pause size={14}/>}</button><button className="icon-btn sm" title={T.cancelProject} aria-label={T.cancelProjectOf(buildingName(k.typeId))} onClick={()=>setCancelId(k.id)}><X size={14}/></button></div>}{cancelId===k.id&&game&&<div className="project-confirm" role="alertdialog" aria-label={T.cancelProject} onKeyDown={e=>{if(e.key==='Escape')setCancelId(null);}}><p>{T.cancelSpent(money(k.spent))}</p><button autoFocus onClick={()=>setCancelId(null)}>{T.keepConstruction}</button><button onClick={()=>{game.command({type:'cancelConstruction',constructionId:k.id});setCancelId(null);}}>{T.cancelProject}</button></div>}</article>;
+        const own=world.constructions.filter(x=>x.companyId===k.companyId),position=own.findIndex(x=>x.id===k.id);
+        return <article className={`project ${k.paused?'project-paused':''}`} key={k.id}><span className="pxnum">{position+1}/{own.length}</span><BuildingSprite typeId={k.typeId} size={64}/><div className="project-main"><div className="project-top"><strong>{buildingName(k.typeId)} +{k.levels??1} {k.paused&&<Pause size={14}/>}</strong><span className="lbl">{regionName(regionById(world,k.regionId))} · {k.targetBuildingId?T.expansion:T.newConstruction}</span>{entries?.find(e=>e.id===k.id)?.capped&&<span title={T.dailyCap} aria-label={T.dailyCap}>◆</span>}</div><Bar value={k.points/k.required} label={T.projectProgress(buildingName(k.typeId))}/><span className="project-nums"><span><NumericValue value={k.points} format="one"/>/<NumericValue value={k.required} format="int"/> pt</span><span><NumericValue value={k.spent} format="money"/></span><span>{T.nDays(k.ticksElapsed)}</span></span></div>{game&&owner.isPlayer&&k.companyId===owner.id&&<div className="project-actions"><button className="icon-btn sm" title={T.moveProjectUp} aria-label={T.moveProjectUp} disabled={position<=0} onClick={()=>game.command({type:'moveConstruction',constructionId:k.id,index:position-1})}><ArrowUp size={14}/></button><button className="icon-btn sm" title={T.moveProjectDown} aria-label={T.moveProjectDown} disabled={position===own.length-1} onClick={()=>game.command({type:'moveConstruction',constructionId:k.id,index:position+1})}><ArrowDown size={14}/></button><button className="icon-btn sm" title={k.paused?T.resumeProject:T.pauseProject} aria-label={k.paused?T.resumeProject:T.pauseProject} onClick={()=>game.command({type:'pauseConstruction',constructionId:k.id,paused:!k.paused})}>{k.paused?<Play size={14}/>:<Pause size={14}/>}</button><button className="icon-btn sm" title={T.cancelProject} aria-label={T.cancelProjectOf(buildingName(k.typeId))} onClick={()=>setCancelId(k.id)}><X size={14}/></button></div>}{cancelId===k.id&&game&&<div className="project-confirm" role="alertdialog" aria-label={T.cancelProject} onKeyDown={e=>{if(e.key==='Escape')setCancelId(null);}}><p>{T.cancelSpent(money(k.spent))}</p><button autoFocus onClick={()=>setCancelId(null)}>{T.keepConstruction}</button><button onClick={()=>{game.command({type:'cancelConstruction',constructionId:k.id});setCancelId(null);}}>{T.cancelProject}</button></div>}</article>;
       })}{!lane.length&&<span className="muted">—</span>}
     </section>;
   })}</div>;
@@ -405,17 +405,18 @@ function Controls({ r, game, world, owner }: { r: Row; game: Game; world: World;
   const { b } = r;
   const type = BUILDING_BY_ID[b.typeId];
   const rname = regionName(r.region);
-  const free = type.land ? landFree(world, b.regionId, type.land) : Infinity;
+  const free = Math.min(type.land ? landFree(world, b.regionId, type.land) : Infinity,type.deposit ? depositFree(world,b.regionId,type.deposit) : Infinity);
+  const full=world.constructions.filter(k=>k.companyId===b.companyId).length>=MAX_CONCURRENT_CONSTRUCTIONS;
   return (
     <div className="hctrl">
       <span className="stepper" role="group" aria-label={T.countOf(r.name)}>
         <button aria-label={T.demolishOne} title={T.demolishOne} disabled={r.queued>0||(b.shrinking??0)>=b.level}
           onClick={() => { if (b.level > 1 || confirm(T.confirmDemolish(rname, r.name))) game.command({ type: 'demolish', buildingId: b.id }); }}>−</button>
         <output>{b.level}{r.queued > 0 && <small>+{r.queued}</small>}</output>
-        <button aria-label={T.expandOne} title={free < 1 ? T.noLand : T.expandOne} disabled={free < 1||(b.shrinking??0)>0}
+        <button aria-label={T.expandOne} title={free < 1 ? T.noLand : T.expandOne} disabled={full||free < 1||(b.shrinking??0)>0}
           onClick={() => game.command({ type: 'expand', buildingId: b.id })}>+</button>
-        <button aria-label={T.expandTen} title={T.expandTen} disabled={free < 10||(b.shrinking??0)>0}
-          onClick={() => game.command({ type: 'expand', buildingId: b.id, levels: 10 })}>+10</button>
+        <button aria-label={T.buildingGroups.expandFive} title={T.buildingGroups.expandFive} disabled={full||free < 5||(b.shrinking??0)>0}
+          onClick={() => game.command({ type: 'expand', buildingId: b.id, levels: 5 })}>+5</button>
       </span>
       {(b.shrinking??0)>0&&<button className="sm-btn" onClick={()=>game.command({type:'cancelDemolish',buildingId:b.id})}>{T.cancelDemolition}</button>}
       <select value={b.methodId} aria-label={T.method} onChange={(e) => game.command({ type: 'setMethod', buildingId: b.id, methodId: e.target.value })}>
@@ -483,12 +484,12 @@ function buildBlockers(world: World, me: Company, region: Region, b: (typeof BUI
   return out;
 }
 
-export function BuildList({ game, world, me, region, projects }: { game: Game; world: World; me: Company; region: Region; projects: number }) {
+export function BuildList({ game, world, me, region, projects, includeTypes, excludeTypes }: { game: Game; world: World; me: Company; region: Region; projects: number; includeTypes?:string[]; excludeTypes?:string[] }) {
   const T = useT();
   const [open, setOpen] = useState<string | null>(null);
   return (
     <div className="cat-grid">
-      {BUILDING_TYPES.filter(bt=>!bt.auto && (!bt.stateOnly || me.state)).map((bt) => {
+      {BUILDING_TYPES.filter(bt=>!bt.auto && (!bt.stateOnly || me.state) && (!includeTypes || includeTypes.includes(bt.id)) && !excludeTypes?.includes(bt.id)).map((bt) => {
         const free = bt.land ? landFree(world, region.id, bt.land) : Infinity;
         const locked = !canBuildType(me, bt);
         const est = constructionEstimate(world, me, bt.id);
@@ -551,6 +552,9 @@ function BuildCard({ bt, region, est, blockers, payback, game, world, me }: {
           onClick={() => game.command({ type: 'build', typeId: bt.id, regionId: region.id })}>
           {blockers.length > 0 ? T.blocked : already ? `${buildingName(bt.id)} +1` : T.buildIn(regionName(region))}
         </button>
+        <button className="primary" aria-label={T.buildingGroups.expandFive} title={T.buildingGroups.expandFive}
+          disabled={blockers.length>0||(bt.land?landFree(world,region.id,bt.land):Infinity)<5||(bt.deposit?depositFree(world,region.id,bt.deposit):Infinity)<5}
+          onClick={()=>game.command({type:'build',typeId:bt.id,regionId:region.id,levels:5})}>+5</button>
       </div>
     </div>
   );

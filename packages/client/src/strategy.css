@@ -152,3 +152,57 @@
 .strategy-panel .ev-icon {box-sizing:content-box;border:0}
 .strategy-panel .hsum>.htile:last-child {order:-1}
 .strategy-panel .hsum>.htile:nth-child(2):has(.badge-ok) {padding:2px 0}
+
+/* Compact desktop ledgers: details are secondary, not permanent vertical blocks. */
+.floating-workspace .window-body,.detail-window .window-body {padding:6px;gap:5px;overflow-x:hidden;scrollbar-gutter:stable}
+.floating-workspace .window-titlebar,.detail-window .window-titlebar {min-height:26px;height:26px;padding:0 5px;font-size:11px}
+.strategy-panel .pane-head {padding:3px 0 5px;margin:0;gap:4px}
+.strategy-panel .title-row {gap:5px;flex-wrap:wrap}
+.strategy-panel .region-art,.strategy-panel .region-art .spr {width:36px!important;height:36px!important}
+.strategy-panel .region-stats {gap:2px;margin:3px 0}
+.strategy-panel .region-stats .stat {padding:3px 5px;background:none;border:0;border-right:1px solid var(--rule)}
+.strategy-panel .stat-value {font-size:15px}
+.strategy-panel h2 {font-size:15px;margin:0}.strategy-panel h3 {margin:4px 0;font-size:12px}
+.strategy-panel .system-tabs button {padding:3px;min-height:25px}
+.strategy-panel .market-aggregate-table {max-height:410px;overflow:auto}
+.strategy-panel .market-aggregate-table thead {position:sticky;top:0;background:var(--sheet);z-index:1}
+.strategy-panel .market-aggregate-table td {height:26px;padding:1px 2px}
+.strategy-panel .market-aggregate-table .spr {width:22px!important;height:22px!important;flex-basis:22px}
+.strategy-panel .market-aggregate-table .entity-link {min-height:24px}
+.ledger-caption {display:flex;justify-content:space-between;gap:5px;padding:6px 0 3px;border-bottom:1px solid var(--rule);font-size:11px;font-weight:600}
+.ledger-caption small {font-size:10px;color:var(--ink2);font-weight:400}
+.strategy-panel .detail-launch {display:flex;align-items:center;gap:6px;width:100%;min-height:29px;padding:4px 2px;background:none;border:0;border-bottom:1px solid var(--rule);border-radius:0;box-shadow:none;text-align:left;font-size:11px;color:var(--ink)}
+.detail-launch>strong {margin-left:auto;font-size:11px;font-weight:500}.detail-launch:hover {background:var(--chip)}
+.strategy-panel .explorer-building {min-height:29px;padding:1px 0;gap:5px}
+.detail-window {position:fixed!important;display:flex;flex-direction:column;width:420px;height:460px;min-width:340px;min-height:220px;max-width:calc(100vw - 16px);max-height:calc(100vh - 90px);resize:both;overflow:hidden;background:var(--sheet);border:1px solid var(--gold);border-radius:3px;box-shadow:0 10px 30px #0005}
+.detail-window .window-titlebar {display:flex;align-items:center;cursor:move;touch-action:none;user-select:none;flex-shrink:0;background:var(--ink);color:var(--sheet)}
+.detail-window .window-titlebar strong {flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.detail-window .window-titlebar small {margin:0 8px;color:var(--gold)}
+.detail-window .window-titlebar button {background:none;border:0;color:inherit;font-size:18px;min-height:24px;padding:0 6px}
+.detail-window .window-body {flex:1;min-height:0;overflow:auto}
+.strategy-panel .help-text {text-decoration:underline dotted;text-underline-offset:3px;cursor:help}
+.strategy-panel .pop-relations {margin:4px 0}.strategy-panel .explorer-heading {padding:2px 0;margin:0 0 3px}
+.detail-window .donut-grid {grid-template-columns:100px minmax(0,1fr);gap:5px}
+.detail-window .dl-head {display:none}.detail-window .dl-row {grid-template-columns:24px minmax(0,1fr) auto 40px;gap:3px;min-height:30px;padding:3px 0;border:0;border-bottom:1px solid var(--rule);border-radius:0}
+.detail-window .dl-tile,.detail-window .dl-tile .spr {width:24px!important;height:24px!important;border:0}
+.detail-window .dl-food,.detail-window .dl-wealth {display:none}
+.detail-window .dl-name b,.detail-window .dl-row>.pxnum {font:11px var(--sans)}
+.detail-window .dl-name {gap:3px}.detail-window .donut-top {margin-bottom:4px}
+.detail-window .pxseg button {min-height:25px;padding:2px 7px;font-size:11px}
+.region-ledger .explorer-building>span:last-child {flex:0 0 auto}
+.region-ledger .explorer-building>span:not(.spr):not(:last-child) {flex:1}
+.detail-window {height:350px}
+
+.strategy-panel .ownership-launch {padding:0;margin:3px 0 5px;border:1px solid var(--rule);min-height:24px;overflow:hidden}
+.ownership-meter {display:flex;width:100%;height:24px;overflow:hidden;background:#687078}
+.ownership-meter>span {display:flex;align-items:center;justify-content:center;gap:4px;min-width:0;overflow:hidden;white-space:nowrap;color:#fff;box-shadow:inset -1px 0 #ffffff70}
+.ownership-meter svg {flex:none}.ownership-meter b {font:600 10px var(--sans)}
+.ownership-launch:hover {outline:2px solid var(--gold);outline-offset:1px}
+.ownership-table {table-layout:fixed;width:100%;font-size:11px}.ownership-table th:first-child {width:50%}.ownership-table td {overflow-wrap:anywhere}
+.ownership-owner {display:flex;align-items:flex-start;gap:4px;overflow-wrap:anywhere}.ownership-owner svg {flex:none}
+.detail-window:has(.ownership-table) {height:220px}
+
+.ownership-legend {display:flex;flex-wrap:wrap;gap:5px 12px;padding:5px 0;font-size:11px}.ownership-legend>span {display:flex;align-items:center;gap:3px}
+.ownership-browser>nav {display:flex;align-items:center;gap:5px;border-bottom:1px solid var(--rule);padding-bottom:4px;font-size:11px}
+.ownership-browser>nav button {min-height:24px;padding:1px 6px}.ownership-browser h3 {display:flex;align-items:center;gap:5px}.ownership-browser .system-table {table-layout:fixed;width:100%}.ownership-browser th {overflow-wrap:anywhere}.ownership-browser th:first-child {width:48%}
+.detail-window:has(.ownership-browser) {height:420px}
+.ownership-meter>span {flex-shrink:0}.ownership-meter svg {max-width:100%}

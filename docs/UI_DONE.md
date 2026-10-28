@@ -1,5 +1,8 @@
 # 반영된 UI 변경 (보관)
 
+> 과거 시점의 구현·검증 기록입니다. 최신 구현 전체의 검증 완료를 뜻하지 않습니다. 현재 상태와 우선순위는 [UI_STATUS](UI_STATUS.md), [UI_CHANGES](UI_CHANGES.md) 참조.
+
+
 `docs/UI_CHANGES.md`에서 화면에 다 반영된 항목을 옮겨 둔 보관 문서다. 할 일은 UI_CHANGES에만 있다. 절 번호(2-xx)는 UI_CHANGES와 같다.
 
 ## 2026-10-21 확인 (main `da005db` 기준 클라이언트 코드)
@@ -406,3 +409,23 @@ sim이 아래 제도를 없앴다. 화면이 계속 컴파일되도록 `packages
 
 
 확인 근거: CompanyPanel의 b.crew → crewOf(b), RegionPanel의 r.education → educationOf(r), PopTable의 부·문해력 렌더링 및 정렬 → wealthOf(p)·literacyOf(p). Household.wealth는 별도 집계값이므로 유지. sim 파일 변경 없음.
+
+
+### 2-47. 시세 창: 전체 / 왕국 / 지역 고르기 (사용자 요청 2026-10-21)
+**사용자 말:** 시세 창에서 전체(왕국/세계 평균)와 각 지역을 빨리 고른다. 마지막 고른 것을 기억한다.
+
+**지금:** 시세 창 = `RegionPanel mode='market'` (`App.tsx` 200), 표는 `r.market[g]` (`RegionPanel.tsx` 76 근처). 보는 지역은 앱 전체의 `regionId`(`App.tsx` 66)라 지도에서 지역을 누르면 열린 시세 창도 말없이 그 지역으로 바뀐다. 2-0-1에서 지도 클릭이 시세 창을 열지 않게 했던 것과 같은 이유로, 시세 창은 지도 선택을 따라가지 않게 한다.
+
+**바꿀 것**
+- 시세 창은 자기 범위 상태를 가진다: `scope: 'world' | 'kingdom' | regionId`. `App.tsx`의 `regionId`와 상관없다. localStorage `market-scope`에 기억 (try/catch, 없는 지역이면 `world`).
+- 창 맨 위 칩 줄 (`role="radiogroup"`): `세계` · `왕국` · 가는 세로선 · 지역 7개(내 왕국 지역 먼저, 이름 앞에 왕국 색 점). ←/→로 이동, Home = 세계. 좁으면 가로 스크롤 한 줄 (줄바꿈 금지).
+- 칩 줄 오른쪽 `⌖` 아이콘 버튼 하나: 지도에서 고른 지역으로 범위를 맞춘다 (툴팁 `지도 선택 지역`). 따라가기는 이 버튼으로만 한다.
+- 모으는 셈 (client 순수 함수 `marketOf(world, scope)`, sim 변경 없음): 범위 지역들의 `market[g]`에서 가격 = `volumeEma` 가중 평균 (합이 0이면 단순 평균), `supplyEma`·`demandEma`·`volumeEma`는 합, 기본가 대비 = 가격 ÷ `GOODS[g].basePrice`. `왕국` = 내 왕국 지역들.
+- 상세(상품 하나): 지역 범위면 지금 상세 그대로. `세계`·`왕국`이면 범위 안 지역별 가격 막대 (지역 이름 · 가격 · 기본가 대비 막대, 비싼 순)를 더한다. 추이 차트는 세계면 `metrics[].goods[g].ratio`(30일), 그 밖은 지금 쓰는 값.
+- 창 머리의 지역 지표 6칸(`RegionPanel.tsx` 103~121)은 시세 창에서 뺀다 (2-46에서 지역 창으로 감). 창 제목은 `시세 · {범위 이름}`.
+- `selectGood`(`App.tsx` 122)는 지금처럼 시세 창을 열고 상품만 바꾼다. 범위는 바꾸지 않는다.
+- 문자열: `scopeWorld` 세계 / World, `scopeKingdom`(2-44와 같이 씀), `followMap` 지도 선택 지역 / Selected region.
+- sim 변경 없음.
+
+
+**2026-10-25 구현·확인:** `marketScope.ts`, `MarketWindow.tsx`, App 연결. 거래량 가중 가격/무거래 평균/합산/왕국 제한/잘못된 저장값을 새 테스트 3개로 확인. 세계·왕국·지역 범위와 지도 선택 독립, 명시적 지도 맞춤, 방향키/Home, 새로고침 기억을 실제 브라우저에서 확인. 1920×1080 한국어 밝은 모드에서 가로 넘침 없음, 콘솔 오류 없음. 루트 typecheck 및 build 통과. 왕국 가격 추이는 기존 지역별 history 가격의 단순 평균이며 세계 추이는 metrics의 ratio를 기본 가격으로 환산한다.

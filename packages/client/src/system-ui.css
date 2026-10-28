@@ -13,3 +13,45 @@
 .strategy-panel .system-table th,.strategy-panel .system-table td {padding:4px 3px;line-height:1.35}
 .strategy-panel .finance-ledger>.entity-link {align-self:flex-start;min-height:0;padding:2px 0}
 .strategy-panel .system-group th>div {padding-top:4px}
+
+.market-scope-toolbar {display:flex;gap:4px;align-items:center;margin-bottom:6px;min-width:0}
+.market-scope-chips {display:flex;flex:1;min-width:0;overflow-x:auto;white-space:nowrap;gap:2px;scrollbar-width:thin}
+.strategy-panel .market-scope-chips button {flex:none;min-height:26px;padding:4px 7px;font-size:11px;border:0;background:none;box-shadow:none}
+.market-scope-chips button[aria-checked=true] {background:var(--chip);box-shadow:inset 0 -2px var(--accent)}
+.market-scope-chips button:nth-child(3) {border-left:1px solid var(--rule)}
+.market-scope-chips i {display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:4px}
+.market-follow {flex:none;padding:4px!important;min-width:28px}
+.market-aggregate-table {max-height:340px;overflow-y:auto;scrollbar-width:thin}
+.market-aggregate-table table {table-layout:fixed;width:100%;font-size:10px}
+.market-aggregate-table thead {position:sticky;top:0;background:var(--sheet);z-index:1}
+.market-aggregate-table th,.market-aggregate-table td {padding:4px 2px;overflow-wrap:anywhere}
+.market-aggregate-table th:first-child {width:25%}
+.strategy-panel .market-aggregate-table .entity-link {padding:0;min-height:26px;gap:3px;background:none;border:0;font-size:10px;box-shadow:none;text-align:left}
+.market-good-heading {display:flex;align-items:center;gap:7px;margin:10px 0 5px}
+.market-window .pane-head {display:none}
+.market-window .system-table th:first-child {width:42%}
+.strategy-panel .market-aggregate-table .spr {width:24px!important;height:24px!important;flex:0 0 24px}.strategy-panel .market-aggregate-table td {height:32px;padding:3px 2px}.market-aggregate-table .gauge-wrap {gap:3px}.market-aggregate-table .gauge {min-width:25px}.market-good-heading .spr {width:32px!important;height:32px!important}
+
+.industry-total {font-size:11px;color:var(--ink2);margin-bottom:6px}
+.industry-group {border-bottom:1px solid var(--rule);padding:5px 0}
+.strategy-panel .industry-group-head {display:flex;align-items:center;gap:7px;width:100%;padding:2px 0;border:0;background:none;box-shadow:none;text-align:left;font-size:12px;min-height:40px}
+.industry-group-head strong {flex:1}.industry-group-head>span:last-child {font-variant-numeric:tabular-nums;text-align:right}
+.strategy-panel .industry-group-head .spr {width:40px!important;height:40px!important;flex:none}
+.industry-group-head small {display:block;font-size:10px}
+.group-metrics {display:flex;flex-direction:column;gap:3px;margin:2px 0 4px 47px}
+.industry-group-detail {padding:5px 0 5px 7px;border-left:2px solid var(--gold);margin-top:6px}
+.industry-group-detail>.group-metrics {margin-left:0}.industry-group-detail>.system-facts {gap:8px}
+.industry-group.owner-group {border-top:1px solid var(--gold)}
+.strategy-panel .industry-new {width:100%;padding:8px;border:0;background:var(--chip);font-size:12px}
+.industry-group-detail .entity-link {white-space:normal;text-align:left;min-height:28px;padding:3px 0}
+
+.strategy-panel .group-metrics .bar {height:3px;min-height:3px;border:0;box-shadow:none;border-radius:0}.industry-group .ownership-split {height:4px}.industry-group-detail .build-foot {flex-wrap:wrap}.industry-group-detail .build-foot .kv {flex-basis:100%}
+
+.group-detail-ledger {display:flex;flex-direction:column;gap:6px;margin:7px 0}.group-detail-ledger summary {font-size:11px;cursor:pointer;padding:3px 0}.group-detail-ledger h4 {font-size:11px;margin:5px 0}.group-detail-ledger .system-table .spr {width:20px!important;height:20px!important;flex:none}.group-detail-ledger .system-table .bar {height:3px;min-height:3px;border:0}
+
+.window-navigation{display:flex;gap:2px;margin-left:auto}.window-navigation button{width:24px;height:24px;padding:0;font-size:15px}.window-navigation button:disabled{opacity:.3}
+.pop-relations{margin:8px 0;border-top:2px solid var(--ink,currentColor);border-bottom:1px solid var(--line,#b6a98d)}
+.pop-relations header{display:flex;justify-content:space-between;font-size:11px;font-weight:700;padding:5px 4px;letter-spacing:.06em}
+.pop-relations button{display:grid;grid-template-columns:48px minmax(0,1fr) auto;align-items:center;gap:6px;width:100%;padding:7px 4px;border:0;border-top:1px solid var(--line,#b6a98d);border-radius:0;text-align:left;background:transparent;font-size:12px}
+.pop-relations button:hover,.pop-relations button:focus-visible{background:var(--hover,#c2ad7933)}
+.pop-relations button>span,.pop-relations small{font-size:10px;opacity:.7}.pop-relations strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}

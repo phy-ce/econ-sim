@@ -1,5 +1,5 @@
 import type { ConstructionActivity } from './constructionActivity';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useMemo, useEffect, useRef, useState } from 'react';
 import type { Command, GameEvent, HistoryPoint, World } from '@econ/sim';
 import type { FromWorker, ToWorker } from './protocol';
 import { EN, KO } from './strings';
@@ -100,14 +100,14 @@ export function useGame() {
     return () => worker.terminate();
   }, [toast]);
 
-  const setPrefs = (p: Partial<Prefs>) => {
+  const setPrefs = useCallback((p: Partial<Prefs>) => {
     const next = { ...prefsRef.current, ...p };
     prefsRef.current = next;
     setPrefsState(next);
     try { localStorage.setItem(PREF_KEY, JSON.stringify(next)); } catch { /* 선택 사항 */ }
-  };
+  }, []);
 
-  return {
+  return useMemo(() => ({
     world,
     constructionActivity,
     hour,
@@ -140,7 +140,7 @@ export function useGame() {
       send({ type: 'new', seed: Math.floor(Math.random() * 1e6) });
       toast(both('started'));
     },
-  };
+  }), [world, constructionActivity, hour, history, speed, toasts, prefs, setPrefs, lastReadTick, setSpeed, send, toast]);
 }
 
 export type Game = ReturnType<typeof useGame>;

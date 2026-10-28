@@ -1,3 +1,4 @@
+import {useNavigationState} from '../NavigationHistory';
 import { useState } from 'react';
 import { TECHS, researchableTechs, unlocksOf, getMethod, literacyOf } from '@econ/sim';
 import type { World, Company } from '@econ/sim';
@@ -12,7 +13,7 @@ const ordered=[...TECHS].sort((a,b)=>depth(a.id)-depth(b.id));
 const pos=new Map<string,{x:number;y:number}>();let treeRows=0;
 for(const d of [...new Set(ordered.map(t=>depth(t.id)))]){const group=ordered.filter(t=>depth(t.id)===d);group.forEach((t,i)=>pos.set(t.id,{x:i%2*204,y:(treeRows+Math.floor(i/2))*116}));treeRows+=Math.ceil(group.length/2);}
 export function ResearchPanel({world,game,me}:{world:World;game:Game;me:Company}) {
- const T=useT(),S=T.system,r=me.research,[selected,setSelected]=useState(r.current??TECHS[0].id);
+ const T=useT(),S=T.system,r=me.research,[selected,setSelected]=useNavigationState('views/ResearchPanel.tsx:selected',r.current??TECHS[0].id);
  const tech=TECHS.find(t=>t.id===selected)!,u=unlocksOf(selected),options=researchableTechs(me);
  const pops=world.pops.filter(p=>world.regions.find(r=>r.id===p.regionId)?.kingdomId===me.kingdomId),n=pops.reduce((n,p)=>n+p.size,0),lit=n?pops.reduce((n,p)=>n+literacyOf(p)*p.size,0)/n:0;
  return <div className="system-panel"><div className="system-facts"><span>{S.weekPoints}<b><NumericValue value={r.points} format="one"/> pt</b></span><span>{S.literacy}<b>{pct(lit)}</b></span></div>

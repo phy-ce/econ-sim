@@ -1,3 +1,4 @@
+import {useNavigationState} from '../NavigationHistory';
 import { useEffect, useId, useState, useRef, type ReactNode } from 'react';
 import { ChevronDown, ChevronRight, ArrowUp, ArrowDown, RotateCcw } from 'lucide-react';
 import { useLang } from '../i18n';
@@ -11,7 +12,7 @@ export function SectionStack({ storageKey, items, revealId, revealKey, explorer=
   const prefix = useId();
   const root=useRef<HTMLDivElement>(null);
   const browse=explorer;
-  const [selected,setSelected]=useState(items[0]?.id);
+  const [selected,setSelected]=useNavigationState(`sections:${storageKey}:selected`,items[0]?.id);
   const active=items.some(i=>i.id===selected)?selected:items[0]?.id;
   const defaults = () => items.map(({ id, height }) => ({ id, height, collapsed: false }));
   const [prefs, setPrefs] = useState<Preference[]>(() => {
