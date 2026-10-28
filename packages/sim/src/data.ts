@@ -475,7 +475,7 @@ export const TUNE = {
   rentShare: 0.05,
   patronWealth: 2,
   patronShare: 0.5,
-  growthEq: { lower: 2.5, middle: 5, upper: 5 },
+  growthEq: { lower: 1, middle: 5, upper: 5 },
   wageOutside: 1.2,
   wageCeil: 0.85,
   switchRate: 0.005,
