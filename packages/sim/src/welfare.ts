@@ -1,3 +1,4 @@
+import {recordPopIncome} from './popIncome';
 import { TICKS_PER_WEEK, TUNE } from './data';
 import { companyById } from './economy';
 import { basketCostAt } from './market';
@@ -115,7 +116,7 @@ export function payWelfare(w: World) {
     for (const { p, amt } of due[ki]) {
       const x = amt * f;
       p.savings += x;
-      p.lastIncome += x;
+      p.lastIncome += x; recordPopIncome(p, 'welfare', x);
       paid += x;
     }
     gov.cash -= paid;

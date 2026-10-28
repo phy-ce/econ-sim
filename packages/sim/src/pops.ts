@@ -1,8 +1,9 @@
+import {recordPopIncome} from './popIncome';
 import { CLASS_DEFS, TUNE, WORKFORCE_RATIO } from './data';
 import { popSol } from './economy';
 import { clamp } from './rng';
 import { POP_CLASSES, wealthOf } from './types';
-import type { GoodBag, Household, Pop, PopClass, Region, World } from './types';
+import type { GoodBag, Household, PopIncomeSource, Pop, PopClass, Region, World } from './types';
 
 // pop: 같은 지역, 같은 직종, 같은 일터의 사람 묶음. 사람이 움직일 때는 저축·자격·부를 함께 들고 간다.
 
@@ -178,7 +179,7 @@ export function prunePops(w: World) {
 const bySize = (p: Pop) => p.size;
 
 /** 조건에 맞는 pop 들에게 노동 인구 비례로 돈을 준다. 받을 pop 이 없으면 false */
-export function payPops(w: World, pops: Pop[], amount: number, weight: (p: Pop) => number = bySize): boolean {
+export function payPops(w: World, pops: Pop[], amount: number, weight: (p: Pop) => number = bySize, source:PopIncomeSource = 'other'): boolean {
   if (amount <= 0) return true;
   let total = 0;
   for (const p of pops) total += weight(p);
@@ -187,12 +188,13 @@ export function payPops(w: World, pops: Pop[], amount: number, weight: (p: Pop) 
     const amt = (amount * weight(p)) / total;
     p.savings += amt;
     p.lastIncome += amt;
+    recordPopIncome(p, source, amt);
   }
   return true;
 }
 
 /** 지역의 그 직종에게 돈을 준다. 그 직종이 없으면 지역 전체, 그것도 없으면 주인 없는 돈 */
-export function payProf(w: World, regionId: number, prof: PopClass, amount: number) {
+export function payProf(w: World, regionId: number, prof: PopClass, amount: number, source:PopIncomeSource = 'wages') {
   if (amount <= 0) return;
   // payPops 와 같은 계산을 목록 없이 한다
   let mine = 0, all = 0;
@@ -207,6 +209,7 @@ export function payProf(w: World, regionId: number, prof: PopClass, amount: numb
       const amt = (amount * p.size) / mine;
       p.savings += amt;
       p.lastIncome += amt;
+    recordPopIncome(p, source, amt);
     }
   } else if (!(all <= 0)) {
     for (const p of w.pops) {
@@ -214,6 +217,7 @@ export function payProf(w: World, regionId: number, prof: PopClass, amount: numb
       const amt = (amount * p.size) / all;
       p.savings += amt;
       p.lastIncome += amt;
+    recordPopIncome(p, source, amt);
     }
   } else w.fund += amount;
 }

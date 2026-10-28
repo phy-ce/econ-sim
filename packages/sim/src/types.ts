@@ -192,6 +192,7 @@ export interface RegionDef {
  * pop: 같은 지역, 같은 직종, 같은 일터의 사람 묶음 (빅토리아3 방식).
  * 소득은 자기 일터에서만 나온다. 일터 0 은 실업.
  */
+export type PopIncomeSource = 'wages' | 'dividends' | 'rent' | 'sales' | 'welfare' | 'other' | 'tax';
 export interface Pop {
   id: number;
   regionId: number;
@@ -208,6 +209,8 @@ export interface Pop {
   /** 다른 직종의 자격을 갖춘 노동 인구 수 */
   quals: Partial<Record<PopClass, number>>;
   incomeEma: number;
+  /** Display-only receipts for this pop ID, reset with lastIncome. Missing in older saves. */
+  incomeBreakdown?: Partial<Record<PopIncomeSource, number>>;
   lastIncome: number;
   lastSpend: number;
   /** 직전 틱 소비 묶음 충족률, 식량 충족률 */
@@ -437,6 +440,8 @@ export interface Household {
   food: number;
   inKind: GoodBag;
   incomeEma: number;
+  /** Display-only receipts for this pop ID, reset with lastIncome. Missing in older saves. */
+  incomeBreakdown?: Partial<Record<PopIncomeSource, number>>;
   lastIncome: number;
   lastSpend: number;
   consumed: GoodBag;

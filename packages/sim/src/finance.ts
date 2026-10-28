@@ -1,3 +1,4 @@
+import {recordPopIncome} from './popIncome';
 import { BUILDING_BY_ID, GOODS, SKILL_DEFS, TECH_BY_ID, TICKS_PER_WEEK, TUNE, WORKFORCE_RATIO, getMethod } from './data';
 import { collectionRatio, companyById, levelOwnersOf, slots, regionById, constructionEstimate, efficiency, isBudgetFunded, isOwnerBuilding, kingdomGdp, logEvent, officeFeeMult, paysDividend, repay, wagesAt, sellThrough, shareWeight } from './economy';
 import { techNameEn } from './i18n';
@@ -258,7 +259,7 @@ export function collectIncomeTax(w: World) {
     const tax = taxOf(p) * (ratio.get(kid) ?? 1);
     if (!gov || tax <= 0) continue;
     p.savings -= tax;
-    p.lastIncome -= tax;
+    p.lastIncome -= tax; recordPopIncome(p, 'tax', tax);
     gov.cash += tax;
     kingdomById(w, kid).revenueWeek += tax;
     got.set(kid, (got.get(kid) ?? 0) + tax);
@@ -388,7 +389,7 @@ function fitReserves(w: World, c: Company): number {
  * 저택: 앉은 귀족·하급 귀족에게 몫(shareWeight × 인원)대로. 금융가: 먼저 성과급(TUNE.financeBonus)을 일하는 전문가에게, 나머지를 지분 수대로.
  * 받을 사람이 없으면 금고로
  */
-function payOwners(w: World, o: Building, amount: number) {
+function payOwners(w: World, o: Building, amount: number, source:'dividends'|'rent' = 'dividends') {
   if (amount <= 0) return;
   o.last.revenue += amount;
   flow(`divIn.${o.typeId}`, amount);
@@ -401,14 +402,14 @@ function payOwners(w: World, o: Building, amount: number) {
   toTreasury(o, keep, 'keep');
   const rest = amount - keep;
   flow(`toPops.${o.typeId}`, rest);
-  for (const p of pops) payPops(w, [p], (rest * p.size * shareWeight(p.prof)) / total);
+  for (const p of pops) payPops(w, [p], (rest * p.size * shareWeight(p.prof)) / total, undefined, source);
 }
 
 /** 금융가 배당: 성과급 → 일하는 전문가, 금고 몫 → 금고, 나머지 → 지분 주인 (지분 수대로) */
 function payFinance(w: World, o: Building, amount: number) {
   const staff = w.pops.filter((p) => p.work === o.id && p.size > 0);
   const bonus = staff.length ? amount * TUNE.financeBonus : 0;
-  if (bonus > 0) payPops(w, staff, bonus);
+  if (bonus > 0) payPops(w, staff, bonus, undefined, 'wages');
   const rest = amount - bonus;
   const holders: Pop[] = [];
   let units = 0;
@@ -417,7 +418,7 @@ function payFinance(w: World, o: Building, amount: number) {
   const keep = rest * (KEEP_SHARE.finance ?? 0);
   toTreasury(o, keep, 'keep');
   flow('toPops.finance', rest - keep);
-  payPops(w, holders, rest - keep, (p) => fundOf(p, o.id));
+  payPops(w, holders, rest - keep, (p) => fundOf(p, o.id), 'dividends');
 }
 
 /**
@@ -436,7 +437,7 @@ export function updateFunds(w: World) {
     let wf = 0;
     for (const p of staff) wf += p.size;
     const pay = Math.min(Math.max(0, o.cash ?? 0), TUNE.financeWage * WORKFORCE_RATIO * wf * TICKS_PER_WEEK);
-    if (pay > 0 && staff.length) { o.cash = (o.cash ?? 0) - pay; flow('staff.finance', pay); payPops(w, staff, pay); }
+    if (pay > 0 && staff.length) { o.cash = (o.cash ?? 0) - pay; flow('staff.finance', pay); payPops(w, staff, pay, undefined, 'wages'); }
     const firm = companyById(w, kingdomById(w, kingdomOf(w, o.regionId)).privateIds[0]);
     let assets = Math.max(0, o.cash ?? 0);
     if (firm) for (const x of levelsOf.get(o.id) ?? []) { const c = constructionEstimate(w, firm, x.typeId).cost; if (Number.isFinite(c)) assets += c * x.n; }
@@ -448,7 +449,7 @@ export function updateFunds(w: World) {
         const holders = w.pops.filter((p) => fundOf(p, o.id) > 0);
         o.cash = (o.cash ?? 0) - out;
         flow('idle.finance', out);
-        payPops(w, holders, out, (p) => fundOf(p, o.id));
+        payPops(w, holders, out, (p) => fundOf(p, o.id), 'other');
         assets -= out;
       }
     }
@@ -495,7 +496,7 @@ function releaseTreasuries(w: World) {
     if (!pops.some((p) => weight(p) > 0)) continue;
     o.cash = (o.cash ?? 0) - out;
     flow(`release.${o.typeId}`, out);
-    payPops(w, pops, out, weight);
+    payPops(w, pops, out, weight, 'other');
   }
 }
 
@@ -596,7 +597,7 @@ export function payRent(w: World, regionId: number, amount: number): boolean {
   const manor = w.buildings.find((x) => x.regionId === regionId && x.typeId === 'manor');
   if (!manor) return false;
   if (!w.pops.some((p) => p.work === manor.id && p.size > 0)) return false;
-  payOwners(w, manor, amount);
+  payOwners(w, manor, amount, 'rent');
   return true;
 }
 

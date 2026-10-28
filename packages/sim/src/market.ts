@@ -175,7 +175,7 @@ export function resetMarkets(w: World) {
     }
     for (const s of POP_CLASSES) if (r.households[s]) r.households[s].consumed = {};
   }
-  for (const p of w.pops) { p.lastIncome = 0; p.lastSpend = 0; p.inKind = {}; }
+  for (const p of w.pops) { p.lastIncome = 0; p.incomeBreakdown = {}; p.lastSpend = 0; p.inKind = {}; }
 }
 
 // ---------------------------------------------------------------- 소작
@@ -282,7 +282,7 @@ function hasLandlords(w: World, regionId: number): boolean {
 
 /** 현물 판매 대금은 판 pop 에게 */
 function paySubsistence(w: World, pop: Pop, amount: number) {
-  if (!payPops(w, [pop], amount)) w.fund += amount;
+  if (!payPops(w, [pop], amount, undefined, 'sales')) w.fund += amount;
 }
 
 // ---------------------------------------------------------------- 주문

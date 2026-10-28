@@ -1,3 +1,4 @@
+import {recordPopIncome} from './popIncome';
 import { BUILDING_BY_ID, CLASS_DEFS, SKILL_DEFS, TUNE, getMethod } from './data';
 import { borrow, disbanded, emptyJobs, emptyStats, isSubsistence, paysDividend, paysShare, peasantSlots, shareWage, wagesAt } from './economy';
 import { tenantIncomePerWorker } from './market';
@@ -326,7 +327,7 @@ export function payWages(w: World) {
       if (list) for (const p of list) {
         const amt = workforce(p) * wages[p.prof as Skill] * ratio;
         p.savings += amt;
-        p.lastIncome += amt;
+        p.lastIncome += amt; recordPopIncome(p, 'wages', amt);
         paid += amt;
       }
       c.cash -= paid;
