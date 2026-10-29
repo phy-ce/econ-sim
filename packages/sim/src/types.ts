@@ -209,6 +209,8 @@ export interface Pop {
   /** 다른 직종의 자격을 갖춘 노동 인구 수 */
   quals: Partial<Record<PopClass, number>>;
   incomeEma: number;
+  /** 통계(GDP)용 소득 평균: 금고 방출(other)을 뺀 incomeEma. 없으면 incomeEma */
+  gdpEma?: number;
   /** Display-only receipts for this pop ID, reset with lastIncome. Missing in older saves. */
   incomeBreakdown?: Partial<Record<PopIncomeSource, number>>;
   lastIncome: number;
@@ -394,7 +396,7 @@ export interface Company {
   cash: number;
   /** 회사 임금표: 민간 상회와 왕실 생산 건물. 매주 AI(adjustWages)가 시장을 보고 정하거나, 플레이어가 정한다 (setWage·setWageOffset) */
   wages: Record<Skill, number>;
-  /** 국영 임금표 (왕실만): 정부 건물(행정청·건축사무소·학교)의 임금 = 기본 임금 × 임금 지수 × 국영 임금 수준 배율 (finance.ts applyStateWages) */
+  /** 국영 임금표 (왕실만): 정부 건물(행정청·건축사무소·학교)의 임금 = 직종별 시장 임금(왕실 건물 제외) × 국영 임금 수준 배율 (finance.ts applyStateWages) */
   stateWages?: Record<Skill, number>;
   /** 지난주 직종별 고용 인원 (AI가 실제로 사람이 찼는지 보고 임금을 정한다) */
   lastEmployed?: Partial<Record<Skill, number>>;
@@ -546,11 +548,11 @@ export interface Kingdom {
    * 이번 주 정부 건물(행정청·학교)의 임금과 원료, 복지, firms = 왕실 생산 건물과 건축사무소의 매출 − 원료 − 임금 (그중 건축사무소 몫 office),
    * build = 왕실 공사가 자기 건축사무소에 낸 수수료
    */
-  spentWeek?: { wages: number; goods: number; welfare?: number; firms?: number; office?: number; build?: number };
+  spentWeek?: { wages: number; goods: number; welfare?: number; firms?: number; office?: number; build?: number; mint?: number; steps?: Record<BudgetItem, number> };
   /** 지난주 국정 수지: 세입 / 정부 건물(행정청·학교) 임금, 원료, 국채 이자, 복지, 왕실 공사(build) / 국영 사업 손익(firms, 그중 건축사무소 office) */
   /** revenue 는 세금·관세·주조를 모두 더한 값, tariffs 는 그중 관세. fees 는 건축사무소가 민간 공사에서 받은 수수료 (사무소 매출의 일부, firms 안에 들어 있다. 지표용) */
   /** 국고 순변화 ≈ revenue − wages − goods − interest − welfare − build + firms */
-  lastBudget?: { revenue: number; tariffs?: number; fees: number; wages: number; goods: number; interest: number; welfare?: number; firms?: number; office?: number; build?: number };
+  lastBudget?: { revenue: number; tariffs?: number; fees: number; wages: number; goods: number; interest: number; welfare?: number; firms?: number; office?: number; build?: number; mint?: number; steps?: Record<BudgetItem, number> };
   /** 주간 국정 지출(정부 건물 + 이자 + 복지 + 왕실 공사 − 건축사무소 손익)의 이동평균. 국고가 몇 주를 버티는지의 기준 (왕실 생산 건물 손익은 넣지 않는다) */
   expenseEma?: number;
   /** 이번 주에 들어온 관세 (주마다 비운다) */

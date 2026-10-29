@@ -74,7 +74,7 @@ export function migrateWorld(input: unknown): World | null {
     }
     for (const k of w.kingdoms) {
       delete (k.budget as Record<string, number>).research;
-      if (k.lastBudget) delete (k.lastBudget as Record<string, number>).research;
+      if (k.lastBudget) delete (k.lastBudget as unknown as Record<string, number>).research;
     }
     w.version = 14;
   }

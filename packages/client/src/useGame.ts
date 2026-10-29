@@ -84,6 +84,8 @@ export function useGame() {
           }
         }
         seenEvents.current = keys;
+      } else if (msg.type === 'hour') {
+        setHour(msg.hour);
       } else if (msg.type === 'saved') {
         try {
           localStorage.setItem(SAVE_KEY, msg.json);

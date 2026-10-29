@@ -580,17 +580,28 @@ export function hasBuilder(w: World, c: Company): boolean {
 
 // ---------------------------------------------------------------- 임금·고용
 
-/** 시장임금: 고용 가중 평균 임금 (자기 회사 제외). 고용이 없으면 기본 임금 */
-export function marketWage(w: World, skill: Skill, excludeCompanyId?: number): number {
-  let paid = 0, n = 0;
+/** 시장임금: 고용 가중 평균 임금 (자기 회사 제외). 고용이 없으면 기본 임금. skills 에 없는 직종은 0 */
+function marketWagesOf(w: World, skills: readonly Skill[], excludeCompanyId?: number): Record<Skill, number> {
+  const paid = emptyJobs(), n = emptyJobs();
   for (const b of w.buildings) {
-    if (b.companyId === excludeCompanyId || b.employed[skill] <= 0) continue;
+    if (b.companyId === excludeCompanyId || !skills.some((s) => b.employed[s] > 0)) continue;
     const c = companyById(w, b.companyId);
     if (!c) continue;
-    paid += b.employed[skill] * wagesAt(c, b.typeId)[skill];
-    n += b.employed[skill];
+    const t = wagesAt(c, b.typeId);
+    for (const s of skills) if (b.employed[s] > 0) { paid[s] += b.employed[s] * t[s]; n[s] += b.employed[s]; }
   }
-  return n > 0 ? paid / n : SKILL_DEFS[skill].baseWage;
+  for (const s of skills) paid[s] = n[s] > 0 ? paid[s] / n[s] : SKILL_DEFS[s].baseWage;
+  return paid;
+}
+
+/** 한 직종의 시장임금 */
+export function marketWage(w: World, skill: Skill, excludeCompanyId?: number): number {
+  return marketWagesOf(w, [skill], excludeCompanyId)[skill];
+}
+
+/** 직종마다 marketWage (한 번에 센다) */
+export function marketWages(w: World, excludeCompanyId?: number): Record<Skill, number> {
+  return marketWagesOf(w, SKILLS, excludeCompanyId);
 }
 
 /** 지역의 이 직종 실업률 (노동 인구 기준) */
@@ -666,7 +677,7 @@ export function moneyIdentity(w: World): number {
 /** 왕국의 연간 총생산: 그 왕국 pop 의 소득 합 × 1년 */
 export function kingdomGdp(w: World, kingdomId: number): number {
   let daily = 0;
-  for (const p of w.pops) if (regionById(w, p.regionId).kingdomId === kingdomId) daily += p.incomeEma;
+  for (const p of w.pops) if (regionById(w, p.regionId).kingdomId === kingdomId) daily += p.gdpEma ?? p.incomeEma;
   return daily * 360;
 }
 

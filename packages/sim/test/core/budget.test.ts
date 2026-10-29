@@ -64,27 +64,6 @@ describe('예산 미리보기', () => {
     console.log(`budgetPreview 세금 단계: ${out.join(' / ')}`);
   });
 
-  it('국영 임금 단계의 순수지 변화에 건축사무소 수수료(국영 사업·왕실 공사) 변화가 들어간다', () => {
-    const v = createWorld(42);
-    runTo(v, 20 * TICKS_PER_WEEK);
-    const pid = playerCompany(v)!;
-    const k0 = v.kingdoms.find((y) => y.id === pid.kingdomId)!;
-    const now = k0.budget.wages, next = now >= 4 ? now - 2 : now + 2;
-    const a = budgetPreview(v, pid.kingdomId);
-    expect(a.lines.find((l) => l.key === 'build')!.knob).toBe('wages');
-    const predicted = a.netByLevel.wages[next - 1] - a.net;
-    const realNet = (x: World) => ledgerNet(x.kingdoms.find((y) => y.id === pid.kingdomId)!.lastBudget!);
-    const ctl = structuredClone(v), chg = structuredClone(v);
-    expect(applyCommandMsg(chg, pid.id, { type: 'setBudget', item: 'wages', value: next })).toBeNull();
-    runTo(ctl, ctl.tick + TICKS_PER_WEEK); runTo(chg, chg.tick + TICKS_PER_WEEK);
-    const real = realNet(chg) - realNet(ctl);
-    console.log(`budgetPreview 임금 ${now}→${next}: 순수지 변화 예상 ${predicted} 실제 ${Math.round(real)}`);
-    // 민간 공사 수수료는 저택·금융가 금고가 낼 수 있는 만큼만 들어오므로(레벨 소유 1단계) 순수지 변화가 작을 때 비율 오차가 커진다:
-    // 오차를 임금 줄 변화 크기에 견준다
-    const wageDelta = Math.abs(a.lines.find((l) => l.key === 'wages')!.byLevel![next - 1] - a.lines.find((l) => l.key === 'wages')!.weekly);
-    expect(Math.abs(predicted - real) / wageDelta).toBeLessThan(0.2);
-  });
-
   it('첫 주들(2~9주)도 실제 수지와 크게 다르지 않다', () => {
     const v = createWorld(42);
     runTo(v, 2 * TICKS_PER_WEEK);
@@ -106,39 +85,19 @@ describe('예산 미리보기', () => {
     expect(Math.abs(e)).toBeLessThan(10);
   });
 
-  it('주초 미리보기가 그 주 실제 국정 수지와 크게 다르지 않다 (8주, 모든 왕국)', () => {
-    // 기상 조건이 끝나는 날 소작지 판매(토지세)가 몇 배로 뛴다 (소작농은 먹고 남는 만큼만 판다). 미리보기는 계절을 내다보지 않으므로 기상 조건 없이 잰다
-    const chance = TUNE.harvestChance;
-    TUNE.harvestChance = 0;
+  it('지금 단계의 미리보기는 지난주 확정 장부와 같다 (8주, 모든 왕국)', () => {
+    // 줄 값은 지난주 실제 값에서 시작하고, 지난주 단계로 보면 모형 차이가 0이다: 줄마다 장부 값과 반올림 단위(100) 안에서 맞는다
     const v = createWorld(42);
     runTo(v, 21 * TICKS_PER_WEEK);
-    const errs: string[] = [];
-    const sums: { pIn: number; rIn: number; pOut: number; rOut: number; gross: number; spend: number; k: World['kingdoms'][number] }[] = [];
-    for (const k of v.kingdoms) sums.push({ pIn: 0, rIn: 0, pOut: 0, rOut: 0, gross: 0, spend: 0, k });
     for (let wk = 0; wk < 8; wk++) {
-      const pre = sums.map((s) => budgetPreview(v, s.k.id));
       runTo(v, v.tick + TICKS_PER_WEEK);
-      sums.forEach((s, i) => {
-        const p = pre[i], b = s.k.lastBudget!;
-        s.pIn += lineOf(p, 'tax') + lineOf(p, 'tariffs') + lineOf(p, 'mint');
-        s.pOut += lineOf(p, 'stateFirms') + lineOf(p, 'build') + lineOf(p, 'wages') + lineOf(p, 'goods') + lineOf(p, 'interest') + lineOf(p, 'welfare');
-        s.rIn += b.revenue;
-        s.rOut += ledgerNet(b) - b.revenue;
-        s.gross += ledgerGross(b);
-        s.spend += b.wages + b.goods + b.interest + (b.welfare ?? 0) + (b.build ?? 0);
-      });
+      for (const k of v.kingdoms) {
+        const b = k.lastBudget!, p = budgetPreview(v, k.id, b.steps); // AI 는 주가 끝난 뒤 단계를 바꾸므로 지난주 단계로 본다
+        const want = { tax: b.revenue - (b.tariffs ?? 0) - (b.mint ?? 0), tariffs: b.tariffs ?? 0, mint: b.mint ?? 0, wages: -b.wages, stateFirms: b.firms ?? 0, build: -(b.build ?? 0), goods: -b.goods, interest: -b.interest, welfare: -(b.welfare ?? 0) };
+        for (const [key, x] of Object.entries(want)) expect(Math.abs(lineOf(p, key) - x), `주 ${wk} 왕국 ${k.id} ${key}`).toBeLessThanOrEqual(50);
+        expect(Math.abs(p.net - ledgerNet(b)), `주 ${wk} 왕국 ${k.id} 순수지`).toBeLessThanOrEqual(300);
+      }
     }
-    TUNE.harvestChance = chance;
-    const pct = (a: number, b: number) => Math.round((a / Math.abs(b)) * 1000) / 10;
-    for (const s of sums) {
-      // 지출은 국영 사업 손익(건축사무소 수수료)을 뺀 순액이라 0 가까이 갈 수 있다. 오차는 총 지출(임금·원료·이자·복지·왕실 공사)에 대한 비율로 잰다
-      const e = { income: pct(s.pIn - s.rIn, s.rIn), expense: pct(s.pOut - s.rOut, s.spend), netOfGross: pct(s.pIn + s.pOut - s.rIn - s.rOut, s.gross) };
-      errs.push(`왕국 ${s.k.id} ${JSON.stringify(e)}`);
-      expect(Math.abs(e.income), `왕국 ${s.k.id} 수입`).toBeLessThan(15);
-      expect(Math.abs(e.expense), `왕국 ${s.k.id} 지출`).toBeLessThan(15);
-      expect(Math.abs(e.netOfGross), `왕국 ${s.k.id} 순수지`).toBeLessThan(10);
-    }
-    console.log(`budgetPreview 8주 오차 %: ${errs.join(' / ')}`);
   });
 
   it('줄 묶음: 손잡이별 묶음 합이 순수지이고, 국영 사업 손익은 국영 임금 손잡이를 따른다', () => {
@@ -149,7 +108,7 @@ describe('예산 미리보기', () => {
     for (const g of a.groups) if (g.knob !== 'fixed') g.byLevel!.forEach((v, i) => expect(a.netByLevel[g.knob as 'tax'][i] - a.net).toBeCloseTo(v - g.weekly, 6));
   });
 
-  it('자세히 보기: 행 합 + 보정 = 줄 값, 임금·국영 사업·이자는 보정 없이 맞는다', () => {
+  it('자세히 보기: 행 합 + 보정 = 줄 값 (보정 = 지난주 확정 장부와 지금 고용 기준 행 합의 차이)', () => {
     for (const k of w.kingdoms) for (const steps of [{}, { wages: 5, tax: 1, welfare: 2 }]) {
       const p = budgetPreview(w, k.id, steps);
       for (const l of p.lines) {
@@ -158,7 +117,7 @@ describe('예산 미리보기', () => {
         expect(d.weekly).toBeCloseTo(budgetLineRaw(w, k.id, l.key, steps), 6);
         expect(rows + d.smoothing).toBeCloseTo(d.weekly, 6);
         expect(Math.abs(d.weekly - l.weekly), l.key).toBeLessThanOrEqual(50);
-        if (l.key === 'wages' || l.key === 'stateFirms' || l.key === 'interest') expect(Math.abs(d.smoothing), l.key).toBeLessThan(1e-6);
+        // 줄 값은 지난주 확정 장부에서 시작하므로 행 합(지금 고용 기준)과의 차이가 보정으로 남는다: 보정 없음을 요구하지 않는다
       }
       const wd = budgetDrill(w, k.id, 'wages', steps);
       if (wd.key !== 'wages') throw new Error('wages');

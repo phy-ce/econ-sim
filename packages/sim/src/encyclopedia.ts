@@ -724,8 +724,8 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   },
   {
     id: 'state-wages', category: 'labour', title: t('국영 임금과 임금 지수', 'State wages and the wage index'),
-    rule: t('왕실의 정부 건물(행정청·건축사무소·학교)은 국영 임금을 준다: 기본 임금 × 임금 지수 × 국영 임금 단계 배율({0}). 왕실 생산 건물은 시장 임금이다. 임금 지수는 민간 노동자·농부 평균 임금 ÷ 기본 임금의 주간 이동평균이다.', 'Crown government buildings (administration, construction office, school) pay the state wage: base wage × wage index × state-wage step ({0}). Crown producers pay market wages. The wage index is the weekly moving average of private labourer and farmer wages ÷ base wage.'),
-    formula: 'wage_s = baseWage_s × index × level',
+    rule: t('왕실의 정부 건물(행정청·건축사무소·학교)은 국영 임금을 준다: 그 직종의 시장 임금 × 국영 임금 단계 배율({0}). 시장 임금은 이 왕실 밖 모든 건물의 고용 가중 평균 임금이다 (고용이 없는 직종은 기본 임금). 왕실 생산 건물도 시장 임금이다. 임금 지수(민간 노동자·농부 평균 임금 ÷ 기본 임금)는 AI 왕실이 국영 임금 단계를 고르는 데만 쓴다.', 'Crown government buildings (administration, construction office, school) pay the state wage: the market wage of the job × state-wage step ({0}). The market wage is the employment-weighted average wage of all buildings outside this crown (base wage if nobody is employed in that job). Crown producers pay market wages too. The wage index (private labourer and farmer wages ÷ base wage) is only used by the AI crown to pick the state-wage step.'),
+    formula: 'wage_s = marketWage_s × level',
     params: [tune('govWageLevels', '국영 임금 단계', 'State wage steps', 'x')],
     live: {
       pick: ['kingdom'], run: (w, ctx) => {

@@ -145,6 +145,11 @@ export function movePeople(w: World, from: Pop, to: Pop, workers: number, qualif
   const ff = from.fund;
   if (ff) for (let i = 0; i < ff.id.length; i++) { const u = ff.u[i] * frac; ff.u[i] -= u; addFund(to, ff.id[i], u); }
   from.incomeEma -= inc; to.incomeEma += inc;
+  // 통계용 소득도 같은 비율로. 없으면 incomeEma 의 옮기기 전 값 (위에서 이미 inc 만큼 옮겼다)
+  if (from.gdpEma !== undefined || to.gdpEma !== undefined) {
+    const fg = from.gdpEma ?? from.incomeEma + inc, g = fg * frac;
+    from.gdpEma = fg - g; to.gdpEma = (to.gdpEma ?? to.incomeEma - inc) + g;
+  }
   from.size -= people;
   to.size = total;
   track(w, fromProf, toProf, people);
@@ -164,6 +169,8 @@ export function prunePops(w: World) {
       const heir = p.work !== 0 ? findPop(w, p.regionId, p.prof, 0) : undefined;
       if (heir && heir !== p && heir.size >= 1e-3) {
         heir.savings += p.savings; heir.incomeEma += p.incomeEma;
+        // 통계용 소득: 없으면 incomeEma (상속인은 더하기 전 값)
+        heir.gdpEma = (heir.gdpEma ?? heir.incomeEma - p.incomeEma) + (p.gdpEma ?? p.incomeEma);
         const pf = p.fund;
         if (pf) for (let j = 0; j < pf.id.length; j++) addFund(heir, pf.id[j], pf.u[j]);
       } else w.fund += p.savings;

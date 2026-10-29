@@ -146,6 +146,7 @@ function runCommand(w: World, actor: number, cmd: Command): CommandError | null 
     }
     // 회사 임금표(생산 건물). 왕실도 생산 건물 임금은 이것으로 정한다. 왕실 정부 건물은 국영 임금(정책 단계 'wages')이다
     case 'setWage': {
+      if (company.state && company.isPlayer) return fail('왕실의 생산 건물 임금은 시장 임금입니다.', 'Crown production wages follow the market.');
       const base = SKILL_DEFS[cmd.skill]?.baseWage;
       if (!base || !Number.isFinite(cmd.wage)) return fail('잘못된 임금입니다.', 'Invalid wage.');
       company.wages[cmd.skill] = round2(Math.min(base * 10, Math.max(base * 0.1, cmd.wage)));
@@ -153,6 +154,7 @@ function runCommand(w: World, actor: number, cmd: Command): CommandError | null 
       return null;
     }
     case 'setWageOffset': {
+      if (company.state && company.isPlayer) return fail('왕실의 생산 건물 임금은 시장 임금입니다.', 'Crown production wages follow the market.');
       if (!SKILL_DEFS[cmd.skill] || !Number.isFinite(cmd.offset)) return fail('잘못된 임금 비율입니다.', 'Invalid wage ratio.');
       if (!company.wageOffset) company.wageOffset = emptyJobs();
       company.wageOffset[cmd.skill] = Math.min(1, Math.max(-0.5, cmd.offset));

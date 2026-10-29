@@ -19,7 +19,7 @@ for (let d = 1; d <= years * 360; d++) {
     for (const b of w.buildings) if (b.companyId === g.id) acc[i].byType[b.typeId] = (acc[i].byType[b.typeId] ?? 0) + b.last.wageCost + b.last.inputCost;
     if (w.tick % 7 !== 0) return;
     for (const k of LEDGER_KEYS) acc[i].ledger[k] = (acc[i].ledger[k] ?? 0) + g.lastLedger[k];
-    for (const [k, v] of Object.entries(w.kingdoms[i].lastBudget ?? {})) acc[i].budget[k] = (acc[i].budget[k] ?? 0) + v;
+    for (const [k, v] of Object.entries(w.kingdoms[i].lastBudget ?? {})) { if (typeof v === 'number') acc[i].budget[k] = (acc[i].budget[k] ?? 0) + v; }
   });
   if (d % 360 !== 0) continue;
   console.log(`== ${d / 360}년 (하루 평균)`);

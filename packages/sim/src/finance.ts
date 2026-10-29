@@ -1,6 +1,6 @@
 import {recordPopIncome} from './popIncome';
 import { BUILDING_BY_ID, GOODS, SKILL_DEFS, TECH_BY_ID, TICKS_PER_WEEK, TUNE, WORKFORCE_RATIO, getMethod } from './data';
-import { collectionRatio, companyById, levelOwnersOf, slots, regionById, constructionEstimate, efficiency, isBudgetFunded, isOwnerBuilding, kingdomGdp, logEvent, officeFeeMult, paysDividend, repay, wagesAt, sellThrough, shareWeight } from './economy';
+import { collectionRatio, companyById, marketWages, levelOwnersOf, slots, regionById, constructionEstimate, efficiency, isBudgetFunded, isOwnerBuilding, kingdomGdp, logEvent, officeFeeMult, paysDividend, repay, wagesAt, sellThrough, shareWeight } from './economy';
 import { techNameEn } from './i18n';
 import { flow, kingdomById, kingdomOf, toFinance, toTreasury } from './kingdoms';
 import { fundOf, payPops } from './pops';
@@ -107,7 +107,7 @@ export function taxRates(k: Kingdom, law: TaxLaw = k.taxLaw): { land: number; po
 
 /**
  * 임금 지수 (매주, 빅토리아3의 '보통 임금'): 왕국 민간 건물 노동자·농부의 평균 임금 ÷ 기본 임금 (고용 가중)의 이동평균.
- * 국영 임금은 이 지수에 직종별 기본 임금(노동자 10, 기술자 15, 전문가 40 …)을 곱한다. 민간 노동자 고용이 없으면 그대로 둔다
+ * 국영 임금 계산에는 쓰지 않고, AI 가 국영 임금 단계를 고를 때 본다 (ai.ts). 민간 노동자 고용이 없으면 그대로 둔다
  */
 export function updateWageIndex(w: World, k: Kingdom) {
   let paid = 0, base = 0;
@@ -122,14 +122,15 @@ export function updateWageIndex(w: World, k: Kingdom) {
 }
 
 /**
- * 국영 임금 (빅토리아3 정부 임금): 기본 임금 × 임금 지수 × 국영 임금 수준 배율. 왕실의 정부 건물(행정청·건축사무소·학교)만 이 임금을 준다.
+ * 국영 임금 (빅토리아3 정부 임금): 직종별 시장임금(왕실 건물 제외, marketWages) × 국영 임금 수준 배율. 왕실의 정부 건물(행정청·건축사무소·학교)만 이 임금을 준다.
  * 왕실 생산 건물은 민간 상회처럼 회사 임금표(wages)를 쓴다 (2026-10-23 사용자 결정, DECISIONS 6-2)
  */
 export function applyStateWages(w: World, k: Kingdom) {
   const gov = companyById(w, k.governmentId);
   if (!gov) return;
   const t = (gov.stateWages ??= { ...gov.wages });
-  for (const s of SKILLS) t[s] = round2(SKILL_DEFS[s].baseWage * (k.wageIndex ?? 1) * budgetMult(k, 'wages'));
+  const market = marketWages(w, gov.id);
+  for (const s of SKILLS) t[s] = round2(market[s] * budgetMult(k, 'wages'));
 }
 
 /**
@@ -152,6 +153,7 @@ export function spendBudget(w: World) {
     const b = {
       revenue: round2(revenue), tariffs: round2(k.tariffWeek ?? 0), fees: round2(k.privateFeeWeek ?? 0), wages: round2(spent.wages), goods: round2(spent.goods),
       interest: round2(gov.ledger.interest), welfare: round2(spent.welfare ?? 0), firms: round2(spent.firms ?? 0), office: round2(spent.office ?? 0), build: round2(spent.build ?? 0),
+      mint: round2(k.budgetBase?.mint ?? 0), steps: { ...k.budget },
     };
     k.lastBudget = b;
     // 국고가 내는 돈: 정부 건물(행정청·학교) + 이자 + 복지 + 왕실 공사 − 건축사무소 손익 (왕실 공사 수수료는 사무소 매출로 돌아오므로 둘을 함께 센다)
