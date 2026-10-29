@@ -1,5 +1,5 @@
 import { GOOD_IDS, GOODS, playerCompany } from '@econ/sim';
-import type { World, GoodId } from '@econ/sim';
+import type { World, GoodId, HistoryPoint } from '@econ/sim';
 
 export type MarketScope = 'world' | 'kingdom' | number;
 export function validMarketScope(value: unknown, world: World): MarketScope {
@@ -18,4 +18,13 @@ export function marketOf(world: World, scope: MarketScope) {
     const price=volumeEma>0?regions.reduce((n,r)=>n+r.market[g].price*r.market[g].volumeEma,0)/volumeEma:regions.length?regions.reduce((n,r)=>n+r.market[g].price,0)/regions.length:GOODS[g].basePrice;
     return [g,{price,ratio:price/GOODS[g].basePrice,volumeEma,supplyEma:sum('supplyEma'),demandEma:sum('demandEma'),inventory:sum('inventory')}];
   })) as Record<GoodId,{price:number;ratio:number;volumeEma:number;supplyEma:number;demandEma:number;inventory:number}>;
+}
+
+/** Preserve incomplete timestamps so charts do not bridge missing regional observations. */
+export function marketPriceHistory(history: HistoryPoint[], regionIds: number[], good: GoodId): Record<string,number>[] {
+  return history.map((point): Record<string,number>=>{
+    const prices=regionIds.map(id=>point.prices[id]?.[good]);
+    if(!prices.length || prices.some(price=>price===undefined || !Number.isFinite(price))) return {tick:point.tick};
+    return {tick:point.tick,price:prices.reduce<number>((sum,price)=>sum+price!,0)/prices.length};
+  });
 }

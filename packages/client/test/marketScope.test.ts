@@ -1,6 +1,6 @@
 import {describe,it,expect} from 'vitest';
 import {createWorld,playerCompany,GOODS} from '@econ/sim';
-import {marketOf,scopeRegions,validMarketScope} from '../src/marketScope';
+import {marketOf,marketPriceHistory,scopeRegions,validMarketScope} from '../src/marketScope';
 describe('market scope',()=>{
  it('weights prices by actual volume and adds flows without changing source markets',()=>{
   const w=createWorld(42);w.regions=w.regions.slice(0,2);
@@ -22,5 +22,19 @@ describe('market scope',()=>{
   expect(validMarketScope(999,w)).toBe('world');expect(validMarketScope(null,w)).toBe('world');
   expect(validMarketScope(w.regions[0].id,w)).toBe(w.regions[0].id);
   expect(marketOf({...w,regions:[]},'world').food.price).toBe(GOODS.food.basePrice);
+ });
+});
+
+describe('market price history',()=>{
+ it('keeps missing timestamps as gaps instead of joining adjacent observations',()=>{
+  const history=[{tick:0,prices:{1:{food:10},2:{food:30}}},{tick:7,prices:{1:{food:12}}},{tick:14,prices:{1:{food:20},2:{food:40}}}] as unknown as import('@econ/sim').HistoryPoint[];
+  expect(marketPriceHistory(history,[1,2],'food')).toEqual([{tick:0,price:20},{tick:7},{tick:14,price:30}]);
+  expect(marketPriceHistory(history,[1],'food')).toEqual([{tick:0,price:10},{tick:7,price:12},{tick:14,price:20}]);
+ });
+ it('retains legitimate zero prices but excludes nonfinite and empty samples',()=>{
+  const history=[{tick:0,prices:{1:{food:0},2:{food:NaN}}}] as unknown as import('@econ/sim').HistoryPoint[];
+  expect(marketPriceHistory(history,[1],'food')).toEqual([{tick:0,price:0}]);
+  expect(marketPriceHistory(history,[1,2],'food')).toEqual([{tick:0}]);
+  expect(marketPriceHistory(history,[],'food')).toEqual([{tick:0}]);
  });
 });

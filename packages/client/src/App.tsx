@@ -9,7 +9,7 @@ import type { PopRequest } from './views/PopTable';
 import { eventDestination } from './eventDestination';
 import { NumericValue } from './NumericValue';
 import { taxCollectionRatio } from './systemMetrics';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { Menu, Moon, Pause, SkipForward, Map, HardHat, Users, Package, Factory, Landmark, FlaskConical, ChartNoAxesCombined } from 'lucide-react';
 import { WindowWorkspace } from './views/WindowWorkspace';
@@ -64,6 +64,7 @@ export function App() {
   const [opened, setOpened] = useState<WindowId[]>(['map']);
   const [revealRequest,setRevealRequest] = useState(0);
   const [screenRequest,setScreenRequest]=useState<ScreenRequest|null>(null);
+  const openLinkedWindow=useCallback((route:ScreenRoute)=>{setOpened(current=>[...current.filter(w=>w!==route.kind),route.kind]);setScreenRequest(p=>({target:route.kind,route,sequence:(p?.sequence??0)+1}));},[]);
   const requestScreen=(target:WindowId,route:ScreenRoute)=>setScreenRequest(p=>({target,route,sequence:(p?.sequence??0)+1}));
   const showWindow = (id: WindowId) => { setOpened(current=>id==='map'?current:[...current.filter(w=>w!==id),id]); setRevealRequest(v=>v+1); };
   const [popRequest,setPopRequest]=useState<PopRequest|null>(null);
@@ -204,7 +205,7 @@ export function App() {
 
       <WindowWorkspace opened={opened} onOpened={setOpened} windows={[
         {id:'map',title:T.paneMap,icon:<Map size={18}/>,content:<RegionMap world={world} selected={regionId} onSelect={selectRegion}/>},
-        ...([{id:'region',title:T.system.region,icon:<Users size={18}/>},{id:'market',title:T.market,icon:<Package size={18}/>},{id:'policies',title:T.system.policies,icon:<Landmark size={18}/>},{id:'finance',title:T.finance,icon:<Landmark size={18}/>},{id:'research',title:T.research,icon:<FlaskConical size={18}/>},{id:'construction',title:T.construct,icon:<HardHat size={18}/>},{id:'trends',title:lang==='ko'?'통계 · 소식':'Statistics',icon:<ChartNoAxesCombined size={18}/>} ] as const).map(w=>({...w,content:<GameWindow id={w.id} game={game} mapRegionId={regionId} request={screenRequest}/>}))
+        ...([{id:'region',title:T.system.region,icon:<Users size={18}/>},{id:'market',title:T.market,icon:<Package size={18}/>},{id:'policies',title:T.system.policies,icon:<Landmark size={18}/>},{id:'finance',title:T.finance,icon:<Landmark size={18}/>},{id:'research',title:T.research,icon:<FlaskConical size={18}/>},{id:'construction',title:T.construct,icon:<HardHat size={18}/>},{id:'trends',title:lang==='ko'?'통계 · 소식':'Statistics',icon:<ChartNoAxesCombined size={18}/>} ] as const).map(w=>({...w,content:<GameWindow id={w.id} game={game} mapRegionId={regionId} request={screenRequest} onOpenWindow={openLinkedWindow}/>}))
       ]}/>
 
 

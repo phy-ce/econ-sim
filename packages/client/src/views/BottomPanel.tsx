@@ -1,3 +1,4 @@
+import {EconomyCharts} from './EconomyCharts';
 import {memo, useCallback} from 'react';
 import {useNavigationState} from '../NavigationHistory';
 import { PopTable, type PopRequest } from './PopTable';
@@ -38,6 +39,7 @@ function BottomPanelView({ world, history, lastReadTick, onRead, onJump, viewedI
 
   return (
     <SectionStack explorer revealId={popRequest?'pops':'company'} revealKey={popRequest?.sequence??viewedId} storageKey="trends-v2" items={[
+      {id:'economy',shortTitle:lang==='ko'?'경제 추이':'Trends',title:lang==='ko'?'경제·인구·재정 추이':'Economic, population and fiscal trends',height:520,content:<EconomyCharts world={world}/>},
       ...(me?[{id:'summary',shortTitle:lang==='ko'?'요약':'Summary',title:T.mySummary,height:220,content:<CompanySummary world={world} company={me}/>}]:[]),
       {id:'pops',shortTitle:lang==='ko'?'인구':'Pops',title:T.popList,height:360,content:<PopTable world={world} request={popRequest} onRegion={onJump} onBuilding={onBuilding}/>},
       ...(viewed?[{id:'company',shortTitle:lang==='ko'?'상회':'House',title:T.companyDetails,height:310,content:<CompanyView world={world} company={viewed} onView={onViewCompany}/>}]:[]),

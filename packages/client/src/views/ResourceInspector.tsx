@@ -13,7 +13,7 @@ import { ArrowDownToLine, ArrowUpFromLine, ArrowRight, Factory, Pause, ChevronRi
 import { TUNE, getMethod, companyById } from '@econ/sim';
 import type { Building, GoodBag, GoodId, Region, World } from '@econ/sim';
 import { BuildingSprite, GoodSprite } from '../sprites';
-import { buildingName, goodName, companyName, methodName, useLang, useT } from '../i18n';
+import { buildingName, goodName, regionName, companyName, methodName, useLang, useT } from '../i18n';
 import { compact, money, pct } from '../format';
 
 export function BuildingInspector({ building: input, world, onGood, onCompany, game }: {
@@ -41,8 +41,8 @@ export function BuildingInspector({ building: input, world, onGood, onCompany, g
   </section>;
 }
 
-export function ResourceInspector({ world, region, good, onGood, onCompany, game }: {
-  game?:Game; world: World; region: Region; good: GoodId; onGood: (g: GoodId) => void; onCompany: (id: number) => void;
+export function ResourceInspector({ world, region, good, onGood, onCompany, game, scopeRegions, scopeMarket, scopeLabel }: {
+  scopeRegions?:Region[];scopeMarket?:Pick<Region['market'][GoodId],'price'|'supplyEma'|'demandEma'|'inventory'>;scopeLabel?:string;game?:Game; world: World; region: Region; good: GoodId; onGood: (g: GoodId) => void; onCompany: (id: number) => void;
 }) {
   const ko = useLang() === 'ko';
   const T = useT();
@@ -51,7 +51,8 @@ export function ResourceInspector({ world, region, good, onGood, onCompany, game
   const [sort, setSort] = useState('quantity');
   const [direction, setDirection] = useState(-1);
   const [search, setSearch] = useState('');
-  const local = world.buildings.filter(b => b.regionId === region.id);
+  const regionIds=new Set((scopeRegions??[region]).map(r=>r.id));
+  const local = world.buildings.filter(b => regionIds.has(b.regionId));
   const related = (s: 'inputs' | 'outputs') => local.filter(b => (getMethod(b.typeId, b.methodId)[s][good] ?? 0) > 0);
   const rows = related(side).filter(b => `${buildingName(b.typeId)} ${companyById(world,b.companyId) ? companyName(companyById(world,b.companyId)!) : ''}`.toLocaleLowerCase().includes(search.toLocaleLowerCase())).sort((a,b) => {
     const value = (b: Building) => sort === 'quantity' ? (getMethod(b.typeId,b.methodId)[side][good] ?? 0)*b.level : sort === 'level' ? b.level : sort === 'utilization' ? (b.active && !b.idle ? b.utilization : 0) : b.profitEma;
@@ -59,9 +60,9 @@ export function ResourceInspector({ world, region, good, onGood, onCompany, game
     return (['name','owner'].includes(sort) ? label(a).localeCompare(label(b)) : value(a)-value(b))*direction || a.id-b.id;
   });
   const detail = rows.find(b => b.id === selected);
-  const market = region.market[good];
+  const market = scopeMarket??region.market[good];
   return <section className="resource-inspector">
-    <div className="inspector-heading"><span className="resource-emblem"><GoodSprite g={good} size={48} /></span><div><span className="lbl">{ko ? '선택한 자원 · 지역 시장' : 'Selected good · Local market'}</span><h2>{goodName(good)}</h2></div><strong className="resource-price"><NumericValue value={market.price} format="money"/></strong></div>
+    <div className="inspector-heading"><span className="resource-emblem"><GoodSprite g={good} size={48} /></span><div><span className="lbl">{scopeLabel??(ko ? '선택한 자원 · 지역 시장' : 'Selected good · Local market')}</span><h2>{goodName(good)}</h2></div><strong className="resource-price"><NumericValue value={market.price} format="money"/></strong></div>
     <div className="inspector-metrics"><span><ArrowUpFromLine size={16} /><HelpText text={T.help.supply}>{ko ? '공급' : 'Supply'}</HelpText><b><NumericValue value={market.supplyEma} format="compact"/></b></span><span><ArrowDownToLine size={16} /><HelpText text={T.help.demand}>{ko ? '수요' : 'Demand'}</HelpText><b><NumericValue value={market.demandEma} format="compact"/></b></span><span><HelpText text={T.help.inventory}>{ko ? '재고' : 'Inventory'}</HelpText><b><NumericValue value={market.inventory} format="compact"/></b></span></div>
     <div className="relation-tabs" role="group" aria-label={ko ? '자원과 건물 관계' : 'Building relationships'}>
       <button data-help={T.help.consumers} aria-pressed={side === 'inputs'} onClick={() => { setSide('inputs'); setSelected(null); }}><ArrowDownToLine size={18} />{ko ? '소비 건물' : 'Consumers'}<b>{related('inputs').length}</b></button>
@@ -72,7 +73,7 @@ export function ResourceInspector({ world, region, good, onGood, onCompany, game
       const c = companyById(world,b.companyId);
       const stopped = !b.active || b.idle;
       return <button key={b.id} className="industry-row" aria-pressed={b.id === selected} onClick={() => setSelected(b.id === selected ? null : b.id)}>
-        <BuildingSprite typeId={b.typeId} size={64} /><span className="industry-name"><strong>{buildingName(b.typeId)}</strong><HarvestBadge world={world} regionId={b.regionId} typeId={b.typeId}/><small><OwnerBadge company={c} world={world}/> ×{b.level}</small>{(b.shrinking??0)>0&&<small className="demolition-badge">{T.demolitionQueue(b.shrinking!)}</small>}<small>{stopped ? <><Pause size={12} /> {ko ? '정지 / 대기' : 'Paused / idle'}</> : methodName(getMethod(b.typeId, b.methodId))}</small></span>
+        <BuildingSprite typeId={b.typeId} size={64} /><span className="industry-name"><strong>{buildingName(b.typeId)}</strong><HarvestBadge world={world} regionId={b.regionId} typeId={b.typeId}/>{scopeRegions&&scopeRegions.length>1&&<small>{regionName(world.regions.find(r=>r.id===b.regionId)!)}</small>}<small><OwnerBadge company={c} world={world}/> ×{b.level}</small>{(b.shrinking??0)>0&&<small className="demolition-badge">{T.demolitionQueue(b.shrinking!)}</small>}<small>{stopped ? <><Pause size={12} /> {ko ? '정지 / 대기' : 'Paused / idle'}</> : methodName(getMethod(b.typeId, b.methodId))}</small></span>
         <span className="industry-amount"><NumericValue value={(getMethod(b.typeId,b.methodId)[side][good] ?? 0)*b.level} format="compact"/><small>{ko ? '기준 / 일' : 'base / day'}</small></span><ChevronRight size={16} />
       </button>;
     })}</div>

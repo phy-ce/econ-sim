@@ -15,12 +15,12 @@ import {Projects} from './CompanyPanel';
 import {eventDestination} from '../eventDestination';
 export type ScreenRoute={kind:WindowId;regionId?:number;buildingId?:number;good?:GoodId;companyId?:number;prof?:PopClass;industry?:boolean;sequence?:number};
 export type ScreenRequest={target:WindowId;route:ScreenRoute;sequence:number};
-function GameWindowView({id,game,mapRegionId,request}:{id:WindowId;game:Game;mapRegionId:number;request:ScreenRequest|null}){
+function GameWindowView({id,game,mapRegionId,request,onOpenWindow}:{onOpenWindow:(route:ScreenRoute)=>void;id:WindowId;game:Game;mapRegionId:number;request:ScreenRequest|null}){
  const world=game.world!;
  const [route,setRoute]=useNavigationState<ScreenRoute>('screen',{kind:id,regionId:mapRegionId});
  const [scope,setScope]=useMarketScope(world);
  const me=playerCompany(world),region=regionById(world,route.regionId??mapRegionId);
- const go=useCallback((next:ScreenRoute)=>setRoute(previous=>({...next,sequence:(previous.sequence??0)+1})),[setRoute]);
+ const go=useCallback((next:ScreenRoute)=>{if(next.kind!==id){onOpenWindow(next);return;}setRoute(previous=>({...next,sequence:(previous.sequence??0)+1}));},[id,onOpenWindow,setRoute]);
  useEffect(()=>{if(request?.target===id)go(request.route);},[request?.sequence]);
  const onBuilding=useCallback((bid:number)=>{const b=world.buildings.find(b=>b.id===bid);if(b)go({kind:'region',regionId:b.regionId,buildingId:bid});},[world,go]);
  const onRegion=useCallback((rid:number)=>go({kind:'region',regionId:rid}),[go]);

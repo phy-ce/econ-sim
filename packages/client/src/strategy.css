@@ -206,3 +206,17 @@
 .ownership-browser>nav button {min-height:24px;padding:1px 6px}.ownership-browser h3 {display:flex;align-items:center;gap:5px}.ownership-browser .system-table {table-layout:fixed;width:100%}.ownership-browser th {overflow-wrap:anywhere}.ownership-browser th:first-child {width:48%}
 .detail-window:has(.ownership-browser) {height:420px}
 .ownership-meter>span {flex-shrink:0}.ownership-meter svg {max-width:100%}
+
+/* Reserves share the ownership meter frame and height. Text spans the whole bar. */
+.reserve-meter {position:relative;background:#414b54}
+.reserve-meter>.reserve-fill {position:absolute;inset:0 auto 0 0;background:#87601c;box-shadow:inset -1px 0 #ffffff70}
+.reserve-meter>.reserve-label {position:relative;z-index:1;width:100%;padding:0 6px;justify-content:flex-start;gap:5px;box-sizing:border-box;box-shadow:none;text-shadow:0 1px 2px #000}
+.reserve-label strong {margin-left:auto;font:600 10px var(--sans);font-variant-numeric:tabular-nums}
+.reserve-label>b:last-child {min-width:32px;text-align:right}
+.reserve-details {margin:0}.reserve-details>div {display:flex;justify-content:space-between;gap:12px;padding:7px 0;border-bottom:1px solid var(--rule)}
+.reserve-details dd {margin:0;font-variant-numeric:tabular-nums}
+.detail-window:has(.reserve-details) {width:320px;height:230px}
+
+.building-metric-bars {display:grid;gap:3px;min-width:0}
+.strategy-panel .building-metric-bars .ownership-launch {margin:0;width:100%}
+.metric-meter .reserve-label>b:last-child {min-width:40px}

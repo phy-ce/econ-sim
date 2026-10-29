@@ -8,6 +8,7 @@ interface Props {
   data: Record<string, number>[];
   series: Series[];
   format?: (v: number) => string;
+  tooltipFormat?: (v:number)=>string;
   reference?: { y: number; label: string; color?: string };
   height?: number;
 }
@@ -16,7 +17,7 @@ interface Props {
 const tickLabel = (tick: number) => t().chartTick(Math.floor(tick / 360) + 1, Math.floor((tick % 360) / 30) + 1);
 
 /** 한 축짜리 시계열 차트. 범례는 차트 밖(공통 범례)에서 그린다 */
-export function TimeChart({ data, series, format = (v) => v.toFixed(1), reference, height = 200 }: Props) {
+export function TimeChart({ data, series, format = (v) => v.toFixed(1), tooltipFormat, reference, height = 200 }: Props) {
   if (data.length < 2) return <p className="empty chart-empty" style={{ height }}>—</p>;
   return (
     <><ResponsiveContainer width="100%" height={height} initialDimension={{ width: 520, height }}>
@@ -30,7 +31,7 @@ export function TimeChart({ data, series, format = (v) => v.toFixed(1), referenc
           contentStyle={{ background: 'var(--sheet)', border: '1px solid var(--rule)', borderRadius: 6, color: 'var(--ink)', boxShadow: 'var(--pop-shadow)', fontSize: 12 }}
           labelStyle={{ fontFamily: 'var(--serif)', fontWeight: 700, marginBottom: 2 }}
           labelFormatter={(tick: number) => `${t().datePrefix}${shortDate(tick)}`}
-          formatter={(v: number, name: string) => [format(v), name]}
+          formatter={(v: number, name: string) => [(tooltipFormat??format)(v), name]}
           cursor={{ stroke: 'var(--ink2)', strokeWidth: 1, strokeDasharray: '3 3' }}
         />
         {reference && <ReferenceLine y={reference.y} stroke={reference.color ?? 'var(--ink2)'} strokeDasharray="5 4" strokeWidth={1.2}

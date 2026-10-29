@@ -1,3 +1,5 @@
+import {BuildingMetricBars} from './BuildingMetricBars';
+import {ReserveBar} from './ReserveBar';
 import {OwnerSummary} from './OwnerSummary';
 import {OwnershipBar} from './OwnershipBar';
 import { buildingEcon, BUILDING_BY_ID, holdingsOf, industryOf, INDUSTRIES, isOwnerBuilding, postCap } from '@econ/sim';
@@ -14,12 +16,11 @@ export function BuildingEconomics({world,building:b,game,onBuilding,compact=fals
  if(isOwnerBuilding(b.typeId))return <><OwnerSummary buildings={[b]}/><OwnershipBar world={world} buildings={[b]}/></>;
  return <div className={`building-economics ${compact?'compact':''}`}>
   <OwnershipBar world={world} buildings={[b]}/>
-  <div className="econ-profit"><span>{S.weekProfit} <b className={e.profitWeek<0?'neg':'pos'}><NumericValue value={e.profitWeek} format="signedMoney"/></b></span><span data-help={S.perLevel}><NumericValue value={e.profitWeekPerLevel} format="signedMoney"/> / L</span></div>
-  {e.hasReserve&&<div title={`${S.reserve}: ${e.reserve.toFixed(2)} / ${e.reserveCap.toFixed(2)}`}><Bar value={e.reserveCap?e.reserve/e.reserveCap:0} label={S.reserve}/></div>}
+  <BuildingMetricBars profit={e.profitWeek} perLevel={e.profitWeekPerLevel}/>
+  {e.hasReserve&&<ReserveBar value={e.reserve} cap={e.reserveCap} weekly={e.reserveWeek}/>}
   {!compact&&<>
    {industry&&<span className="tag-soft">{ko?INDUSTRIES[industry].name:INDUSTRIES[industry].nameEn}</span>}
    <div className="cash-flow">{[[S.sales,e.day.sales],[S.inputs,-e.day.inputs],[S.wages,-e.day.wages],[S.profit,e.day.profit]].map(([name,value])=><div key={name}><span>{name} / {S.day}</span><b className={Number(value)<0?'neg':'pos'}><NumericValue value={Number(value)} format="signedMoney"/></b></div>)}</div>
-   {e.hasReserve&&<p>{S.reserve} <NumericValue value={e.reserve} format="money"/> / <NumericValue value={e.reserveCap} format="money"/> · <NumericValue value={e.reserveWeek} format="signedMoney"/> / {S.week}</p>}
    {(isOwnerBuilding(b.typeId)||b.typeId==='trading_post')&&<p>{T.treasury} <NumericValue value={b.cash??0} format="money"/>{b.typeId==='trading_post'&&<> / <NumericValue value={postCap(b)} format="money"/><Bar value={(b.cash??0)/Math.max(1,postCap(b))} label={T.treasury}/></>}</p>}
    <table className="system-table"><thead><tr><th>{S.owner}</th><th>L / %</th><th>{S.dividend}</th></tr></thead><tbody>{e.owners.map((o,i)=><tr key={i}><th>{o.ownerBuildingId!==undefined?<button className="entity-link" onClick={()=>onBuilding?.(o.ownerBuildingId!)}>{names[o.owner]} ↗</button>:names[o.owner]}{o.regionId&&<small>{regionName(world.regions.find(r=>r.id===o.regionId)!)}</small>}</th><td>{o.levels} / {pct(o.share)}</td><td><NumericValue value={o.dividendWeek} format="money"/></td></tr>)}</tbody></table>
    {isOwnerBuilding(b.typeId)&&<details open><summary>{S.holdings}</summary><table className="system-table"><tbody>{holdingsOf(world,b).map(h=><tr key={h.building.id}><th><button className="entity-link" onClick={()=>onBuilding?.(h.building.id)}>{buildingName(h.building.typeId)} ↗</button><small>{regionName(world.regions.find(r=>r.id===h.building.regionId)!)}</small></th><td>{pct(h.share)} · <NumericValue value={h.building.level*h.share} format="one"/> L</td></tr>)}</tbody></table></details>}

@@ -1,3 +1,5 @@
+import {BuildingMetricBars} from './BuildingMetricBars';
+import {ReserveBar} from './ReserveBar';
 import {OwnerSummary} from './OwnerSummary';
 import {OwnershipBar} from './OwnershipBar';
 import {useNavigationState} from '../NavigationHistory';
@@ -38,8 +40,7 @@ export function RegionIndustry({world,region,game,request,onGood,onCompany,onOpe
  const colors={state:'#bd6150',manor:'#bd914b',finance:'#4d8eaf'};
  const summary=(data:ReturnType<typeof summarizeBuildings>)=><div className="group-metrics">
 
-  <div className="econ-profit"><span data-help={G.staffing}><NumericValue value={data.econ.employed} format="compact"/> / <NumericValue value={data.econ.jobs} format="compact"/></span><span data-help={S.weekProfit} className={data.econ.profitWeek<0?'neg':'pos'}><NumericValue value={data.econ.profitWeek} format="signedMoney"/> / {S.week}</span><span data-help={S.perLevel}><NumericValue value={data.econ.profitWeekPerLevel} format="signedMoney"/> / L</span></div>
-  <Bar value={data.econ.staffing} label={G.staffing}/>{data.econ.hasReserve&&<div title={`${S.reserve}: ${data.econ.reserve.toFixed(2)} / ${data.econ.reserveCap.toFixed(2)}`}><Bar value={data.econ.reserveCap?data.econ.reserve/data.econ.reserveCap:0} label={S.reserve}/></div>}
+  <BuildingMetricBars employed={data.econ.employed} jobs={data.econ.jobs} profit={data.econ.profitWeek} perLevel={data.econ.profitWeekPerLevel}/>{data.econ.hasReserve&&<ReserveBar value={data.econ.reserve} cap={data.econ.reserveCap} weekly={data.econ.reserveWeek}/>}
  </div>;
  return <section className="region-industry">
   <div className="industry-total">{G.types} {groups.length} · L <NumericValue value={groups.reduce((n,g)=>n+g.levels,0)} format="compact"/></div>

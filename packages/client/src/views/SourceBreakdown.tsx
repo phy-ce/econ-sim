@@ -71,7 +71,7 @@ function Side({ title, by, side, extra }: { title: string; by: Record<string, nu
   );
 }
 
-export function SourceBreakdown({ good, m }: { good: GoodId; m: MarketGood }) {
+export function SourceBreakdown({ good, m }: { good: GoodId; m: Pick<MarketGood,'demandByEma'|'supplyByEma'|'demandBy'|'supplyBy'|'inventory'> }) {
   const T = useT();
   const demand = m.demandByEma ?? m.demandBy ?? {};
   const supply = m.supplyByEma ?? m.supplyBy ?? {};
@@ -90,3 +90,4 @@ export function SourceBreakdown({ good, m }: { good: GoodId; m: MarketGood }) {
     </div>
   );
 }
+

@@ -69,9 +69,9 @@ export function RegionMap({ world, selected, onSelect }: { world: World; selecte
         <g className="atlas-data" style={{fillOpacity:layer==='kingdom'?.35:.55}} pointerEvents="none">{world.regions.map(r=><path key={r.id} d={shape(r.id).d} fill={regionColor(r)}/>)}</g>
         <g className="atlas-provinces" pointerEvents="none">{mapData.borders.map(b=><path key={`${b.a}-${b.b}`} d={b.d}/>)}</g>
         <g className="atlas-unclaimed" pointerEvents="none">{mapData.unclaimed.map(p=><path key={p.id} d={p.d} fill={p.id==='lake'?'#93afb3':'#c5bea9'}/>)}</g>
-        <g className="atlas-rivers" pointerEvents="none">{mapData.rivers.map((d,i)=><path key={i} d={d}/>)}</g>
-        <g className="kingdom-borders" aria-hidden="true">{borders.map(b=><g key={`${b.a}-${b.b}`}><path d={b.d} fill="none" stroke="#fff5dc" strokeWidth="7"/><path d={b.d} fill="none" stroke="#403629" strokeWidth="3"/></g>)}</g>
-        {edges.map(([a,b])=>{const [x1,y1]=shape(a).anchors.rail,[x2,y2]=shape(b).anchors.rail;return <path key={`${a}-${b}`} d={`M${x1},${y1}Q${(x1+x2)/2+18},${(y1+y2)/2-20} ${x2},${y2}`} className="atlas-rail"/>;})}
+        <defs><clipPath id="atlas-land-water">{mapData.regions.map(r=><path key={r.id} d={r.d}/>)}{mapData.unclaimed.map(r=><path key={r.id} d={r.d}/>)}</clipPath></defs><g className="atlas-rivers" clipPath="url(#atlas-land-water)" pointerEvents="none">{mapData.rivers.map((d,i)=><path key={i} d={d}/>)}</g>
+        <g className="kingdom-borders" aria-hidden="true">{borders.map(b=><g key={`${b.a}-${b.b}`}><path d={b.d} fill="none" stroke="#fff5dc" strokeWidth="4"/><path d={b.d} fill="none" stroke="#403629" strokeWidth="1.5"/></g>)}</g>
+        <g clipPath="url(#atlas-land-water)" aria-hidden="true">{edges.map(([a,b])=>{const route=mapData.routes.find(r=>r.a===a&&r.b===b);if(!route)return null;return <g key={`${a}-${b}`} className={`atlas-route ${a===selected||b===selected?'is-selected':''}`}><path d={route.d} className="atlas-road-bed"/><path d={route.d} className="atlas-rail"/></g>;})}</g>
         {order.map(r=><g key={r.id} className={`map-cell ${selected===r.id?'selected':''}`} onClick={()=>{if(!suppressClick.current)onSelect(r.id);}} tabIndex={0} role="button" aria-pressed={selected===r.id}
           aria-label={`${kingdomName(r.kingdomId)} · ${T.mapCellAria(regionName(r),int(regionPopulation(r)),regionAvgWealth(r).toFixed(1),pct(r.households.peasant.population/Math.max(1,regionPopulation(r))))}`}
           onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();onSelect(r.id);}}}>
