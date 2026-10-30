@@ -14,6 +14,7 @@
     "test": "npm test -w @econ/sim",
     "test:core": "npm run test:core -w @econ/sim",
     "test:long": "npm run test:long -w @econ/sim",
+    "golden:update": "npm run golden:update -w @econ/sim",
     "typecheck": "npm run typecheck -w @econ/sim && npm run typecheck -w @econ/client && npm run typecheck -w @econ/encyclopedia"
   },
   "devDependencies": {

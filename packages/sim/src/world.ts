@@ -44,6 +44,8 @@ export interface CreateWorldOptions {
   /** 플레이어 왕실의 시작 국고 (없으면 다른 왕실과 같은 규칙, startTreasury) */
   playerCash?: number;
   ai?: boolean;
+  /** AI 난수의 소금 (config.aiSalt, rng/aiRand.ts). 기본 0. 시작 세계는 이 칸 말고는 같다 */
+  aiSalt?: number;
 }
 
 /** 시드 RNG (월드가 생기기 전에 쓰는 것) */
@@ -152,7 +154,7 @@ export function regionStarts(seed: number, owner: Record<number, number>): Map<n
 }
 
 export function createWorld(seed = 1, opts: CreateWorldOptions = {}): World {
-  const { withPlayer = true, playerName, playerCash, ai = true } = opts;
+  const { withPlayer = true, playerName, playerCash, ai = true, aiSalt = 0 } = opts;
   const owner = splitKingdoms(seed);
   const starts = regionStarts(seed, owner);
 
@@ -178,7 +180,7 @@ export function createWorld(seed = 1, opts: CreateWorldOptions = {}): World {
   }
 
   const w: World = {
-    version: 18, config: { ai }, tick: 0, seed, rngState: seed | 0, nextId: 1000,
+    version: 18, config: { ai, aiSalt }, tick: 0, seed, rngState: seed | 0, nextId: 1000,
     regions, kingdoms, pops: [], fund: 0, metrics: [],
     traders: { cash: 0, capital: 0, shipments: [] },
     mint: { minted: 0, issued: 0, retired: 0, interest: 0 },

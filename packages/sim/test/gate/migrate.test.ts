@@ -11,6 +11,8 @@ import { fixtureFiles, loadFixture, readFixtureRaw } from '../fixtures/a0';
 const MONEY_TOLERANCE = 1e-12;
 const moneyDrift = (w: World, m0: number) => Math.abs(moneyIdentity(w) - m0) / Math.max(1, totalMoney(w));
 const DAYS = 30;
+/** 0a 가 더한 config 선택 칸과 불러올 때 채우는 기본값 (compat.ts migrateWorld) */
+const OPTIONAL_DEFAULTS = { aiSalt: 0, rulesRev: 0, rulesHash: '' } as const;
 
 describe('T11 고정 저장 파일 불러오기', () => {
   const files = fixtureFiles();
@@ -20,13 +22,25 @@ describe('T11 고정 저장 파일 불러오기', () => {
     expect(fixtureFiles('8y').some((f) => f.startsWith('save-v18-'))).toBe(true);
   });
 
+  it('0a 이전 코드로 만든 고정 저장에는 선택 칸(config.aiSalt·rulesRev·rulesHash)이 없다 (채움을 시험할 수 있다)', () => {
+    const old = files.filter((f) => {
+      const c = readFixtureRaw(f).config as Record<string, unknown>;
+      return Object.keys(OPTIONAL_DEFAULTS).every((k) => c[k] === undefined);
+    });
+    expect(old.length).toBeGreaterThan(0);
+  });
+
   for (const file of files) {
     it(`${file}: 불러와 ${DAYS}일 돌려도 예외가 없고 화폐가 보존된다`, () => {
       const raw = readFixtureRaw(file);
       const ver = Number(file.match(/^save-v(\d+)-/)![1]);
       expect(raw.version, '파일 이름의 판').toBe(ver);
       const w = loadFixture(file);
-      // 0a 에서 더할 자리: 불러온 뒤 선택 칸(config.aiSalt·rulesRev·rulesHash)이 기본값으로 채워졌는지 단언한다
+      // 0a 선택 칸: 옛 저장에는 없고, 불러오면 기본값(소금 0, 규칙 판 0 = 이력 전, 규칙 해시 '' = 모름)으로 채워진다. 판은 그대로다
+      // (0a 뒤에 만든 파일에 칸이 있으면 그 값이 그대로 남는다)
+      const rawConfig = raw.config as Record<string, unknown>;
+      expect(w.version).toBe(18);
+      for (const [k, def] of Object.entries(OPTIONAL_DEFAULTS)) expect(w.config[k as keyof typeof OPTIONAL_DEFAULTS], `config.${k}`).toBe(rawConfig[k] ?? def);
       const tick0 = w.tick;
       const m0 = moneyIdentity(w);
       let worst = 0, worstTick = tick0;

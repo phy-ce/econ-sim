@@ -100,6 +100,10 @@ export function migrateWorld(input: unknown): World | null {
     // 18판: 유보 기준 AI 의 연속 주 수(Building.richWeeks·brokeWeeks·builtTick, Region.hotWeeks)가 생겼다. 없으면 0이고 다음 주부터 센다
     w.version = 18;
   }
+  // 선택 칸 (오버홀 0a, 판은 그대로): AI 난수 소금은 0, 규칙 판·해시가 없는 옛 저장은 이력 전(0)·모름('')
+  w.config.aiSalt ??= 0;
+  w.config.rulesRev ??= 0;
+  w.config.rulesHash ??= '';
   // 나중에 더한 상품(술 등)은 옛 저장의 지역 시장에 기본가로 넣는다
   for (const r of w.regions ?? []) for (const g of GOOD_IDS) if (!r.market[g]) r.market[g] = newMarketGood(g);
   // 교역은 무역소가 한다 (2026-10-23, 저장 모양은 17판부터 같다). 옛 상인 계정의 현금은 주인 없는 돈으로 옮긴다 (매주 지역 금융가로 간다).

@@ -67,9 +67,9 @@ export function runScript(w: World, tick: number, script: CommandScript, onResul
 
 /**
  * 해시에서 뺄 칸 (점으로 이은 경로). 10 문서 8.2: FlowBook 칸과 config.rulesHash·config.rulesRev 는 비트가 같아도 바뀌므로 뺀다.
- * 그 칸들은 아직 없다 (0a·A 단계에서 생기면 여기에 더한다)
+ * config.rulesHash·rulesRev 는 0a 에서 생겼다 (규칙 라벨이라 동작이 같아도 바뀐다). FlowBook 칸은 A 단계에서 생기면 더한다
  */
-export const HASH_EXCLUDE: readonly string[] = [];
+export const HASH_EXCLUDE: readonly string[] = ['config.rulesHash', 'config.rulesRev'];
 
 /** 키를 정렬한 정규화 JSON (저장과 같은 JSON 의미: undefined 칸은 빠지고 NaN·Infinity 는 null). 제외 경로는 지운다 */
 export function canonicalJson(v: unknown, exclude: readonly string[] = HASH_EXCLUDE): string {

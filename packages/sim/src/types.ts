@@ -643,6 +643,15 @@ export type EventTopic = 'lawChanged' | 'lawFailed';
 
 export interface WorldConfig {
   ai: boolean;
+  /**
+   * 아래 칸은 선택 칸이다: 옛 저장에 없으면 불러올 때(compat.ts migrateWorld) 기본값으로 채우므로 저장 판을 올리지 않는다 (오버홀 0a, 10_ARCHITECTURE 3.4).
+   * AI 난수의 소금 (rng/aiRand.ts). 같은 시드에서 AI 판단만 다른 세계를 만든다. 기본 0
+   */
+  aiSalt?: number;
+  /** 규칙 판: 이 세계를 만든 코드의 골든 이력(packages/sim/golden.json) 길이. 옛 저장은 0 (이력 전) */
+  rulesRev?: number;
+  /** 규칙 표(TUNE·건물·상품·기술·산업·필요) 해시 (save/rulesHash.ts). 플레이어에게 보이지 않는다. 옛 저장은 '' (모름) */
+  rulesHash?: string;
 }
 
 /** 돈이 생기는 길(주조, 국채 발행)과 없어지는 길(국채 상환, 국채 이자, 보유고 상한)의 누적 */

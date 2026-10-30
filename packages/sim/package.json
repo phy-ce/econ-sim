@@ -10,6 +10,7 @@
     "test:core": "vitest run test/core",
     "test:long": "vitest run test/long",
     "sweep": "tsx cli/sweep.ts",
+    "golden:update": "tsx cli/golden.ts --update",
     "typecheck": "tsc --noEmit -p ."
   }
 }

@@ -80,12 +80,14 @@ describe('법: 기술로 열기와 끝날 때 조건', () => {
     };
     const a = make();
     runDays(a.w, TUNE.lawDays + 10);
-    const want = JSON.stringify(a.w);
+    // 규칙 해시(config.rulesHash)는 빼고 비교한다: 둘째 make 는 첫 make 가 바꾼 TUNE.lawPoll 로 세계를 만들어 해시만 다르다 (동작에는 안 쓰이는 라벨)
+    const noLabel = (w: typeof a.w) => JSON.stringify({ ...w, config: { ...w.config, rulesHash: '' } });
+    const want = noLabel(a.w);
     let b = make().w;
     runDays(b, 90);
     b = JSON.parse(JSON.stringify(b));
     runDays(b, TUNE.lawDays + 10 - 90);
-    const got = JSON.stringify(b);
+    const got = noLabel(b);
     expect(got === want ? null : firstDiff(JSON.parse(got), JSON.parse(want))).toBeNull();
     // 인두세는 실패, 투자법은 바뀜
     const k = b.kingdoms[0];

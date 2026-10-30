@@ -1,6 +1,6 @@
 import type { World } from './types';
 
-/** mulberry32. 상태를 world에 저장해서 저장/불러오기 후에도 결과가 같다 */
+/** mulberry32. 상태를 world에 저장해서 저장/불러오기 후에도 결과가 같다. 오버홀 0a 뒤 sim 은 쓰지 않는다 (AI 난수는 rng/aiRand.ts, w.rngState 는 저장 호환으로 남는다) */
 export function rand(world: World): number {
   let t = (world.rngState = (world.rngState + 0x6d2b79f5) | 0);
   t = Math.imul(t ^ (t >>> 15), t | 1);

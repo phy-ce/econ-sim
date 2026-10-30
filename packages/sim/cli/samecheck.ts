@@ -14,7 +14,7 @@
 //      기준 커밋에 samecheck.ts 가 없으면 이 파일과 test/fixtures/(a0.ts, commands-a0.json, 고정 저장 파일)를 그 worktree 에 복사해 돌린다.
 //   3) 새 쪽에서 그 파일과 비교한다:     (cd packages/sim && npx tsx cli/samecheck.ts ../../.tmp/wt/samecheck-base.txt)
 //   두 쪽 모두 같은 commands-a0.json 과 같은 고정 저장 파일을 써야 한다 (명령열을 바꾸면 기준 출력을 다시 만든다).
-// 해시에서 빼는 칸은 test/fixtures/a0.ts HASH_EXCLUDE (지금은 비어 있다. FlowBook·config.rulesHash·config.rulesRev 가 생기면 더한다).
+// 해시에서 빼는 칸은 test/fixtures/a0.ts HASH_EXCLUDE (config.rulesHash·config.rulesRev. FlowBook 이 생기면 더한다).
 // 같은 쪽에서 두 번 돌려 해시가 같으면 결정성 확인도 된다. 시간은 stderr 로 낸다.
 import { readFileSync } from 'node:fs';
 import { createWorld, recordHistory, step } from '../src/index';

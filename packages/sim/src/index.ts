@@ -1,7 +1,16 @@
 export * from './types';
 export * from './data';
 export * from './economy';
-export { createWorld, splitKingdoms, START_CASH, START_TRADE_LEVELS, PLAYER_ID } from './world';
+export { splitKingdoms, START_CASH, START_TRADE_LEVELS, PLAYER_ID } from './world';
+import { createWorld as createBareWorld } from './world';
+import type { CreateWorldOptions } from './world';
+import { stampRules } from './save/rulesHash';
+export { rulesHash, RULES_REV } from './save/rulesHash';
+export { aiRand, aiRandTrace, strKey } from './rng/aiRand';
+/** 새 세계 (world.ts) 에 지금 규칙 판·해시(config.rulesRev·rulesHash)를 단다. 규칙 식별은 저장 층(save/)의 일이라 sim 코어 대신 공개 통로에서 붙인다 */
+export function createWorld(seed = 1, opts: CreateWorldOptions = {}) {
+  return stampRules(createBareWorld(seed, opts));
+}
 export { postCap, postUsable } from './market';
 export type { CreateWorldOptions } from './world';
 export { step, recordHistory, needSplit, birthRateAt, mortalityAt, growthAt, STARVATION_LINE } from './tick';

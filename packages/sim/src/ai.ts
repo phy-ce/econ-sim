@@ -1,6 +1,6 @@
 import { BUILDING_BY_ID, buildPointsOf, BUILDING_TYPES, EDUCATION_FLOOR, EDUCATION_RANGE, GOOD_IDS, GOODS, SKILL_DEFS, TECH_BY_ID, TICKS_PER_WEEK, TICKS_PER_YEAR, TRADING_POST, TUNE, getMethod, regionPerk, tradeEscrowPerLevel, tradeReserveOf } from './data';
 import { withEstimateCache, regionAvgWealth, regionPopulation, wageCostOf,
-  availableMethods, ownBuildingAt, builderOf, canBuildType, kingdomGdp, paysDividend, paysShare, companyById, constructionEstimate, creditLimit, depositFree, efficiency, estimateMethod, harvestFactor, hasBuilder, isGovernment, regionById, wagesAt, researchableTechs, roomFor, sellsShares, slots, hash01,
+  availableMethods, ownBuildingAt, builderOf, canBuildType, kingdomGdp, paysDividend, paysShare, companyById, constructionEstimate, creditLimit, depositFree, efficiency, estimateMethod, harvestFactor, hasBuilder, isGovernment, regionById, wagesAt, researchableTechs, roomFor, sellsShares, slots,
 } from './economy';
 import { MAX_CONCURRENT_CONSTRUCTIONS, MAX_LEVELS_PER_PROJECT, applyCommand } from './commands';
 import { committedCost, favours, funderWeight, hasReserve, lawRevenue, ownerBuildings, ownerFunds, reserveCap, reserveOf, taxRates, treasuryFree } from './finance';
@@ -12,7 +12,8 @@ import type { Outlook } from './outlook';
 import { kingdomById } from './kingdoms';
 import { STAFFING_HORIZON, expectedStaffing, labourPool, laborAvailability, takeFromPool } from './staffing';
 import { LITERACY_PER_WEALTH, workforce } from './pops';
-import { clamp, rand } from './rng';
+import { clamp } from './rng';
+import { aiRand, keyCompany, keyIdx, keyRegion, keyStr, keyWeek } from './rng/aiRand';
 import { BUDGET_STEPS, INVEST_LAWS, SKILLS, expOf, isLowerJob, literacyOf } from './types';
 import type { BudgetItem, Building, Company, GoodId, Kingdom, MethodDef, Region, Skill, TaxLaw, WelfareLaw, World } from './types';
 import { welfareShortOf, welfareWeekly } from './welfare';
@@ -716,7 +717,8 @@ function planResearch(w: World, c: Company, o: Outlook) {
       memo.set(id, v);
       return v;
     };
-    const ranked = researchableTechs(c).map((id) => ({ id, s: ((deep(id) + 1) / TECH_BY_ID[id].cost) * (0.85 + rand(w) * 0.3) })).sort((a, b) => b.s - a.s);
+    // 점수 흔들기는 (회사, 기술, 주) 키의 AI 난수 (rng/aiRand.ts: 다른 명령이 난수를 밀지 않는다)
+    const ranked = researchableTechs(c).map((id) => ({ id, s: ((deep(id) + 1) / TECH_BY_ID[id].cost) * (0.85 + aiRand(w, 'research', keyCompany(c.id), keyStr(id), keyWeek(w.tick)) * 0.3) })).sort((a, b) => b.s - a.s);
     if (ranked.length) applyCommand(w, c.id, { type: 'setResearch', techId: ranked[0].id });
   }
 }
@@ -807,7 +809,7 @@ function planConstruction(w: World, c: Company, o: Outlook) {
   if (!TUNE.aiReserveRule && TUNE.aiBuildNow && TUNE.devShare > 0 && TUNE.devShare < 1 && canStart()) {
     const room = (TUNE.devShare * (c.startCost ?? 0) - (c.devCost ?? 0)) / (1 - TUNE.devShare);
     const budget = Math.min(free(), room);
-    const pick = budget > 0 ? pickProject(w, c, o, budget, false, undefined, 0, true) : null;
+    const pick = budget > 0 ? pickProject(w, c, o, budget, false, undefined, 0, true, 0) : null;
     if (pick) start(pick, 'dev');
   }
   let fallbacks = 0;
@@ -819,7 +821,7 @@ function planConstruction(w: World, c: Company, o: Outlook) {
     const school = schoolCash(w, c, est.costPerDay);
     if (cash <= 0 && school <= 0) break;
     const out = { best: null as Pick | null };
-    const pick = pickProject(w, c, o, cash, fallbacks < TUNE.lossBuildsPerWeek, out, school);
+    const pick = pickProject(w, c, o, cash, fallbacks < TUNE.lossBuildsPerWeek, out, school, false, started);
     blocked ??= out;
     if (!pick) break;
     if (pick.fallback) fallbacks++;
@@ -1123,14 +1125,20 @@ function planTrials(w: World, c: Company, canStart: () => boolean, free: () => n
  */
 function reserveLevels(w: World, c: Company, canStart: () => boolean, free: () => number, start: (p: Pick, path: string) => boolean) {
   const inDebt = c.state && !!TUNE.crownDebtNoBuild && c.debt > c.cash;
+  // 증설 난수 키의 묶음 안 순번: 같은 (지역, 종류, 방식) 내 건물이 w.buildings 에 나오는 순서 (id·builtTick 은 쓰지 않는다. 다른 건물이 끼어들어도 그대로)
+  const order = new Map<string, number>();
   for (const b of [...w.buildings]) {
-    if (b.companyId !== c.id || !reserveRuled(b)) continue;
+    if (b.companyId !== c.id) continue;
+    const group = `${b.regionId}|${b.typeId}|${b.methodId}`;
+    const idx = order.get(group) ?? 0;
+    order.set(group, idx + 1);
+    if (!reserveRuled(b)) continue;
     if (b.shrinking || w.constructions.some((k) => k.targetBuildingId === b.id)) { delete b.richWeeks; delete b.brokeWeeks; continue; }
     const res = b.reserve ?? 0, cap = reserveCap(b);
     // 증설은 확률로 (2026-10-25 사용자 "확률분포로"): 유보 자산이 상한의 TUNE.reserveGrowFrom 을 넘은 만큼 확률이 오르고, 가득 차면 주에 TUNE.reserveGrowMax
     const fillR = cap > 0 ? res / cap : 0;
     const pGrow = TUNE.reserveGrowMax * clamp((fillR - TUNE.reserveGrowFrom) / Math.max(1e-9, 1 - TUNE.reserveGrowFrom), 0, 1);
-    const rich = TUNE.reserveGrowMax > 0 ? hash01(w.seed, b.id, Math.floor(w.tick / TICKS_PER_WEEK), 77) < pGrow : res >= cap * RESERVE_FULL;
+    const rich = TUNE.reserveGrowMax > 0 ? aiRand(w, 'grow', keyCompany(c.id), keyRegion(b.regionId), keyStr(b.typeId), keyStr(b.methodId), keyWeek(w.tick), keyIdx(idx)) < pGrow : res >= cap * RESERVE_FULL;
     // 새 건물(시작 건물은 0일에 생긴 것으로 본다)은 RAMP_WEEKS 동안 사람을 뽑으며 내는 적자를 세지 않는다
     const ramping = w.tick - (b.builtTick ?? 0) < RAMP_WEEKS * TICKS_PER_WEEK;
     const broke = res <= 0 && b.profitEma * TICKS_PER_WEEK < 0 && !ramping && harvestFactor(w, b.regionId, BUILDING_BY_ID[b.typeId].land) >= 1;
@@ -1191,8 +1199,11 @@ function glutOf(w: World, kingdomId: number): (typeId: string, m: MethodDef) => 
  * allowLoss: 이익이 나는 후보가 없으면 수익률이 가장 높은(가장 덜 손해 보는) 후보를 가장 작은 덩어리로 고른다.
  * 학교는 schoolFree(schoolCash)로 짓고, 공사비 + 그 레벨 인건비 TUNE.treasuryLowWeeks 주치가 있어야 한다
  */
-export function pickProject(w: World, c: Company, o: Outlook, free: number, allowLoss = false, blocked?: { best: Pick | null }, schoolFree = 0, dev = false): Pick | null {
+export function pickProject(w: World, c: Company, o: Outlook, free: number, allowLoss = false, blocked?: { best: Pick | null }, schoolFree = 0, dev = false, call = 0): Pick | null {
   let best: Pick | null = null, least: Pick | null = null;
+  // 후보의 AI 난수 키: (회사, 지역, 종류, 방식, 주, 이번 주 몇 번째 부름 call). 같은 주에 여러 번 불리므로(주에 startsPerWeek 번) 부름 순번을 넣어 부를 때마다 새로 흔든다
+  const jitter = (tag: 'least' | 'pick' | 'pickDev', regionId: number, typeId: string, methodId: string) =>
+    aiRand(w, tag, keyCompany(c.id), keyRegion(regionId), keyStr(typeId), keyStr(methodId), keyWeek(w.tick), keyIdx(call));
   // 발전 투자 대상: 잠재 수요(바꿀 수 있는 몫)가 있고 공급(공사 중 포함)이 지금 수요 + 잠재 수요에 못 미치는 상품
   const devGood = (g: GoodId) => o.latent[g] > 1e-6 && o.supply[g] < o.demand[g] + o.latent[g];
   const devOuts = (m: MethodDef) => GOOD_IDS.filter((g) => (m.outputs[g] ?? 0) > 0 && devGood(g));
@@ -1272,7 +1283,7 @@ export function pickProject(w: World, c: Company, o: Outlook, free: number, allo
             continue;
           }
           if (allowLoss && levels === CHUNKS[CHUNKS.length - 1] && e.profit >= -TUNE.lossTolerance * e.wageCost) {
-            const s = roi + Math.abs(roi) * (rand(w) - 0.5) * 0.3;
+            const s = roi + Math.abs(roi) * (jitter('least', r.id, t.id, m.id) - 0.5) * 0.3;
             if (!least || s > least.score) least = { regionId: r.id, typeId: t.id, methodId: m.id, levels, score: s, fallback: true };
           }
           if (e.profit <= 0) continue;
@@ -1284,7 +1295,7 @@ export function pickProject(w: World, c: Company, o: Outlook, free: number, allo
         if (!pick) continue;
         // 지역 우선 투자: 그 지역 저택·금융가 돈으로 짓는 몫만큼 가산점
         const here = c.state ? 0 : Math.min(1, localFunds(r.id, t.id) / (perLevel * pick.levels));
-        const score = pick.roi * (0.85 + rand(w) * 0.3) * (1 + TUNE.localBias * here);
+        const score = pick.roi * (0.85 + jitter(dev ? 'pickDev' : 'pick', r.id, t.id, m.id) * 0.3) * (1 + TUNE.localBias * here);
         if (!best || score > best.score) best = { regionId: r.id, typeId: t.id, methodId: m.id, levels: pick.levels, score };
       }
     }
