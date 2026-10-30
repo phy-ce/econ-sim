@@ -6,6 +6,7 @@
 # 환경 변수: L="main,새 규칙" 실행 이름, TITLE 제목, DESC 한 줄 설명, K="gdp levels" 처음 보일 지표, S="1 2" 시드
 # 해마다 한 줄 파일({"y":1,"seed":1,"gdp":..,"stock":{..}} 처럼, 진단 스크립트 출력)도 읽는다: 인자를 "이름=파일"로 주면
 # 같은 이름의 파일들이 시드별로 한 실행이 되고, 안쪽 사전은 "stock.gov" 처럼 펼친다
+# 0b 측정 jsonl (cli/lab.ts: run·k·salt 칸) 은 줄의 run 이 실행 이름이고, KING=1 처럼 왕국 줄을 고른다 (기본 대륙 줄 k=all)
 #
 # 보고서 형식 2 (format: 2): 지표 이름은 keys 에 한 번만 쓰고, 실행마다 시드마다 해마다 한 줄 배열
 #   runs[i].seeds["1"] = [[y, v(keys[0]), v(keys[1]), ...], ...]   (없는 값은 null)
@@ -154,7 +155,19 @@ for f, (ko, desc) in FLOWS.items():
     for o, oko in (('manor', '저택'), ('finance', '금융가')):
         LABELS[f'flows.{f}.{o}'] = L(f'{oko}: {ko}', '소유 건물 흐름', '백만/년', desc)
 
-GROUPS = ['경제', '생활수준', '소득', '인구', '계층 인구', '계층 노동 인구', '일자리', '임금', '돈', '돈 ÷ 총생산', '왕실', '연구', '건축사무소', '복지', '왕실 장부', '민간 장부',
+# 0b 측정 (cli/lab.ts, src/lab/metrics.ts): 정의는 metrics.ts 주석과 docs/overhaul/0B_SPECS.json
+LAB = {'solPeasAvg': ('소작농 생활수준 (연평균)', ''), 'solUnskAvg': ('노동자 생활수준 (연평균)', ''), 'solLower': ('하층 생활수준', ''), 'fulfil': ('하층 충족률', ''),
+       'foodLow': ('하층 식량 충족', ''), 'grainAvg': ('곡물 가격비 (연평균)', ''), 'gdpPre': ('세전 총생산', '백만/년'), 'debtLimit': ('한도 대비 부채', ''),
+       'welShare': ('하층 소득 중 복지 비율', ''), 'lowInc': ('하층 소득 ÷ 생활비 (마지막 7일)', ''), 'lowIncAvg': ('하층 소득 ÷ 생활비 (연평균)', ''),
+       'wagePeas': ('노동자 임금 ÷ 소작 소득', ''), 'peasantIncome': ('소작 1인 순소득', '/일'), 'realWageU04': ('노동자 임금 ÷ 부 1 묶음 비용', ''),
+       'labShare': ('노동 몫 (임금 ÷ (임금 + 배당))', ''), 'labShareVA': ('노동 몫 (임금 ÷ 부가가치)', ''), 'backlog': ('공사 대기 일수', '일'),
+       'tradeGdp': ('교역량 ÷ 총생산', ''), 'tradeY': ('무역소 매입액', '백만/년'), 'posts': ('가동 무역소 수', ''), 'netMig': ('왕국 간 순이주 ÷ 인구', '/년'),
+       'basket1': ('부 1 묶음 비용 (기본가 대비)', ''), 'basket5': ('부 5 묶음 비용 (기본가 대비)', ''), 'revY': ('pop 세금 합', '백만/년'), 'peasK': ('소작농 인구', '천'),
+       'tax1Sh': ('세금 1단계 날 비율', ''), 'tax5Sh': ('세금 5단계 날 비율', ''), 'wageStep': ('국영 임금 단계', '1~5'), 'welL': ('복지법', '0~3'),
+       'lawFails': ('법 바꾸기 실패', '/년'), 'debtMax': ('한도 대비 부채 (해 최대)', ''), 'debt75': ('한도 0.75 이상 날', '일'), 'harvDays': ('기상 걸린 지역·날', '일'),
+       'k4Share': ('하한에 붙은 소작농 비율', ''), 'era4Y': ('시대 IV 첫 기술 해', '년')}
+for k, (nm, u) in LAB.items(): LABELS[k] = L(nm, '0b 측정', u)
+GROUPS = ['경제', '0b 측정', '생활수준', '소득', '인구', '계층 인구', '계층 노동 인구', '일자리', '임금', '돈', '돈 ÷ 총생산', '왕실', '연구', '건축사무소', '복지', '왕실 장부', '민간 장부',
           '소유 건물 흐름', '시장', '값 (기본가 대비)', '공급', '수요', '공급÷수요', '거래량', '가계 수요', '건물 레벨', 'AI 길', '소유', '정부', '하급 귀족 일자리', '기타']
 # 해마다 한 줄 진단 파일(.tmp/col/collapse.ts)에서만 뜻이 다른 이름
 FLAT = {'peas': L('소작농 수', '인구', '백만')}
@@ -224,9 +237,14 @@ def build(files):
                         if d: p['sd.' + k[4:]] = round(p[k] / d, 3)
                 runs.setdefault(t, {})[str(r['seed'])] = r['traj']
             elif 'y' in r:
+                # cli/lab.ts 줄: 실행 이름은 run (salt 가 0 이 아니면 '.s<salt>'), 범위는 환경 변수 KING (기본 'all' = 대륙, 왕국 id)
+                rn = name
+                if 'run' in r:
+                    if str(r.get('k')) != os.environ.get('KING', 'all'): continue
+                    rn = (name + ':' if name else '') + r['run'] + (f".s{r['salt']}" if r.get('salt') else '')
                 flat_mode = True
-                p = flat(r); p.pop('seed', None)
-                runs.setdefault(name or os.path.basename(f), {}).setdefault(str(r.get('seed', 0)), []).append(p)
+                p = flat(r); p.pop('seed', None); p.pop('salt', None); p.pop('k', None)
+                runs.setdefault(rn or os.path.basename(f), {}).setdefault(str(r.get('seed', 0)), []).append(p)
     if not runs: sys.exit('traj 나 해마다 한 줄(y)이 있는 줄이 없다')
     names = os.environ['L'].split(',') if os.environ.get('L') else []
     return finish([(names[i] if i < len(names) else ('기준' if t == '{}' else t), t, s) for i, (t, s) in enumerate(runs.items())], flat_mode)

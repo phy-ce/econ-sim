@@ -22,6 +22,8 @@ const EXPECTED: Record<string, [number, number]> = {
   'finance.ts': [10, 4],
   'kingdoms.ts': [3, 1],
   'labor.ts': [2, 0],
+  // 0b 측정 도구의 고갈 처방 drain (국고 0·부채 한도, 소멸은 w.mint.retired 에 적는다). 게임 번들 밖, 개발용 충격
+  'lab/run.ts': [0, 2],
   'market.ts': [9, 3],
   'pops.ts': [8, 0],
   'production.ts': [6, 8],

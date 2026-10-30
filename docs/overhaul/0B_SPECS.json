@@ -1,0 +1,1599 @@
+{
+ "about": "0b 1차 실행 명세 (cli/labspecs.py 가 만든다). docs/overhaul/01_VISION.md 10장 0b 측정 항목 표, 0B_PREREG.md. 돌리기: cd packages/sim && bash cli/lab.sh <out.jsonl> ../../docs/overhaul/0B_SPECS.json",
+ "code": "main be7e72f + 0b 사전 등록 7c45da7 (sim 세계 코드 그대로)",
+ "counts": {
+  "X01-base": 4,
+  "X01-a": 12,
+  "X01-b": 4,
+  "X04-E1": 8,
+  "X01-m": 52,
+  "X01-e": 12,
+  "X01-s": 12,
+  "X03-e": 2,
+  "X05-S0b": 6,
+  "X08-L": 4,
+  "X08-W": 4,
+  "X08-V": 4,
+  "X07-A6": 8,
+  "X08-F": 2,
+  "X01-f (optional)": 8,
+  "total (optional 제외)": 134
+ },
+ "excluded": [
+  {
+   "item": "X01-d 브라우저 비용",
+   "why": "사용자 PC 브라우저가 필요하다 (0B_PREREG 머리말)"
+  },
+  {
+   "item": "X10-A0",
+   "why": "A0 단계에서 끝났다 (0 회)"
+  },
+  {
+   "item": "X03-A",
+   "why": "0b′ 의 5-1 비교에서 잰다 (0 회)"
+  },
+  {
+   "item": "X07-A6 20년",
+   "why": "5년 거름 뒤 2차"
+  }
+ ],
+ "choices": [
+  "연구: withPlayer 켬이면 플레이어 왕실이 사전 등록 1장 순서로 고른다. 매일 step 직전에 연구가 비었는지 보고 비었으면 그날 고른다 (\"그 주에 바로\").",
+  "예산·법·처방은 모두 플레이어 왕국(왕국 1, 왕실 100)에 건다. 처방 효과·단서의 기본 비교 범위도 왕국 1 이다 (labsum --k).",
+  "학교 5개·행정청 2개 = 각 5·2 레벨, 플레이어 지역을 인구 많은 순으로 돌아가며 1레벨씩 (같은 지역에 같은 건물이 있으면 증설). 국고 부족·동시 공사 상한이면 날마다 다시 시도.",
+  "방식 한 단계: 왕실은 생산 건물 없이 시작하므로 공방 1레벨(목공구)을 건축사무소 지역에 짓고, 다음 방식(철공구, ironworking)이 고정 연구 순서로 열리면 바꾼다. 5년 안에 안 열릴 수 있다 (log 줄의 setMethod 시점).",
+  "짓고 민영화: 30일에 (손익 이동평균이 쌓인 뒤) 시작 생산 건물 종류(곡물 농장·섬유 농장·벌목장·공방) 중 그 왕국 민간 건물의 레벨당 손익 이동평균이 가장 큰 종류를 그 땅이 가장 많이 빈 지역에 1레벨 짓고, 완공 90일 뒤 민영화를 켠다.",
+  "곡물 농장 1·3레벨 증설: 왕실 농장이 없어 빈 농지가 가장 많은 플레이어 지역에 새로 짓는다 (build).",
+  "복지 켬/끔(X05-S0b): 플레이어 왕국 복지법을 구빈(poor)/none 으로 강제, 복지 단계는 기본 3.",
+  "정책 사다리 끈 판: withPlayer 끔에서 왕국 1 예산을 날마다 3·3·3 으로 되돌린다 (명령 길). 대조는 noplayer 의 첫 10년.",
+  "고갈 처방: 5년차 첫날(1800일) 세 왕국 모두 국고 현금을 소멸(w.mint.retired 에 적음)시키고 부채를 한도로. 화폐 항등식은 지킨다.",
+  "행렬의 단계 3·시작 법 칸(m.tax3, m.wages3, m.welfare3, m.taxLaw.land, m.invest.nobles, m.welfareLaw.none)은 기준선과 같은 설정이지만 명령·강제를 거친 판으로 그대로 돌린다 (점검용).",
+  "X03-D(S/D 분해)는 기준선 실행의 대륙 줄(subSup·bldSup·cap·capLv·tIn·tOut·hh)로 잰다: 실행 추가 없음.",
+  "X07-A6 의 20년 8회는 5년 거름 뒤 단서가 뜬 변수만이라 1차 명세에 넣지 않는다.",
+  "X08-F 40년은 이름 base40 (기준선 20년과 같은 앞 20년)."
+ ],
+ "specs": [
+  {
+   "item": "X01-base",
+   "name": "base",
+   "seed": 1,
+   "salt": 0,
+   "years": 20
+  },
+  {
+   "item": "X01-base",
+   "name": "base",
+   "seed": 2,
+   "salt": 0,
+   "years": 20
+  },
+  {
+   "item": "X01-base",
+   "name": "base",
+   "seed": 3,
+   "salt": 0,
+   "years": 20
+  },
+  {
+   "item": "X01-base",
+   "name": "base",
+   "seed": 4,
+   "salt": 0,
+   "years": 20
+  },
+  {
+   "item": "X01-a",
+   "name": "base",
+   "seed": 1,
+   "salt": 1,
+   "years": 20
+  },
+  {
+   "item": "X01-a",
+   "name": "base",
+   "seed": 1,
+   "salt": 2,
+   "years": 20
+  },
+  {
+   "item": "X01-a",
+   "name": "base",
+   "seed": 1,
+   "salt": 3,
+   "years": 20
+  },
+  {
+   "item": "X01-a",
+   "name": "base",
+   "seed": 2,
+   "salt": 1,
+   "years": 20
+  },
+  {
+   "item": "X01-a",
+   "name": "base",
+   "seed": 2,
+   "salt": 2,
+   "years": 20
+  },
+  {
+   "item": "X01-a",
+   "name": "base",
+   "seed": 2,
+   "salt": 3,
+   "years": 20
+  },
+  {
+   "item": "X01-a",
+   "name": "base",
+   "seed": 3,
+   "salt": 1,
+   "years": 20
+  },
+  {
+   "item": "X01-a",
+   "name": "base",
+   "seed": 3,
+   "salt": 2,
+   "years": 20
+  },
+  {
+   "item": "X01-a",
+   "name": "base",
+   "seed": 3,
+   "salt": 3,
+   "years": 20
+  },
+  {
+   "item": "X01-a",
+   "name": "base",
+   "seed": 4,
+   "salt": 1,
+   "years": 20
+  },
+  {
+   "item": "X01-a",
+   "name": "base",
+   "seed": 4,
+   "salt": 2,
+   "years": 20
+  },
+  {
+   "item": "X01-a",
+   "name": "base",
+   "seed": 4,
+   "salt": 3,
+   "years": 20
+  },
+  {
+   "item": "X01-b",
+   "name": "noplayer",
+   "seed": 1,
+   "salt": 0,
+   "years": 20,
+   "withPlayer": false
+  },
+  {
+   "item": "X01-b",
+   "name": "noplayer",
+   "seed": 2,
+   "salt": 0,
+   "years": 20,
+   "withPlayer": false
+  },
+  {
+   "item": "X01-b",
+   "name": "noplayer",
+   "seed": 3,
+   "salt": 0,
+   "years": 20,
+   "withPlayer": false
+  },
+  {
+   "item": "X01-b",
+   "name": "noplayer",
+   "seed": 4,
+   "salt": 0,
+   "years": 20,
+   "withPlayer": false
+  },
+  {
+   "item": "X04-E1",
+   "name": "e1.rent0",
+   "seed": 1,
+   "salt": 0,
+   "years": 5,
+   "tune": {
+    "rentShare": 0
+   }
+  },
+  {
+   "item": "X04-E1",
+   "name": "e1.rent0",
+   "seed": 2,
+   "salt": 0,
+   "years": 5,
+   "tune": {
+    "rentShare": 0
+   }
+  },
+  {
+   "item": "X04-E1",
+   "name": "e1.rent0.025",
+   "seed": 1,
+   "salt": 0,
+   "years": 5,
+   "tune": {
+    "rentShare": 0.025
+   }
+  },
+  {
+   "item": "X04-E1",
+   "name": "e1.rent0.025",
+   "seed": 2,
+   "salt": 0,
+   "years": 5,
+   "tune": {
+    "rentShare": 0.025
+   }
+  },
+  {
+   "item": "X04-E1",
+   "name": "e1.rent0.1",
+   "seed": 1,
+   "salt": 0,
+   "years": 5,
+   "tune": {
+    "rentShare": 0.1
+   }
+  },
+  {
+   "item": "X04-E1",
+   "name": "e1.rent0.1",
+   "seed": 2,
+   "salt": 0,
+   "years": 5,
+   "tune": {
+    "rentShare": 0.1
+   }
+  },
+  {
+   "item": "X04-E1",
+   "name": "e1.rent0.2",
+   "seed": 1,
+   "salt": 0,
+   "years": 5,
+   "tune": {
+    "rentShare": 0.2
+   }
+  },
+  {
+   "item": "X04-E1",
+   "name": "e1.rent0.2",
+   "seed": 2,
+   "salt": 0,
+   "years": 5,
+   "tune": {
+    "rentShare": 0.2
+   }
+  },
+  {
+   "item": "X01-m",
+   "name": "m.tax1",
+   "seed": 1,
+   "salt": 0,
+   "years": 5,
+   "budget": {
+    "tax": 1
+   }
+  },
+  {
+   "item": "X01-m",
+   "name": "m.tax1",
+   "seed": 2,
+   "salt": 0,
+   "years": 5,
+   "budget": {
+    "tax": 1
+   }
+  },
+  {
+   "item": "X01-m",
+   "name": "m.tax2",
+   "seed": 1,
+   "salt": 0,
+   "years": 5,
+   "budget": {
+    "tax": 2
+   }
+  },
+  {
+   "item": "X01-m",
+   "name": "m.tax2",
+   "seed": 2,
+   "salt": 0,
+   "years": 5,
+   "budget": {
+    "tax": 2
+   }
+  },
+  {
+   "item": "X01-m",
+   "name": "m.tax3",
+   "seed": 1,
+   "salt": 0,
+   "years": 5,
+   "budget": {
+    "tax": 3
+   }
+  },
+  {
+   "item": "X01-m",
+   "name": "m.tax3",
+   "seed": 2,
+   "salt": 0,
+   "years": 5,
+   "budget": {
+    "tax": 3
+   }
+  },
+  {
+   "item": "X01-m",
+   "name": "m.tax4",
+   "seed": 1,
+   "salt": 0,
+   "years": 5,
+   "budget": {
+    "tax": 4
+   }
+  },
+  {
+   "item": "X01-m",
+   "name": "m.tax4",
+   "seed": 2,
+   "salt": 0,
+   "years": 5,
+   "budget": {
+    "tax": 4
+   }
+  },
+  {
+   "item": "X01-m",
+   "name": "m.tax5",
+   "seed": 1,
+   "salt": 0,
+   "years": 5,
+   "budget": {
+    "tax": 5
+   }
+  },
+  {
+   "item": "X01-m",
+   "name": "m.tax5",
+   "seed": 2,
+   "salt": 0,
+   "years": 5,
+   "budget": {
+    "tax": 5
+   }
+  },
+  {
+   "item": "X01-m",
+   "name": "m.wages1",
+   "seed": 1,
+   "salt": 0,
+   "years": 5,
+   "budget": {
+    "wages": 1
+   }
+  },
+  {
+   "item": "X01-m",
+   "name": "m.wages1",
+   "seed": 2,
+   "salt": 0,
+   "years": 5,
+   "budget": {
+    "wages": 1
+   }
+  },
+  {
+   "item": "X01-m",
+   "name": "m.wages2",
+   "seed": 1,
+   "salt": 0,
+   "years": 5,
+   "budget": {
+    "wages": 2
+   }
+  },
+  {
+   "item": "X01-m",
+   "name": "m.wages2",
+   "seed": 2,
+   "salt": 0,
+   "years": 5,
+   "budget": {
+    "wages": 2
+   }
+  },
+  {
+   "item": "X01-m",
+   "name": "m.wages3",
+   "seed": 1,
+   "salt": 0,
+   "years": 5,
+   "budget": {
+    "wages": 3
+   }
+  },
+  {
+   "item": "X01-m",
+   "name": "m.wages3",
+   "seed": 2,
+   "salt": 0,
+   "years": 5,
+   "budget": {
+    "wages": 3
+   }
+  },
+  {
+   "item": "X01-m",
+   "name": "m.wages4",
+   "seed": 1,
+   "salt": 0,
+   "years": 5,
+   "budget": {
+    "wages": 4
+   }
+  },
+  {
+   "item": "X01-m",
+   "name": "m.wages4",
+   "seed": 2,
+   "salt": 0,
+   "years": 5,
+   "budget": {
+    "wages": 4
+   }
+  },
+  {
+   "item": "X01-m",
+   "name": "m.wages5",
+   "seed": 1,
+   "salt": 0,
+   "years": 5,
+   "budget": {
+    "wages": 5
+   }
+  },
+  {
+   "item": "X01-m",
+   "name": "m.wages5",
+   "seed": 2,
+   "salt": 0,
+   "years": 5,
+   "budget": {
+    "wages": 5
+   }
+  },
+  {
+   "item": "X01-m",
+   "name": "m.welfare1",
+   "seed": 1,
+   "salt": 0,
+   "years": 5,
+   "budget": {
+    "welfare": 1
+   }
+  },
+  {
+   "item": "X01-m",
+   "name": "m.welfare1",
+   "seed": 2,
+   "salt": 0,
+   "years": 5,
+   "budget": {
+    "welfare": 1
+   }
+  },
+  {
+   "item": "X01-m",
+   "name": "m.welfare2",
+   "seed": 1,
+   "salt": 0,
+   "years": 5,
+   "budget": {
+    "welfare": 2
+   }
+  },
+  {
+   "item": "X01-m",
+   "name": "m.welfare2",
+   "seed": 2,
+   "salt": 0,
+   "years": 5,
+   "budget": {
+    "welfare": 2
+   }
+  },
+  {
+   "item": "X01-m",
+   "name": "m.welfare3",
+   "seed": 1,
+   "salt": 0,
+   "years": 5,
+   "budget": {
+    "welfare": 3
+   }
+  },
+  {
+   "item": "X01-m",
+   "name": "m.welfare3",
+   "seed": 2,
+   "salt": 0,
+   "years": 5,
+   "budget": {
+    "welfare": 3
+   }
+  },
+  {
+   "item": "X01-m",
+   "name": "m.welfare4",
+   "seed": 1,
+   "salt": 0,
+   "years": 5,
+   "budget": {
+    "welfare": 4
+   }
+  },
+  {
+   "item": "X01-m",
+   "name": "m.welfare4",
+   "seed": 2,
+   "salt": 0,
+   "years": 5,
+   "budget": {
+    "welfare": 4
+   }
+  },
+  {
+   "item": "X01-m",
+   "name": "m.welfare5",
+   "seed": 1,
+   "salt": 0,
+   "years": 5,
+   "budget": {
+    "welfare": 5
+   }
+  },
+  {
+   "item": "X01-m",
+   "name": "m.welfare5",
+   "seed": 2,
+   "salt": 0,
+   "years": 5,
+   "budget": {
+    "welfare": 5
+   }
+  },
+  {
+   "item": "X01-m",
+   "name": "m.taxLaw.land",
+   "seed": 1,
+   "salt": 0,
+   "years": 5,
+   "laws": {
+    "tax": "land"
+   }
+  },
+  {
+   "item": "X01-m",
+   "name": "m.taxLaw.land",
+   "seed": 2,
+   "salt": 0,
+   "years": 5,
+   "laws": {
+    "tax": "land"
+   }
+  },
+  {
+   "item": "X01-m",
+   "name": "m.taxLaw.poll",
+   "seed": 1,
+   "salt": 0,
+   "years": 5,
+   "laws": {
+    "tax": "poll"
+   }
+  },
+  {
+   "item": "X01-m",
+   "name": "m.taxLaw.poll",
+   "seed": 2,
+   "salt": 0,
+   "years": 5,
+   "laws": {
+    "tax": "poll"
+   }
+  },
+  {
+   "item": "X01-m",
+   "name": "m.taxLaw.income",
+   "seed": 1,
+   "salt": 0,
+   "years": 5,
+   "laws": {
+    "tax": "income"
+   }
+  },
+  {
+   "item": "X01-m",
+   "name": "m.taxLaw.income",
+   "seed": 2,
+   "salt": 0,
+   "years": 5,
+   "laws": {
+    "tax": "income"
+   }
+  },
+  {
+   "item": "X01-m",
+   "name": "m.invest.nobles",
+   "seed": 1,
+   "salt": 0,
+   "years": 5,
+   "laws": {
+    "invest": "nobles"
+   }
+  },
+  {
+   "item": "X01-m",
+   "name": "m.invest.nobles",
+   "seed": 2,
+   "salt": 0,
+   "years": 5,
+   "laws": {
+    "invest": "nobles"
+   }
+  },
+  {
+   "item": "X01-m",
+   "name": "m.invest.upper",
+   "seed": 1,
+   "salt": 0,
+   "years": 5,
+   "laws": {
+    "invest": "upper"
+   }
+  },
+  {
+   "item": "X01-m",
+   "name": "m.invest.upper",
+   "seed": 2,
+   "salt": 0,
+   "years": 5,
+   "laws": {
+    "invest": "upper"
+   }
+  },
+  {
+   "item": "X01-m",
+   "name": "m.invest.middle",
+   "seed": 1,
+   "salt": 0,
+   "years": 5,
+   "laws": {
+    "invest": "middle"
+   }
+  },
+  {
+   "item": "X01-m",
+   "name": "m.invest.middle",
+   "seed": 2,
+   "salt": 0,
+   "years": 5,
+   "laws": {
+    "invest": "middle"
+   }
+  },
+  {
+   "item": "X01-m",
+   "name": "m.invest.lower",
+   "seed": 1,
+   "salt": 0,
+   "years": 5,
+   "laws": {
+    "invest": "lower"
+   }
+  },
+  {
+   "item": "X01-m",
+   "name": "m.invest.lower",
+   "seed": 2,
+   "salt": 0,
+   "years": 5,
+   "laws": {
+    "invest": "lower"
+   }
+  },
+  {
+   "item": "X01-m",
+   "name": "m.welfareLaw.none",
+   "seed": 1,
+   "salt": 0,
+   "years": 5,
+   "laws": {
+    "welfare": "none"
+   }
+  },
+  {
+   "item": "X01-m",
+   "name": "m.welfareLaw.none",
+   "seed": 2,
+   "salt": 0,
+   "years": 5,
+   "laws": {
+    "welfare": "none"
+   }
+  },
+  {
+   "item": "X01-m",
+   "name": "m.welfareLaw.poor",
+   "seed": 1,
+   "salt": 0,
+   "years": 5,
+   "laws": {
+    "welfare": "poor"
+   }
+  },
+  {
+   "item": "X01-m",
+   "name": "m.welfareLaw.poor",
+   "seed": 2,
+   "salt": 0,
+   "years": 5,
+   "laws": {
+    "welfare": "poor"
+   }
+  },
+  {
+   "item": "X01-m",
+   "name": "m.welfareLaw.wage",
+   "seed": 1,
+   "salt": 0,
+   "years": 5,
+   "laws": {
+    "welfare": "wage"
+   }
+  },
+  {
+   "item": "X01-m",
+   "name": "m.welfareLaw.wage",
+   "seed": 2,
+   "salt": 0,
+   "years": 5,
+   "laws": {
+    "welfare": "wage"
+   }
+  },
+  {
+   "item": "X01-m",
+   "name": "m.welfareLaw.universal",
+   "seed": 1,
+   "salt": 0,
+   "years": 5,
+   "laws": {
+    "welfare": "universal"
+   }
+  },
+  {
+   "item": "X01-m",
+   "name": "m.welfareLaw.universal",
+   "seed": 2,
+   "salt": 0,
+   "years": 5,
+   "laws": {
+    "welfare": "universal"
+   }
+  },
+  {
+   "item": "X01-e",
+   "name": "be.tax1",
+   "seed": 1,
+   "salt": 0,
+   "years": 20,
+   "budget": {
+    "tax": 1
+   }
+  },
+  {
+   "item": "X01-e",
+   "name": "be.tax1",
+   "seed": 2,
+   "salt": 0,
+   "years": 20,
+   "budget": {
+    "tax": 1
+   }
+  },
+  {
+   "item": "X01-e",
+   "name": "be.tax5",
+   "seed": 1,
+   "salt": 0,
+   "years": 20,
+   "budget": {
+    "tax": 5
+   }
+  },
+  {
+   "item": "X01-e",
+   "name": "be.tax5",
+   "seed": 2,
+   "salt": 0,
+   "years": 20,
+   "budget": {
+    "tax": 5
+   }
+  },
+  {
+   "item": "X01-e",
+   "name": "be.wages1",
+   "seed": 1,
+   "salt": 0,
+   "years": 20,
+   "budget": {
+    "wages": 1
+   }
+  },
+  {
+   "item": "X01-e",
+   "name": "be.wages1",
+   "seed": 2,
+   "salt": 0,
+   "years": 20,
+   "budget": {
+    "wages": 1
+   }
+  },
+  {
+   "item": "X01-e",
+   "name": "be.wages5",
+   "seed": 1,
+   "salt": 0,
+   "years": 20,
+   "budget": {
+    "wages": 5
+   }
+  },
+  {
+   "item": "X01-e",
+   "name": "be.wages5",
+   "seed": 2,
+   "salt": 0,
+   "years": 20,
+   "budget": {
+    "wages": 5
+   }
+  },
+  {
+   "item": "X01-e",
+   "name": "be.welfare1",
+   "seed": 1,
+   "salt": 0,
+   "years": 20,
+   "budget": {
+    "welfare": 1
+   }
+  },
+  {
+   "item": "X01-e",
+   "name": "be.welfare1",
+   "seed": 2,
+   "salt": 0,
+   "years": 20,
+   "budget": {
+    "welfare": 1
+   }
+  },
+  {
+   "item": "X01-e",
+   "name": "be.welfare5",
+   "seed": 1,
+   "salt": 0,
+   "years": 20,
+   "budget": {
+    "welfare": 5
+   }
+  },
+  {
+   "item": "X01-e",
+   "name": "be.welfare5",
+   "seed": 2,
+   "salt": 0,
+   "years": 20,
+   "budget": {
+    "welfare": 5
+   }
+  },
+  {
+   "item": "X01-s",
+   "name": "s.schools5",
+   "seed": 1,
+   "salt": 0,
+   "years": 5,
+   "script": [
+    {
+     "t": 0,
+     "cmd": {
+      "macro": "schools",
+      "n": 5
+     }
+    }
+   ]
+  },
+  {
+   "item": "X01-s",
+   "name": "s.schools5",
+   "seed": 2,
+   "salt": 0,
+   "years": 5,
+   "script": [
+    {
+     "t": 0,
+     "cmd": {
+      "macro": "schools",
+      "n": 5
+     }
+    }
+   ]
+  },
+  {
+   "item": "X01-s",
+   "name": "s.admins2",
+   "seed": 1,
+   "salt": 0,
+   "years": 5,
+   "script": [
+    {
+     "t": 0,
+     "cmd": {
+      "macro": "admins",
+      "n": 2
+     }
+    }
+   ]
+  },
+  {
+   "item": "X01-s",
+   "name": "s.admins2",
+   "seed": 2,
+   "salt": 0,
+   "years": 5,
+   "script": [
+    {
+     "t": 0,
+     "cmd": {
+      "macro": "admins",
+      "n": 2
+     }
+    }
+   ]
+  },
+  {
+   "item": "X01-s",
+   "name": "s.method",
+   "seed": 1,
+   "salt": 0,
+   "years": 5,
+   "script": [
+    {
+     "t": 0,
+     "cmd": {
+      "macro": "methodStep"
+     }
+    }
+   ]
+  },
+  {
+   "item": "X01-s",
+   "name": "s.method",
+   "seed": 2,
+   "salt": 0,
+   "years": 5,
+   "script": [
+    {
+     "t": 0,
+     "cmd": {
+      "macro": "methodStep"
+     }
+    }
+   ]
+  },
+  {
+   "item": "X01-s",
+   "name": "s.privatize",
+   "seed": 1,
+   "salt": 0,
+   "years": 5,
+   "script": [
+    {
+     "t": 30,
+     "cmd": {
+      "macro": "buildPrivatize",
+      "wait": 90
+     }
+    }
+   ]
+  },
+  {
+   "item": "X01-s",
+   "name": "s.privatize",
+   "seed": 2,
+   "salt": 0,
+   "years": 5,
+   "script": [
+    {
+     "t": 30,
+     "cmd": {
+      "macro": "buildPrivatize",
+      "wait": 90
+     }
+    }
+   ]
+  },
+  {
+   "item": "X01-s",
+   "name": "s.farm1",
+   "seed": 1,
+   "salt": 0,
+   "years": 5,
+   "script": [
+    {
+     "t": 0,
+     "cmd": {
+      "macro": "farm",
+      "levels": 1
+     }
+    }
+   ]
+  },
+  {
+   "item": "X01-s",
+   "name": "s.farm1",
+   "seed": 2,
+   "salt": 0,
+   "years": 5,
+   "script": [
+    {
+     "t": 0,
+     "cmd": {
+      "macro": "farm",
+      "levels": 1
+     }
+    }
+   ]
+  },
+  {
+   "item": "X01-s",
+   "name": "s.farm3",
+   "seed": 1,
+   "salt": 0,
+   "years": 5,
+   "script": [
+    {
+     "t": 0,
+     "cmd": {
+      "macro": "farm",
+      "levels": 3
+     }
+    }
+   ]
+  },
+  {
+   "item": "X01-s",
+   "name": "s.farm3",
+   "seed": 2,
+   "salt": 0,
+   "years": 5,
+   "script": [
+    {
+     "t": 0,
+     "cmd": {
+      "macro": "farm",
+      "levels": 3
+     }
+    }
+   ]
+  },
+  {
+   "item": "X03-e",
+   "name": "s.method20",
+   "seed": 1,
+   "salt": 0,
+   "years": 20,
+   "script": [
+    {
+     "t": 0,
+     "cmd": {
+      "macro": "methodStep"
+     }
+    }
+   ]
+  },
+  {
+   "item": "X03-e",
+   "name": "s.method20",
+   "seed": 2,
+   "salt": 0,
+   "years": 20,
+   "script": [
+    {
+     "t": 0,
+     "cmd": {
+      "macro": "methodStep"
+     }
+    }
+   ]
+  },
+  {
+   "item": "X05-S0b",
+   "name": "s0.drain",
+   "seed": 1,
+   "salt": 0,
+   "years": 10,
+   "shocks": [
+    {
+     "t": 1800,
+     "kind": "drain"
+    }
+   ],
+   "note": "5년차 첫날 세 왕국 모두 국고 0·부채 한도"
+  },
+  {
+   "item": "X05-S0b",
+   "name": "s0.drain",
+   "seed": 2,
+   "salt": 0,
+   "years": 10,
+   "shocks": [
+    {
+     "t": 1800,
+     "kind": "drain"
+    }
+   ],
+   "note": "5년차 첫날 세 왕국 모두 국고 0·부채 한도"
+  },
+  {
+   "item": "X05-S0b",
+   "name": "s0.welOn",
+   "seed": 1,
+   "salt": 0,
+   "years": 10,
+   "laws": {
+    "welfare": "poor"
+   },
+   "note": "복지 켬 = 플레이어 왕국 구빈법 강제 (단계 3)"
+  },
+  {
+   "item": "X05-S0b",
+   "name": "s0.welOff",
+   "seed": 1,
+   "salt": 0,
+   "years": 10,
+   "laws": {
+    "welfare": "none"
+   },
+   "note": "복지 끔 = 플레이어 왕국 복지법 none 강제 (기준선과 같은 법)"
+  },
+  {
+   "item": "X05-S0b",
+   "name": "s0.ladderOff",
+   "seed": 1,
+   "salt": 0,
+   "years": 10,
+   "withPlayer": false,
+   "pin": {
+    "kingdom": 1,
+    "tax": 3,
+    "wages": 3,
+    "welfare": 3
+   },
+   "note": "withPlayer 끔에서 왕국 1 의 예산 단계를 시작값 3·3·3 에 고정. 대조는 noplayer (X01-b) 의 첫 10년"
+  },
+  {
+   "item": "X05-S0b",
+   "name": "s0.ladderOff",
+   "seed": 2,
+   "salt": 0,
+   "years": 10,
+   "withPlayer": false,
+   "pin": {
+    "kingdom": 1,
+    "tax": 3,
+    "wages": 3,
+    "welfare": 3
+   },
+   "note": "withPlayer 끔에서 왕국 1 의 예산 단계를 시작값 3·3·3 에 고정. 대조는 noplayer (X01-b) 의 첫 10년"
+  },
+  {
+   "item": "X08-L",
+   "name": "script4",
+   "seed": 1,
+   "salt": 0,
+   "years": 20,
+   "script": [
+    {
+     "t": 0,
+     "cmd": {
+      "macro": "schools",
+      "n": 5
+     }
+    },
+    {
+     "t": 0,
+     "cmd": {
+      "macro": "admins",
+      "n": 2
+     }
+    },
+    {
+     "t": 0,
+     "cmd": {
+      "macro": "methodStep"
+     }
+    },
+    {
+     "t": 30,
+     "cmd": {
+      "macro": "buildPrivatize",
+      "wait": 90
+     }
+    }
+   ]
+  },
+  {
+   "item": "X08-L",
+   "name": "script4",
+   "seed": 2,
+   "salt": 0,
+   "years": 20,
+   "script": [
+    {
+     "t": 0,
+     "cmd": {
+      "macro": "schools",
+      "n": 5
+     }
+    },
+    {
+     "t": 0,
+     "cmd": {
+      "macro": "admins",
+      "n": 2
+     }
+    },
+    {
+     "t": 0,
+     "cmd": {
+      "macro": "methodStep"
+     }
+    },
+    {
+     "t": 30,
+     "cmd": {
+      "macro": "buildPrivatize",
+      "wait": 90
+     }
+    }
+   ]
+  },
+  {
+   "item": "X08-L",
+   "name": "script4",
+   "seed": 3,
+   "salt": 0,
+   "years": 20,
+   "script": [
+    {
+     "t": 0,
+     "cmd": {
+      "macro": "schools",
+      "n": 5
+     }
+    },
+    {
+     "t": 0,
+     "cmd": {
+      "macro": "admins",
+      "n": 2
+     }
+    },
+    {
+     "t": 0,
+     "cmd": {
+      "macro": "methodStep"
+     }
+    },
+    {
+     "t": 30,
+     "cmd": {
+      "macro": "buildPrivatize",
+      "wait": 90
+     }
+    }
+   ]
+  },
+  {
+   "item": "X08-L",
+   "name": "script4",
+   "seed": 4,
+   "salt": 0,
+   "years": 20,
+   "script": [
+    {
+     "t": 0,
+     "cmd": {
+      "macro": "schools",
+      "n": 5
+     }
+    },
+    {
+     "t": 0,
+     "cmd": {
+      "macro": "admins",
+      "n": 2
+     }
+    },
+    {
+     "t": 0,
+     "cmd": {
+      "macro": "methodStep"
+     }
+    },
+    {
+     "t": 30,
+     "cmd": {
+      "macro": "buildPrivatize",
+      "wait": 90
+     }
+    }
+   ]
+  },
+  {
+   "item": "X08-W",
+   "name": "hw.0.03",
+   "seed": 1,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "harvestChance": 0.03
+   }
+  },
+  {
+   "item": "X08-W",
+   "name": "hw.0.03",
+   "seed": 2,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "harvestChance": 0.03
+   }
+  },
+  {
+   "item": "X08-W",
+   "name": "hw.0.1",
+   "seed": 1,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "harvestChance": 0.1
+   }
+  },
+  {
+   "item": "X08-W",
+   "name": "hw.0.1",
+   "seed": 2,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "harvestChance": 0.1
+   }
+  },
+  {
+   "item": "X08-V",
+   "name": "base",
+   "seed": 5,
+   "salt": 0,
+   "years": 10
+  },
+  {
+   "item": "X08-V",
+   "name": "base",
+   "seed": 6,
+   "salt": 0,
+   "years": 10
+  },
+  {
+   "item": "X08-V",
+   "name": "base",
+   "seed": 7,
+   "salt": 0,
+   "years": 10
+  },
+  {
+   "item": "X08-V",
+   "name": "base",
+   "seed": 8,
+   "salt": 0,
+   "years": 10
+  },
+  {
+   "item": "X07-A6",
+   "name": "a6.wageOutside1",
+   "seed": 1,
+   "salt": 0,
+   "years": 5,
+   "tune": {
+    "wageOutside": 1.0
+   }
+  },
+  {
+   "item": "X07-A6",
+   "name": "a6.wageOutside1",
+   "seed": 2,
+   "salt": 0,
+   "years": 5,
+   "tune": {
+    "wageOutside": 1.0
+   }
+  },
+  {
+   "item": "X07-A6",
+   "name": "a6.wageOutside1.5",
+   "seed": 1,
+   "salt": 0,
+   "years": 5,
+   "tune": {
+    "wageOutside": 1.5
+   }
+  },
+  {
+   "item": "X07-A6",
+   "name": "a6.wageOutside1.5",
+   "seed": 2,
+   "salt": 0,
+   "years": 5,
+   "tune": {
+    "wageOutside": 1.5
+   }
+  },
+  {
+   "item": "X07-A6",
+   "name": "a6.wageCeil0.7",
+   "seed": 1,
+   "salt": 0,
+   "years": 5,
+   "tune": {
+    "wageCeil": 0.7
+   }
+  },
+  {
+   "item": "X07-A6",
+   "name": "a6.wageCeil0.7",
+   "seed": 2,
+   "salt": 0,
+   "years": 5,
+   "tune": {
+    "wageCeil": 0.7
+   }
+  },
+  {
+   "item": "X07-A6",
+   "name": "a6.wageCeil1",
+   "seed": 1,
+   "salt": 0,
+   "years": 5,
+   "tune": {
+    "wageCeil": 1.0
+   }
+  },
+  {
+   "item": "X07-A6",
+   "name": "a6.wageCeil1",
+   "seed": 2,
+   "salt": 0,
+   "years": 5,
+   "tune": {
+    "wageCeil": 1.0
+   }
+  },
+  {
+   "item": "X08-F",
+   "name": "base40",
+   "seed": 1,
+   "salt": 0,
+   "years": 40
+  },
+  {
+   "item": "X08-F",
+   "name": "base40",
+   "seed": 3,
+   "salt": 0,
+   "years": 40
+  },
+  {
+   "item": "X01-f",
+   "name": "base",
+   "seed": 1,
+   "salt": 4,
+   "years": 5,
+   "optional": true,
+   "note": "거짓 단서율 null: 0a 산출을 쓰면 안 돌려도 된다 (OPTIONAL=1)"
+  },
+  {
+   "item": "X01-f",
+   "name": "base",
+   "seed": 1,
+   "salt": 5,
+   "years": 5,
+   "optional": true,
+   "note": "거짓 단서율 null: 0a 산출을 쓰면 안 돌려도 된다 (OPTIONAL=1)"
+  },
+  {
+   "item": "X01-f",
+   "name": "base",
+   "seed": 1,
+   "salt": 6,
+   "years": 5,
+   "optional": true,
+   "note": "거짓 단서율 null: 0a 산출을 쓰면 안 돌려도 된다 (OPTIONAL=1)"
+  },
+  {
+   "item": "X01-f",
+   "name": "base",
+   "seed": 1,
+   "salt": 7,
+   "years": 5,
+   "optional": true,
+   "note": "거짓 단서율 null: 0a 산출을 쓰면 안 돌려도 된다 (OPTIONAL=1)"
+  },
+  {
+   "item": "X01-f",
+   "name": "base",
+   "seed": 2,
+   "salt": 4,
+   "years": 5,
+   "optional": true,
+   "note": "거짓 단서율 null: 0a 산출을 쓰면 안 돌려도 된다 (OPTIONAL=1)"
+  },
+  {
+   "item": "X01-f",
+   "name": "base",
+   "seed": 2,
+   "salt": 5,
+   "years": 5,
+   "optional": true,
+   "note": "거짓 단서율 null: 0a 산출을 쓰면 안 돌려도 된다 (OPTIONAL=1)"
+  },
+  {
+   "item": "X01-f",
+   "name": "base",
+   "seed": 2,
+   "salt": 6,
+   "years": 5,
+   "optional": true,
+   "note": "거짓 단서율 null: 0a 산출을 쓰면 안 돌려도 된다 (OPTIONAL=1)"
+  },
+  {
+   "item": "X01-f",
+   "name": "base",
+   "seed": 2,
+   "salt": 7,
+   "years": 5,
+   "optional": true,
+   "note": "거짓 단서율 null: 0a 산출을 쓰면 안 돌려도 된다 (OPTIONAL=1)"
+  }
+ ]
+}
