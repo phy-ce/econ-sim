@@ -1,6 +1,7 @@
 import type {
   BuildingTypeDef, ClassDef, DepositId, GoodDef, GoodId, HarvestDef, Industry, IndustryDef, LandType, MethodDef, NeedDef, NeedId, PopClass, RegionDef, Skill, SkillDef, TaxLaw, InvestLaw, TechDef,
 } from './types';
+import { ipow } from './rng/ipow';
 
 // 세계관: 근세에서 산업화로 넘어가는 가상의 대륙. 세 왕국이 땅을 나눠 갖는다. 화폐 단위는 플로린(ƒ).
 // 상품·건물·기술은 이 파일에 정의만 추가하면 늘어난다.
@@ -634,7 +635,7 @@ export const TRADE_ESCROW_SHARE = 0.5;
 /** 무역소 방식 1레벨의 유보액: TUNE.tradeReserve × TRADE_STEP_MULT^(방식 단계) */
 export function tradeReserveOf(methodId: string): number {
   const i = BUILDING_BY_ID[TRADING_POST].methods.findIndex((m) => m.id === methodId);
-  return TUNE.tradeReserve * Math.pow(TRADE_STEP_MULT, Math.max(0, i));
+  return TUNE.tradeReserve * ipow(TRADE_STEP_MULT, Math.max(0, i));
 }
 /** 무역소 1레벨을 지을 때 묶는 돈 (방식과 상관없이 기본 유보액의 TRADE_ESCROW_SHARE) */
 export function tradeEscrowPerLevel(): number {

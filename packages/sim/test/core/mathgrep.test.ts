@@ -14,10 +14,7 @@ const ALLOWED: { file: string; has: string; why: string }[] = [
   // 꺼진 비교 경로 (8.5 정리 때 지운다)
   { file: 'economy.ts', has: '1 - Math.exp(-x)', why: "collectionRatio 의 TUNE.taxCurve = 'exp' 경로 (기본 'hyp')" },
   { file: 'economy.ts', has: '(demand / supply) ** TUNE.priceExp', why: 'priceFormula 의 TUNE.priceExp > 0 경로 (기본 0)' },
-  // 0a 에서 정수 거듭제곱 ipow 로 바꾸고 지운다
-  { file: 'data.ts', has: 'Math.pow(TRADE_STEP_MULT', why: 'tradeReserveOf (지수 = 방식 순번)' },
-  { file: 'market.ts', has: 'Math.pow(min / c, SUBSTITUTION_EXP)', why: '대체재 비중 (지수 10)' },
-  { file: 'pops.ts', has: '(1 + g) ** DAYS_PER_YEAR', why: 'Pop.growth 표시값 (지수 360, 저장 칸)' },
+  // data.ts tradeReserveOf·market.ts 대체재 비중·pops.ts Pop.growth 의 Math.pow·** 3곳은 0a 에서 rng/ipow.ts 로 바꿨다
 ];
 
 /** 주석을 지운 줄 목록 (블록 주석은 줄 수를 지켜 비운다. src 에는 문자열 안 // 가 없다) */

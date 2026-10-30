@@ -5,6 +5,7 @@ import { borderCost, kingdomById, kingdomOf, payTariff, toTreasury } from './kin
 import { INVEST_CLASSES } from './policy';
 import { addFund, findPop, payPops, payProf, workforce } from './pops';
 import { clamp } from './rng';
+import { ipow } from './rng/ipow';
 import { POP_CLASSES, WEALTH_MAX, WEALTH_MIN, crewOf, wealthOf } from './types';
 import type { Building, Company, GoodBag, GoodId, MarketGood, NeedDef, NeedId, Pop, Region, SalvageLot, Shipment, World } from './types';
 
@@ -443,7 +444,7 @@ function computeSplit(need: NeedDef, prices: number[], caps: number[]): Split {
 function splitWeights(need: NeedDef, prices: number[]): number[] {
   const costs = need.options.map((o, i) => o.units * prices[i]);
   const min = Math.min(...costs);
-  return costs.map((c) => Math.pow(min / c, SUBSTITUTION_EXP));
+  return costs.map((c) => ipow(min / c, SUBSTITUTION_EXP));
 }
 
 /** 무게대로 나누고 상한(caps)을 넘는 몫은 나머지에 다시 나눈 비중 */

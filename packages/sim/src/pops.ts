@@ -2,6 +2,7 @@ import {recordPopIncome} from './popIncome';
 import { CLASS_DEFS, TUNE, WORKFORCE_RATIO } from './data';
 import { popSol } from './economy';
 import { clamp } from './rng';
+import { ipowBin } from './rng/ipow';
 import { POP_CLASSES, wealthOf } from './types';
 import type { GoodBag, Household, PopIncomeSource, Pop, PopClass, Region, World } from './types';
 
@@ -379,7 +380,7 @@ export function updateGrowth(w: World) {
     const sol = popSol(p);
     const g = growthWith(p, sol);
     p.sol = sol;
-    p.growth = ((1 + g) ** DAYS_PER_YEAR - 1) * 100;
+    p.growth = (ipowBin(1 + g, DAYS_PER_YEAR) - 1) * 100;
     p.size = Math.max(0, p.size * (1 + g));
   }
 }
