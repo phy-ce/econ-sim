@@ -924,6 +924,6 @@ AI 노동자 임금 바닥 (기본값 0.03 · 2~6):
   - 합치기 (2026-10-23 사용자: "테스트하지말고합치기만해"): main 0b805b4 (국영 임금 17판, 술, `aiBuildNow` 1, 소작 산출 변경(공구 0), `startWorkshop` 3)를 wt-trade에 합쳤다. 비교 실행은 하지 않았다 (typecheck와 화폐 보존·결정성 테스트만). R 5,000은 그대로 두고 DESIGN 11 `tradeReserve` 근거에 "재검증 필요"를 달았다.
 
 ### 7-28. 오버홀 A0 뒤 결정 대기 (2026-10-30, 브랜치 wt-a0)
-- Q3: 0a 에서 AI 난수 분리와 함께 `Math.pow` 도 고정할지 (추천: 함께). 0a 병합을 막음. 자세히: docs/overhaul/12_DECISIONS_NEEDED.md Q3.
+- Q3: 0a 에서 AI 난수 분리와 함께 `Math.pow` 도 고정할지 (추천: 함께). 사용자 "계속 해봐"(2026-10-30)로 추천안대로 0a 에 넣었다. 다르게 정하면 커밋 f67358b·58e49ae 를 빼고 골든을 다시 만든다 (HANDOFF 0a 절). 자세히: docs/overhaul/12_DECISIONS_NEEDED.md Q3.
 - Q10: 시험을 core / gate / long 으로 나누고 CLAUDE.md '실행과 검증'을 고칠지 (추천: 나눔). 답 전에는 test/gate/{migrate,interleave}.test.ts 가 test:core 밖이고 전체 vitest run 에서만 돈다. 자세히: 12_DECISIONS_NEEDED.md Q10.
 - 미추적 test/core/_wd.test.ts (단언 없는 진단 출력, 사용자 PC main 체크아웃) 정리 여부: 사용자 확인 필요 (10_ARCHITECTURE.md 10.2).
