@@ -46,7 +46,7 @@ add('X03-e', 's.method20', S12, 20, script=SCRIPTS['method'])
 add('X05-S0b', 's0.drain', S12, 10, shocks=[{'t': 1800, 'kind': 'drain'}], note='5년차 첫날 세 왕국 모두 국고 0·부채 한도')
 add('X05-S0b', 's0.welOn', (1,), 10, laws={'welfare': 'poor'}, note='복지 켬 = 플레이어 왕국 구빈법 강제 (단계 3)')
 add('X05-S0b', 's0.welOff', (1,), 10, laws={'welfare': 'none'}, note='복지 끔 = 플레이어 왕국 복지법 none 강제 (기준선과 같은 법)')
-add('X05-S0b', 's0.ladderOff', S12, 10, withPlayer=False, pin={'kingdom': 1, 'tax': 3, 'wages': 3, 'welfare': 3}, note='withPlayer 끔에서 왕국 1 의 예산 단계를 시작값 3·3·3 에 고정. 대조는 noplayer (X01-b) 의 첫 10년')
+add('X05-S0b', 's0.ladderOff', S12, 10, withPlayer=False, pin={'kingdom': 1, 'tax': 3, 'wages': 3, 'welfare': 3}, control='noplayer', note='withPlayer 끔에서 왕국 1 의 예산 단계를 시작값 3·3·3 에 고정. 대조는 noplayer (X01-b) 의 첫 10년')
 add('X08-L', 'script4', S14, 20, script=SCRIPTS['schools5'] + SCRIPTS['admins2'] + SCRIPTS['method'] + SCRIPTS['privatize'])
 for h in (0.03, 0.1):
     add('X08-W', f'hw.{h:g}', S12, 20, tune={'harvestChance': h})

@@ -587,6 +587,10 @@ export const TUNE = {
   // 가득 차면 주에 25% (평균 4주에 1레벨, 그 전 규칙 "90% 4주"와 비슷하게), 절반 아래면 0. reserveGrowMax 0 이면 그 전 규칙. 값은 비교 안 함 (근거 없음)
   reserveGrowMax: 0.25,
   reserveGrowFrom: 0.5,
+  // 유보 기준 증설의 과잉 검사 (오버홀 03 5-1, 0b′, AI 판단): > 0 이면 증설 전에 그 지역 그 산출 상품의 예상 공급 ÷ 수요(economy.ts projectedSD:
+  // 공급 이동평균 + 모든 회사의 공사 중 레벨 산출, ÷ 수요 이동평균)가 이 값을 넘는 주는 증설하지 않는다. 0 = 검사 없음 (그 전과 같음).
+  // 후보 1.25 / 1.5 / 1.75 와 0 을 비교 중 (docs/overhaul/0BP_5-1_SPECS.json), 근거 없음
+  aiGlutSD: 0,
   aiMixedMethods: 0, // 1 = 건물 전체를 바꿀 수 없을 때 같은 지역에 더 나은 방식 1~2레벨을 따로 짓는다 (세계 규칙이 바뀌어 사용자 결정 필요, DECISIONS 7-21)
   officeRichWeeks: 52,
   officeSelfPay: 0,

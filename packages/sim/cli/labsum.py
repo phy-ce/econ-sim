@@ -1,4 +1,5 @@
-# 0b 측정 분석: python cli/labsum.py a.jsonl [b.jsonl ...] [--k 1] [--md 결과.md] [--empty 지표,지표,...]   (packages/sim 에서)
+# 0b 측정 분석: python cli/labsum.py a.jsonl [b.jsonl ...] [--k 1] [--md 결과.md] [--empty 지표,지표,...] [--specs 명세.json]   (packages/sim 에서)
+# 후보 비교 (0b′): python cli/labsum.py a.jsonl --compare g0 [--runs g1.25,g1.5] [--metrics gdp,sd.grain,margR.*] [--k all] [--md 결과.md]
 # 입력은 cli/lab.ts·lab.sh 의 jsonl. 판정 규칙은 docs/overhaul/0B_PREREG.md 를 그대로 따른다 (결과를 본 뒤 규칙을 바꾸지 않는다):
 #   (a) 기준선 대역: 실행 'base' 의 salt 0..3, 해마다 지표마다 min–max (2장). K=4 대역 폭 ÷ 카드 기준 단위 한 줄.
 #   (b) 단서: salt 0 실행 하나가 2년차부터 3년 이상 연속, 같은 부호로 같은 시드의 대역 밖 (2장). 국고 비용 누계를 같이.
@@ -6,7 +7,12 @@
 #   (d) E7: 기준선(salt 0) 시드 1~4 × 왕국 3 = 12칸, 19개 해마다 변화 중 기준 단위 × 0.5 이상이 5개 이상인 칸이 6칸 이상 (3장).
 #   (e) 통과 기준 a)~e) (5장). (f) 거짓 단서율: base salt 4..7 이 있으면 (X01-f).
 #   (g) 빈 해 (4장): --empty 로 E7 을 통과하고 사람이 확인한 지표 목록을 줄 때만 계산한다 (사전 등록 4장 순서).
-# --k: 단서·효과·대역을 볼 범위 (기본 1 = 플레이어 왕국, 처방이 걸리는 곳. 'all' 이면 대륙).
+# --k: 단서·효과·대역을 볼 범위 (기본 1 = 플레이어 왕국, 처방이 걸리는 곳. 'all' 이면 대륙. --compare 의 기본은 'all').
+# 0b 결과(0B_RESULTS 2.0)가 지적한 셋을 고쳤다 (사전 등록 판정 규칙은 그대로):
+#   - 대조: 실행 끝 줄의 "control" (명세 LabSpec.control) 이나 --specs 명세 파일의 control 이 있으면 그 실행의 salt 0..3 을 대역·효과의 대조로 쓴다 (없으면 'base').
+#   - 중복: 같은 시드·범위에서 salt 0 의 해마다 줄이 겹치는 해에서 모두 같은 두 실행(같은 명령, 예 be.tax1 = m.tax1)은 앞의 것 하나만 판정한다.
+#   - 충격: 로그에 drain 이 있는 실행은 충격 뒤 첫 연말을 1년차로 다시 센다 (단서는 그 2년차부터, 효과는 그 5년차, 자료가 짧으면 마지막 해).
+# --compare 대조: 같은 시드의 salt 0..3 이 다 있는 실행끼리, 지표마다 해마다 후보별 평균 (min–max) 표와 대조 대비 효과(+/−: 그해 후보 4개와 대조 4개가 완전히 갈림) 표.
 import json, sys, os
 from collections import defaultdict
 
@@ -54,6 +60,17 @@ def load(files):
     return data, logs
 
 
+def spec_controls(path):
+    """명세 파일(배열 또는 키마다 배열)에서 실행 이름 -> control"""
+    raw = json.load(open(path, encoding='utf-8'))
+    lists = [raw] if isinstance(raw, list) else [v for v in raw.values() if isinstance(v, list)]
+    out = {}
+    for lst in lists:
+        for sp in lst:
+            if isinstance(sp, dict) and sp.get('control'): out[sp['name']] = sp['control']
+    return out
+
+
 def fmt(v, d=3):
     if v is None: return '—'
     if abs(v) >= 1000: return f'{v:,.0f}'
@@ -67,19 +84,33 @@ def table(head, rows):
 
 
 class Sum:
-    def __init__(self, data, logs, k):
+    def __init__(self, data, logs, k, controls=None):
         self.d, self.logs, self.k = data, logs, k
+        self.controls = controls or {}
         self.out = []
 
     def p(self, *s): self.out.append(' '.join(str(x) for x in s))
+
+    def control(self, run, seed):
+        """효과·대역의 대조 실행: 실행 끝 줄의 control, 없으면 --specs 의 control, 없으면 'base'"""
+        for sa in range(4):
+            lg = self.logs.get((run, seed, sa))
+            if lg and lg.get('control'): return lg['control']
+        return self.controls.get(run, 'base')
+
+    def start(self, run, seed):
+        """충격 처방: 충격 뒤 첫 연말이 1년차가 되도록 빼는 해 수 (로그의 drain, salt 0 기준). 충격이 없으면 0"""
+        lg = self.logs.get((run, seed, 0))
+        ts = [e['t'] for e in (lg or {}).get('log', []) if str(e.get('what', '')).startswith('drain') and e.get('err') is None]
+        return min(ts) // 360 if ts else 0
 
     def series(self, run, seed, salt, metric, k=None):
         t = self.d.get((run, seed, salt, k or self.k), {})
         return {y: r.get(metric) for y, r in t.items()}
 
-    def band(self, seed, metric, k=None, salts=(0, 1, 2, 3)):
-        """{y: (min, max)} 기준선 salt 0..3 이 모두 있는 해만"""
-        ss = [self.series('base', seed, s, metric, k) for s in salts]
+    def band(self, seed, metric, k=None, salts=(0, 1, 2, 3), run='base'):
+        """{y: (min, max)} 대조(기본 기준선) salt 0..3 이 모두 있는 해만"""
+        ss = [self.series(run, seed, s, metric, k) for s in salts]
         if not all(ss): return {}
         out = {}
         for y in ss[0]:
@@ -89,6 +120,19 @@ class Sum:
 
     def seeds_of(self, run, salt=0):
         return sorted({s for (r, s, sa, k) in self.d if r == run and sa == salt and k == self.k})
+
+    def dup_of(self, run, seed, runs):
+        """같은 실행(같은 명령, 예 be.tax1 = m.tax1)의 짝: salt 0 의 해들이 모두 다른 실행 B 의 해 안에 있고 그 해 줄이 모두 같으며
+        충격 시점·대조가 같은 B (해가 더 많은 쪽, 같으면 이름이 앞선 쪽이 B). 없으면 None. 판정 수를 셀 때만 쓴다"""
+        a = self.d.get((run, seed, 0, self.k), {})
+        if not a: return None
+        for other in runs:
+            if other == run: continue
+            b = self.d.get((other, seed, 0, self.k), {})
+            if not set(a) <= set(b) or (len(b) == len(a) and other > run): continue
+            if self.start(run, seed) != self.start(other, seed) or self.control(run, seed) != self.control(other, seed): continue
+            if all(a[y] == b[y] for y in a): return other
+        return None
 
     # (a)
     def sec_band(self):
@@ -111,13 +155,14 @@ class Sum:
         self.p('')
 
     def clue(self, run, seed, salt, metric, k=None):
-        """(부호, 연속 해 수): 2년차부터 같은 부호로 대역 밖인 가장 긴 연속. 대역이 없으면 None"""
-        b = self.band(seed, metric, k)
+        """(부호, 연속 해 수): 2년차(충격 처방은 충격 뒤 2년차)부터 같은 부호로 대조 대역 밖인 가장 긴 연속. 대역이 없으면 None"""
+        b = self.band(seed, metric, k, run=self.control(run, seed))
         s = self.series(run, seed, salt, metric, k)
         if not b or not s: return None
+        y0 = self.start(run, seed)
         best, cur, sign = (0, 0), 0, 0
         for y in sorted(s):
-            if y < 2 or y not in b or s[y] is None: cur, sign = 0, 0; continue
+            if y - y0 < 2 or y not in b or s[y] is None: cur, sign = 0, 0; continue
             lo, hi = b[y]
             g = 1 if s[y] > hi else -1 if s[y] < lo else 0
             if g != 0 and g == sign: cur += 1
@@ -127,7 +172,7 @@ class Sum:
         return best
 
     def treasury_cost(self, run, seed):
-        a, b = self.series('base', seed, 0, 'treasury'), self.series(run, seed, 0, 'treasury')
+        a, b = self.series(self.control(run, seed), seed, 0, 'treasury'), self.series(run, seed, 0, 'treasury')
         ys = sorted(set(a) & set(b))
         return (a[ys[-1]] - b[ys[-1]], ys[-1]) if ys else (None, None)
 
@@ -136,9 +181,11 @@ class Sum:
         self.p('## (b) 단서: salt 0 실행 하나 대 기준선 대역 (2년차부터 3년 이상 연속, 같은 부호)\n')
         self.p('칸: + / − 와 연속 해 수 (3 미만은 ·). 국고 비용 = 기준선 순국고 − 처방 순국고 (마지막 해, 백만). 대역이 없는 시드(5~8 등)는 뺀다.\n')
         runs = sorted({r for (r, s, sa, k) in self.d if r != 'base' and sa == 0 and k == self.k})
-        rows, self.clues = [], {}
+        rows, self.clues, self.dups = [], {}, {}
         for run in runs:
             for seed in self.seeds_of(run):
+                dup = self.dup_of(run, seed, runs)
+                if dup: self.dups[(run, seed)] = dup
                 cells, any_band = [], False
                 for m, _ in CORE:
                     c = self.clue(run, seed, 0, m)
@@ -150,25 +197,35 @@ class Sum:
                     else: cells.append('·')
                 if not any_band: continue
                 cost, yy = self.treasury_cost(run, seed)
-                rows.append([run, seed] + cells + [fmt(cost) + (f' ({yy}년)' if yy else '')])
+                rows.append([run, seed] + cells + [fmt(cost) + (f' ({yy}년)' if yy else '') + (f' · = {dup} (같은 실행, 판정은 한 번)' if dup else '')])
         self.p(table(['실행', '시드'] + [nm for _, nm in CORE] + ['국고 비용'], rows))
-        n = sum(len(v) for v in self.clues.values())
-        self.p(f'\n단서 {n}개 / 칸 {len(rows)}. 단서만으로는 효과라고 쓰지 않는다 (10 3.8).\n')
+        n = sum(len(v) for key, v in self.clues.items() if key not in self.dups)
+        alt = sorted({(r, self.control(r, s)) for r in runs for s in self.seeds_of(r) if self.control(r, s) != 'base'})
+        self.p(f'\n단서 {n}개 / 칸 {len(rows) - len(self.dups)} (같은 실행 {len(self.dups)}칸은 세지 않음). 단서만으로는 효과라고 쓰지 않는다 (10 3.8).'
+               + (' 대조가 base 가 아닌 실행: ' + ', '.join(f'{r} → {c}' for r, c in alt) + '.' if alt else '')
+               + (' 충격 처방은 충격 뒤 첫 연말을 1년차로 센다: ' + ', '.join(sorted({f'{r} (+{self.start(r, s)}년)' for r in runs for s in self.seeds_of(r) if self.start(r, s)})) + '.' if any(self.start(r, s) for r in runs for s in self.seeds_of(r)) else '') + '\n')
 
     # (c)
     def sec_effects(self):
-        self.p('## (c) 효과: 단서가 뜬 칸, salt 0..3 처방 4개 대 기준선 4개, 5년차 (사전 등록 2장)\n')
-        rows, self.effects, n = [], [], 0
+        self.p('## (c) 효과: 단서가 뜬 칸, salt 0..3 처방 4개 대 대조 4개 (명세의 대조, 없으면 기준선), 5년차 (충격 처방은 충격 뒤 5년차, 사전 등록 2장)\n')
+        rows, self.effects, n, seen = [], [], 0, {}
         for (run, seed), ms in sorted(self.clues.items()):
+            ctl, y0 = self.control(run, seed), self.start(run, seed)
             for m, sign in ms:
-                t = [self.series(run, seed, s, m).get(5) for s in range(4)]
-                c = [self.series('base', seed, s, m).get(5) for s in range(4)]
-                if None in t or None in c: rows.append([run, seed, NAME.get(m, m), '처방 salt 1..3 없음 (2차 실행 필요)', '']); continue
+                ys = sorted(set(self.series(run, seed, 0, m)) & set(self.series(ctl, seed, 0, m)))
+                ye = y0 + 5 if y0 + 5 in ys or not ys else max(ys)
+                t = [self.series(run, seed, s, m).get(ye) for s in range(4)]
+                c = [self.series(ctl, seed, s, m).get(ye) for s in range(4)]
+                if None in t or None in c: rows.append([run, seed, NAME.get(m, m), f'{ye}년차: 처방 또는 대조({ctl}) salt 1..3 없음 (2차 실행 필요)', '']); continue
+                # 같은 판정 (같은 시드·지표·해·대조에서 처방 네 값이 같다 = 같은 명령의 다른 이름) 은 한 번만 센다
+                key = (seed, m, ye, ctl, tuple(t))
+                if key in seen: rows.append([run, seed, NAME.get(m, m), f'= {seen[key]} 와 같은 판정', '세지 않음']); continue
+                seen[key] = run
                 n += 1
                 eff = '+' if min(t) > max(c) else '−' if max(t) < min(c) else ''
                 if eff: self.effects.append((run, seed, m, eff))
-                rows.append([run, seed, NAME.get(m, m), f'처방 {fmt(min(t))}–{fmt(max(t))} / 대조 {fmt(min(c))}–{fmt(max(c))}', eff or '갈리지 않음'])
-        self.p(table(['실행', '시드', '지표', '5년차 범위', '효과'], rows) if rows else '단서가 뜬 칸이 없다.')
+                rows.append([run, seed, NAME.get(m, m), f'{ye}년차 처방 {fmt(min(t))}–{fmt(max(t))} / 대조({ctl}) {fmt(min(c))}–{fmt(max(c))}', eff or '갈리지 않음'])
+        self.p(table(['실행', '시드', '지표', '판정 해 범위', '효과'], rows) if rows else '단서가 뜬 칸이 없다.')
         self.p(f'\n판정 {n}개, 효과 {len(self.effects)}개. 참고: {FALSE_ALARM}. 판정 하나의 교환 가능 오경보 확률 2/70 ≈ 2.9% (10 3.8).\n')
 
     # (d)
@@ -298,18 +355,90 @@ class Sum:
         self.p(f'\n빈 해 비율 50% 이상인 칸 {over}개 / {len(rows)}. 6칸을 넘으면 "중반 원천이 모자란다" → {"넘음" if over > 6 else "넘지 않음"}.\n')
 
 
+# 0b′ 5-1 후보 비교의 기본 지표 (03 5장 1번·4.3, 범위 k 의 줄에 있는 것만 낸다. 대륙 줄에만 있는 sd.* 등은 --k all)
+COMPARE = ['gdp', 'gdpPre', 'pop', 'peas', 'jobless', 'solPeas', 'solUnsk', 'peasantIncome', 'wage.unskilled', 'wpos.unskilled.floor', 'wpos.farmer.floor',
+           'sellV', 'lvProd', 'savNoble', 'vault', 'vaultG', 'pledge', 'pledgeNew', 'startLv', 'demoLv', 'quickDemo', 'quickIdx', 'growStarts', 'glutBlock',
+           'adminStaff', 'skim', 'margR1', 'sd.grain', 'sd.fiber', 'sd.timber', 'sd.fuel', 'sd.cloth', 'sd.furniture',
+           'sdSwing.grain', 'sdSwing.fiber', 'sdSwing.timber', 'sdSwingR.grain', 'sdSwingR.fiber', 'sdSwingR.timber',
+           'capLv.grain', 'capLv.fiber', 'capLv.timber']
+CNAME = NAME | {'gdpPre': '세전 총생산', 'peasantIncome': '소작 1인 소득', 'wage.unskilled': '노동자 임금', 'wpos.unskilled.floor': '바닥에 붙은 노동자 비율',
+                'wpos.farmer.floor': '바닥에 붙은 농부 비율', 'sellV': '팔린 비율 (가치)', 'lvProd': '생산 건물 레벨 합', 'savNoble': '귀족 직종 저축',
+                'vault': '저택·금융가 금고', 'vaultG': '금고 해마다 증가율', 'pledge': '남은 금고 공사 약정', 'pledgeNew': '새 금고 약정', 'startLv': '착공 레벨',
+                'demoLv': '헐린 레벨', 'quickDemo': '52주 안 헐린 레벨', 'quickIdx': '짓고 부수기 지수', 'growStarts': '유보 증설 착공', 'glutBlock': '과잉 검사로 막힌 증설',
+                'adminStaff': '행정청 인원 (천)', 'skim': '저택 거둠', 'margR1': '실제 ÷ 설계 이익률 (기본 방식)'}
+
+
+def natural(name):
+    import re
+    return [float(x) if re.fullmatch(r'\d+(\.\d+)?', x) else x for x in re.split(r'(\d+(?:\.\d+)?)', name) if x]
+
+
+def compare(S, ctrl, runs, metrics):
+    """후보 비교: 시드마다 지표마다 해마다 평균 (min–max), 대조 대비 효과 (4 대 4 완전 분리)"""
+    k = S.k
+    allruns = sorted({r for (r, s, sa, kk) in S.d if kk == k}, key=natural)
+    cands = [r for r in (runs or allruns) if r != ctrl]
+    seeds = sorted({s for (r, s, sa, kk) in S.d if r == ctrl and kk == k and all((ctrl, s, x, k) in S.d for x in range(4))})
+    S.p(f'## 후보 비교 (대조 {ctrl}, 후보 {", ".join(cands)}, 범위 k = {k}, salt 0..3)\n')
+    S.p('효과: 그해 후보 salt 0..3 네 값이 모두 대조 네 값보다 크면 +, 모두 작으면 −. 판정 수가 많아 우연한 효과가 섞인다 (0a null 5지표 × 5년 가족 오경보율 45%, 판정 하나 약 2.9%).\n')
+    if not seeds: S.p('대조 salt 0..3 이 다 있는 시드가 없다.\n'); return
+    exp = []
+    for m in metrics:
+        if m.endswith('*'):
+            pre = m[:-1]
+            exp += sorted({key for t in S.d.values() for row in t.values() for key in row if key.startswith(pre)})
+        else: exp.append(m)
+    summary = []
+    for m in exp:
+        for seed in seeds:
+            sers = {r: [S.series(r, seed, x, m) for x in range(4)] for r in [ctrl] + cands}
+            ok = [r for r in cands if all(sers[r]) and all((r, seed, x, k) in S.d for x in range(4))]
+            if not all(sers[ctrl]) or not ok: continue
+            ys = sorted(set.intersection(*[set(s) for r in [ctrl] + ok for s in sers[r]]))
+            ys = [y for y in ys if all(s.get(y) is not None for r in [ctrl] + ok for s in sers[r])]
+            if not ys: continue
+            S.p(f'### {CNAME.get(m, m)} ({m}), 시드 {seed}\n')
+            rows, eff_rows, cnt = [], [], {r: [0, 0] for r in ok}
+            for y in ys:
+                cells, effs = [], []
+                c = [s[y] for s in sers[ctrl]]
+                for r in [ctrl] + ok:
+                    v = [s[y] for s in sers[r]]
+                    cells.append(f'{fmt(sum(v) / 4)} ({fmt(min(v))}–{fmt(max(v))})')
+                    if r != ctrl:
+                        e = '+' if min(v) > max(c) else '−' if max(v) < min(c) else ''
+                        if e == '+': cnt[r][0] += 1
+                        elif e: cnt[r][1] += 1
+                        effs.append(e or '·')
+                rows.append([y] + cells)
+                eff_rows.append([y] + effs)
+            S.p(table(['해'] + [f'{r} 평균 (min–max)' for r in [ctrl] + ok], rows))
+            S.p('\n' + table(['해'] + [f'{r} 효과' for r in ok], eff_rows) + '\n')
+            last = ys[-1]
+            for r in ok:
+                d = sum(s[last] for s in sers[r]) / 4 - sum(s[last] for s in sers[ctrl]) / 4
+                summary.append([CNAME.get(m, m), m, seed, r, cnt[r][0], cnt[r][1], len(ys), f'{fmt(d)} ({last}년)'])
+    S.p('### 요약: 효과가 난 해 수 (대조 대비)\n')
+    S.p(table(['지표', '키', '시드', '후보', '+ 해', '− 해', '해 수', '마지막 해 평균 차'], summary) if summary else '비교할 칸이 없다.')
+    S.p('')
+
+
 def main():
     args = sys.argv[1:]
     def opt(n, d=None):
         if n in args:
             i = args.index(n); v = args[i + 1]; del args[i:i + 2]; return v
         return d
-    k, md, empty = opt('--k', '1'), opt('--md'), opt('--empty')
+    cmp_ctrl, runs, metrics = opt('--compare'), opt('--runs'), opt('--metrics')
+    k, md, empty, specs = opt('--k', 'all' if cmp_ctrl else '1'), opt('--md'), opt('--empty'), opt('--specs')
     data, logs = load(args)
-    S = Sum(data, logs, k)
+    S = Sum(data, logs, k, spec_controls(specs) if specs else None)
     S.p(f'# 0b 측정 분석 (cli/labsum.py, 입력 {", ".join(os.path.basename(a) for a in args)})\n')
-    S.sec_band(); S.sec_clues(); S.sec_effects(); S.sec_e7(); S.sec_pass(); S.sec_false()
-    if empty: S.sec_empty(empty.split(','))
+    if cmp_ctrl:
+        compare(S, cmp_ctrl, runs.split(',') if runs else None, metrics.split(',') if metrics else COMPARE)
+    else:
+        S.sec_band(); S.sec_clues(); S.sec_effects(); S.sec_e7(); S.sec_pass(); S.sec_false()
+        if empty: S.sec_empty(empty.split(','))
     text = '\n'.join(S.out)
     if md:
         open(md, 'w', encoding='utf-8').write(text)

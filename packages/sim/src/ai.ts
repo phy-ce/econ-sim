@@ -1,6 +1,6 @@
 import { BUILDING_BY_ID, buildPointsOf, BUILDING_TYPES, EDUCATION_FLOOR, EDUCATION_RANGE, GOOD_IDS, GOODS, SKILL_DEFS, TECH_BY_ID, TICKS_PER_WEEK, TICKS_PER_YEAR, TRADING_POST, TUNE, getMethod, regionPerk, tradeEscrowPerLevel, tradeReserveOf } from './data';
 import { withEstimateCache, regionAvgWealth, regionPopulation, wageCostOf,
-  availableMethods, ownBuildingAt, builderOf, canBuildType, kingdomGdp, paysDividend, paysShare, companyById, constructionEstimate, creditLimit, depositFree, efficiency, estimateMethod, harvestFactor, hasBuilder, isGovernment, regionById, wagesAt, researchableTechs, roomFor, sellsShares, slots,
+  availableMethods, ownBuildingAt, builderOf, canBuildType, kingdomGdp, paysDividend, paysShare, companyById, constructionEstimate, creditLimit, depositFree, efficiency, estimateMethod, harvestFactor, hasBuilder, isGovernment, regionById, wagesAt, researchableTechs, roomFor, sellsShares, slots, mainOutput, projectedSD,
 } from './economy';
 import { MAX_CONCURRENT_CONSTRUCTIONS, MAX_LEVELS_PER_PROJECT, applyCommand } from './commands';
 import { committedCost, favours, funderWeight, hasReserve, lawRevenue, ownerBuildings, ownerFunds, reserveCap, reserveOf, taxRates, treasuryFree } from './finance';
@@ -1124,6 +1124,7 @@ function planTrials(w: World, c: Company, canStart: () => boolean, free: () => n
  * 유보 기준 증설·철거 (TUNE.aiReserveRule, 매주 배당 정산 뒤): 생산 건물마다 찬 주(유보 자산 ≥ 상한 × RESERVE_FULL)와
  * 바닥난 적자 주(유보 자산 0, 주간 손익 = profitEma × 7 < 0. 기상 조건이 걸린 주와 공사로 생긴 지(시작 건물은 0일부터) RAMP_WEEKS 주 안은 세지 않는다)를 센다.
  * 바닥난 적자가 TUNE.reserveShrinkWeeks 주면 1레벨 철거 대기, 증설 확률(TUNE.reserveGrowMax > 0, 아래)이 뽑히면 (reserveGrowMax 0 이면 찬 주가 RESERVE_STREAK 주면) 땅(매장량)이 있고 돈이 되면 1레벨 증설 (못 하면 다음 주에 다시 본다).
+ * TUNE.aiGlutSD > 0 이면 증설 확률이 뽑혀도 그 지역 그 산출 상품의 예상 공급 ÷ 수요(projectedSD)가 그 값을 넘으면 그 주는 증설하지 않는다 (오버홀 03 5-1).
  * 증설 공사 중이거나 철거 중인 건물은 세지 않는다. 돈: 왕실은 새 공사에 쓸 수 있는 돈(freeCash), 민간은 저택·금융가 금고(공사 명령이 낼 곳을 고른다)
  */
 function reserveLevels(w: World, c: Company, canStart: () => boolean, free: () => number, start: (p: Pick, path: string) => boolean) {
@@ -1141,7 +1142,14 @@ function reserveLevels(w: World, c: Company, canStart: () => boolean, free: () =
     // 증설은 확률로 (2026-10-25 사용자 "확률분포로"): 유보 자산이 상한의 TUNE.reserveGrowFrom 을 넘은 만큼 확률이 오르고, 가득 차면 주에 TUNE.reserveGrowMax
     const fillR = cap > 0 ? res / cap : 0;
     const pGrow = TUNE.reserveGrowMax * clamp((fillR - TUNE.reserveGrowFrom) / Math.max(1e-9, 1 - TUNE.reserveGrowFrom), 0, 1);
-    const rich = TUNE.reserveGrowMax > 0 ? aiRand(w, 'grow', keyCompany(c.id), keyRegion(b.regionId), keyStr(b.typeId), keyStr(b.methodId), keyWeek(w.tick), keyIdx(idx)) < pGrow : res >= cap * RESERVE_FULL;
+    let rich = TUNE.reserveGrowMax > 0 ? aiRand(w, 'grow', keyCompany(c.id), keyRegion(b.regionId), keyStr(b.typeId), keyStr(b.methodId), keyWeek(w.tick), keyIdx(idx)) < pGrow : res >= cap * RESERVE_FULL;
+    // 과잉 검사 (TUNE.aiGlutSD > 0, 오버홀 03 5-1): 그 지역 그 산출 상품(산출이 여럿이면 기본가 값이 가장 큰 것, mainOutput)의 예상 공급 ÷ 수요
+    // (공사 중 레벨 산출 포함, projectedSD)가 임계를 넘으면 이번 주 증설 확률 0 (찬 주로 세지 않는다). aiRand 는 키 해시라 막아도 다른 난수가 밀리지 않는다
+    if (rich && TUNE.aiGlutSD > 0) {
+      const g = mainOutput(b.typeId, b.methodId);
+      const sd = g ? projectedSD(w, b.regionId, g) : null;
+      if (sd !== null && sd > TUNE.aiGlutSD) { rich = false; aiTrace.on?.(w, c, 'glutBlock', b.typeId, b.methodId, 0, undefined, b.regionId); }
+    }
     // 새 건물(시작 건물은 0일에 생긴 것으로 본다)은 RAMP_WEEKS 동안 사람을 뽑으며 내는 적자를 세지 않는다
     const ramping = w.tick - (b.builtTick ?? 0) < RAMP_WEEKS * TICKS_PER_WEEK;
     const broke = res <= 0 && b.profitEma * TICKS_PER_WEEK < 0 && !ramping && harvestFactor(w, b.regionId, BUILDING_BY_ID[b.typeId].land) >= 1;

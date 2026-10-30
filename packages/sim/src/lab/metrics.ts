@@ -4,10 +4,11 @@
 // 날마다 세는 값(체류일·바닥에 붙은 주·한계 켜진 날)은 after() 가 step 뒤에 센다. 지표 정의가 문서에 없는 것은 넣지 않는다 (DEFINED_NOT 목록).
 import { BUILDING_BY_ID, BUILDING_TYPES, CLASS_DEFS, CONSUMPTION_PER_CAPITA, GOOD_IDS, GOODS, NEEDS, SKILL_DEFS, TECH_BY_ID, TECH_COST, TICKS_PER_WEEK, TICKS_PER_YEAR, TRADING_POST, TUNE, WORKFORCE_RATIO, getMethod, needsAt } from '../data';
 import {
-  FLOW_ZERO, builderOf, companyById, constructionEstimate, creditLimit, estimateMethod, harvestCondition, harvestFactor, isGovernment, kingdomGdp, paysDividend,
+  FLOW_ZERO, builderOf, companyById, constructionEstimate, creditLimit, estimateMethod, harvestCondition, harvestFactor, isGovernment, isOwnerBuilding, kingdomGdp, paysDividend,
   slots, totalMoney, wagesAt,
 } from '../economy';
 import { kingdomLiteracy } from '../finance';
+import { FLOW } from '../kingdoms';
 import { subsistenceWage } from '../labor';
 import { PRICE_MAX, PRICE_MIN, basketCostAt, needSharesAt, postUsable } from '../market';
 import { lawUnlocked } from '../policy';
@@ -56,6 +57,18 @@ export function nextMethod(typeId: string, methodId: string): string | undefined
   const same = t.methods.filter((m) => key(m) === key(cur));
   return same[same.indexOf(cur) + 1]?.id;
 }
+
+/** 설계 이익률 (methods_audit.ts 와 같은 셈): 기본가·기본 임금에서 (매출 − 임금 − 원료) ÷ 매출. 기본 방식은 20% (CLAUDE.md 건물 숫자 규칙) */
+const DESIGN_MARGIN = new Map<string, number>();
+for (const t of BUILDING_TYPES) for (const m of t.methods) {
+  let rev = 0, cost = 0;
+  for (const [g, q] of Object.entries(m.outputs)) rev += (q ?? 0) * GOODS[g as GoodId].basePrice;
+  for (const [g, q] of Object.entries(m.inputs)) cost += (q ?? 0) * GOODS[g as GoodId].basePrice;
+  for (const [s, n] of Object.entries(m.workers)) cost += (n ?? 0) * SKILL_DEFS[s as Skill].baseWage;
+  if (rev > 0) DESIGN_MARGIN.set(`${t.id}.${m.id}`, (rev - cost) / rev);
+}
+/** '지은 지 52주 안' (07 4.5 (d) 짓고 부수기 지수) */
+const QUICK_TICKS = 52 * TICKS_PER_WEEK;
 
 /** 생산 건물 (단계 통계·노동 몫): 자동 건물·정부 건물·산출 없는 건물(무역소) 제외 */
 function isProduction(b: Building): boolean {
@@ -173,10 +186,22 @@ class Acc {
   taxStep = 0; tax1 = 0; tax5 = 0; welStep = 0; wageStep = 0;
   debtMax = 0; debt75 = 0;
   lawFails = 0;
+  // 0b′ 5-1 비교 지표 (03 5장 1번): 팔린 비율(가치), 짓고 부수기 (레벨), 금고 새 약정, 유보 증설 착공·과잉 검사로 막힌 증설
+  soldV = 0; supV = 0;
+  demoLv = 0; quickDemo = 0; startLv = 0; builtLv = 0; pledgeNew = 0;
+  growStarts = 0; glutBlock = 0;
   constructor() { for (let c = 0; c < NC; c++) this.burdenRing.push(new Float64Array(0)); }
 }
 
-interface GoodAcc { sd: number; sdN: number; rsd: Float64Array; rsdN: Float64Array; lo: number; hi: number; n: number; sup: number; dem: number; sub: number; bld: number; tin: number; tout: number; hh: number; price: number }
+interface GoodAcc {
+  sd: number; sdN: number; rsd: Float64Array; rsdN: Float64Array; lo: number; hi: number; n: number; sup: number; dem: number; sub: number; bld: number; tin: number; tout: number; hh: number; price: number;
+  /** 해 안 S/D 최소·최대 (대륙, 지역별) */
+  cMin: number; cMax: number; rMin: Float64Array; rMax: Float64Array;
+  /** 팔린 양 × 값, 내놓은 양 × 값 (하루 합) */
+  soldV: number; supV: number;
+}
+/** 건물 레벨 기록 (짓고 부수기): 레벨마다 완공 날(시작 레벨·지은 날을 모르는 레벨은 −Infinity), 지역·종류 키 */
+interface LevelRec { lv: number; ticks: number[]; key: string; regionId: number }
 interface RegionAcc { cond: number; hf: number; grain: number; sales: number; floor: number }
 
 const sig = (x: number) => (Number.isFinite(x) ? (x === 0 || Number.isInteger(x) ? x : Number(x.toPrecision(6))) : null);
@@ -202,6 +227,14 @@ export class Collector {
   lawYear: Record<string, number>[] = [];
   readonly base1 = basketAtBase(1);
   readonly base5 = basketAtBase(5);
+  /** 짓고 부수기: 건물 id → 레벨 기록, 본 공사 id → (지역·종류 키, 레벨 수) */
+  levels = new Map<number, LevelRec>();
+  cons = new Map<number, [string, number]>();
+  /** 연초 금고 합 (범위별), 연초 저택 거둠 누계 (kingdoms.ts FLOW) */
+  vault0: number[] = [];
+  skim0 = 0;
+  /** 건물 종류.방식별 한 해 [매출, 원료비, 임금] (대륙) */
+  margin = new Map<string, [number, number, number]>();
 
   constructor(w: World, readonly opt: CollectorOptions) {
     this.kingdoms = [...w.kingdoms];
@@ -216,12 +249,27 @@ export class Collector {
       this.tierYear.push({}); this.lawYear.push({});
     }
     this.popBefore = this.scopePops(w);
+    for (const b of w.buildings) if (!BUILDING_BY_ID[b.typeId].auto) this.levels.set(b.id, { lv: b.level, ticks: new Array(b.level).fill(-Infinity), key: `${b.regionId}|${b.typeId}`, regionId: b.regionId });
+    for (const k of w.constructions) this.cons.set(k.id, [`${k.regionId}|${k.typeId}`, k.levels ?? 1]);
     this.startYear(w);
     this.techs(w, 0);
   }
 
+  /** ai.ts aiTrace 로 받는 AI 판단 기록 (run.ts 가 이어 준다): 유보 증설 착공('reserve', 레벨), 과잉 검사로 막힌 증설('glutBlock', 건물·주) */
+  trace(path: string, regionId: number | undefined, levels: number) {
+    if (path !== 'reserve' && path !== 'glutBlock') return;
+    const s = regionId == null ? -1 : this.scopeOf(regionId);
+    for (const a of s >= 0 ? [this.acc[s], this.acc[this.nk]] : [this.acc[this.nk]]) {
+      if (path === 'reserve') a.growStarts += levels; else a.glutBlock++;
+    }
+  }
+
   private newGood(w: World): GoodAcc {
-    return { sd: 0, sdN: 0, rsd: new Float64Array(w.regions.length), rsdN: new Float64Array(w.regions.length), lo: 0, hi: 0, n: 0, sup: 0, dem: 0, sub: 0, bld: 0, tin: 0, tout: 0, hh: 0, price: 0 };
+    const n = w.regions.length;
+    return {
+      sd: 0, sdN: 0, rsd: new Float64Array(n), rsdN: new Float64Array(n), lo: 0, hi: 0, n: 0, sup: 0, dem: 0, sub: 0, bld: 0, tin: 0, tout: 0, hh: 0, price: 0,
+      cMin: Infinity, cMax: -Infinity, rMin: new Float64Array(n).fill(Infinity), rMax: new Float64Array(n).fill(-Infinity), soldV: 0, supV: 0,
+    };
   }
 
   private scopeOf(regionId: number): number { return this.regionScope.get(regionId) ?? -1; }
@@ -233,6 +281,15 @@ export class Collector {
   }
 
   private startYear(w: World) {
+    this.vault0 = new Array(this.nk + 1).fill(0);
+    for (const b of w.buildings) {
+      if (!isOwnerBuilding(b.typeId)) continue;
+      const s = this.scopeOf(b.regionId);
+      if (s >= 0) this.vault0[s] += b.cash ?? 0;
+      this.vault0[this.nk] += b.cash ?? 0;
+    }
+    this.skim0 = FLOW['skim.manor'] ?? 0;
+    this.margin.clear();
     for (const a of this.acc) a.sav0.fill(0);
     for (const p of w.pops) {
       const s = this.scopeOf(p.regionId);
@@ -278,7 +335,15 @@ export class Collector {
         ga.n++; ga.price += ratio;
         if (ratio <= mn * 1.05) ga.lo++;
         if (ratio >= mx * 0.95) ga.hi++;
-        if (m.demandEma > FLOW_ZERO) { ga.rsd[ri] += m.supplyEma / m.demandEma; ga.rsdN[ri]++; }
+        if (m.demandEma > FLOW_ZERO) {
+          const q = m.supplyEma / m.demandEma;
+          ga.rsd[ri] += q; ga.rsdN[ri]++;
+          if (q < ga.rMin[ri]) ga.rMin[ri] = q;
+          if (q > ga.rMax[ri]) ga.rMax[ri] = q;
+        }
+        const sv = m.sold * m.price, pv = m.supply * m.price;
+        ga.soldV += sv; ga.supV += pv;
+        for (const a of s >= 0 ? [this.acc[s], all] : [all]) { a.soldV += sv; a.supV += pv; }
         ga.sup += m.supply; ga.dem += m.demand; ga.tin += m.shippedIn; ga.tout += m.shippedOut;
         if (m.supplyBy) for (const key in m.supplyBy) { const q = m.supplyBy[key]; if (key === 'subsistence') ga.sub += q; else if (key.startsWith('bld:')) ga.bld += q; }
         if (m.demandBy) for (const key in m.demandBy) if (key.startsWith('pop:')) ga.hh += m.demandBy[key];
@@ -293,7 +358,7 @@ export class Collector {
       let s = 0, d = 0;
       for (const r of w.regions) { s += r.market[g].supplyEma; d += r.market[g].demandEma; }
       const ga = this.goods.get(g)!;
-      if (d > FLOW_ZERO) { ga.sd += s / d; ga.sdN++; }
+      if (d > FLOW_ZERO) { const q = s / d; ga.sd += q; ga.sdN++; if (q < ga.cMin) ga.cMin = q; if (q > ga.cMax) ga.cMax = q; }
     }
     // pop: 소득 원천·소비·생활수준·L6·부담률·이주
     const basket1 = new Map<number, number>();
@@ -349,7 +414,12 @@ export class Collector {
       if (!isProduction(b)) continue;
       const s = this.scopeOf(b.regionId), t = Math.min(MAX_TIER, methodTier(b.typeId, b.methodId));
       for (const si of s >= 0 ? [s, nk] : [nk]) { this.acc[si].tWage[t] += b.last.wageCost; this.acc[si].tVa[t] += b.last.revenue - b.last.inputCost; }
+      const key = `${b.typeId}.${b.methodId}`;
+      const mg = this.margin.get(key);
+      if (mg) { mg[0] += b.last.revenue; mg[1] += b.last.inputCost; mg[2] += b.last.wageCost; }
+      else this.margin.set(key, [b.last.revenue, b.last.inputCost, b.last.wageCost]);
     }
+    this.trackLevels(w);
     // 정책 단계
     this.kingdoms.forEach((k, i) => {
       for (const a of [this.acc[i], all]) {
@@ -359,6 +429,71 @@ export class Collector {
         if (k.budget.tax === 5) a.tax5 += f;
       }
     });
+  }
+
+  /**
+   * 짓고 부수기 (07 4.5 (d), 03 4.3 "지은 지 52주 안에 헐린 레벨"): 날마다 건물 레벨과 공사 목록을 앞날과 견준다.
+   * 새 공사 = 착공 레벨 (그 공사의 저택·금융가 약정액 합 = 새 약정). 같은 (지역, 종류) 안에서 그날 사라진 공사의 레벨까지의 늘어남 = 완공 (그날을 레벨에 적는다),
+   * 그 밖의 늘어남 = 민영화로 옮겨 온 레벨. 같은 (지역, 종류)의 줄어듦 중 옮겨 온 레벨만큼은 옮겨 간 레벨(지은 날을 넘긴다), 나머지 = 헐린 레벨.
+   * 헐린 레벨은 그 건물에서 가장 최근에 지은 레벨로 본다 (그래서 52주 안 수는 상한이다). 시작 건물의 레벨은 지은 날이 없어 52주 안으로 세지 않는다.
+   * 자동 건물(소작지·저택·금융가: 레벨이 사람 수를 따라 저절로 바뀐다)은 세지 않는다. 착공 레벨은 모든 공사 (자동 건물은 공사로 짓지 않는다)
+   */
+  private trackLevels(w: World) {
+    const nk = this.nk;
+    const scopes = (regionId: number) => { const s = this.scopeOf(regionId); return s >= 0 ? [this.acc[s], this.acc[nk]] : [this.acc[nk]]; };
+    // 공사: 새로 생긴 것 (착공), 사라진 것 (완공 또는 취소)
+    const built = new Map<string, number>();
+    const live = new Set<number>();
+    for (const k of w.constructions) {
+      live.add(k.id);
+      if (this.cons.has(k.id)) continue;
+      const lv = k.levels ?? 1;
+      this.cons.set(k.id, [`${k.regionId}|${k.typeId}`, lv]);
+      let pledge = 0;
+      if (k.funders) for (const v of Object.values(k.funders)) pledge += v;
+      for (const a of scopes(k.regionId)) { a.startLv += lv; a.pledgeNew += pledge; }
+    }
+    for (const [id, [key, lv]] of this.cons) if (!live.has(id)) { built.set(key, (built.get(key) ?? 0) + lv); this.cons.delete(id); }
+    // 건물 레벨 변화 (w.buildings 순서, 사라진 건물은 기록 순서)
+    const gains: [Building, LevelRec, number][] = [], drops: [LevelRec, number][] = [];
+    const seen = new Set<number>();
+    for (const b of w.buildings) {
+      if (BUILDING_BY_ID[b.typeId].auto) continue;
+      seen.add(b.id);
+      let rec = this.levels.get(b.id);
+      if (!rec) { rec = { lv: 0, ticks: [], key: `${b.regionId}|${b.typeId}`, regionId: b.regionId }; this.levels.set(b.id, rec); }
+      if (b.level > rec.lv) gains.push([b, rec, b.level - rec.lv]);
+      else if (b.level < rec.lv) drops.push([rec, rec.lv - b.level]);
+    }
+    for (const [id, rec] of this.levels) if (!seen.has(id)) { if (rec.lv > 0) drops.push([rec, rec.lv]); this.levels.delete(id); }
+    if (!gains.length && !drops.length) return;
+    // 늘어남: 완공 몫과 옮겨 온 몫
+    const movedIn = new Map<string, number>();
+    const inQueue: [LevelRec, number][] = [];
+    for (const [b, rec, n] of gains) {
+      const c = Math.min(n, built.get(rec.key) ?? 0);
+      built.set(rec.key, (built.get(rec.key) ?? 0) - c);
+      for (let i = 0; i < c; i++) rec.ticks.push(w.tick);
+      for (const a of scopes(b.regionId)) a.builtLv += c;
+      if (n > c) { movedIn.set(rec.key, (movedIn.get(rec.key) ?? 0) + n - c); inQueue.push([rec, n - c]); }
+      rec.lv = b.level;
+    }
+    // 줄어듦: 옮겨 간 몫(민영화)과 헐린 몫
+    const passed = new Map<string, number[]>();
+    for (const [rec, n] of drops) {
+      const mv = Math.min(n, movedIn.get(rec.key) ?? 0);
+      movedIn.set(rec.key, (movedIn.get(rec.key) ?? 0) - mv);
+      for (let i = 0; i < n; i++) {
+        const t = rec.ticks.pop() ?? -Infinity;
+        if (i < mv) { const q = passed.get(rec.key) ?? []; q.push(t); passed.set(rec.key, q); continue; }
+        for (const a of scopes(rec.regionId)) { a.demoLv++; if (w.tick - t < QUICK_TICKS) a.quickDemo++; }
+      }
+      rec.lv -= n;
+    }
+    for (const [rec, n] of inQueue) {
+      for (let i = 0; i < n; i++) rec.ticks.push(passed.get(rec.key)?.shift() ?? -Infinity);
+      rec.ticks.sort((x, y) => x - y);
+    }
   }
 
   // ------------------------------------------------------------ 주마다
@@ -560,6 +695,19 @@ export class Collector {
       }
     }
     const wageOf = (s: Skill) => div(paid[SKILLS.indexOf(s)], emp[SKILLS.indexOf(s)]);
+    // 0b′ 5-1: 저택·금융가 금고 합, 남은 금고 공사 약정액 (약정 − 낸 공사비, finance.ts pledgeLeft 의 합), 행정청 인원·레벨
+    let vault = 0, pledge = 0, adminStaff = 0, adminLv = 0;
+    for (const b of w.buildings) {
+      if (!inScope(b.regionId)) continue;
+      if (isOwnerBuilding(b.typeId)) vault += b.cash ?? 0;
+      if (b.typeId === 'admin') { adminLv += b.level; for (const s of SKILLS) adminStaff += b.employed[s]; }
+    }
+    for (const x of w.constructions) {
+      if (!x.funders || !inScope(x.regionId)) continue;
+      let tot = 0;
+      for (const v of Object.values(x.funders)) tot += v;
+      pledge += Math.max(0, tot - x.spent);
+    }
     let pi = 0, pw = 0, bk1 = 0, bk5 = 0, bkw = 0, bkWorker = 0;
     for (const r of w.regions) {
       if (!inScope(r.id)) continue;
@@ -665,6 +813,11 @@ export class Collector {
       ...(k ? { taxIdx: TAX_LAWS.indexOf(k.taxLaw), invIdx: INVEST_LAWS.indexOf(k.investLaw), welL: WELFARE_LAWS.indexOf(k.welfareLaw ?? 'none'),
         tWeeks: sig((k.expenseEma ?? 0) > 0 ? cash / k.expenseEma! : NaN) } : {}),
       lawFails: a.lawFails, debtMax: sig(a.debtMax), debt75: sig(a.debt75),
+      // 0b′ 5-1 (03 5장 1번·4.3): 팔린 비율(가치), 귀족 직종(상급·하급 귀족) 저축 합, 금고 합·해마다 증가율, 금고 공사 약정 (남은 것, 올해 새로), 짓고 부수기, 유보 증설, 행정청
+      sellV: sig(div(a.soldV, a.supV) ?? NaN), savNoble: sig((sav[CI.gentry] + sav[CI.aristocrat]) / M),
+      vault: sig(vault / M), vaultG: sig(this.vault0[i] > 0 ? (vault - this.vault0[i]) / this.vault0[i] : NaN), pledge: sig(pledge / M), pledgeNew: sig(a.pledgeNew / M),
+      startLv: a.startLv, builtLv: a.builtLv, demoLv: a.demoLv, quickDemo: a.quickDemo, quickIdx: sig(div(a.quickDemo, a.startLv) ?? NaN),
+      growStarts: a.growStarts, glutBlock: a.glutBlock, lvProd: lvTot, adminStaff: sig(adminStaff / K), adminLv,
       // X08-H (왕국 단위 요약), 08 3.5 한계
       harvDays: a.harvDays, k4Share: sig(div(k4n, k4d) ?? NaN), lim,
       ...tech,
@@ -697,12 +850,35 @@ export class Collector {
       tIn[g] = sig(a.tin / nd / K); tOut[g] = sig(a.tout / nd / K); hh[g] = sig(a.hh / nd / K);
       cap[g] = sig((capQ.get(g) ?? 0) / K); capLv[g] = capL.get(g) ?? 0;
     }
+    // 0b′ 5-1: 해 안 S/D 진동 폭 (최대 − 최소; 대륙, 지역 중앙값·최대. 수요가 아주 작은 지역의 폭이 평균을 덮어 중앙값을 쓴다), 상품별 팔린 비율(가치)
+    const sdSwing: Record<string, number | null> = {}, sdSwingR: Record<string, number | null> = {}, sdSwingRMax: Record<string, number | null> = {}, sellG: Record<string, number | null> = {};
+    for (const g of GOOD_IDS) {
+      const a = this.goods.get(g)!;
+      sdSwing[g] = a.sdN ? sig(a.cMax - a.cMin) : null;
+      const sw: number[] = [];
+      for (let i = 0; i < a.rMin.length; i++) if (a.rsdN[i] > 0) sw.push(a.rMax[i] - a.rMin[i]);
+      sw.sort((x, y) => x - y);
+      sdSwingR[g] = sw.length ? sig(sw.length % 2 ? sw[(sw.length - 1) / 2] : (sw[sw.length / 2 - 1] + sw[sw.length / 2]) / 2) : null;
+      sdSwingRMax[g] = sw.length ? sig(Math.max(...sw)) : null;
+      sellG[g] = a.supV > 0 ? sig(a.soldV / a.supV) : null;
+    }
+    // 실제 이익률 ÷ 설계 이익률 (건물 종류.방식별 한 해 합: (매출 − 원료 − 임금) ÷ 매출), 기본 방식(1단계) 묶음은 ÷ 20%
+    const margR: Record<string, number | null> = {};
+    let r1 = 0, p1 = 0;
+    for (const [key, [rev, inp, wage]] of this.margin) {
+      const dm = DESIGN_MARGIN.get(key);
+      if (!(rev > 0) || !dm) continue;
+      margR[key] = sig((rev - inp - wage) / rev / dm);
+      const [typeId, methodId] = key.split('.');
+      if (methodTier(typeId, methodId) === 1) { r1 += rev; p1 += rev - inp - wage; }
+    }
+    const skim = (FLOW['skim.manor'] ?? 0) - this.skim0;
     const reg: Record<string, Record<string, number | null>> = {};
     for (const r of w.regions) {
       const a = this.regions.get(r.id)!;
       reg[r.id] = { k: r.kingdomId, cond: sig(a.cond / nd), hf: sig(a.hf / nd), grain: sig(a.grain / nd), sales: sig(a.sales / K), floor: sig(a.floor / nd) };
     }
-    return { sd, sdMax, sdAvg, lo, hi, price, sup, dem, subSup, bldSup, tIn, tOut, hh, cap, capLv, reg };
+    return { sd, sdMax, sdAvg, lo, hi, price, sup, dem, subSup, bldSup, tIn, tOut, hh, cap, capLv, reg, sdSwing, sdSwingR, sdSwingRMax, sellG, margR, margR1: sig(r1 > 0 ? p1 / r1 / 0.2 : NaN), skim: sig(skim / M) };
   }
 }
 
@@ -714,7 +890,8 @@ export const DEFINED_NOT: { item: string; why: string }[] = [
   { item: '실질 임금 연결 지수 (03 E1b 의 (나), 매년 실제 구매량 연결)', why: '정의는 있으나 지역·계층별 구매량 연결 계산이 이 도구에 없다. 고정 묶음(가) 판 realW.* 만 낸다' },
   { item: '허브 상품 충족률의 왕국 한 값', why: '06 6.6 은 상품마다 공급 ÷ 수요만 정의한다. hub.<상품> 여섯 개로 낸다' },
   { item: '대기 일수 E7 기준 단위', why: '08 3.3.1 기준 단위 근거 없음, 비율 지표도 아니라 E7 판정을 하지 않는다 (값은 backlog)' },
-  { item: '올리지 못한 레벨의 원인 4가지 비율, 일자리 장부, 짓고 허는 반복 (06 8.1 2·5·7)', why: 'AI 판단 안의 값이라 세계 상태만 읽어서는 못 센다 (methoddiag 가 필요)' },
+  { item: '올리지 못한 레벨의 원인 4가지 비율, 일자리 장부 (06 8.1 2·5)', why: 'AI 판단 안의 값이라 세계 상태만 읽어서는 못 센다 (methoddiag 가 필요). 짓고 허는 반복은 레벨 기록으로 센다 (quickDemo·quickIdx, 같은 (회사, 지역, 종류)의 같은 해 착공·철거 "되풀이" 수는 아직 없다)' },
+  { item: '저택 거둠의 왕국별 값', why: 'kingdoms.ts FLOW 가 대륙 합 누계라 대륙 줄의 skim 만 낸다' },
   { item: '표지 채널 부담·궤적 이탈 (08 8.2 #8, 4.2)', why: '궤적 이탈의 W·k 후보가 정해지지 않았다 (잡음 폭이 나온 뒤)' },
   { item: '미지급 이탈 잔존율 (05 8.3 고갈 처방)', why: '건물별 일꾼 추적이 필요하다. 왕실 생산 건물이 없는 판에서는 0 이다' },
   { item: '세입 중 복지로 되돌아간 몫, 복지 문턱 전환 비율 (05 8.1)', why: 'pop 하루 단위의 같은 주 짝 계산이 필요하다 (이번 묶음에서 뺌)' },

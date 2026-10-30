@@ -1200,6 +1200,7 @@
     "wages": 3,
     "welfare": 3
    },
+   "control": "noplayer",
    "note": "withPlayer 끔에서 왕국 1 의 예산 단계를 시작값 3·3·3 에 고정. 대조는 noplayer (X01-b) 의 첫 10년"
   },
   {
@@ -1215,6 +1216,7 @@
     "wages": 3,
     "welfare": 3
    },
+   "control": "noplayer",
    "note": "withPlayer 끔에서 왕국 1 의 예산 단계를 시작값 3·3·3 에 고정. 대조는 noplayer (X01-b) 의 첫 10년"
   },
   {

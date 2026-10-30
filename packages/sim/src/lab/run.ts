@@ -5,6 +5,7 @@
 import { BUILDING_BY_ID, TECH_BY_ID, TICKS_PER_YEAR, TUNE } from '../data';
 import { builderOf, companyById, creditLimit, landFree, researchableTechs } from '../economy';
 import { applyCommandMsg, createWorld, step } from '../index';
+import { aiTrace } from '../ai';
 import type { Command, InvestLaw, TaxLaw, WelfareLaw, World } from '../types';
 import { Collector, methodTier, nextMethod } from './metrics';
 import type { LabRow } from './metrics';
@@ -49,6 +50,8 @@ export interface LabSpec {
   pin?: { kingdom: number; tax: number; wages: number; welfare: number };
   /** 개발용 충격: drain = 국고 0·부채를 한도로 (국고 현금은 소멸로 장부에 적어 화폐 항등식을 지킨다) */
   shocks?: { t: number; kind: 'drain'; kingdoms?: number[] }[];
+  /** 효과 판정의 대조 실행 이름 (cli/labsum.py, 없으면 'base'). 예: 사다리 끔 → 'noplayer' */
+  control?: string;
   /** 기본 묶음에서 빼는 실행 (lab.sh 는 OPTIONAL=1 일 때만 돈다) */
   optional?: boolean;
   note?: string;
@@ -212,6 +215,7 @@ export interface RunOptions {
 export function runSpec(spec: LabSpec, opts: RunOptions = {}): LabResult {
   const saved: Record<string, unknown> = { ...TUNE };
   const t0 = performance.now();
+  const prevTrace = aiTrace.on;
   try {
     if (spec.tune) Object.assign(TUNE, spec.tune);
     const salt = spec.salt ?? 0, withPlayer = spec.withPlayer ?? true;
@@ -233,6 +237,8 @@ export function runSpec(spec: LabSpec, opts: RunOptions = {}): LabResult {
     const tasks = (spec.script ?? []).map((l) => makeTask(l, log));
     const fixed = withPlayer && (spec.research ?? 'fixed') === 'fixed';
     const col = opts.observe === false ? null : new Collector(w, { run: spec.name, seed: spec.seed, salt });
+    // AI 판단 기록 (읽기만): 유보 증설 착공·과잉 검사로 막힌 증설을 센다. 앞에 걸린 훅은 그대로 부르고, 끝나면 되돌린다
+    if (col) aiTrace.on = (tw, c, path, typeId, methodId, levels, o, regionId) => { prevTrace?.(tw, c, path, typeId, methodId, levels, o, regionId); if (tw === w) col.trace(path, regionId, levels); };
     const rows: LabRow[] = [];
     const pin = spec.pin;
     const pinBudget = () => {
@@ -256,6 +262,7 @@ export function runSpec(spec: LabSpec, opts: RunOptions = {}): LabResult {
     }
     return { rows, log, world: w, ms: performance.now() - t0 };
   } finally {
+    aiTrace.on = prevTrace;
     for (const k of Object.keys(TUNE)) if (!(k in saved)) delete (TUNE as Record<string, unknown>)[k];
     Object.assign(TUNE, saved);
   }
