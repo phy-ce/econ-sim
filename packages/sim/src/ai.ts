@@ -717,8 +717,8 @@ function planResearch(w: World, c: Company, o: Outlook) {
       memo.set(id, v);
       return v;
     };
-    // 점수 흔들기는 (회사, 기술, 주) 키의 AI 난수 (rng/aiRand.ts: 다른 명령이 난수를 밀지 않는다)
-    const ranked = researchableTechs(c).map((id) => ({ id, s: ((deep(id) + 1) / TECH_BY_ID[id].cost) * (0.85 + aiRand(w, 'research', keyCompany(c.id), keyStr(id), keyWeek(w.tick)) * 0.3) })).sort((a, b) => b.s - a.s);
+    // 점수 흔들기는 (회사, 기술, 주) 키의 AI 난수 (rng/aiRand.ts: 다른 명령이 난수를 밀지 않는다), 폭 1 ± AI_JITTER
+    const ranked = researchableTechs(c).map((id) => ({ id, s: ((deep(id) + 1) / TECH_BY_ID[id].cost) * (1 - AI_JITTER + aiRand(w, 'research', keyCompany(c.id), keyStr(id), keyWeek(w.tick)) * 2 * AI_JITTER) })).sort((a, b) => b.s - a.s);
     if (ranked.length) applyCommand(w, c.id, { type: 'setResearch', techId: ranked[0].id });
   }
 }
@@ -1030,11 +1030,14 @@ function swapLand(w: World, c: Company, o: Outlook, cand: Pick) {
 // ---------------------------------------------------------------- 유보 기준 증설·철거와 새 투자 (TUNE.aiReserveRule, 2026-10-25)
 //
 // 사용자 요청 (2026-10-25): "유보액을 기준으로 건물을 늘리고 줄였으면 좋겠는데. + 신규투자". AI가 시장을 전망하지 않고, 건물의 유보 자산과 지금 시장 신호만 본다.
-// - 생산 건물 (자동·정부 건물·무역소가 아니고 유보 자산을 쌓는 건물): 유보 자산 ≥ 상한 × RESERVE_FULL 이 RESERVE_STREAK 주 이어지면 1레벨 증설,
+// - 생산 건물 (자동·정부 건물·무역소가 아니고 유보 자산을 쌓는 건물): 매주 확률 TUNE.reserveGrowMax × clamp((유보 ÷ 상한 − TUNE.reserveGrowFrom) ÷ (1 − TUNE.reserveGrowFrom))로 1레벨 증설
+//   (확률은 AI 난수 aiRand 'grow'. reserveGrowMax 0 이면 유보 자산 ≥ 상한 × RESERVE_FULL 이 RESERVE_STREAK 주 이어질 때),
 //   유보 자산 0이고 주간 손익 < 0 이 TUNE.reserveShrinkWeeks 주 이어지면 1레벨 철거 (마지막 레벨이면 건물이 없어진다). 그 밖에는 아무것도 하지 않는다.
 // - 새 투자: 그 상품을 내는 건물이 없는 곳에 1레벨 시험 공사. (가) 지역 시장값 ≥ 기본가 × TRIAL_PRICE 가 RESERVE_STREAK 주 이어진 상품 (그 지역에 생산 건물이 없을 때),
 //   (나) 투입 충족 < STARVE_FILL 이 RESERVE_STREAK 주 이어진 건물(Building.starvedWeeks)의 가장 모자란 투입재 (그 왕국에 생산 건물이 없을 때. 광석 → 철 → 공구 사슬을 연다).
 //   다 지은 뒤에는 위 증설·철거 규칙이 맡는다. 방식 바꾸기는 그대로다 (manageBuildings)
+/** AI 점수 흔들기 폭: 연구·착공 점수에 1 ± 이 값의 고른 무작위를 곱한다 (0.85~1.15, 첫 커밋 9c76862 부터의 값, 근거 없음) */
+export const AI_JITTER = 0.15;
 /** 유보 자산이 이 비율 이상이면 찬 주로 센다 (사용자 합의 값, 근거 없음) */
 export const RESERVE_FULL = 0.9;
 /** 찬 주·바닥난 적자 주·비싼 주·굶은 주를 이 주 수 이어서 본다 (사용자 합의 값, 근거 없음) */
@@ -1120,7 +1123,7 @@ function planTrials(w: World, c: Company, canStart: () => boolean, free: () => n
 /**
  * 유보 기준 증설·철거 (TUNE.aiReserveRule, 매주 배당 정산 뒤): 생산 건물마다 찬 주(유보 자산 ≥ 상한 × RESERVE_FULL)와
  * 바닥난 적자 주(유보 자산 0, 주간 손익 = profitEma × 7 < 0. 기상 조건이 걸린 주와 공사로 생긴 지(시작 건물은 0일부터) RAMP_WEEKS 주 안은 세지 않는다)를 센다.
- * 바닥난 적자가 TUNE.reserveShrinkWeeks 주면 1레벨 철거 대기, 찬 주가 RESERVE_STREAK 주면 땅(매장량)이 있고 돈이 되면 1레벨 증설 (못 하면 다음 주에 다시 본다).
+ * 바닥난 적자가 TUNE.reserveShrinkWeeks 주면 1레벨 철거 대기, 증설 확률(TUNE.reserveGrowMax > 0, 아래)이 뽑히면 (reserveGrowMax 0 이면 찬 주가 RESERVE_STREAK 주면) 땅(매장량)이 있고 돈이 되면 1레벨 증설 (못 하면 다음 주에 다시 본다).
  * 증설 공사 중이거나 철거 중인 건물은 세지 않는다. 돈: 왕실은 새 공사에 쓸 수 있는 돈(freeCash), 민간은 저택·금융가 금고(공사 명령이 낼 곳을 고른다)
  */
 function reserveLevels(w: World, c: Company, canStart: () => boolean, free: () => number, start: (p: Pick, path: string) => boolean) {
@@ -1295,7 +1298,7 @@ export function pickProject(w: World, c: Company, o: Outlook, free: number, allo
         if (!pick) continue;
         // 지역 우선 투자: 그 지역 저택·금융가 돈으로 짓는 몫만큼 가산점
         const here = c.state ? 0 : Math.min(1, localFunds(r.id, t.id) / (perLevel * pick.levels));
-        const score = pick.roi * (0.85 + jitter(dev ? 'pickDev' : 'pick', r.id, t.id, m.id) * 0.3) * (1 + TUNE.localBias * here);
+        const score = pick.roi * (1 - AI_JITTER + jitter(dev ? 'pickDev' : 'pick', r.id, t.id, m.id) * 2 * AI_JITTER) * (1 + TUNE.localBias * here);
         if (!best || score > best.score) best = { regionId: r.id, typeId: t.id, methodId: m.id, levels: pick.levels, score };
       }
     }

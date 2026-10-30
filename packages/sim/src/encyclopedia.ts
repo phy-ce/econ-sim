@@ -35,7 +35,7 @@ import {
   DAILY_INTEREST, KEEP_SHARE, TREASURY_RELEASE, MINT_BASE, MINT_RATE, RESERVE_SHARE, kingdomLiteracy, researchPoints, adminCapacityOf, reserveCap, taxCapacity, taxRates,
   weeklyOutputValue,
 } from './finance';
-import { CHUNKS, INPUT_SUPPLY_MIN, MIXED_LEVELS, RAISE_FILL, RESERVE_FULL, RESERVE_STREAK, STARVE_FILL, TRIAL_PRICE, SWITCH_MARGIN, SWITCH_MIN_WAGE_SHARE, LAW_COOLDOWN, LAW_SWITCH, WELFARE_COOLDOWN, WELFARE_SWITCH, OFFICE_BLOCK, OFFICE_GROWTH, STAFFING_HORIZON, SWITCH_COOLDOWN } from './ai';
+import { AI_JITTER, CHUNKS, INPUT_SUPPLY_MIN, MIXED_LEVELS, RAISE_FILL, RESERVE_FULL, RESERVE_STREAK, STARVE_FILL, TRIAL_PRICE, SWITCH_MARGIN, SWITCH_MIN_WAGE_SHARE, LAW_COOLDOWN, LAW_SWITCH, WELFARE_COOLDOWN, WELFARE_SWITCH, OFFICE_BLOCK, OFFICE_GROWTH, STAFFING_HORIZON, SWITCH_COOLDOWN } from './ai';
 import { budgetPreview } from './budget';
 import { ownershipAssets } from './policy';
 import { welfareIncome, welfareTarget, welfareWeekly } from './welfare';
@@ -1251,8 +1251,8 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   },
   {
     id: 'ai-research', category: 'ai', title: t('연구 고르기', 'Choosing research'),
-    rule: t('고른 기술이 없으면 늘 (가치 + 1) ÷ 비용 × 무작위 0.85~1.15가 가장 큰 기술을 고른다. 가치 = 여는 방식의 손익 개선(학교 기술은 모자란 자리 가치). 후속 기술 가치의 절반을 물려받는다.', 'Whenever no tech is chosen, pick the tech with the highest (value + 1) ÷ cost × random 0.85–1.15. Value = profit gain from unlocked methods (school techs: missing seat value), plus half of successors\' value.'),
-    params: [],
+    rule: t('고른 기술이 없으면 늘 (가치 + 1) ÷ 비용 × 무작위 (1 ± {0})가 가장 큰 기술을 고른다. 가치 = 여는 방식의 손익 개선(학교 기술은 모자란 자리 가치). 후속 기술 가치의 절반을 물려받는다.', 'Whenever no tech is chosen, pick the tech with the highest (value + 1) ÷ cost × random (1 ± {0}). Value = profit gain from unlocked methods (school techs: missing seat value), plus half of successors\' value.'),
+    params: [p('무작위 폭', 'Random spread', () => AI_JITTER, 'pct')],
     related: ['tech', 'research'], seenIn: ['finance'], source: ['ai.ts planResearch', 'outlook.ts techValue'], design: ['10'],
   },
   {
@@ -1284,7 +1284,7 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   },
   {
     id: 'ai-reserve', category: 'ai', title: t('유보 자산으로 늘리고 줄이기', 'Growing and shrinking by reserves'),
-    rule: t('{0} = 1이면 생산 건물은 전망을 보지 않는다. 유보 자산이 상한의 {1} 이상인 주가 {2}주 이어지면 1레벨 늘리고 (땅과 돈이 있을 때), 유보 자산이 0이고 주간 손익이 마이너스인 주가 {2}주 이어지면 1레벨 헌다 (마지막 레벨이면 건물이 없어진다). 새 투자: 지역 값이 기본가의 {3}배 이상인 주가 {2}주 이어진 상품을 그 지역에서 아무도 만들지 않거나, 투입 충족이 {4} 미만인 주가 {2}주 이어진 건물의 가장 모자란 투입재를 왕국에서 아무도 만들지 않으면 그 상품을 내는 건물을 1레벨 짓는다. 행정청·학교·사무소·무역소는 옛 판단을 쓴다.', 'With {0} = 1 producers ignore forecasts. After {2} weeks with the reserve at {1} of its cap or more, a building grows one level (if land and funds allow); after {2} weeks with an empty reserve and a weekly loss, it loses one level (the last level removes the building). New investment: a good whose regional price stayed at {3}× base or more for {2} weeks with no producer in that region, or the scarcest input of a building whose input fill stayed under {4} for {2} weeks with no producer in the kingdom, gets a one-level producer. Administrations, schools, offices and trading posts keep the old rules.'),
+    rule: t('{0} = 1이면 생산 건물은 전망을 보지 않는다. 매주 유보 자산이 상한의 {6}을 넘은 만큼 증설 확률이 오르고, 가득 차면 주에 {5}이다 (땅과 돈이 있을 때 1레벨, 확률은 AI 난수). {5} = 0이면 상한의 {1} 이상인 주가 {2}주 이어질 때 늘린다. 유보 자산이 0이고 주간 손익이 마이너스인 주가 {3}주 이어지면 1레벨 헌다 (마지막 레벨이면 건물이 없어진다). 새 투자: 지역 값이 기본가의 {7}배 이상인 주가 {2}주 이어진 상품을 그 지역에서 아무도 만들지 않거나, 투입 충족이 {8} 미만인 주가 {2}주 이어진 건물의 가장 모자란 투입재를 왕국에서 아무도 만들지 않으면 그 상품을 내는 건물을 1레벨 짓는다. 행정청·학교·사무소·무역소는 옛 판단을 쓴다.', 'With {0} = 1 producers ignore forecasts. Each week the chance to grow one level rises with the reserve above {6} of its cap, reaching {5} when full (if land and funds allow; drawn from the AI random numbers). With {5} = 0 a building grows after {2} weeks at {1} of its cap or more. After {3} weeks with an empty reserve and a weekly loss it loses one level (the last level removes the building). New investment: a good whose regional price stayed at {7}× base or more for {2} weeks with no producer in that region, or the scarcest input of a building whose input fill stayed under {8} for {2} weeks with no producer in the kingdom, gets a one-level producer. Administrations, schools, offices and trading posts keep the old rules.'),
     params: [tune('aiReserveRule', '유보 기준 AI', 'Reserve-based AI'), p('찬 유보 자산', 'Full reserve', () => RESERVE_FULL, 'pct'), p('연속 주 수', 'Weeks in a row', () => RESERVE_STREAK, 'week'), tune('reserveShrinkWeeks', '철거까지 적자 주', 'Loss weeks before shrinking'), tune('needFixedTotal', '묶음 합계 고정', 'Fixed basket total'), tune('reserveGrowMax', '증설 확률 (가득 참)', 'Grow chance when full'), tune('reserveGrowFrom', '증설 시작 유보 비율', 'Grow from reserve share'),
       p('새 투자 값 배수', 'Trial price multiple', () => TRIAL_PRICE, 'x'), p('굶는 투입 충족', 'Starving fill', () => STARVE_FILL, 'pct')],
     related: ['reserves', 'ai-construction', 'ai-demolition'], seenIn: ['company'], source: ['ai.ts reserveLevels', 'ai.ts planTrials'], design: ['10'],
