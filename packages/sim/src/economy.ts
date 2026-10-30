@@ -647,7 +647,7 @@ export function colonySol(w: World, prof: PopClass): number {
 
 /**
  * 주인 없는 돈(fund)을 뺀 돈 계정 전부를 정해진 순서로 f 에 넘기고 돌려받은 값으로 바꾼다.
- * 돈을 가진 계정을 새로 두면 여기와 totalMoney 에 같이 넣는다
+ * 지금 sim 안에서 부르는 곳은 없다 (A0 에서 totalMoney 가 직접 더하게 바뀜). 계정 목록의 기준으로 남겨 둔다: 돈을 가진 계정을 새로 두면 여기와 totalMoney 에 같이 넣는다
  */
 export function mapMoney(w: World, f: (x: number) => number): void {
   w.traders.cash = f(w.traders.cash);

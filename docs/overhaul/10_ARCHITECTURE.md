@@ -76,7 +76,7 @@ HANDOFF 다음 할 일 6 은 "가격 범위 3곳, 360일 7곳, 화폐 발행 공
 
 ### 2.4 화폐 장부와 읽기 층의 재료 [사실]
 
-- 보존식: `moneyIdentity = totalMoney − netMinted` (`economy.ts:660~675`). `totalMoney` = 주인 없는 돈 + `mapMoney`(무역상·회사·pop 저축·건물 금고·공사 에스크로). `money.test.ts` 가 시드 7 로 3년을 매일 확인하고(허용 오차 총량 × 1e-12, 주석 근거: 같은 조건에서 최대 8e-15), 20년 시험은 해마다 1e-9 를 본다 (`longRun.ts:33`).
+- 보존식: `moneyIdentity = totalMoney − netMinted` (`economy.ts:661~680`, A0 뒤 줄 번호). `totalMoney` = 주인 없는 돈 + `mapMoney` 와 같은 계정(무역상·회사·pop 저축·건물 금고·공사 에스크로)을 같은 순서로 직접 더한 값 (A0 부터 `mapMoney` 를 부르지 않는 읽기 함수). `money.test.ts` 가 시드 7 로 3년을 매일 확인하고(허용 오차 총량 × 1e-12, 주석 근거: 같은 조건에서 최대 8e-15), 20년 시험은 해마다 1e-9 를 본다 (`longRun.ts:33`).
 - pop 의 소득 원천은 `recordPopIncome`(`popIncome.ts`)이 `incomeBreakdown`(wages·dividends·rent·sales·welfare·other·tax)에 쌓지만 이 칸은 하루마다 비워진다 (`market.ts:178`, "reset with lastIncome"). 해·주 단위로 쌓는 곳이 없다. 따라서 몫의 장부(01 P3, 04 문서)는 새 누적기가 필요하다.
 - 돈이 움직이는 곳은 많다: `.savings ±=`, `.cash ±=`, `.fund ±=` 가 파일 10곳에 45줄 나오고, `escrow`·`debt` 의 `±=` 가 3줄, `o.cash = (o.cash ?? 0) - pay` 같은 대입형이 30줄(초기화와 `mapMoney` 포함) 더 있다 (grep, 2026-10-30 작업 트리: main `5fdefe7` + 클라이언트 미커밋 변경, sim 은 같다. `economy.ts:652~658 mapMoney` 의 계정 목록에서 필드를 잡았다). 코드로 확인된 이동이 둘 있다: 이주는 pop 의 저축을 비율로 옮기고(`pops.ts:142~143`, 직종이 다를 때만 칸이 바뀐다), 사망한 pop 의 저축은 상속인 또는 `w.fund` 로 간다(`pops.ts:168~176`). 나머지 중 몇 곳이 `recordPopIncome` 을 거치는지는 확인 못 함. 그래서 "장부가 닫히는가"는 새 측정으로 재야 한다 (3.6, 7.2 의 A0 탐침).
 - `metrics.ts recordMetrics` 는 하루 평균 0.041ms(0.7%), `recordHistory` 0.017ms (m3). 기록 비용은 작다.
@@ -121,7 +121,7 @@ HANDOFF 다음 할 일 6 은 "가격 범위 3곳, 360일 7곳, 화폐 발행 공
 
 | 묶음 | 파일 | 하는 일 | 빈틈 |
 |---|---|---|---|
-| `test/core` | determinism, money, ranges, harvest, prospect, laws, welfare, buildingecon, popIncome, decimals, budget, encyclopedia | 변경마다(약 10초). 화폐 매일, 범위, 결정성, 옛 저장 변환(decimals) | 결정성 200일·시드 42, 읽기 함수 순수성은 `budget.test.ts` 한 곳(JSON 비교), 저장 왕복의 JSON 안정성(`undefined`·`NaN`·`-0` 등) 별도 시험 없음 |
+| `test/core` | determinism, money, ranges, harvest, prospect, laws, welfare, buildingecon, popIncome, decimals, budget, encyclopedia | 변경마다(약 10초). 화폐 매일, 범위, 결정성, 옛 저장 변환(decimals) | 결정성 200일·시드 42. 읽기 함수 순수성은 `readonly.test.ts`(얼린 세계), 저장 왕복 JSON 안정성은 `roundtrip.test.ts` (A0 에서 추가) |
 | `test/` 루트 | `rules.test.ts`, `limits.test.ts` | 규칙 시나리오, 한도 | |
 | `test/long` | `seed1/2.test.ts` → `longRun.ts` | 20년 × 시드 1·2(AI 대체), 화폐 1e-9, 4단계 기술 연도, 식량 | 결정성·저장 왕복·성능·크기는 안 본다 |
 | 임시 | `test/core/_wd.test.ts` (git 미추적) | 예산 미리보기 진단 출력 | `test:core` 안에 있어 같이 돈다. 단언이 없어 늘 통과한다 |
@@ -504,7 +504,7 @@ aiRand(seed, salt, tag, k1..kn):
 | `tick.ts applyWagePolicy` | 확인 후 삭제 | HANDOFF 다음 7 "죽은 경로"(`wageOffset` 설정자가 AI 에 있는지 확인 못 함) | 정리 |
 | `popIncome.ts` | 유지 + 확장 | 낸 돈 선 기록, FlowBook 호출 | A |
 | `metrics.ts` | 유지 | 기록 쓰기. 보관 칸을 `annals` 로 내보내는 훅만 추가 | 1b |
-| `budget.ts` | 유지 | 읽기 모델. `READERS` 등록. 실패 중인 테스트 2개 원인 조사(A0) | A0 |
+| `budget.ts` | 유지 | 읽기 모델. `READERS` 등록. 예산 시험 2개(0704b3f 실패, 52b37e3 교체·삭제) 원인 조사는 A0 에서 끝남 (A0_PROBE.md 2장) | A0 |
 | `outlook.ts` | 유지 | 07 문서 소관. 건드리지 않음 | |
 | `encyclopedia.ts` | 유지 + 변경 | 숫자를 `RULES`·`TUNE` 에서 읽음. 항목 수 시험 유지. `:869` 의 `**` 는 표시용이라 둔다 | RT |
 | `index.ts` | 변경 | 새 모듈 내보내기 (새 폴더를 export 할 수 있는 기존 파일은 이것 하나, 3.1). 기존 이름은 그대로 | 계속 |
