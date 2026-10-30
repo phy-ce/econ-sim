@@ -647,7 +647,7 @@ export function colonySol(w: World, prof: PopClass): number {
 
 /**
  * 주인 없는 돈(fund)을 뺀 돈 계정 전부를 정해진 순서로 f 에 넘기고 돌려받은 값으로 바꾼다.
- * 화폐 총량(totalMoney)이 이 목록을 쓴다: 돈을 가진 계정을 새로 두면 여기에 넣는다
+ * 돈을 가진 계정을 새로 두면 여기와 totalMoney 에 같이 넣는다
  */
 export function mapMoney(w: World, f: (x: number) => number): void {
   w.traders.cash = f(w.traders.cash);
@@ -657,9 +657,14 @@ export function mapMoney(w: World, f: (x: number) => number): void {
   for (const k of w.constructions) if (k.escrow !== undefined) k.escrow = f(k.escrow);
 }
 
+/** 화폐 총량. 세계에 쓰지 않는 읽기 함수라 mapMoney 와 같은 계정을 같은 순서로 더한다 (순서가 같아야 합이 비트까지 같다) */
 export function totalMoney(w: World): number {
   let t = w.fund;
-  mapMoney(w, (x) => { t += x; return x; });
+  t += w.traders.cash;
+  for (const c of w.companies) t += c.cash;
+  for (const p of w.pops) t += p.savings;
+  for (const b of w.buildings) if (b.cash !== undefined) t += b.cash;
+  for (const k of w.constructions) if (k.escrow !== undefined) t += k.escrow;
   return t;
 }
 

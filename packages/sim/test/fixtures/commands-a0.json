@@ -1,0 +1,213 @@
+{
+ "about": "A0 고정 명령열 (10_ARCHITECTURE 3.4·8.2). 시드 1, 플레이어 왕실(100). t = 그날 step 직전. 바꾸면 고정 저장 파일과 samecheck 기준 출력을 다시 만들어야 한다",
+ "actor": 100,
+ "commands": [
+  {
+   "t": 0,
+   "cmd": {
+    "type": "setResearch",
+    "techId": "printing"
+   },
+   "note": "투자법 '전문가까지'를 여는 기술"
+  },
+  {
+   "t": 0,
+   "cmd": {
+    "type": "setBudget",
+    "item": "tax",
+    "value": 4
+   },
+   "note": "세율 단계"
+  },
+  {
+   "t": 7,
+   "cmd": {
+    "type": "build",
+    "typeId": "school",
+    "regionId": 1,
+    "levels": 1
+   },
+   "note": "학교"
+  },
+  {
+   "t": 14,
+   "cmd": {
+    "type": "build",
+    "typeId": "school",
+    "regionId": 3,
+    "levels": 1
+   }
+  },
+  {
+   "t": 21,
+   "cmd": {
+    "type": "build",
+    "typeId": "school",
+    "regionId": 1,
+    "levels": 1
+   },
+   "note": "연속 착공 (같은 건물에 둘째 공사)"
+  },
+  {
+   "t": 200,
+   "cmd": {
+    "type": "build",
+    "typeId": "trading_post",
+    "regionId": 1,
+    "levels": 10
+   },
+   "note": "왕실 무역소 (금고 돈을 공사에 묶음)"
+  },
+  {
+   "t": 300,
+   "cmd": {
+    "type": "setResearch",
+    "techId": "bloomery"
+   }
+  },
+  {
+   "t": 360,
+   "cmd": {
+    "type": "setWelfareLaw",
+    "law": "poor"
+   },
+   "note": "법 전환 1: 복지법 (조건 없음, 180일). 시드 1 에서 구빈 지출이 국고를 비워 국채가 발행된다"
+  },
+  {
+   "t": 480,
+   "cmd": {
+    "type": "setInvestLaw",
+    "law": "upper"
+   },
+   "note": "법 전환 2: 투자법 (기술 + 금융가 비율)"
+  },
+  {
+   "t": 540,
+   "cmd": {
+    "type": "setBudget",
+    "item": "tax",
+    "value": 2
+   }
+  },
+  {
+   "t": 620,
+   "cmd": {
+    "type": "setResearch",
+    "techId": "ironworking"
+   }
+  },
+  {
+   "t": 720,
+   "cmd": {
+    "type": "setBudget",
+    "item": "wages",
+    "value": 5
+   },
+   "note": "국영 임금 최고"
+  },
+  {
+   "t": 720,
+   "cmd": {
+    "type": "build",
+    "typeId": "farm",
+    "regionId": 1,
+    "levels": 10
+   },
+   "note": "왕실 생산 건물"
+  },
+  {
+   "t": 727,
+   "cmd": {
+    "type": "build",
+    "typeId": "school",
+    "regionId": 6,
+    "levels": 2
+   }
+  },
+  {
+   "t": 900,
+   "cmd": {
+    "type": "setWelfareLaw",
+    "law": "none"
+   },
+   "note": "복지 끄기 (국채를 갚기 시작)"
+  },
+  {
+   "t": 1080,
+   "cmd": {
+    "type": "setBudget",
+    "item": "tax",
+    "value": 5
+   }
+  },
+  {
+   "t": 1080,
+   "cmd": {
+    "type": "setBudget",
+    "item": "wages",
+    "value": 3
+   }
+  },
+  {
+   "t": 1260,
+   "cmd": {
+    "type": "setTaxLaw",
+    "law": "poll"
+   },
+   "note": "법 전환 3: 세법 (기술 + 금융가 비율)"
+  },
+  {
+   "t": 1300,
+   "cmd": {
+    "type": "setResearch",
+    "techId": "coking"
+   }
+  },
+  {
+   "t": 1620,
+   "cmd": {
+    "type": "setBudget",
+    "item": "tax",
+    "value": 3
+   }
+  },
+  {
+   "t": 1900,
+   "cmd": {
+    "type": "setResearch",
+    "techId": "steam_engine"
+   }
+  },
+  {
+   "t": 2200,
+   "cmd": {
+    "type": "setInvestLaw",
+    "law": "middle"
+   }
+  },
+  {
+   "t": 2860,
+   "cmd": {
+    "type": "setResearch",
+    "techId": "wagonway"
+   },
+   "note": "증기기관 완료 뒤 (8년 저장에 연구 중 상태)"
+  },
+  {
+   "t": 2790,
+   "cmd": {
+    "type": "setWelfareLaw",
+    "law": "poor"
+   },
+   "note": "8년 저장(2880일)에 법 전환 중 상태가 남게"
+  },
+  {
+   "t": 2790,
+   "cmd": {
+    "type": "setBudget",
+    "item": "tax",
+    "value": 4
+   }
+  }
+ ]
+}
