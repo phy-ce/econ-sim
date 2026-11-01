@@ -30,7 +30,7 @@
 - 없음. 2-69(왕실 임금 읽기 전용)는 코드 완료 (`e1d700f`, 화면 미검증, UI_DONE).
 
 사용자 요청
-1. **서브윈도우 이력 잔여**: 인구·토지·교육 상세 안의 링크가 부모 창으로 빠진다 (예: `PopTable.tsx:42` `onRegion`·`onBuilding`). 같은 DetailWindow 안 이력으로 바꾼다. 기반(DetailWindow마다 NavigationProvider)은 UI_DONE "2026-11-01 서브윈도우 독립 이력 기반".
+1. **서브윈도우 이력 잔여**: 코드 완료, 화면 미검증. UI_DONE의 2026-11-01 내부 경로 명세 참조.
 2. **공통 투입·산출 UI (2-51)**: 실제 양·단가·금액·충족/판매·방식 비교. 지금은 `ResourceInspector.tsx:38` recipe만 있다.
 3. **건물 그룹 잔여 (2-42, 2-59)**: 서비스 합계, 손익 워터폴, 소유주 미지정 배당. 기존 그룹·소유권 바(`RegionIndustry.tsx:56·58`)는 다시 만들지 않는다.
 4. **철거 진행 (2-49)**: 대기 레벨 막대·배지(`ResourceInspector.tsx:36·76`)는 있다. 남은 일정·회수 자재.
@@ -1576,3 +1576,4 @@ sim 변경 (wt-research):
 - **2-72·단위 F 인두세 부담 (2026-11-01):** S3 안에 직종별 부담률(걷힘 ÷ 세금·복지 전 소득, 05 L-S1)을 읽는 함수. 05 C-2 결정 뒤.
 - **오버홀 1a·1b 선행 (09 7.1 S1~S8, 2026-11-01 옮김):** S1 몫의 장부(단위 D), S2 분해 체인(E), S3 1차 효과 미리보기·바닥 전후 값(F), S4 `GameEvent` 종류 코드·숫자 칸(L), S5 슬롯 메타(M), S6 사전 "처음 하는 법"·말단 항목 id 테스트(G), S7 출생·사망·순이주 월 지표(L), S8 노드 월 경계 기록(L). 정의는 09 7.1.
 - 이미 export되는 것: `paysDividend`, `kingdomGdp`, `kingdomById`, `builderOf`, `companyById`, `peasantSlots`, `disbanded`, `slots`, `harvestCondition`, `harvestLabel`, `HARVEST_KINDS`, `taxRates`, `taxCapacity`, `holdingsOf`, `levelOwnersOf`, `buildingEcon` (2-59, wt-regionecon), `RESERVE_SHARE`, `KEEP_SHARE`, `budgetPreview`, `reserveCap`, `hasReserve`, `weeklyOutputValue`, `creditLimit`, `isGovernment`, `crewOf`, `wealthOf`, `literacyOf`, `educationOf`
+

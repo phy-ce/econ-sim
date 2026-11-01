@@ -13,17 +13,18 @@ export interface PopRequest { regionId:number; prof:PopClass; sequence:number }
 type Column='region'|'prof'|'size'|'wealth'|'sol'|'food'|'fulfillment'|'incomeEma'|'kind'|'literacy'|'growth';
 type View='living'|'income'|'education';
 const VIEW_COLUMNS:Record<View,Column[]>={living:['size','sol','food','fulfillment'],income:['size','wealth','incomeEma','kind'],education:['size','literacy','growth']};
-function PopTableView({world,request,onRegion,onBuilding,fixedRegion}:{world:World;fixedRegion?:number;request?:PopRequest|null;onRegion:(id:number)=>void;onBuilding:(id:number)=>void}) {
- const [active,setActive]=useNavigationState<number|null>(`pops:${fixedRegion===undefined?'global':'region'}:active`,null);
+function PopTableView({world,request,onRegion,onBuilding,fixedRegion,preserveSelection=false}:{preserveSelection?:boolean;world:World;fixedRegion?:number;request?:PopRequest|null;onRegion:(id:number)=>void;onBuilding:(id:number)=>void}) {
+ const stateScope=preserveSelection?'detail:'+fixedRegion+':'+(request?.prof??''):(fixedRegion===undefined?'global':'region');
+ const [active,setActive]=useNavigationState<number|null>(`pops:${stateScope}:active`,null);
  const activePop=world.pops.find(p=>p.id===active);
  const visit=(id:number|null)=>setActive(id);
  const T=useT(),ko=useLang()==='ko';
- const [region,setRegion]=useNavigationState(`pops:${fixedRegion===undefined?'global':'region'}:region`,fixedRegion??0),[prof,setProf]=useNavigationState<PopClass|''>(`pops:${fixedRegion===undefined?'global':'region'}:prof`,''),[unemployed,setUnemployed]=useNavigationState(`pops:${fixedRegion===undefined?'global':'region'}:unemployed`,false);
- const [view,setView]=useNavigationState<View>(`pops:${fixedRegion===undefined?'global':'region'}:view`,()=>{try{const v=localStorage.getItem('estera.popView');return v==='income'||v==='education'?v:'living';}catch{return 'living';}});
- const [sort,setSort]=useNavigationState<Column>(`pops:${fixedRegion===undefined?'global':'region'}:sort`,'size'),[direction,setDirection]=useNavigationState(`pops:${fixedRegion===undefined?'global':'region'}:direction`,-1);
+ const [region,setRegion]=useNavigationState(`pops:${stateScope}:region`,fixedRegion??0),[prof,setProf]=useNavigationState<PopClass|''>(`pops:${stateScope}:prof`,preserveSelection?(request?.prof??''):''),[unemployed,setUnemployed]=useNavigationState(`pops:${stateScope}:unemployed`,false);
+ const [view,setView]=useNavigationState<View>(`pops:${stateScope}:view`,()=>{try{const v=localStorage.getItem('estera.popView');return v==='income'||v==='education'?v:'living';}catch{return 'living';}});
+ const [sort,setSort]=useNavigationState<Column>(`pops:${stateScope}:sort`,'size'),[direction,setDirection]=useNavigationState(`pops:${stateScope}:direction`,-1);
  useEffect(()=>{try{localStorage.setItem('estera.popView',view);}catch{}},[view]);
- useEffect(()=>{if(request){setActive(null);setRegion(request.regionId);setProf(request.prof);setUnemployed(false);}},[request]);
- useEffect(()=>{if(fixedRegion!==undefined){setRegion(fixedRegion);setActive(null);}},[fixedRegion]);
+ useEffect(()=>{if(request&&!preserveSelection){setActive(null);setRegion(request.regionId);setProf(request.prof);setUnemployed(false);}},[request]);
+ useEffect(()=>{if(fixedRegion!==undefined&&!preserveSelection){setRegion(fixedRegion);setActive(null);}},[fixedRegion]);
  const buildings=useMemo(()=>new Map(world.buildings.map(b=>[b.id,b])),[world.buildings]);
  const regions=useMemo(()=>new Map(world.regions.map(r=>[r.id,r])),[world.regions]);
  const names:Record<Column,string>={region:T.popRegion,prof:T.popProfession,size:T.popSize,wealth:T.wealthLevel,sol:T.standardOfLiving,food:T.popFood,fulfillment:T.popNeeds,incomeEma:T.popIncome,kind:T.popKind,literacy:T.popLiteracy,growth:T.popGrowth};

@@ -73,3 +73,8 @@ DetailWindow 독립 NavigationProvider/버튼, BuildingPops 및 ResourceInspecto
 
 - 2026-11-01 2-69 코드 완료, 화면 미검증. 왕실 Wages는 읽기 전용, 민간 range 유지. 루트 타입 검사 통과. 상세 명세/근거는 UI_DONE으로 이동.
 
+
+### 2026-11-01 UI_DESIGN 기준 후속
+- UI_DESIGN 2.3·3장: 인구·토지·교육 상세 내부 탐색 경로를 DetailExplorer로 연결. 부모 창 이동 대신 상세별 이력 사용. PopTable의 상세 경로 복원 시 초기화 방지. 루트 타입 검사 통과, 화면 미검증.
+- UI_DESIGN 10장 어긋남 1~8 확인. 기본 집계·소유권 색 토큰·문자열·빈 목록 문장·폐기 코드 정리는 이 변경에 포함하지 않음. 사전 단위 G와 화면 실측은 기존 대기 유지.
+
