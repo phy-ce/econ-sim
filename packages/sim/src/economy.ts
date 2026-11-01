@@ -1,5 +1,5 @@
 import {
-  BUILDING_BY_ID, BUILDING_TYPES, GOOD_IDS, GOODS, HARVEST_KINDS, HARVEST_MAX_SEASONS, HARVEST_SEASON_DAYS, HARVEST_SPREAD, HARVEST_STEP, LAW_TECH, LAND_NAMES, LAND_NAMES_EN,
+  ABS_LIMITS, BUILDING_BY_ID, BUILDING_TYPES, GOOD_IDS, GOODS, HARVEST_KINDS, HARVEST_MAX_SEASONS, HARVEST_SEASON_DAYS, HARVEST_SPREAD, HARVEST_STEP, LAW_TECH, LAND_NAMES, LAND_NAMES_EN,
   MAX_POINTS_PER_LEVEL_DAY, REGIONS, SKILL_DEFS, SUBSISTENCE, TECH_BY_ID, VEIN_NAMES, VEIN_NAMES_EN, getMethod, regionPerk, scaleBonus, TUNE,
   buildPointsOf, TRADING_POST,
 } from './data';
@@ -388,9 +388,9 @@ export function shareWeight(s: PopClass): number {
 /** 소유 건물에서 직종 s 한 사람이 받는 하루 몫 추정: 이익 이동평균 × 1명 몫 ÷ 앉은 사람의 몫 합 (s 는 적어도 1명으로 센다) */
 export function shareWage(b: Building, s: Skill): number {
   // 금융가 전문가: 보장 임금 + 성과급 (받은 배당 이동평균 × TUNE.financeBonus ÷ 인원)
-  if (b.typeId === 'finance') return TUNE.financeWage + (Math.max(0, b.profitEma) * TUNE.financeBonus) / Math.max(1, b.employed.expert);
+  if (b.typeId === 'finance') return TUNE.financeWage + (Math.max(0, b.profitEma) * TUNE.financeBonus) / Math.max(ABS_LIMITS.shareMin, b.employed.expert);
   let total = 0;
-  for (const k of SKILLS) total += shareWeight(k) * (k === s ? Math.max(1, b.employed[k]) : b.employed[k]);
+  for (const k of SKILLS) total += shareWeight(k) * (k === s ? Math.max(ABS_LIMITS.shareMin, b.employed[k]) : b.employed[k]);
   return (Math.max(0, b.profitEma) * shareWeight(s)) / total;
 }
 
@@ -730,11 +730,11 @@ export function kingdomGdp(w: World, kingdomId: number): number {
  * 왕실만 빌린다: 국고가 모자라면 국채를 찍어 빌리고(새 돈), 남으면 갚는다(그 돈은 사라진다). 민간 상회는 빌리지 않는다 (한도 0).
  * 국채 한도 = 기본 한도 + 연간 총생산 × STATE_CREDIT_GDP
  */
-export const BASE_CREDIT = 300_000;
+export const BASE_CREDIT = ABS_LIMITS.baseCredit;
 /** 국채 한도 = 연간 총생산 × 이 비율 */
 export const STATE_CREDIT_GDP = 0.25;
 export function creditLimit(w: World, c: Company): number {
-  return c.state ? BASE_CREDIT + kingdomGdp(w, c.kingdomId) * STATE_CREDIT_GDP : 0;
+  return c.state ? ABS_LIMITS.baseCredit + kingdomGdp(w, c.kingdomId) * STATE_CREDIT_GDP : 0;
 }
 
 /** 왕실이 국채를 찍어 빌린다. 민간은 0 (빌리지 않는다) */

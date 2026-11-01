@@ -1,5 +1,5 @@
 import {recordPopIncome} from './popIncome';
-import { CLASS_DEFS, TUNE, WORKFORCE_RATIO } from './data';
+import { ABS_LIMITS, CLASS_DEFS, TUNE, WORKFORCE_RATIO } from './data';
 import { popSol } from './economy';
 import { clamp } from './rng';
 import { ipowBin } from './rng/ipow';
@@ -164,11 +164,11 @@ export function prunePops(w: World) {
   let keep: Pop[] | null = null;
   for (let i = 0; i < pops.length; i++) {
     const p = pops[i];
-    if (p.size >= 1e-3) { if (keep) keep.push(p); continue; }
+    if (p.size >= ABS_LIMITS.popMin) { if (keep) keep.push(p); continue; }
     if (!keep) keep = pops.slice(0, i);
     if (p.savings !== 0 || p.incomeEma !== 0 || p.fund) {
       const heir = p.work !== 0 ? findPop(w, p.regionId, p.prof, 0) : undefined;
-      if (heir && heir !== p && heir.size >= 1e-3) {
+      if (heir && heir !== p && heir.size >= ABS_LIMITS.popMin) {
         heir.savings += p.savings; heir.incomeEma += p.incomeEma;
         // 통계용 소득: 없으면 incomeEma (상속인은 더하기 전 값)
         heir.gdpEma = (heir.gdpEma ?? heir.incomeEma - p.incomeEma) + (p.gdpEma ?? p.incomeEma);

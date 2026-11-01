@@ -22,6 +22,17 @@ export const LEVELS_PER_BLOCK = 2;
 /** 한 공사에 레벨당 하루 들어갈 수 있는 최대 포인트. 그 전 10 (빅토리아3 한 건물 상한)을 기준 임금 재계산(2026-11-01)의 공사 포인트 배율 약 0.35 로 줄였다 (공사 기간이 그 전과 비슷하게) */
 export const MAX_POINTS_PER_LEVEL_DAY = 3.5;
 const cells = (n: number) => Math.round(n * LEVELS_PER_BLOCK);
+/**
+ * 사람 수·상품 양·돈의 고정 문턱 (건물 규모나 경제 크기에 비례하지 않는 값). 본 게임에서는 바꾸지 않는다.
+ * 마이크로 세계(src/lab/micro.ts)가 건물 숫자를 축소할 때 같이 줄인다 (사람·양은 축소 배율, 돈은 인구 비율).
+ * - popMin: 이보다 작은 pop 은 지우고 소비하지 않는다 (pops.ts prunePops, market.ts), hireRoom: 빈자리가 이 인원 이하면 그날 뽑지 않는다 (labor.ts laborMarket)
+ * - hireMin: 건물 하나가 하루에 뽑는 최소 인원 (labor.ts laborMarket, 자리 × HIRE_RATE 가 이보다 작을 때)
+ * - shareMin: 소유 건물 1인 몫 추정에서 그 직종을 적어도 이만큼으로 센다 (economy.ts shareWage)
+ * - seekMin: 이주 매력도에서 구직자를 적어도 이만큼으로 센다 (labor.ts migrate)
+ * - unsuppliedQty: 대륙 공급·수요가 이 양보다 작으면 아무도 만들지 않는 상품으로 본다 (outlook.ts)
+ * - baseCredit: 국채 기본 한도 (economy.ts creditLimit), mintBase: 주조 기본액 (finance.ts mintMoney), reserveBase: 회사 기본 준비금 (finance.ts reserveOf)
+ */
+export const ABS_LIMITS = { popMin: 1e-3, hireRoom: 0.01, hireMin: 3, shareMin: 1, seekMin: 1, unsuppliedQty: 1, baseCredit: 300_000, mintBase: 1_000, reserveBase: 50_000 };
 
 export const GOOD_IDS: GoodId[] = [
   'grain', 'fiber', 'timber', 'ore', 'fuel',

@@ -1,5 +1,5 @@
 import {recordPopIncome} from './popIncome';
-import { BUILDING_BY_ID, CLASS_DEFS, SKILL_DEFS, TUNE, getMethod } from './data';
+import { ABS_LIMITS, BUILDING_BY_ID, CLASS_DEFS, SKILL_DEFS, TUNE, getMethod } from './data';
 import { borrow, disbanded, emptyJobs, emptyStats, isSubsistence, paysDividend, paysShare, peasantSlots, shareWage, wagesAt } from './economy';
 import { tenantIncomePerWorker } from './market';
 import { findPop, getPop, movePeople, workforce } from './pops';
@@ -10,7 +10,7 @@ import type { Building, Company, MethodDef, Pop, PopClass, Region, Skill, World 
 // 노동시장: 사람은 자격이 되는 자리 중 1인당 소득이 가장 높은 곳으로 옮긴다 (조금 나은 정도로는 안 옮긴다).
 // 소득은 임금 자리는 회사 임금, 소유 자리(저택·금융가)는 한 사람이 받는 배당 추정, 소작지는 소작 소득이다.
 
-/** 하루 채용 상한: 자리의 이 비율 (최소 3명) */
+/** 하루 채용 상한: 자리의 이 비율 (최소 ABS_LIMITS.hireMin 명, 3) */
 export const HIRE_RATE = 0.01;
 /** 임금을 다 못 받으면 하루에 떠나는 비율 */
 export const UNPAID_QUIT = 0.03;
@@ -221,8 +221,8 @@ export function laborMarket(w: World) {
       const { b, prof } = seat;
       const cap = prof === 'peasant' ? seat.slots : fillableWith(b, seat.m, prof as Skill, seat.slots);
       const cur = findPop(w, r.id, prof, b.id);
-      let room = Math.min(cap - (cur ? workforce(cur) : 0), Math.max(3, seat.slots * HIRE_RATE));
-      if (room <= 0.01) continue;
+      let room = Math.min(cap - (cur ? workforce(cur) : 0), Math.max(ABS_LIMITS.hireMin, seat.slots * HIRE_RATE));
+      if (room <= ABS_LIMITS.hireRoom) continue;
       const list = listOf(prof);
       let h = heads.get(prof)!;
       if (h >= list.length) continue;
@@ -230,7 +230,7 @@ export function laborMarket(w: World) {
       // dest 는 이 자리의 pop 이다 (findPop(w, r.id, prof, b.id) 도 늘 dest)
       const dest = getPop(w, r.id, prof, b.id);
       const qualified = OPEN.includes(prof) ? undefined : prof;
-      for (let j = h; j < list.length && room > 0.01; j++) {
+      for (let j = h; j < list.length && room > ABS_LIMITS.hireRoom; j++) {
         const c = list[j];
         // 일하는 후보는 지금 소득이 낮은 순이므로, 이 자리가 충분히 낫지 않은 첫 후보에서 멈춘다
         if (c.emp && !(wage > c.cur * premium)) break;
@@ -406,7 +406,7 @@ export function migrate(w: World) {
       if (p.work === 0 && (lower ? p.prof === 'peasant' || isLowerJob(p.prof) : p.prof === prof)) seekers += workforce(p);
     }
     open.sort((a, b) => b.wage - a.wage);
-    const want = Math.max(1, seekers);
+    const want = Math.max(ABS_LIMITS.seekMin, seekers);
     let left = want, income = 0;
     for (const o of open) {
       if (left <= 0) break;

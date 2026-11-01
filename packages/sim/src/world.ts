@@ -28,7 +28,7 @@ const KINGDOMS = [
 ];
 
 /** 1인당 시작 저축 (부양가족 포함 1인 기준) */
-const START_SAVINGS: Record<PopClass, number> = { peasant: 5, unskilled: 20, farmer: 20, skilled: 100, expert: 300, gentry: 200, capitalist: 500, aristocrat: 500 };
+export const START_SAVINGS: Record<PopClass, number> = { peasant: 5, unskilled: 20, farmer: 20, skilled: 100, expert: 300, gentry: 200, capitalist: 500, aristocrat: 500 };
 /** 처음부터 아는 기술: 손베틀·손가구·목공구 등 수공업 방식 */
 export const START_TECHS = ['spinning', 'guilds'];
 /** 왕실이 갖고 시작하는 건축사무소 레벨 (목조 2 × 20레벨 = 하루 약 40포인트. 공사 하나는 레벨당 하루 10포인트까지라 농장 1레벨(200점)은 약 20일).
@@ -37,7 +37,7 @@ export const START_OFFICE_LEVELS = 20;
 /** 왕실마다 시작 학교 레벨 (인구가 가장 많은 지역, 귀족 가정교사) */
 export const START_SCHOOL_LEVELS = 1;
 /** 상층의 시작 문해력 */
-const UPPER_LITERACY = 0.6;
+export const UPPER_LITERACY = 0.6;
 
 export interface CreateWorldOptions {
   withPlayer?: boolean;
@@ -342,7 +342,7 @@ export function createWorld(seed = 1, opts: CreateWorldOptions = {}): World {
  * 왕실 시작 국고 = 시작 정부 건물(행정청·건축사무소·학교)을 다 돌리는 주간 운영비 × TUNE.startTreasuryWeeks.
  * 운영비는 시작 국영 임금과 기본가 원료로 센다
  */
-function startTreasury(w: World, gov: Company): number {
+export function startTreasury(w: World, gov: Company): number {
   let daily = 0;
   for (const b of w.buildings) {
     if (b.companyId !== gov.id || !isGovernment(b.typeId)) continue;

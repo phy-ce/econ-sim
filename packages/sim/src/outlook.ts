@@ -1,4 +1,4 @@
-import { BUILDING_BY_ID, GOOD_IDS, GOODS, NEEDS, SKILL_DEFS, TUNE, getMethod, needsAt, regionPerk, tenantYield } from './data';
+import { ABS_LIMITS, BUILDING_BY_ID, GOOD_IDS, GOODS, NEEDS, SKILL_DEFS, TUNE, getMethod, needsAt, regionPerk, tenantYield } from './data';
 import { STAFFING_HORIZON, extraNeed, poolKey, poolOf } from './staffing';
 import { workforce } from './pops';
 import { FLOW_ZERO, availableMethods, collectionRatio, priceBounds, priceFormula, harvestFactorEma, regionAvgWealth, isGovernment, regionById, shippingRate, wageCostOf } from './economy';
@@ -214,7 +214,7 @@ export function marketOutlook(w: World): Outlook {
         if (!(need > 0)) continue;
         // 첫 공사: 아무도 만들지도(공사 중 포함) 쓰지도 않는 투입재는 다 채운다고 본다. 그 수요를 보고 원료 건물이 들어온다
         // (막으면 광석 → 철처럼 수요가 없어 아무도 원료를 만들지 않는 사슬이 영원히 시작되지 않는다). 착공하면 add 가 수요를 더해 다음 공사는 막힌다
-        if (PRODUCIBLE.has(g) && supply[g] < 1 && demand[g] < 1) continue;
+        if (PRODUCIBLE.has(g) && supply[g] < ABS_LIMITS.unsuppliedQty && demand[g] < ABS_LIMITS.unsuppliedQty) continue;
         f = Math.min(f, clamp(spare[g] / need, 0, 1));
       }
       return f;
@@ -222,7 +222,7 @@ export function marketOutlook(w: World): Outlook {
     price(g, dS = 0, dD = 0, withLatent = true, regionId) {
       const v = view(g, regionId);
       const S = v.S + dS, D = v.D + dD + (withLatent ? v.L : 0);
-      if (S < 1 && dD > 0) return GOODS[g].basePrice * UNSUPPLIED_INPUT;
+      if (S < ABS_LIMITS.unsuppliedQty && dD > 0) return GOODS[g].basePrice * UNSUPPLIED_INPUT;
       const back = sub?.get(g);
       if (!back) return longRunPrice(g, D, S);
       // 돌아오는 수요는 값이 낮을수록 크다: 장기 가격 = 그 값에서 돌아오는 수요까지 센 가격이 되는 값 (격자에서 찾아 선형 보간)

@@ -1,4 +1,4 @@
-import { CONSUMPTION_PER_CAPITA, GOOD_IDS, GOODS, NEEDS, SUBSISTENCE, TRADING_POST, TUNE, WORKFORCE_RATIO, getMethod, needsAt, rawMax, tenantYield, tradeReserveOf } from './data';
+import { ABS_LIMITS, CONSUMPTION_PER_CAPITA, GOOD_IDS, GOODS, NEEDS, SUBSISTENCE, TRADING_POST, TUNE, WORKFORCE_RATIO, getMethod, needsAt, rawMax, tenantYield, tradeReserveOf } from './data';
 import { CARTAGE_RATE, RAIL_RATE, borrow, harvestFactor, priceBounds, priceFormula, regionById, sellThrough, shippingRate, isSubsistence } from './economy';
 import { financeIdle, treasuryOver, payRent, paySalvage, taxDue, taxRates } from './finance';
 import { borderCost, kingdomById, kingdomOf, payTariff, toTreasury } from './kingdoms';
@@ -325,7 +325,7 @@ export function collectOrders(w: World, book: Book) {
   // 같은 지역·같은 부(0.1 단위)의 pop 은 그 필요를 처음 계산한 비중을 같이 쓴다 (지역 id → 부 키 → 필요별 비중)
   const groups: Map<number, (Pick[] | undefined)[]>[] = [];
   for (const p of w.pops) {
-    if (p.size < 1e-3) continue;
+    if (p.size < ABS_LIMITS.popMin) continue;
     const d = dayOf(days, w, p.regionId);
     let byWealth = groups[d.r.id];
     if (!byWealth) groups[d.r.id] = byWealth = new Map();

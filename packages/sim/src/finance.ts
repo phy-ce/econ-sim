@@ -1,5 +1,5 @@
 import {recordPopIncome} from './popIncome';
-import { BUILDING_BY_ID, GOODS, SKILL_DEFS, TECH_BY_ID, TICKS_PER_WEEK, TUNE, WORKFORCE_RATIO, getMethod } from './data';
+import { ABS_LIMITS, BUILDING_BY_ID, GOODS, SKILL_DEFS, TECH_BY_ID, TICKS_PER_WEEK, TUNE, WORKFORCE_RATIO, getMethod } from './data';
 import { collectionRatio, companyById, marketWages, levelOwnersOf, slots, regionById, constructionEstimate, efficiency, isBudgetFunded, isOwnerBuilding, kingdomGdp, logEvent, officeFeeMult, paysDividend, repay, wagesAt, sellThrough, shareWeight } from './economy';
 import { techNameEn } from './i18n';
 import { flow, kingdomById, kingdomOf, toFinance, toTreasury } from './kingdoms';
@@ -309,7 +309,7 @@ export function weeklyWageBill(w: World, c: Company): number {
 
 /** 회사가 늘 남겨 두는 현금: 기본 + 주간 임금 + 건물 유보 자산 합 (공사·투자에 쓰지 않는다) */
 export function reserveOf(w: World, c: Company): number {
-  return 50_000 + weeklyWageBill(w, c) + buildingReserves(w, c);
+  return ABS_LIMITS.reserveBase + weeklyWageBill(w, c) + buildingReserves(w, c);
 }
 
 /** 진행 중인 공사를 끝내는 데 더 들 돈 */
@@ -704,7 +704,7 @@ export function weeklyBanking(w: World) {
 // ---------------------------------------------------------------- 주조와 보유고 (빅토리아3 방식)
 
 /** 주조: 왕국마다 매주 기본액 + 주간 총생산 × 비율만큼 국고에 새 돈이 생긴다 */
-export const MINT_BASE = 1_000;
+export const MINT_BASE = ABS_LIMITS.mintBase;
 export const MINT_RATE = 0.03;
 
 /** 국고가 쓸 곳: 준비금 + 진행 중 공사 + 석 달 공사비 */
@@ -716,7 +716,7 @@ export function mintMoney(w: World) {
   for (const k of w.kingdoms) {
     const gov = companyById(w, k.governmentId);
     if (!gov) continue;
-    const amt = MINT_BASE + (kingdomGdp(w, k.id) * TICKS_PER_WEEK / 360) * MINT_RATE;
+    const amt = ABS_LIMITS.mintBase + (kingdomGdp(w, k.id) * TICKS_PER_WEEK / 360) * MINT_RATE;
     // 예산 미리보기 기준값 (화면 전용): 이번 주 주조액 (주 1회만 바뀐다)
     (k.budgetBase ??= {}).mint = amt;
     gov.cash += amt;

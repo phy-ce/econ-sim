@@ -1,6 +1,6 @@
-import { BUILDING_BY_ID, MAX_POINTS_PER_LEVEL_DAY, SKILL_DEFS, TICKS_PER_WEEK, TUNE, getMethod } from './data';
+import { ABS_LIMITS, BUILDING_BY_ID, MAX_POINTS_PER_LEVEL_DAY, SKILL_DEFS, TICKS_PER_WEEK, TUNE, getMethod } from './data';
 import { builderOf, companyById, isBudgetFunded, kingdomGdp, marketWages, officeFeeMult, paysDividend, regionById, slots } from './economy';
-import { DAILY_INTEREST, MINT_BASE, MINT_RATE } from './finance';
+import { DAILY_INTEREST, MINT_RATE } from './finance';
 import { kingdomById, kingdomOf } from './kingdoms';
 import { funderShares } from './production';
 import { BUDGET_ITEMS, BUDGET_STEPS, SKILLS, TAX_LAWS } from './types';
@@ -274,7 +274,7 @@ function budgetModel(w: World, k: Kingdom) {
   const buildLast = last?.build ?? soFar(k.spentWeek?.build);
   const fixed = {
     tariffs: base.tariffs ?? soFar(k.tariffWeek),
-    mint: base.mint ?? (gov ? MINT_BASE + (kingdomGdp(w, k.id) * TICKS_PER_WEEK / 360) * MINT_RATE : 0),
+    mint: base.mint ?? (gov ? ABS_LIMITS.mintBase + (kingdomGdp(w, k.id) * TICKS_PER_WEEK / 360) * MINT_RATE : 0),
     goods: -(base.goods ?? last?.goods ?? soFar(k.spentWeek?.goods)),
     interest: -Math.max(0, gov?.debt ?? 0) * DAILY_INTEREST * TICKS_PER_WEEK,
   };
@@ -494,9 +494,9 @@ export function drillTariffs(w: World, kid: number): TariffDrill {
 /** 주조 (공식, 지금 GDP) */
 export function drillMint(w: World, kid: number): MintDrill {
   const k = kingdomById(w, kid), gdpWeek = (kingdomGdp(w, k.id) * TICKS_PER_WEEK) / 360;
-  const rows: { part: 'base' | 'gdp'; weekly: number }[] = companyById(w, k.governmentId) ? [{ part: 'base', weekly: MINT_BASE }, { part: 'gdp', weekly: gdpWeek * MINT_RATE }] : [];
+  const rows: { part: 'base' | 'gdp'; weekly: number }[] = companyById(w, k.governmentId) ? [{ part: 'base', weekly: ABS_LIMITS.mintBase }, { part: 'gdp', weekly: gdpWeek * MINT_RATE }] : [];
   const total = budgetLineRaw(w, kid, 'mint', {});
-  return { key: 'mint', weekly: total, smoothing: total - sumW(rows), base: MINT_BASE, gdpWeek, rate: MINT_RATE, rows };
+  return { key: 'mint', weekly: total, smoothing: total - sumW(rows), base: ABS_LIMITS.mintBase, gdpWeek, rate: MINT_RATE, rows };
 }
 
 /** 왕실 공사 (그 국영 임금 단계) */
