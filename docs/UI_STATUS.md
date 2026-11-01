@@ -35,10 +35,34 @@ UI 문서의 시작점. 사용자 최신 요청이 과거 문서보다 우선한
 ## 검증 한계
 - 최신 소유권 탐색 추가분: client 타입 검사 및 계산 테스트 통과. 브라우저 도구 연결 오류로 클릭·배치 미검증.
 - 2026-10-29 시세 후속 수정 후 루트 전체 타입 검사 통과.
-- 핵심 테스트 최근 실행: 39 통과/1 실패. budget.test.ts:85 예산 미리보기 오차 검사 실패, 원인 미조사. 화폐 보존·결정성 통과.
+- 과거 budget.test.ts:85 실패 기록은 폐기: 52b37e3에서 시험 삭제·교체, A0_PROBE.md 2장에 9b46c2d 예산 시험 8개 통과 기록. 이번 세션 재실행 결과 아님.
 - 영어/다크 모드의 과거 통과 기록은 신규 창과 소유권 탐색 검증으로 승계하지 않는다.
 - 소작지별 주간 지대가 기록되지 않아 — 표시. 금융가 직원 인구와 투자 지분 소유자를 혼동하지 않는다.
 
 ## 다음 작업
 UI_CHANGES 0장 순서를 따른다. 완료 처리 시 구현 근거와 실제 검증 범위를 함께 기록하고, 미검증 추가분을 UI_DONE의 완료 항목으로 옮기지 않는다.
 
+
+## 2026-11-01 코드 대조 (브라우저 연결 불가로 화면 검증 중단)
+
+아래는 구현 상태이며 브라우저 검증 통과 판정이 아니다. UI_DONE 이동 없음.
+
+| 우선순위 | 상태 | 코드 근거와 잔여 |
+|---|---|---|
+| 0 / 2-68 연구 트리 | 구현됨, 화면 미검증 | packages/client/src/researchLayout.ts:13 깊이별 행, :18 선행 위치 평균 정렬, :19 가변 폭 배치. views/ResearchPanel.tsx:45 계통도 선택·확대, :50 스크롤·드래그. 영어/다크와 실제 배치 검증 남음 |
+| 1 소유권 탐색 | 구현됨, 화면 미검증 | views/OwnershipBrowser.tsx:13 독립 pages/at 이력, :14 이후 기관·팝·지역 이동. 혼합·극소 지분 및 기관 소멸의 실제 조작 검증 남음 |
+| 2 다른 서브윈도우 이력 | 부분 | views/PopTable.tsx:17 선택 상태 저장은 있으나 views/DetailWindow.tsx:8 자체 상태에는 탐색 이력이 없음. 모든 상세 창의 독립 이력 완료로 볼 수 없음 |
+| 3 / 2-50 기관 표시 | 구현됨, 경로 감사·화면 미검증 | views/OwnerSummary.tsx:6 공통 표시, views/RegionIndustry.tsx:56 그룹, views/BuildingEconomics.tsx:16 개별, views/OwnershipBrowser.tsx:33 기관에 적용 |
+| 4 / 2-51 투입·산출 | 부분 | views/ResourceInspector.tsx:38 방식 투입·산출 recipe 존재. 실제 양·단가·금액·판매 및 방식 비교를 합친 공통 UI는 이 경로에 없음 |
+| 5 / 2-42·2-59 그룹 | 부분 | views/RegionIndustry.tsx:58 매출·원료·임금·이익 숫자 표시. 워터폴은 이 경로에 없음. 서비스 합계와 미지정 배당은 추가 대조 필요 |
+| 6 / 2-49 철거 | 부분 | views/ResourceInspector.tsx:36 대기 레벨 막대, :76 목록 배지 구현. 일정·회수 자재는 이 표시 경로에 없음 |
+| 7 전체 화면 감사 | 부분 | views/ResearchPanel.tsx:15, views/PolicyPanel.tsx:12, views/FinancePanel.tsx:16 기존 화면·선택 상태 구현. 세부 요구 전체 충족 여부는 미판정 |
+| 8 실사용 환경 검증 | 없음 (이번 세션) | 1920×1080·영어·다크·Edge 배율 검증 수행 못 함 |
+
+실행: git status --short 정상. npm.cmd run typecheck는 PowerShell 권한 오류 없이 시작해 @econ/sim의 tsc --noEmit -p .까지 출력했으나 완료 응답 없음. packages/client에서 npx.cmd vite --port 5199도 도구 호출이 출력 없이 대기. 승인 요청이나 샌드박스 오류 메시지는 표시되지 않음. 타입 검사 통과·서버 준비·브라우저 검증을 주장하지 않는다. 검증 조건 미충족으로 커밋하지 않음.
+
+### 실행 환경 재검증 (2026-11-01)
+- require_escalated로 npm.cmd run typecheck 재실행: sim → client → encyclopedia 모두 완료, 종료 코드 0. 앞선 무출력만으로 실행 불가를 단정한 기록은 이 결과로 정정한다.
+- packages/client에서 require_escalated로 npx.cmd vite --port 5199 실행: Vite v6.4.4 ready in 562 ms, http://localhost:5199/.
+- 브라우저 도구 createBrowserTab 및 listBrowsers 모두 The browser access host is unavailable 반환. 실제 화면·영어·다크 검증 없음. 2-68은 UI_DONE으로 옮기지 않는다.
+- 코드 수정 없이 UI 문서만 선택하여 커밋. 기존 클라이언트 미커밋 변경 보존.
