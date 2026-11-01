@@ -17,6 +17,9 @@ describe('kingdom comparison totals',()=>{
   expect(data.profit).toBe(14);
   expect(data.levels).toBe(producer.level);
   expect(data.parts.royal).toBe(producer.level);
+  expect(Object.values(data.parts).reduce((n,v)=>n+v,0)).toBe(data.levels);
+  expect(Object.values(data.employment).reduce((n,v)=>n+v,0)).toBeCloseTo(data.employed);
+  expect(Object.values(data.profits).reduce((n,v)=>n+v,0)).toBeCloseTo(data.profit);
   expect(data.privateFunds).toBe(75);
  });
 });

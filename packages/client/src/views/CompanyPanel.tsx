@@ -1,4 +1,5 @@
 import {officeLoadFor} from '../officeLoad';
+import {KingdomTotals} from './KingdomTotals';
 import {t as uiCopy} from '../i18n';
 import {OwnerSummary} from './OwnerSummary';
 import {FlowRow} from './FlowRow';
@@ -579,6 +580,5 @@ export function KingdomSummary({world,government}:{world:World;government:Compan
  const T=useT(),regions=new Set(world.regions.filter(r=>r.kingdomId===government.kingdomId).map(r=>r.id));
  const buildings=world.buildings.filter(b=>regions.has(b.regionId));
  const rows=buildings.map(b=>{const row=rowOf(world,b);return isOwnerBuilding(b.typeId)?{...row,rev:0,raw:0,wage:0,profit:0}:row;});
- const weekly=buildings.filter(b=>!isOwnerBuilding(b.typeId)&&!isGovernment(b.typeId)).reduce((n,b)=>n+b.profitEma*7,0);
- return <><div className="system-facts"><span>{T.treasury}<b><NumericValue value={government.cash-government.debt} format="money"/> / <NumericValue value={creditLimit(world,government)} format="money"/></b></span><span>{T.system.weekProfit}<b><NumericValue value={weekly} format="signedMoney"/></b></span></div><Summary rows={rows}/></>;
+ return <><KingdomTotals world={world} id={government.kingdomId}/><div className="system-facts"><span>{T.treasury}<b><NumericValue value={government.cash-government.debt} format="money"/> / <NumericValue value={creditLimit(world,government)} format="money"/></b></span><span>{T.lastWeekPL}<b><NumericValue value={government.lastWeekProfit} format="signedMoney"/></b></span></div><Summary rows={rows}/></>;
 }

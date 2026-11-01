@@ -2,3 +2,9 @@
 .strategy-panel .kingdom-comparison th, .strategy-panel .kingdom-comparison td { white-space: nowrap; overflow-wrap: normal; width: 110px; padding: 8px; }
 .strategy-panel .kingdom-comparison th:first-child { width: 130px; }
 .strategy-panel .kingdom-comparison .th-sort { white-space: normal; }
+.kingdom-totals { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px; margin:6px 0; }
+.kingdom-totals>div { display:flex; flex-direction:column; gap:4px; border:1px solid var(--rule); padding:6px; }
+.kingdom-totals>div:last-child { grid-column:1 / -1; }
+.kingdom-totals>div>span:first-child { font-size:11px; color:var(--ink2); }
+.kingdom-total-bar { display:flex; height:8px; border:1px solid var(--ink); background:var(--sheet); }
+.kingdom-total-bar i { display:block; height:100%; }

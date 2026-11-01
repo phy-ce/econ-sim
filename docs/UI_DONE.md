@@ -794,3 +794,8 @@ ownershipAssets API로 소유 기관 소재지 기준 왕국/지역 막대, 내 
 - 기존 회사 6개 선택과 상회 순위를 왕국 3개 선택·비교 표로 합쳤다. 왕국 경제는 영토의 건물(소유 기관 제외)을 표시하고 기존 회사 ID 링크를 소속 왕국으로 받는다.
 - 왕실 금고와 민간 순자금은 분리한다. 주간 생산 이익은 정부·소유 기관 이익을 제외한다. 소유 레벨은 현재 API의 국가/저택/금융가와 미배정 몫으로 표시한다.
 - root typecheck·클라이언트 50시험 통과. 헤드리스 스크린샷 확인(1920×1080): C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/kingdom-comparison-fixed.png, kingdom-comparison-right.png, kingdom-economy.png. 영문 다크, 3행 및 상세 진입 확인. 전체 2-35는 미완료로 원문을 UI_CHANGES에 유지한다.
+
+### 2026-11-01 · 2-35 부분: 공통 왕국 합계 타일
+- 요약과 왕국 경제에 같은 인구·주간 GDP·레벨·고용/일자리·주간 생산 이익 타일을 적용했다. 구성 막대는 최신 소유권 규칙의 왕실·저택·금융가 및 미배정 레벨을 사용한다. 음수 이익 몫은 툴팁에 남기고 막대는 양수 몫으로 그린다.
+- 소유 기관의 직원은 고용에 포함하며 기관 수입·정부 수입은 주간 생산 이익에서 제외한다. 국고 옆 지난주 수지는 정부 장부 값으로 분리했다.
+- root typecheck/client50시험 통과. 헤드리스 스크린샷 확인(1920×1080): C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/kingdom-totals-en.png, kingdom-totals-ko.png. 한/영 다크 확인. 전체 2-35는 아직 미완료다.
