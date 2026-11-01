@@ -384,7 +384,8 @@ export function collectOrders(w: World, book: Book) {
     const src = POP_SRC[p.prof] ?? `pop:${p.prof}`;
     for (let i = 0; i < NG; i++) {
       const q = goods[i];
-      if (q <= 1e-9) continue;
+      // 시장 수요에 넣지 않는 아주 작은 양은 계획에서도 지운다 (남기면 결제 때 아무도 팔지 않은 값을 내서 돈이 사라진다)
+      if (q <= 1e-9) { goods[i] = 0; continue; }
       const mg = d.mg[i];
       mg.demand += q;
       addBy(mg.demandBy, src, q);
