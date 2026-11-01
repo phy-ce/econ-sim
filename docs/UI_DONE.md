@@ -804,3 +804,7 @@ ownershipAssets API로 소유 기관 소재지 기준 왕국/지역 막대, 내 
 - 왕국 전용 목록에 소유 종류 필터·개수, 검색, 주간 이익/레벨/이름/지역/충원율/유보율 정렬, 공통 소유·유보 막대, 고용/일자리와 철거 대기를 연결했다. 좁은 창에서 장부 필드를 건물별 세 줄로 배치한다. 조작은 지역 건물 상세에 둔다.
 - 건물 링크로 연 상세가 아래에 가려지지 않도록 요청 대상까지 자동 스크롤한다.
 - root typecheck/client50시험 통과. 헤드리스 스크린샷 확인(1920×1080): C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/kingdom-buildings-ko.png, kingdom-building-open-visible.png. 전체17/금융가2 및 해당 무역소 상세 진입 확인. 전체2-35의 차트·자금 세부 등은 남아 있다.
+
+### 2026-11-01 · 2-35 부분: 왕국 추이
+- 월간 기록으로 레벨 누적 면적, 국고/민간 자금 두 선, 연 GDP 탭을 구현했다. 레벨은 2-54의 국가·저택·금융가 기록을 사용하고 미배정 몫은 회색이다. 소작지·소유 기관 제외라는 기록 정의를 유지한다. 없어진 투자 풀은 소유 기관 금고 라벨로 고쳤다.
+- root typecheck/client50시험 통과. 헤드리스 스크린샷 확인(1920×1080): C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/kingdom-trends-levels.png, kingdom-trends-money.png, kingdom-trends-gdp-fixed.png. 실제 seed42·360일의 월간12기록으로 면적/두 선/GDP를 확인했다. 다른 왕국·영문·라이트 차트는 화면 미검증이다.

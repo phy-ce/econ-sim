@@ -183,12 +183,15 @@ DetailWindow 독립 NavigationProvider/버튼, BuildingPops 및 ResourceInspecto
 - 왕국 주간 생산 이익은 isGovernment와 소유 기관을 제외하도록 보정. 정부100·소유기관1000·생산2의 profitEma를 둔 회귀에서 주간생산14만 집계 확인. root typecheck/client49시험 통과.
 
 
-- 2-35 부분 구현: 통계의 회사 6개 선택·순위를 왕국 3개 선택·비교로 합침. 비교의 모든 열 정렬, 행 클릭 → 왕국 경제, 영토 기준 건물 목록(소유 기관 제외), 민간 순자금(cash−debt), 왕실·저택·금융가/미배정 레벨 집계. 최신 2-52 규칙에 따라 폐기된 privateShare/stake를 새로 쓰지 않음. 기존 회사 ID 링크는 소속 왕국으로 연결해 호환 유지.
+- 2-35 부분 구현: 통계의 회사 6개 선택·순위를 왕국 3개 선택·비교로 합침. 비교의 모든 열 정렬, 행 클릭 → 왕국 경제, 영토 기준 건물 목록(소유 기관 제외), 민간 순자금(cash−debt), 왕실·저택·금융가/미배정 레벨 집계. 최신 2-54 규칙에 따라 폐기된 privateShare/stake를 새로 쓰지 않음. 기존 회사 ID 링크는 소속 왕국으로 연결해 호환 유지.
 - 검증: root typecheck 및 client vitest 20파일 50시험 통과. 헤드리스 스크린샷 확인(1920×1080): C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/kingdom-comparison-fixed.png, kingdom-comparison-right.png, kingdom-economy.png. 3행, 본문391px/scrollWidth391px, 비교 표790px는 내부 가로 스크롤. 영문 다크 확인; 한국어 및 다른 왕국 전환은 추가 확인 예정.
 - 2-35 남음: 공통 합계 타일의 인구·주간 GDP·소유 구성, 민간 자금 세부 내역, 소유 필터·유보 정렬을 갖춘 건물 표, 왕국 추이 차트, 회사 라우팅/미사용 코드 정리. 원문을 UI_DONE으로 전부 옮기지 않음.
 
 - 2-35 합계 타일 추가: KingdomTotals를 요약·왕국 경제에서 함께 사용. 인구, 주간 GDP(연 GDP/360×7), 레벨, 고용/일자리, 주간 생산 이익. 레벨·고용·이익에 현재 소유권 3종/미배정 구성 막대와 소수2자리 툴팁. 소유 기관의 고용만 포함하고 그 수입은 생산 이익에서 제외. 국고 옆 지난주 수지는 정부 lastWeekProfit으로 분리.
 - 검증: root typecheck/client20파일50시험 통과. 레벨·고용·이익 구성 합계 일치 회귀 검증 추가. 헤드리스 스크린샷 확인(1920×1080): C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/kingdom-totals-en.png, kingdom-totals-ko.png (영/한 다크). 실제 메뉴 KO 버튼으로 전환 확인. 기존 선택·비교 커밋 d54de6b. 2-35 건물 표·차트·돈 세부·라우팅 정리 잔여.
 
-- 2-35 建物 목록 후속: 회사용 House를 왕국 전용 KingdomBuildings로 교체. 왕실/저택/금융가 필터·개수, 건물/지역 검색, 주간 이익·레벨·이름·지역·충원율·유보율 정렬(순서는 주마다 갱신), 소유권·유보 공통 막대, 철거 대기 숫자. 420px 창에서는 각 건물의 장부 필드를 세 줄로 배치해 가로 넘침 없음. 소유 기관 제외, 소작지 포함. 조작은 지역 상세로 이동.
+- 2-35 건물 목록 후속: 회사용 House를 왕국 전용 KingdomBuildings로 교체. 왕실/저택/금융가 필터·개수, 건물/지역 검색, 주간 이익·레벨·이름·지역·충원율·유보율 정렬(순서는 주마다 갱신), 소유권·유보 공통 막대, 철거 대기 숫자. 420px 창에서는 각 건물의 장부 필드를 세 줄로 배치해 가로 넘침 없음. 소유 기관 제외, 소작지 포함. 조작은 지역 상세로 이동.
 - 링크 검증에서 대상 건물이 아래에 가려진 것을 발견해 RegionIndustry의 요청 건물 상세를 창 안으로 자동 스크롤. 헤드리스 스크린샷 확인(1920×1080): C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/kingdom-buildings-ko.png, kingdom-building-open-visible.png. 전체17→금융가2 필터, 무역소 클릭→해당 무역소 상세(top87px) 확인. 본문391/scroll391. root typecheck/client50시험 통과. 합계 타일 커밋61fcba8. 추이·자금 세부·라우팅 정리 잔여.
+
+- 2-35 추이 구현: 기존 월간 KingdomMetrics로 레벨 누적 면적(국가/저택/금융가/미배정), 국고와 민간 현금+소유 기관 금고 2개 선, 연 GDP를 탭 전환. 2-54의 levelsManor/levelsFinance가 이미 있어 별도 sim 변경 불필요. 현재 합계와 달리 기록 레벨은 sim 정의대로 소작지·소유 기관 제외. 투자 풀의 남은 화면 라벨을 저택·금융가 금고, 장부는 자본 유입으로 정정.
+- root typecheck/client50시험 통과. 헤드리스 별도 프로필에서 createWorld(42)→step 360일로 만든 실제 기록12개 사용. 헤드리스 스크린샷 확인(1920×1080): C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/kingdom-trends-levels.png, kingdom-trends-money.png, kingdom-trends-gdp-fixed.png. 4면/2선/1선, 본문391px·가로 넘침없음. 금액축 왼쪽 잘림을 발견해 이 차트의 축 폭을52px로 보정. 화면 미검증: 다른 왕국 차트 전환, 영문 차트와 라이트 테마.
