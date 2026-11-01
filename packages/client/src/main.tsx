@@ -12,3 +12,5 @@ createRoot(document.getElementById('root')!).render(
 );
 
 import './strategy.css';
+
+import './readability.css';

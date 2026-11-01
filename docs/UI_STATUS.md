@@ -97,3 +97,10 @@ DetailWindow 독립 NavigationProvider/버튼, BuildingPops 및 ResourceInspecto
 - C(2-71·2-72 1항): 코드 완료, 헤드리스 스크린샷 확인(1920×1080). 경로 C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/state-budget.png 및 state-laws.png. typecheck/client 전체 53시험 통과.
 - 2-76: 헤드리스 스크린샷 확인(1920×1080). 같은 scratch의 first.png, language-ko.png. 한국어 클릭 저장값 ko·진입 확인. 재실행/영어·밤 추가 확인 예정.
 
+
+- ownerSummary NavigationProvider 시험 수정 커밋 c5e9e47. client 전체 17파일 53시험 통과 확인. 이후 각 커밋 전에 root typecheck와 client 전체 시험을 실행.
+- 2-77 진행: 수요/공급 생성 아이콘 32px·행 38px·배경 대비, 범례/팝 표 24px·최소 막대 6px·보조 글자 11px. 헤드리스 검증 예정.
+
+
+- 2-77 완료: 헤드리스 스크린샷 확인(1920×1080), scratch market-icons-ko.png / market-icons-en-dark.png. 아이콘 32px, 시세창 가로 넘침 없음, 영어/다크 대비 이미지 확인. typecheck와 client 전체53시험 통과.
+

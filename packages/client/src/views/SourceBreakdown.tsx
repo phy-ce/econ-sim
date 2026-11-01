@@ -14,11 +14,11 @@ function describe(key: string, side: 'demand' | 'supply'): { label: string; icon
   const T = t();
   if (key.startsWith('pop:')) {
     const c = key.slice(4) as PopClass;
-    return { label: T.srcConsumption(className(c)), icon: <ClassSprite c={c} /> };
+    return { label: T.srcConsumption(className(c)), icon: <ClassSprite c={c} size={32}/> };
   }
   if (key.startsWith('bld:')) {
     const t = key.slice(4);
-    return { label: side === 'demand' ? T.srcInputs(buildingName(t)) : T.srcOutput(buildingName(t)), icon: <BuildingSprite typeId={t} size={16} /> };
+    return { label: side === 'demand' ? T.srcInputs(buildingName(t)) : T.srcOutput(buildingName(t)), icon: <BuildingSprite typeId={t} size={32} /> };
   }
   switch (key) {
     case 'salvage': return {label:T.salvage,icon:<GoodSprite g="timber"/>};

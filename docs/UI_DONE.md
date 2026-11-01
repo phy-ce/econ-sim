@@ -653,3 +653,7 @@ DemolitionProgress: 남는 레벨·철거 대기·이번 주 1레벨, 다음/전
 ### 2026-11-01 C(2-71·2-72 1항)
 정책·재정 → 국가 예산/법 탭. 기존 본문과 명령 유지, 탭/법 소식/국고·빚 소식 목적지 연결. 복지법 없음 단계 5개 disabled, 잠금 칩이 법·복지 분야로 이동. 루트 typecheck 및 client 17파일 53시험 통과. 헤드리스 스크린샷 확인(1920×1080): Temp/estera-ui-cdp/state-budget.png, state-laws.png. 예산 왕실 range 0, 복지 disabled 5, 법·복지 활성, 가로폭 418=scrollWidth 418 확인. 상세 조작 전체 회귀의 실사용 검증은 별도.
 
+
+### 2026-11-01 2-77 아이콘·막대 가독성
+수요/공급 사람·건물 아이콘 32px, 행 38px, 표식 10px, 배경·그림자 대비. 범례·팝 표 아이콘 24px, 막대 최소 6px/테두리1px, 보조 글자 최소11px. 헤드리스 스크린샷 확인(1920×1080): C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/market-icons-ko.png, market-icons-en-dark.png. 실제 아이콘 32×32, 시세창 clientWidth=scrollWidth=418, 새 Runtime 예외 없음. root typecheck 및 client 53시험 통과.
+
