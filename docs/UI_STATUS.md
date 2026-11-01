@@ -125,3 +125,6 @@ DetailWindow 독립 NavigationProvider/버튼, BuildingPops 및 ResourceInspecto
 
 - 2-77 정식 명세 후속 완료: Sprite 계열 명시 size<20 검색0, 기본24, 점10, 막대 채움6+테두리, 9px 글자10. 경제 추이/범례·인구 표 헤드리스 스크린샷 확인(1920×1080): C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/icons-trends.png, icons-pop-table.png. 인구 표 아이콘24, 창 scrollWidth418 확인. 시세 한/영·밤 확인은 market-icons-ko.png / market-icons-en-dark.png. typecheck/client48시험 통과.
 
+
+- 2-51 후속: 실제 관련 건물 양/그룹 단가·금액/상회 상품 링크 구현, typecheck/client48시험 통과. 화면 미검증. 전체 공통 요약 레이아웃 잔여와 허용 범위 밖 packages/encyclopedia 라벨은 미완료로 유지.
+

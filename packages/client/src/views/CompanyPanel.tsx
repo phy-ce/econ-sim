@@ -62,7 +62,7 @@ export function rowOf(world: World, b: Building): Row {
   });
   const office = !!method.construction;
   const outputs = GOOD_IDS.filter((g) => method.outputs[g]).map((g) => {
-    const cur = b.active ? b.last.output[g] ?? 0 : 0;
+    const cur = b.active&&!b.idle ? b.last.output[g] ?? 0 : 0;
     return { g, cur, max: method.outputs[g]! * run, price: price(g), value: cur * price(g) };
   });
   const outCur = office ? b.last.points : outputs.reduce((a, o) => a + o.cur, 0);
@@ -126,7 +126,7 @@ export function CompanyPanel({ game, world, me, region, onViewCompany }: { game:
 }
 
 /** 다른 상회 보기 (읽기 전용): 조작 없이 재무·임금·연구와 건물 막대만 */
-export function CompanyView({ world, company: c, onView }: { world: World; company: Company; onView: (id: number) => void }) {
+export function CompanyView({ world, company: c, onView,onGood }: {onGood?:(g:GoodId)=>void; world: World; company: Company; onView: (id: number) => void }) {
   const T = useT();
   const owned = world.buildings.filter((b) => b.companyId === c.id);
   const projects = world.constructions.filter((k) => k.companyId === c.id);
@@ -160,7 +160,7 @@ export function CompanyView({ world, company: c, onView }: { world: World; compa
           : <span className="muted">—</span>}</dd></div>
         {research.known.length > 0 && <div><dt>{T.knownTechs}</dt><dd>{research.known.map((x) => <span key={x} className="tag-soft">{techName(x)}</span>)}</dd></div>}
       </dl>
-      <House world={world} owner={c} mine={owned} projects={projects} />
+      <House onGood={onGood} world={world} owner={c} mine={owned} projects={projects} />
     </>
   );
 }
@@ -170,7 +170,7 @@ export function CompanyView({ world, company: c, onView }: { world: World; compa
 type Filter = 'all' | 'staff' | 'input' | 'loss';
 type SortKey = 'pl' | 'margin' | 'name' | 'level' | 'region' | 'staff' | 'input';
 
-function House({ game, world, owner, mine, projects }: { game?: Game; world: World; owner: Company; mine: Building[]; projects: World['constructions'] }) {
+function House({ game, world, owner, mine, projects,onGood }: {onGood?:(g:GoodId)=>void; game?: Game; world: World; owner: Company; mine: Building[]; projects: World['constructions'] }) {
   const T = useT();
   const [filter, setFilter] = useState<Filter>('all');
   const [sort, setSort] = useState<SortKey>('pl');
@@ -219,7 +219,7 @@ function House({ game, world, owner, mine, projects }: { game?: Game; world: Wor
             </div>
             {shown.length === 0 && <p className="empty">0</p>}
             {shown.map((r) => (
-              <BuildingRow key={r.b.id} r={r} game={game} world={world} owner={owner}
+              <BuildingRow onGood={onGood} key={r.b.id} r={r} game={game} world={world} owner={owner}
                 open={openId === r.b.id} onToggle={() => setOpenId(openId === r.b.id ? null : r.b.id)} />
             ))}
           </div>
@@ -307,7 +307,7 @@ export function Projects({game,world,owner,projects,regionId}:{game?:Game;world:
 
 // ---------------------------------------------------------------- 건물 한 줄 + 펼친 상세
 
-function BuildingRow({ r, game, world, owner, open, onToggle }: { r: Row; game?: Game; world: World; owner: Company; open: boolean; onToggle: () => void }) {
+function BuildingRow({ r, game, world, owner, open, onToggle,onGood }: {onGood?:(g:GoodId)=>void; r: Row; game?: Game; world: World; owner: Company; open: boolean; onToggle: () => void }) {
   const T = useT();
   const { b } = r;
   const scale = Math.max(r.rev, r.raw + r.wage, 1);
@@ -358,7 +358,7 @@ function BuildingRow({ r, game, world, owner, open, onToggle }: { r: Row; game?:
 
             <section className="hd-sec" aria-label={T.hInputs}>
               <h4 className="hd-h"><span>{T.hInputs} → {T.hOutput}</span><span className="lbl">{regionName(r.region)}</span></h4>
-              <FlowRow world={world} building={b}/>
+              <FlowRow world={world} building={b} onGood={onGood}/>
             </section>
 
             <section className="hd-sec" aria-label={T.balance}>

@@ -12,7 +12,7 @@ import { SectionStack } from './SectionStack';
 import { SortHeader } from './SortHeader';
 import { useMemo, useState } from 'react';
 import { POP_CLASSES, kingdomGdp } from '@econ/sim';
-import type { HistoryPoint, World, GameEvent } from '@econ/sim';
+import type { HistoryPoint, World, GameEvent,GoodId } from '@econ/sim';
 import { TimeChart } from './Chart';
 import { Notifications } from './Notifications';
 import { ClassSprite } from '../sprites';
@@ -20,7 +20,7 @@ import { CLASS_COLOR } from '../ui';
 import { compactMoney, signedCompactMoney } from '../format';
 import { className, companyName, useT, useLang } from '../i18n';
 
-function BottomPanelView({ world, history, lastReadTick, onRead, onJump, viewedId, onViewCompany, game, onEvent, popRequest, onBuilding }: {
+function BottomPanelView({ world, history, lastReadTick, onRead, onJump, viewedId, onViewCompany, game, onEvent, popRequest, onBuilding,onGood }: {onGood?:(g:GoodId)=>void;
   popRequest:PopRequest|null; onBuilding:(id:number)=>void;
   onEvent:(event:GameEvent)=>void; game:Game; world: World; history: HistoryPoint[];
   lastReadTick: number; onRead: () => void; onJump: (regionId: number) => void;
@@ -43,7 +43,7 @@ function BottomPanelView({ world, history, lastReadTick, onRead, onJump, viewedI
       {id:'economy',shortTitle:uiCopy().screenText['trends'],title:uiCopy().screenText['economicPopulationAndFiscalTrends'],height:520,content:<EconomyCharts world={world}/>},
       ...(me?[{id:'summary',shortTitle:uiCopy().screenText['summary'],title:T.mySummary,height:220,content:<CompanySummary world={world} company={me}/>}]:[]),
       {id:'pops',shortTitle:uiCopy().screenText['pops'],title:T.popList,height:360,content:<PopTable world={world} request={popRequest} onRegion={onJump} onBuilding={onBuilding}/>},
-      ...(viewed?[{id:'company',shortTitle:uiCopy().screenText['house'],title:T.companyDetails,height:310,content:<CompanyView world={world} company={viewed} onView={onViewCompany}/>}]:[]),
+      ...(viewed?[{id:'company',shortTitle:uiCopy().screenText['house'],title:T.companyDetails,height:310,content:<CompanyView onGood={onGood} world={world} company={viewed} onView={onViewCompany}/>}]:[]),
 { id: 'kingdoms',shortTitle:uiCopy().screenText['kingdoms'], title: T.kingdomAccounts, height: 174, content: <table className="kingdom-accounts"><thead><tr><th>{T.kingdomLabel}</th><th>{T.investmentPool}</th><th>{T.annualGdp}</th></tr></thead><tbody>{world.kingdoms.map(k=><tr key={k.id}><th><i className="swatch" style={{background:k.color}}/>{lang==='ko'?k.name:k.nameEn}</th><td><NumericValue value={k.investmentPool} format="compactMoney"/></td><td><NumericValue value={kingdomGdp(world,k.id)} format="compactMoney"/></td></tr>)}</tbody></table> }, { id: 'wealth' , title: T.wealthByClassTitle, shortTitle:uiCopy().screenText['living'], height: 236, content: <>
       
         <div className="card-head">
