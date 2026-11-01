@@ -2,6 +2,8 @@
 // 세계를 읽기만 한다: step 사이에 불러 상태를 읽고 lab 쪽 누적기에만 쓴다 (test/gate/lab.test.ts 가 lab 실행과 그냥 step 의 세계 해시가 같은지 본다).
 // 해마다 연말(w.tick % 360 === 0)에 왕국별 한 줄과 왕국 합계 한 줄(k: 'all')을 낸다. 키 목록과 정의는 LAB_KEYS (아래)와 cli/labsum.py 가 같이 쓴다.
 // 날마다 세는 값(체류일·바닥에 붙은 주·한계 켜진 날)은 after() 가 step 뒤에 센다. 지표 정의가 문서에 없는 것은 넣지 않는다 (DEFINED_NOT 목록).
+// 장기 시험(test/long/longRun.ts)도 이 수집기로 해마다 데이터를 남긴다 (2026-11-01): 그 시험에서 단언을 뺀 지표(노동자 식량 foodUnsk*, 계층 이동 mob,
+// 대륙 줄 era4Y)를 여기서 낸다.
 import { BUILDING_BY_ID, BUILDING_TYPES, CLASS_DEFS, CONSUMPTION_PER_CAPITA, GOOD_IDS, GOODS, NEEDS, SKILL_DEFS, TECH_BY_ID, TECH_COST, TICKS_PER_WEEK, TICKS_PER_YEAR, TRADING_POST, TUNE, WORKFORCE_RATIO, getMethod, needsAt } from '../data';
 import {
   FLOW_ZERO, builderOf, companyById, constructionEstimate, creditLimit, estimateMethod, harvestCondition, harvestFactor, isGovernment, kingdomGdp, paysDividend,
@@ -135,6 +137,8 @@ class Acc {
   weeks = 0;
   // 생활수준 연평균 (통과 기준 b)
   solPeas = 0; nPeas = 0; solUnsk = 0; nUnsk = 0;
+  // 노동자 식량 충족 (인구 가중, 날마다): 한 해 합·날 수·최저 (장기 시험 데이터, test/long/longRun.ts)
+  foodU = 0; foodUN = 0; foodUMin = Infinity;
   // 직종 × 소득 원천 (pop.incomeBreakdown, 하루 합의 한 해 합), 소비 (lastSpend)
   inc = new Float64Array(NC * NS);
   spend = new Float64Array(NC);
@@ -200,6 +204,8 @@ export class Collector {
   /** 왕국마다 단계별 첫 기술 해, 법이 열린 해 (연말 줄에 그 뒤로 계속 적는다) */
   tierYear: Record<number, number>[] = [];
   lawYear: Record<string, number>[] = [];
+  /** 계층 이동 누적 기록(w.mobility)의 연초 사본: 연말 줄에 한 해 이동량을 낸다 (세계의 기록은 읽기만 한다) */
+  mob0: Record<string, number> = {};
   readonly base1 = basketAtBase(1);
   readonly base5 = basketAtBase(5);
 
@@ -218,6 +224,7 @@ export class Collector {
     this.popBefore = this.scopePops(w);
     this.startYear(w);
     this.techs(w, 0);
+    this.mob0 = { ...(w.mobility ?? {}) };
   }
 
   private newGood(w: World): GoodAcc {
@@ -249,6 +256,7 @@ export class Collector {
     if (w.tick % TICKS_PER_WEEK === 0) this.weekly(w);
     if (w.tick % TICKS_PER_YEAR !== 0) return [];
     const rows = this.year(w);
+    this.mob0 = { ...(w.mobility ?? {}) };
     this.acc = this.acc.map(() => new Acc());
     for (const g of GOOD_IDS) this.goods.set(g, this.newGood(w));
     for (const r of this.regions.values()) { r.cond = 0; r.hf = 0; r.grain = 0; r.sales = 0; r.floor = 0; }
@@ -303,6 +311,7 @@ export class Collector {
     const dayGross: Float64Array[] = this.acc.map(() => new Float64Array(NC));
     const lowNum = new Float64Array(nk + 1), lowDen = new Float64Array(nk + 1);
     const natural = new Float64Array(nk + 1), popNow = new Float64Array(nk + 1);
+    const uFed = new Float64Array(nk + 1), uPop = new Float64Array(nk + 1);
     for (const p of w.pops) {
       const s = this.scopeOf(p.regionId);
       const scopes = s >= 0 ? [s, nk] : [nk];
@@ -320,7 +329,7 @@ export class Collector {
         if (br) for (const k in br) a.inc[c * NS + SI[k as PopIncomeSource]] += br[k as PopIncomeSource] ?? 0;
         a.spend[c] += p.lastSpend;
         if (p.prof === 'peasant') { a.solPeas += p.sol * p.size; a.nPeas += p.size; }
-        if (p.prof === 'unskilled') { a.solUnsk += p.sol * p.size; a.nUnsk += p.size; }
+        if (p.prof === 'unskilled') { a.solUnsk += p.sol * p.size; a.nUnsk += p.size; uFed[si] += p.food * p.size; uPop[si] += p.size; }
         if (LOWER[c] && r) { lowNum[si] += Math.max(0, p.incomeEma) + inKind; lowDen[si] += (basket1.get(r.id) ?? 0) * p.size; }
         dayTax[si][c] += tax; dayGross[si][c] += gross;
         natural[si] += nat; popNow[si] += p.size;
@@ -329,6 +338,7 @@ export class Collector {
     for (let si = 0; si <= nk; si++) {
       const a = this.acc[si];
       a.lowNum += lowNum[si]; a.lowDen += lowDen[si];
+      if (uPop[si] > 0) { const f = uFed[si] / uPop[si]; a.foodU += f; a.foodUN++; if (f < a.foodUMin) a.foodUMin = f; }
       a.lowRing.push([lowNum[si], lowDen[si]]);
       if (a.lowRing.length > 7) a.lowRing.shift();
       for (let c = 0; c < NC; c++) {
@@ -633,6 +643,10 @@ export class Collector {
       for (const [t, yy] of Object.entries(this.tierYear[i])) tech['tierY.' + t] = yy;
       for (const [l, yy] of Object.entries(this.lawYear[i])) tech['lawY.' + l] = yy;
       if (this.tierYear[i][TECH_COST.indexOf(ERA4_COST)] != null) tech.era4Y = this.tierYear[i][TECH_COST.indexOf(ERA4_COST)];
+    } else {
+      // 대륙 줄: 어느 왕국이든 시대 IV 첫 기술을 얻은 가장 이른 해
+      const ys = this.tierYear.map((t) => t[TECH_COST.indexOf(ERA4_COST)]).filter((v): v is number => v != null);
+      if (ys.length) tech.era4Y = Math.min(...ys);
     }
     const k = isAll ? undefined : this.kingdoms[i];
     const d = Math.max(1, a.days);
@@ -642,6 +656,7 @@ export class Collector {
       solPeas: sig(div(sol[CI.peasant], n[CI.peasant]) ?? NaN), solUnsk: sig(div(sol[CI.unskilled], n[CI.unskilled]) ?? NaN),
       solPeasAvg: sig(div(a.solPeas, a.nPeas) ?? NaN), solUnskAvg: sig(div(a.solUnsk, a.nUnsk) ?? NaN),
       solLower: sig(lower(sol) ?? NaN), fulfil: sig(lower(ful) ?? NaN), foodLow: sig(lower(food) ?? NaN),
+      foodUnsk: sig(div(food[CI.unskilled], n[CI.unskilled]) ?? NaN), foodUnskMin: a.foodUN ? sig(a.foodUMin) : null, foodUnskAvg: sig(div(a.foodU, a.foodUN) ?? NaN),
       grain: sig(grainEnd), grainAvg: sig(div(a.grain, a.grainN) ?? NaN), gdp: sig(gdp / M), gdpPre: sig(gdpPre / M),
       'stock.gov': sig(cash / M), 'stock.govDebt': sig(debt / M), treasury: sig((cash - debt) / M), debtLimit: sig(div(debtLim, limSum) ?? NaN),
       taxRatio: sig(div(taxRatioW, pop) ?? NaN), lit: sig(isAll ? (div(lit, pop) ?? NaN) : kingdomLiteracy(w, k!.id)),
@@ -702,7 +717,10 @@ export class Collector {
       const a = this.regions.get(r.id)!;
       reg[r.id] = { k: r.kingdomId, cond: sig(a.cond / nd), hf: sig(a.hf / nd), grain: sig(a.grain / nd), sales: sig(a.sales / K), floor: sig(a.floor / nd) };
     }
-    return { sd, sdMax, sdAvg, lo, hi, price, sup, dem, subSup, bldSup, tIn, tOut, hh, cap, capLv, reg };
+    // 계층 이동 (w.mobility 의 한 해 증가, 천 명, 0 이 아닌 것만): 출발>도착. 왕국을 가리지 않는 기록이라 대륙 줄에만 낸다
+    const mob: Record<string, number | null> = {};
+    for (const [key, v] of Object.entries(w.mobility ?? {})) { const d = v - (this.mob0[key] ?? 0); if (d !== 0) mob[key] = sig(d / K); }
+    return { sd, sdMax, sdAvg, lo, hi, price, sup, dem, subSup, bldSup, tIn, tOut, hh, cap, capLv, reg, mob };
   }
 }
 
