@@ -116,3 +116,6 @@ DetailWindow 독립 NavigationProvider/버튼, BuildingPops 및 ResourceInspecto
 
 - UI_DESIGN 어긋남 1·2·4 정리 중: 팝 기본 1인당, 빈 집단 —, 소유권 바 CSS 토큰과 밤 색 분리. sim 변경 없음.
 
+
+- 폐기 좌우 고정/격자 코드 제거 중: WindowId overview/industry 제거, 옛 배치 모듈 빈 모듈로 정리(파일 삭제 명령 금지 준수). 시험을 현재 자유 창 3개 동시 표시·경계로 교체.
+

@@ -673,3 +673,7 @@ CompanyPanel BuildingRow의 저택·금융가는 별도 행으로 분기: 자리
 ### 2026-11-01 UI_DESIGN 어긋남 1·2·4 (화면 미검증)
 팝 집계 기본 1인당, 빈 집단 — 표시. OwnershipBar의 왕실/저택/금융가/미지정 색을 CSS 토큰으로 바꾸고 다크 팔레트 추가. 원래 왕실 토큰 재사용. root typecheck/client55시험 통과.
 
+
+### 2026-11-01 폐기 배치 코드 정리
+좌우 slotRect/placeWindows 및 격자 swap/resize/windowTracks 구현 제거. 파일 삭제 명령 없이 빈 모듈 표식 유지. WindowId overview/industry 제거. 옛 규칙 시험 10개를 현재 경계·자유 창3개 동시 표시 3개로 교체. root typecheck/client48시험 통과. 화면 동작 변경 없음.
+
