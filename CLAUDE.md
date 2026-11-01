@@ -82,6 +82,7 @@ data(상품·건물·기술·TUNE) · types · world(시작 상태) · tick(하�
 - `docs/UI_CHANGES.md`: 화면 작업자에게 넘길 변경 (할 일만). `docs/UI_DONE.md`: 반영된 변경 보관
 - `docs/DECISIONS.md`: 사용자 결정이 필요한 것
 - `HANDOFF.md`: 세션 인수인계 (큰 작업이 끝날 때마다)
+- `docs/log/`: 날짜가 붙은 지난 기록 (옛 HANDOFF 절, 날짜별 UI 기록). 지금 기준이 아니다. 화면 규칙의 지금 기준은 `docs/UI_DESIGN.md`
 - GitHub 이슈: 알려진 문제. 고치면 커밋 메시지로 닫는다.
 
 ## 커밋
