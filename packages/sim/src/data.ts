@@ -675,6 +675,9 @@ export const TUNE = {
   // 마지막 공급자 지킴 (2026-11-01 마이크로 시제품 microB S7, AI 판단): 1 = AI 철거(유보 철거·5-2·A2·A3)는 왕국에서 다른 건물이 원료로 쓰는 상품의
   // 마지막 생산 건물(자동 건물 제외)의 마지막 레벨을 헐지 않는다 (ai.ts keepLast). 0 = 끔 (21ea2ff 와 같음). 본 게임 비교 전, 근거: 마이크로 시제품 (DESIGN 11)
   aiKeepLastSupplier: 0,
+  // 증설 위치 (2026-11-01 마이크로 시제품 microB S5, AI 판단): 1 = 유보 증설이 뽑히면 왕국 안에서 그 산출 상품의 지역 예상 공급 ÷ 수요(glutSD)가 가장 낮고
+  // 땅·부지·일손(자격자 포함, laborAvailability ≥ minStaffing)이 되는 지역에 1레벨 짓는다 (ai.ts growRegion). 0 = 끔 (그 건물 지역). 본 게임 비교 전, 근거: 마이크로 시제품 (DESIGN 11)
+  aiGrowWhere: 0,
   // 행정청 징수율 하한 (오버홀 07 A4, 0b′, AI 판단, 이슈 #4): > 0 이면 AI 왕실은 왕국 징수율(taxRatio)이 이 값 아래인 동안 행정청 레벨을 헐지 않는다
   // (reviewLevels 가 적자 주를 세지 않고, 올려 둔 행정청 철거 대기를 거둔다). 0 = 하한 없음 (그 전과 같음). 후보 0.6 / 0.7 / 0.8 과 0 을 비교 중 (docs/overhaul/0BP_A4_SPECS.json), 근거 없음
   aiAdminFloor: 0,

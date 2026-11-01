@@ -1211,14 +1211,39 @@ function reserveLevels(w: World, c: Company, canStart: () => boolean, free: () =
       delete b.brokeWeeks;
       continue;
     }
-    if ((TUNE.reserveGrowMax > 0 ? !rich : nr < RESERVE_STREAK) || inDebt || !canStart() || roomFor(w, b.regionId, b.typeId) < 1) continue;
+    if ((TUNE.reserveGrowMax > 0 ? !rich : nr < RESERVE_STREAK) || inDebt || !canStart()) continue;
+    const at = TUNE.aiGrowWhere ? growRegion(w, c, b) : b.regionId;
+    if (roomFor(w, at, b.typeId) < 1) continue;
     const cost = constructionEstimate(w, c, b.typeId).cost;
     if (!Number.isFinite(cost) || free() < cost) continue;
-    if (start({ regionId: b.regionId, typeId: b.typeId, methodId: b.methodId, levels: 1, score: 0 }, 'reserve')) delete b.richWeeks;
+    if (start({ regionId: at, typeId: b.typeId, methodId: b.methodId, levels: 1, score: 0 }, 'reserve')) delete b.richWeeks;
   }
 }
 
 interface Pick { regionId: number; typeId: string; methodId: string; levels: number; score: number; fallback?: boolean }
+
+/**
+ * 증설 위치 (TUNE.aiGrowWhere = 1, 2026-11-01 마이크로 시제품 microB S5): 유보 증설이 뽑힌 건물 b 의 1레벨을 지을 지역.
+ * 후보 = 왕국 지역 중 그 종류 부지·땅(매장량, 기상 조건 없음)이 있고 일손이 되는 곳 (laborAvailability ≥ MIN_STAFFING: 직종마다 그 지역 구직 가능 인원 ÷ 필요,
+ * 기술자·전문가는 자격자만 센다). 그중 산출 상품(mainOutput)의 지역 예상 공급 ÷ 수요(glutSD, 과잉 검사와 같은 값)가 가장 낮은 곳, 같으면 b 의 지역, 그다음 지역 순서.
+ * 수요가 없는 지역(glutSD null)은 후보가 아니다. 후보가 없으면 b 의 지역 (끈 것과 같다).
+ * 같은 지역이면 b 를 늘리고, 다른 지역이면 그 지역의 같은 종류·방식 건물을 늘리거나 새로 짓는다 (start → ownBuildingAt).
+ * 마이크로 시제품과 다른 점: 수요 없는 지역을 S/D 0 으로 보지 않고 뺀다, 같은 값이면 b 의 지역을 먼저 본다
+ */
+function growRegion(w: World, c: Company, b: Building): number {
+  const g = mainOutput(b.typeId, b.methodId);
+  if (!g) return b.regionId;
+  const m = getMethod(b.typeId, b.methodId), land = BUILDING_BY_ID[b.typeId].land;
+  const own = ownRegions(w, c);
+  let best = b.regionId, low = Infinity;
+  for (const r of [...own.filter((x) => x.id === b.regionId), ...own.filter((x) => x.id !== b.regionId)]) {
+    if (roomFor(w, r.id, b.typeId) < 1 || harvestFactor(w, r.id, land) < 1) continue;
+    if (laborAvailability(w, r, m, 1, c.state, undefined, c) < MIN_STAFFING()) continue;
+    const sd = glutSD(w, r.id, g);
+    if (sd !== null && sd < low) { low = sd; best = r.id; }
+  }
+  return best;
+}
 
 /**
  * 마지막 공급자 지킴 (TUNE.aiKeepLastSupplier = 1, 2026-11-01 마이크로 시제품 microB S7): 건물 b 의 남는 레벨(레벨 − 철거 대기)이 1 이하이고,
