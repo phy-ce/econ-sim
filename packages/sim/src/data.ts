@@ -737,11 +737,15 @@ export function tradeEscrowPerLevel(): number {
   return TUNE.tradeReserve * TRADE_ESCROW_SHARE;
 }
 
-/** 이 건물 1레벨의 공사 포인트: 표의 buildPoints × TUNE.buildCostMult, 10 단위 (공사·견적·자재·화면이 모두 이것을 쓴다) */
+/** 마이크로 세계(lab/micro.ts)의 건물 종류별 배율 typeScale 을 공사 포인트에도 곱한다 (lab 이 채우고 비운다. 본 게임에서는 비어 있다) */
+export const MICRO_BUILD_SCALE: Record<string, number> = {};
+/** 이 건물 1레벨의 공사 포인트: 표의 buildPoints × TUNE.buildCostMult, 10 단위 (공사·견적·자재·화면이 모두 이것을 쓴다). 마이크로 typeScale 이 있으면 그 배율 (반올림 없이) */
 export function buildPointsOf(typeId: string): number {
   const base = BUILDING_BY_ID[typeId].buildPoints;
   if (!base) return 0;
-  return Math.max(10, Math.round((base * TUNE.buildCostMult) / 10) * 10);
+  const pts = Math.max(10, Math.round((base * TUNE.buildCostMult) / 10) * 10);
+  const k = MICRO_BUILD_SCALE[typeId];
+  return k === undefined ? pts : pts * k;
 }
 
 // ---------------------------------------------------------------- 기상 조건

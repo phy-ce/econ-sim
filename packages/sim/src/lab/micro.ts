@@ -9,10 +9,12 @@
 // 축소 배율 s (기본 1/50): 레벨당 일꾼·원료·산출 × s. 값(가격·임금·이익률)은 그대로라 1인당 경제는 본 게임과 같다.
 // - 공사 포인트(buildPoints)와 건축사무소 포인트(construction)는 그대로 둔다: 사무소 일꾼·자재가 s 배라 포인트 1의 값이 s 배가 되고,
 //   그래서 1레벨 공사비도 s 배다 (공사 기간은 같다). buildPointsOf 가 10 단위로 반올림하고 최소 10이라 포인트를 줄이면 깨진다.
+// - 건물 종류별 배율 typeScale 은 공사 포인트에도 곱한다 (data.ts MICRO_BUILD_SCALE, 반올림 없이). 그 종류의 레벨당 일꾼·산출이 typeScale 배인데
+//   공사 포인트가 그대로면 산출에 비해 공사비가 1/typeScale 배가 된다 (2026-11-01 microB 가 찾은 도구 버그: labor 프리셋 공방 0.15·방직 0.25 에서 약 4~7배).
 // - 사람·양의 고정 문턱(ABS_LIMITS hireMin·shareMin·seekMin·unsuppliedQty)은 × s, 돈 문턱(baseCredit·mintBase·reserveBase)은 × 인구 비율
 //   (마이크로 인구 ÷ 본 게임 같은 왕국 시작 인구). 소작지 1칸 인원(SUBSISTENCE.workersPerCell)·무역소 유보액(TUNE.tradeReserve)도 × s.
 // - 저택·금융가 크기 규칙(OWNERSHIP_SEATS·OWNER_SEATS_PER_LEVEL·financeStaff)은 레벨 단위의 비율이라 표 축소만으로 맞는다.
-import { ABS_LIMITS, BUILDING_BY_ID, BUILDING_TYPES, GOOD_IDS, SUBSISTENCE, TAX_PEOPLE_PER_LEVEL, TICKS_PER_YEAR, TIERS, TRADING_POST, TUNE, WORKFORCE_RATIO, tradeReserveOf } from '../data';
+import { ABS_LIMITS, BUILDING_BY_ID, BUILDING_TYPES, GOOD_IDS, MICRO_BUILD_SCALE, SUBSISTENCE, TAX_PEOPLE_PER_LEVEL, TICKS_PER_YEAR, TIERS, TRADING_POST, TUNE, WORKFORCE_RATIO, tradeReserveOf } from '../data';
 import { SCRIPTED_QUAKES, collectionRatio, newBuilding, paysDividend, slots } from '../economy';
 import { applyStateWages, taxCapacity, updateWageIndex } from '../finance';
 import { createWorld } from '../index';
@@ -125,6 +127,7 @@ export function restoreMicroScale(): void {
   Object.assign(ABS_LIMITS, snapshot.abs);
   for (const k of Object.keys(TUNE.needMul)) delete TUNE.needMul[k as NeedId];
   Object.assign(TUNE.needMul, snapshot.needMul);
+  for (const k of Object.keys(MICRO_BUILD_SCALE)) delete MICRO_BUILD_SCALE[k];
   active = null;
 }
 
@@ -154,6 +157,7 @@ function applyMicroScale(scale: number, popRatio: number, adminK: number, floors
     ABS_LIMITS.mintBase = snapshot.abs.mintBase * popRatio;
     ABS_LIMITS.reserveBase = snapshot.abs.reserveBase * popRatio;
   }
+  Object.assign(MICRO_BUILD_SCALE, typeScale);
   active = { scale, popRatio, adminK, floors, typeScale };
 }
 
