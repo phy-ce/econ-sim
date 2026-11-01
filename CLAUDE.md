@@ -61,7 +61,7 @@
 ## 실행과 검증
 - `npm run typecheck`: sim + 클라이언트 (변경할 때마다)
 - `npm run test:core`: 화폐 보존·결정성(저장/불러오기)·범위만 (약 10초, 변경할 때마다)
-- `cd packages/sim && npx vitest run`: 전체 테스트 (파일 병렬, 약 1분: 20년 시드 하나 길이). `npm run test:long`: 20년만
+- `cd packages/sim && npx vitest run`: 전체 테스트 (파일 병렬, 약 1~2분). 시험은 코드 문제(완주·화폐 보존·결정성·범위·공식)만 판정하고 경제 결과로는 실패하지 않는다 (2026-11-01 사용자). `npm run test:long`: 20년 시드 1·2, 해마다 지표를 `.tmp/test-data/long-<시드>.jsonl`에 남긴다 (`python cli/report.py <id> 파일`로 보고서, `LONG_DATA=0`으로 끈다)
 - `bash packages/sim/cli/sweep.sh out.jsonl '<TUNE JSON>' ...` → `python packages/sim/cli/sweepsum.py out.jsonl`:
   20년 × 시드 2개 비교 (packages/sim 에서 실행). `SEEDS="1 2 3"`, `YEARS=10`, `TIMING=1`(실행 시간) 로 바꾼다
 - `bash packages/sim/cli/fast.sh <cli 파일> 인자`: tsx 대신 esbuild 로 묶어 실행 (같은 결과, 시작 2초·계산 10% 빠름)
