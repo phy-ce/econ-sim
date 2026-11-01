@@ -119,21 +119,21 @@ Research costs no money. Each week the crown earns 50 + 3 × the kingdom's liter
 
 ## Classes
 
-| Class | Stratum | Base wage | Income |
+| Class | Stratum | Base wage (× labourer) | Income |
 |---|---|---|---|
 | Tenant farmers | lower | – | the region's free farmland (see below) |
-| Labourers | lower | 10 | wages |
-| Farmers | lower | 10 | wages on grain farms, fibre farms and ranches (open to anyone, like labourer jobs; each company sets its own farmer wage) |
-| Skilled workers | middle | 15 | wages |
-| Experts | middle | 40 | wages |
-| Gentry | middle | 30 | wages in hereditary administration and tutor schools, or a 0.25 share in the manor |
-| Capitalists | upper | 40 | shares in the financial district |
-| High nobility | upper | 40 | shares in the manor: dividends of the manor's levels and tenant rent |
+| Labourers | lower | 1 | wages |
+| Farmers | lower | 1 | wages on grain farms, fibre farms and ranches (open to anyone, like labourer jobs) |
+| Skilled workers | middle | 1.5 | wages |
+| Experts | middle | 4 | wages |
+| Gentry | middle | 3 | wages in hereditary administration and tutor schools, or a 0.25 share in the manor |
+| Capitalists | upper | 4 | shares in the financial district |
+| High nobility | upper | 4 | shares in the manor: dividends of the manor's levels and tenant rent |
 
 - **Needs.** Each consumption basket grows with wealth. Food and intoxicants share one budget: up to wealth 10, 0.05 per wealth point of what used to be food is liquor instead, so a basket costs the same as before liquor existed. Liquor comes from distilleries (grain into liquor, like a grocery plant) and from tenant farms.
 - **Tenant farms.** All free farmland is tenant land, 500 tenants per cell. Each tenant worker grows 2.34 grain and 0.23 liquor a day, a little more than the household uses at wealth 5, plus 0.2 clothing and 0.2 timber. Tenants make no furniture, tools or fibre. **Rent: 5% of the harvest is taken first and sold straight away; the money goes to the regional manor** (half as much from very poor tenants, wealth below 2). Of the rest, tenants keep what they use and sell the remainder for themselves. Under the land-tax law they pay a fixed land tax per head.
 - **High nobles = manor seats.** Each manor's seats = its weekly economy (output value of owned levels + tenant harvest, at base prices) ÷ 16,000, approached 1% a day. Nobles beyond the seats become gentry; empty seats are filled by gentry. Starting nobles are a fifth of the tier value.
-- **Wealth** is a standard of living from 1 to 99. It rises when income covers the next consumption basket and falls when it does not cover the current one. Living standard (wealth × fulfilment) sets births and deaths, as in Victoria 3. Hunger raises deaths sharply.
+- **Wealth** is a standard of living from 1 to 99. It rises when income covers the next consumption basket and falls when it does not cover the current one. For tenants, labourers and farmers, savings above 8 weeks of living costs also count as income, spread over 52 weeks. Living standard (wealth × fulfilment) sets births and deaths, as in Victoria 3. Hunger raises deaths sharply.
 - **Qualifications.** Literacy (from schools and wealth) and wealth let people qualify for skilled, expert, gentry and noble seats. Anyone except capitalists and high nobility can take labourer and tenant seats.
 - **Best-paying job.** People move to the best-paying seat they qualify for. The unemployed move at once. The employed move only for more than 1.1× their current income: 0.5% a day at 1.1×, up to 5% a day at 2×. Income per person is the wage, the tenant harvest value, or, for an ownership seat, the building's dividends × own shares ÷ all seated shares. A building hires at most max(3, 1% of its seats) a day.
 - **Migration.** A region's pull is the income an unemployed person can expect there times its food fulfilment. People move when a neighbour pulls more than 1.3× harder, fastest (0.1% a day) at 2×. Employed people move at a quarter of that speed; employed upper classes stay.
@@ -143,7 +143,7 @@ Research costs no money. Each week the crown earns 50 + 3 × the kingdom's liter
 
 - **Taxes.** One tax law at a time, and a change takes 180 days. *Land tax* (the start): ƒ0.02 a day per tenant. *Poll tax*: ƒ0.6 a day per non-tenant, available once financial districts hold 10% of owner assets. *Income tax*: 30% of non-tenant wages and dividends (subsistence exempt), available at 30%. Owner assets are the weekly output value of owned levels, plus tenant harvests for manors.
 - **Investment law and the fund.** Financial districts are funds. Pops of the allowed classes buy units of their regional district with spare cash at the unit value (treasury + build cost of owned levels, per unit) and receive dividends by units. At first only nobles may buy; at a financial share of 5% / 10% / 15% the law can widen to experts / skilled / labourers and farmers. Spare cash of other classes and tenants goes to the district treasury without units. Districts employ one expert per owned level at ƒ20 a day plus 10% of the dividends received. There is no capitalist class.
-- **Policy levels** (1–5, start 3). **Tax level** multiplies every tax rate by 0.6 / 0.8 / 1 / 1.2 / 1.4. **State wages**: crown government buildings (administration, builder's office, school) pay base wage × wage index × 0.7 / 0.85 / 1 / 1.15 / 1.3; the wage index follows the average private labourer wage. Crown production buildings (farms, workshops, trade) pay market wages like a private company: you set them on the wage screen (market wage ± a percentage), and AI crowns adjust them weekly by the same rule as private companies. **Welfare** sets the target standard of living 2 / 2.5 / 3 / 3.5 / 4 for those the welfare law covers. Research has no level: it costs no money. The budget preview shows the weekly balance at each level before you change it.
+- **Policy levels** (1–5, start 3). **Tax level** multiplies every tax rate by 0.6 / 0.8 / 1 / 1.2 / 1.4. **State wages**: crown government buildings (administration, builder's office, school) pay the regional market wage × 0.7 / 0.85 / 1 / 1.15 / 1.3. Crown production buildings (farms, workshops, trade) pay the regional market wage like a private company; you can add a percentage on the wage screen. **Welfare** sets the target standard of living 2 / 2.5 / 3 / 3.5 / 4 for those the welfare law covers. Research has no level: it costs no money. The budget preview shows the weekly balance at each level before you change it.
 - **Government buildings** (administration, offices, schools) always run at full capacity. The treasury pays the wages and inputs of administration and schools; construction offices pay their way from construction fees, and their profit or loss goes to the treasury like a state enterprise. Only the crown builds schools and administration.
 - **Schools.** Noble tutors (100 gentry, 20,000 places) or, with printing, public schools (1,000 workers, 100,000 places). Education moves towards 0.1 + 0.8 × places ÷ population and raises literacy.
 - **Treasury income**: taxes, tariffs, minting (ƒ1,000 + 3% of weekly output each week) and the profit of crown enterprises, including construction offices, which earn fees from every project. The crown starts with 26 weeks of running costs.
@@ -157,7 +157,7 @@ Research costs no money. Each week the crown earns 50 + 3 × the kingdom's liter
 The other two crowns and all three private companies are run by AI, through the same command path as the player. Each week:
 
 - **Investment.** For every good the AI forms a long-run price from continent-wide demand (current demand, inputs of projects under construction, households that would switch back from raw goods, and the harvest of tenants the new jobs pull off the land) against supply. A candidate earns that price on only the share of its output this demand buys (demand ÷ (supply + its output)), with transport and the best utilisation (100/75/50/25%). Up to 20% of a house's yearly construction spend may go to development projects that also count the inputs better methods would use (latent demand), accepting a loss of up to a quarter of their wages, one project a week. It builds where yearly profit ÷ construction cost is above 0.2 and it can find at least half the workers, up to three projects a week.
-- **Wages.** Raised while vacancies stay open, cut after a losing week. Kept between 1.2× what new workers earn now and 85% of value added.
+- **Wages.** Each region has one market wage per job, paid by every building there. It rises a little each day while there are more seats than people willing to take them and falls while there are fewer. With no seats, a job's wage is the job below (tenants for labourers and farmers) × 1.1. There is no minimum wage, so labourers can earn less than tenants for a while. The base wage (labourer = a tenant's daily income at base prices × 1.2) is only the yardstick for building numbers.
 - **Methods, utilisation, demolition.** Switches to a method that earns 5% more per unit. Cuts utilisation after four weeks of heavy loss and demolishes after 26 weeks of a losing last level, but not while the reserve still covers the loss, unless the building has been starved of inputs for 8 weeks.
 - **Crown.** Picks the tax law with the higher expected revenue. Moves the policy levels by how many weeks of spending the treasury holds (tightens below 26 weeks, loosens above 52). Always has a research target, picked by value ÷ cost. Adds office levels when the queue is longer than 30 days. Builds schools until regions can reach 60% literacy.
 

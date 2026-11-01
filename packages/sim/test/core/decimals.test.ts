@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { GOODS, applyCommandMsg, createWorld, migrateWorld, playerCompany, recordHistory, step } from '../../src/index';
 import type { World } from '../../src/index';
 import { PRICE_MAX, PRICE_MIN, updatePrices } from '../../src/market';
+import { TUNE } from '../../src/data';
 
 // 반올림은 플레이어에게 보이는 값에만 한다 (CLAUDE.md). sim 이 계산하고 저장하는 값은 반올림하지 않는다 (round.ts).
 // 여기서는 화면에 그대로 나가는 값이 소수 둘째 자리인지, 반올림하지 않은 저장값이 저장/불러오기에서 그대로 돌아오는지, 옛 판 저장 변환을 본다.
@@ -32,12 +33,15 @@ function violations(root: unknown, label: string, limit = 8): string[] {
   return count ? [`${count}개`, ...found] : [];
 }
 
-/** 화면에 그대로 나가는 값: 기록(history·metrics), 지난주 국정 수지, 투자 풀 칸, 회사 임금 */
+/**
+ * 화면에 그대로 나가는 값: 기록(history·metrics), 지난주 국정 수지, 투자 풀 칸, 회사 임금.
+ * 지역 시장 임금(TUNE.wageMarket = 1)에서는 회사 임금표가 지역 임금의 고용 가중 평균인 계산값이라 (labor.ts syncCompanyWages) 반올림하지 않고 화면이 반올림한다. 그때는 세지 않는다
+ */
 function shown(w: World) {
   return {
     history: w.history, metrics: w.metrics,
     kingdoms: w.kingdoms.map((k) => ({ lastBudget: k.lastBudget, investmentPool: k.investmentPool })),
-    wages: w.companies.map((c) => c.wages),
+    wages: TUNE.wageMarket ? [] : w.companies.map((c) => c.wages),
   };
 }
 

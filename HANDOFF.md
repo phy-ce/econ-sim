@@ -1,13 +1,34 @@
-# 인수인계 (2026-11-01 기준)
+# 인수인계 (2026-11-02 기준)
 
 에스테라 왕국 경제 시뮬레이션. 빅토리아3의 경제 루프에서 영감을 받은 근세 왕국 경영 게임이다. 공개 배포가 목표다.
 
 - 폴더: `C:\Users\phyju\Desktop\Coding_Desk\2026\estera economy sim`
 - 저장소: https://github.com/phy-ce/econ-sim (main). 검증된 병합마다 푸시한다(2026-10-19 사용자 지시).
 - 작업 규칙: `CLAUDE.md`. 경제 규칙 요약: `docs/DESIGN.md`. 빅토리아3 근거: `docs/VIC3_REFERENCE.md`.
-- 사용자 결정 대기: `docs/overhaul/12_DECISIONS_NEEDED.md`(Q1~Q20)와 `docs/DECISIONS.md`. 지금 답을 기다리는 것은 아래 0-1030 절 0b′ 의 "사용자 답 대기" 줄. 화면 작업자에게 넘길 것: `docs/UI_CHANGES.md` 맨 위 "0. 지금 할 일".
+- 사용자 결정 대기: `docs/overhaul/12_DECISIONS_NEEDED.md`(Q1~Q20)와 `docs/DECISIONS.md`. 지금 답을 기다리는 것은 아래 0-1030 절 0b′ 의 "사용자 답 대기" 줄과 0-1102 의 `tenantSlack` 메모. 화면 작업자에게 넘길 것: `docs/UI_CHANGES.md` 맨 위 "0. 지금 할 일".
 - 클라우드 세션(claude.ai/code)으로 이어서 할 수 있다. 규칙은 CLAUDE.md "클라우드 세션"을 본다.
 - 옛 세션 기록: `docs/log/` (2026-10-25 이전 HANDOFF 절은 `docs/log/HANDOFF_2026-10-18_to_10-25.md`, 날짜별 UI 기록도 여기). 다른 문서의 "HANDOFF 0-ind3"·"HANDOFF 0-aifix" 같은 옛 절 참조는 그 파일에 있다.
+
+## 0-1102. 2026-11-02: wt-labor 를 main 에 합칠 준비 (0b′ + 기준 임금 + 지역 시장 임금 + 마이크로 + 조합)
+- 사용자 결정 (DECISIONS 7-38): "소작지 수확 체감은 일단 메모만 해 두고, all 의 나머지를 넣어서 메인에 합쳐 봐", "테스트는 일단 생략" → 확인 비교(새 기본값 대 main 20년 × salt 묶음)는 돌리지 않았다. 근거는 보고서 2026-11-02-combo (all 판, `tenantSlack` 0.5 포함).
+- 이 브랜치가 가져오는 것:
+  - 0b′ (옛 wt-0bp): 5-1 과잉 검사 `aiGlutSD` 1.5 (기본, 보고서 2026-11-01-0bp-glut). 5-2 `aiCutSD`·`aiDemoSD`, A1~A3 (`aiGlutIdle`·`aiSellDemoSD`·`aiMarginal`), A4 (`aiAdminFloor`·`aiAdminWage`) 는 스위치만 (기본 0). lab 지표.
+  - 기준 임금 재계산 (DECISIONS 7-31, 보고서 2026-11-01-basewage): 노동자 = 기본가 소작 1인 소득 × `wageOutside`, 방식 숫자 `cli/rebasewage.ts` 로 약 0.35배, `MAX_POINTS_PER_LEVEL_DAY` 3.5, 사무소 포인트 0.7·1.4·2.1. DESIGN 11장 비교값 다수 "재검증 필요".
+  - 화폐 누수 수정 (0b5f754, 아주 작은 가계 수요가 아무도 안 판 물건 값을 냄, `test/core/tinyDemand`).
+  - **새 기본값**: 지역 시장 임금 `wageMarket` 1·`wageMarketRate` 0.0025 (DESIGN 7.3, `docs/overhaul/LABOR_MARKET.md`), `reserveGrowMax` 1, `aiKeepLastSupplier` 1 (S7), `aiGrowWhere` 1 (S5), `aiReserveFund` 1 (S8), D2 `wealthSavWeeks` 52·`wealthSavBuffer` 8·`wealthSavLower` 1. 끈 채: `tenantSlack` (메모), 재해 `quakeChance`, `startPopScale` 1, 저택 `manorTargetMult`·`manorGentrySeats`, 5-2, A1~A4.
+  - 마이크로 세계 도구 (`src/lab` micro, `cli/microcheck.ts`, `cli/microjudge.ts`), 결과 `.tmp/lm/microA·microB·combo` (RESULT.md), 명세 `docs/overhaul/{LABOR,QUAKE,MANOR,COMBO}_SPECS.json`.
+- main 병합 (959015b): 충돌 6곳. DECISIONS 는 main 7-29·7-30 다음에 wt-labor 7-31~7-37 (번호 안 겹침), DESIGN 11장 사무소 행은 양쪽 "재검증 필요" 를 다 남김, report.py 라벨·사전 import·lab/metrics 반환·보고서 목록은 양쪽 합침. 사무소 필요 포인트(`officeLoad`)는 포인트·`MAX_POINTS_PER_LEVEL_DAY`·자재가 함께 0.35배라 비율이 그대로 성립 (test/core/officeload 통과).
+- 시험을 하나 고쳤다: `test/core/decimals.test.ts` 는 지역 시장 임금에서 회사 임금표(`Company.wages`, 지역 임금의 고용 가중 평균인 계산값)를 "보이는 값" 에서 뺀다 (DESIGN 2장 반올림 줄). 화면이 소수 둘째 자리로 보인다.
+- 검증: `npm run typecheck`, `npm run test:core` (22 파일 70개), `methods_audit` 종료 0. 전체 vitest·장기·클라이언트 시험은 사용자 지시로 생략. 골든은 손대지 않음 (합친 뒤 `npm run golden:update`).
+- 알려진 문제: 소작농이 0 에 가까워지면 노동자 소득이 무너지는 판 (사용자: 나중 확장 몫), 노동자가 소작보다 못 버는 기간 (7-33 수용), 민간 회사 현금 0 함정 (microA 발견 2), 완공 정산의 금고 음수 (0-1101b), README 의 AI 절은 옛 판단을 설명한다 (임금·국영 임금·부 줄만 고쳤다).
+- 다음 할 일: (1) premerge → main, golden:update. (2) 새 기본값 대 main 확인 비교 (20년 × 시드 1·2 × salt 0..3, `cli/lab.sh`) 를 돌려 DESIGN 11장 `wageMarket` 행에 더한다. (3) 민간 회사 현금 0 함정: 주인이 운전자금을 넣는 AI 후보 (DECISIONS 7-38). (4) `tenantSlack` 다시 물을 때 근거는 2026-11-02-combo kgsd·all.
+- **화면에 넘길 것 (ui-ux 가 UI_CHANGES 로 옮긴다)**:
+  - 지역 시장 임금 표: 지역마다 직종별 `Region.wages` (노동자·농부·기술자·전문가·하급 귀족…) 와 소작 1인 소득 (`subsistenceWage`), 52주 평균 `Region.wageAvg`. 사전 `market-wage` 제목에서 "(비교 중)" 을 뺐다.
+  - 국영 임금 상세: 정부 건물 임금 = 그 지역 시장 임금 × 국영 임금 단계 배율 (`Region.stateWages`, 매주). 왕실 `stateWages` 는 왕국 지역 평균 (대표값).
+  - 회사 임금표: AI 임금 판단(`adjustWages`)이 돌지 않고 `Company.wages` 는 지역 임금의 고용 가중 평균 계산값 (반올림 안 됨 → 화면에서 소수 둘째 자리). 실제 지급은 지역 시장 임금 × (1 + 웃돈 `setWageOffset`, −50%~+100%) 이고 `setWage` 로 넣은 절대값은 지급에 쓰이지 않는다 (`economy.ts wagesAt`, 지역 임금이 있으면). 플레이어 임금 화면은 웃돈만 두는지 정한다.
+  - 저축·부: 하층(소작농·노동자·농부)은 생활비 8주치를 넘는 저축 ÷ 52주가 부를 정하는 소득에 더해진다. pop 상세의 부 이동 줄에 이 몫을 보일지.
+  - 재해 사건 열: `quakeChance` 기본 0 이라 지금은 안 나오지만 켜면 "지역 지진 소작지 −25% (3칸) · 1080일" 사건 (`quakeLabel`, `logEvent` warn), 사전 `tenant-disaster`.
+  - 사무소 가동 비율: 이미 UI_CHANGES 2-78 (코드 완료).
 
 ## 0-1101c. 2026-11-01: 건축사무소는 필요한 만큼만 자재를 산다 (`wt-officeuse`)
 - 사용자 결정 DECISIONS 7-30. 가동 비율 = min(1, 필요 포인트 ÷ 능력) (`production.ts officeNeed`·`officeLoad`). 자재 주문은 그 비율의 2일분 (`market.ts collectOrders`). 일자리·임금은 그대로. 규칙과 숫자: DESIGN 8장 "한 줄 규칙".
@@ -28,7 +49,7 @@
 - UI_CHANGES·UI_DESIGN 13장·UI_STATUS 의 링크를 `log/` 로 고쳤다. CLAUDE.md 문서 목록에 `docs/log/` 를 더했고, 화면 규칙의 지금 기준은 `docs/UI_DESIGN.md` 라고 적었다.
 - 남은 일: `docs/UI_WINDOWS_2026-10-28.md` 는 사용자 PC main 체크아웃에 커밋 안 한 수정이 있어 아직 안 옮겼다. 화면 작업자가 그 수정을 커밋한 뒤 `docs/log/` 로 옮기고, UI_DESIGN.md:126·UI_STATUS.md:10·UI_DONE.md:465 의 참조를 고친다.
 
-## 0-1101-basewage. 기준 임금 재계산 (`wt-basewage`, 06bab20 위, 합치기 전)
+## 0-1101-basewage. 기준 임금 재계산 (`wt-basewage`, 06bab20 위, wt-labor 에 들어가 0-1102 로 합친다)
 
 - 사용자 결정 2026-11-01 (DECISIONS 7-31): 기본 임금 = 기본가 소작 1인 하루 소득 2.95 (`data.ts tenantIncomeAtBase`) × `wageOutside` 1.2 → 0.5 단위 3.5. 기술자 5.5, 하급 귀족 10.5, 전문가·자본가·상급 귀족 14 (`ruleBaseWage`, `methods_audit` 9번 규칙).
 - 방식 숫자는 `cli/rebasewage.ts`로 다시 셌다 (일꾼 그대로, 원료·산출·공사 포인트 약 0.35배). 사무소 포인트 0.7·1.4·2.1, `MAX_POINTS_PER_LEVEL_DAY` 3.5, 학교 300·행정청 150·사무소 50, 전문 관료제 종이 70. `methods_audit` 통과.
@@ -72,7 +93,7 @@
 - E7 (해마다 변하는가): 빈 해 지표 다섯 중 소작 비율·징수율·곡물 가격비·노동자 생활수준 통과, 실업 0/12. **빈 해 계산은 사용자 확인 대기** (사전 등록 4장).
 - 못 한 것: 브라우저 비용(X01-d, 사용자 브라우저 필요), A6 20년 24회·be.tax4 8회(2차 후보), 방식 처방은 5년 안에 철공구가 안 열려 사실상 "공방 짓기"였다.
 
-**0b′ 진행 중 (2026-10-30 세션 끝, 사용자 사정으로 중단)**: 브랜치 `wt-0bp` (origin 에 올림, 커밋 8a31e51, main 4062a92 위). main 에 아직 안 합침.
+**0b′ 진행 중 (2026-10-30 세션 끝, 사용자 사정으로 중단. 그 뒤 5-1 은 1.5 로 정했고 wt-labor 에 들어가 0-1102 로 합친다)**: 브랜치 `wt-0bp` (origin 에 올림, 커밋 8a31e51, main 4062a92 위). main 에 아직 안 합침.
 - 한 것: 03 5-1 과잉 신호 구현. `reserveLevels` 가 증설 확률을 뽑은 뒤 같은 지역·산출 상품의 예상 S/D(`economy.ts projectedSD`: 공급 이동평균 + 공사 중 레벨 산출, ÷ 수요 이동평균)가 `TUNE.aiGlutSD` 를 넘으면 그 주 증설 안 함. 기본 0 = 검사 없음이라 결과 비트 동일 (golden "같음", samecheck 5개 같음, core·gate 73개 통과). 짧은 확인(1.5, 2년 × 시드 1): 막힌 증설 1년차 9건·2년차 56건, 유보 증설 59→54·87→56레벨.
 - 함께 바꾼 것: lab 지표 추가(해 안 S/D 진동 폭, 팔린 비율, 실제/설계 이익률, 귀족 저축, 금고와 증가율, 공사 약정, 52주 안에 헐린 레벨, 저택 거둠, 행정청 인원, glutBlock), labsum 고침(명세의 대조 사용, 중복 판정 제거, drain 은 충격 뒤 5년차로 판정 — 이 해석은 확인 필요), `labsum.py --compare g0` 후보 비교 모드. DESIGN 10·11장(aiGlutSD 행, expandUtilMin 재검증 필요), 사전 aiGlutSD.
 - **다음 할 일 (차례대로)**: (1) wt-0bp 에서 5년 비교 32회 `cd packages/sim && bash cli/lab.sh <out5.jsonl> ../../docs/overhaul/0BP_5-1_SPECS.json` → `python cli/labsum.py <out5.jsonl> --compare g0` (g0 / 1.25 / 1.5 / 1.75 × 시드 1·2 × salt 0..3). (2) 남은 후보로 20년 32회 `KEY=specs20 bash cli/lab.sh ...`. 채택 제한: 1.5·1.75 는 52주 안에 헐린 레벨이 늘면 채택 안 함 (03 5장 1번). 기대 방향: S/D 증가 둔화. (3) 고른 값을 DESIGN 11장 근거 칸에 적고 premerge → main. (4) 이어서 07 A4(세금 단계 끝값 고착·징수율 0)·A6(임금 배율 20년 24회)·A5, 0B_RESULTS 2장 "0b′ 에 넘길 것". (5) 0b′ 끝에 기준선 재측정, 그 커밋을 'AI 기준선'으로 여기에 적는다.

@@ -535,10 +535,10 @@ export const TUNE = {
   switchMax: 0.05,
   // 지역 시장 임금 (2026-11-01 사용자 승인 "지역 임금 규칙 검증", docs/overhaul/LABOR_MARKET.md 1단계 (가)): 1 = 지역·직종마다 시장 임금 하나를 모든 임금 건물이 준다
   // (labor.ts updateMarketWages, 날마다 임금 × wageMarketRate × clamp((자리 − 오려는 사람) ÷ min(자리, 오려는 사람), −1, 1)). AI 임금 판단(adjustWages)은 돌지 않는다.
-  // 0 = 지금 규칙 (회사 임금표, AI 바닥·천장). 비교 중 (docs/overhaul/LABOR_SPECS.json), 근거 없음
-  wageMarket: 0,
-  // 시장 임금의 하루 속도 r. 후보 0.0025 / 0.005 / 0.01 (주에 최대 약 1.75% / 3.5% / 7%). 비교 전이라 가운데 값, 근거 없음
-  wageMarketRate: 0.005,
+  // 0 = 그 전 규칙 (회사 임금표, AI 바닥·천장). 2026-11-02 사용자 "all 의 나머지를 넣어서" 로 기본 1 (근거: DESIGN 11, 보고서 2026-11-02-combo)
+  wageMarket: 1,
+  // 시장 임금의 하루 속도 r (주에 최대 약 1.75%). 후보 0.0025 / 0.005 / 0.01 중 조합 비교(2026-11-02-combo)가 쓴 값 (DESIGN 11)
+  wageMarketRate: 0.0025,
   adminScale: 0.3,
   lossBuildsPerWeek: 0,
   lossTolerance: Infinity,
@@ -555,8 +555,8 @@ export const TUNE = {
   peasantKeepWeeks: 8,
   // 저축을 부에 넣기 (2026-11-01 마이크로 시제품 microA D2, 세계 규칙, 사용자 결정 대기 DECISIONS 7-37): wealthSavWeeks > 0 이면 부 단계를 정하는 소득(market.ts updateWealth)에
   // max(0, 저축 − 생활비 × wealthSavBuffer 주) ÷ wealthSavWeeks 주를 더한다. wealthSavLower 1 = 하층(소작농·노동자·농부)만, 0 = 모든 pop.
-  // wealthSavWeeks 0 = 끔 (21ea2ff 와 같음). 후보 52 (버퍼 8, 하층만, 마이크로 시제품 1위), 본 게임 비교 전, 근거: 마이크로 시제품 (DESIGN 11)
-  wealthSavWeeks: 0,
+  // wealthSavWeeks 0 = 끔. 2026-11-02 사용자 "all 의 나머지를 넣어서" 로 기본 52 (버퍼 8, 하층만 = D2, DECISIONS 7-38, 근거: DESIGN 11)
+  wealthSavWeeks: 52,
   wealthSavBuffer: 8,
   wealthSavLower: 1,
   manorTargetMult: 0, // 비교 전 (0 = 끔, 후보 2·3)
@@ -628,7 +628,7 @@ export const TUNE = {
   // 후보 확률 0.02 / 0.05, 손실 10% / 25%, 기간 1 / 3년 (docs/overhaul/QUAKE_SPECS.json). 비교 전, 근거 없음
   // 소작지 여유 (2026-11-01 마이크로 시제품 microB S3, 세계 규칙, 사용자 결정 대기 DECISIONS 7-37): > 0 이면 소작지 1인 수확 × (1 + tenantSlack × clamp(1 − 채움 ÷ 기준 채움, 0, 1)).
   // 기준 채움 = 켜진 뒤 첫 수확 날 그 지역 채움 (Region.tenantFill0). 시작 상태에서 1배라 중립이고, 모두 떠나면 1 + tenantSlack 배 (market.ts tenantSlackMult).
-  // 0 = 끔 (21ea2ff 와 같음). 후보 0.5 (마이크로 시제품의 α), 본 게임 비교 전, 근거: 마이크로 시제품 (DESIGN 11)
+  // 0 = 끔. 후보 0.5 (마이크로 시제품의 α). 2026-11-02 사용자 "소작지 수확 체감은 일단 메모만" 으로 끈 채 둔다 (DECISIONS 7-38, DESIGN 11)
   tenantSlack: 0,
   quakeChance: 0,
   quakeLoss: 0.25,
@@ -658,8 +658,8 @@ export const TUNE = {
   // 1 = 부마다 묶음 합계를 그 전 곡선의 합으로 고정하고 구성만 바꾼다 (needsAt), 0 = 늘린 곡선 그대로
   needFixedTotal: 1,
   // 유보 기준 AI 증설 확률 (2026-10-25 사용자 "확률분포로"): 주마다 확률 = reserveGrowMax × (유보 ÷ 상한 − reserveGrowFrom) ÷ (1 − reserveGrowFrom), 0~reserveGrowMax.
-  // 가득 차면 주에 25% (평균 4주에 1레벨, 그 전 규칙 "90% 4주"와 비슷하게), 절반 아래면 0. reserveGrowMax 0 이면 그 전 규칙. 값은 비교 안 함 (근거 없음)
-  reserveGrowMax: 0.25,
+  // reserveGrowMax 0 이면 그 전 규칙. 처음 값 0.25 (가득 차면 주에 25%, 근거 없음). 2026-11-02 사용자 "all 의 나머지를 넣어서" 로 1 (가득 차면 매주, 근거: DESIGN 11)
+  reserveGrowMax: 1,
   reserveGrowFrom: 0.5,
   // 유보 기준 증설의 과잉 검사 (오버홀 03 5-1, 0b′, AI 판단): > 0 이면 증설 전에 그 지역 그 산출 상품의 예상 공급 ÷ 수요(economy.ts projectedSD:
   // 공급 이동평균 + 모든 회사의 공사 중 레벨 산출, ÷ 수요 이동평균)가 이 값을 넘는 주는 증설하지 않는다. 0 = 검사 없음 (그 전과 같음).
@@ -683,14 +683,14 @@ export const TUNE = {
   // aiMarginal (A3): 회사가 자기 값 효과를 본다. 1 = 증설은 그 지역 그 상품의 자기 하루 손익이 레벨 +1 로 늘 때만 (ai.ts growGain), 2 = 그리고 레벨 −1 로 늘면 헌다 (marginExit)
   aiMarginal: 0,
   // 마지막 공급자 지킴 (2026-11-01 마이크로 시제품 microB S7, AI 판단): 1 = AI 철거(유보 철거·5-2·A2·A3)는 왕국에서 다른 건물이 원료로 쓰는 상품의
-  // 마지막 생산 건물(자동 건물 제외)의 마지막 레벨을 헐지 않는다 (ai.ts keepLast). 0 = 끔 (21ea2ff 와 같음). 본 게임 비교 전, 근거: 마이크로 시제품 (DESIGN 11)
-  aiKeepLastSupplier: 0,
+  // 마지막 생산 건물(자동 건물 제외)의 마지막 레벨을 헐지 않는다 (ai.ts keepLast). 0 = 끔. 2026-11-02 기본 1 (근거: DESIGN 11)
+  aiKeepLastSupplier: 1,
   // 증설 위치 (2026-11-01 마이크로 시제품 microB S5, AI 판단): 1 = 유보 증설이 뽑히면 왕국 안에서 그 산출 상품의 지역 예상 공급 ÷ 수요(glutSD)가 가장 낮고
-  // 땅·부지·일손(자격자 포함, laborAvailability ≥ minStaffing)이 되는 지역에 1레벨 짓는다 (ai.ts growRegion). 0 = 끔 (그 건물 지역). 본 게임 비교 전, 근거: 마이크로 시제품 (DESIGN 11)
-  aiGrowWhere: 0,
+  // 땅·부지·일손(자격자 포함, laborAvailability ≥ minStaffing)이 되는 지역에 1레벨 짓는다 (ai.ts growRegion). 0 = 끔 (그 건물 지역). 2026-11-02 기본 1 (근거: DESIGN 11)
+  aiGrowWhere: 1,
   // 유보로 증설비 (2026-11-01 마이크로 시제품 microB S8): 1 = 민간 AI 회사의 유보 증설이 저택·금융가 금고 부족으로 막히면, 그 건물 유보 자산이 모자란 돈 이상일 때
-  // 그만큼을 회사 현금에서 공사비를 낼 저택·금융가 금고로 옮긴다 (ai.ts fundFromReserve, 돈은 옮길 뿐). 0 = 끔. 본 게임 비교 전, 근거: 마이크로 시제품 (DESIGN 11)
-  aiReserveFund: 0,
+  // 그만큼을 회사 현금에서 공사비를 낼 저택·금융가 금고로 옮긴다 (ai.ts fundFromReserve, 돈은 옮길 뿐). 0 = 끔. 2026-11-02 기본 1 (근거: DESIGN 11)
+  aiReserveFund: 1,
   // 행정청 징수율 하한 (오버홀 07 A4, 0b′, AI 판단, 이슈 #4): > 0 이면 AI 왕실은 왕국 징수율(taxRatio)이 이 값 아래인 동안 행정청 레벨을 헐지 않는다
   // (reviewLevels 가 적자 주를 세지 않고, 올려 둔 행정청 철거 대기를 거둔다). 0 = 하한 없음 (그 전과 같음). 후보 0.6 / 0.7 / 0.8 과 0 을 비교 중 (docs/overhaul/0BP_A4_SPECS.json), 근거 없음
   aiAdminFloor: 0,

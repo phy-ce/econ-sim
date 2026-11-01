@@ -714,7 +714,7 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   },
   {
     id: 'ai-wages', category: 'labour', title: t('시장 임금', 'Market wages'),
-    rule: t('지역 시장 임금이 꺼져 있을 때(기본) 회사마다 생산 건물 임금표가 하나다 (왕실의 생산 건물 포함). AI 회사(민간 상회와 왕실)는 매주 직종별 임금을 움직인다. 바닥 = 옮겨 올 사람의 지금 소득 × {0}. 천장 = 부가가치 × {1}를 기본 임금 비율로 나눈 몫. 바닥이 천장보다 우선한다. 최저임금은 없다.', 'With the regional market wage off (default) each company has one wage table for its producing buildings (crown producers included). AI companies (private houses and crowns) adjust wages weekly per job. Floor = current income of people who would move in × {0}. Ceiling = value added × {1}, split by base-wage weight. The floor wins. There is no minimum wage.'),
+    rule: t('지역 시장 임금이 꺼져 있을 때(기본은 켜져 있다) 회사마다 생산 건물 임금표가 하나다 (왕실의 생산 건물 포함). AI 회사(민간 상회와 왕실)는 매주 직종별 임금을 움직인다. 바닥 = 옮겨 올 사람의 지금 소득 × {0}. 천장 = 부가가치 × {1}를 기본 임금 비율로 나눈 몫. 바닥이 천장보다 우선한다. 최저임금은 없다.', 'With the regional market wage off (it is on by default) each company has one wage table for its producing buildings (crown producers included). AI companies (private houses and crowns) adjust wages weekly per job. Floor = current income of people who would move in × {0}. Ceiling = value added × {1}, split by base-wage weight. The floor wins. There is no minimum wage.'),
     formula: 'loss → ×0.98; vacancies > 5% & slow hiring → ×1.03; vacancies < 2% → ×0.99',
     params: [tune('wageOutside', '바닥 배율', 'Floor multiple', 'x'), tune('wageCeil', '천장 (부가가치 중)', 'Ceiling (share of value added)', 'pct'), tune('wageLossCut', '적자면 깎기', 'Cut on loss')],
     live: {
@@ -727,7 +727,7 @@ export const ENCYCLOPEDIA: EncEntry[] = [
     related: ['market-wage', 'state-wages', 'tenant-income', 'best-seat'], seenIn: ['company', 'workforce'], source: ['ai.ts adjustWages'], design: ['7.3'],
   },
   {
-    id: 'market-wage', category: 'labour', title: t('지역 시장 임금 (비교 중)', 'Regional market wage (under comparison)'),
+    id: 'market-wage', category: 'labour', title: t('지역 시장 임금', 'Regional market wage'),
     rule: t('{0} = 1이면 지역마다 직종마다 시장 임금이 하나 있고, 그 지역의 모든 임금 건물(왕실 생산 건물 포함)이 그것을 준다. 날마다 임금 × {1} × clamp((자리 − 오려는 사람) ÷ min(자리, 오려는 사람), −1, 1)만큼 움직인다. 오려는 사람 = 재직자 + 자격 있는 실업자 + 다른 자리에서 일하는 자격자 × 옮기는 비율(지금 소득, 시장 임금) ÷ 최대 비율. 손해 보는 생산 건물의 빈자리는 자리로 세지 않는다. 자리가 없으면 한 칸 아래 직종 임금 × 옮기는 문턱(노동자·농부는 소작 1인 소득 × 문턱)이고 시작 임금도 같다. 자격자가 없으면 움직이지 않는다. 기본 임금의 {2}~{3}배 안. 정부 건물은 그 지역 시장 임금 × 국영 임금 단계. AI 투자 판단은 지금 임금과 {4}일 이동평균 중 큰 값. 0이면 회사 임금표와 AI 임금 판단이다.', 'With {0} = 1 each region has one market wage per job, paid by every wage building there (crown producers included). Each day it moves by wage × {1} × clamp((seats − willing) ÷ min(seats, willing), −1, 1). Willing = incumbents + qualified unemployed + qualified people working elsewhere × switch share(current income, market wage) ÷ max share. Vacancies of loss-making producers do not count as seats. With no seats it is the job below × the switch threshold (labourers and farmers: tenant income × threshold), as is the starting wage. With no qualified people it does not move. Kept within {2}–{3}× base wage. Government buildings pay the regional market wage × state-wage step. AI investment uses the larger of the current wage and its {4}-day moving average. 0 keeps company wage tables and AI wage setting.'),
     formula: 'w ← w × (1 + r × clamp((D − S) / min(D, S), −1, 1))',
     params: [tune('wageMarket', '지역 시장 임금', 'Regional market wage'), tune('wageMarketRate', '하루 속도', 'Daily rate', 'pct'), p('안전 범위 최소', 'Safety floor', () => MARKET_WAGE_RANGE[0], 'x'), p('안전 범위 최대', 'Safety cap', () => MARKET_WAGE_RANGE[1], 'x'), p('투자 판단 이동평균', 'Investment moving average', () => WAGE_AVG_DAYS, 'day')],
@@ -743,7 +743,7 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   },
   {
     id: 'state-wages', category: 'labour', title: t('국영 임금과 임금 지수', 'State wages and the wage index'),
-    rule: t('왕실의 정부 건물(행정청·건축사무소·학교)은 국영 임금을 준다: 그 직종의 시장 임금 × 국영 임금 단계 배율({0}). 시장 임금은 이 왕실 밖 모든 건물의 고용 가중 평균 임금이다 (고용이 없는 직종은 기본 임금). 왕실 생산 건물도 시장 임금이다. 임금 지수(민간 노동자·농부 평균 임금 ÷ 기본 임금)는 AI 왕실이 국영 임금 단계를 고르는 데만 쓴다.', 'Crown government buildings (administration, construction office, school) pay the state wage: the market wage of the job × state-wage step ({0}). The market wage is the employment-weighted average wage of all buildings outside this crown (base wage if nobody is employed in that job). Crown producers pay market wages too. The wage index (private labourer and farmer wages ÷ base wage) is only used by the AI crown to pick the state-wage step.'),
+    rule: t('왕실의 정부 건물(행정청·건축사무소·학교)은 국영 임금을 준다: 그 직종의 시장 임금 × 국영 임금 단계 배율({0}). 지역 시장 임금이 켜져 있으면(기본) 시장 임금은 그 지역 시장 임금이고, 꺼져 있으면 이 왕실 밖 모든 건물의 고용 가중 평균 임금이다 (고용이 없는 직종은 기본 임금). 왕실 생산 건물도 시장 임금이다. 임금 지수(민간 노동자·농부 평균 임금 ÷ 기본 임금)는 AI 왕실이 국영 임금 단계를 고르는 데만 쓴다.', 'Crown government buildings (administration, construction office, school) pay the state wage: the market wage of the job × state-wage step ({0}). With the regional market wage on (default) the market wage is that region’s market wage; with it off it is the employment-weighted average wage of all buildings outside this crown (base wage if nobody is employed in that job). Crown producers pay market wages too. The wage index (private labourer and farmer wages ÷ base wage) is only used by the AI crown to pick the state-wage step.'),
     formula: 'wage_s = marketWage_s × level',
     params: [tune('govWageLevels', '국영 임금 단계', 'State wage steps', 'x')],
     live: {
@@ -863,7 +863,7 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   },
   {
     id: 'wealth', category: 'people', title: t('부와 생활수준', 'Wealth and standard of living'),
-    rule: t('소득(현금 + 쓴 현물)이 다음 단계 묶음 비용의 102%를 넘으면 부가 하루 최대 +0.03, 지금 단계의 98%에 못 미치면 최대 −0.03 움직인다. 생활수준 = max(1, 부 × 충족률). {0}이 0보다 크면 생활비 {1}주치를 넘는 저축 ÷ {0}주도 이 소득에 더한다 ({2} = 1이면 하층만, 시제품). {0}이 0이면 끈 것이다.', 'If income (cash + in-kind used) exceeds 102% of the next step\'s basket, wealth rises up to 0.03 a day; below 98% of the current basket it falls up to 0.03. SoL = max(1, wealth × fulfilment). If {0} is above 0, savings above {1} weeks of living costs ÷ {0} weeks also count as this income (lower strata only when {2} = 1, prototype). At {0} = 0 it is off.'),
+    rule: t('소득(현금 + 쓴 현물)이 다음 단계 묶음 비용의 102%를 넘으면 부가 하루 최대 +0.03, 지금 단계의 98%에 못 미치면 최대 −0.03 움직인다. 생활수준 = max(1, 부 × 충족률). {0}이 0보다 크면 생활비 {1}주치를 넘는 저축 ÷ {0}주도 이 소득에 더한다 ({2} = 1이면 하층만). {0}이 0이면 끈 것이다.', 'If income (cash + in-kind used) exceeds 102% of the next step\'s basket, wealth rises up to 0.03 a day; below 98% of the current basket it falls up to 0.03. SoL = max(1, wealth × fulfilment). If {0} is above 0, savings above {1} weeks of living costs ÷ {0} weeks also count as this income (lower strata only when {2} = 1). At {0} = 0 it is off.'),
     formula: 'SoL = max(1, W × fulfilment); income += max(0, savings − cost × 7 × {1}) ÷ (7 × {0})',
     params: [tune('wealthSavWeeks', '저축을 나눌 주', 'Weeks to spread savings', 'week'), tune('wealthSavBuffer', '남겨 둘 생활비', 'Living costs kept', 'week'), tune('wealthSavLower', '하층만', 'Lower strata only')],
     live: {
