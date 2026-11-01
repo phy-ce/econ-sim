@@ -126,5 +126,15 @@
 .budget-preview {display:inline-flex;align-items:center;gap:3px;margin-left:5px;color:var(--ink2);font-size:10px;font-weight:400;white-space:nowrap}
 .budget-detail-body .entity-link {display:inline-flex;align-items:center;gap:4px;max-width:100%}
 .budget-detail-body .spr {flex:none;vertical-align:middle}
+.budget-law-comparison>div {display:grid;grid-template-columns:80px minmax(0,1fr) 100px;gap:6px;align-items:center;font-size:11px;padding:5px 3px}
+.budget-law-comparison>div[data-current=true] {background:var(--chip);box-shadow:inset 3px 0 var(--gold);font-weight:700}
+.budget-law-comparison .numeric-value {text-align:right}
+.budget-uncovered {opacity:.65}
+.budget-empty {font-size:13px;margin:8px 0}
+.budget-jobs>section {padding:5px 0;border-top:1px dotted var(--rule)}
+.budget-jobs strong {display:flex;align-items:center;gap:4px;font-size:11px}
+.budget-job-figures {display:flex;flex-wrap:wrap;gap:6px 10px;margin:4px 0}
+.budget-job-figures>span {display:flex;flex-direction:column;gap:2px;font-size:10px;color:var(--ink2)}
+.budget-job-figures b {color:var(--ink);font-size:11px}
 
 .economy-charts {min-width:0}.chart-period,.chart-kingdoms {display:flex;flex-wrap:wrap;align-items:center;gap:4px;margin:5px 0}.chart-period button,.chart-kingdoms button {font-size:10px;padding:3px 6px;min-height:24px}.chart-period small {margin-left:auto;font-size:10px;color:var(--ink2)}.chart-kingdoms i {display:inline-block;width:8px;height:8px;margin-right:4px}.chart-kingdoms button[aria-pressed=false] {opacity:.5}.chart-period button[aria-pressed=true] {background:var(--chip);border-color:var(--gold)}.economic-chart {border-top:1px solid var(--rule);padding-top:5px;margin-top:8px;min-width:0}.economic-chart h4 {margin:0;font-size:11px}.chart-pending {font-size:11px;padding:12px 0}
