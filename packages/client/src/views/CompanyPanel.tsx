@@ -1,4 +1,5 @@
-import { isGovernment, crewOf, depositFree } from '@econ/sim';
+import {FlowRow} from './FlowRow';
+import { isGovernment, crewOf, depositFree, harvestFactor } from '@econ/sim';
 import { NumericValue } from '../NumericValue';
 import { OwnerBadge } from './OwnerBadge';
 import { Workforce } from './Workforce';
@@ -50,10 +51,10 @@ export function rowOf(world: World, b: Building): Row {
   });
   if (b.typeId === 'subsistence') staff.splice(0, staff.length, { s: 'peasant', emp: b.tenants ?? 0, jobs: peasantSlots(b) });
   const emp = staff.reduce((a, x) => a + x.emp, 0), jobs = staff.reduce((a, x) => a + x.jobs, 0);
-  const fill = b.active ? b.last.inputFill : 0;
+  const fill = b.active&&!b.idle ? b.last.inputFill : 0;
   const price = (g: GoodId) => region.market[g].price;
   const inputs = GOOD_IDS.filter((g) => method.inputs[g]).map((g) => {
-    const need = method.inputs[g]! * run * crew;
+    const need = method.inputs[g]! * run * crew * harvestFactor(world,b.regionId,BUILDING_BY_ID[b.typeId].land);
     const cur = need * fill;
     return { g, cur, max: need, price: price(g), value: cur * price(g) };
   });
@@ -330,7 +331,7 @@ function BuildingRow({ r, game, world, owner, open, onToggle }: { r: Row; game?:
           <span className={`pxnum hc-sub ${r.inShort ? 'neg' : ''}`}>{r.inputs.length && !b.idle ? pct(r.inFill) : '—'}</span>
         </span>
         <span className="hc-out">
-          {getMethod(b.typeId,b.methodId).taxCapacity ? <><span className="lbl">{T.taxCapacity}</span><b className="pxnum"><NumericValue value={getMethod(b.typeId,b.methodId).taxCapacity! * b.level * TUNE.adminScale} format="compact"/></b></> : <><Bar value={r.outMax > 0 ? r.outCur / r.outMax : 0} tone="out" /><span className="pxnum hc-sub">{qty(r.outCur)}/{qty(r.outMax)}{r.office ? 'pt' : ''}</span></>}
+          {getMethod(b.typeId,b.methodId).taxCapacity ? <><span className="lbl">{T.taxCapacity}</span><b className="pxnum"><NumericValue value={getMethod(b.typeId,b.methodId).taxCapacity! * b.level * TUNE.adminScale} format="compact"/></b></> : <><span className="pxnum hc-sub">{qty(r.outCur)}{r.office ? 'pt' : ''}</span></>}
         </span>
         <span className="hc-money">
           <span className="mm"><span className="mm-l">{T.wfRev}</span><span className="mini"><i style={{ width: `${(r.rev / scale) * 100}%`, background: 'var(--wf-rev)' }} /></span></span>
@@ -354,37 +355,7 @@ function BuildingRow({ r, game, world, owner, open, onToggle }: { r: Row; game?:
 
             <section className="hd-sec" aria-label={T.hInputs}>
               <h4 className="hd-h"><span>{T.hInputs} → {T.hOutput}</span><span className="lbl">{regionName(r.region)}</span></h4>
-              <div className="flow sub lbl" aria-hidden="true"><span /><span /><span /><span className="num">{T.colUnit}</span><span className="num">{T.colDaily}</span></div>
-              {r.inputs.map((f) => (
-                <div key={`i${f.g}`} className="flow">
-                  <span className="tile xs"><GoodSprite g={f.g} size={16} /></span>
-                  <b>{goodName(f.g)}</b>
-                  <span className="flow-q"><Bar value={f.max > 0 ? f.cur / f.max : 0} tone="in" vac none={f.max <= 0} /><span className={`pxnum small ${f.cur < f.max * 0.99 ? 'neg' : ''}`}>{qty(f.cur)}/{qty(f.max)}</span></span>
-                  <span className="pxnum num">ƒ{f.price < 100 ? one(f.price) : int(f.price)}</span>
-                  <span className="pxnum num">−<NumericValue value={f.value} format="money"/></span>
-                </div>
-              ))}
-              {r.inputs.length > 0 && <hr className="flow-rule" />}
-              {getMethod(b.typeId,b.methodId).taxCapacity && <div className="service-output">{T.taxCapacity} <b><NumericValue value={getMethod(b.typeId,b.methodId).taxCapacity! * b.level * TUNE.adminScale} format="compact"/></b></div>}
-              {r.office
-                ? (
-                  <div className="flow">
-                    <span className="tile xs"><BuildingSprite typeId={b.typeId} size={16} /></span>
-                    <b>{T.buildPts}</b>
-                    <span className="flow-q"><Bar value={r.outMax > 0 ? r.outCur / r.outMax : 0} tone="out" /><span className="pxnum small">{qty(r.outCur)}/{qty(r.outMax)}</span></span>
-                    <span className="pxnum num">—</span>
-                    <span className="pxnum num muted">ƒ0</span>
-                  </div>
-                )
-                : r.outputs.map((f) => (
-                  <div key={`o${f.g}`} className="flow">
-                    <span className="tile xs"><GoodSprite g={f.g} size={16} /></span>
-                    <b>{goodName(f.g)}</b>
-                    <span className="flow-q"><Bar value={f.max > 0 ? f.cur / f.max : 0} tone="out" /><span className="pxnum small">{qty(f.cur)}/{qty(f.max)}</span></span>
-                    <span className="pxnum num">ƒ{f.price < 100 ? one(f.price) : int(f.price)}</span>
-                    <span className="pxnum num pos">+<NumericValue value={f.value} format="money"/></span>
-                  </div>
-                ))}
+              <FlowRow world={world} building={b}/>
             </section>
 
             <section className="hd-sec" aria-label={T.balance}>
@@ -429,6 +400,7 @@ function Controls({ r, game, world, owner }: { r: Row; game: Game; world: World;
           return <option key={m.id} value={m.id} disabled={!ok}>{methodName(m)} {label}</option>;
         })}
       </select>
+      <details><summary>{T.method} · 1 L</summary>{type.methods.map(m=><div key={m.id}><strong>{methodName(m)}</strong><FlowRow world={world} typeId={b.typeId} methodId={m.id} regionId={b.regionId}/></div>)}</details>
       {!(owner.state && isGovernment(b.typeId)) && <><label className="util">
         <span className="lbl">{T.utilisation}</span>
         <input type="range" min={10} max={100} step={10} value={Math.round(b.utilization * 100)} aria-label={T.utilisation}
@@ -485,30 +457,38 @@ function buildBlockers(world: World, me: Company, region: Region, b: (typeof BUI
 }
 
 export function BuildList({ game, world, me, region, projects, includeTypes, excludeTypes }: { game: Game; world: World; me: Company; region: Region; projects: number; includeTypes?:string[]; excludeTypes?:string[] }) {
-  const T = useT();
+  const T = useT(),ko=useLang()==='ko';
+  const [query,setQuery]=useState(''),[filter,setFilter]=useState('all'),[sort,setSort]=useState('ready');
   const [open, setOpen] = useState<string | null>(null);
+  const candidates=BUILDING_TYPES.filter(bt=>!bt.auto && (!bt.stateOnly || me.state) && (!includeTypes || includeTypes.includes(bt.id)) && !excludeTypes?.includes(bt.id)).map(bt=>({bt,blockers:buildBlockers(world,me,region,bt,projects),cost:constructionEstimate(world,me,bt.id).cost}));
+  const ready=candidates.filter(c=>!c.blockers.length).length;
+  const shown=candidates.filter(c=>filter==='all'||(filter==='ready'?!c.blockers.length:c.blockers.length>0)).filter(c=>buildingName(c.bt.id).toLocaleLowerCase().includes(query.trim().toLocaleLowerCase())).sort((a,b)=>sort==='cost'?a.cost-b.cost||buildingName(a.bt.id).localeCompare(buildingName(b.bt.id)):sort==='name'?buildingName(a.bt.id).localeCompare(buildingName(b.bt.id)):Number(!!a.blockers.length)-Number(!!b.blockers.length)||buildingName(a.bt.id).localeCompare(buildingName(b.bt.id)));
   return (
+   <div className="build-catalogue">
+    <div className="catalogue-context"><strong>{regionName(region)}</strong><span>{ko?'건설 가능':'Available'} <b>{ready}</b> / {candidates.length}</span></div>
+    <div className="notice-filters" role="group" aria-label={ko?'건설 조건':'Construction availability'}>{[['all',ko?'전체':'All'],['ready',ko?'건설 가능':'Available'],['blocked',ko?'조건 미충족':'Unavailable']].map(([id,label])=><button key={id} aria-pressed={filter===id} onClick={()=>setFilter(id)}>{label}</button>)}</div>
+    <div className="catalogue-tools"><input aria-label={ko?'건물 검색':'Search buildings'} placeholder={ko?'건물 검색':'Search buildings'} value={query} onChange={e=>setQuery(e.target.value)}/><select aria-label={ko?'건물 정렬':'Sort buildings'} value={sort} onChange={e=>setSort(e.target.value)}><option value="ready">{ko?'건설 가능순':'Availability'}</option><option value="name">{ko?'이름순':'Name'}</option><option value="cost">{ko?'비용 낮은순':'Lowest cost'}</option></select></div>
+    {!shown.length&&<div className="catalogue-empty">{ko?'일치하는 건물 없음':'No matching buildings'}<button onClick={()=>{setQuery('');setFilter('all');}}>{ko?'필터 초기화':'Reset filters'}</button></div>}
     <div className="cat-grid">
-      {BUILDING_TYPES.filter(bt=>!bt.auto && (!bt.stateOnly || me.state) && (!includeTypes || includeTypes.includes(bt.id)) && !excludeTypes?.includes(bt.id)).map((bt) => {
+      {shown.map(({bt,blockers}) => {
         const free = bt.land ? landFree(world, region.id, bt.land) : Infinity;
         const locked = !canBuildType(me, bt);
         const est = constructionEstimate(world, me, bt.id);
         const usable = availableMethods(me, bt.id);
         const best = usable.length ? Math.max(...usable.map((m) => estimateAfterEntry(world, region.id, bt.id, m.id, me.wages).profit)) : null;
-        const blockers = buildBlockers(world, me, region, bt, projects);
         const isOffice = bt.methods.some((m) => m.construction);
         const payback = best != null && best > 0 && Number.isFinite(est.cost) ? Math.ceil(est.cost / best) : null;
         const isOpen = open === bt.id;
         return (
           <div key={bt.id} className={`cat ${isOpen ? 'open' : ''} ${blockers.length ? 'blocked' : ''}`}>
-            <button className="cat-head" aria-expanded={isOpen} onClick={() => setOpen(isOpen ? null : bt.id)}>
+            <button className="cat-head" data-help={blockers.length?blockers.join(' · '):(ko?'클릭하여 생산 방식·비용 확인':'Inspect methods and construction cost')} aria-expanded={isOpen} onClick={() => setOpen(isOpen ? null : bt.id)}>
               <span className="tile md"><Sprite64 id={bt.id} size={40} /></span>
               <span className="cat-name">{buildingName(bt.id)}{bt.land && <small className="muted">{landName(bt.land)} <span className="pxnum">{free}</span></small>}{!bt.land && <small className="muted">{bt.methods[0].seats ? <>{T.schoolSeats} <NumericValue value={bt.methods[0].seats} format="compact"/></> : bt.methods[0].taxCapacity ? <>{T.taxCapacity} <NumericValue value={bt.methods[0].taxCapacity*TUNE.adminScale} format="compact"/></> : null}</small>}</span>
               <span className="cat-figure">
                 {locked ? <span className="muted">{T.techNeeded}</span>
                   : free < 1 ? <span className="neg">{T.noLand}</span>
                   : isOffice ? <span className="muted">{est.required}pt</span>
-                  : <span className={best! >= 0 ? 'pos' : 'neg'}><NumericValue value={best!} format="signedMoney"/><small>{T.perDay}</small></span>}
+                  : <span className={best!=null&&best>=0?'pos':'neg'}>{best==null?'—':<NumericValue value={best} format="signedCompactMoney"/>}<small>{ko?'예상 / 일':'est. / day'}</small></span>}
                 {!locked && free >= 1 && !isOffice && <small className="muted">{payback ? `${T.payback} ${payback > 1800 ? T.fiveYearsPlus : T.nDays(payback)}` : '—'}</small>}
               </span>
             </button>
@@ -517,6 +497,7 @@ export function BuildList({ game, world, me, region, projects, includeTypes, exc
         );
       })}
     </div>
+   </div>
   );
 }
 
@@ -535,7 +516,7 @@ function BuildCard({ bt, region, est, blockers, payback, game, world, me }: {
             <div className="m-main">
               <strong>{methodName(m)}{!ok && <span className="tag-soft">{T.needsTechTag(techName(m.tech!))}</span>}</strong>
               <span className="m-line">{SKILLS.filter((s) => m.workers[s]).map((s) => <span key={s} className="bag-item"><i className="sw" style={{ background: SKILL_COLOR[s] }} />{skillName(s)} <span className="pxnum">{qty(m.workers[s]!)}</span></span>)}</span>
-              <span className="m-line">{GOOD_IDS.some((g) => m.inputs[g]) && <><Bag bag={m.inputs} /> → </>}{m.taxCapacity ? <span>{T.taxCapacity} <b><NumericValue value={m.taxCapacity*TUNE.adminScale} format="compact"/></b></span> : m.seats ? <span>{T.schoolSeats} <NumericValue value={m.seats} format="compact"/></span> : m.construction ? <span className="pxnum">{m.construction}pt</span> : <Bag bag={m.outputs} />}</span>
+              <FlowRow world={world} typeId={bt.id} methodId={m.id} regionId={region.id}/>
             </div>
             {!m.construction && <div className={`m-est ${e.profit >= 0 ? 'pos' : 'neg'}`}><NumericValue value={e.profit} format="signedMoney"/><small>{T.perDay}</small></div>}
           </li>

@@ -78,3 +78,6 @@ DetailWindow 독립 NavigationProvider/버튼, BuildingPops 및 ResourceInspecto
 - UI_DESIGN 2.3·3장: 인구·토지·교육 상세 내부 탐색 경로를 DetailExplorer로 연결. 부모 창 이동 대신 상세별 이력 사용. PopTable의 상세 경로 복원 시 초기화 방지. 루트 타입 검사 통과, 화면 미검증.
 - UI_DESIGN 10장 어긋남 1~8 확인. 기본 집계·소유권 색 토큰·문자열·빈 목록 문장·폐기 코드 정리는 이 변경에 포함하지 않음. 사전 단위 G와 화면 실측은 기존 대기 유지.
 
+
+- 2-51: FlowRow를 개별 상세·상회 펼침·건설 방식에 연결, 실제/1레벨 기준 구분. 상회 방식 비교 추가. 사전 패키지 라벨 수정은 허용 범위 밖(막힘: packages/encyclopedia). 화면 미검증. 상회 상품 링크·일부 요약 공통화는 잔여로 추적.
+
