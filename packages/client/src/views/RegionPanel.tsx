@@ -1,4 +1,5 @@
 import {t as uiCopy} from '../i18n';
+import {marketPriceHistory} from '../marketScope';
 import {memo, useCallback} from 'react';
 import { RegionIndustry } from './RegionIndustry';
 import { BuildingEconomics } from './BuildingEconomics';
@@ -57,7 +58,7 @@ function RegionPanelView({ world, region, history, selectedGood, onSelectGood, o
   const tenantShare = lower > 0 ? r.households.peasant.population / lower : 0;
   const headline = `region-${r.id}`;
   const [sort, setSort] = useState<{ key: SortKey; dir: 1 | -1 }>({ key: 'value', dir: -1 });
-  const priceData = useMemo(() => history.map((p) => ({ tick: p.tick, price: p.prices[r.id]?.[selectedGood] ?? 0 })), [history, r.id, selectedGood]);
+  const priceData = useMemo(() => marketPriceHistory(history,[r.id],selectedGood), [history, r.id, selectedGood]);
 
   // 순서는 정렬 기준·지역이 바뀔 때와 게임 속 일주일마다만 다시 매긴다 (값이 매 순간 바뀌어 행이 뛰지 않게)
   const week = Math.floor(world.tick / 7);

@@ -1178,3 +1178,38 @@ ownershipAssets API로 소유 기관 소재지 기준 왕국/지역 막대, 내 
 - 넣을 곳: 직종 목록을 손으로 적은 곳에 농부를 더한다. 예: `sprites.tsx` 23·26의 계층 아이콘 목록, `RegionPanel.tsx` 62~64 하층 합계(소작농 + 노동자 → + 농부)와 실업률, `RegionExplorer.tsx` 27 실업률(노동자만 본다), 그 밖에 `'unskilled'`를 직접 쓰는 곳.
 
 ---
+
+## 2026-11-01 · 2-36 종이·2-39 임시 아이콘 감사 완료
+- 종이/종이 공장 및 옛 임시 별칭8쌍은 현재 전용 아틀라스 셀에 연결된다. paper=goods-b:3, cloth=goods-a:6, paper_mill=buildings-b:0, workshop=buildings-a:10. 나머지 농부/소작농·하급/상급 귀족·목장/농장·고기/식료품·고급/일반 가구·고급/일반 옷감도 서로 다른 셀 회귀 시험 통과. 정당한 옛 이름 별칭(factory 등)은 남긴다. 농부 테마 토큰은169f97b에서 완료.
+- 종이는 GOOD_IDS 기반 시세/건물 흐름에 이미 들어 있다. 지역 가격 기록의 남은 결측0 대체를 공통 marketPriceHistory로 교체해 종이가 없던 날짜는 가격 키를 빼고 실제0은 보존한다. 공통 결측/0 회귀 시험으로 확인했다.
+- root typecheck/client21파일55시험 통과. 읽기 전용 icons/list.ts:72고유 그림, 누락/별칭 없음. 기존 미커밋 지도는 재생성하지 않았다.
+- 헤드리스 스크린샷 확인(1920×1080): C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/paper-market-ko-light.png, paper-mill-ko-light.png. 종이ƒ2.28/생산 건물2곳, 실제 중앙 고원 종이 공장/펄프 압착709/일·전용 건물 그림·상세 연결, 본문418/scroll418. buildings-b.webp 원본 시트의 수차·종이 더미가 있는 종이 공장도 이미지로 확인했다.
+- 화면 미검증: 과거 저장의 종이 결측 구간 실제 재생·영문 다크 종이 상세·모든 아이콘 쌍을 나란히 놓은 화면. 전용 셀 검증과 전체 시각 검증을 구분한다. 아래 옛 상품/방식/저장판 수치는 현재 sim 데이터가 우선한다.
+### 2-36. 종이 (새 상품·종이 공장)
+- 새 상품 `paper` (종이 / Paper, 기본가 4). `GOOD_IDS` 맨 끝에 붙였다. 상품 목록·시장 표는 `GOOD_IDS`·`GOODS`로 그리면 저절로 나온다.
+- 새 건물 `paper_mill` (종이 공장 / Paper mill, 공장 부지, 1,000점). 방식 `pulp_press` (펄프 압착): 목재 2,500 → 종이 5,000, 노동자 800·기술자 200. 기술 없이 지을 수 있다.
+- 전문 관료제(`admin_professional`)의 원료가 가구 100에서 종이 200으로 바뀌었다.
+- 할 일: `spriteAtlas.ts`에 `paper`(상품)·`paper_mill`(건물) 그림을 넣는다. 그림이 생기기 전에는 별칭(예: `paper:'tools'`, `paper_mill:'workshop'`)으로 임시 표시해도 된다. 클라이언트 컴파일은 바꾸지 않아도 통과한다 (클라이언트 파일은 고치지 않았다).
+- 옛 저장: `migrateWorld`가 지역 시장에 `paper`를 기본가로 넣는다. 불러오기 전 기록(`history[].prices`)에는 `paper`가 없으니 가격 그래프는 값이 없는 칸을 건너뛴다.
+- 행정청 징세 한도는 이제 원료 충족률을 따른다 (`b.last.inputFill`). 건물 패널의 "원료 충족"이 행정청에도 실제 효과가 있다.
+
+- 임시 (sim 쪽에서 컴파일·테스트용으로 넣음): `spriteAtlas.ts` 13행 별칭 `paper_mill:'workshop'`, `paper:'cloth'`. 전용 아이콘을 그리면 이 별칭을 지운다.
+
+### 2-39. 임시 아이콘 목록 (2026-10-21 정리)
+전용 그림이 없어서 다른 아이콘을 빌려 쓰는 것들이다. 모두 `packages/client/src/spriteAtlas.ts` 13행 `aliases`에 있다. 전용 그림을 아틀라스(`public/assets/*-v2.png`, 4×3칸)에 넣고 `sheets` 목록에 id를 더한 뒤 별칭을 지운다.
+
+| id | 종류 | 지금 빌려 쓰는 그림 | 언제 넣었나 | 같은 그림을 쓰는 것 (헷갈림) |
+|---|---|---|---|---|
+| `paper` | 상품 (종이) | `cloth` 옷감 | 2026-10-21 sim (2-36) | 옷감·고급 옷감 |
+| `paper_mill` | 건물 (종이 공장) | `workshop` 공방 | 2026-10-21 sim (2-36) | 공방 |
+| `farmer` | 계층 (농부) | `peasant` 소작농 | 2026-10-21 sim (2-37) | 소작농 |
+| `gentry` | 계층 (하급 귀족) | `aristocrat` 상급 귀족 | 이전 | 상급 귀족 |
+| `ranch` | 건물 (목장) | `farm` 곡물 농장 | 이전 | 곡물 농장 |
+| `meat` | 상품 (고기) | `food` 식료품 | 이전 | 식료품 |
+| `luxury_furniture` | 상품 (고급 가구) | `furniture` 가구 | 이전 | 가구 |
+| `luxury_cloth` | 상품 (고급 옷감) | `cloth` 옷감 | 이전 | 옷감·종이 |
+
+- 그 밖의 별칭(`factory`, `locomotive`, `laborer`, `m-wheat`, `m-mine`, `fuelworks`)은 옛 이름을 지금 그림으로 잇는 것이라 새 그림이 필요 없다.
+- 색: 농부 계층 색은 `ui.tsx` 8행 `var(--c-farmer, #8a9a3c)` 임시값이다. `styles.css` 토큰 `--c-farmer`(밝은·어두운 테마 둘 다)를 만든다.
+- 우선순위: 같은 화면에 나란히 나와 헷갈리는 쌍부터 — 농부/소작농(계층 표·도넛), 하급/상급 귀족(저택 직원), 종이/옷감(시세 창).
+- 테스트 `test/uiRefresh.test.ts`는 아이콘이 null이 아닌지만 본다. 전용 그림을 넣은 뒤에는 "서로 다른 칸"인지 확인하게 바꾸는 것을 권한다.

@@ -217,3 +217,5 @@ DetailWindow 독립 NavigationProvider/버튼, BuildingPops 및 ResourceInspecto
 
 - 2-37 완료: farmer 라이트/다크 토큰#677b2f/#a8be62(--sheet 대비4.37/7.85:1), 임시 fallback 제거. 옛 하층 합계에 농부 포함, 하층 실업률을 노동자+농부 노동 인구 가중 집계로 수정. 현재 개요의 해당 옛 지표는 숨김 상태라 계산은 시험 근거이며 시각 확인으로 주장하지 않음.
 - root typecheck/client21파일55시험 통과. 가중 집계2시험·과거 임시 별칭8쌍의 고유 셀1시험 추가. 읽기 전용 icons/list.ts:72고유 그림·누락/별칭 없음. 헤드리스 스크린샷 확인(1920×1080): C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/farmer-en-dark.png, farmer-ko-light.png. 농부35.7k/24px·다크rgb168,190,98/라이트rgb103,123,47, 본문418/scroll418. 실제 취업 이동·전 경로는 화면 미검증. 원문 UI_DONE 이동.
+
+- 2-36·2-39 완료: 종이/종이 공장과 옛 별칭8쌍 모두 별도 셀, icons/list.ts 72고유 그림. 지역 가격 기록의 결측0 대체를 marketPriceHistory로 통일(결측 키 생략·실제0 보존). root typecheck/client55시험 통과. 헤드리스 스크린샷 확인(1920×1080): C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/paper-market-ko-light.png, paper-mill-ko-light.png. 종이ƒ2.28/생산2곳·종이 공장 실제 상세709/일, 본문418/scroll418. 원본 buildings-b.webp도 이미지 확인. 과거 저장 결측 재생·새 종이 영문다크·전 아이콘 쌍 시각 비교는 미검증. 원문 UI_DONE 이동. 농부 커밋169f97b.
