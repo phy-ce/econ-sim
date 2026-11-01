@@ -9,7 +9,7 @@ import {
   harvestLabel, hasBuilder, holdingsOf, isOwnerBuilding, kingdomById, kingdomGdp, kingdomOf, landFree, landUsed, lawUnlocked, levelOwnersOf,
   marketWage, marketWages, moneyIdentity, netMinted, outputCapacity, ownershipAssets, playerCompany, policyStatus, priceIn, privatizePrice,
   regionById, regionUnemployment, researchableTechs, roomFor, shippingRate, step, taxCapacity, totalMoney, treasuryFree, unemploymentRate, veinsLeft,
-  createWorld,
+  createWorld, currentSD, projectedSD,
 } from '../../src/index';
 import type { BudgetLineKey, EncCtx, World } from '../../src/index';
 
@@ -54,6 +54,8 @@ const READERS: Record<string, (w: World) => void> = {
       for (const t of BUILDING_TYPES) roomFor(w, r.id, t.id);
       for (const p of POP_CLASSES) regionUnemployment(w, r.id, p);
       for (const g of GOOD_IDS) { priceIn(w, r.id, g); outputCapacity(w, r.id, g); }
+      // 예상·지금 공급 ÷ 수요 (0b′ AI 증설 검사 aiGlutSD·감축 aiCutSD·aiDemoSD, 건설 화면의 레벨 +N 뒤 예상)
+      for (const g of GOOD_IDS) { projectedSD(w, r.id, g); projectedSD(w, r.id, g, 1000); currentSD(w, r.id, g); }
       for (const o of w.regions) for (const g of ['grain', 'tools'] as const) { freightRate(w, r.id, o.id, g); borderCost(w, r.id, o.id, g); }
     }
   },
