@@ -9,7 +9,7 @@ import {
   harvestLabel, hasBuilder, holdingsOf, isOwnerBuilding, kingdomById, kingdomGdp, kingdomOf, landFree, landUsed, lawUnlocked, levelOwnersOf,
   marketWage, marketWages, moneyIdentity, netMinted, outputCapacity, ownershipAssets, playerCompany, policyStatus, priceIn, privatizePrice,
   regionById, regionUnemployment, researchableTechs, roomFor, shippingRate, step, taxCapacity, totalMoney, treasuryFree, unemploymentRate, veinsLeft,
-  createWorld, currentSD, projectedSD,
+  createWorld, currentSD, projectedSD, subsistenceWage, wealthDrivers,
 } from '../../src/index';
 import type { BudgetLineKey, EncCtx, World } from '../../src/index';
 
@@ -41,6 +41,7 @@ const READERS: Record<string, (w: World) => void> = {
     }
   },
   totalMoney: (w) => { totalMoney(w); moneyIdentity(w); },
+  pops: (w) => { for (const p of w.pops) wealthDrivers(w, p); },
   money: (w) => {
     netMinted(w);
     for (const s of SKILLS) marketWage(w, s);
@@ -53,6 +54,7 @@ const READERS: Record<string, (w: World) => void> = {
       for (const d of DEPOSITS) { depositFree(w, r.id, d); veinsLeft(w, r.id, d); }
       for (const t of BUILDING_TYPES) roomFor(w, r.id, t.id);
       for (const p of POP_CLASSES) regionUnemployment(w, r.id, p);
+      subsistenceWage(w, r);
       for (const g of GOOD_IDS) { priceIn(w, r.id, g); outputCapacity(w, r.id, g); }
       // 예상·지금 공급 ÷ 수요 (0b′ AI 증설 검사 aiGlutSD·감축 aiCutSD·aiDemoSD, 건설 화면의 레벨 +N 뒤 예상)
       for (const g of GOOD_IDS) { projectedSD(w, r.id, g); projectedSD(w, r.id, g, 1000); currentSD(w, r.id, g); }

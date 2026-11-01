@@ -122,6 +122,17 @@ describe('예산 미리보기', () => {
       const wd = budgetDrill(w, k.id, 'wages', steps);
       if (wd.key !== 'wages') throw new Error('wages');
       for (const r of wd.rows) for (const j of r.jobsBy) expect(j.perHead).toBeCloseTo(j.baseWage * j.wageIndex * j.stepMult, 9);
+      // 지역 시장 임금 (TUNE.wageMarket): 행 지역 Region.wages × 단계. 지금 단계면 실제 지급 Region.stateWages 와 같다
+      // (stateWages 는 주초에 다시 정해지고 시장 임금은 날마다 최대 ±0.25% 움직여 주중 차이는 2% 안)
+      if (!TUNE.wageMarket) continue;
+      for (const r of wd.rows) {
+        const reg = w.regions.find((x) => x.id === r.regionId)!;
+        for (const j of r.jobsBy) {
+          expect(j.marketWage).toBe(reg.wages![j.skill]);
+          expect(j.perHead).toBeCloseTo(j.marketWage! * j.stepMult, 9);
+          if (Object.keys(steps).length === 0) expect(Math.abs(j.perHead / reg.stateWages![j.skill] - 1)).toBeLessThan(0.02);
+        }
+      }
     }
   });
 
