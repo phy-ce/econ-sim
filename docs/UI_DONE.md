@@ -1250,3 +1250,17 @@ ownershipAssets API로 소유 기관 소재지 기준 왕국/지역 막대, 내 
 
 - 2-45 세율·조건 툴팁 보완 완료: 모든 세법 선택지의 taxRates(k, law)를 현재 예산 단계 기준으로 표시(정액은 1인/일, 소득세는 %). 조건 미달 툴팁에 financeRatio/threshold, 전환 중에는 목표 법 라벨 추가. 루트 typecheck 및 클라이언트23파일61시험 통과(예산5단계 KO/EN 회귀 포함).
 - 헤드리스 스크린샷 확인(1920×1080): C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/policy-tax-quotes-ko.png. 토지세ƒ0.02/인·일 툴팁, 인두세ƒ0.6/인·일·소득세30%는 DOM 대조. 본문418/scroll418。영문·다크 화면 및 다른 법 툴팁 실표시는 화면 미검증. 투자 직종 아이콘과 전환 완료/실패 소식 전 경로는 잔여.
+
+
+## 2026-11-02 2-29 저택 배당 표시
+
+### 2-29. 저택의 하급 귀족 (gentry)
+- 저택(`manor`) 1레벨 자리: 귀족 100 + 하급 귀족 100. 일자리 표·막대는 `slots(b, s)`·`b.employed`라 그대로 보인다.
+- 저택 수입(배당·지대·철거 대금)은 몫으로 나뉜다: 귀족 1명 1몫, 하급 귀족 1명 `TUNE.gentryShare`(0.25) 몫. 저택·금융가 자리는 모두 임금이 없다.
+- 새 export (`economy.ts`): `paysShare(b, s)` 이 자리가 임금 대신 몫을 받는가 (`paysDividend`는 그대로 있다), `shareWage(b, s)` 한 사람의 기대 하루 몫 (= labor `dividendWage`), `shareWeight(cls)` 1명 몫.
+- 넣을 곳: 건물 카드에서 "배당" 표시를 `paysShare(b, s)`로 바꾸면 저택의 하급 귀족도 몫으로 보인다 (`CompanyPanel.tsx` 152행은 `paysDividend(c.state, s)`). 저택 툴팁에 직종별 1명 몫(`shareWage`)을 보일 수 있다 (선택).
+- 저장 형식 그대로. 옛 저장은 다음 날 저택이 커지고 실업 하급 귀족이 차차 앉는다.
+
+
+- 코드 완료: Workforce는 이미 paysShare를 사용. 실제 소유 기관 상세/그룹에서 쓰는 OwnerSummary에도 동일 기준의 배당 표식을 추가해 하급·상급 귀족 모두 표시. 현재 sim slots에 따라 자리 수를 읽으며 옛 고정100/100을 화면에 박지 않는다.
+- 루트 typecheck/클라이언트23파일62시험 통과. 헤드리스 스크린샷 확인(1920×1080): C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/manor-gentry-share-ko.png. 동부 삼림 저택23레벨·하급2.3k/상급433 및 배당 아이콘2개, 본문418/scroll418. 영문·다크 상세 및 실제 몫 지급은 화면 미검증.

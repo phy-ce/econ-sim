@@ -233,3 +233,6 @@ DetailWindow 독립 NavigationProvider/버튼, BuildingPops 및 ResourceInspecto
 
 - 2-45 세율·조건 툴팁 보완 완료: 모든 세법 선택지의 taxRates(k, law)를 현재 예산 단계 기준으로 표시(정액은 1인/일, 소득세는 %). 조건 미달 툴팁에 financeRatio/threshold, 전환 중에는 목표 법 라벨 추가. 루트 typecheck 및 클라이언트23파일61시험 통과(예산5단계 KO/EN 회귀 포함).
 - 헤드리스 스크린샷 확인(1920×1080): C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/policy-tax-quotes-ko.png. 토지세ƒ0.02/인·일 툴팁, 인두세ƒ0.6/인·일·소득세30%는 DOM 대조. 본문418/scroll418。영문·다크 화면 및 다른 법 툴팁 실표시는 화면 미검증. 투자 직종 아이콘과 전환 완료/실패 소식 전 경로는 잔여.
+- 5beb5c0: 실제 세율 툴팁 커밋. 2-29 대조에서 실제 상세가 Workforce 대신 OwnerSummary를 쓰므로 하급 귀족 배당 표식을 OwnerSummary에도 추가 중.
+- 코드 완료: Workforce는 이미 paysShare를 사용. 실제 소유 기관 상세/그룹에서 쓰는 OwnerSummary에도 동일 기준의 배당 표식을 추가해 하급·상급 귀족 모두 표시. 현재 sim slots에 따라 자리 수를 읽으며 옛 고정100/100을 화면에 박지 않는다.
+- 루트 typecheck/클라이언트23파일62시험 통과. 헤드리스 스크린샷 확인(1920×1080): C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/manor-gentry-share-ko.png. 동부 삼림 저택23레벨·하급2.3k/상급433 및 배당 아이콘2개, 본문418/scroll418. 영문·다크 상세 및 실제 몫 지급은 화면 미검증.
