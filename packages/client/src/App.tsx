@@ -153,7 +153,7 @@ export function App() {
 
         {me && (
           <div className="ledger">
-            <button className="chip loan-chip" onClick={()=>openLinkedWindow({kind:'state',tab:'budget'})} aria-label={T.finance} data-help={`${T.system.netTreasury}\n${T.cash}: ${me.cash.toFixed(2)} · ${T.loan}: ${me.debt.toFixed(2)}`}><span className="chip-label"><Sprite name="coin" size={24}/>{T.treasury}</span><span className="chip-value"><NumericValue value={me.cash-me.debt} format="money"/> / <NumericValue value={limit} format="money"/></span></button>
+            <button className={`chip loan-chip ${debtRatio>=1?'bad':debtRatio>=.7?'warn':''}`} onClick={()=>openLinkedWindow({kind:'state',tab:'budget'})} aria-label={T.finance} data-help={`${T.system.netTreasury}\n${T.cash}: ${me.cash.toFixed(2)} · ${T.loan}: ${me.debt.toFixed(2)}`}><span className="chip-label"><Sprite name="coin" size={24}/>{T.treasury}</span><span className="chip-value"><span className={me.cash-me.debt<0?'neg':undefined}><NumericValue value={me.cash-me.debt} format="money"/></span> / <NumericValue value={limit} format="money"/></span></button>
             <dl className={`chip ${me.lastWeekProfit >= 0 ? 'good' : 'bad'}`}><dt>{T.lastWeekPL}</dt><dd><NumericValue value={me.lastWeekProfit} format="signedMoney"/></dd></dl>
             <dl className={`chip ${collection < .8 ? 'warn' : ''}`}><dt>{T.taxCollection}</dt><dd>{Math.round(collection*100)}%</dd><Bar value={collection} tone={collection < .8 ? 'gold' : 'pos'} size="sm" label={T.taxCollection}/></dl>
           </div>

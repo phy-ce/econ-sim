@@ -202,3 +202,6 @@ DetailWindow 독립 NavigationProvider/버튼, BuildingPops 및 ResourceInspecto
 
 - 2-35 코드 완료: kingdomId 기반 라우팅과 kingdom 섹션으로 전환. 기존 companyId는 이전 이력 호환용으로만 읽고 새 요청은 왕국 ID를 쓴다. 저장된 company 섹션 배치를 kingdom으로 이전. 같은 왕국 링크도 sequence로 섹션 재노출. 사용하지 않는 상회 선택/상세/요약과 전용 문자열 제거, 자원 소유 검색·정렬/지역 개별 링크를 실제 소유 종류로 변경.
 - 검증: root typecheck/client20파일50시험 통과. JSX 문장 추가 중 따옴표 오류는 typecheck가 잡았고 고친 뒤 다시 통과. 헤드리스 스크린샷 확인(1920×1080): C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/kingdom-history.png, kingdom-ko-light.png, kingdom-en-dark-final.png. 비교행→왕국, 두 왕국 간 뒤로/앞으로 선택 복원true, 한글 라이트/영문 다크, 가로 넘침없음. 상품 소유 검색 전체 경우·모든 정렬/차트 툴팁·일반 브라우저 배율은 화면 미검증. 2-35 원문은 2-54 대체 사항과 함께 UI_DONE으로 이동. 차트에 필요한 소유 기록이 이미 있어 옛 네 몫 API 대기는 폐기.
+
+- 2-26·2-28·2-34 코드 대조/주요 화면 확인 완료, 원문 UI_DONE 이동. 광맥 스크린샷 deposits-en-dark.png(철0/160, 석탄2/90, 잠재량 비노출), 음수 금고 negative-treasury-en-dark.png(검증용 cash10000/debt20000, 상단·예산·왕국 모두 −ƒ10k/동일 neg색), 도크 dock-toggle-check.png(false→true→false, 지도·최소화 없음). 모두 C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/, 헤드리스 스크린샷 확인(1920×1080). root typecheck/client50시험 통과.
+- 2-33 분포 대조: 실제 seed42·360일 세계의 지역 평균 부1.14~1.27, 생활수준1.07~1.24(소수2자리). 두 분포 범위는 유사하므로 현재 SOL_STOPS=WEALTH_STOPS를 유지. 이 조건에서는 고정된 첫 정점2 아래에 모두 몰린다. 부 정점은 사용자 고정값(2/5/7.5/11)이므로 임의 변경하지 않는다. 가운데 두 정점에 분포시키라는 옛 요구와 충돌하는 범위 재선택은 막힘(사용자/화면 설계 결정 필요). 보간 자체는 기존 78611c1 구현·스크린샷 확인, 일반화하지 않음.
