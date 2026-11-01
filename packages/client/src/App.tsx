@@ -171,6 +171,8 @@ export function App() {
             <button onClick={game.stepOnce} disabled={running} title={T.stepDay} aria-label={T.stepDay}><SkipForward size={14} aria-hidden="true" /></button>
           </div>
 
+          <div className="segmented"><button onClick={()=>game.runUntilYearEnd(game.speed||4*BASE_TPS)}>▸ {T.yearEnd}</button><Popover label={T.destination} button={<>▾</>}>{close=><button onClick={()=>{game.runUntilYearEnd(game.speed||4*BASE_TPS);close();}}>{T.yearEnd}</button>}</Popover></div>
+          {!running&&<button className="pause-reason" onClick={()=>{if(game.pauseReason.event)openEvent(game.pauseReason.event);}} disabled={!game.pauseReason.event}>{game.pauseReason.kind==='danger'?T.reasonDanger:game.pauseReason.kind==='yearEnd'?`${T.reasonReached} · ${T.yearEnd}`:T.pause}</button>}
           <Popover label={T.notifications(unread)} className="bell"
             button={<><Sprite name="bell" size={20} />{unread > 0 && <span className="badge">{unread > 99 ? '99+' : unread}</span>}</>}>
             {(close) => (

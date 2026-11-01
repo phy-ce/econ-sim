@@ -661,3 +661,7 @@ DemolitionProgress: 남는 레벨·철거 대기·이번 주 1레벨, 다음/전
 ### 2026-11-01 H(2-73) 건설 입구
 ConstructionPanel 지역 칩·짓기/대기열 탭, 내 왕국 지역만 활성, 지도 내 지역 선택 연동, ScreenRoute 지역 이력, 기존 BuildList/Projects 재사용. 지역 전환 시 카드만 닫고 검색/필터/정렬 유지. 헤드리스 스크린샷 확인(1920×1080): C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/construction-fixed.png. 외국 칩 disabled, 탭 두 개, 가로폭418=scroll418. root typecheck/client55시험 통과. 실제 build 명령 클릭 경로 전체 실사용 검증은 남음.
 
+
+### 2026-11-01 J(2-74) 기간 진행·정지 사유
+프로토콜 runUntil/reached, 워커 advance의 틱 경계 정지, 수동 속도·새 판/불러오기 목표 취소. 연말 분할 버튼·정지/위험/도달 사유 칩, 위험 소식 목적지 이동. 위험 키 숫자 정규화·35틱 에피소드, 반복 토스트는 유지. root typecheck/client55시험 통과(위험 반복·공백·건물별·정지중 사례 2시험 포함). 헤드리스 스크린샷 확인(1920×1080): C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/year-end-reached.png. 테스트 저장 tick359에서 실행 → tick360, Reached · Year end 확인. sim 수정 없음.
+

@@ -11,6 +11,7 @@ let activity: ConstructionActivity | null = null;
 let world: World = createWorld(Date.now() % 100000);
 recordHistory(world);
 let ticksPerSecond = 0;
+let targetTick:number|null=null;
 let queue: QueuedCommand[] = []; // 외부(서버)에서 들어올 명령용. 지금은 비어 있다
 let resetHistory = true;
 let pendingErrors: WorkerError[] = [];
@@ -60,11 +61,13 @@ function publish() {
 
 function advance(n: number) {
   for (let i = 0; i < n; i++) {
+    if(targetTick!==null&&world.tick>=targetTick){ticksPerSecond=0;budget=0;targetTick=null;publish();post({type:'reached',reason:'yearEnd',tick:world.tick});return;}
     const before = captureConstruction(world);
     const errs = step(world, queue);
     activity = constructionActivity(before, world.tick);
     queue = [];
     pendingErrors.push(...errs.map((text) => ({ text })));
+    if(targetTick!==null&&world.tick>=targetTick){ticksPerSecond=0;budget=0;targetTick=null;publish();post({type:'reached',reason:'yearEnd',tick:world.tick});return;}
     // 히스토리가 앞에서 잘리면 전체를 다시 보낸다
     if (world.history.length < postedHistory) { postedHistory = 0; resetHistory = true; }
   }
@@ -99,12 +102,16 @@ setInterval(() => {
 self.onmessage = (e: MessageEvent<ToWorker>) => {
   const msg = e.data;
   switch (msg.type) {
+    case 'runUntil':
+      targetTick=msg.tick;return;
     case 'new':
+      targetTick=null;
       world = createWorld(msg.seed);
       recordHistory(world);
       postedHistory = 0; resetHistory = true; queue = []; budget = 0; activity = null;
       break;
     case 'load': {
+      targetTick=null;
       // 옛 저장은 지금 형식으로 바꾼다 (sim compat.ts). 바꿀 수 없는 저장이면 지금 게임을 그대로 둔다
       const loaded = migrateWorld(msg.world);
       if (!loaded) break;
@@ -113,6 +120,7 @@ self.onmessage = (e: MessageEvent<ToWorker>) => {
       break;
     }
     case 'speed':
+      targetTick=null;
       ticksPerSecond = msg.ticksPerSecond;
       return;
     case 'command':

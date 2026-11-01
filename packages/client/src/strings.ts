@@ -6,6 +6,7 @@ import { particle } from './format';
 type S = string;
 
 export const KO = {
+ yearEnd:"연말",destination:"목적지",reasonDanger:"위험",reasonReached:"도달",
  constructionBuild:"짓기",constructionQueue:"대기열",
  stateTitle:"국가",stateBudget:"예산",stateLaws:"법",
  exportTrace: "기록 내보내기",
@@ -305,6 +306,7 @@ export const KO = {
 export type Dict = typeof KO;
 
 export const EN: Dict = {
+ yearEnd:"Year end",destination:"Destination",reasonDanger:"Danger",reasonReached:"Reached",
  constructionBuild:"Build",constructionQueue:"Queue",
  stateTitle:"State",stateBudget:"Budget",stateLaws:"Laws",
  exportTrace: "Export trace",

@@ -1,3 +1,5 @@
+import {dangerPause} from './dangerPause';
+import {TICKS_PER_YEAR} from '@econ/sim';
 import {trace,traceTick} from './trace';
 import type { ConstructionActivity } from './constructionActivity';
 import { useCallback, useMemo, useEffect, useRef, useState } from 'react';
@@ -31,6 +33,8 @@ export function useGame() {
   const [history, setHistory] = useState<HistoryPoint[]>([]);
   const [speed, setSpeedState] = useState(0);
   const speedRef = useRef(0);
+  const [pauseReason,setPauseReason]=useState<{kind:'user'|'danger'|'yearEnd';event?:GameEvent}>({kind:'user'});
+  const dangerEpisodes=useRef(new Map<string,{tick:number;stopped:boolean}>());
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [lastReadTick, setLastReadTick] = useState(-1);
   const [prefs, setPrefsState] = useState<Prefs>(loadPrefs);
@@ -47,8 +51,9 @@ export function useGame() {
 
   const send = useCallback((msg: ToWorker) => workerRef.current?.postMessage(msg), []);
 
-  const setSpeed = useCallback((ticksPerSecond: number) => {
-    trace('speed',{previous:speedRef.current,next:ticksPerSecond,reason:'user'});
+  const setSpeed = useCallback((ticksPerSecond: number,reason:'user'|'key'='user') => {
+    setPauseReason({kind:'user'});
+    trace('speed',{previous:speedRef.current,next:ticksPerSecond,reason});
     speedRef.current = ticksPerSecond;
     setSpeedState(ticksPerSecond);
     send({ type: 'speed', ticksPerSecond });
@@ -72,22 +77,25 @@ export function useGame() {
         // 내 상회·왕국 전체에 생긴 새 소식: 주의 이상은 알림으로 띄우고, 위험은 게임을 멈춘다
         const keys = new Set(msg.world.events.map(eventKey));
         if (seenEvents.current) {
-          let pause = false;
+          let pause:GameEvent|undefined;
           for (const ev of msg.world.events) {
             if (seenEvents.current.has(eventKey(ev))) continue;
             // 내 상회 소식은 모두, 왕국 전체 소식은 위험만 알림으로 띄운다 (나머지는 알림 목록에만)
             if (ev.companyId === 100 || (ev.companyId === null && ev.kind === 'danger')) toast(ev, ev.kind, ev.regionId);
             else continue;
-            if (ev.kind === 'danger' && ev.companyId === 100) pause = true;
+            if (ev.kind === 'danger' && ev.companyId === 100&&dangerPause(dangerEpisodes.current,ev,prefsRef.current.pauseOnDanger&&speedRef.current>0)) pause = ev;
           }
           if (pause && prefsRef.current.pauseOnDanger && speedRef.current > 0) {
             trace('speed',{previous:speedRef.current,next:0,reason:'danger'});
+            setPauseReason({kind:'danger',event:pause});
             speedRef.current = 0;
             setSpeedState(0);
             worker.postMessage({ type: 'speed', ticksPerSecond: 0 } satisfies ToWorker);
           }
         }
         seenEvents.current = keys;
+      } else if (msg.type === 'reached') {
+        trace('speed',{previous:speedRef.current,next:0,reason:'reached'});speedRef.current=0;setSpeedState(0);setPauseReason({kind:'yearEnd'});
       } else if (msg.type === 'hour') {
         setHour(msg.hour);
       } else if (msg.type === 'saved') {
@@ -119,6 +127,8 @@ export function useGame() {
     hour,
     history,
     speed,
+    pauseReason,
+    runUntilYearEnd:(rate:number)=>{if(!world)return;setPauseReason({kind:'user'});speedRef.current=rate;setSpeedState(rate);send({type:'speed',ticksPerSecond:rate});send({type:'runUntil',tick:(Math.floor(world.tick/TICKS_PER_YEAR)+1)*TICKS_PER_YEAR});trace('speed',{next:rate,reason:'user',target:'yearEnd'});},
     toasts,
     prefs,
     setPrefs,
@@ -133,7 +143,9 @@ export function useGame() {
       try {
         const saved = localStorage.getItem(SAVE_KEY);
         if (!saved) { toast(both('noSave'), 'error'); return; }
-        seenEvents.current = null;
+        dangerEpisodes.current.clear();
+        dangerEpisodes.current.clear();
+      seenEvents.current = null;
         send({ type: 'load', world: JSON.parse(saved) });
         toast(both('loaded'));
       } catch {
@@ -141,12 +153,13 @@ export function useGame() {
       }
     },
     newGame: () => {
+      dangerEpisodes.current.clear();
       seenEvents.current = null;
       setLastReadTick(-1);
       send({ type: 'new', seed: Math.floor(Math.random() * 1e6) });
       toast(both('started'));
     },
-  }), [world, constructionActivity, hour, history, speed, toasts, prefs, setPrefs, lastReadTick, setSpeed, send, toast]);
+  }), [world, constructionActivity, hour, history, speed,pauseReason, toasts, prefs, setPrefs, lastReadTick, setSpeed, send, toast]);
 }
 
 export type Game = ReturnType<typeof useGame>;
