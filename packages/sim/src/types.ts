@@ -490,6 +490,12 @@ export interface Region {
   /** TUNE.aiReserveRule (AI 새 투자): 상품 값이 기본가의 1.25배 이상이었던 연속 주 수 (0인 상품은 없다). 없으면 모두 0 (18판에서 생겼다) */
   hotWeeks?: Partial<Record<GoodId, number>>;
   /**
+   * AI 가동률 감축·철거 (TUNE.aiCutSD·aiDemoSD, 오버홀 03 5-2): 지금 공급 ÷ 수요가 aiCutSD 이상 / aiDemoSD 이상이었던 연속 주 수 (0인 상품은 없다).
+   * 문턱이 0(끔)이면 생기지 않는다. 없으면 모두 0 (18판 안에서 더한 칸이라 판을 올리지 않았다)
+   */
+  cutWeeks?: Partial<Record<GoodId, number>>;
+  demoWeeks?: Partial<Record<GoodId, number>>;
+  /**
    * 이 지역에서 내보내는 교역 (매일, 0.95/0.05 이동평균, market.ts addTraderOrders). AI 무역소 판단용.
    * buy = 무역소 금고로 산 하루 매입 주문액, cut = 금고가 모자라 잘린 주문액 (무역소가 없으면 내려던 주문 전부), margin = 주문의 기대 이익률 (값 차이 − 운임 − 관세, 매입액 대비).
    * 없으면 0 (16판에서 생겼다)

@@ -192,6 +192,8 @@ class Acc {
   soldV = 0; supV = 0;
   demoLv = 0; quickDemo = 0; startLv = 0; builtLv = 0; pledgeNew = 0;
   growStarts = 0; glutBlock = 0;
+  // 0b′ 5-2 (03 5장 2번): 팔리지 않음 기준 가동률 감축('sdCut')·철거('sdDemo', 레벨), 가동률 올리기('utilUp', 모든 생산 건물), 적자 감축('lossCut') 횟수
+  sdCut = 0; sdDemo = 0; utilUp = 0; lossCut = 0;
   constructor() { for (let c = 0; c < NC; c++) this.burdenRing.push(new Float64Array(0)); }
 }
 
@@ -257,12 +259,20 @@ export class Collector {
     this.techs(w, 0);
   }
 
-  /** ai.ts aiTrace 로 받는 AI 판단 기록 (run.ts 가 이어 준다): 유보 증설 착공('reserve', 레벨), 과잉 검사로 막힌 증설('glutBlock', 건물·주) */
+  /**
+   * ai.ts aiTrace 로 받는 AI 판단 기록 (run.ts 가 이어 준다): 유보 증설 착공('reserve', 레벨), 과잉 검사로 막힌 증설('glutBlock', 건물·주),
+   * 5-2 감축('sdCut', 10%씩 한 번)·철거('sdDemo', 1레벨), 가동률 올리기('utilUp', 10%씩 한 번), 적자 감축('lossCut', 10%씩 한 번)
+   */
   trace(path: string, regionId: number | undefined, levels: number) {
-    if (path !== 'reserve' && path !== 'glutBlock') return;
+    if (!['reserve', 'glutBlock', 'sdCut', 'sdDemo', 'utilUp', 'lossCut'].includes(path)) return;
     const s = regionId == null ? -1 : this.scopeOf(regionId);
     for (const a of s >= 0 ? [this.acc[s], this.acc[this.nk]] : [this.acc[this.nk]]) {
-      if (path === 'reserve') a.growStarts += levels; else a.glutBlock++;
+      if (path === 'reserve') a.growStarts += levels;
+      else if (path === 'glutBlock') a.glutBlock++;
+      else if (path === 'sdCut') a.sdCut++;
+      else if (path === 'sdDemo') a.sdDemo -= levels;
+      else if (path === 'utilUp') a.utilUp++;
+      else a.lossCut++;
     }
   }
 
@@ -822,7 +832,7 @@ export class Collector {
       sellV: sig(div(a.soldV, a.supV) ?? NaN), savNoble: sig((sav[CI.gentry] + sav[CI.aristocrat]) / M),
       vault: sig(vault / M), vaultG: sig(this.vault0[i] > 0 ? (vault - this.vault0[i]) / this.vault0[i] : NaN), pledge: sig(pledge / M), pledgeNew: sig(a.pledgeNew / M),
       startLv: a.startLv, builtLv: a.builtLv, demoLv: a.demoLv, quickDemo: a.quickDemo, quickIdx: sig(div(a.quickDemo, a.startLv) ?? NaN),
-      growStarts: a.growStarts, glutBlock: a.glutBlock, lvProd: lvTot, adminStaff: sig(adminStaff / K), adminLv,
+      growStarts: a.growStarts, glutBlock: a.glutBlock, sdCut: a.sdCut, sdDemo: a.sdDemo, utilUp: a.utilUp, lossCut: a.lossCut, lvProd: lvTot, adminStaff: sig(adminStaff / K), adminLv,
       // 0b′ A4: 행정청 레벨 가중 충원율 (연말), 징수율 해 안 최저·평균 (날마다)
       adminSt: sig(div(adminSt, adminLv) ?? NaN), taxRatioMin: sig(a.trMin), taxRatioAvg: sig(a.trSum / d),
       // X08-H (왕국 단위 요약), 08 3.5 한계
@@ -838,12 +848,18 @@ export class Collector {
     const lo: Record<string, number | null> = {}, hi: Record<string, number | null> = {}, price: Record<string, number | null> = {};
     const sup: Record<string, number | null> = {}, dem: Record<string, number | null> = {}, subSup: Record<string, number | null> = {}, bldSup: Record<string, number | null> = {};
     const tIn: Record<string, number | null> = {}, tOut: Record<string, number | null> = {}, hh: Record<string, number | null> = {}, cap: Record<string, number | null> = {}, capLv: Record<string, number | null> = {};
-    const capQ = new Map<GoodId, number>(), capL = new Map<GoodId, number>();
+    const capQ = new Map<GoodId, number>(), capL = new Map<GoodId, number>(), capU = new Map<GoodId, number>();
     for (const b of w.buildings) {
       if (BUILDING_BY_ID[b.typeId].auto) continue;
       const m = getMethod(b.typeId, b.methodId);
-      for (const g of Object.keys(m.outputs) as GoodId[]) { capQ.set(g, (capQ.get(g) ?? 0) + (m.outputs[g] ?? 0) * b.level); capL.set(g, (capL.get(g) ?? 0) + b.level); }
+      for (const g of Object.keys(m.outputs) as GoodId[]) {
+        capQ.set(g, (capQ.get(g) ?? 0) + (m.outputs[g] ?? 0) * b.level); capL.set(g, (capL.get(g) ?? 0) + b.level);
+        capU.set(g, (capU.get(g) ?? 0) + (b.active ? b.utilization : 0) * b.level);
+      }
     }
+    // 0b′ 5-2: 상품별 레벨 가중 가동률 (연말, 그 상품을 내는 자동 아닌 건물, 꺼진 건물은 0)
+    const utilG: Record<string, number | null> = {};
+    for (const g of GOOD_IDS) { const l = capL.get(g) ?? 0; utilG[g] = l > 0 ? sig((capU.get(g) ?? 0) / l) : null; }
     const nd = Math.max(1, this.acc[this.nk].days);
     for (const g of GOOD_IDS) {
       const a = this.goods.get(g)!;
@@ -885,7 +901,7 @@ export class Collector {
       const a = this.regions.get(r.id)!;
       reg[r.id] = { k: r.kingdomId, cond: sig(a.cond / nd), hf: sig(a.hf / nd), grain: sig(a.grain / nd), sales: sig(a.sales / K), floor: sig(a.floor / nd) };
     }
-    return { sd, sdMax, sdAvg, lo, hi, price, sup, dem, subSup, bldSup, tIn, tOut, hh, cap, capLv, reg, sdSwing, sdSwingR, sdSwingRMax, sellG, margR, margR1: sig(r1 > 0 ? p1 / r1 / 0.2 : NaN), skim: sig(skim / M) };
+    return { sd, sdMax, sdAvg, lo, hi, price, sup, dem, subSup, bldSup, tIn, tOut, hh, cap, capLv, utilG, reg, sdSwing, sdSwingR, sdSwingRMax, sellG, margR, margR1: sig(r1 > 0 ? p1 / r1 / 0.2 : NaN), skim: sig(skim / M) };
   }
 }
 

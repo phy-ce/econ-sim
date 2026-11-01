@@ -516,6 +516,15 @@ export function projectedSD(w: World, regionId: number, g: GoodId, addOutput = 0
 }
 
 /**
+ * 지금 공급 ÷ 수요 (읽기 전용): 지역 공급 이동평균 ÷ 수요 이동평균 (공사 중 레벨은 넣지 않는다). 수요 이동평균이 FLOW_ZERO 이하이면 null.
+ * AI 가동률 감축·철거(ai.ts sdExit, TUNE.aiCutSD·aiDemoSD, 오버홀 03 5-2)가 쓴다: 감축은 아직 안 지은 공급이 아니라 지금 넘친 것을 본다
+ */
+export function currentSD(w: World, regionId: number, g: GoodId): number | null {
+  const mk = regionById(w, regionId).market[g];
+  return mk.demandEma > FLOW_ZERO ? mk.supplyEma / mk.demandEma : null;
+}
+
+/**
  * 예상 S/D 검사(오버홀 03 5-1)가 보는 방식의 산출 상품: 기본가로 잰 산출 값(양 × 기본가)이 가장 큰 상품 (같으면 outputs 에 먼저 나온 것).
  * 03 문서는 산출이 여럿인 방식을 정하지 않아 가장 큰 산출 하나로 정했다 (2026-10-30 데이터에는 산출이 둘 이상인 방식이 없다). 산출이 없으면 null
  */

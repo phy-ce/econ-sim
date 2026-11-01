@@ -1,0 +1,899 @@
+{
+ "about": "0b′ 5-2 (팔리지 않음 기준 가동률 감축·철거) 비교 명세. docs/overhaul/03_ECONOMY.md 5장 2번, 07_RIVALS_AI.md 5.4 S/D 문턱 표·A5. TUNE.aiGlutSD 는 기본 1.5 고정, aiCutSD(감축 시작)·aiDemoSD(철거 시작)·aiExitWeeks(N) 만 바꾼다 × 시드 1·2 × salt 0..3. 플레이어 왕실 방치(withPlayer 기본) + 고정 연구 순서(research 기본 'fixed'). 돌리기 (packages/sim 에서): 5년 bash cli/lab.sh <out5.jsonl> ../../docs/overhaul/0BP_5-2_SPECS.json, 20년 KEY=specs20 bash cli/lab.sh <out20.jsonl> ../../docs/overhaul/0BP_5-2_SPECS.json. 요약: python cli/labsum.py <out.jsonl> --compare x0 (범위 기본 대륙, sd.*·utilG.*·lo.* 는 대륙 줄).",
+ "code": "wt-0bp (2c59c37 + 5-2 aiCutSD·aiDemoSD·aiExitWeeks, lab 지표 sdCut·sdDemo·utilUp·lossCut·utilG 추가)",
+ "counts": {
+  "specs (5년)": 40,
+  "specs20 (20년)": 40
+ },
+ "choices": [
+  "x0 은 5-2 끔 (aiCutSD 0 = 2c59c37 과 비트 동일, aiGlutSD 1.5). 새 지표(sdCut·sdDemo·utilUp·lossCut·utilG)가 5-1 결과 줄에 없어 다시 돈다.",
+  "후보는 07 5.4 표에서 aiGlutSD 1.5 < aiCutSD < aiDemoSD 를 지키는 조합만: 감축 1.75·철거 2, 감축 1.75·철거 2.5, 감축 2·철거 2.5 (N 26), N 52 는 감축 1.75·철거 2 하나만 더. 감축 1.5 는 증설 임계 1.5 와 같아 순서를 어겨 뺐다. 감축 N 13 은 이번에 돌리지 않는다 (07 표의 감축 N 후보 13/26 중 26 만, 감축과 철거가 같은 N 하나를 쓴다).",
+  "감축은 지금 S/D(currentSD, 공사 중 제외)를 본다: 아직 안 지은 공급이 아니라 지금 넘친 것을 줄인다. 다시 올리기(그 전 규칙, 마진 > 0 이면 +10%)는 예상 S/D(공사 중 포함)가 aiGlutSD 를 넘는 동안 막는다 (증설 검사와 같은 선).",
+  "완충 (07 A5, 근거 없음): 한 지역·상품에서 한 주에 감축 한 건물(레벨당 손익이 가장 나쁜 것), 철거 한 건물. 철거는 가동률이 하한 10% 이거나 꺼진 건물만.",
+  "실행 이름 c<감축>d<철거>[n<N>]: labsum --compare 의 후보 이름. 5년판과 20년판은 같은 이름이라 출력 파일을 나눠 요약한다."
+ ],
+ "specs": [
+  {
+   "item": "X03-5-2",
+   "name": "x0",
+   "seed": 1,
+   "salt": 0,
+   "years": 5
+  },
+  {
+   "item": "X03-5-2",
+   "name": "x0",
+   "seed": 1,
+   "salt": 1,
+   "years": 5
+  },
+  {
+   "item": "X03-5-2",
+   "name": "x0",
+   "seed": 1,
+   "salt": 2,
+   "years": 5
+  },
+  {
+   "item": "X03-5-2",
+   "name": "x0",
+   "seed": 1,
+   "salt": 3,
+   "years": 5
+  },
+  {
+   "item": "X03-5-2",
+   "name": "x0",
+   "seed": 2,
+   "salt": 0,
+   "years": 5
+  },
+  {
+   "item": "X03-5-2",
+   "name": "x0",
+   "seed": 2,
+   "salt": 1,
+   "years": 5
+  },
+  {
+   "item": "X03-5-2",
+   "name": "x0",
+   "seed": 2,
+   "salt": 2,
+   "years": 5
+  },
+  {
+   "item": "X03-5-2",
+   "name": "x0",
+   "seed": 2,
+   "salt": 3,
+   "years": 5
+  },
+  {
+   "item": "X03-5-2",
+   "name": "c1.75d2",
+   "seed": 1,
+   "salt": 0,
+   "years": 5,
+   "tune": {
+    "aiCutSD": 1.75,
+    "aiDemoSD": 2,
+    "aiExitWeeks": 26
+   }
+  },
+  {
+   "item": "X03-5-2",
+   "name": "c1.75d2",
+   "seed": 1,
+   "salt": 1,
+   "years": 5,
+   "tune": {
+    "aiCutSD": 1.75,
+    "aiDemoSD": 2,
+    "aiExitWeeks": 26
+   }
+  },
+  {
+   "item": "X03-5-2",
+   "name": "c1.75d2",
+   "seed": 1,
+   "salt": 2,
+   "years": 5,
+   "tune": {
+    "aiCutSD": 1.75,
+    "aiDemoSD": 2,
+    "aiExitWeeks": 26
+   }
+  },
+  {
+   "item": "X03-5-2",
+   "name": "c1.75d2",
+   "seed": 1,
+   "salt": 3,
+   "years": 5,
+   "tune": {
+    "aiCutSD": 1.75,
+    "aiDemoSD": 2,
+    "aiExitWeeks": 26
+   }
+  },
+  {
+   "item": "X03-5-2",
+   "name": "c1.75d2",
+   "seed": 2,
+   "salt": 0,
+   "years": 5,
+   "tune": {
+    "aiCutSD": 1.75,
+    "aiDemoSD": 2,
+    "aiExitWeeks": 26
+   }
+  },
+  {
+   "item": "X03-5-2",
+   "name": "c1.75d2",
+   "seed": 2,
+   "salt": 1,
+   "years": 5,
+   "tune": {
+    "aiCutSD": 1.75,
+    "aiDemoSD": 2,
+    "aiExitWeeks": 26
+   }
+  },
+  {
+   "item": "X03-5-2",
+   "name": "c1.75d2",
+   "seed": 2,
+   "salt": 2,
+   "years": 5,
+   "tune": {
+    "aiCutSD": 1.75,
+    "aiDemoSD": 2,
+    "aiExitWeeks": 26
+   }
+  },
+  {
+   "item": "X03-5-2",
+   "name": "c1.75d2",
+   "seed": 2,
+   "salt": 3,
+   "years": 5,
+   "tune": {
+    "aiCutSD": 1.75,
+    "aiDemoSD": 2,
+    "aiExitWeeks": 26
+   }
+  },
+  {
+   "item": "X03-5-2",
+   "name": "c1.75d2.5",
+   "seed": 1,
+   "salt": 0,
+   "years": 5,
+   "tune": {
+    "aiCutSD": 1.75,
+    "aiDemoSD": 2.5,
+    "aiExitWeeks": 26
+   }
+  },
+  {
+   "item": "X03-5-2",
+   "name": "c1.75d2.5",
+   "seed": 1,
+   "salt": 1,
+   "years": 5,
+   "tune": {
+    "aiCutSD": 1.75,
+    "aiDemoSD": 2.5,
+    "aiExitWeeks": 26
+   }
+  },
+  {
+   "item": "X03-5-2",
+   "name": "c1.75d2.5",
+   "seed": 1,
+   "salt": 2,
+   "years": 5,
+   "tune": {
+    "aiCutSD": 1.75,
+    "aiDemoSD": 2.5,
+    "aiExitWeeks": 26
+   }
+  },
+  {
+   "item": "X03-5-2",
+   "name": "c1.75d2.5",
+   "seed": 1,
+   "salt": 3,
+   "years": 5,
+   "tune": {
+    "aiCutSD": 1.75,
+    "aiDemoSD": 2.5,
+    "aiExitWeeks": 26
+   }
+  },
+  {
+   "item": "X03-5-2",
+   "name": "c1.75d2.5",
+   "seed": 2,
+   "salt": 0,
+   "years": 5,
+   "tune": {
+    "aiCutSD": 1.75,
+    "aiDemoSD": 2.5,
+    "aiExitWeeks": 26
+   }
+  },
+  {
+   "item": "X03-5-2",
+   "name": "c1.75d2.5",
+   "seed": 2,
+   "salt": 1,
+   "years": 5,
+   "tune": {
+    "aiCutSD": 1.75,
+    "aiDemoSD": 2.5,
+    "aiExitWeeks": 26
+   }
+  },
+  {
+   "item": "X03-5-2",
+   "name": "c1.75d2.5",
+   "seed": 2,
+   "salt": 2,
+   "years": 5,
+   "tune": {
+    "aiCutSD": 1.75,
+    "aiDemoSD": 2.5,
+    "aiExitWeeks": 26
+   }
+  },
+  {
+   "item": "X03-5-2",
+   "name": "c1.75d2.5",
+   "seed": 2,
+   "salt": 3,
+   "years": 5,
+   "tune": {
+    "aiCutSD": 1.75,
+    "aiDemoSD": 2.5,
+    "aiExitWeeks": 26
+   }
+  },
+  {
+   "item": "X03-5-2",
+   "name": "c2d2.5",
+   "seed": 1,
+   "salt": 0,
+   "years": 5,
+   "tune": {
+    "aiCutSD": 2,
+    "aiDemoSD": 2.5,
+    "aiExitWeeks": 26
+   }
+  },
+  {
+   "item": "X03-5-2",
+   "name": "c2d2.5",
+   "seed": 1,
+   "salt": 1,
+   "years": 5,
+   "tune": {
+    "aiCutSD": 2,
+    "aiDemoSD": 2.5,
+    "aiExitWeeks": 26
+   }
+  },
+  {
+   "item": "X03-5-2",
+   "name": "c2d2.5",
+   "seed": 1,
+   "salt": 2,
+   "years": 5,
+   "tune": {
+    "aiCutSD": 2,
+    "aiDemoSD": 2.5,
+    "aiExitWeeks": 26
+   }
+  },
+  {
+   "item": "X03-5-2",
+   "name": "c2d2.5",
+   "seed": 1,
+   "salt": 3,
+   "years": 5,
+   "tune": {
+    "aiCutSD": 2,
+    "aiDemoSD": 2.5,
+    "aiExitWeeks": 26
+   }
+  },
+  {
+   "item": "X03-5-2",
+   "name": "c2d2.5",
+   "seed": 2,
+   "salt": 0,
+   "years": 5,
+   "tune": {
+    "aiCutSD": 2,
+    "aiDemoSD": 2.5,
+    "aiExitWeeks": 26
+   }
+  },
+  {
+   "item": "X03-5-2",
+   "name": "c2d2.5",
+   "seed": 2,
+   "salt": 1,
+   "years": 5,
+   "tune": {
+    "aiCutSD": 2,
+    "aiDemoSD": 2.5,
+    "aiExitWeeks": 26
+   }
+  },
+  {
+   "item": "X03-5-2",
+   "name": "c2d2.5",
+   "seed": 2,
+   "salt": 2,
+   "years": 5,
+   "tune": {
+    "aiCutSD": 2,
+    "aiDemoSD": 2.5,
+    "aiExitWeeks": 26
+   }
+  },
+  {
+   "item": "X03-5-2",
+   "name": "c2d2.5",
+   "seed": 2,
+   "salt": 3,
+   "years": 5,
+   "tune": {
+    "aiCutSD": 2,
+    "aiDemoSD": 2.5,
+    "aiExitWeeks": 26
+   }
+  },
+  {
+   "item": "X03-5-2",
+   "name": "c1.75d2n52",
+   "seed": 1,
+   "salt": 0,
+   "years": 5,
+   "tune": {
+    "aiCutSD": 1.75,
+    "aiDemoSD": 2,
+    "aiExitWeeks": 52
+   }
+  },
+  {
+   "item": "X03-5-2",
+   "name": "c1.75d2n52",
+   "seed": 1,
+   "salt": 1,
+   "years": 5,
+   "tune": {
+    "aiCutSD": 1.75,
+    "aiDemoSD": 2,
+    "aiExitWeeks": 52
+   }
+  },
+  {
+   "item": "X03-5-2",
+   "name": "c1.75d2n52",
+   "seed": 1,
+   "salt": 2,
+   "years": 5,
+   "tune": {
+    "aiCutSD": 1.75,
+    "aiDemoSD": 2,
+    "aiExitWeeks": 52
+   }
+  },
+  {
+   "item": "X03-5-2",
+   "name": "c1.75d2n52",
+   "seed": 1,
+   "salt": 3,
+   "years": 5,
+   "tune": {
+    "aiCutSD": 1.75,
+    "aiDemoSD": 2,
+    "aiExitWeeks": 52
+   }
+  },
+  {
+   "item": "X03-5-2",
+   "name": "c1.75d2n52",
+   "seed": 2,
+   "salt": 0,
+   "years": 5,
+   "tune": {
+    "aiCutSD": 1.75,
+    "aiDemoSD": 2,
+    "aiExitWeeks": 52
+   }
+  },
+  {
+   "item": "X03-5-2",
+   "name": "c1.75d2n52",
+   "seed": 2,
+   "salt": 1,
+   "years": 5,
+   "tune": {
+    "aiCutSD": 1.75,
+    "aiDemoSD": 2,
+    "aiExitWeeks": 52
+   }
+  },
+  {
+   "item": "X03-5-2",
+   "name": "c1.75d2n52",
+   "seed": 2,
+   "salt": 2,
+   "years": 5,
+   "tune": {
+    "aiCutSD": 1.75,
+    "aiDemoSD": 2,
+    "aiExitWeeks": 52
+   }
+  },
+  {
+   "item": "X03-5-2",
+   "name": "c1.75d2n52",
+   "seed": 2,
+   "salt": 3,
+   "years": 5,
+   "tune": {
+    "aiCutSD": 1.75,
+    "aiDemoSD": 2,
+    "aiExitWeeks": 52
+   }
+  }
+ ],
+ "specs20": [
+  {
+   "item": "X03-5-2",
+   "name": "x0",
+   "seed": 1,
+   "salt": 0,
+   "years": 20
+  },
+  {
+   "item": "X03-5-2",
+   "name": "x0",
+   "seed": 1,
+   "salt": 1,
+   "years": 20
+  },
+  {
+   "item": "X03-5-2",
+   "name": "x0",
+   "seed": 1,
+   "salt": 2,
+   "years": 20
+  },
+  {
+   "item": "X03-5-2",
+   "name": "x0",
+   "seed": 1,
+   "salt": 3,
+   "years": 20
+  },
+  {
+   "item": "X03-5-2",
+   "name": "x0",
+   "seed": 2,
+   "salt": 0,
+   "years": 20
+  },
+  {
+   "item": "X03-5-2",
+   "name": "x0",
+   "seed": 2,
+   "salt": 1,
+   "years": 20
+  },
+  {
+   "item": "X03-5-2",
+   "name": "x0",
+   "seed": 2,
+   "salt": 2,
+   "years": 20
+  },
+  {
+   "item": "X03-5-2",
+   "name": "x0",
+   "seed": 2,
+   "salt": 3,
+   "years": 20
+  },
+  {
+   "item": "X03-5-2",
+   "name": "c1.75d2",
+   "seed": 1,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "aiCutSD": 1.75,
+    "aiDemoSD": 2,
+    "aiExitWeeks": 26
+   }
+  },
+  {
+   "item": "X03-5-2",
+   "name": "c1.75d2",
+   "seed": 1,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "aiCutSD": 1.75,
+    "aiDemoSD": 2,
+    "aiExitWeeks": 26
+   }
+  },
+  {
+   "item": "X03-5-2",
+   "name": "c1.75d2",
+   "seed": 1,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "aiCutSD": 1.75,
+    "aiDemoSD": 2,
+    "aiExitWeeks": 26
+   }
+  },
+  {
+   "item": "X03-5-2",
+   "name": "c1.75d2",
+   "seed": 1,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "aiCutSD": 1.75,
+    "aiDemoSD": 2,
+    "aiExitWeeks": 26
+   }
+  },
+  {
+   "item": "X03-5-2",
+   "name": "c1.75d2",
+   "seed": 2,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "aiCutSD": 1.75,
+    "aiDemoSD": 2,
+    "aiExitWeeks": 26
+   }
+  },
+  {
+   "item": "X03-5-2",
+   "name": "c1.75d2",
+   "seed": 2,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "aiCutSD": 1.75,
+    "aiDemoSD": 2,
+    "aiExitWeeks": 26
+   }
+  },
+  {
+   "item": "X03-5-2",
+   "name": "c1.75d2",
+   "seed": 2,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "aiCutSD": 1.75,
+    "aiDemoSD": 2,
+    "aiExitWeeks": 26
+   }
+  },
+  {
+   "item": "X03-5-2",
+   "name": "c1.75d2",
+   "seed": 2,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "aiCutSD": 1.75,
+    "aiDemoSD": 2,
+    "aiExitWeeks": 26
+   }
+  },
+  {
+   "item": "X03-5-2",
+   "name": "c1.75d2.5",
+   "seed": 1,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "aiCutSD": 1.75,
+    "aiDemoSD": 2.5,
+    "aiExitWeeks": 26
+   }
+  },
+  {
+   "item": "X03-5-2",
+   "name": "c1.75d2.5",
+   "seed": 1,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "aiCutSD": 1.75,
+    "aiDemoSD": 2.5,
+    "aiExitWeeks": 26
+   }
+  },
+  {
+   "item": "X03-5-2",
+   "name": "c1.75d2.5",
+   "seed": 1,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "aiCutSD": 1.75,
+    "aiDemoSD": 2.5,
+    "aiExitWeeks": 26
+   }
+  },
+  {
+   "item": "X03-5-2",
+   "name": "c1.75d2.5",
+   "seed": 1,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "aiCutSD": 1.75,
+    "aiDemoSD": 2.5,
+    "aiExitWeeks": 26
+   }
+  },
+  {
+   "item": "X03-5-2",
+   "name": "c1.75d2.5",
+   "seed": 2,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "aiCutSD": 1.75,
+    "aiDemoSD": 2.5,
+    "aiExitWeeks": 26
+   }
+  },
+  {
+   "item": "X03-5-2",
+   "name": "c1.75d2.5",
+   "seed": 2,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "aiCutSD": 1.75,
+    "aiDemoSD": 2.5,
+    "aiExitWeeks": 26
+   }
+  },
+  {
+   "item": "X03-5-2",
+   "name": "c1.75d2.5",
+   "seed": 2,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "aiCutSD": 1.75,
+    "aiDemoSD": 2.5,
+    "aiExitWeeks": 26
+   }
+  },
+  {
+   "item": "X03-5-2",
+   "name": "c1.75d2.5",
+   "seed": 2,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "aiCutSD": 1.75,
+    "aiDemoSD": 2.5,
+    "aiExitWeeks": 26
+   }
+  },
+  {
+   "item": "X03-5-2",
+   "name": "c2d2.5",
+   "seed": 1,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "aiCutSD": 2,
+    "aiDemoSD": 2.5,
+    "aiExitWeeks": 26
+   }
+  },
+  {
+   "item": "X03-5-2",
+   "name": "c2d2.5",
+   "seed": 1,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "aiCutSD": 2,
+    "aiDemoSD": 2.5,
+    "aiExitWeeks": 26
+   }
+  },
+  {
+   "item": "X03-5-2",
+   "name": "c2d2.5",
+   "seed": 1,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "aiCutSD": 2,
+    "aiDemoSD": 2.5,
+    "aiExitWeeks": 26
+   }
+  },
+  {
+   "item": "X03-5-2",
+   "name": "c2d2.5",
+   "seed": 1,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "aiCutSD": 2,
+    "aiDemoSD": 2.5,
+    "aiExitWeeks": 26
+   }
+  },
+  {
+   "item": "X03-5-2",
+   "name": "c2d2.5",
+   "seed": 2,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "aiCutSD": 2,
+    "aiDemoSD": 2.5,
+    "aiExitWeeks": 26
+   }
+  },
+  {
+   "item": "X03-5-2",
+   "name": "c2d2.5",
+   "seed": 2,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "aiCutSD": 2,
+    "aiDemoSD": 2.5,
+    "aiExitWeeks": 26
+   }
+  },
+  {
+   "item": "X03-5-2",
+   "name": "c2d2.5",
+   "seed": 2,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "aiCutSD": 2,
+    "aiDemoSD": 2.5,
+    "aiExitWeeks": 26
+   }
+  },
+  {
+   "item": "X03-5-2",
+   "name": "c2d2.5",
+   "seed": 2,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "aiCutSD": 2,
+    "aiDemoSD": 2.5,
+    "aiExitWeeks": 26
+   }
+  },
+  {
+   "item": "X03-5-2",
+   "name": "c1.75d2n52",
+   "seed": 1,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "aiCutSD": 1.75,
+    "aiDemoSD": 2,
+    "aiExitWeeks": 52
+   }
+  },
+  {
+   "item": "X03-5-2",
+   "name": "c1.75d2n52",
+   "seed": 1,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "aiCutSD": 1.75,
+    "aiDemoSD": 2,
+    "aiExitWeeks": 52
+   }
+  },
+  {
+   "item": "X03-5-2",
+   "name": "c1.75d2n52",
+   "seed": 1,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "aiCutSD": 1.75,
+    "aiDemoSD": 2,
+    "aiExitWeeks": 52
+   }
+  },
+  {
+   "item": "X03-5-2",
+   "name": "c1.75d2n52",
+   "seed": 1,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "aiCutSD": 1.75,
+    "aiDemoSD": 2,
+    "aiExitWeeks": 52
+   }
+  },
+  {
+   "item": "X03-5-2",
+   "name": "c1.75d2n52",
+   "seed": 2,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "aiCutSD": 1.75,
+    "aiDemoSD": 2,
+    "aiExitWeeks": 52
+   }
+  },
+  {
+   "item": "X03-5-2",
+   "name": "c1.75d2n52",
+   "seed": 2,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "aiCutSD": 1.75,
+    "aiDemoSD": 2,
+    "aiExitWeeks": 52
+   }
+  },
+  {
+   "item": "X03-5-2",
+   "name": "c1.75d2n52",
+   "seed": 2,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "aiCutSD": 1.75,
+    "aiDemoSD": 2,
+    "aiExitWeeks": 52
+   }
+  },
+  {
+   "item": "X03-5-2",
+   "name": "c1.75d2n52",
+   "seed": 2,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "aiCutSD": 1.75,
+    "aiDemoSD": 2,
+    "aiExitWeeks": 52
+   }
+  }
+ ]
+}

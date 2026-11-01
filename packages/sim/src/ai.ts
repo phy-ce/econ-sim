@@ -1,6 +1,6 @@
 import { BUILDING_BY_ID, buildPointsOf, BUILDING_TYPES, EDUCATION_FLOOR, EDUCATION_RANGE, GOOD_IDS, GOODS, SKILL_DEFS, TECH_BY_ID, TICKS_PER_WEEK, TICKS_PER_YEAR, TRADING_POST, TUNE, getMethod, regionPerk, tradeEscrowPerLevel, tradeReserveOf } from './data';
 import { withEstimateCache, regionAvgWealth, regionPopulation, wageCostOf,
-  availableMethods, ownBuildingAt, builderOf, canBuildType, kingdomGdp, paysDividend, paysShare, companyById, constructionEstimate, creditLimit, depositFree, efficiency, estimateMethod, harvestFactor, hasBuilder, isGovernment, regionById, wagesAt, researchableTechs, roomFor, sellsShares, slots, mainOutput, projectedSD,
+  availableMethods, ownBuildingAt, builderOf, canBuildType, kingdomGdp, paysDividend, paysShare, companyById, constructionEstimate, creditLimit, depositFree, efficiency, estimateMethod, harvestFactor, hasBuilder, isGovernment, regionById, wagesAt, researchableTechs, roomFor, sellsShares, slots, mainOutput, projectedSD, currentSD,
 } from './economy';
 import { MAX_CONCURRENT_CONSTRUCTIONS, MAX_LEVELS_PER_PROJECT, applyCommand } from './commands';
 import { committedCost, favours, funderWeight, hasReserve, lawRevenue, ownerBuildings, ownerFunds, reserveCap, reserveOf, taxRates, treasuryFree } from './finance';
@@ -70,6 +70,7 @@ export const aiTrace: { on?: (w: World, c: Company, path: string, typeId: string
 export function runAi(w: World) {
   if (!w.config.ai) return;
   if (TUNE.aiReserveRule) countHotPrices(w);
+  if (TUNE.aiReserveRule && (TUNE.aiCutSD > 0 || TUNE.aiDemoSD > 0)) sdExit(w);
   const outlook = marketOutlook(w);
   // 이번 주 방식 바꾸기가 함께 쓰는 일손 곳간 (지역, 직종): 한 건물이 바꾸며 더 뽑을 사람을 빼 두어, 같은 사람을 여러 건물이 세지 않는다
   const switchPools = new Map<string, number>();
@@ -618,7 +619,7 @@ function manageBuildings(w: World, c: Company, o: Outlook, pools: Map<string, nu
 
     if (!b.active) {
       b.pausedWeeks += 1;
-      if (current.margin > 0.05 && inputsAvailable(w, cur, b.level, b)) {
+      if (current.margin > 0.05 && inputsAvailable(w, cur, b.level, b) && !sdHold(w, b)) {
         applyCommand(w, c.id, { type: 'setActive', buildingId: b.id, active: true });
         applyCommand(w, c.id, { type: 'setUtilization', buildingId: b.id, utilization: 0.3 });
         b.lossWeeks = 0; b.profitEma = 0;
@@ -636,8 +637,10 @@ function manageBuildings(w: World, c: Company, o: Outlook, pools: Map<string, nu
     if (b.lossWeeks >= 4 && b.utilization > 0.1 + 1e-9) {
       applyCommand(w, c.id, { type: 'setUtilization', buildingId: b.id, utilization: Math.max(0.1, b.utilization - 0.1) });
       b.lossWeeks = 0;
-    } else if (b.utilization < 1 && current.margin > 0 && !(TUNE.starveWeeks > 0 && b.last.inputFill < RAISE_FILL)) {
+      aiTrace.on?.(w, c, 'lossCut', b.typeId, b.methodId, 0, undefined, b.regionId);
+    } else if (b.utilization < 1 && current.margin > 0 && !(TUNE.starveWeeks > 0 && b.last.inputFill < RAISE_FILL) && !sdHold(w, b)) {
       applyCommand(w, c.id, { type: 'setUtilization', buildingId: b.id, utilization: b.utilization + 0.1 });
+      aiTrace.on?.(w, c, 'utilUp', b.typeId, b.methodId, 0, undefined, b.regionId);
     }
   }
 }
@@ -1199,6 +1202,81 @@ function reserveLevels(w: World, c: Company, canStart: () => boolean, free: () =
 }
 
 interface Pick { regionId: number; typeId: string; methodId: string; levels: number; score: number; fallback?: boolean }
+
+// ---------------------------------------------------------------- 팔리지 않음 기준 가동률 감축·철거 (TUNE.aiCutSD·aiDemoSD, 오버홀 03 5-2, 0b′)
+//
+// 0b (main be7e72f, 20년 × 시드 1~4): 곡물 S/D 2.3~2.8, 값이 하한 0.25 에 10년차부터 붙었다. 적자 4주 감축은 유보 자산이 있으면 면제되고,
+// 유보 0·적자 26주 철거는 임금 바닥이 곡물값을 따라 내려가 손익이 적자로 잘 안 가서 켜지지 않았다 (docs/overhaul/0B_RESULTS.md 1장).
+// 그래서 '적자'가 아니라 '팔리지 않음'(지역 지금 공급 ÷ 수요)을 퇴출 신호로 쓴다. 문턱 순서는 03 5장 1번의 AI 판단 원칙
+// 증설 허용(aiGlutSD) < 감축 시작(aiCutSD) < 철거 시작(aiDemoSD) 이고 (07 5.4 표), 이 순서를 지키는 조합만 비교한다 (코드로 막지 않는다).
+
+/**
+ * 감축이 다시 올리기를 막는 동안인가 (aiCutSD > 0 일 때만): 유보 기준 생산 건물의 산출 상품(mainOutput) 지역 예상 S/D(projectedSD, 공사 중 포함)가
+ * 증설 임계 aiGlutSD 를 넘으면 (aiGlutSD 가 0 이거나 aiCutSD 이상이면 aiCutSD 를 넘으면) 가동률을 올리지도, 꺼진 건물을 다시 켜지도 않는다.
+ * "증설이 막힐 만큼 넘치는 동안은 다시 올리지 않는다": 감축 시작(aiCutSD)보다 낮은 선에서 다시 올리므로 [올림선, aiCutSD) 구간은 그대로 둔다
+ * (같은 선에서 줄이고 올리면 주마다 오르내린다). 올리기 자체는 그 전 규칙(마진 > 0 이면 +10%)이다
+ */
+function sdHold(w: World, b: Building): boolean {
+  if (!(TUNE.aiCutSD > 0) || !reserveRuled(b)) return false;
+  const g = mainOutput(b.typeId, b.methodId);
+  const sd = g ? projectedSD(w, b.regionId, g) : null;
+  const line = TUNE.aiGlutSD > 0 && TUNE.aiGlutSD < TUNE.aiCutSD ? TUNE.aiGlutSD : TUNE.aiCutSD;
+  return sd !== null && sd > line;
+}
+
+/** 감축 하한 (manageBuildings 의 적자 감축과 같은 10%) */
+export const UTIL_FLOOR = 0.1;
+
+/**
+ * 팔리지 않음 기준 감축·철거 (매주 runAi 앞에서 한 번, 회사 판단보다 먼저):
+ * 1) 지역·상품마다 지금 공급 ÷ 수요(currentSD, 공사 중 제외: 감축은 지금 넘친 것을 본다)가 aiCutSD 이상인 연속 주(Region.cutWeeks),
+ *    aiDemoSD 이상인 연속 주(Region.demoWeeks)를 센다. 수요가 없으면(null) 세지 않는다.
+ * 2) cutWeeks ≥ aiExitWeeks 이면 그 지역에서 그 상품을 산출(mainOutput)하는 AI 회사의 유보 기준 생산 건물(reserveRuled, 켜져 있고 가동률 > 10%) 중
+ *    레벨당 장기 손익(profitEma ÷ 레벨)이 가장 나쁜 하나의 가동률을 10% 줄인다 (유보 자산이 있어도). 문턱 아래로 내려갈 때까지 주마다 한 번.
+ * 3) demoWeeks ≥ aiExitWeeks 이면 같은 건물 중 가동률이 하한(10%)이거나 꺼진 것(철거 대기·증설 공사 중 제외)에서 레벨당 손익이 가장 나쁜 하나를 1레벨 헌다.
+ * 완충 (07 A5 범위, 근거 없음): 한 지역·상품에서 한 주에 감축 한 건물, 철거 한 건물까지. 여러 회사 건물이 함께 줄이면 EMA(하루 10%) 반응보다 빨리 줄어 지나치게 줄 수 있어서다.
+ * 같은 값이면 w.buildings 순서가 앞선 건물 (결정성). 플레이어 건물은 건드리지 않지만 그 공급은 S/D 에 들어간다
+ */
+function sdExit(w: World) {
+  const cut = TUNE.aiCutSD, demo = TUNE.aiDemoSD, need = TUNE.aiExitWeeks;
+  const ai = new Map(w.companies.filter((c) => !c.isPlayer).map((c) => [c.id, c] as const));
+  const groups = new Map<string, Building[]>();
+  for (const b of w.buildings) {
+    if (b.level <= 0 || !ai.has(b.companyId) || !reserveRuled(b)) continue;
+    const g = mainOutput(b.typeId, b.methodId);
+    if (!g) continue;
+    const key = `${b.regionId}|${g}`;
+    const list = groups.get(key);
+    if (list) list.push(b); else groups.set(key, [b]);
+  }
+  const perLevel = (b: Building) => b.profitEma / Math.max(1, b.level);
+  const worst = (list: Building[]) => list.reduce<Building | null>((x, b) => (!x || perLevel(b) < perLevel(x) ? b : x), null);
+  for (const r of w.regions) {
+    const cw: Partial<Record<GoodId, number>> = {}, dw: Partial<Record<GoodId, number>> = {};
+    for (const g of GOOD_IDS) {
+      const sd = currentSD(w, r.id, g);
+      if (sd === null) continue;
+      if (cut > 0 && sd >= cut) cw[g] = (r.cutWeeks?.[g] ?? 0) + 1;
+      if (demo > 0 && sd >= demo) dw[g] = (r.demoWeeks?.[g] ?? 0) + 1;
+    }
+    if (Object.keys(cw).length) r.cutWeeks = cw; else delete r.cutWeeks;
+    if (Object.keys(dw).length) r.demoWeeks = dw; else delete r.demoWeeks;
+    for (const g of GOOD_IDS) {
+      const list = groups.get(`${r.id}|${g}`);
+      if (!list) continue;
+      if ((cw[g] ?? 0) >= need) {
+        const b = worst(list.filter((x) => x.active && x.utilization > UTIL_FLOOR + 1e-9));
+        const c = b && ai.get(b.companyId);
+        if (b && c && !applyCommand(w, c.id, { type: 'setUtilization', buildingId: b.id, utilization: Math.max(UTIL_FLOOR, b.utilization - 0.1) })) aiTrace.on?.(w, c, 'sdCut', b.typeId, b.methodId, 0, undefined, r.id);
+      }
+      if ((dw[g] ?? 0) >= need) {
+        const b = worst(list.filter((x) => (!x.active || x.utilization <= UTIL_FLOOR + 1e-9) && !x.shrinking && !w.constructions.some((k) => k.targetBuildingId === x.id)));
+        const c = b && ai.get(b.companyId);
+        if (b && c && !applyCommand(w, c.id, { type: 'demolish', buildingId: b.id, levels: 1 })) aiTrace.on?.(w, c, 'sdDemo', b.typeId, b.methodId, -1, undefined, r.id);
+      }
+    }
+  }
+}
 
 /**
  * TUNE.expandUtilMin (0 = 끔): 왕국 안(왕실 + 민간 상회. 왕국마다 민간 상회는 하나라 회사로 나누면 왕실 건물만 빠진다) 같은 종류이고

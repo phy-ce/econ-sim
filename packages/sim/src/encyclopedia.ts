@@ -35,7 +35,7 @@ import {
   DAILY_INTEREST, KEEP_SHARE, TREASURY_RELEASE, MINT_BASE, MINT_RATE, RESERVE_SHARE, kingdomLiteracy, researchPoints, adminCapacityOf, reserveCap, taxCapacity, taxRates,
   weeklyOutputValue,
 } from './finance';
-import { AI_JITTER, CHUNKS, INPUT_SUPPLY_MIN, MIXED_LEVELS, RAISE_FILL, RESERVE_FULL, RESERVE_STREAK, STARVE_FILL, TRIAL_PRICE, SWITCH_MARGIN, SWITCH_MIN_WAGE_SHARE, LAW_COOLDOWN, LAW_SWITCH, WELFARE_COOLDOWN, WELFARE_SWITCH, OFFICE_BLOCK, OFFICE_GROWTH, STAFFING_HORIZON, SWITCH_COOLDOWN, ADMIN_STAFFED } from './ai';
+import { AI_JITTER, CHUNKS, INPUT_SUPPLY_MIN, MIXED_LEVELS, RAISE_FILL, RESERVE_FULL, RESERVE_STREAK, STARVE_FILL, TRIAL_PRICE, UTIL_FLOOR, SWITCH_MARGIN, SWITCH_MIN_WAGE_SHARE, LAW_COOLDOWN, LAW_SWITCH, WELFARE_COOLDOWN, WELFARE_SWITCH, OFFICE_BLOCK, OFFICE_GROWTH, STAFFING_HORIZON, SWITCH_COOLDOWN, ADMIN_STAFFED } from './ai';
 import { budgetPreview } from './budget';
 import { ownershipAssets } from './policy';
 import { welfareIncome, welfareTarget, welfareWeekly } from './welfare';
@@ -1246,9 +1246,11 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   },
   {
     id: 'ai-utilization', category: 'ai', title: t('가동률', 'Utilisation'),
-    rule: t('유보 자산이 남아 있으면 줄이지 않는다 (투입 충족 < {2}가 {0}주 이어진 건물은 유보 자산이 있어도 줄인다, 0이면 끔). 4주 연속 크게 적자(마진 < −20%)면 −10% (최소 10%), 마진 > 0이면 +10% ({0} > 0이면 투입 충족이 {1} 이상일 때만). 기상 조건 적자는 세지 않는다. 왕실 정부 건물은 늘 100%다.', 'No cuts while a reserve remains (a building whose input fill stayed under {2} for {0} weeks is cut even with a reserve; 0 = off). Four weeks of heavy losses (margin < −20%) cut 10% (min 10%); positive margin adds 10% (with {0} > 0 only when input fill is at least {1}). Weather losses do not count. Crown government buildings stay at 100%.'),
-    params: [tune('starveWeeks', '굶은 주 수', 'Starved weeks', 'week'), p('올리는 투입 충족', 'Fill needed to raise', () => RAISE_FILL, 'pct'), p('굶는 투입 충족', 'Starving fill', () => STARVE_FILL, 'pct')],
-    related: ['reserves', 'profit', 'harvest-conditions'], seenIn: ['company'], source: ['ai.ts manageBuildings'], design: ['10'],
+    rule: t('유보 자산이 남아 있으면 줄이지 않는다 (투입 충족 < {2}가 {0}주 이어진 건물은 유보 자산이 있어도 줄인다, 0이면 끔). 4주 연속 크게 적자(마진 < −20%)면 −10% (최소 10%), 마진 > 0이면 +10% ({0} > 0이면 투입 충족이 {1} 이상일 때만). 기상 조건 적자는 세지 않는다. 왕실 정부 건물은 늘 100%다. 팔리지 않음 ({3} > 0, 유보 기준 생산 건물): 그 지역 그 산출 상품의 지금 공급 ÷ 수요(이동평균)가 {3} 이상인 주가 {5}주 이어지면, 그 지역에서 그 상품을 내는 AI 건물 중 레벨당 손익이 가장 나쁜 하나의 가동률을 주마다 10% 줄인다 (유보 자산이 있어도, 최소 {6}). {4} 이상인 주가 {5}주 이어지면 가동률이 {6}이거나 꺼진 건물 중 하나를 주마다 1레벨 헌다. {3} > 0이면 예상 공급 ÷ 수요가 {7}({7}이 0이거나 {3} 이상이면 {3})를 넘는 동안 가동률을 올리지도 다시 켜지도 않는다. 0이면 끔.', 'No cuts while a reserve remains (a building whose input fill stayed under {2} for {0} weeks is cut even with a reserve; 0 = off). Four weeks of heavy losses (margin < −20%) cut 10% (min 10%); positive margin adds 10% (with {0} > 0 only when input fill is at least {1}). Weather losses do not count. Crown government buildings stay at 100%. Unsold output ({3} > 0, reserve-based producers): after {5} weeks with current supply ÷ demand (moving averages) of a good in a region at {3} or more, the AI producer of that good there with the worst profit per level is cut 10% each week (even with a reserve, min {6}). After {5} weeks at {4} or more, one building at {6} or paused loses one level each week. With {3} > 0 utilisation is not raised and paused buildings are not restarted while projected supply ÷ demand is above {7} ({3} if {7} is 0 or at least {3}). 0 = off.'),
+    params: [tune('starveWeeks', '굶은 주 수', 'Starved weeks', 'week'), p('올리는 투입 충족', 'Fill needed to raise', () => RAISE_FILL, 'pct'), p('굶는 투입 충족', 'Starving fill', () => STARVE_FILL, 'pct'),
+      tune('aiCutSD', '감축 시작 공급 ÷ 수요', 'Supply ÷ demand starting cuts', 'x'), tune('aiDemoSD', '철거 시작 공급 ÷ 수요', 'Supply ÷ demand starting demolition', 'x'), tune('aiExitWeeks', '감축·철거까지 주 수', 'Weeks before cuts and demolition', 'week'),
+      p('감축 하한', 'Cut floor', () => UTIL_FLOOR, 'pct'), tune('aiGlutSD', '증설 막는 예상 공급 ÷ 수요', 'Projected supply ÷ demand blocking growth', 'x')],
+    related: ['reserves', 'profit', 'harvest-conditions', 'ai-reserve'], seenIn: ['company'], source: ['ai.ts manageBuildings', 'ai.ts sdExit', 'economy.ts currentSD'], design: ['10'],
   },
   {
     id: 'ai-research', category: 'ai', title: t('연구 고르기', 'Choosing research'),

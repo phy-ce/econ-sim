@@ -591,6 +591,14 @@ export const TUNE = {
   // 공급 이동평균 + 모든 회사의 공사 중 레벨 산출, ÷ 수요 이동평균)가 이 값을 넘는 주는 증설하지 않는다. 0 = 검사 없음 (그 전과 같음).
   // 후보 1.25 / 1.5 / 1.75 와 0 을 비교 중 (docs/overhaul/0BP_5-1_SPECS.json), 근거 없음
   aiGlutSD: 1.5,
+  // 팔리지 않음 기준 가동률 감축·철거 (오버홀 03 5-2, 07 5.4 문턱 표, 0b′, AI 판단, ai.ts sdExit): 지역 지금 공급 ÷ 수요(currentSD)가 aiCutSD 이상인 주가
+  // aiExitWeeks 주 이어지면 그 지역 그 상품을 내는 AI 생산 건물 중 레벨당 손익이 가장 나쁜 하나의 가동률을 주마다 10% 줄이고 (유보 자산이 있어도),
+  // aiDemoSD 이상인 주가 aiExitWeeks 주 이어지면 가동률이 하한(10%)이거나 꺼진 건물 중 하나를 주마다 1레벨 헌다. aiCutSD > 0 이면 증설이 막힐 만큼
+  // 넘치는 동안(예상 S/D > aiGlutSD, aiGlutSD 가 0 이거나 aiCutSD 이상이면 aiCutSD) 가동률을 다시 올리거나 다시 켜지 않는다. 0 = 끔 (그 전과 같음).
+  // 켤 때는 aiGlutSD < aiCutSD < aiDemoSD 인 조합만 비교한다 (docs/overhaul/0BP_5-2_SPECS.json). 후보 감축 1.75 / 2, 철거 2 / 2.5, N 26 / 52, 근거 없음
+  aiCutSD: 0,
+  aiDemoSD: 0,
+  aiExitWeeks: 26,
   // 행정청 징수율 하한 (오버홀 07 A4, 0b′, AI 판단, 이슈 #4): > 0 이면 AI 왕실은 왕국 징수율(taxRatio)이 이 값 아래인 동안 행정청 레벨을 헐지 않는다
   // (reviewLevels 가 적자 주를 세지 않고, 올려 둔 행정청 철거 대기를 거둔다). 0 = 하한 없음 (그 전과 같음). 후보 0.6 / 0.7 / 0.8 과 0 을 비교 중 (docs/overhaul/0BP_A4_SPECS.json), 근거 없음
   aiAdminFloor: 0,

@@ -355,17 +355,19 @@ class Sum:
         self.p(f'\n빈 해 비율 50% 이상인 칸 {over}개 / {len(rows)}. 6칸을 넘으면 "중반 원천이 모자란다" → {"넘음" if over > 6 else "넘지 않음"}.\n')
 
 
-# 0b′ 5-1 후보 비교의 기본 지표 (03 5장 1번·4.3, 범위 k 의 줄에 있는 것만 낸다. 대륙 줄에만 있는 sd.* 등은 --k all)
+# 0b′ 5-1·5-2 후보 비교의 기본 지표 (03 5장 1·2번·4.3, 범위 k 의 줄에 있는 것만 낸다. 대륙 줄에만 있는 sd.* 등은 --k all)
 COMPARE = ['gdp', 'gdpPre', 'pop', 'peas', 'jobless', 'solPeas', 'solUnsk', 'peasantIncome', 'wage.unskilled', 'wpos.unskilled.floor', 'wpos.farmer.floor',
            'sellV', 'lvProd', 'savNoble', 'vault', 'vaultG', 'pledge', 'pledgeNew', 'startLv', 'demoLv', 'quickDemo', 'quickIdx', 'growStarts', 'glutBlock',
            'adminStaff', 'skim', 'margR1', 'sd.grain', 'sd.fiber', 'sd.timber', 'sd.fuel', 'sd.cloth', 'sd.furniture',
            'sdSwing.grain', 'sdSwing.fiber', 'sdSwing.timber', 'sdSwingR.grain', 'sdSwingR.fiber', 'sdSwingR.timber',
-           'capLv.grain', 'capLv.fiber', 'capLv.timber']
+           'capLv.grain', 'capLv.fiber', 'capLv.timber',
+           'sdCut', 'sdDemo', 'utilUp', 'lossCut', 'utilG.grain', 'utilG.fiber', 'utilG.timber', 'lo.grain', 'price.grain']
 CNAME = NAME | {'gdpPre': '세전 총생산', 'peasantIncome': '소작 1인 소득', 'wage.unskilled': '노동자 임금', 'wpos.unskilled.floor': '바닥에 붙은 노동자 비율',
                 'wpos.farmer.floor': '바닥에 붙은 농부 비율', 'sellV': '팔린 비율 (가치)', 'lvProd': '생산 건물 레벨 합', 'savNoble': '귀족 직종 저축',
                 'vault': '저택·금융가 금고', 'vaultG': '금고 해마다 증가율', 'pledge': '남은 금고 공사 약정', 'pledgeNew': '새 금고 약정', 'startLv': '착공 레벨',
                 'demoLv': '헐린 레벨', 'quickDemo': '52주 안 헐린 레벨', 'quickIdx': '짓고 부수기 지수', 'growStarts': '유보 증설 착공', 'glutBlock': '과잉 검사로 막힌 증설',
-                'adminStaff': '행정청 인원 (천)', 'skim': '저택 거둠', 'margR1': '실제 ÷ 설계 이익률 (기본 방식)'}
+                'adminStaff': '행정청 인원 (천)', 'sdCut': '5-2 가동률 감축 (번)', 'sdDemo': '5-2 철거 레벨',
+                'utilUp': '가동률 올리기 (번)', 'lossCut': '적자 가동률 감축 (번)', 'skim': '저택 거둠', 'margR1': '실제 ÷ 설계 이익률 (기본 방식)'}
 
 
 def natural(name):
