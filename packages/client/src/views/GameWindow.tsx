@@ -1,3 +1,4 @@
+import {ConstructionPanel} from './ConstructionPanel';
 import {StatePanel} from './StatePanel';
 import {memo, useCallback} from 'react';
 import {useEffect,useMemo} from 'react';
@@ -23,6 +24,7 @@ function GameWindowView({id,game,mapRegionId,request,onOpenWindow}:{onOpenWindow
  const me=playerCompany(world),region=regionById(world,route.regionId??mapRegionId);
  const go=useCallback((next:ScreenRoute)=>{if(next.kind!==id){onOpenWindow(next);return;}setRoute(previous=>({...next,sequence:(previous.sequence??0)+1}));},[id,onOpenWindow,setRoute]);
  useEffect(()=>{if(request?.target===id)go(request.route);},[request?.sequence]);
+ useEffect(()=>{if(id==='construction'&&world.regions.some(r=>r.id===mapRegionId&&r.kingdomId===me?.kingdomId))go({kind:'construction',regionId:mapRegionId});},[id,mapRegionId]);
  const onBuilding=useCallback((bid:number)=>{const b=world.buildings.find(b=>b.id===bid);if(b)go({kind:'region',regionId:b.regionId,buildingId:bid});},[world,go]);
  const onRegion=useCallback((rid:number)=>go({kind:'region',regionId:rid}),[go]);
  const onGood=useCallback((good:GoodId)=>go({kind:'market',regionId:region.id,good}),[region.id,go]);
@@ -40,7 +42,7 @@ function GameWindowView({id,game,mapRegionId,request,onOpenWindow}:{onOpenWindow
  if(!me)return null;
  if(route.kind==='state')return <StatePanel game={game} world={world} me={me} onBuilding={onBuilding} onResearch={()=>go({kind:'research'})} requestedTab={route.tab} sequence={sequence}/>;
  if(route.kind==='research')return <ResearchPanel game={game} world={world} me={me}/>;
- if(route.kind==='construction')return <Projects game={game} world={world} owner={me} projects={world.constructions}/>;
+ if(route.kind==='construction')return <ConstructionPanel game={game} world={world} me={me} regionId={region.id} onRegion={regionId=>go({kind:'construction',regionId})}/>;
  return null;
 }
 

@@ -5,7 +5,7 @@ import { OwnerBadge } from './OwnerBadge';
 import { Workforce } from './Workforce';
 // 상회 패널: 내 상회(조작 가능)와 다른 상회(읽기 전용). 시안 "내 상회 · 투입·산출·수지" 기준.
 import { ListTools } from './ListTools';
-import { useMemo, useState } from 'react';
+import { useMemo, useState,useEffect } from 'react';
 import {
   BUILDING_BY_ID, BUILDING_TYPES, GOOD_IDS, MAX_CONCURRENT_CONSTRUCTIONS, TUNE,
   SKILLS, POP_CLASSES, TECHS, companyById, paysDividend, peasantSlots, availableMethods, canBuildType, constructionEstimate, creditLimit, estimateAfterEntry,
@@ -460,6 +460,7 @@ export function BuildList({ game, world, me, region, projects, includeTypes, exc
   const T = useT(),ko=useLang()==='ko';
   const [query,setQuery]=useState(''),[filter,setFilter]=useState('all'),[sort,setSort]=useState('ready');
   const [open, setOpen] = useState<string | null>(null);
+  useEffect(()=>setOpen(null),[region.id]);
   const candidates=BUILDING_TYPES.filter(bt=>!bt.auto && (!bt.stateOnly || me.state) && (!includeTypes || includeTypes.includes(bt.id)) && !excludeTypes?.includes(bt.id)).map(bt=>({bt,blockers:buildBlockers(world,me,region,bt,projects),cost:constructionEstimate(world,me,bt.id).cost}));
   const ready=candidates.filter(c=>!c.blockers.length).length;
   const shown=candidates.filter(c=>filter==='all'||(filter==='ready'?!c.blockers.length:c.blockers.length>0)).filter(c=>buildingName(c.bt.id).toLocaleLowerCase().includes(query.trim().toLocaleLowerCase())).sort((a,b)=>sort==='cost'?a.cost-b.cost||buildingName(a.bt.id).localeCompare(buildingName(b.bt.id)):sort==='name'?buildingName(a.bt.id).localeCompare(buildingName(b.bt.id)):Number(!!a.blockers.length)-Number(!!b.blockers.length)||buildingName(a.bt.id).localeCompare(buildingName(b.bt.id)));

@@ -657,3 +657,7 @@ DemolitionProgress: 남는 레벨·철거 대기·이번 주 1레벨, 다음/전
 ### 2026-11-01 2-77 아이콘·막대 가독성
 수요/공급 사람·건물 아이콘 32px, 행 38px, 표식 10px, 배경·그림자 대비. 범례·팝 표 아이콘 24px, 막대 최소 6px/테두리1px, 보조 글자 최소11px. 헤드리스 스크린샷 확인(1920×1080): C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/market-icons-ko.png, market-icons-en-dark.png. 실제 아이콘 32×32, 시세창 clientWidth=scrollWidth=418, 새 Runtime 예외 없음. root typecheck 및 client 53시험 통과.
 
+
+### 2026-11-01 H(2-73) 건설 입구
+ConstructionPanel 지역 칩·짓기/대기열 탭, 내 왕국 지역만 활성, 지도 내 지역 선택 연동, ScreenRoute 지역 이력, 기존 BuildList/Projects 재사용. 지역 전환 시 카드만 닫고 검색/필터/정렬 유지. 헤드리스 스크린샷 확인(1920×1080): C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/construction-fixed.png. 외국 칩 disabled, 탭 두 개, 가로폭418=scroll418. root typecheck/client55시험 통과. 실제 build 명령 클릭 경로 전체 실사용 검증은 남음.
+

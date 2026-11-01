@@ -104,3 +104,6 @@ DetailWindow 독립 NavigationProvider/버튼, BuildingPops 및 ResourceInspecto
 
 - 2-77 완료: 헤드리스 스크린샷 확인(1920×1080), scratch market-icons-ko.png / market-icons-en-dark.png. 아이콘 32px, 시세창 가로 넘침 없음, 영어/다크 대비 이미지 확인. typecheck와 client 전체53시험 통과.
 
+
+- H(2-73) 코드 완료. 헤드리스 스크린샷 확인(1920×1080) construction-fixed.png, 내 지역 활성/외국 잠금/가로 넘침 없음. typecheck/client55시험 통과.
+
