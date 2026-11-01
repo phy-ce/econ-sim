@@ -170,3 +170,6 @@ DetailWindow 독립 NavigationProvider/버튼, BuildingPops 및 ResourceInspecto
 
 - 2-33 감사 후속: wealthColor를 고정정점2/5/7.5/11의 OKLab 연속 보간으로 교체, 단일 연속 범례·정점 눈금. SOL_STOPS는 같은 정점으로 명시(장기분포에 따른 별도 범위 선택은 미실시). root typecheck/client48시험 통과. 헤드리스 스크린샷 확인(1920×1080): C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/wealth-gradient.png. CSS OKLab 지원true,5.99/6/6.01 보간비 연속 변화 확인.
 
+
+- 2-44 API 대기 해제 후 구현 완료. 왕국/지역 자산 막대·월별 왕국 추이, 조건선 없음. typecheck/client48시험 통과. 헤드리스 1920×1080 assets-kingdoms.png/assets-regions.png 확인. 위치 C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/.
+

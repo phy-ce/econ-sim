@@ -765,3 +765,23 @@ CompanyPanel BuildingRow의 저택·금융가는 별도 행으로 분기: 자리
 ### 2026-11-01 2-78 사무소 가동 비율 (화면 미검증)
 rowOf/FlowRow 원료에 officeLoad 곱, 사무소 서비스 칩에 가동 비율 표시, 그룹은 레벨 가중 가동 비율 전달. 회사가 없는 옛 대상은 조회 예외 방지. root typecheck/client48시험 통과. CDP 현재 테스트 세계 사무소3개 모두 load0·원료 섬유/목재/공구0 확인(읽기만). 화면 가동0/부분/전체 비율 스크린샷 대조는 남음. sim 수정 없음.
 
+
+### 2-44. 저택 대 금융가 자산 비율 (통계·소식, 사용자 요청 2026-10-21, sim 쪽 필요)
+
+> 현재 상태 (2026-10-28): API 대기 해제: ownershipAssets export 존재. 요청한 통계/추이 필드와 UI 반영 범위는 별도 감사 필요.
+**사용자 말:** 통계·소식에 저택 대 금융가 자산 비율을 지역별·왕국별로 보인다. 세법 조건선은 그리지 않는다 (DECISIONS 7-19 마지막 줄).
+- **값 (DECISIONS 7-18 "저택 크기"와 같은 셈):** 자산 = 가진 레벨의 주간 산출 가치(기본가, 레벨 × `weeklyOutputValue(typeId, methodId)`, 지분이면 × 지분) + 저택만 그 지역 소작지 수확의 주간 가치(기본가). 비율 = 금융가 ÷ (저택 + 금융가). 주간 값, 100 단위로 둥글게.
+- "지역별"은 **주인(저택·금융가)이 있는 지역** 기준이다. 7-16·7-19가 들어오면 저택·금융가가 다른 지역 레벨도 사므로 건물 위치로 묶지 않는다.
+- **sim 쪽 필요 (3장):** `ownershipAssets(world)` 순수 함수와 `KingdomMetrics.assetsManor`·`assetsFinance` (30일마다). 들어오기 전에는 만들지 않는다 (지금 `holdingsOf`로 흉내 내면 7-16 뒤 숫자가 달라진다).
+- **보여줄 곳:** 통계·소식 창 `BottomPanel.tsx` 38~72 `SectionStack`에 새 섹션 `assets`를 `kingdoms`(42) 바로 뒤에.
+  1. 머리 오른쪽 칩 두 개 `왕국 | 지역` (보기 전환, 고른 것은 localStorage `trends-assets-scope`, try/catch).
+  2. 막대 목록: 한 행 = 왕국(왕국 색 점 + 이름) 또는 지역(지역 이름 + 왕국 색 점). 내 왕국(지역은 내 왕국 지역)이 위. 행마다 가로 비율 막대 하나: 저택 색 | 금융가 색 (2-32-4의 두 고정 색), 너비 ∝ 자산. 오른쪽에 금융가 비율 `NN%` (정수). 툴팁: `저택 ƒ/주 · 금융가 ƒ/주`.
+  3. 추이: `TimeChart`로 왕국별 금융가 비율 선 (0~100%, 왕국 색, 내 왕국 굵게). 데이터 `metrics[].kingdoms[k].assetsFinance / (assetsManor + assetsFinance)`. 지역 보기일 때도 추이는 왕국 선만 (지역 추이는 두지 않는다).
+  - 세법·투자법 조건 값(가로선, 눈금, 색 띠)을 막대·차트에 그리지 않는다. 조건 숫자는 정책 창(2-45)에만 있다.
+- 문자열: `assetsTitle` 저택·금융가 자산 / Manor vs finance assets, `scopeKingdom` 왕국 / Kingdoms, `scopeRegion` 지역 / Regions, `financeShare` 금융가 비율 / Finance share.
+
+
+
+### 2026-11-01 2-44 자산 비율
+ownershipAssets API로 소유 기관 소재지 기준 왕국/지역 막대, 내 왕국 우선, 범위 저장·창 이력, 월별 왕국 금융가 비율 추이 추가. 법 조건선 없음. typecheck/client48시험 통과. 헤드리스 스크린샷 확인(1920×1080): C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/assets-kingdoms.png 및 assets-regions.png. 왕국3/지역7행·창폭418=scroll418 확인. 여러 월 곡선 실사용은 기록 대기.
+
