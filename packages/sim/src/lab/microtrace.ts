@@ -2,7 +2,7 @@
 // pop 은 (지역, 직종, 일터) 의 사람 묶음이다 (sim 의 단위). 인구 400명 세계에서 묶음은 수십 개라 전부 남긴다.
 import { BUILDING_BY_ID, GOOD_IDS, GOODS } from '../data';
 import { moneyIdentity, paysShare, slots, totalMoney, wagesAt } from '../economy';
-import { dividendWage, subsistenceWage } from '../labor';
+import { dividendWage, labourTable, subsistenceWage } from '../labor';
 import { workforce } from '../pops';
 import type { Building, GoodId, PopClass, Skill, World } from '../types';
 import { SKILLS, isLowerJob } from '../types';
@@ -41,6 +41,11 @@ export interface LaborRow {
   qual: number;
   /** 고용 가중 평균 임금, 소작 1인 하루 소득 (노동자·농부 임금 바닥의 기준) */
   wage: number; tenantInc: number;
+  /**
+   * 지역 시장 임금 (TUNE.wageMarket = 1 이면 Region.wages, 아니면 고용 가중 평균 임금, 고용이 없으면 민간 상회 임금표)과
+   * 그 임금에서의 노동시장 표 (labor.ts labourTable): 자리 D (손해 보는 건물의 빈자리 제외), 오려는 사람 S
+   */
+  market: number; D: number; S: number;
 }
 /** weekProfit 는 이번 주 누계(주 끝 표본에서는 막 0 이 됐다), lastWeekProfit 는 지난주 손익 (AI 임금 판단이 본 값) */
 export interface CoRow { id: number; state: boolean; cash: number; debt: number; weekProfit: number; lastWeekProfit: number; wages: Record<Skill, number> }
@@ -66,7 +71,7 @@ export function microTrace(w: World): MicroRow {
     if (b.typeId === 'subsistence') return tenantInc.get(b.regionId) ?? 0;
     if (paysShare(b, s as Skill)) return dividendWage(b, s as Skill);
     const c = coById.get(b.companyId);
-    return c ? wagesAt(c, b.typeId)[s as Skill] ?? 0 : 0;
+    return c ? wagesAt(c, b.typeId, w, b.regionId)[s as Skill] ?? 0 : 0;
   };
   const pops: PopRow[] = w.pops.filter((p) => p.size > 0).map((p) => {
     const b = p.work ? byId.get(p.work) : undefined;
@@ -84,7 +89,7 @@ export function microTrace(w: World): MicroRow {
     const c = coById.get(b.companyId);
     const sl = pick(SKILLS, (s) => slots(b, s));
     const emp = pick(SKILLS, (s) => b.employed[s]);
-    const wage = c && !BUILDING_BY_ID[b.typeId].auto ? pick(SKILLS, (s) => (sl[s] ? wagesAt(c, b.typeId)[s] : 0)) : {};
+    const wage = c && !BUILDING_BY_ID[b.typeId].auto ? pick(SKILLS, (s) => (sl[s] ? wagesAt(c, b.typeId, w, b.regionId)[s] : 0)) : {};
     const out = { ...b.last.output } as Partial<Record<GoodId, number>>;
     const mk = w.regions.find((r) => r.id === b.regionId)!.market;
     const soldQ = pick(Object.keys(out) as GoodId[], (g) => (out[g] ?? 0) * (mk[g].supply > 0 ? Math.min(1, mk[g].sold / mk[g].supply) : 0));
@@ -104,9 +109,17 @@ export function microTrace(w: World): MicroRow {
     mkts.push({ r: r.id, g, p: m.price, base: GOODS[g].basePrice, S: m.supply, D: m.demand, Sema: m.supplyEma, Dema: m.demandEma, sold: m.sold, inv: m.inventory });
   }
   const labor: LaborRow[] = [];
+  const firm = w.companies.find((c) => !c.state);
   for (const r of w.regions) {
     const local = w.buildings.filter((b) => b.regionId === r.id && !BUILDING_BY_ID[b.typeId].auto);
     const rp = w.pops.filter((p) => p.regionId === r.id && p.size > 0);
+    const seatAvg = (s: Skill) => {
+      let e = 0, paid = 0;
+      for (const b of local) { const c = coById.get(b.companyId); if (c && b.employed[s] > 0) { e += b.employed[s]; paid += b.employed[s] * wagesAt(c, b.typeId, w, r.id)[s]; } }
+      return e > 0 ? paid / e : firm?.wages[s] ?? 0;
+    };
+    const marketOf = (s: Skill) => r.wages?.[s] ?? seatAvg(s);
+    const tab = labourTable(w, r, w.buildings.filter((b) => b.regionId === r.id), rp, coById, tenantInc.get(r.id) ?? 0, marketOf);
     const tenants = rp.filter((p) => p.prof === 'peasant' && p.work && byId.get(p.work)?.typeId === 'subsistence').reduce((a, p) => a + workforce(p), 0);
     for (const s of SKILLS) {
       let jobs = 0, emp = 0, paid = 0;
@@ -115,12 +128,12 @@ export function microTrace(w: World): MicroRow {
         if (n <= 0) continue;
         jobs += n; emp += b.employed[s];
         const c = coById.get(b.companyId);
-        if (c) paid += b.employed[s] * wagesAt(c, b.typeId)[s];
+        if (c) paid += b.employed[s] * wagesAt(c, b.typeId, w, r.id)[s];
       }
       if (jobs <= 0 && s !== 'unskilled' && s !== 'farmer') continue;
       const unemp = rp.filter((p) => p.work === 0 && (p.prof === s || (isLowerJob(s) && p.prof === 'peasant'))).reduce((a, p) => a + workforce(p), 0);
       const qual = rp.reduce((a, p) => a + (p.prof === s ? workforce(p) : (p.quals[s] ?? 0)), 0);
-      labor.push({ r: r.id, s, jobs, emp, vac: Math.max(0, jobs - emp), unemp, tenants: isLowerJob(s) ? tenants : 0, qual, wage: emp > 0 ? paid / emp : 0, tenantInc: tenantInc.get(r.id) ?? 0 });
+      labor.push({ r: r.id, s, jobs, emp, vac: Math.max(0, jobs - emp), unemp, tenants: isLowerJob(s) ? tenants : 0, qual, wage: emp > 0 ? paid / emp : 0, tenantInc: tenantInc.get(r.id) ?? 0, market: marketOf(s), D: tab[s].jobs, S: tab[s].willing });
     }
   }
   const cos: CoRow[] = w.companies.map((c) => ({ id: c.id, state: c.state, cash: c.cash, debt: c.debt, weekProfit: c.weekProfit, lastWeekProfit: c.lastWeekProfit, wages: { ...c.wages } }));

@@ -16,7 +16,7 @@ import { ABS_LIMITS, BUILDING_BY_ID, BUILDING_TYPES, GOOD_IDS, SUBSISTENCE, TAX_
 import { collectionRatio, newBuilding, paysDividend, slots } from '../economy';
 import { applyStateWages, taxCapacity, updateWageIndex } from '../finance';
 import { createWorld } from '../index';
-import { syncEmployment } from '../labor';
+import { initMarketWages, syncEmployment } from '../labor';
 import { affordableTenantWealth, affordableWealth } from '../market';
 import { addFund, aggregateHouseholds, findPop, getPop, movePeople, workforce } from '../pops';
 import { updateOwnership, updateSubsistence } from '../production';
@@ -53,6 +53,12 @@ export interface MicroOptions {
   personUnit?: number;
   /** 고정 문턱(ABS_LIMITS)도 축소한다 (기본 true). false 는 축소가 무엇을 깨는지 보는 비교용 */
   floors?: boolean;
+  /**
+   * 건물 종류별 추가 축소 배율 (기본 없음 = 1): 그 종류의 레벨당 일꾼·원료·산출에 scale 다음으로 더 곱한다. 값(이익률)은 그대로다.
+   * 작은 세계에서는 1레벨이 지역 수요보다 훨씬 큰 건물(예: 공방 1레벨 공구 산출 = 마이크로 공구 수요의 약 6배)이 늘 넘쳐 값이 바닥에 붙고 헐린다.
+   * 그런 건물을 더 작게 만들어 시장이 두꺼워지게 한다 (노동시장 검증용, 2026-11-01)
+   */
+  typeScale?: Record<string, number>;
 }
 
 /** 기본 시작 건물 (배율 1/50에서 일자리 약 63: 농장 2 = 농부 20, 섬유 농장 10, 벌목 10, 방직 6, 공방 6, 건축사무소 10, 행정청 하급 귀족 1) */
@@ -83,15 +89,15 @@ export const microInfo = (w: World): MicroInfo | undefined => INFO.get(w);
 
 // ---------------------------------------------------------------- 표 축소
 
-interface MethodSnap { m: MethodDef; workers: Record<string, number>; inputs: Record<string, number>; outputs: Record<string, number>; seats?: number; taxCapacity?: number }
+interface MethodSnap { type: string; m: MethodDef; workers: Record<string, number>; inputs: Record<string, number>; outputs: Record<string, number>; seats?: number; taxCapacity?: number }
 interface Snapshot { methods: MethodSnap[]; workersPerCell: number; tradeReserve: number; abs: typeof ABS_LIMITS; needMul: Record<string, number> }
 let snapshot: Snapshot | null = null;
-let active: { scale: number; popRatio: number; adminK: number; floors: boolean } | null = null;
+let active: { scale: number; popRatio: number; adminK: number; floors: boolean; typeScale: Record<string, number> } | null = null;
 
 function takeSnapshot(): Snapshot {
   return {
-    methods: BUILDING_TYPES.flatMap((t) => t.methods).map((m) => ({
-      m, workers: { ...m.workers } as Record<string, number>, inputs: { ...m.inputs } as Record<string, number>, outputs: { ...m.outputs } as Record<string, number>,
+    methods: BUILDING_TYPES.flatMap((t) => t.methods.map((m) => ({ t, m }))).map(({ t, m }) => ({
+      type: t.id, m, workers: { ...m.workers } as Record<string, number>, inputs: { ...m.inputs } as Record<string, number>, outputs: { ...m.outputs } as Record<string, number>,
       seats: m.seats, taxCapacity: m.taxCapacity,
     })),
     workersPerCell: SUBSISTENCE.workersPerCell, tradeReserve: TUNE.tradeReserve, abs: { ...ABS_LIMITS }, needMul: { ...TUNE.needMul } as Record<string, number>,
@@ -117,16 +123,17 @@ export function restoreMicroScale(): void {
 }
 
 /** 축소를 켠다 (켜져 있으면 먼저 되돌린 뒤 다시 켠다) */
-function applyMicroScale(scale: number, popRatio: number, adminK: number, floors: boolean): void {
+function applyMicroScale(scale: number, popRatio: number, adminK: number, floors: boolean, typeScale: Record<string, number> = {}): void {
   restoreMicroScale();
   snapshot ??= takeSnapshot();
   const mul = (o: Record<string, number | undefined>, k: number) => { for (const key of Object.keys(o)) if (o[key] !== undefined) o[key] = o[key]! * k; };
   for (const s of snapshot.methods) {
-    mul(s.m.workers as Record<string, number>, scale);
-    mul(s.m.inputs as Record<string, number>, scale);
-    mul(s.m.outputs as Record<string, number>, scale);
-    if (s.seats !== undefined) s.m.seats = s.seats * scale;
-    if (s.taxCapacity !== undefined) s.m.taxCapacity = s.taxCapacity * scale * adminK;
+    const k = scale * (typeScale[s.type] ?? 1);
+    mul(s.m.workers as Record<string, number>, k);
+    mul(s.m.inputs as Record<string, number>, k);
+    mul(s.m.outputs as Record<string, number>, k);
+    if (s.seats !== undefined) s.m.seats = s.seats * k;
+    if (s.taxCapacity !== undefined) s.m.taxCapacity = s.taxCapacity * k * adminK;
   }
   SUBSISTENCE.workersPerCell = snapshot.workersPerCell * scale;
   TUNE.tradeReserve = snapshot.tradeReserve * scale;
@@ -141,7 +148,7 @@ function applyMicroScale(scale: number, popRatio: number, adminK: number, floors
     ABS_LIMITS.mintBase = snapshot.abs.mintBase * popRatio;
     ABS_LIMITS.reserveBase = snapshot.abs.reserveBase * popRatio;
   }
-  active = { scale, popRatio, adminK, floors };
+  active = { scale, popRatio, adminK, floors, typeScale };
 }
 
 /** 지금 켜진 축소 (없으면 null) */
@@ -185,7 +192,7 @@ export function createMicroWorld(opts: MicroOptions = {}): World {
   const adminK = (opts.adminFit ?? true) ? (total * TUNE.adminStart / TUNE.adminScale) / (TAX_PEOPLE_PER_LEVEL * scale) : 1;
 
   // 2) 축소를 켠다
-  applyMicroScale(scale, popRatio, adminK, floors);
+  applyMicroScale(scale, popRatio, adminK, floors, opts.typeScale ?? {});
 
   // 3) 지역·왕국·회사
   const td = TIERS[Math.max(1, Math.min(TIERS.length, tier)) - 1];
@@ -301,9 +308,10 @@ export function createMicroWorld(opts: MicroOptions = {}): World {
     const tenants = subs ? findPop(w, r.id, 'peasant', subs.id) : undefined;
     for (const p of w.pops.filter((x) => x.regionId === r.id)) p.wealth = p === tenants ? affordableTenantWealth(w, r, p.size, workforce(p)) : affordableWealth(r, p.size, p.incomeEma);
   }
+  if (TUNE.wageMarket) initMarketWages(w);
   updateWageIndex(w, kingdom);
   applyStateWages(w, kingdom);
-  gov.wages = { ...gov.stateWages! };
+  if (!TUNE.wageMarket) gov.wages = { ...gov.stateWages! };
   gov.cash = gov.weekStartCash = startTreasury(w, gov);
   gov.debt = 0;
   for (const f of w.buildings.filter((x) => x.typeId === 'finance')) {

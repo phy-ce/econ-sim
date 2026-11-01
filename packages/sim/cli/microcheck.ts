@@ -1,6 +1,11 @@
 // 마이크로 세계 균형 점검 (src/lab/micro.ts, 2026-11-01 사용자 지시: 작은 모델에서 모든 사람을 추적하며 먼저 확인한다).
 // packages/sim 에서:  npx tsx cli/microcheck.ts [--years 10] [--seed 1] [--at 360] [--runs base,jobs,cloth,people,control] [--every 7] [--out 파일접두] [--scale 0.02] [--people 400] [--floors 0]
 //                       [--build "farm=2,lumber=1,workshop=1,builder=1@crown,admin=1@crown"]  (시작 건물: 종류[:방식]=레벨[@crown])
+//                       [--tune '{"wageMarket":1,"wageMarketRate":0.005}']  (실행마다 TUNE 을 바꾸고 끝나면 되돌린다)
+//                       [--typescale "workshop=0.15,textile=0.25"]  (건물 종류별 추가 축소, micro.ts MicroOptions.typeScale)
+//                       [--preset labor]  (노동시장 검증용 살아 있는 세계: typescale workshop=0.15,textile=0.25,fiber_farm=0.25 + TUNE reserveShrinkWeeks 1e9.
+//                                         기본 세계는 공방·방직 1레벨이 지역 수요의 몇 배라 값이 바닥에 붙어 적자 → 유보 규칙으로 헐리고 → 공구가 끊겨 3년차에 생산 건물이 0 이 된다)
+//                       [--sections abcdj]  (j = 노동시장 판정 J1~J4·M 시나리오·해마다 직종 소득 표)
 //   (빠르게: bash cli/fast.sh microcheck.ts ...)
 // 실행마다 <접두>-<이름>.jsonl 에 관측 줄(src/lab/microtrace.ts, --every 일마다: pop·건물·시장·노동시장·회사·화폐 전부)과 끝에 요약 줄 하나를 쓴다.
 // 판정은 시험 실패가 아니라 표다 (사용자: 시험은 코드 문제만 판정한다). 종료 코드는 늘 0 (실행 오류만 1).
@@ -11,6 +16,11 @@
 //   cloth   --at 일부터 의복 필요(clothing·standard_clothing) × 1.5 (상품 수요 충격)
 //   people  --at 일에 소작농 100명(식구 포함, 저축 0) 추가 (일손 공급 충격)
 //   control 축소 대조: 배율 1, 인구 × 50, 계층 반올림 단위 50 (축소가 결과를 바꾸는지. 값은 1인당이라 같은 표로 읽는다)
+//   jobsbig --at 일에 민간 곡물 농장 4레벨 (농부 일자리 +40, 소작 예비를 거의 다 쓰는 일손 부족, LABOR_MARKET.md M2)
+//   cut     --at 일에 곡물 농장을 없앤다 (일손 과잉, M3)
+//   rent    --at 일에 지대(TUNE.rentShare) +0.2, 26주 뒤 되돌림 (바깥 선택지 충격, M4)
+//   skill   --at 일에 장인 가구(furniture_luxury) 2레벨: 기술자 자리 약 +5, 자격자보다 많다 (숙련 부족, M5)
+//   two     지역 2개 (인구 --people 씩), 시작 건물은 지역 0 에만 (지역 0 일손 부족·지역 1 과잉, M6)
 //
 // 점검 (주 단위 표본):
 //   (a) 상품: S/D(공급·수요 이동평균의 비) > 1.05 인 주에 다음 주 가격이 내렸나(또는 바닥), < 0.95 면 올랐나(또는 천장). 12주 뒤 |ln S/D| 가 줄었나. 해마다 S/D
@@ -22,10 +32,13 @@ import { dirname } from 'node:path';
 import { BUILDING_BY_ID, TICKS_PER_WEEK, TICKS_PER_YEAR, TUNE } from '../src/data';
 import { isGovernment } from '../src/economy';
 import { step } from '../src/index';
+import { createHash } from 'node:crypto';
 import { applyMicroShock, createMicroWorld, microInfo, restoreMicroScale } from '../src/lab/micro';
 import type { MicroBuilding, MicroOptions, MicroShock } from '../src/lab/micro';
 import { microTrace } from '../src/lab/microtrace';
 import type { MicroRow } from '../src/lab/microtrace';
+import type { World } from '../src/types';
+import { laborJudge, laborYearly } from './microjudge';
 import { moneyIdentity, totalMoney } from '../src/index';
 
 const args = process.argv.slice(2);
@@ -41,19 +54,32 @@ const buildings: MicroBuilding[] | undefined = BUILD ? BUILD.split(',').map((x) 
   return { type, ...(method ? { method } : {}), levels: Number(lv), ...(owner === 'crown' ? { owner: 'crown' as const } : {}) };
 }) : undefined;
 const KEY_GOODS = ['grain', 'fiber', 'timber', 'cloth', 'tools', 'furniture', 'liquor'];
+const PRESET = arg('preset', '');
+const TUNE_SET: Record<string, unknown> = { ...(PRESET === 'labor' ? { reserveShrinkWeeks: 1e9 } : {}), ...JSON.parse(arg('tune', '{}')) };
+const TYPESCALE_ARG = arg('typescale', PRESET === 'labor' ? 'workshop=0.15,textile=0.25,fiber_farm=0.25' : '');
+const typeScale: Record<string, number> | undefined = TYPESCALE_ARG ? Object.fromEntries(TYPESCALE_ARG.split(',').map((x) => { const [k, v] = x.split('='); return [k, Number(v)]; })) : undefined;
+const SECTIONS = arg('sections', 'abcd');
 
-interface RunDef { name: string; opts: MicroOptions; shocks: MicroShock[] }
-const baseOpts: MicroOptions = { seed: SEED, scale: SCALE, people: [PEOPLE], floors: FLOORS, ...(buildings ? { buildings } : {}) };
+/** 실행 안의 TUNE 충격 (관측용 개입, 실행이 끝나면 되돌린다) */
+type LabShock = MicroShock | { t: number; kind: 'tune'; set: Record<string, number> };
+export interface RunDef { name: string; opts: MicroOptions; shocks: LabShock[] }
+const baseOpts: MicroOptions = { seed: SEED, scale: SCALE, people: [PEOPLE], floors: FLOORS, ...(buildings ? { buildings } : {}), ...(typeScale ? { typeScale } : {}) };
+const RENT0 = TUNE.rentShare;
 const DEFS: Record<string, RunDef> = {
   base: { name: 'base', opts: baseOpts, shocks: [] },
   jobs: { name: 'jobs', opts: baseOpts, shocks: [{ t: AT, kind: 'build', type: 'farm', levels: 2 }] },
+  jobsbig: { name: 'jobsbig', opts: baseOpts, shocks: [{ t: AT, kind: 'build', type: 'farm', levels: 4 }] },
+  cut: { name: 'cut', opts: baseOpts, shocks: [{ t: AT, kind: 'remove', type: 'farm' }] },
+  rent: { name: 'rent', opts: baseOpts, shocks: [{ t: AT, kind: 'tune', set: { rentShare: RENT0 + 0.2 } }, { t: AT + 26 * TICKS_PER_WEEK, kind: 'tune', set: { rentShare: RENT0 } }] },
+  skill: { name: 'skill', opts: baseOpts, shocks: [{ t: AT, kind: 'build', type: 'furniture', method: 'furniture_luxury', levels: 2 }] },
+  two: { name: 'two', opts: { ...baseOpts, people: [PEOPLE, PEOPLE] }, shocks: [] },
   cloth: { name: 'cloth', opts: baseOpts, shocks: [{ t: AT, kind: 'need', mul: { clothing: 1.5, standard_clothing: 1.5 } }] },
   people: { name: 'people', opts: baseOpts, shocks: [{ t: AT, kind: 'people', n: Math.round(PEOPLE / 4) }] },
   control: { name: 'control', opts: { ...baseOpts, scale: 1, people: [PEOPLE * Math.round(1 / SCALE)], personUnit: Math.round(1 / SCALE) }, shocks: [] },
 };
 
 /** 주 표본 하나 (1인당·비율로 줄인 값) */
-interface Week {
+export interface Week {
   t: number;
   goods: Record<string, { p: number; base: number; S: number; D: number }>;
   /** 회사id:직종 → 자리·고용·임금 (정부 건물 빼고) */
@@ -67,6 +93,11 @@ interface Week {
   firmCash: number; crownCash: number; crownDebt: number; cons: number;
   /** 회사 id → 지난주 손익 */
   profit: Record<string, number>;
+  /** 노동시장 판정용: 지역마다 직종마다 시장 임금·자리 D·오려는 사람 S·고용, 소작 1인 소득 */
+  lab: { r: number; s: string; w: number; D: number; S: number; emp: number; vac: number }[];
+  tenantBy: Record<number, number>;
+  /** 계층 1인 하루 소득 (식구 포함, 일하는 사람만, 소작은 현물 포함): 소작·노동자(노동자+농부)·기술자·전문가·하급 귀족·상급 귀족·자본가 */
+  cls: Record<string, number>;
 }
 
 function summarizeWeek(row: MicroRow): Week {
@@ -102,13 +133,60 @@ function summarizeWeek(row: MicroRow): Week {
     levels: prod.reduce((a, b) => a + b.lvl, 0), buildings: prod.map((b) => `${b.type}${b.lvl}`).join(' '),
     firmCash: row.cos.find((c) => !c.state)?.cash ?? 0, crownCash: row.cos.find((c) => c.state)?.cash ?? 0, crownDebt: row.cos.find((c) => c.state)?.debt ?? 0, cons: row.constructions.length,
     profit: Object.fromEntries(row.cos.map((c) => [String(c.id), c.lastWeekProfit])),
+    lab: row.labor.map((l) => ({ r: l.r, s: l.s, w: l.market, D: l.D, S: l.S, emp: l.emp, vac: l.vac })),
+    tenantBy: Object.fromEntries(row.labor.filter((l) => l.s === 'unskilled').map((l) => [l.r, l.tenantInc])),
+    cls: classIncome(row),
   };
 }
 
-interface RunResult { def: RunDef; weeks: Week[]; drift: number; driftAbs: number; driftTick: number; ms: number; rows: number }
+/** 계층 1인 하루 소득 (일하는 pop 만): (incomeEma + 현물) ÷ 인원 */
+function classIncome(row: MicroRow): Record<string, number> {
+  const acc: Record<string, { inc: number; n: number }> = {};
+  for (const p of row.pops) {
+    if (!p.work) continue;
+    const k = p.prof === 'peasant' ? (p.workType === 'subsistence' ? 'tenant' : null) : p.prof === 'unskilled' || p.prof === 'farmer' ? 'labour' : p.prof;
+    if (!k) continue;
+    const a = (acc[k] ??= { inc: 0, n: 0 });
+    a.inc += p.incEma + p.kind; a.n += p.size;
+  }
+  return Object.fromEntries(Object.entries(acc).filter(([, a]) => a.n > 0).map(([k, a]) => [k, a.inc / a.n]));
+}
+
+export interface RunResult { def: RunDef; weeks: Week[]; drift: number; driftAbs: number; driftTick: number; ms: number; rows: number; hash: string; same?: boolean }
+
+const stateHash = (w: World) => createHash('sha1').update(JSON.stringify({ ...w, config: { ...w.config, rulesHash: '' } })).digest('hex').slice(0, 12);
+
+/** J1 결정성: 같은 시드로 다시 돌리며 중간(reloadAt 일)에 JSON 저장/불러오기를 한 번 해서 끝 상태가 같은지 */
+function replay(def: RunDef, reloadAt: number): string {
+  const saved: Record<string, unknown> = {};
+  for (const k of Object.keys(TUNE_SET)) saved[k] = (TUNE as Record<string, unknown>)[k];
+  Object.assign(TUNE, TUNE_SET);
+  const tuneSaved: Record<string, number> = {};
+  let w = createMicroWorld(def.opts);
+  const shocks = [...def.shocks];
+  for (let d = 0; d < YEARS * TICKS_PER_YEAR; d++) {
+    for (const s of shocks) if (s.t === w.tick) applyShock(w, s, tuneSaved);
+    if (w.tick === reloadAt) w = JSON.parse(JSON.stringify(w)) as World;
+    step(w);
+  }
+  const h = stateHash(w);
+  Object.assign(TUNE, tuneSaved);
+  restoreMicroScale();
+  Object.assign(TUNE, saved);
+  return h;
+}
+
+function applyShock(w: World, s: LabShock, tuneSaved: Record<string, number>) {
+  if (s.kind !== 'tune') { applyMicroShock(w, s); return; }
+  for (const [k, v] of Object.entries(s.set)) { if (!(k in tuneSaved)) tuneSaved[k] = (TUNE as unknown as Record<string, number>)[k]; (TUNE as unknown as Record<string, number>)[k] = v; }
+}
 
 function run(def: RunDef): RunResult {
   const t0 = Date.now();
+  const saved: Record<string, unknown> = {};
+  for (const k of Object.keys(TUNE_SET)) saved[k] = (TUNE as Record<string, unknown>)[k];
+  Object.assign(TUNE, TUNE_SET);
+  const tuneSaved: Record<string, number> = {};
   const w = createMicroWorld(def.opts);
   const file = OUT ? `${OUT}-${def.name}.jsonl` : '';
   if (file) { mkdirSync(dirname(file) || '.', { recursive: true }); writeFileSync(file, JSON.stringify({ kind: 'meta', run: def.name, opts: def.opts, shocks: def.shocks, info: microInfo(w) }) + '\n'); }
@@ -120,7 +198,7 @@ function run(def: RunDef): RunResult {
   const write = (row: MicroRow) => { if (!file) return; buf.push(JSON.stringify(row)); rows++; if (buf.length >= 50) { appendFileSync(file, buf.join('\n') + '\n'); buf = []; } };
   write(microTrace(w));
   for (let d = 0; d < YEARS * TICKS_PER_YEAR; d++) {
-    for (const s of shocks) if (s.t === w.tick) applyMicroShock(w, s);
+    for (const s of shocks) if (s.t === w.tick) applyShock(w, s, tuneSaved);
     step(w);
     const dev = Math.abs(moneyIdentity(w) - m0);
     const rel = dev / Math.max(1, totalMoney(w));
@@ -133,8 +211,11 @@ function run(def: RunDef): RunResult {
     }
   }
   if (file && buf.length) appendFileSync(file, buf.join('\n') + '\n');
+  const hash = stateHash(w);
+  Object.assign(TUNE, tuneSaved);
   restoreMicroScale();
-  return { def, weeks, drift, driftAbs, driftTick, ms: Date.now() - t0, rows };
+  Object.assign(TUNE, saved);
+  return { def, weeks, drift, driftAbs, driftTick, ms: Date.now() - t0, rows, hash };
 }
 
 // ---------------------------------------------------------------- 표
@@ -281,11 +362,17 @@ for (const name of RUNS) {
   const def = DEFS[name];
   if (!def) throw new Error(`실행 이름 ${name} 없음 (${Object.keys(DEFS).join(', ')})`);
   const r = run(def);
+  if (SECTIONS.includes('j') && def.name === 'base') { r.same = replay(def, Math.floor((YEARS * TICKS_PER_YEAR) / 2)) === r.hash; }
   results.push(r);
   console.log(`\n==== ${name}: ${YEARS}년 × 시드 ${SEED}, ${r.ms}ms, 관측 줄 ${r.rows}${OUT ? ` → ${OUT}-${name}.jsonl` : ''}`);
   console.log(`(d) 화폐: 매일 moneyIdentity 어긋남 최대 ${r.drift.toExponential(2)} (화폐 총량 대비), ${r.driftAbs.toExponential(2)} 플로린, ${r.driftTick}일`);
-  const summary = { kind: 'summary', run: name, years: YEARS, seed: SEED, goods: goodsCheck(r), labor: laborCheck(r), classes: classCheck(r), money: { drift: r.drift, abs: r.driftAbs, tick: r.driftTick } };
+  const summary = {
+    kind: 'summary', run: name, years: YEARS, seed: SEED, tune: TUNE_SET, typeScale,
+    goods: SECTIONS.includes('a') ? goodsCheck(r) : undefined, labor: SECTIONS.includes('b') ? laborCheck(r) : undefined, classes: SECTIONS.includes('c') ? classCheck(r) : undefined,
+    money: { drift: r.drift, abs: r.driftAbs, tick: r.driftTick },
+    judge: SECTIONS.includes('j') ? laborJudge(r, AT, YEARS) : undefined, yearly: SECTIONS.includes('j') ? laborYearly(r, YEARS) : undefined,
+  };
   if (OUT) appendFileSync(`${OUT}-${name}.jsonl`, JSON.stringify(summary) + '\n');
 }
 const base = results.find((r) => r.def.name === 'base');
-if (base) shockTable(base, results.filter((r) => r.def.shocks.length > 0));
+if (base && SECTIONS.includes('d')) shockTable(base, results.filter((r) => r.def.shocks.length > 0));
