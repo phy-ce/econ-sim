@@ -301,8 +301,6 @@ export const KO = {
     "classIncome": "현금 소득의 최근 평균에 현물의 지역 시장가를 더해 비교합니다.",
     "taxLaw": "토지세는 토지 기반으로, 인두·소득세는 인두세와 소득세로 걷습니다. 옆에는 현재 세금 단계가 반영된 실제 세율을 표시합니다.",
     "taxCollection": "부과한 세금 중 행정 역량으로 실제 거둘 수 있는 비율입니다. 세금 단계와는 다른 값입니다.",
-    "previousWeek": "마지막으로 마감한 한 주의 장부입니다.",
-    "currentWeek": "진행 중인 이번 주의 누적 장부입니다. 주가 끝나기 전에는 지난주와 기간이 다릅니다.",
     "policy": "1~5단계 정책입니다. 각 단계에 올리면 적용 배율을 볼 수 있습니다. 세금·임금·연구는 서로 독립적입니다.",
     "sales": "건물이 상품을 판매해 얻은 수입입니다.",
     "tax": "왕실이 실제 징수한 세금입니다. 행정 역량에 따라 부과액보다 적을 수 있습니다.",
@@ -335,12 +333,10 @@ export const KO = {
 ,
 
   policyLevel:'단계', taxLaw:'세법', landBased:'토지세', perCapita:'인두·소득세', schoolSeats:'교육 정원', weatherRegions:'기상 피해 지역', outputLoss:'산출 감소',
-  demolitionQueue:(n:number)=>`철거 중 ${n}레벨`, cancelDemolition:'철거 취소', salvage:'철거 자재', keepConstruction:'계속 건설', popList:'인구 상세', popRegion:'지역', popProfession:'직종', popWork:'일터', popSize:'인구', popFood:'식량', popNeeds:'소비', popIncome:'1인 소득 / 일', popKind:'1인 현물 / 일', popLiteracy:'문해력', popGrowth:'연 증감', allRegions:'모든 지역', allProfessions:'모든 직종', unemployedOnly:'실업만', inKindValue:'1인 현물 시장가 / 일', privateEquity:'민간 지분', adjustFinance:'재정에서 조정', pollTax:'인두세', incomeTax:'소득세', budgetShare:'비율', retainedBudget:'국고 적립', budgetRevenue:'예산 세입', loan:'대출', newConstruction:'신규', expansion:'증설', moveProjectUp:'공사 우선순위 올리기', moveProjectDown:'공사 우선순위 내리기', pauseProject:'공사 일시정지', resumeProject:'공사 재개', cancelSpent:(amount:string)=>`공사를 취소할까요? 지출 ${amount}은 돌려받지 못합니다.`, educationPending:'이번 주 교육 집행액은 아직 제공되지 않습니다.',
-
-  weeklyProfit: '주간 손익', foreignTerritory: '다른 왕국 영토',
+  demolitionQueue:(n:number)=>`철거 중 ${n}레벨`, cancelDemolition:'철거 취소', salvage:'철거 자재', keepConstruction:'계속 건설', popList:'인구 상세', popRegion:'지역', popProfession:'직종', popWork:'일터', popSize:'인구', popFood:'식량', popNeeds:'소비', popIncome:'1인 소득 / 일', popKind:'1인 현물 / 일', popLiteracy:'문해력', popGrowth:'연 증감', allRegions:'모든 지역', allProfessions:'모든 직종', unemployedOnly:'실업만', inKindValue:'1인 현물 시장가 / 일', privateEquity:'민간 지분', adjustFinance:'재정에서 조정', pollTax:'인두세', incomeTax:'소득세', loan:'대출', newConstruction:'신규', expansion:'증설', moveProjectUp:'공사 우선순위 올리기', moveProjectDown:'공사 우선순위 내리기', pauseProject:'공사 일시정지', resumeProject:'공사 재개', cancelSpent:(amount:string)=>`공사를 취소할까요? 지출 ${amount}은 돌려받지 못합니다.`, weeklyProfit: '주간 손익', foreignTerritory: '다른 왕국 영토',
   territory: '영토', mapLayers: '지도 표시',
-  finance: '재정', weeklyAccounts: '주간 수지', currentWeek: '이번 주', previousWeek: '지난주', receipts: '수입', expenses: '지출', capitalFlows: '자본 흐름', incomeTaxRates: '소득세율', lowerStratum: '하층', middleStratum: '중층', upperStratum: '상층', construct: '건설', kingdomQueue: '왕국 공사', mySummary: '왕국 요약', dailyCap: '일일 공사 상한', receivedToday: '오늘 받은 포인트', stage: '단계',
-  ledgerLabels: {sales:'판매',tax:'세금',mint:'주조',buildFees:'민간 공사 수수료',wages:'정부 임금',inputs:'국영 건물 원료',research:'연구',interest:'이자',welfare:'복지',dividends:'배당 지급',investment:'자본 유입',buildPaid:'공사비 지급'},
+  finance: '재정', weeklyAccounts: '주간 수지', receipts: '수입', expenses: '지출', capitalFlows: '자본 흐름', incomeTaxRates: '소득세율', lowerStratum: '하층', middleStratum: '중층', upperStratum: '상층', construct: '건설', kingdomQueue: '왕국 공사', mySummary: '왕국 요약', dailyCap: '일일 공사 상한', receivedToday: '오늘 받은 포인트', stage: '단계',
+  ledgerLabels: {sales:'판매',tax:'세금',mint:'주조',buildFees:'민간 공사 수수료',wages:'정부 임금',inputs:'국영 건물 원료',research:'연구',interest:'이자',dividends:'배당 지급',investment:'자본 유입',buildPaid:'공사비 지급'},
 
   kingdomLabel: '왕국', stateOwner: '왕실', privateOwner: '민간', playerOwner: '플레이어', dividend: '배당', taxCollection: '세금 징수율', taxCapacity: '세금 역량', investmentPool: '저택·금융가 금고', annualGdp: 'GDP / 년', standardOfLiving: '생활수준', wealthLevel: '부', portClosed: '항구 폐쇄', ownership: '건물 소유', landlord: '지주', noBuildings: '건물 없음', noMatches: '검색 결과 없음',
 
@@ -369,7 +365,6 @@ export const KO = {
   nightTheme: '밤 등불',
   bannerSeized: '은행 관리',
   bannerDistress: '은행 경고',
-  distressWeeks: '부실 주 수',
   paneMap: '왕국 지도',
   paneRegion: '지역 상세',
   paneCompanyOf: (name: S) => `${name} 상세`,
@@ -856,8 +851,6 @@ export const EN: Dict = {
     "classIncome": "Compare recent average cash income plus the local market value of in-kind goods.",
     "taxLaw": "Land tax uses land-based taxation; per-capita law uses poll and income taxes. The rates include the current tax level.",
     "taxCollection": "Share of assessed tax collectible with administrative capacity. Separate from the tax policy level.",
-    "previousWeek": "Ledger for the last completed week.",
-    "currentWeek": "Accumulated ledger for the current, incomplete week. Its duration differs from the previous completed week.",
     "policy": "Five independent policy levels. Hover a level for its multiplier; tax, wages and research are independent.",
     "sales": "Revenue from building goods sales.",
     "tax": "Taxes actually collected by the crown; administrative capacity can limit collection.",
@@ -890,12 +883,10 @@ export const EN: Dict = {
 ,
 
   policyLevel:'Level', taxLaw:'Tax law', landBased:'Land tax', perCapita:'Per-capita tax', schoolSeats:'School seats', weatherRegions:'Weather-affected regions', outputLoss:'Output loss',
-  demolitionQueue:(n:number)=>`Demolishing ${n} levels`, cancelDemolition:'Cancel demolition', salvage:'Salvage', keepConstruction:'Keep construction', popList:'Population details', popRegion:'Region', popProfession:'Profession', popWork:'Workplace', popSize:'Population', popFood:'Food', popNeeds:'Needs', popIncome:'Income / person / day', popKind:'In kind / person / day', popLiteracy:'Literacy', popGrowth:'Annual growth', allRegions:'All regions', allProfessions:'All professions', unemployedOnly:'Unemployed only', inKindValue:'In-kind market value / person / day', privateEquity:'Private equity', adjustFinance:'Adjust in Finance', pollTax:'Poll tax', incomeTax:'Income tax', budgetShare:'Share', retainedBudget:'Treasury retained', budgetRevenue:'Budget revenue', loan:'Loan', newConstruction:'New', expansion:'Expansion', moveProjectUp:'Raise construction priority', moveProjectDown:'Lower construction priority', pauseProject:'Pause construction', resumeProject:'Resume construction', cancelSpent:(amount:string)=>`Cancel construction? The ${amount} spent will not be refunded.`, educationPending:'Current-week education spending is not provided yet.',
-
-  weeklyProfit: 'Weekly profit', foreignTerritory: 'Foreign territory',
+  demolitionQueue:(n:number)=>`Demolishing ${n} levels`, cancelDemolition:'Cancel demolition', salvage:'Salvage', keepConstruction:'Keep construction', popList:'Population details', popRegion:'Region', popProfession:'Profession', popWork:'Workplace', popSize:'Population', popFood:'Food', popNeeds:'Needs', popIncome:'Income / person / day', popKind:'In kind / person / day', popLiteracy:'Literacy', popGrowth:'Annual growth', allRegions:'All regions', allProfessions:'All professions', unemployedOnly:'Unemployed only', inKindValue:'In-kind market value / person / day', privateEquity:'Private equity', adjustFinance:'Adjust in Finance', pollTax:'Poll tax', incomeTax:'Income tax', loan:'Loan', newConstruction:'New', expansion:'Expansion', moveProjectUp:'Raise construction priority', moveProjectDown:'Lower construction priority', pauseProject:'Pause construction', resumeProject:'Resume construction', cancelSpent:(amount:string)=>`Cancel construction? The ${amount} spent will not be refunded.`, weeklyProfit: 'Weekly profit', foreignTerritory: 'Foreign territory',
   territory: 'Territory', mapLayers: 'Map layers',
-  finance: 'Finance', weeklyAccounts: 'Weekly accounts', currentWeek: 'This week', previousWeek: 'Last week', receipts: 'Revenue', expenses: 'Expenses', capitalFlows: 'Capital flows', incomeTaxRates: 'Income tax', lowerStratum: 'Lower', middleStratum: 'Middle', upperStratum: 'Upper', construct: 'Build', kingdomQueue: 'Kingdom construction', mySummary: 'Kingdom summary', dailyCap: 'Daily construction cap', receivedToday: 'Points received today', stage: 'Stage',
-  ledgerLabels: {sales:'Sales',tax:'Taxes',mint:'Minting',buildFees:'Private construction fees',wages:'Government wages',inputs:'State building inputs',research:'Research',interest:'Interest',welfare:'Welfare',dividends:'Dividends paid',investment:'Capital inflow',buildPaid:'Construction paid'},
+  finance: 'Finance', weeklyAccounts: 'Weekly accounts', receipts: 'Revenue', expenses: 'Expenses', capitalFlows: 'Capital flows', incomeTaxRates: 'Income tax', lowerStratum: 'Lower', middleStratum: 'Middle', upperStratum: 'Upper', construct: 'Build', kingdomQueue: 'Kingdom construction', mySummary: 'Kingdom summary', dailyCap: 'Daily construction cap', receivedToday: 'Points received today', stage: 'Stage',
+  ledgerLabels: {sales:'Sales',tax:'Taxes',mint:'Minting',buildFees:'Private construction fees',wages:'Government wages',inputs:'State building inputs',research:'Research',interest:'Interest',dividends:'Dividends paid',investment:'Capital inflow',buildPaid:'Construction paid'},
 
   kingdomLabel: 'Kingdom', stateOwner: 'Royal', privateOwner: 'Private', playerOwner: 'Player', dividend: 'Dividend', taxCollection: 'Tax collection', taxCapacity: 'Tax capacity', investmentPool: 'Owner treasuries', annualGdp: 'GDP / year', standardOfLiving: 'Living standard', wealthLevel: 'Wealth', portClosed: 'Port closed', ownership: 'Building ownership', landlord: 'Landlords', noBuildings: 'No buildings', noMatches: 'No results',
 
@@ -923,7 +914,6 @@ export const EN: Dict = {
   nightTheme: 'Night lamp',
   bannerSeized: 'Bank supervision',
   bannerDistress: 'Bank warning',
-  distressWeeks: 'Weeks in distress',
   paneMap: 'Kingdom map',
   paneRegion: 'Region details',
   paneCompanyOf: (name) => `${name} details`,

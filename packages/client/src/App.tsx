@@ -210,7 +210,7 @@ export function App() {
 
       <WindowWorkspace opened={opened} onOpened={setOpened} windows={[
         {id:'map',title:T.paneMap,icon:<Map size={18}/>,content:<RegionMap world={world} selected={regionId} onSelect={selectRegion}/>},
-        ...([{id:'region',title:T.system.region,icon:<Users size={18}/>},{id:'market',title:T.market,icon:<Package size={18}/>},{id:'state',title:T.stateTitle,icon:<Landmark size={18}/>},{id:'research',title:T.research,icon:<FlaskConical size={18}/>},{id:'construction',title:T.construct,icon:<HardHat size={18}/>},{id:'trends',title:uiCopy().screenText['statistics'],icon:<ChartNoAxesCombined size={18}/>} ] as const).map(w=>({...w,content:<GameWindow id={w.id} game={game} mapRegionId={regionId} request={screenRequest} onOpenWindow={openLinkedWindow}/>}))
+        ...([{id:'region',title:T.system.region,icon:<Users size={18}/>},{id:'market',title:T.market,icon:<Package size={18}/>},{id:'state',title:T.stateTitle,icon:<Landmark size={18}/>},{id:'research',title:T.research,icon:<FlaskConical size={18}/>},{id:'construction',title:T.construct,icon:<HardHat size={18}/>},{id:'trends',title:uiCopy().screenText['statistics'],icon:<ChartNoAxesCombined size={18}/>} ] as const).map(w=>({...w,content:<GameWindow id={w.id} active={opened.includes(w.id)} game={game} mapRegionId={regionId} request={screenRequest} onOpenWindow={openLinkedWindow}/>}))
       ]}/>
 
 

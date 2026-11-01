@@ -205,3 +205,7 @@ DetailWindow 독립 NavigationProvider/버튼, BuildingPops 및 ResourceInspecto
 
 - 2-26·2-28·2-34 코드 대조/주요 화면 확인 완료, 원문 UI_DONE 이동. 광맥 스크린샷 deposits-en-dark.png(철0/160, 석탄2/90, 잠재량 비노출), 음수 금고 negative-treasury-en-dark.png(검증용 cash10000/debt20000, 상단·예산·왕국 모두 −ƒ10k/동일 neg색), 도크 dock-toggle-check.png(false→true→false, 지도·최소화 없음). 모두 C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/, 헤드리스 스크린샷 확인(1920×1080). root typecheck/client50시험 통과.
 - 2-33 분포 대조: 실제 seed42·360일 세계의 지역 평균 부1.14~1.27, 생활수준1.07~1.24(소수2자리). 두 분포 범위는 유사하므로 현재 SOL_STOPS=WEALTH_STOPS를 유지. 이 조건에서는 고정된 첫 정점2 아래에 모두 몰린다. 부 정점은 사용자 고정값(2/5/7.5/11)이므로 임의 변경하지 않는다. 가운데 두 정점에 분포시키라는 옛 요구와 충돌하는 범위 재선택은 막힘(사용자/화면 설계 결정 필요). 보간 자체는 기존 78611c1 구현·스크린샷 확인, 일반화하지 않음.
+
+- 2-30 완료/2-60 부분 보완: 예산 현재값+회색 → 예상값(묶음/줄/머리·바닥 순수지), 실제 국가 창 닫힘을 FinancePanel까지 전달해 상세 동반 닫기, 인건비 그림24px·레벨·인원/자리·직종 산식·단계 배율, 법/세율 칩, 관세 상대 왕국 번역. 오래된 미사용 장부 문자열 제거. 2-30 원문 UI_DONE 이동, 2-60은 상세 잔여가 있어 유지.
+- root typecheck/client50시험 통과. 헤드리스 스크린샷 확인(1920×1080): C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/budget-preview-arrows.png, budget-staff-formula.png, budget-detail-parent-close.png. 3단계 선택 유지하며5단계 포커스 → 예상값6개, blur →0개. 부모 닫기 뒤 상세0, 재개방 뒤에도0. 본문391/scroll391·상세431/scroll431·그림24px. 현재 영어 다크 확인, 신규 한국어/라이트는 화면 미검증.
+- 2-60 남음: 일부 머리 칩/세법 비교 막대·복지 세부 필드·빈 상태와 모든 상세 탭/정렬/이동 조합 감사. 이전 지도/금고/도크 감사 커밋 ecbbec0.

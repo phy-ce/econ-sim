@@ -7,12 +7,13 @@ import { TUNE, creditLimit, budgetPreview, budgetDrill, roundBudget } from '@eco
 import type { BudgetLineKey, Company, World } from '@econ/sim';
 import type { Game } from '../useGame';
 import { NumericValue } from '../NumericValue';
-import { buildingName, className, goodName, regionName, useT } from '../i18n';
+import {BuildingSprite,ClassSprite,GoodSprite} from '../sprites';
+import { buildingName, className, goodName, regionName, useT,useLang } from '../i18n';
 import { exactNumber, pct } from '../format';
 import '../system-ui.css';
 
 export function FinancePanel({game,world,me,onBuilding,onPolicies,active=true}:{active?:boolean;game:Game;world:World;me:Company;onBuilding?:(id:number)=>void;onPolicies?:()=>void}) {
- const T=useT(),S=T.system;
+ const T=useT(),S=T.system,ko=useLang()==='ko';
  const [detail,setDetail]=useNavigationState<BudgetLineKey|null>('views/FinancePanel.tsx:detail',null);
  const [direction,setDirection]=useState(-1);
  const [breakdown,setBreakdown]=useNavigationState('views/FinancePanel.tsx:breakdown',false);
@@ -26,28 +27,36 @@ export function FinancePanel({game,world,me,onBuilding,onPolicies,active=true}:{
  const secondary=drill?.key==='goods'?drill.byGood:drill?.key==='tariffs'?drill.byPartner:null;
  const label=(key:BudgetLineKey)=>T.budgetLines[key]??key;
  const multipliers={tax:TUNE.taxLevels,wages:TUNE.govWageLevels,welfare:TUNE.welfareLevels};
+ const amount=(current:number,projected?:number)=><><NumericValue value={roundBudget(current)} format="signedMoney"/>{projected!==undefined&&<small className="budget-preview">→ <NumericValue value={roundBudget(projected)} format="signedMoney"/></small>}</>;
+ const projectedNet=hover?preview.netByLevel[hover.knob][hover.level-1]:undefined;
  const region=(id:number)=>{const r=world.regions.find(r=>r.id===id);return r?regionName(r):String(id);};
+ const kingdom=(id:number)=>{const k=world.kingdoms.find(k=>k.id===id);return k?(ko?k.name:k.nameEn):String(id);};
  return <div className="system-panel finance-ledger">
-  <div className="system-facts"><span title={`${T.cash}: ${exactNumber(me.cash)}\n${T.loan}: ${exactNumber(me.debt)}`}>{T.treasury}<b><span className={me.cash-me.debt<0?'neg':undefined}><NumericValue value={me.cash-me.debt} format="money"/></span> / <NumericValue value={creditLimit(world,me)} format="money"/></b></span><span>{T.budgetNet}<b className={preview.net<0?'neg':'pos'}><NumericValue value={roundBudget(preview.net)} format="signedMoney"/></b></span></div>
+  <div className="system-facts"><span title={`${T.cash}: ${exactNumber(me.cash)}\n${T.loan}: ${exactNumber(me.debt)}`}>{T.treasury}<b><span className={me.cash-me.debt<0?'neg':undefined}><NumericValue value={me.cash-me.debt} format="money"/></span> / <NumericValue value={creditLimit(world,me)} format="money"/></b></span><span>{T.budgetNet}<b className={preview.net<0?'neg':'pos'}>{amount(preview.net,projectedNet)}</b></span></div>
 
   <table className="system-table"><thead><tr><th>{S.item}</th><th>{T.weeklyBudget}</th></tr></thead>
-   {preview.groups.map(group=><tbody key={group.knob}><tr className="system-group"><th colSpan={2}><div><span>{group.knob==='welfare'&&k.welfareLaw==='none'&&<button className="entity-link" data-help={`${S.welfareLaw}: ${S.none}`} onClick={onPolicies}>🔒 {S.welfareLaw}: {S.none}</button>}{S[group.knob]} <NumericValue value={group.weekly} format="signedMoney"/></span>{group.knob!=='fixed'&&<span className="policy-steps" role="group" aria-label={S[group.knob]}>{[1,2,3,4,5].map(level=>{const knob=group.knob as 'tax'|'wages'|'welfare';return <button key={level} disabled={knob==='welfare'&&k.welfareLaw==='none'} aria-pressed={k.budget[knob]===level} data-help={`${S[knob]} ${level} · ${knob==='welfare'?S.target:'×'} ${multipliers[knob][level-1]}\n${T.weeklyBudget}: ${exactNumber(group.byLevel?.[level-1]??0)}\n${T.budgetNet}: ${exactNumber(preview.netByLevel[knob][level-1])}`} onMouseEnter={()=>setHover({knob,level})} onMouseLeave={()=>setHover(null)} onFocus={()=>setHover({knob,level})} onBlur={()=>setHover(null)} onClick={()=>game.command({type:'setBudget',item:knob,value:level})}>{level}</button>;})}</span>}</div></th></tr>
-    {group.lines.map(key=>{const line=preview.lines.find(l=>l.key===key)!;return <tr key={key}><th><button className="entity-link" aria-expanded={detail===key} onClick={()=>{setDetail(detail===key?null:key);}}>{label(key)} ↗ {key==='tax'&&<small>{pct(k.taxRatio??0)}</small>}</button></th><td className={line.weekly<0?'neg':'pos'}><NumericValue value={roundBudget(hover&&line.knob===hover.knob?(line.byLevel?.[hover.level-1]??line.weekly):line.weekly)} format="signedMoney"/></td></tr>;})}
-   </tbody>)}<tfoot><tr><th>{T.budgetNet}</th><td><NumericValue value={roundBudget(preview.net)} format="signedMoney"/></td></tr></tfoot>
+   {preview.groups.map(group=><tbody key={group.knob}><tr className="system-group"><th colSpan={2}><div><span>{group.knob==='welfare'&&k.welfareLaw==='none'&&<button className="entity-link" data-help={`${S.welfareLaw}: ${S.none}`} onClick={onPolicies}>🔒 {S.welfareLaw}: {S.none}</button>}{S[group.knob]} {amount(group.weekly,hover&&group.knob===hover.knob?group.byLevel?.[hover.level-1]:undefined)}</span>{group.knob!=='fixed'&&<span className="policy-steps" role="group" aria-label={S[group.knob]}>{[1,2,3,4,5].map(level=>{const knob=group.knob as 'tax'|'wages'|'welfare';return <button key={level} disabled={knob==='welfare'&&k.welfareLaw==='none'} aria-pressed={k.budget[knob]===level} data-help={`${S[knob]} ${level} · ${knob==='welfare'?S.target:'×'} ${multipliers[knob][level-1]}\n${T.weeklyBudget}: ${exactNumber(group.byLevel?.[level-1]??0)}\n${T.budgetNet}: ${exactNumber(preview.netByLevel[knob][level-1])}`} onMouseEnter={()=>setHover({knob,level})} onMouseLeave={()=>setHover(null)} onFocus={()=>setHover({knob,level})} onBlur={()=>setHover(null)} onClick={()=>game.command({type:'setBudget',item:knob,value:level})}>{level}</button>;})}</span>}</div></th></tr>
+    {group.lines.map(key=>{const line=preview.lines.find(l=>l.key===key)!;return <tr key={key}><th><button className="entity-link" aria-expanded={detail===key} onClick={()=>{setDetail(detail===key?null:key);}}>{label(key)} ↗ {key==='tax'&&<small>{pct(k.taxRatio??0)}</small>}</button></th><td className={line.weekly<0?'neg':'pos'}>{amount(line.weekly,hover&&line.knob===hover.knob?line.byLevel?.[hover.level-1]:undefined)}</td></tr>;})}
+   </tbody>)}<tfoot><tr><th>{T.budgetNet}</th><td>{amount(preview.net,projectedNet)}</td></tr></tfoot>
   </table>
   <details><summary>{S.marketWages}</summary><Wages game={game} world={world} me={me}/></details>
   {drill&&<DetailWindow title={`${label(drill.key)} · ${S.details}`} help={label(drill.key)} open hideTrigger onOpenChange={open=>{if(!open)setDetail(null);}}>
    <div className="budget-detail-body">
     <b><NumericValue value={drill.weekly} format="signedMoney"/> / {S.week}</b>
+    <div className="system-facts">
+    {'law' in drill&&<span>{S[drill.law]}</span>}
+    {'stepMult' in drill&&<span>{T.stage}<b>×{drill.stepMult.toFixed(2)}</b></span>}
+    {'rates' in drill&&<><span>{S.land}<b><NumericValue value={drill.rates.land} format="money"/></b></span><span>{S.poll}<b><NumericValue value={drill.rates.poll} format="money"/></b></span><span>{S.income}<b>{pct(drill.rates.income)}</b></span></>}
+    </div>
     {'collection' in drill&&<p>{T.taxCollection} {pct(drill.collection)}</p>}
     {'target' in drill&&<p>{S.target} {drill.target}</p>}
     {'debt' in drill&&<p><NumericValue value={drill.debt} format="money"/> × {pct(drill.dailyRate)} × 7</p>}
     {secondary&&<div className="system-tabs"><button aria-pressed={!breakdown} onClick={()=>setBreakdown(false)}>{S.details}</button><button aria-pressed={breakdown} onClick={()=>setBreakdown(true)}>{drill.key==='goods'?T.system.goods:T.system.kingdom}</button></div>}
     {'laws' in drill&&<div className="system-facts">{drill.laws.map(l=><span key={l.law}>{S[l.law]}<b><NumericValue value={l.weekly} format="signedMoney"/></b></span>)}</div>}
-    {breakdown&&secondary?<table className="system-table"><tbody>{[...secondary].sort((a,b)=>Math.abs(b.weekly)-Math.abs(a.weekly)).map((r,i)=><tr key={i}><th>{'good' in r?goodName(r.good):world.kingdoms.find(k=>k.id===r.kingdomId)?.name}{'qty' in r&&<small><NumericValue value={r.qty} format="compact"/> × <NumericValue value={r.price} format="money"/></small>}</th><td><NumericValue value={r.weekly} format="signedMoney"/></td></tr>)}</tbody></table>:<table className="system-table"><thead><tr><th>{S.item}</th><SortHeader label={T.weeklyBudget} active direction={direction} onClick={()=>setDirection(-direction)}/></tr></thead><tbody>{[...drill.rows].sort((a,b)=>(Math.abs(a.weekly)-Math.abs(b.weekly))*direction).map((row,i)=>{
+    {breakdown&&secondary?<table className="system-table"><tbody>{[...secondary].sort((a,b)=>Math.abs(b.weekly)-Math.abs(a.weekly)).map((r,i)=><tr key={i}><th>{'good' in r?<><GoodSprite g={r.good} size={24}/>{goodName(r.good)}</>:kingdom(r.kingdomId)}{'qty' in r&&<small><NumericValue value={r.qty} format="compact"/> × <NumericValue value={r.price} format="money"/></small>}</th><td><NumericValue value={r.weekly} format="signedMoney"/></td></tr>)}</tbody></table>:<table className="system-table"><thead><tr><th>{S.item}</th><SortHeader label={T.weeklyBudget} active direction={direction} onClick={()=>setDirection(-direction)}/></tr></thead><tbody>{[...drill.rows].sort((a,b)=>(Math.abs(a.weekly)-Math.abs(b.weekly))*direction).map((row,i)=>{
      const name='typeId' in row?buildingName(row.typeId):'prof' in row?className(row.prof):'group' in row?S[row.group as 'poor'|'wage']:'good' in row?goodName(row.good):'part' in row?({base:S.base,gdp:S.gdp,wage:S.wages,other:S.other,interest:label('interest')})[row.part]:'';
-     return <tr key={i}><th>{'buildingId' in row?<button className="entity-link" onClick={()=>{setDetail(null);onBuilding?.(row.buildingId);}}>{name} ↗</button>:name}{'regionId' in row&&<small>{region(row.regionId)}</small>}
-      {'jobsBy' in row&&<details className="budget-formula"><summary>{S.formula}</summary>{row.jobsBy.filter(j=>j.employed>0).map(j=><p key={j.skill}>{className(j.skill)}: <NumericValue value={j.employed} format="compact"/> × <NumericValue value={j.baseWage} format="money"/> × {j.wageIndex.toFixed(2)} × {j.stepMult.toFixed(2)} × 7 = <NumericValue value={j.weekly} format="money"/></p>)}</details>}
+     return <tr key={i}><th>{'buildingId' in row?<button className="entity-link" onClick={()=>{setDetail(null);onBuilding?.(row.buildingId);}}>{'typeId' in row&&<BuildingSprite typeId={row.typeId} size={24}/>} {name} ↗</button>:name}{'regionId' in row&&<small>{region(row.regionId)} {'level' in row&&<>×<NumericValue value={row.level} format="compact"/></>}</small>}{'employed' in row&&<small>{T.hStaff} <NumericValue value={row.employed} format="compact"/>{'jobs' in row&&<> / <NumericValue value={row.jobs} format="compact"/></>}</small>}
+      {'jobsBy' in row&&<details className="budget-formula"><summary>{S.formula}</summary>{row.jobsBy.filter(j=>j.employed>0).map(j=><p key={j.skill}><ClassSprite c={j.skill} size={24}/>{className(j.skill)}: <NumericValue value={j.employed} format="compact"/> × <NumericValue value={j.baseWage} format="money"/> × {j.wageIndex.toFixed(2)} × {j.stepMult.toFixed(2)} × 7 = <NumericValue value={j.weekly} format="money"/></p>)}</details>}
       {'sales' in row&&<small>{S.sales} <NumericValue value={row.sales} format="money"/> − {S.inputs} <NumericValue value={row.inputs} format="money"/> − {S.wages} <NumericValue value={row.wages} format="money"/></small>}
       {'payers' in row&&<small><NumericValue value={row.payers} format="compact"/> · {row.base==='income'?pct(row.rate):exactNumber(row.rate)}</small>}
       {'covered' in row&&<small>{row.covered?S.covered:S.excluded} · <NumericValue value={row.short} format="compact"/></small>}

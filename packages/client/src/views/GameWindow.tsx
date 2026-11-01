@@ -17,7 +17,7 @@ import {Projects} from './CompanyPanel';
 import {eventDestination} from '../eventDestination';
 export type ScreenRoute={kind:WindowId;regionId?:number;buildingId?:number;good?:GoodId;kingdomId?:number;companyId?:number;prof?:PopClass;industry?:boolean;sequence?:number;tab?:'budget'|'laws'};
 export type ScreenRequest={target:WindowId;route:ScreenRoute;sequence:number};
-function GameWindowView({id,game,mapRegionId,request,onOpenWindow}:{onOpenWindow:(route:ScreenRoute)=>void;id:WindowId;game:Game;mapRegionId:number;request:ScreenRequest|null}){
+function GameWindowView({id,game,mapRegionId,request,onOpenWindow,active=true}:{active?:boolean;onOpenWindow:(route:ScreenRoute)=>void;id:WindowId;game:Game;mapRegionId:number;request:ScreenRequest|null}){
  const world=game.world!;
  const [route,setRoute]=useNavigationState<ScreenRoute>('screen',{kind:id,regionId:mapRegionId});
  const [scope,setScope]=useMarketScope(world);
@@ -41,7 +41,7 @@ function GameWindowView({id,game,mapRegionId,request,onOpenWindow}:{onOpenWindow
  if(route.kind==='market')return <MarketWindow game={game} world={world} scope={scope} onScope={setScope} mapRegionId={region.id} history={game.history} good={route.good??'food'} onGood={onGood} onCompany={onCompany} onBuildings={onBuildings}/>;
  if(route.kind==='trends')return <BottomPanel onFinance={()=>go({kind:'state',tab:'budget'})} onGood={onGood} game={game} world={world} history={game.history} lastReadTick={game.lastReadTick} onRead={game.markRead} onJump={onRegion} kingdomId={route.kingdomId??world.companies.find(c=>c.id===route.companyId)?.kingdomId??null} onViewKingdom={onKingdom} sequence={route.kingdomId!==undefined||route.companyId!==undefined?sequence:undefined} onBuilding={onBuilding} onEvent={onEvent} popRequest={null}/>;
  if(!me)return null;
- if(route.kind==='state')return <StatePanel game={game} world={world} me={me} onBuilding={onBuilding} onResearch={()=>go({kind:'research'})} requestedTab={route.tab} sequence={sequence}/>;
+ if(route.kind==='state')return <StatePanel active={active} game={game} world={world} me={me} onBuilding={onBuilding} onResearch={()=>go({kind:'research'})} requestedTab={route.tab} sequence={sequence}/>;
  if(route.kind==='research')return <ResearchPanel game={game} world={world} me={me}/>;
  if(route.kind==='construction')return <ConstructionPanel game={game} world={world} me={me} regionId={region.id} onRegion={regionId=>go({kind:'construction',regionId})}/>;
  return null;
