@@ -176,3 +176,6 @@ DetailWindow 독립 NavigationProvider/버튼, BuildingPops 및 ResourceInspecto
 
 - 2-35 표시 후속: OwnerBadge 민간 본문을 회사명 대신 민간/Private로 통일, 왕국은 색띠·툴팁 유지. root typecheck/client48시험 통과. 화면 미검증. 회사 선택/순위의 왕국 단위 전면전환은 미완료이며 별도 추적.
 
+
+- 2-35 왕국 요약 합산 부분 완료: 정부·민간 모두 포함, 소유 기관 손익 이중계산 제외, 국고 분리. typecheck/client48시험 통과, 헤드리스 kingdom-summary.png(1920×1080) 확인. 나머지 회사 선택/순위/왕국경제 상세 전환은 남음.
+

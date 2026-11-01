@@ -6,7 +6,7 @@ import {useNavigationState} from '../NavigationHistory';
 import { PopTable, type PopRequest } from './PopTable';
 import { NumericValue } from '../NumericValue';
 import type { Game } from '../useGame';
-import { CompanySummary, CompanyView, Projects } from './CompanyPanel';
+import { CompanySummary,KingdomSummary, CompanyView, Projects } from './CompanyPanel';
 import { playerCompany, companyById } from '@econ/sim';
 import { OwnerBadge } from './OwnerBadge';
 import { SectionStack } from './SectionStack';
@@ -42,7 +42,7 @@ function BottomPanelView({ world, history, lastReadTick, onRead, onJump, viewedI
   return (
     <SectionStack explorer revealId={popRequest?'pops':'company'} revealKey={popRequest?.sequence??viewedId} storageKey="trends-v2" items={[
       {id:'economy',shortTitle:uiCopy().screenText['trends'],title:uiCopy().screenText['economicPopulationAndFiscalTrends'],height:520,content:<EconomyCharts world={world}/>},
-      ...(me?[{id:'summary',shortTitle:uiCopy().screenText['summary'],title:T.mySummary,height:220,content:<CompanySummary world={world} company={me}/>}]:[]),
+      ...(me?[{id:'summary',shortTitle:uiCopy().screenText['summary'],title:T.kingdomSummary,height:220,content:<KingdomSummary world={world} government={me}/>}]:[]),
       {id:'pops',shortTitle:uiCopy().screenText['pops'],title:T.popList,height:360,content:<PopTable world={world} request={popRequest} onRegion={onJump} onBuilding={onBuilding}/>},
       ...(viewed?[{id:'company',shortTitle:uiCopy().screenText['house'],title:T.companyDetails,height:310,content:<CompanyView onGood={onGood} world={world} company={viewed} onView={onViewCompany}/>}]:[]),
 { id: 'kingdoms',shortTitle:uiCopy().screenText['kingdoms'], title: T.kingdomAccounts, height: 174, content: <table className="kingdom-accounts"><thead><tr><th>{T.kingdomLabel}</th><th>{T.investmentPool}</th><th>{T.annualGdp}</th></tr></thead><tbody>{world.kingdoms.map(k=><tr key={k.id}><th><i className="swatch" style={{background:k.color}}/>{lang==='ko'?k.name:k.nameEn}</th><td><NumericValue value={k.investmentPool} format="compactMoney"/></td><td><NumericValue value={kingdomGdp(world,k.id)} format="compactMoney"/></td></tr>)}</tbody></table> }, {id:'assets',title:T.assetsTitle,shortTitle:T.assetsTitle,height:360,content:<OwnershipAssets world={world}/>}, { id: 'wealth' , title: T.wealthByClassTitle, shortTitle:uiCopy().screenText['living'], height: 236, content: <>

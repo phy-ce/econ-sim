@@ -785,3 +785,7 @@ rowOf/FlowRow 원료에 officeLoad 곱, 사무소 서비스 칩에 가동 비율
 ### 2026-11-01 2-44 자산 비율
 ownershipAssets API로 소유 기관 소재지 기준 왕국/지역 막대, 내 왕국 우선, 범위 저장·창 이력, 월별 왕국 금융가 비율 추이 추가. 법 조건선 없음. typecheck/client48시험 통과. 헤드리스 스크린샷 확인(1920×1080): C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/assets-kingdoms.png 및 assets-regions.png. 왕국3/지역7행·창폭418=scroll418 확인. 여러 월 곡선 실사용은 기록 대기.
 
+
+### 2026-11-01 2-35 왕국 요약 합산 (부분)
+통계 summary를 왕실 회사 요약에서 왕국 영토의 정부·민간 합산으로 전환. 저택·금융가는 고용 합계에만 포함하고 생산 수입·비용·손익은 제외. 국고는 왕실 순금고/한도로 별도 유지. 주간 이익은 소유 기관을 제외한 건물 profitEma×7 합. root typecheck/client48시험 통과. 헤드리스 스크린샷 확인(1920×1080): C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/kingdom-summary.png, 창폭418=scroll418. 회사 선택·순위의 왕국 전환은 미완료.
+

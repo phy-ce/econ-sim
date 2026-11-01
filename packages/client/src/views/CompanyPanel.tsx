@@ -574,3 +574,11 @@ export function CompanySummary({world,company}:{world:World;company:Company}) {
   const T=useT();
   return <><div className="stats"><div className="stat"><span>{T.cash}</span><b><NumericValue value={company.cash} format="compactMoney"/></b></div><div className="stat"><span>{T.loanLimit}</span><b><NumericValue value={company.debt} format="compactMoney"/></b></div><div className="stat"><span>{T.lastWeekPL}</span><b className={company.lastWeekProfit<0?'neg':'pos'}><NumericValue value={company.lastWeekProfit} format="signedCompactMoney"/></b></div></div><Summary rows={world.buildings.filter(b=>b.companyId===company.id).map(b=>rowOf(world,b))}/></>;
 }
+
+export function KingdomSummary({world,government}:{world:World;government:Company}){
+ const T=useT(),regions=new Set(world.regions.filter(r=>r.kingdomId===government.kingdomId).map(r=>r.id));
+ const buildings=world.buildings.filter(b=>regions.has(b.regionId));
+ const rows=buildings.map(b=>{const row=rowOf(world,b);return isOwnerBuilding(b.typeId)?{...row,rev:0,raw:0,wage:0,profit:0}:row;});
+ const weekly=buildings.filter(b=>!isOwnerBuilding(b.typeId)).reduce((n,b)=>n+b.profitEma*7,0);
+ return <><div className="system-facts"><span>{T.treasury}<b><NumericValue value={government.cash-government.debt} format="money"/> / <NumericValue value={creditLimit(world,government)} format="money"/></b></span><span>{T.system.weekProfit}<b><NumericValue value={weekly} format="signedMoney"/></b></span></div><Summary rows={rows}/></>;
+}
