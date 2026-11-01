@@ -229,3 +229,7 @@ DetailWindow 독립 NavigationProvider/버튼, BuildingPops 및 ResourceInspecto
 - 631751f: 정책·연구 링크 및 전환 상태 수정 커밋. 다음 2-54 민영화 가격 툴팁·허용 대상 보완 착수.
 - 코드 완료: BuildingEconomics의 민영화 허용 기준을 sellsShares로 통일해 무역소·정부/자동 건물 제외. privatizePrice의 레벨당 매각 가격·연간 이익을 정확한 소수2자리 툴팁으로 표시, KO/EN 라벨 추가. 미사용 privateEquity 문자열 제거. 소유 몫·금고·장부 라벨은 앞선 완료 기록 참조.
 - 검증: 루트 typecheck 통과, 클라이언트22파일59시험 통과(가격 한/영 및 무역소 조작 제외 회귀 포함). 헤드리스 스크린샷 확인(1920×1080): C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/privatization-price-ko-tooltip.png. 별도 프로필 검증용 왕실 벌목장8레벨, 가격ƒ186,233.21/레벨·연간 이익−ƒ164,784.26/레벨 툴팁 확인. 검증용 저장은 복원. 실제 매각 진행·영문/다크 화면은 화면 미검증.
+- 2ec3fe9: 2-54 민영화 가격·대상 수정 커밋. 이어서 2-45 실제 세율·조건 툴팁 보완.
+
+- 2-45 세율·조건 툴팁 보완 완료: 모든 세법 선택지의 taxRates(k, law)를 현재 예산 단계 기준으로 표시(정액은 1인/일, 소득세는 %). 조건 미달 툴팁에 financeRatio/threshold, 전환 중에는 목표 법 라벨 추가. 루트 typecheck 및 클라이언트23파일61시험 통과(예산5단계 KO/EN 회귀 포함).
+- 헤드리스 스크린샷 확인(1920×1080): C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/policy-tax-quotes-ko.png. 토지세ƒ0.02/인·일 툴팁, 인두세ƒ0.6/인·일·소득세30%는 DOM 대조. 본문418/scroll418。영문·다크 화면 및 다른 법 툴팁 실표시는 화면 미검증. 투자 직종 아이콘과 전환 완료/실패 소식 전 경로는 잔여.
