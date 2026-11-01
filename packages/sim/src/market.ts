@@ -181,6 +181,25 @@ export function resetMarkets(w: World) {
 
 // ---------------------------------------------------------------- 소작
 
+/** 소작지 채움 = 일하는 소작농 노동 인구 ÷ (칸 × 1칸 인원). 칸이 없으면 null */
+export function tenantFill(w: World, b: Building, pop = findPop(w, b.regionId, 'peasant', b.id)): number | null {
+  if (b.level <= 0) return null;
+  return (pop ? workforce(pop) : 0) / (b.level * SUBSISTENCE.workersPerCell);
+}
+
+/**
+ * 소작지 여유 배율 (시제품 TUNE.tenantSlack > 0, 2026-11-01 마이크로 microB S3): 1 + tenantSlack × clamp(1 − 채움 ÷ 기준 채움, 0, 1).
+ * 기준 채움(Region.tenantFill0) = 켜진 뒤 첫 수확 날의 채움이라 시작 상태에서 1배다 (시제품은 1 − 채움을 써서 시작 채움이 1 보다 낮은 세계에서 첫날부터 수확이 늘었다).
+ * 소작농이 떠나 칸이 빌수록 남은 사람의 1인 수확이 늘고 (모두 떠나면 1 + tenantSlack 배), 기준보다 차면 1배다. 끔·기준 없음이면 1
+ */
+export function tenantSlackMult(w: World, r: Region, b?: Building, pop?: Pop): number {
+  const a = TUNE.tenantSlack, f0 = r.tenantFill0;
+  if (!a || !(f0 !== undefined && f0 > 0)) return 1;
+  const sub = b ?? w.buildings.find((x) => x.regionId === r.id && isSubsistence(x.typeId));
+  const f = sub ? tenantFill(w, sub, pop) : null;
+  return f === null ? 1 : 1 + a * clamp(1 - f / f0, 0, 1);
+}
+
 /** 소작지 노동 인구 wf 의 하루 수확 */
 function harvestOutput(wf: number): GoodBag {
   const bag: GoodBag = {};
@@ -201,8 +220,10 @@ export function harvest(w: World, book: Book) {
     if (!pop || pop.size <= 0) continue;
     const r = regionById(w, b.regionId);
     const { rent } = harvestShares(w, r, wealthOf(pop));
-    // 기상 조건이 걸리면 수확이 그만큼 줄어든다 (economy.ts harvestFactor)
-    const out = harvestOutput(workforce(pop) * harvestFactor(w, r.id, 'arable'));
+    // 소작지 여유 (TUNE.tenantSlack): 켜진 뒤 첫 수확 날의 채움을 기준으로 남긴다
+    if (TUNE.tenantSlack && r.tenantFill0 === undefined) { const f = tenantFill(w, b, pop); if (f !== null && f > 0) r.tenantFill0 = f; }
+    // 기상 조건이 걸리면 수확이 그만큼 줄어든다 (economy.ts harvestFactor). 소작지 여유 배율 (끔이면 1)
+    const out = harvestOutput(workforce(pop) * harvestFactor(w, r.id, 'arable') * tenantSlackMult(w, r, b, pop));
     const { own, sell } = splitHarvest(pop.size, wealthOf(pop), GOOD_IDS.map((g) => (out[g] ?? 0) * (1 - rent)));
     for (let i = 0; i < NG; i++) {
       const g = GOOD_IDS[i], q = out[g];
@@ -255,7 +276,7 @@ function bagOf(q: number[]): GoodBag {
  * 쓰고 남아 버려지는 현물은 소득이 아니다
  */
 export function tenantIncomePerWorker(w: World, r: Region, wealth: number): number {
-  const out = harvestOutput(harvestFactor(w, r.id, 'arable'));
+  const out = harvestOutput(harvestFactor(w, r.id, 'arable') * tenantSlackMult(w, r));
   const sh = harvestShares(w, r, wealth);
   const { own, sell } = splitHarvest(1 / WORKFORCE_RATIO, wealth, GOOD_IDS.map((g) => (out[g] ?? 0) * (1 - sh.rent)));
   let v = 0;

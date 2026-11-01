@@ -23,7 +23,7 @@ import {
 import { borderCost, kingdomById, DEFAULT_TARIFF } from './kingdoms';
 import {
   CARGO_DECAY, CARGO_MIN, FLOW_EMA, INVEST_RATE, PRICE_MAX, PRICE_MIN, PRICE_SPEED, SAVINGS_DRAW, SHIP_RATE, STALE_SIGNAL, SUBSTITUTION_EXP,
-  basketCostAt, harvestShares, manorNeed, needSharesAt, splitHarvest, tenantIncomePerWorker,
+  basketCostAt, harvestShares, manorNeed, needSharesAt, splitHarvest, tenantIncomePerWorker, tenantSlackMult,
 } from './market';
 import {
   LITERACY_DOWN, LITERACY_PER_WEALTH, LITERACY_UP, QUAL_DECAY, QUAL_FACTOR, QUAL_FROM, QUAL_RATE, SEVERE_STARVATION, STARVATION_LINE,
@@ -945,6 +945,22 @@ export const ENCYCLOPEDIA: EncEntry[] = [
     },
     live: { pick: [], run: (w) => ({ rows: w.regions.map((r) => ({ label: regionLabel(r), value: quakeLabel(w, r.id) ?? '-' })) }) },
     related: ['tenant-farms', 'harvest-conditions', 'best-seat', 'migration'], seenIn: ['region', 'alerts'], source: ['economy.ts quakeAt', 'production.ts updateSubsistence'], design: ['4'],
+  },
+  {
+    id: 'tenant-slack', category: 'tenants', title: t('소작지 여유 (시제품)', 'Tenant land slack (prototype)'),
+    rule: t('{0}이 0보다 크면 소작지에서 일하는 사람이 시작 때 채움보다 줄어든 비율 × {0}만큼 1인 수확이 는다 (모두 떠나면 1 + {0}배, 시작 때보다 차면 그대로). 0이면 끈 것이다.', 'If {0} is above 0, each tenant’s harvest rises by {0} × the share by which tenant land has emptied since its starting fill (1 + {0} times when everyone has left, unchanged when fuller than at the start). At 0 it is off.'),
+    formula: 'harvest per worker × (1 + {0} × clamp(1 − fill ÷ startFill, 0, 1))',
+    params: [tune('tenantSlack', '여유 배율', 'Slack multiple', 'x')],
+    example: () => {
+      const f0 = 0.8, f = 0.4, k = 1 + TUNE.tenantSlack * Math.min(1, Math.max(0, 1 - f / f0));
+      return {
+        inputs: [row('시작 채움', 'Starting fill', f0, 'pct'), row('지금 채움', 'Current fill', f, 'pct')],
+        steps: [row('줄어든 비율', 'Share emptied', 1 - f / f0, 'pct')],
+        result: [row('1인 수확 배율', 'Harvest multiple', r2(k), 'x')],
+      };
+    },
+    live: { pick: [], run: (w) => ({ rows: w.regions.map((r) => ({ label: regionLabel(r), value: r2(tenantSlackMult(w, r)) })) }) },
+    related: ['tenant-output', 'tenant-income', 'tenant-farms'], seenIn: ['region'], source: ['market.ts tenantSlackMult', 'market.ts harvest'], design: ['4'],
   },
   {
     id: 'manor-take', category: 'tenants', title: t('저택 거둠', 'Manor skim'),

@@ -512,6 +512,8 @@ export interface Region {
   sellWeeks?: Partial<Record<GoodId, number>>;
   /** 0b′ A3 자기 값 효과 철거 (TUNE.aiMarginal ≥ 2): 키 "회사 id|상품" → 1레벨 헐면 회사 손익이 느는 연속 주 수 (0인 키는 없다). 끔이면 생기지 않는다 */
   marginWeeks?: Record<string, number>;
+  /** 소작지 여유 (시제품 TUNE.tenantSlack > 0): 그 지역 소작지 채움(일하는 소작농 노동 인구 ÷ 칸 × 1칸 인원)의 기준값. 켜진 뒤 첫 수확 날의 채움 (0이면 다음 날 다시). 끔이면 생기지 않는다 */
+  tenantFill0?: number;
   /**
    * 이 지역에서 내보내는 교역 (매일, 0.95/0.05 이동평균, market.ts addTraderOrders). AI 무역소 판단용.
    * buy = 무역소 금고로 산 하루 매입 주문액, cut = 금고가 모자라 잘린 주문액 (무역소가 없으면 내려던 주문 전부), margin = 주문의 기대 이익률 (값 차이 − 운임 − 관세, 매입액 대비).

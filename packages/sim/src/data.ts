@@ -620,6 +620,10 @@ export const TUNE = {
   harvestIntensity: [2, 6] as [number, number], // 빅토리아3 가뭄과 같은 범위 (−10~−30%)
   // 소작지 재해 (2026-11-01 사용자 "소작지가 지진 같은 것에 의해 변동이 있게 해서 노동자로 보내볼까", 시제품, DESIGN 4): 0 = 끔.
   // 후보 확률 0.02 / 0.05, 손실 10% / 25%, 기간 1 / 3년 (docs/overhaul/QUAKE_SPECS.json). 비교 전, 근거 없음
+  // 소작지 여유 (2026-11-01 마이크로 시제품 microB S3, 세계 규칙, 사용자 결정 대기 DECISIONS 7-37): > 0 이면 소작지 1인 수확 × (1 + tenantSlack × clamp(1 − 채움 ÷ 기준 채움, 0, 1)).
+  // 기준 채움 = 켜진 뒤 첫 수확 날 그 지역 채움 (Region.tenantFill0). 시작 상태에서 1배라 중립이고, 모두 떠나면 1 + tenantSlack 배 (market.ts tenantSlackMult).
+  // 0 = 끔 (21ea2ff 와 같음). 후보 0.5 (마이크로 시제품의 α), 본 게임 비교 전, 근거: 마이크로 시제품 (DESIGN 11)
+  tenantSlack: 0,
   quakeChance: 0,
   quakeLoss: 0.25,
   quakeYears: 3,
