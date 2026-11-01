@@ -560,4 +560,4 @@ sim이 아래 제도를 없앴다. 화면이 계속 컴파일되도록 `packages
 - 완료 기준: 왕실에서 재정 창의 range 입력 0개, 임금 명령 오류 토스트 없음. typecheck.
 
 - 2026-11-01 코드 완료, 화면 미검증: Wages에서 me.state일 때 range와 오프셋 %를 렌더링하지 않음. 국영 임금·시장 임금·실업 막대 보존, 민간 조정 보존. 루트 npm.cmd run typecheck 전체 통과. sim 변경 없음.
-
+- 2026-11-01 확인 (UI/UX 담당): `CompanyPanel.tsx:457·459`의 `!me.state` 분기로 왕실은 오프셋 %와 range를 그리지 않는다. 근거 맞음, 화면 미검증.
