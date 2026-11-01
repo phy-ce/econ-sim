@@ -152,3 +152,6 @@ DetailWindow 독립 NavigationProvider/버튼, BuildingPops 및 ResourceInspecto
 
 - 서브윈도우 추가 조작: 인구 앞으로 복원true, 토지→지역 건물 목록→뒤로 링 복원true, 교육→지역 건물 목록7링크→뒤로 교육 지표 복원true. 헤드리스 스크린샷 확인(1920×1080): C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/land-history.png, education-history.png. 부모 Port Belmar 유지. 기관 소멸/극소 지분은 별도 미검증.
 
+
+- 0장 감사 후속: EconomyCharts 빈 차트/비교 선택 안내 문장은 —로 바꾸고 툴팁에 보존. 정지·도달 사유의 비활성 opacity를1로 보강. root typecheck/client48시험 통과. 변경 후 화면 미검증.
+
