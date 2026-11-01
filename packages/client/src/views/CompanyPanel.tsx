@@ -454,9 +454,9 @@ export function Wages({ game, world, me }: { game: Game; world: World; me: Compa
           <div key={s} className="wage">
             <div className="wage-row">
               <span className="wage-name"><i className="sw" style={{ background: SKILL_COLOR[s] }} />{skillName(s)}</span>
-              <output className="wage-out">ƒ<NumericValue value={me.wages[s]} format="two"/> <small className={offset >= 0 ? 'pos' : 'neg'}>{spct(offset)}</small></output>
+              <output className="wage-out">ƒ<NumericValue value={me.wages[s]} format="two"/> {!me.state&&<small className={offset >= 0 ? 'pos' : 'neg'}>{spct(offset)}</small>}</output>
             </div>
-            {<input type="range" min={-50} max={100} step={5} value={Math.round(offset * 100)}
+            {!me.state&&<input type="range" min={-50} max={100} step={5} value={Math.round(offset * 100)}
               aria-label={T.wageAria(skillName(s))}
               onChange={(e) => game.command({ type: 'setWageOffset', skill: s, offset: Number(e.target.value) / 100 })} />}
             <div className="wage-meta">

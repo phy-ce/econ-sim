@@ -551,3 +551,13 @@ sim이 아래 제도를 없앴다. 화면이 계속 컴파일되도록 `packages
 - 두 강에 각각 두 지류를 합류시키고 본류/지류 굵기 구분. 서부는 해안에서 클립, 동부는 지도 밖까지 하류 연장.
 - build-map에 도로 목록/끝점 검증 추가. 7개 지역·9개 인접 관계 통과. Shapely 검사에서 지역 7개와 미소유지 2개 폴리곤 유효·내부 중첩 없음. 전체 타입 검사 통과.
 - 1920×1028 CSS viewport에서 한국어 밝은 모드 지도 및 확대/초기화 확인. 다크 모드 실측은 남음. 바깥 지도 확장부의 긴 직선과 배경 이미지의 사각 이음새는 별도 개선 대상.
+
+### 2-69. 왕실 생산 건물 임금은 읽기 전용 (sim 2026-10-29, 2-65 이어서, 깨진 화면)
+- 지금: 재정 창 `FinancePanel.tsx:38`이 `<Wages>`를 그리고, `CompanyPanel.tsx:459~461`이 회사 종류와 상관없이 직종마다 `input type="range"`(시장 임금 대비 −50~+100%)를 그린다. 플레이어 왕실(`me.state && me.isPlayer`)이 움직이면 sim이 `setWageOffset`·`setWage`를 거절한다 (`commands.ts:149·157`, "왕실의 생산 건물 임금은 시장 임금입니다" / "Crown production wages follow the market"). 끌 때마다 오류 토스트가 뜬다.
+- 바꿀 것: `me.state`이면 슬라이더와 오프셋 %(`spct(offset)`)를 그리지 않는다. 직종마다 한 줄: 직종 이름 · 임금 `me.wages[s]` · 시장 임금 `marketWage(world, s, me.id)` · 실업 막대 `unemploymentRate(world, s)` (지금 `wage-meta` 그대로). 위 줄 국영 임금(`me.stateWages`, `CompanyPanel.tsx:448`)은 그대로 둔다 (국영 임금 단계가 정한다).
+- 민간 플레이어의 임금 조정(슬라이더)은 그대로.
+- 문자열: 새 문자열 없음.
+- 완료 기준: 왕실에서 재정 창의 range 입력 0개, 임금 명령 오류 토스트 없음. typecheck.
+
+- 2026-11-01 코드 완료, 화면 미검증: Wages에서 me.state일 때 range와 오프셋 %를 렌더링하지 않음. 국영 임금·시장 임금·실업 막대 보존, 민간 조정 보존. 루트 npm.cmd run typecheck 전체 통과. sim 변경 없음.
+

@@ -70,3 +70,6 @@ UI_CHANGES 0장 순서를 따른다. 완료 처리 시 구현 근거와 실제 �
 ### 2026-11-01 이력 후속
 DetailWindow 독립 NavigationProvider/버튼, BuildingPops 및 ResourceInspector 선택 상태 이력 연결. 루트 타입 검사와 현재 체크아웃 ownershipPop 회귀 3개 통과, 화면 미검증. 우선순위 2는 부분 완료이며 인구·토지·교육 내부 링크 전환이 남음.
 
+
+- 2026-11-01 2-69 코드 완료, 화면 미검증. 왕실 Wages는 읽기 전용, 민간 range 유지. 루트 타입 검사 통과. 상세 명세/근거는 UI_DONE으로 이동.
+

@@ -26,7 +26,7 @@
 
 ### 우선순위
 깨진 화면
-1. **왕실 임금 슬라이더 (2-69)**: 재정 창의 시장 임금 슬라이더를 왕실이 움직이면 sim이 명령을 거절한다. 왕실이면 읽기 전용으로.
+1. **왕실 임금 슬라이더 (2-69)**: 코드 완료, 화면 미검증. UI_DONE 참조.
 
 사용자 요청
 2. **서브윈도우 이력 잔여**: 인구·토지·교육 상세 안의 링크가 부모 창으로 빠진다 (예: `PopTable.tsx:42` `onRegion`·`onBuilding`). 같은 DetailWindow 안 이력으로 바꾼다. 기반(DetailWindow마다 NavigationProvider)은 UI_DONE "2026-11-01 서브윈도우 독립 이력 기반".
@@ -1478,13 +1478,6 @@ sim 변경 (wt-research):
   4. 시장 창(지역): 교역 수요 막대 둘 (`Region.trade.buy` 산 주문, `cut` 잘린 주문) + 기대 이익률 숫자. 무역소가 없는 지역은 `buy` 0.
   5. 상인 현금을 보이던 곳(통계의 `traders` 선 등)이 있으면 이름을 "무역소 금고"로.
   설명 문구는 넣지 않는다 (규칙은 README·사전 `trade`·`trading-post`).
-
-### 2-69. 왕실 생산 건물 임금은 읽기 전용 (sim 2026-10-29, 2-65 이어서, 깨진 화면)
-- 지금: 재정 창 `FinancePanel.tsx:38`이 `<Wages>`를 그리고, `CompanyPanel.tsx:459~461`이 회사 종류와 상관없이 직종마다 `input type="range"`(시장 임금 대비 −50~+100%)를 그린다. 플레이어 왕실(`me.state && me.isPlayer`)이 움직이면 sim이 `setWageOffset`·`setWage`를 거절한다 (`commands.ts:149·157`, "왕실의 생산 건물 임금은 시장 임금입니다" / "Crown production wages follow the market"). 끌 때마다 오류 토스트가 뜬다.
-- 바꿀 것: `me.state`이면 슬라이더와 오프셋 %(`spct(offset)`)를 그리지 않는다. 직종마다 한 줄: 직종 이름 · 임금 `me.wages[s]` · 시장 임금 `marketWage(world, s, me.id)` · 실업 막대 `unemploymentRate(world, s)` (지금 `wage-meta` 그대로). 위 줄 국영 임금(`me.stateWages`, `CompanyPanel.tsx:448`)은 그대로 둔다 (국영 임금 단계가 정한다).
-- 민간 플레이어의 임금 조정(슬라이더)은 그대로.
-- 문자열: 새 문자열 없음.
-- 완료 기준: 왕실에서 재정 창의 range 입력 0개, 임금 명령 오류 토스트 없음. typecheck.
 
 ### 2-70. K 시험용 계측 (오버홀 09 단위 K, 3.8·U7)
 - 목적: 1a 사람 시험 기록 일곱 가지 중 1~4·6·7의 숫자(숫자 → 처방 클릭 수, 첫 처방까지 분, 연구 선택 → 첫 재생 초, 창 열림 순서, 정지 구간, 처방 뒤 확인 행동)를 사람이 세지 않아도 되게 한다. sim은 이 기록을 읽지 않는다.
