@@ -146,3 +146,6 @@ DetailWindow 독립 NavigationProvider/버튼, BuildingPops 및 ResourceInspecto
 
 - 2-78 코드 완료: 원료 officeLoad 반영·사무소/그룹 가동 비율 표시. typecheck/client48시험 통과, CDP 읽기 검증 사무소3개 load0/모든 원료0. 화면 미검증(office-load-check.png는 코드 조회 장면이며 사무소 화면 검증 근거가 아님).
 
+
+- 서브윈도우 이력: 헤드리스 스크린샷 확인(1920×1080), C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/detail-history-back.png. 인구 구성→소작농 목록→개별 팝→거주지→뒤로 순서 실제 클릭. 목록/선택/거주지 렌더와 뒤로 시 선택 팝 복원 true, 부모 지역 창 앞80자 동일 확인. 토지·교육·앞으로·다른 팝 경로는 아직 별도 검증 필요.
+
