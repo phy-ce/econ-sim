@@ -1,0 +1,1747 @@
+{
+ "about": "0b′ 곡물 시장 균형 AI 판단 후보 (A1 aiGlutIdle, A2 aiSellDemoSD·aiSellDemoWeeks, A3 aiMarginal) 비교 명세. 진단 .tmp/0bp/diag/RESULT.md 4.1. 플레이어 왕실 방치(withPlayer 기본) + 고정 연구 순서(research 기본 fixed). 대조 base = 지금 기본 (5-1 aiGlutSD 1.5, 5-2 끔, A1·A2·A3 끔). 1차 거름 (packages/sim 에서): bash cli/lab.sh <out10.jsonl> ../../docs/overhaul/0BP_GRAIN_SPECS.json (10년 × 시드 1·2 × salt 0..1). 2차: KEY=specs20 bash cli/lab.sh <out20.jsonl> ../../docs/overhaul/0BP_GRAIN_SPECS.json [이름 필터] (같은 이름의 20년 × salt 0..3, 거른 뒤 고른다). 요약: python cli/labsum.py <out.jsonl> --compare base (대륙 줄; 레벨이 줄어든 해 수 표 capLvD.* 가 같이 나온다. salt 0..3 이 다 있어야 비교하므로 1차 결과는 salt 0..1 을 직접 본다).",
+ "code": "wt-0bp (c9b2967 + A1·A2·A3 스위치, lab 지표 sellDemo·marginDemo·marginBlock·marginOk·capLvD)",
+ "counts": {
+  "runs": 12,
+  "specs (10년 × 시드 1·2 × salt 0..1)": 48,
+  "specs20 (20년 × 시드 1·2 × salt 0..3)": 96
+ },
+ "choices": [
+  "A2 는 짓기 문턱(aiGlutSD) < 헐기 문턱(aiSellDemoSD) 조합만: 1.5/1.75 (지금 짓기 그대로), 1.1/1.25, 1.25/1.5 × N 13/26. 이름 a2g<짓기>d<헐기>n<N>.",
+  "A3 철거(aiMarginal 2)의 연속 주 수는 aiSellDemoWeeks 기본 26 을 쓴다.",
+  "A1+A2 는 짓기 1.1 / 헐기 1.25 / N 26 하나만 (A1 이 흉년 톱니를 끊으면 낮은 짓기 문턱에서도 증설이 덜 열리는지 본다).",
+  "짧은 확인 (wt-0bp, 10년 × 시드 1 × salt 0): a3m2 는 생산 건물 레벨 합이 10년차 10 (대조 537)으로 경제가 무너졌다. a2g1.1d1.25n26 은 188 (대조 537). 둘 다 곡물만이 아니라 모든 상품에 걸린다."
+ ],
+ "specs": [
+  {
+   "item": "X03-grain",
+   "name": "base",
+   "seed": 1,
+   "salt": 0,
+   "years": 10
+  },
+  {
+   "item": "X03-grain",
+   "name": "base",
+   "seed": 1,
+   "salt": 1,
+   "years": 10
+  },
+  {
+   "item": "X03-grain",
+   "name": "base",
+   "seed": 2,
+   "salt": 0,
+   "years": 10
+  },
+  {
+   "item": "X03-grain",
+   "name": "base",
+   "seed": 2,
+   "salt": 1,
+   "years": 10
+  },
+  {
+   "item": "X03-grain",
+   "name": "a1",
+   "seed": 1,
+   "salt": 0,
+   "years": 10,
+   "tune": {
+    "aiGlutIdle": 1
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a1",
+   "seed": 1,
+   "salt": 1,
+   "years": 10,
+   "tune": {
+    "aiGlutIdle": 1
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a1",
+   "seed": 2,
+   "salt": 0,
+   "years": 10,
+   "tune": {
+    "aiGlutIdle": 1
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a1",
+   "seed": 2,
+   "salt": 1,
+   "years": 10,
+   "tune": {
+    "aiGlutIdle": 1
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a2g1.5d1.75n13",
+   "seed": 1,
+   "salt": 0,
+   "years": 10,
+   "tune": {
+    "aiGlutSD": 1.5,
+    "aiSellDemoSD": 1.75,
+    "aiSellDemoWeeks": 13
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a2g1.5d1.75n13",
+   "seed": 1,
+   "salt": 1,
+   "years": 10,
+   "tune": {
+    "aiGlutSD": 1.5,
+    "aiSellDemoSD": 1.75,
+    "aiSellDemoWeeks": 13
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a2g1.5d1.75n13",
+   "seed": 2,
+   "salt": 0,
+   "years": 10,
+   "tune": {
+    "aiGlutSD": 1.5,
+    "aiSellDemoSD": 1.75,
+    "aiSellDemoWeeks": 13
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a2g1.5d1.75n13",
+   "seed": 2,
+   "salt": 1,
+   "years": 10,
+   "tune": {
+    "aiGlutSD": 1.5,
+    "aiSellDemoSD": 1.75,
+    "aiSellDemoWeeks": 13
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a2g1.5d1.75n26",
+   "seed": 1,
+   "salt": 0,
+   "years": 10,
+   "tune": {
+    "aiGlutSD": 1.5,
+    "aiSellDemoSD": 1.75,
+    "aiSellDemoWeeks": 26
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a2g1.5d1.75n26",
+   "seed": 1,
+   "salt": 1,
+   "years": 10,
+   "tune": {
+    "aiGlutSD": 1.5,
+    "aiSellDemoSD": 1.75,
+    "aiSellDemoWeeks": 26
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a2g1.5d1.75n26",
+   "seed": 2,
+   "salt": 0,
+   "years": 10,
+   "tune": {
+    "aiGlutSD": 1.5,
+    "aiSellDemoSD": 1.75,
+    "aiSellDemoWeeks": 26
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a2g1.5d1.75n26",
+   "seed": 2,
+   "salt": 1,
+   "years": 10,
+   "tune": {
+    "aiGlutSD": 1.5,
+    "aiSellDemoSD": 1.75,
+    "aiSellDemoWeeks": 26
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a2g1.1d1.25n13",
+   "seed": 1,
+   "salt": 0,
+   "years": 10,
+   "tune": {
+    "aiGlutSD": 1.1,
+    "aiSellDemoSD": 1.25,
+    "aiSellDemoWeeks": 13
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a2g1.1d1.25n13",
+   "seed": 1,
+   "salt": 1,
+   "years": 10,
+   "tune": {
+    "aiGlutSD": 1.1,
+    "aiSellDemoSD": 1.25,
+    "aiSellDemoWeeks": 13
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a2g1.1d1.25n13",
+   "seed": 2,
+   "salt": 0,
+   "years": 10,
+   "tune": {
+    "aiGlutSD": 1.1,
+    "aiSellDemoSD": 1.25,
+    "aiSellDemoWeeks": 13
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a2g1.1d1.25n13",
+   "seed": 2,
+   "salt": 1,
+   "years": 10,
+   "tune": {
+    "aiGlutSD": 1.1,
+    "aiSellDemoSD": 1.25,
+    "aiSellDemoWeeks": 13
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a2g1.1d1.25n26",
+   "seed": 1,
+   "salt": 0,
+   "years": 10,
+   "tune": {
+    "aiGlutSD": 1.1,
+    "aiSellDemoSD": 1.25,
+    "aiSellDemoWeeks": 26
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a2g1.1d1.25n26",
+   "seed": 1,
+   "salt": 1,
+   "years": 10,
+   "tune": {
+    "aiGlutSD": 1.1,
+    "aiSellDemoSD": 1.25,
+    "aiSellDemoWeeks": 26
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a2g1.1d1.25n26",
+   "seed": 2,
+   "salt": 0,
+   "years": 10,
+   "tune": {
+    "aiGlutSD": 1.1,
+    "aiSellDemoSD": 1.25,
+    "aiSellDemoWeeks": 26
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a2g1.1d1.25n26",
+   "seed": 2,
+   "salt": 1,
+   "years": 10,
+   "tune": {
+    "aiGlutSD": 1.1,
+    "aiSellDemoSD": 1.25,
+    "aiSellDemoWeeks": 26
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a2g1.25d1.5n13",
+   "seed": 1,
+   "salt": 0,
+   "years": 10,
+   "tune": {
+    "aiGlutSD": 1.25,
+    "aiSellDemoSD": 1.5,
+    "aiSellDemoWeeks": 13
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a2g1.25d1.5n13",
+   "seed": 1,
+   "salt": 1,
+   "years": 10,
+   "tune": {
+    "aiGlutSD": 1.25,
+    "aiSellDemoSD": 1.5,
+    "aiSellDemoWeeks": 13
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a2g1.25d1.5n13",
+   "seed": 2,
+   "salt": 0,
+   "years": 10,
+   "tune": {
+    "aiGlutSD": 1.25,
+    "aiSellDemoSD": 1.5,
+    "aiSellDemoWeeks": 13
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a2g1.25d1.5n13",
+   "seed": 2,
+   "salt": 1,
+   "years": 10,
+   "tune": {
+    "aiGlutSD": 1.25,
+    "aiSellDemoSD": 1.5,
+    "aiSellDemoWeeks": 13
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a2g1.25d1.5n26",
+   "seed": 1,
+   "salt": 0,
+   "years": 10,
+   "tune": {
+    "aiGlutSD": 1.25,
+    "aiSellDemoSD": 1.5,
+    "aiSellDemoWeeks": 26
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a2g1.25d1.5n26",
+   "seed": 1,
+   "salt": 1,
+   "years": 10,
+   "tune": {
+    "aiGlutSD": 1.25,
+    "aiSellDemoSD": 1.5,
+    "aiSellDemoWeeks": 26
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a2g1.25d1.5n26",
+   "seed": 2,
+   "salt": 0,
+   "years": 10,
+   "tune": {
+    "aiGlutSD": 1.25,
+    "aiSellDemoSD": 1.5,
+    "aiSellDemoWeeks": 26
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a2g1.25d1.5n26",
+   "seed": 2,
+   "salt": 1,
+   "years": 10,
+   "tune": {
+    "aiGlutSD": 1.25,
+    "aiSellDemoSD": 1.5,
+    "aiSellDemoWeeks": 26
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a3m1",
+   "seed": 1,
+   "salt": 0,
+   "years": 10,
+   "tune": {
+    "aiMarginal": 1
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a3m1",
+   "seed": 1,
+   "salt": 1,
+   "years": 10,
+   "tune": {
+    "aiMarginal": 1
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a3m1",
+   "seed": 2,
+   "salt": 0,
+   "years": 10,
+   "tune": {
+    "aiMarginal": 1
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a3m1",
+   "seed": 2,
+   "salt": 1,
+   "years": 10,
+   "tune": {
+    "aiMarginal": 1
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a3m2",
+   "seed": 1,
+   "salt": 0,
+   "years": 10,
+   "tune": {
+    "aiMarginal": 2
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a3m2",
+   "seed": 1,
+   "salt": 1,
+   "years": 10,
+   "tune": {
+    "aiMarginal": 2
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a3m2",
+   "seed": 2,
+   "salt": 0,
+   "years": 10,
+   "tune": {
+    "aiMarginal": 2
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a3m2",
+   "seed": 2,
+   "salt": 1,
+   "years": 10,
+   "tune": {
+    "aiMarginal": 2
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a1a3m2",
+   "seed": 1,
+   "salt": 0,
+   "years": 10,
+   "tune": {
+    "aiGlutIdle": 1,
+    "aiMarginal": 2
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a1a3m2",
+   "seed": 1,
+   "salt": 1,
+   "years": 10,
+   "tune": {
+    "aiGlutIdle": 1,
+    "aiMarginal": 2
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a1a3m2",
+   "seed": 2,
+   "salt": 0,
+   "years": 10,
+   "tune": {
+    "aiGlutIdle": 1,
+    "aiMarginal": 2
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a1a3m2",
+   "seed": 2,
+   "salt": 1,
+   "years": 10,
+   "tune": {
+    "aiGlutIdle": 1,
+    "aiMarginal": 2
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a1a2g1.1d1.25n26",
+   "seed": 1,
+   "salt": 0,
+   "years": 10,
+   "tune": {
+    "aiGlutIdle": 1,
+    "aiGlutSD": 1.1,
+    "aiSellDemoSD": 1.25,
+    "aiSellDemoWeeks": 26
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a1a2g1.1d1.25n26",
+   "seed": 1,
+   "salt": 1,
+   "years": 10,
+   "tune": {
+    "aiGlutIdle": 1,
+    "aiGlutSD": 1.1,
+    "aiSellDemoSD": 1.25,
+    "aiSellDemoWeeks": 26
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a1a2g1.1d1.25n26",
+   "seed": 2,
+   "salt": 0,
+   "years": 10,
+   "tune": {
+    "aiGlutIdle": 1,
+    "aiGlutSD": 1.1,
+    "aiSellDemoSD": 1.25,
+    "aiSellDemoWeeks": 26
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a1a2g1.1d1.25n26",
+   "seed": 2,
+   "salt": 1,
+   "years": 10,
+   "tune": {
+    "aiGlutIdle": 1,
+    "aiGlutSD": 1.1,
+    "aiSellDemoSD": 1.25,
+    "aiSellDemoWeeks": 26
+   },
+   "control": "base"
+  }
+ ],
+ "specs20": [
+  {
+   "item": "X03-grain",
+   "name": "base",
+   "seed": 1,
+   "salt": 0,
+   "years": 20
+  },
+  {
+   "item": "X03-grain",
+   "name": "base",
+   "seed": 1,
+   "salt": 1,
+   "years": 20
+  },
+  {
+   "item": "X03-grain",
+   "name": "base",
+   "seed": 1,
+   "salt": 2,
+   "years": 20
+  },
+  {
+   "item": "X03-grain",
+   "name": "base",
+   "seed": 1,
+   "salt": 3,
+   "years": 20
+  },
+  {
+   "item": "X03-grain",
+   "name": "base",
+   "seed": 2,
+   "salt": 0,
+   "years": 20
+  },
+  {
+   "item": "X03-grain",
+   "name": "base",
+   "seed": 2,
+   "salt": 1,
+   "years": 20
+  },
+  {
+   "item": "X03-grain",
+   "name": "base",
+   "seed": 2,
+   "salt": 2,
+   "years": 20
+  },
+  {
+   "item": "X03-grain",
+   "name": "base",
+   "seed": 2,
+   "salt": 3,
+   "years": 20
+  },
+  {
+   "item": "X03-grain",
+   "name": "a1",
+   "seed": 1,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "aiGlutIdle": 1
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a1",
+   "seed": 1,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "aiGlutIdle": 1
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a1",
+   "seed": 1,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "aiGlutIdle": 1
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a1",
+   "seed": 1,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "aiGlutIdle": 1
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a1",
+   "seed": 2,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "aiGlutIdle": 1
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a1",
+   "seed": 2,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "aiGlutIdle": 1
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a1",
+   "seed": 2,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "aiGlutIdle": 1
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a1",
+   "seed": 2,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "aiGlutIdle": 1
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a2g1.5d1.75n13",
+   "seed": 1,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "aiGlutSD": 1.5,
+    "aiSellDemoSD": 1.75,
+    "aiSellDemoWeeks": 13
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a2g1.5d1.75n13",
+   "seed": 1,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "aiGlutSD": 1.5,
+    "aiSellDemoSD": 1.75,
+    "aiSellDemoWeeks": 13
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a2g1.5d1.75n13",
+   "seed": 1,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "aiGlutSD": 1.5,
+    "aiSellDemoSD": 1.75,
+    "aiSellDemoWeeks": 13
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a2g1.5d1.75n13",
+   "seed": 1,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "aiGlutSD": 1.5,
+    "aiSellDemoSD": 1.75,
+    "aiSellDemoWeeks": 13
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a2g1.5d1.75n13",
+   "seed": 2,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "aiGlutSD": 1.5,
+    "aiSellDemoSD": 1.75,
+    "aiSellDemoWeeks": 13
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a2g1.5d1.75n13",
+   "seed": 2,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "aiGlutSD": 1.5,
+    "aiSellDemoSD": 1.75,
+    "aiSellDemoWeeks": 13
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a2g1.5d1.75n13",
+   "seed": 2,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "aiGlutSD": 1.5,
+    "aiSellDemoSD": 1.75,
+    "aiSellDemoWeeks": 13
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a2g1.5d1.75n13",
+   "seed": 2,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "aiGlutSD": 1.5,
+    "aiSellDemoSD": 1.75,
+    "aiSellDemoWeeks": 13
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a2g1.5d1.75n26",
+   "seed": 1,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "aiGlutSD": 1.5,
+    "aiSellDemoSD": 1.75,
+    "aiSellDemoWeeks": 26
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a2g1.5d1.75n26",
+   "seed": 1,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "aiGlutSD": 1.5,
+    "aiSellDemoSD": 1.75,
+    "aiSellDemoWeeks": 26
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a2g1.5d1.75n26",
+   "seed": 1,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "aiGlutSD": 1.5,
+    "aiSellDemoSD": 1.75,
+    "aiSellDemoWeeks": 26
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a2g1.5d1.75n26",
+   "seed": 1,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "aiGlutSD": 1.5,
+    "aiSellDemoSD": 1.75,
+    "aiSellDemoWeeks": 26
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a2g1.5d1.75n26",
+   "seed": 2,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "aiGlutSD": 1.5,
+    "aiSellDemoSD": 1.75,
+    "aiSellDemoWeeks": 26
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a2g1.5d1.75n26",
+   "seed": 2,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "aiGlutSD": 1.5,
+    "aiSellDemoSD": 1.75,
+    "aiSellDemoWeeks": 26
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a2g1.5d1.75n26",
+   "seed": 2,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "aiGlutSD": 1.5,
+    "aiSellDemoSD": 1.75,
+    "aiSellDemoWeeks": 26
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a2g1.5d1.75n26",
+   "seed": 2,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "aiGlutSD": 1.5,
+    "aiSellDemoSD": 1.75,
+    "aiSellDemoWeeks": 26
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a2g1.1d1.25n13",
+   "seed": 1,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "aiGlutSD": 1.1,
+    "aiSellDemoSD": 1.25,
+    "aiSellDemoWeeks": 13
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a2g1.1d1.25n13",
+   "seed": 1,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "aiGlutSD": 1.1,
+    "aiSellDemoSD": 1.25,
+    "aiSellDemoWeeks": 13
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a2g1.1d1.25n13",
+   "seed": 1,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "aiGlutSD": 1.1,
+    "aiSellDemoSD": 1.25,
+    "aiSellDemoWeeks": 13
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a2g1.1d1.25n13",
+   "seed": 1,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "aiGlutSD": 1.1,
+    "aiSellDemoSD": 1.25,
+    "aiSellDemoWeeks": 13
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a2g1.1d1.25n13",
+   "seed": 2,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "aiGlutSD": 1.1,
+    "aiSellDemoSD": 1.25,
+    "aiSellDemoWeeks": 13
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a2g1.1d1.25n13",
+   "seed": 2,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "aiGlutSD": 1.1,
+    "aiSellDemoSD": 1.25,
+    "aiSellDemoWeeks": 13
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a2g1.1d1.25n13",
+   "seed": 2,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "aiGlutSD": 1.1,
+    "aiSellDemoSD": 1.25,
+    "aiSellDemoWeeks": 13
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a2g1.1d1.25n13",
+   "seed": 2,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "aiGlutSD": 1.1,
+    "aiSellDemoSD": 1.25,
+    "aiSellDemoWeeks": 13
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a2g1.1d1.25n26",
+   "seed": 1,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "aiGlutSD": 1.1,
+    "aiSellDemoSD": 1.25,
+    "aiSellDemoWeeks": 26
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a2g1.1d1.25n26",
+   "seed": 1,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "aiGlutSD": 1.1,
+    "aiSellDemoSD": 1.25,
+    "aiSellDemoWeeks": 26
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a2g1.1d1.25n26",
+   "seed": 1,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "aiGlutSD": 1.1,
+    "aiSellDemoSD": 1.25,
+    "aiSellDemoWeeks": 26
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a2g1.1d1.25n26",
+   "seed": 1,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "aiGlutSD": 1.1,
+    "aiSellDemoSD": 1.25,
+    "aiSellDemoWeeks": 26
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a2g1.1d1.25n26",
+   "seed": 2,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "aiGlutSD": 1.1,
+    "aiSellDemoSD": 1.25,
+    "aiSellDemoWeeks": 26
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a2g1.1d1.25n26",
+   "seed": 2,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "aiGlutSD": 1.1,
+    "aiSellDemoSD": 1.25,
+    "aiSellDemoWeeks": 26
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a2g1.1d1.25n26",
+   "seed": 2,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "aiGlutSD": 1.1,
+    "aiSellDemoSD": 1.25,
+    "aiSellDemoWeeks": 26
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a2g1.1d1.25n26",
+   "seed": 2,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "aiGlutSD": 1.1,
+    "aiSellDemoSD": 1.25,
+    "aiSellDemoWeeks": 26
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a2g1.25d1.5n13",
+   "seed": 1,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "aiGlutSD": 1.25,
+    "aiSellDemoSD": 1.5,
+    "aiSellDemoWeeks": 13
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a2g1.25d1.5n13",
+   "seed": 1,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "aiGlutSD": 1.25,
+    "aiSellDemoSD": 1.5,
+    "aiSellDemoWeeks": 13
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a2g1.25d1.5n13",
+   "seed": 1,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "aiGlutSD": 1.25,
+    "aiSellDemoSD": 1.5,
+    "aiSellDemoWeeks": 13
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a2g1.25d1.5n13",
+   "seed": 1,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "aiGlutSD": 1.25,
+    "aiSellDemoSD": 1.5,
+    "aiSellDemoWeeks": 13
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a2g1.25d1.5n13",
+   "seed": 2,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "aiGlutSD": 1.25,
+    "aiSellDemoSD": 1.5,
+    "aiSellDemoWeeks": 13
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a2g1.25d1.5n13",
+   "seed": 2,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "aiGlutSD": 1.25,
+    "aiSellDemoSD": 1.5,
+    "aiSellDemoWeeks": 13
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a2g1.25d1.5n13",
+   "seed": 2,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "aiGlutSD": 1.25,
+    "aiSellDemoSD": 1.5,
+    "aiSellDemoWeeks": 13
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a2g1.25d1.5n13",
+   "seed": 2,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "aiGlutSD": 1.25,
+    "aiSellDemoSD": 1.5,
+    "aiSellDemoWeeks": 13
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a2g1.25d1.5n26",
+   "seed": 1,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "aiGlutSD": 1.25,
+    "aiSellDemoSD": 1.5,
+    "aiSellDemoWeeks": 26
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a2g1.25d1.5n26",
+   "seed": 1,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "aiGlutSD": 1.25,
+    "aiSellDemoSD": 1.5,
+    "aiSellDemoWeeks": 26
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a2g1.25d1.5n26",
+   "seed": 1,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "aiGlutSD": 1.25,
+    "aiSellDemoSD": 1.5,
+    "aiSellDemoWeeks": 26
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a2g1.25d1.5n26",
+   "seed": 1,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "aiGlutSD": 1.25,
+    "aiSellDemoSD": 1.5,
+    "aiSellDemoWeeks": 26
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a2g1.25d1.5n26",
+   "seed": 2,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "aiGlutSD": 1.25,
+    "aiSellDemoSD": 1.5,
+    "aiSellDemoWeeks": 26
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a2g1.25d1.5n26",
+   "seed": 2,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "aiGlutSD": 1.25,
+    "aiSellDemoSD": 1.5,
+    "aiSellDemoWeeks": 26
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a2g1.25d1.5n26",
+   "seed": 2,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "aiGlutSD": 1.25,
+    "aiSellDemoSD": 1.5,
+    "aiSellDemoWeeks": 26
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a2g1.25d1.5n26",
+   "seed": 2,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "aiGlutSD": 1.25,
+    "aiSellDemoSD": 1.5,
+    "aiSellDemoWeeks": 26
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a3m1",
+   "seed": 1,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "aiMarginal": 1
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a3m1",
+   "seed": 1,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "aiMarginal": 1
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a3m1",
+   "seed": 1,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "aiMarginal": 1
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a3m1",
+   "seed": 1,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "aiMarginal": 1
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a3m1",
+   "seed": 2,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "aiMarginal": 1
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a3m1",
+   "seed": 2,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "aiMarginal": 1
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a3m1",
+   "seed": 2,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "aiMarginal": 1
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a3m1",
+   "seed": 2,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "aiMarginal": 1
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a3m2",
+   "seed": 1,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "aiMarginal": 2
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a3m2",
+   "seed": 1,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "aiMarginal": 2
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a3m2",
+   "seed": 1,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "aiMarginal": 2
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a3m2",
+   "seed": 1,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "aiMarginal": 2
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a3m2",
+   "seed": 2,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "aiMarginal": 2
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a3m2",
+   "seed": 2,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "aiMarginal": 2
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a3m2",
+   "seed": 2,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "aiMarginal": 2
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a3m2",
+   "seed": 2,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "aiMarginal": 2
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a1a3m2",
+   "seed": 1,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "aiGlutIdle": 1,
+    "aiMarginal": 2
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a1a3m2",
+   "seed": 1,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "aiGlutIdle": 1,
+    "aiMarginal": 2
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a1a3m2",
+   "seed": 1,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "aiGlutIdle": 1,
+    "aiMarginal": 2
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a1a3m2",
+   "seed": 1,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "aiGlutIdle": 1,
+    "aiMarginal": 2
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a1a3m2",
+   "seed": 2,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "aiGlutIdle": 1,
+    "aiMarginal": 2
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a1a3m2",
+   "seed": 2,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "aiGlutIdle": 1,
+    "aiMarginal": 2
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a1a3m2",
+   "seed": 2,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "aiGlutIdle": 1,
+    "aiMarginal": 2
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a1a3m2",
+   "seed": 2,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "aiGlutIdle": 1,
+    "aiMarginal": 2
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a1a2g1.1d1.25n26",
+   "seed": 1,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "aiGlutIdle": 1,
+    "aiGlutSD": 1.1,
+    "aiSellDemoSD": 1.25,
+    "aiSellDemoWeeks": 26
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a1a2g1.1d1.25n26",
+   "seed": 1,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "aiGlutIdle": 1,
+    "aiGlutSD": 1.1,
+    "aiSellDemoSD": 1.25,
+    "aiSellDemoWeeks": 26
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a1a2g1.1d1.25n26",
+   "seed": 1,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "aiGlutIdle": 1,
+    "aiGlutSD": 1.1,
+    "aiSellDemoSD": 1.25,
+    "aiSellDemoWeeks": 26
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a1a2g1.1d1.25n26",
+   "seed": 1,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "aiGlutIdle": 1,
+    "aiGlutSD": 1.1,
+    "aiSellDemoSD": 1.25,
+    "aiSellDemoWeeks": 26
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a1a2g1.1d1.25n26",
+   "seed": 2,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "aiGlutIdle": 1,
+    "aiGlutSD": 1.1,
+    "aiSellDemoSD": 1.25,
+    "aiSellDemoWeeks": 26
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a1a2g1.1d1.25n26",
+   "seed": 2,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "aiGlutIdle": 1,
+    "aiGlutSD": 1.1,
+    "aiSellDemoSD": 1.25,
+    "aiSellDemoWeeks": 26
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a1a2g1.1d1.25n26",
+   "seed": 2,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "aiGlutIdle": 1,
+    "aiGlutSD": 1.1,
+    "aiSellDemoSD": 1.25,
+    "aiSellDemoWeeks": 26
+   },
+   "control": "base"
+  },
+  {
+   "item": "X03-grain",
+   "name": "a1a2g1.1d1.25n26",
+   "seed": 2,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "aiGlutIdle": 1,
+    "aiGlutSD": 1.1,
+    "aiSellDemoSD": 1.25,
+    "aiSellDemoWeeks": 26
+   },
+   "control": "base"
+  }
+ ]
+}

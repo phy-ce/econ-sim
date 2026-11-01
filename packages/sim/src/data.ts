@@ -599,6 +599,15 @@ export const TUNE = {
   aiCutSD: 0,
   aiDemoSD: 0,
   aiExitWeeks: 26,
+  // 곡물 균형 후보 (0b′ A1·A2·A3, AI 판단, 진단 .tmp/0bp/diag/RESULT.md 4.1, 비교 명세 docs/overhaul/0BP_GRAIN_SPECS.json). 모두 0 = 끔 (c9b2967 과 같음), 근거 없음.
+  // aiGlutIdle 1 (A1): 과잉 검사(aiGlutSD)와 sdHold 가 보는 예상 공급에 놀고 있는 설비 산출((1 − 가동률) × 레벨 × 레벨당 산출)과 기상 조건으로 줄어든 공급(평년으로 되돌린 차)을 더한다 (ai.ts glutSD)
+  aiGlutIdle: 0,
+  // aiSellDemoSD > 0 (A2): 지역 지금 공급 ÷ 수요가 이 값 이상인 주가 aiSellDemoWeeks 주 이어지면 그 지역 그 상품의 AI 생산 건물 중 레벨당 손익이 가장 나쁜 하나를
+  // 가동률과 무관하게 주마다 1레벨 헌다 (ai.ts sellDemo). aiSellDemoWeeks 는 A3 철거의 연속 주 수로도 쓴다
+  aiSellDemoSD: 0,
+  aiSellDemoWeeks: 26,
+  // aiMarginal (A3): 회사가 자기 값 효과를 본다. 1 = 증설은 그 지역 그 상품의 자기 하루 손익이 레벨 +1 로 늘 때만 (ai.ts growGain), 2 = 그리고 레벨 −1 로 늘면 헌다 (marginExit)
+  aiMarginal: 0,
   // 행정청 징수율 하한 (오버홀 07 A4, 0b′, AI 판단, 이슈 #4): > 0 이면 AI 왕실은 왕국 징수율(taxRatio)이 이 값 아래인 동안 행정청 레벨을 헐지 않는다
   // (reviewLevels 가 적자 주를 세지 않고, 올려 둔 행정청 철거 대기를 거둔다). 0 = 하한 없음 (그 전과 같음). 후보 0.6 / 0.7 / 0.8 과 0 을 비교 중 (docs/overhaul/0BP_A4_SPECS.json), 근거 없음
   aiAdminFloor: 0,

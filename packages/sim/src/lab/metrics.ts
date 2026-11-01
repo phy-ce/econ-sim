@@ -194,6 +194,8 @@ class Acc {
   growStarts = 0; glutBlock = 0;
   // 0b′ 5-2 (03 5장 2번): 팔리지 않음 기준 가동률 감축('sdCut')·철거('sdDemo', 레벨), 가동률 올리기('utilUp', 모든 생산 건물), 적자 감축('lossCut') 횟수
   sdCut = 0; sdDemo = 0; utilUp = 0; lossCut = 0;
+  // 0b′ 곡물 균형 후보: A2 설비 철거('sellDemo', 레벨), A3 자기 값 효과 철거('marginDemo', 레벨), A3 가 막은('marginBlock')·허용한('marginOk') 증설 (건물·주)
+  sellDemo = 0; marginDemo = 0; marginBlock = 0; marginOk = 0;
   constructor() { for (let c = 0; c < NC; c++) this.burdenRing.push(new Float64Array(0)); }
 }
 
@@ -207,6 +209,16 @@ interface GoodAcc {
 /** 건물 레벨 기록 (짓고 부수기): 레벨마다 완공 날(시작 레벨·지은 날을 모르는 레벨은 −Infinity), 지역·종류 키 */
 interface LevelRec { lv: number; ticks: number[]; key: string; regionId: number }
 interface RegionAcc { cond: number; hf: number; grain: number; sales: number; floor: number }
+
+/** 상품별 레벨 합: 그 상품을 산출하는 자동 아닌 건물의 레벨 (continentRow 의 capLv 와 같은 셈) */
+function capLevels(w: World): Map<GoodId, number> {
+  const m = new Map<GoodId, number>();
+  for (const b of w.buildings) {
+    if (BUILDING_BY_ID[b.typeId].auto) continue;
+    for (const g of Object.keys(getMethod(b.typeId, b.methodId).outputs) as GoodId[]) m.set(g, (m.get(g) ?? 0) + b.level);
+  }
+  return m;
+}
 
 const sig = (x: number) => (Number.isFinite(x) ? (x === 0 || Number.isInteger(x) ? x : Number(x.toPrecision(6))) : null);
 const div = (a: number, b: number) => (b !== 0 ? a / b : null);
@@ -239,6 +251,8 @@ export class Collector {
   skim0 = 0;
   /** 건물 종류.방식별 한 해 [매출, 원료비, 임금] (대륙) */
   margin = new Map<string, [number, number, number]>();
+  /** 상품별 레벨 합 (그 상품을 내는 자동 아닌 건물, capLv 와 같은 셈): 지난 연말 (처음은 시작 세계). 해마다 변화 capLvD 를 낸다 */
+  capLv0 = new Map<GoodId, number>();
 
   constructor(w: World, readonly opt: CollectorOptions) {
     this.kingdoms = [...w.kingdoms];
@@ -253,6 +267,7 @@ export class Collector {
       this.tierYear.push({}); this.lawYear.push({});
     }
     this.popBefore = this.scopePops(w);
+    this.capLv0 = capLevels(w);
     for (const b of w.buildings) if (!BUILDING_BY_ID[b.typeId].auto) this.levels.set(b.id, { lv: b.level, ticks: new Array(b.level).fill(-Infinity), key: `${b.regionId}|${b.typeId}`, regionId: b.regionId });
     for (const k of w.constructions) this.cons.set(k.id, [`${k.regionId}|${k.typeId}`, k.levels ?? 1]);
     this.startYear(w);
@@ -261,10 +276,11 @@ export class Collector {
 
   /**
    * ai.ts aiTrace 로 받는 AI 판단 기록 (run.ts 가 이어 준다): 유보 증설 착공('reserve', 레벨), 과잉 검사로 막힌 증설('glutBlock', 건물·주),
-   * 5-2 감축('sdCut', 10%씩 한 번)·철거('sdDemo', 1레벨), 가동률 올리기('utilUp', 10%씩 한 번), 적자 감축('lossCut', 10%씩 한 번)
+   * 5-2 감축('sdCut', 10%씩 한 번)·철거('sdDemo', 1레벨), 가동률 올리기('utilUp', 10%씩 한 번), 적자 감축('lossCut', 10%씩 한 번),
+   * 곡물 균형 후보 A2 철거('sellDemo', 1레벨)·A3 철거('marginDemo', 1레벨)·A3 증설 판단('marginBlock' 막음, 'marginOk' 허용, 건물·주)
    */
   trace(path: string, regionId: number | undefined, levels: number) {
-    if (!['reserve', 'glutBlock', 'sdCut', 'sdDemo', 'utilUp', 'lossCut'].includes(path)) return;
+    if (!['reserve', 'glutBlock', 'sdCut', 'sdDemo', 'utilUp', 'lossCut', 'sellDemo', 'marginDemo', 'marginBlock', 'marginOk'].includes(path)) return;
     const s = regionId == null ? -1 : this.scopeOf(regionId);
     for (const a of s >= 0 ? [this.acc[s], this.acc[this.nk]] : [this.acc[this.nk]]) {
       if (path === 'reserve') a.growStarts += levels;
@@ -272,6 +288,10 @@ export class Collector {
       else if (path === 'sdCut') a.sdCut++;
       else if (path === 'sdDemo') a.sdDemo -= levels;
       else if (path === 'utilUp') a.utilUp++;
+      else if (path === 'sellDemo') a.sellDemo -= levels;
+      else if (path === 'marginDemo') a.marginDemo -= levels;
+      else if (path === 'marginBlock') a.marginBlock++;
+      else if (path === 'marginOk') a.marginOk++;
       else a.lossCut++;
     }
   }
@@ -832,7 +852,8 @@ export class Collector {
       sellV: sig(div(a.soldV, a.supV) ?? NaN), savNoble: sig((sav[CI.gentry] + sav[CI.aristocrat]) / M),
       vault: sig(vault / M), vaultG: sig(this.vault0[i] > 0 ? (vault - this.vault0[i]) / this.vault0[i] : NaN), pledge: sig(pledge / M), pledgeNew: sig(a.pledgeNew / M),
       startLv: a.startLv, builtLv: a.builtLv, demoLv: a.demoLv, quickDemo: a.quickDemo, quickIdx: sig(div(a.quickDemo, a.startLv) ?? NaN),
-      growStarts: a.growStarts, glutBlock: a.glutBlock, sdCut: a.sdCut, sdDemo: a.sdDemo, utilUp: a.utilUp, lossCut: a.lossCut, lvProd: lvTot, adminStaff: sig(adminStaff / K), adminLv,
+      growStarts: a.growStarts, glutBlock: a.glutBlock, sdCut: a.sdCut, sdDemo: a.sdDemo, utilUp: a.utilUp, lossCut: a.lossCut,
+      sellDemo: a.sellDemo, marginDemo: a.marginDemo, marginBlock: a.marginBlock, marginOk: a.marginOk, lvProd: lvTot, adminStaff: sig(adminStaff / K), adminLv,
       // 0b′ A4: 행정청 레벨 가중 충원율 (연말), 징수율 해 안 최저·평균 (날마다)
       adminSt: sig(div(adminSt, adminLv) ?? NaN), taxRatioMin: sig(a.trMin), taxRatioAvg: sig(a.trSum / d),
       // X08-H (왕국 단위 요약), 08 3.5 한계
@@ -873,6 +894,10 @@ export class Collector {
       tIn[g] = sig(a.tin / nd / K); tOut[g] = sig(a.tout / nd / K); hh[g] = sig(a.hh / nd / K);
       cap[g] = sig((capQ.get(g) ?? 0) / K); capLv[g] = capL.get(g) ?? 0;
     }
+    // 0b′ 곡물 균형: 상품별 레벨 합의 한 해 변화 (연말 − 지난 연말). labsum 이 줄어든 해(< 0)를 센다
+    const capLvD: Record<string, number | null> = {};
+    for (const g of GOOD_IDS) capLvD[g] = (capL.get(g) ?? 0) - (this.capLv0.get(g) ?? 0);
+    this.capLv0 = capL;
     // 0b′ 5-1: 해 안 S/D 진동 폭 (최대 − 최소; 대륙, 지역 중앙값·최대. 수요가 아주 작은 지역의 폭이 평균을 덮어 중앙값을 쓴다), 상품별 팔린 비율(가치)
     const sdSwing: Record<string, number | null> = {}, sdSwingR: Record<string, number | null> = {}, sdSwingRMax: Record<string, number | null> = {}, sellG: Record<string, number | null> = {};
     for (const g of GOOD_IDS) {
@@ -901,7 +926,7 @@ export class Collector {
       const a = this.regions.get(r.id)!;
       reg[r.id] = { k: r.kingdomId, cond: sig(a.cond / nd), hf: sig(a.hf / nd), grain: sig(a.grain / nd), sales: sig(a.sales / K), floor: sig(a.floor / nd) };
     }
-    return { sd, sdMax, sdAvg, lo, hi, price, sup, dem, subSup, bldSup, tIn, tOut, hh, cap, capLv, utilG, reg, sdSwing, sdSwingR, sdSwingRMax, sellG, margR, margR1: sig(r1 > 0 ? p1 / r1 / 0.2 : NaN), skim: sig(skim / M) };
+    return { sd, sdMax, sdAvg, lo, hi, price, sup, dem, subSup, bldSup, tIn, tOut, hh, cap, capLv, capLvD, utilG, reg, sdSwing, sdSwingR, sdSwingRMax, sellG, margR, margR1: sig(r1 > 0 ? p1 / r1 / 0.2 : NaN), skim: sig(skim / M) };
   }
 }
 

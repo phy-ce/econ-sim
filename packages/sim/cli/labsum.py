@@ -361,13 +361,17 @@ COMPARE = ['gdp', 'gdpPre', 'pop', 'peas', 'jobless', 'solPeas', 'solUnsk', 'pea
            'adminStaff', 'skim', 'margR1', 'sd.grain', 'sd.fiber', 'sd.timber', 'sd.fuel', 'sd.cloth', 'sd.furniture',
            'sdSwing.grain', 'sdSwing.fiber', 'sdSwing.timber', 'sdSwingR.grain', 'sdSwingR.fiber', 'sdSwingR.timber',
            'capLv.grain', 'capLv.fiber', 'capLv.timber',
-           'sdCut', 'sdDemo', 'utilUp', 'lossCut', 'utilG.grain', 'utilG.fiber', 'utilG.timber', 'lo.grain', 'price.grain']
+           'sdCut', 'sdDemo', 'utilUp', 'lossCut', 'utilG.grain', 'utilG.fiber', 'utilG.timber', 'lo.grain', 'price.grain',
+           'capLvD.grain', 'sellDemo', 'marginDemo', 'marginBlock', 'marginOk']
+# 레벨이 줄어든 해 수를 세는 지표 (0b′ 곡물 균형: 상품별 레벨 합의 한 해 변화, 대륙 줄)
+DROPS = ['capLvD.grain', 'capLvD.fiber', 'capLvD.timber']
 CNAME = NAME | {'gdpPre': '세전 총생산', 'peasantIncome': '소작 1인 소득', 'wage.unskilled': '노동자 임금', 'wpos.unskilled.floor': '바닥에 붙은 노동자 비율',
                 'wpos.farmer.floor': '바닥에 붙은 농부 비율', 'sellV': '팔린 비율 (가치)', 'lvProd': '생산 건물 레벨 합', 'savNoble': '귀족 직종 저축',
                 'vault': '저택·금융가 금고', 'vaultG': '금고 해마다 증가율', 'pledge': '남은 금고 공사 약정', 'pledgeNew': '새 금고 약정', 'startLv': '착공 레벨',
                 'demoLv': '헐린 레벨', 'quickDemo': '52주 안 헐린 레벨', 'quickIdx': '짓고 부수기 지수', 'growStarts': '유보 증설 착공', 'glutBlock': '과잉 검사로 막힌 증설',
                 'adminStaff': '행정청 인원 (천)', 'sdCut': '5-2 가동률 감축 (번)', 'sdDemo': '5-2 철거 레벨',
-                'utilUp': '가동률 올리기 (번)', 'lossCut': '적자 가동률 감축 (번)', 'skim': '저택 거둠', 'margR1': '실제 ÷ 설계 이익률 (기본 방식)'}
+                'utilUp': '가동률 올리기 (번)', 'capLvD.grain': '곡물 레벨 합 한 해 변화', 'sellDemo': 'A2 설비 철거 레벨', 'marginDemo': 'A3 철거 레벨',
+                'marginBlock': 'A3 가 막은 증설 (건물·주)', 'marginOk': 'A3 가 허용한 증설 (건물·주)', 'lossCut': '적자 가동률 감축 (번)', 'skim': '저택 거둠', 'margR1': '실제 ÷ 설계 이익률 (기본 방식)'}
 
 
 def natural(name):
@@ -380,10 +384,13 @@ def compare(S, ctrl, runs, metrics):
     k = S.k
     allruns = sorted({r for (r, s, sa, kk) in S.d if kk == k}, key=natural)
     cands = [r for r in (runs or allruns) if r != ctrl]
-    seeds = sorted({s for (r, s, sa, kk) in S.d if r == ctrl and kk == k and all((ctrl, s, x, k) in S.d for x in range(4))})
-    S.p(f'## 후보 비교 (대조 {ctrl}, 후보 {", ".join(cands)}, 범위 k = {k}, salt 0..3)\n')
-    S.p('효과: 그해 후보 salt 0..3 네 값이 모두 대조 네 값보다 크면 +, 모두 작으면 −. 판정 수가 많아 우연한 효과가 섞인다 (0a null 5지표 × 5년 가족 오경보율 45%, 판정 하나 약 2.9%).\n')
-    if not seeds: S.p('대조 salt 0..3 이 다 있는 시드가 없다.\n'); return
+    # salt 묶음: 대조에 있는 salt 0..n−1 (기본 0..3, 1차 거름 명세는 0..1). 시드마다 대조에 그 salt 가 다 있어야 한다
+    nsalt = max([sa for (r, s, sa, kk) in S.d if r == ctrl and kk == k] or [3]) + 1
+    SALTS = range(min(nsalt, 4))
+    seeds = sorted({s for (r, s, sa, kk) in S.d if r == ctrl and kk == k and all((ctrl, s, x, k) in S.d for x in SALTS)})
+    S.p(f'## 후보 비교 (대조 {ctrl}, 후보 {", ".join(cands)}, 범위 k = {k}, salt 0..{len(SALTS) - 1})\n')
+    S.p(f'효과: 그해 후보 salt {len(SALTS)}개 값이 모두 대조 {len(SALTS)}개 값보다 크면 +, 모두 작으면 −. 판정 수가 많아 우연한 효과가 섞인다 (0a null 5지표 × 5년 가족 오경보율 45%, 판정 하나 약 2.9%, salt 4개 기준).\n')
+    if not seeds: S.p(f'대조 salt 0..{len(SALTS) - 1} 이 다 있는 시드가 없다.\n'); return
     exp = []
     for m in metrics:
         if m.endswith('*'):
@@ -393,8 +400,8 @@ def compare(S, ctrl, runs, metrics):
     summary = []
     for m in exp:
         for seed in seeds:
-            sers = {r: [S.series(r, seed, x, m) for x in range(4)] for r in [ctrl] + cands}
-            ok = [r for r in cands if all(sers[r]) and all((r, seed, x, k) in S.d for x in range(4))]
+            sers = {r: [S.series(r, seed, x, m) for x in SALTS] for r in [ctrl] + cands}
+            ok = [r for r in cands if all(sers[r]) and all((r, seed, x, k) in S.d for x in SALTS)]
             if not all(sers[ctrl]) or not ok: continue
             ys = sorted(set.intersection(*[set(s) for r in [ctrl] + ok for s in sers[r]]))
             ys = [y for y in ys if all(s.get(y) is not None for r in [ctrl] + ok for s in sers[r])]
@@ -406,7 +413,7 @@ def compare(S, ctrl, runs, metrics):
                 c = [s[y] for s in sers[ctrl]]
                 for r in [ctrl] + ok:
                     v = [s[y] for s in sers[r]]
-                    cells.append(f'{fmt(sum(v) / 4)} ({fmt(min(v))}–{fmt(max(v))})')
+                    cells.append(f'{fmt(sum(v) / len(v))} ({fmt(min(v))}–{fmt(max(v))})')
                     if r != ctrl:
                         e = '+' if min(v) > max(c) else '−' if max(v) < min(c) else ''
                         if e == '+': cnt[r][0] += 1
@@ -418,11 +425,33 @@ def compare(S, ctrl, runs, metrics):
             S.p('\n' + table(['해'] + [f'{r} 효과' for r in ok], eff_rows) + '\n')
             last = ys[-1]
             for r in ok:
-                d = sum(s[last] for s in sers[r]) / 4 - sum(s[last] for s in sers[ctrl]) / 4
+                d = sum(s[last] for s in sers[r]) / len(SALTS) - sum(s[last] for s in sers[ctrl]) / len(SALTS)
                 summary.append([CNAME.get(m, m), m, seed, r, cnt[r][0], cnt[r][1], len(ys), f'{fmt(d)} ({last}년)'])
+    drops(S, ctrl, cands, seeds, SALTS)
     S.p('### 요약: 효과가 난 해 수 (대조 대비)\n')
     S.p(table(['지표', '키', '시드', '후보', '+ 해', '− 해', '해 수', '마지막 해 평균 차'], summary) if summary else '비교할 칸이 없다.')
     S.p('')
+
+
+def drops(S, ctrl, cands, seeds, SALTS=range(4)):
+    """레벨이 줄어든 해 수: DROPS 지표 < 0 인 (salt, 해) 수 ÷ 전체와 가장 크게 준 해의 값. 진단 RESULT.md 3.3 의 "레벨이 줄어든 해" 와 같은 셈 (1년차는 시작 세계 대비)"""
+    k = S.k
+    rows = []
+    for m in DROPS:
+        for seed in seeds:
+            for r in [ctrl] + cands:
+                n = tot = 0
+                lo = None
+                for x in SALTS:
+                    for y, v in S.series(r, seed, x, m, k).items():
+                        if v is None: continue
+                        tot += 1
+                        if v < 0: n += 1
+                        lo = v if lo is None else min(lo, v)
+                if tot: rows.append([m, seed, r, n, tot, fmt(lo)])
+    if rows:
+        S.p(f'### 레벨이 줄어든 해 수 (salt 0..{len(SALTS) - 1} × 해, 대륙 줄)\n')
+        S.p(table(['지표', '시드', '실행', '줄어든 해', '전체', '최소 변화'], rows) + '\n')
 
 
 def main():
