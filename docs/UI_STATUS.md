@@ -8,9 +8,9 @@ UI 문서의 시작점. 사용자 최신 요청이 과거 문서보다 우선한
 | UI_CHANGES.md | 현재 우선순위 및 미완료·부분 구현 상세 요구 |
 | UI_DONE.md | 날짜·코드 시점별 검증된 변경 보관. 현재 전체 회귀 통과 보증 아님 |
 | UI_WINDOWS_2026-10-28.md | 최신 창·밀도·소유권 구현과 검증 기록 |
-| UI_BUILDING_GROUPS_2026-10-26.md | 지역 건물 그룹 구현·잔여 범위 |
-| UI_BACKLOG_ARCHIVE_2026-10-28.md | 이전 할 일 목록 원문. 실행 기준 아님 |
-| UI_FIXED_WINDOWS_2026-10-22.md | 폐기된 고정 창 방식의 과거 기록 |
+| log/UI_BUILDING_GROUPS_2026-10-26.md | 지역 건물 그룹 구현·잔여 범위 |
+| log/UI_BACKLOG_ARCHIVE_2026-10-28.md | 이전 할 일 목록 원문. 실행 기준 아님 |
+| log/UI_FIXED_WINDOWS_2026-10-22.md | 폐기된 고정 창 방식의 과거 기록 |
 
 ## 구현 및 확인 상태
 | 범위 | 상태 | 근거 / 남은 것 |
@@ -72,4 +72,9 @@ DetailWindow 독립 NavigationProvider/버튼, BuildingPops 및 ResourceInspecto
 
 
 - 2026-11-01 2-69 코드 완료, 화면 미검증. 왕실 Wages는 읽기 전용, 민간 range 유지. 루트 타입 검사 통과. 상세 명세/근거는 UI_DONE으로 이동.
+
+
+### 2026-11-01 UI_DESIGN 기준 후속
+- UI_DESIGN 2.3·3장: 인구·토지·교육 상세 내부 탐색 경로를 DetailExplorer로 연결. 부모 창 이동 대신 상세별 이력 사용. PopTable의 상세 경로 복원 시 초기화 방지. 루트 타입 검사 통과, 화면 미검증.
+- UI_DESIGN 10장 어긋남 1~8 확인. 기본 집계·소유권 색 토큰·문자열·빈 목록 문장·폐기 코드 정리는 이 변경에 포함하지 않음. 사전 단위 G와 화면 실측은 기존 대기 유지.
 
