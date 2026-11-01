@@ -86,7 +86,7 @@ function RegionPanelView({ world, region, history, selectedGood, onSelectGood, o
             <span className="perks">
               {Object.entries(REGIONS.find((d) => d.id === r.id)!.perks).map(([t, v]) => (
                 <span key={t} className="tag-soft" tabIndex={0} data-help={T.help.perk}>
-                  <BuildingSprite typeId={t} size={16} /> {buildingName(t)} +{Math.round((v ?? 0) * 100)}%
+                  <BuildingSprite typeId={t} size={24} /> {buildingName(t)} +{Math.round((v ?? 0) * 100)}%
                 </span>
               ))}
             </span>

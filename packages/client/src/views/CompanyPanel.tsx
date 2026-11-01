@@ -267,7 +267,7 @@ function Summary({ rows }: { rows: Row[] }) {
         <h3 className="htile-h"><span>{T.fInput}</span><span className={`pxnum ${shortList.length ? 'badge-bad' : 'badge-ok'}`}>{shortList.length}</span></h3>
         {shortList.map(([g, x]) => (
           <div key={g} className="irow">
-            <span className="tile xs"><GoodSprite g={g} size={16} /></span>
+            <span className="tile xs"><GoodSprite g={g} size={24} /></span>
             <span className="irow-m">
               <span className="irow-t"><b>{goodName(g)}</b><span className="pxnum">{qty(x.cur)}/{qty(x.max)}</span></span>
               <Bar value={x.cur / x.max} tone="in" vac label={goodName(g)} />

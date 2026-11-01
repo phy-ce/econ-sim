@@ -122,3 +122,6 @@ DetailWindow 독립 NavigationProvider/버튼, BuildingPops 및 ResourceInspecto
 
 - UI_DESIGN 문자열 정리 진행: 25개 화면의 한/영 조건 277곳·문구252개와 목록4개를 strings.ts로 이동. 데이터 이름(왕국/산업)은 기존 sim 번역 필드 유지. 언어 선택 버튼은 자국어 고정. exactNumber도 최대 소수2자리로 규칙 통일.
 
+
+- 2-77 정식 명세 후속 완료: Sprite 계열 명시 size<20 검색0, 기본24, 점10, 막대 채움6+테두리, 9px 글자10. 경제 추이/범례·인구 표 헤드리스 스크린샷 확인(1920×1080): C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/icons-trends.png, icons-pop-table.png. 인구 표 아이콘24, 창 scrollWidth418 확인. 시세 한/영·밤 확인은 market-icons-ko.png / market-icons-en-dark.png. typecheck/client48시험 통과.
+

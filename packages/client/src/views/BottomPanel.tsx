@@ -50,7 +50,7 @@ function BottomPanelView({ world, history, lastReadTick, onRead, onJump, viewedI
           
           <ul className="legend">
             {series.map((s) => (
-              <li key={s.key}><span className="legend-sp" style={{ color: s.color }}><ClassSprite c={s.key} size={16} /></span>{s.name}</li>
+              <li key={s.key}><span className="legend-sp" style={{ color: s.color }}><ClassSprite c={s.key} size={24} /></span>{s.name}</li>
             ))}
           </ul>
         </div>

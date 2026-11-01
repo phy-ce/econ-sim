@@ -94,7 +94,7 @@ export function RegionMap({ world, selected, onSelect }: { world: World; selecte
           <span><i className="key-rail" /> {T.keyRail}</span>
           <span>★ {T.keyMine}</span>
           
-          <span><Sprite name="m-wheat" size={16} /><Sprite name="m-tree" size={16} /><Sprite name="m-mine" size={16} /> {T.keyLand}</span>
+          <span><Sprite name="m-wheat" size={24} /><Sprite name="m-tree" size={24} /><Sprite name="m-mine" size={24} /> {T.keyLand}</span>
         </div>
       </div>
       <details className="map-directory"><summary>{uiCopy().screenText['regions']}</summary><table className="region-directory-table">
