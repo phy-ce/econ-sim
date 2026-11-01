@@ -1,4 +1,5 @@
-import {useState} from 'react';
+import {useId} from 'react';
+import {useNavigationState} from '../NavigationHistory';
 import {GOOD_IDS,POP_CLASSES} from '@econ/sim';
 import type {Building,World,PopClass,GoodId} from '@econ/sim';
 import {className,regionName,goodName,useLang} from '../i18n';
@@ -7,15 +8,16 @@ import {Bar} from '../ui';
 
 /** Scope by actual work IDs, never by a region-wide household aggregate. */
 export function BuildingPops({world,buildings,onGood,popIds}:{world:World;buildings:Building[];onGood:(id:GoodId)=>void;popIds?:number[]}){
+ const scope=useId();
  const ko=useLang()==='ko',ids=new Set(buildings.map(b=>b.id));
  const pops=world.pops.filter(p=>(popIds?popIds.includes(p.id):ids.has(p.work))&&p.size>0);
- const [selected,setSelected]=useState<PopClass|null>(null);
+ const [selected,setSelected]=useNavigationState<PopClass|null>(scope+':profession',null);
  const professions=POP_CLASSES.filter(c=>pops.some(p=>p.prof===c));
  const prof=selected&&professions.includes(selected)?selected:professions[0];
  const rows=pops.filter(p=>p.prof===prof),size=rows.reduce((n,p)=>n+p.size,0);
  const sum=(key:'lastIncome'|'lastSpend'|'savings'|'incomeEma')=>rows.reduce((n,p)=>n+p[key],0);
  const avg=(key:'sol'|'food'|'fulfillment'|'literacy'|'growth'|'wealth')=>size?rows.reduce((n,p)=>n+p[key]*p.size,0)/size:0;
- const [perHead,setPerHead]=useState(false),divisor=perHead?Math.max(1,size):1;
+ const [perHead,setPerHead]=useNavigationState(scope+':per-head',false),divisor=perHead?Math.max(1,size):1;
  const region=world.regions.find(r=>r.id===(pops[0]?.regionId??buildings[0]?.regionId));
  const goods=GOOD_IDS.map(g=>({g,qty:rows.reduce((n,p)=>n+(p.inKind[g]??0),0)})).filter(x=>x.qty>0);
  if(!region)return null;

@@ -1,3 +1,4 @@
+import {useNavigationState} from '../NavigationHistory';
 import { BuildingEconomics } from './BuildingEconomics';
 import { isOwnerBuilding } from '@econ/sim';
 import { HelpText } from '../TooltipLayer';
@@ -8,7 +9,7 @@ import { BuildingControls } from './CompanyPanel';
 import { OwnerBadge } from './OwnerBadge';
 import { Workforce } from './Workforce';
 import { ListTools } from './ListTools';
-import { useState, useEffect } from 'react';
+import { useId, useEffect } from 'react';
 import { ArrowDownToLine, ArrowUpFromLine, ArrowRight, Factory, Pause, ChevronRight } from 'lucide-react';
 import { TUNE, getMethod, companyById } from '@econ/sim';
 import type { Building, GoodBag, GoodId, Region, World } from '@econ/sim';
@@ -19,7 +20,8 @@ import { compact, money, pct } from '../format';
 export function BuildingInspector({ building: input, world, onGood, onCompany, game }: {
   game?:Game; building: Building; world: World; onGood: (g: GoodId) => void; onCompany: (id: number) => void;
 }) {
-  const [ownerId,setOwnerId]=useState<number|null>(null);
+  const scope=useId();
+  const [ownerId,setOwnerId]=useNavigationState<number|null>(scope+':owner',null);
   useEffect(()=>setOwnerId(null),[input.id]);
   const b=world.buildings.find(b=>b.id===ownerId)??input;
   const ko = useLang() === 'ko';
@@ -46,11 +48,12 @@ export function ResourceInspector({ world, region, good, onGood, onCompany, game
 }) {
   const ko = useLang() === 'ko';
   const T = useT();
-  const [side, setSide] = useState<'inputs' | 'outputs'>('inputs');
-  const [selected, setSelected] = useState<number | null>(null);
-  const [sort, setSort] = useState('quantity');
-  const [direction, setDirection] = useState(-1);
-  const [search, setSearch] = useState('');
+  const scope=useId();
+  const [side, setSide] = useNavigationState<'inputs' | 'outputs'>(scope+':side','inputs');
+  const [selected, setSelected] = useNavigationState<number | null>(scope+':selected',null);
+  const [sort, setSort] = useNavigationState(scope+':sort','quantity');
+  const [direction, setDirection] = useNavigationState(scope+':direction',-1);
+  const [search, setSearch] = useNavigationState(scope+':search','');
   const regionIds=new Set((scopeRegions??[region]).map(r=>r.id));
   const local = world.buildings.filter(b => regionIds.has(b.regionId));
   const related = (s: 'inputs' | 'outputs') => local.filter(b => (getMethod(b.typeId, b.methodId)[s][good] ?? 0) > 0);

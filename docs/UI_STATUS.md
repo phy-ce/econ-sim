@@ -66,3 +66,7 @@ UI_CHANGES 0장 순서를 따른다. 완료 처리 시 구현 근거와 실제 �
 - packages/client에서 require_escalated로 npx.cmd vite --port 5199 실행: Vite v6.4.4 ready in 562 ms, http://localhost:5199/.
 - 브라우저 도구 createBrowserTab 및 listBrowsers 모두 The browser access host is unavailable 반환. 실제 화면·영어·다크 검증 없음. 2-68은 UI_DONE으로 옮기지 않는다.
 - 코드 수정 없이 UI 문서만 선택하여 커밋. 기존 클라이언트 미커밋 변경 보존.
+
+### 2026-11-01 이력 후속
+DetailWindow 독립 NavigationProvider/버튼, BuildingPops 및 ResourceInspector 선택 상태 이력 연결. 루트 타입 검사와 현재 체크아웃 ownershipPop 회귀 3개 통과, 화면 미검증. 우선순위 2는 부분 완료이며 인구·토지·교육 내부 링크 전환이 남음.
+
