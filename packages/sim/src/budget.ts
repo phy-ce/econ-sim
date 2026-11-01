@@ -1,5 +1,5 @@
 import { ABS_LIMITS, BUILDING_BY_ID, MAX_POINTS_PER_LEVEL_DAY, SKILL_DEFS, TICKS_PER_WEEK, TUNE, getMethod } from './data';
-import { builderOf, companyById, isBudgetFunded, kingdomGdp, marketWages, officeFeeMult, paysDividend, regionById, slots } from './economy';
+import { builderOf, companyById, isBudgetFunded, kingdomGdp, marketWages, officeFeeMult, paysDividend, regionById, slots, wagesAt } from './economy';
 import { DAILY_INTEREST, MINT_RATE } from './finance';
 import { kingdomById, kingdomOf } from './kingdoms';
 import { funderShares } from './production';
@@ -91,7 +91,8 @@ function prodWageWeek(w: World, b: Building): number {
   const c = companyById(w, b.companyId);
   if (!c) return 0;
   let day = 0;
-  for (const s of SKILLS) if (!paysDividend(b.stateOwned, s)) day += b.employed[s] * c.wages[s];
+  const wages = wagesAt(c, b.typeId, w, b.regionId);
+  for (const s of SKILLS) if (!paysDividend(b.stateOwned, s)) day += b.employed[s] * wages[s];
   return day * TICKS_PER_WEEK;
 }
 

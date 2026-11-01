@@ -29,7 +29,7 @@ import {
   LITERACY_DOWN, LITERACY_PER_WEALTH, LITERACY_UP, QUAL_DECAY, QUAL_FACTOR, QUAL_FROM, QUAL_RATE, SEVERE_STARVATION, STARVATION_LINE,
   birthRateAt, mortalityAt, workforce,
 } from './pops';
-import { HIRE_RATE, MIGRATE_FULL, MIGRATE_MAX, MIGRATE_START, UNPAID_QUIT, subsistenceWage, switchShare } from './labor';
+import { HIRE_RATE, MARKET_WAGE_RANGE, MIGRATE_FULL, MIGRATE_MAX, MIGRATE_START, UNPAID_QUIT, WAGE_AVG_DAYS, subsistenceWage, switchShare } from './labor';
 import { CREW_RATE, EXP_GAIN } from './production';
 import {
   DAILY_INTEREST, KEEP_SHARE, TREASURY_RELEASE, MINT_BASE, MINT_RATE, RESERVE_SHARE, kingdomLiteracy, researchPoints, adminCapacityOf, reserveCap, taxCapacity, taxRates,
@@ -682,7 +682,7 @@ export const ENCYCLOPEDIA: EncEntry[] = [
           if (def.auto && !def.ownership) continue;
           const c = companyById(w, b.companyId), m = getMethod(b.typeId, b.methodId);
           for (const s of SKILLS) if ((m.workers[s] ?? 0) > 0) {
-            const wage = def.ownership ? shareWage(b, s) : c ? wagesAt(c, b.typeId)[s] : 0;
+            const wage = def.ownership ? shareWage(b, s) : c ? wagesAt(c, b.typeId, w, b.regionId)[s] : 0;
             bars.push(bar(t(`${def.name} · ${SKILL_DEFS[s].name}`, `${def.nameEn} · ${SKILL_DEFS[s].nameEn}`), r2(wage), 'florin'));
           }
         }
@@ -712,7 +712,7 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   },
   {
     id: 'ai-wages', category: 'labour', title: t('시장 임금', 'Market wages'),
-    rule: t('회사마다 생산 건물 임금표가 하나다 (왕실의 생산 건물 포함). AI 회사(민간 상회와 왕실)는 매주 직종별 임금을 움직인다. 바닥 = 옮겨 올 사람의 지금 소득 × {0}. 천장 = 부가가치 × {1}를 기본 임금 비율로 나눈 몫. 바닥이 천장보다 우선한다. 최저임금은 없다.', 'Each company has one wage table for its producing buildings (crown producers included). AI companies (private houses and crowns) adjust wages weekly per job. Floor = current income of people who would move in × {0}. Ceiling = value added × {1}, split by base-wage weight. The floor wins. There is no minimum wage.'),
+    rule: t('지역 시장 임금이 꺼져 있을 때(기본) 회사마다 생산 건물 임금표가 하나다 (왕실의 생산 건물 포함). AI 회사(민간 상회와 왕실)는 매주 직종별 임금을 움직인다. 바닥 = 옮겨 올 사람의 지금 소득 × {0}. 천장 = 부가가치 × {1}를 기본 임금 비율로 나눈 몫. 바닥이 천장보다 우선한다. 최저임금은 없다.', 'With the regional market wage off (default) each company has one wage table for its producing buildings (crown producers included). AI companies (private houses and crowns) adjust wages weekly per job. Floor = current income of people who would move in × {0}. Ceiling = value added × {1}, split by base-wage weight. The floor wins. There is no minimum wage.'),
     formula: 'loss → ×0.98; vacancies > 5% & slow hiring → ×1.03; vacancies < 2% → ×0.99',
     params: [tune('wageOutside', '바닥 배율', 'Floor multiple', 'x'), tune('wageCeil', '천장 (부가가치 중)', 'Ceiling (share of value added)', 'pct'), tune('wageLossCut', '적자면 깎기', 'Cut on loss')],
     live: {
@@ -722,7 +722,22 @@ export const ENCYCLOPEDIA: EncEntry[] = [
         return { bars: SKILLS.filter((s) => !['capitalist', 'aristocrat'].includes(s)).map((s) => bar(t(SKILL_DEFS[s].name, SKILL_DEFS[s].nameEn ?? s), r2(c.wages[s]), 'florin', SKILL_DEFS[s].baseWage * 2)) };
       },
     },
-    related: ['state-wages', 'tenant-income', 'best-seat'], seenIn: ['company', 'workforce'], source: ['ai.ts adjustWages'], design: ['7.3'],
+    related: ['market-wage', 'state-wages', 'tenant-income', 'best-seat'], seenIn: ['company', 'workforce'], source: ['ai.ts adjustWages'], design: ['7.3'],
+  },
+  {
+    id: 'market-wage', category: 'labour', title: t('지역 시장 임금 (비교 중)', 'Regional market wage (under comparison)'),
+    rule: t('{0} = 1이면 지역마다 직종마다 시장 임금이 하나 있고, 그 지역의 모든 임금 건물(왕실 생산 건물 포함)이 그것을 준다. 날마다 임금 × {1} × clamp((자리 − 오려는 사람) ÷ min(자리, 오려는 사람), −1, 1)만큼 움직인다. 오려는 사람 = 재직자 + 자격 있는 실업자 + 다른 자리에서 일하는 자격자 × 옮기는 비율(지금 소득, 시장 임금) ÷ 최대 비율. 손해 보는 생산 건물의 빈자리는 자리로 세지 않는다. 자리가 없으면 한 칸 아래 직종 임금 × 옮기는 문턱(노동자·농부는 소작 1인 소득 × 문턱)이고 시작 임금도 같다. 자격자가 없으면 움직이지 않는다. 기본 임금의 {2}~{3}배 안. 정부 건물은 그 지역 시장 임금 × 국영 임금 단계. AI 투자 판단은 지금 임금과 {4}일 이동평균 중 큰 값. 0이면 회사 임금표와 AI 임금 판단이다.', 'With {0} = 1 each region has one market wage per job, paid by every wage building there (crown producers included). Each day it moves by wage × {1} × clamp((seats − willing) ÷ min(seats, willing), −1, 1). Willing = incumbents + qualified unemployed + qualified people working elsewhere × switch share(current income, market wage) ÷ max share. Vacancies of loss-making producers do not count as seats. With no seats it is the job below × the switch threshold (labourers and farmers: tenant income × threshold), as is the starting wage. With no qualified people it does not move. Kept within {2}–{3}× base wage. Government buildings pay the regional market wage × state-wage step. AI investment uses the larger of the current wage and its {4}-day moving average. 0 keeps company wage tables and AI wage setting.'),
+    formula: 'w ← w × (1 + r × clamp((D − S) / min(D, S), −1, 1))',
+    params: [tune('wageMarket', '지역 시장 임금', 'Regional market wage'), tune('wageMarketRate', '하루 속도', 'Daily rate', 'pct'), p('안전 범위 최소', 'Safety floor', () => MARKET_WAGE_RANGE[0], 'x'), p('안전 범위 최대', 'Safety cap', () => MARKET_WAGE_RANGE[1], 'x'), p('투자 판단 이동평균', 'Investment moving average', () => WAGE_AVG_DAYS, 'day')],
+    live: {
+      pick: ['kingdom'], run: (w, ctx) => {
+        const k = kingdomOfCtx(w, ctx);
+        const r = w.regions.find((x) => x.kingdomId === k.id && x.wages);
+        if (!r) return {};
+        return { rows: [row('지역', 'Region', r.id), row('노동자 시장 임금', 'Labourer market wage', r.wages!.unskilled, 'florin'), row('기술자 시장 임금', 'Skilled market wage', r.wages!.skilled, 'florin'), row('전문가 시장 임금', 'Expert market wage', r.wages!.expert, 'florin'), row('소작 1인 소득', 'Tenant income', subsistenceWage(w, r), 'florin')] };
+      },
+    },
+    related: ['ai-wages', 'state-wages', 'best-seat', 'tenant-income'], seenIn: ['workforce'], source: ['labor.ts updateMarketWages', 'labor.ts labourTable', 'economy.ts wagesAt'], design: ['7.3'],
   },
   {
     id: 'state-wages', category: 'labour', title: t('국영 임금과 임금 지수', 'State wages and the wage index'),

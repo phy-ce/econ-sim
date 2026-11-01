@@ -281,10 +281,27 @@ const GOV_TYPES = new Map<string, boolean>();
 
 /**
  * 회사가 그 건물(유형)에 주는 임금표: 왕실의 정부 건물(행정청·건축사무소·학교)은 국영 임금(stateWages),
- * 나머지(왕실 생산 건물 포함)는 회사 임금(wages, 민간처럼 시장에서 정한다)
+ * 나머지(왕실 생산 건물 포함)는 회사 임금(wages, 민간처럼 시장에서 정한다).
+ * TUNE.wageMarket = 1 이고 지역(w, regionId)을 주면 그 지역 시장 임금(Region.wages)이다: 정부 건물은 그 지역 국영 임금(Region.stateWages),
+ * 시장임금 정책을 쓰는 회사(플레이어)는 지역 시장 임금 × (1 + 웃돈). 지역 임금이 아직 없으면 회사 임금표
  */
-export function wagesAt(c: Company, typeId: string): Record<Skill, number> {
+export function wagesAt(c: Company, typeId: string, w?: World, regionId?: number): Record<Skill, number> {
+  if (TUNE.wageMarket && w && regionId !== undefined) {
+    const r = regionById(w, regionId);
+    if (r.wages) {
+      if (c.state && isGovernment(typeId)) return r.stateWages ?? c.stateWages ?? r.wages;
+      return c.wageOffset ? offsetWages(r.wages, c.wageOffset) : r.wages;
+    }
+  }
   return c.state && c.stateWages && isGovernment(typeId) ? c.stateWages : c.wages;
+}
+
+/** 지역 시장 임금 × (1 + 웃돈), 플레이어 임금 범위(기본 임금의 0.1~10배, commands.ts setWage 와 같다). 웃돈이 모두 0 이면 그 표 그대로 */
+export function offsetWages(market: Record<Skill, number>, offset: Record<Skill, number>): Record<Skill, number> {
+  if (SKILLS.every((s) => !offset[s])) return market;
+  const out = {} as Record<Skill, number>;
+  for (const s of SKILLS) { const base = SKILL_DEFS[s].baseWage; out[s] = Math.min(base * 10, Math.max(base * 0.1, market[s] * (1 + offset[s]))); }
+  return out;
 }
 
 /** 국고가 운영비(임금·원료)를 내는 정부 건물: 행정청·학교. 건축사무소는 공사 수수료를 받는 국영 사업이다 (이익·손실이 국고로) */
@@ -592,7 +609,7 @@ function officeTotals(w: World, builder: Company) {
     if (!m.construction) continue;
     const st = b.idle ? 1 : Math.max(0.3, b.last.staffing);
     pointsPerDay += m.construction * b.level * b.utilization * st * efficiency(b);
-    const e = estimateMethod(w, b.regionId, b.typeId, b.methodId, wagesAt(builder, b.typeId));
+    const e = estimateMethod(w, b.regionId, b.typeId, b.methodId, wagesAt(builder, b.typeId, w, b.regionId));
     const cost = (e.wageCost + e.inputCost) * b.level * b.utilization * st;
     costPerDay += cost;
     feePerDay += cost * officeFeeMult(b.methodId);
@@ -627,7 +644,7 @@ function marketWagesOf(w: World, skills: readonly Skill[], excludeCompanyId?: nu
     if (b.companyId === excludeCompanyId || !skills.some((s) => b.employed[s] > 0)) continue;
     const c = companyById(w, b.companyId);
     if (!c) continue;
-    const t = wagesAt(c, b.typeId);
+    const t = wagesAt(c, b.typeId, w, b.regionId);
     for (const s of skills) if (b.employed[s] > 0) { paid[s] += b.employed[s] * t[s]; n[s] += b.employed[s]; }
   }
   for (const s of skills) paid[s] = n[s] > 0 ? paid[s] / n[s] : SKILL_DEFS[s].baseWage;

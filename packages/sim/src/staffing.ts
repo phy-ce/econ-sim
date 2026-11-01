@@ -36,11 +36,13 @@ export function labourPool(w: World, r: Region, s: Skill, strict = false): numbe
  */
 export function poachable(w: World, r: Region, s: Skill, c: Company): number {
   const reach = Math.min(1, TUNE.switchRate * STAFFING_HORIZON);
+  // 회사 c 가 이 지역 새 자리에 주는 임금 (TUNE.wageMarket = 1 이면 지역 시장 임금)
+  const mine = TUNE.wageMarket && r.wages ? r.wages[s] : c.wages[s];
   let n = 0;
   for (const b of w.buildings) {
     if (b.regionId !== r.id || b.companyId === c.id || paysShare(b, s) || !(b.employed[s] > 0)) continue;
     const o = companyById(w, b.companyId);
-    if (o && wagesAt(o, b.typeId)[s] * TUNE.switchPremium < c.wages[s]) n += b.employed[s] * reach;
+    if (o && wagesAt(o, b.typeId, w, b.regionId)[s] * TUNE.switchPremium < mine) n += b.employed[s] * reach;
   }
   return n;
 }

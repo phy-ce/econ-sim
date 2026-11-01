@@ -176,7 +176,7 @@ export function recordMetrics(w: World) {
       for (const b of w.buildings) {
         if (kingdomOf(w, b.regionId) !== k.id || BUILDING_BY_ID[b.typeId].auto) continue;
         const c = companyById(w, b.companyId);
-        emp += b.employed[s]; cap += slots(b, s); paid += b.employed[s] * (c ? wagesAt(c, b.typeId)[s] : 0);
+        emp += b.employed[s]; cap += slots(b, s); paid += b.employed[s] * (c ? wagesAt(c, b.typeId, w, b.regionId)[s] : 0);
       }
       const idle = pops.filter((p) => p.prof === s && p.work === 0).reduce((a, p) => a + workforce(p), 0);
       labor[s] = { wage: emp > 0 ? round2(paid / emp) : 0, employed: r0(emp), slots: r0(cap), jobless: r0(idle) };

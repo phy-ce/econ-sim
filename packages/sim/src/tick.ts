@@ -1,4 +1,4 @@
-import { EDUCATION_FLOOR, EDUCATION_RANGE, GOOD_IDS, SKILL_DEFS, TICKS_PER_WEEK, getMethod } from './data';
+import { EDUCATION_FLOOR, EDUCATION_RANGE, GOOD_IDS, SKILL_DEFS, TICKS_PER_WEEK, TUNE, getMethod } from './data';
 import { round2 } from './rng';
 import { roundAll, writePool } from './round';
 import { colonyPopulation, colonySol, marketWage, prospect, totalMoney, unemploymentRate } from './economy';
@@ -9,7 +9,7 @@ import { weeklyAlerts } from './alerts';
 import { recordMetrics } from './metrics';
 import { applyCommandMsg } from './commands';
 import { chargeInterest, collectIncomeTax, doResearch, updateFunds, mintMoney, payDividends, spendBudget, weeklyBanking } from './finance';
-import { laborMarket, migrate, payWages, syncEmployment } from './labor';
+import { laborMarket, migrate, payWages, syncEmployment, updateMarketWages } from './labor';
 import { clearMarkets, collectOrders, harvest, newBook, resetMarkets, updatePrices } from './market';
 import { aggregateHouseholds, matchNobles, prunePops, toward, updateGrowth, updateLiteracy, updateQualifications } from './pops';
 import { advanceConstruction, produce, progressDemolition, updateIdleOffices, updateSubsistence } from './production';
@@ -37,6 +37,7 @@ export function step(w: World, commands: QueuedCommand[] = []): string[] {
   updateSubsistence(w);
   updateIdleOffices(w);
   applyWagePolicy(w);
+  updateMarketWages(w);
   chargeInterest(w);
   doResearch(w);
   laborMarket(w);
@@ -79,6 +80,8 @@ export function step(w: World, commands: QueuedCommand[] = []): string[] {
 
 /** 시장임금 정책을 쓰는 회사(플레이어)의 임금을 매일 시장에 맞춘다 */
 function applyWagePolicy(w: World) {
+  // TUNE.wageMarket = 1: 플레이어 임금은 지역 시장 임금 × (1 + 웃돈)이다 (economy.ts wagesAt). 대표 임금표는 updateMarketWages 가 맞춘다
+  if (TUNE.wageMarket) return;
   for (const c of w.companies) {
     if (!c.wageOffset) continue;
     for (const s of SKILLS) {

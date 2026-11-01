@@ -452,6 +452,8 @@ export function scaleBonus(level: number): number {
  * - firmBufferWeeks: 민간 상회가 배당 전에 남기는 운영 자금 = 주간 (임금 + 원료) × 이 주 수 (임금·원료가 판매 대금보다 먼저 나간다)
  * - crownPrivatize: 비교용. 'all' 이면 AI 왕실이 생산 건물 모두에 민영화를 켠다 (기본 'off': 민영화는 플레이어가 켠다)
  * - taxCurve: 징수율 곡선. 'exp' = 1 − e^(−x), 'hyp' = x / (1 + x) (x = 행정청 한도 / 인구)
+ * - wageMarket, wageMarketRate: 1 이면 지역·직종 시장 임금 (labor.ts updateMarketWages). 날마다 임금 × wageMarketRate × clamp((자리 − 오려는 사람) ÷ min(자리, 오려는 사람), −1, 1) 만큼 움직인다.
+ *   오려는 사람 = 재직자 + 자격 있는 실업자 + 다른 자리에서 일하는 자격자 × switchShare(지금 소득, 시장 임금) ÷ switchMax. 0 이면 회사 임금표와 AI 임금 판단 (ai.ts adjustWages)
  * - switchRate, switchPremium, switchMax: 일하는 사람은 소득이 switchPremium 배 넘게 나은 자리로 옮긴다. 하루에 옮기는 비율은
  *   switchPremium 배일 때 switchRate 이고 소득 배율의 차이에 비례해 늘어 switchMax 에서 멈춘다 (labor.ts switchShare)
  * - cashBufferDays: 팝이 금고(저택·금융가)로 보내지 않고 들고 있는 돈 (생활비 + 세금의 며칠분)
@@ -524,6 +526,12 @@ export const TUNE = {
   switchRate: 0.005,
   switchPremium: 1.1,
   switchMax: 0.05,
+  // 지역 시장 임금 (2026-11-01 사용자 승인 "지역 임금 규칙 검증", docs/overhaul/LABOR_MARKET.md 1단계 (가)): 1 = 지역·직종마다 시장 임금 하나를 모든 임금 건물이 준다
+  // (labor.ts updateMarketWages, 날마다 임금 × wageMarketRate × clamp((자리 − 오려는 사람) ÷ min(자리, 오려는 사람), −1, 1)). AI 임금 판단(adjustWages)은 돌지 않는다.
+  // 0 = 지금 규칙 (회사 임금표, AI 바닥·천장). 비교 중 (docs/overhaul/LABOR_SPECS.json), 근거 없음
+  wageMarket: 0,
+  // 시장 임금의 하루 속도 r. 후보 0.0025 / 0.005 / 0.01 (주에 최대 약 1.75% / 3.5% / 7%). 비교 전이라 가운데 값, 근거 없음
+  wageMarketRate: 0.005,
   adminScale: 0.3,
   lossBuildsPerWeek: 0,
   lossTolerance: Infinity,

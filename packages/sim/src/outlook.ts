@@ -1,7 +1,7 @@
 import { ABS_LIMITS, BUILDING_BY_ID, GOOD_IDS, GOODS, NEEDS, SKILL_DEFS, TUNE, getMethod, needsAt, regionPerk, tenantYield } from './data';
 import { STAFFING_HORIZON, extraNeed, poolKey, poolOf } from './staffing';
 import { workforce } from './pops';
-import { FLOW_ZERO, availableMethods, collectionRatio, priceBounds, priceFormula, harvestFactorEma, regionAvgWealth, isGovernment, regionById, shippingRate, wageCostOf } from './economy';
+import { FLOW_ZERO, availableMethods, collectionRatio, priceBounds, priceFormula, harvestFactorEma, regionAvgWealth, isGovernment, regionById, shippingRate, wageCostOf, wagesAt } from './economy';
 import { BY_EMA, needSharesAt } from './market';
 import { clamp } from './rng';
 import { SKILLS } from './types';
@@ -338,9 +338,17 @@ export interface Valuation { revenue: number; inputCost: number; wageCost: numbe
 
 /**
  * 새로 지을지 판단할 때 쓰는 장기 임금: 생산 건물은 민간·왕실 모두 지금 임금과 기본 임금 × TUNE.investWage 중 큰 값.
- * 왕실의 정부 건물(행정청 등)은 정책(국영 임금 수준)이 정하므로 지금 국영 임금 그대로 본다
+ * 왕실의 정부 건물(행정청 등)은 정책(국영 임금 수준)이 정하므로 지금 국영 임금 그대로 본다.
+ * TUNE.wageMarket = 1 이고 지역(w, r)을 주면: 그 지역 회사 임금(wagesAt)과 지역 시장 임금 52주 이동평균(Region.wageAvg) 중 큰 값 (정부 건물은 그 지역 국영 임금)
  */
-export function longRunWages(c: Company, typeId: string): Record<Skill, number> {
+export function longRunWages(c: Company, typeId: string, w?: World, r?: Region): Record<Skill, number> {
+  if (TUNE.wageMarket && w && r?.wages) {
+    const now = wagesAt(c, typeId, w, r.id);
+    if (c.state && isGovernment(typeId)) return now;
+    const lr = {} as Record<Skill, number>;
+    for (const s of SKILLS) lr[s] = Math.max(now[s], r.wageAvg?.[s] ?? now[s]);
+    return lr;
+  }
   if (c.state && c.stateWages && isGovernment(typeId)) return c.stateWages;
   const out = {} as Record<Skill, number>;
   for (const s of SKILLS) out[s] = Math.max(c.wages[s], SKILL_DEFS[s].baseWage * TUNE.investWage);
@@ -401,7 +409,7 @@ function valueFixed(w: World, r: Region, c: Company, typeId: string, m: MethodDe
     if (kingdom) cap = (kingdom.taxCapacity ?? 0) + pending * TUNE.adminScale;
   }
   // 새로 지을지 판단할 때는 장기 임금으로 본다 (longRunWages)
-  const wage = wageCostOf(m, longRunWages(c, typeId), c.state);
+  const wage = wageCostOf(m, longRunWages(c, typeId, w, r), c.state);
   return { perk, ship, kingdom, cap, wage, goods: goodsOf(m) };
 }
 

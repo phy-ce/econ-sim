@@ -1,6 +1,6 @@
 import {recordPopIncome} from './popIncome';
 import { ABS_LIMITS, BUILDING_BY_ID, CLASS_DEFS, SKILL_DEFS, TUNE, getMethod } from './data';
-import { borrow, disbanded, emptyJobs, emptyStats, isSubsistence, paysDividend, paysShare, peasantSlots, shareWage, wagesAt } from './economy';
+import { borrow, disbanded, emptyJobs, emptyStats, isGovernment, isSubsistence, offsetWages, paysDividend, paysShare, peasantSlots, shareWage, wagesAt } from './economy';
 import { tenantIncomePerWorker } from './market';
 import { findPop, getPop, movePeople, workforce } from './pops';
 import { clamp } from './rng';
@@ -118,7 +118,7 @@ function seatsIn(w: World, r: Region, local: Building[], comp: Map<number, Compa
     const c = comp.get(b.companyId);
     for (const s of SKILLS) {
       const n = slotsWith(b, m, s);
-      if (n > 0) out.push({ b, prof: s, slots: n, wage: paysShare(b, s) ? dividendWage(b, s) : c ? wagesAt(c, b.typeId)[s] : 0, m });
+      if (n > 0) out.push({ b, prof: s, slots: n, wage: paysShare(b, s) ? dividendWage(b, s) : c ? wagesAt(c, b.typeId, w, r.id)[s] : 0, m });
     }
   }
   return out;
@@ -314,7 +314,7 @@ export function payWages(w: World) {
     let bill = 0;
     for (const b of mine) {
       const list = workersOf.get(b.id);
-      const wages = wagesAt(c, b.typeId);
+      const wages = wagesAt(c, b.typeId, w, b.regionId);
       if (list) for (const p of list) bill += workforce(p) * wages[p.prof as Skill];
     }
     // 왕실만 빌린다. 민간은 가진 현금만큼 비례로 준다
@@ -323,7 +323,7 @@ export function payWages(w: World) {
     for (const b of mine) {
       let paid = 0;
       const list = workersOf.get(b.id);
-      const wages = wagesAt(c, b.typeId);
+      const wages = wagesAt(c, b.typeId, w, b.regionId);
       if (list) for (const p of list) {
         const amt = workforce(p) * wages[p.prof as Skill] * ratio;
         p.savings += amt;
@@ -339,6 +339,166 @@ export function payWages(w: World) {
       b.last = last;
     }
   }
+}
+
+// ---------------------------------------------------------------- 지역 시장 임금 (TUNE.wageMarket = 1)
+
+/** 시작 임금·고용 0 대체값에서 한 칸 아래 직종 (노동자·농부는 그 지역 소작 1인 소득) */
+export const WAGE_LADDER: Record<Skill, Skill | null> = { unskilled: null, farmer: null, skilled: 'unskilled', expert: 'skilled', gentry: 'skilled', capitalist: 'expert', aristocrat: 'expert' };
+/** 지역 시장 임금의 안전 범위: 기본 임금(설계 참조)의 이 배수 (플레이어 임금 범위 commands.ts setWage 와 같다) */
+export const MARKET_WAGE_RANGE: [number, number] = [0.1, 10];
+/** 투자 판단 임금의 이동평균 기간 (일): 52주 */
+export const WAGE_AVG_DAYS = 364;
+
+const clampWage = (s: Skill, v: number) => clamp(v, SKILL_DEFS[s].baseWage * MARKET_WAGE_RANGE[0], SKILL_DEFS[s].baseWage * MARKET_WAGE_RANGE[1]);
+
+/**
+ * 시작 임금과 고용 0 대체값: 한 칸 아래 직종의 시장 임금 × switchPremium (노동자·농부는 소작 1인 소득 × switchPremium).
+ * 사람이 옮기려면 지금 소득보다 switchPremium 배 넘게 나아야 하므로, 이 값이 일손이 남는 지역의 균형 근처다 (LABOR_MARKET.md 7장)
+ */
+export function startWage(wages: Partial<Record<Skill, number>>, s: Skill, tenant: number): number {
+  const below = WAGE_LADDER[s];
+  return clampWage(s, (below ? wages[below] ?? 0 : tenant) * TUNE.switchPremium);
+}
+
+/** 지역 시장 임금이 없으면 시작 임금 규칙으로 채운다 (새 세계, 옛 저장). 그 표를 돌려준다 */
+export function ensureWages(w: World, r: Region, tenant = subsistenceWage(w, r)): Record<Skill, number> {
+  if (r.wages) return r.wages;
+  const wages = {} as Record<Skill, number>;
+  for (const s of SKILLS) wages[s] = startWage(wages, s, tenant);
+  r.wages = wages;
+  r.wageAvg = { ...wages };
+  return wages;
+}
+
+/** 지역 노동시장의 한 직종: 자리(D), 오려는 사람(S), 자격자, 재직자 (노동 인구) */
+export interface LabourCell { jobs: number; willing: number; qualified: number; employed: number }
+
+/**
+ * 지역 노동시장 표 (직종마다, 세계를 바꾸지 않는다). wageOf(s) 는 그 직종 자리가 주는 임금 (시장 임금).
+ * - 자리: 그 지역 임금 자리(배당 자리·소작지 제외)의 채울 수 있는 자리 (fillable, 채용과 같은 규칙). 이익 이동평균(profitEma)이 음수인 생산 건물은
+ *   빈자리를 세지 않는다 (재직자만): 손해 보는 건물은 사람을 더 찾지 않는다 (빅토리아3 BUILDING_PROFIT_TARGET_TO_HIRE_EMPLOYEES 와 같은 생각)
+ * - 오려는 사람: 그 직종 재직자 + 자격 있는 실업자 + 다른 자리에서 일하는 자격자 × switchShare(지금 소득, wageOf(s)) ÷ switchMax.
+ *   자격은 채용(laborMarket)과 같다: 노동자·농부 자리는 귀족·자본가 말고 누구나, 그 밖은 그 직종 pop 과 그 자격(quals)을 가진 사람
+ */
+export function labourTable(w: World, r: Region, local: Building[], pops: Pop[], comp: Map<number, Company>, tenant: number, wageOf: (s: Skill) => number): Record<Skill, LabourCell> {
+  const out = {} as Record<Skill, LabourCell>;
+  for (const s of SKILLS) out[s] = { jobs: 0, willing: 0, qualified: 0, employed: 0 };
+  const here = new Map<number, Building>();
+  for (const b of local) {
+    here.set(b.id, b);
+    if (isSubsistence(b.typeId) || BUILDING_BY_ID[b.typeId].ownership) continue;
+    const m = methodOf(b);
+    if (!m) continue;
+    const losing = !isGovernment(b.typeId) && b.profitEma < 0;
+    for (const s of SKILLS) {
+      const n = slotsWith(b, m, s);
+      if (n <= 0 || paysShare(b, s)) continue;
+      const f = fillableWith(b, m, s, n);
+      out[s].jobs += losing ? Math.min(f, b.employed[s]) : f;
+      out[s].employed += b.employed[s];
+    }
+  }
+  const want = SKILLS.filter((s) => out[s].jobs > 1e-9);
+  if (!want.length) return out;
+  const wage = want.map(wageOf);
+  for (const p of pops) {
+    if (p.size <= 0) continue;
+    const wf = workforce(p);
+    const b = p.work ? here.get(p.work) : undefined;
+    let cur = 0, paidSeat = false;
+    if (b) {
+      if (isSubsistence(b.typeId)) cur = tenant;
+      else if (paysShare(b, p.prof as Skill)) cur = dividendWage(b, p.prof as Skill);
+      else { const c = comp.get(b.companyId); cur = c ? wagesAt(c, b.typeId, w, r.id)[p.prof as Skill] : 0; paidSeat = true; }
+    }
+    for (let i = 0; i < want.length; i++) {
+      const s = want[i];
+      const base = p.prof === s ? wf : isLowerJob(s) ? (isOwnerClass(p.prof) ? 0 : wf) : p.quals[s] ?? 0;
+      if (base <= 1e-6) continue;
+      const cell = out[s];
+      cell.qualified += base;
+      if (!b) cell.willing += base;
+      else if (p.prof === s && paidSeat) cell.willing += base;
+      else cell.willing += (base * switchShare(cur, wage[i])) / TUNE.switchMax;
+    }
+  }
+  return out;
+}
+
+/**
+ * 지역 시장 임금 (TUNE.wageMarket = 1, 날마다 노동시장 앞에서): 지역·직종마다
+ * 임금 × (1 + wageMarketRate × clamp((자리 − 오려는 사람) ÷ min(자리, 오려는 사람), −1, 1)).
+ * 자리가 없으면 시작 임금 규칙(한 칸 아래 × switchPremium), 자격자가 아무도 없으면 움직이지 않는다. 안전 범위는 기본 임금의 MARKET_WAGE_RANGE 배.
+ * 그다음 회사 임금표(Company.wages)를 대표값으로 맞춘다 (syncCompanyWages)
+ */
+export function updateMarketWages(w: World) {
+  if (!TUNE.wageMarket) return;
+  const comp = companyMap(w);
+  const localOf = groupBuildings(w, (b) => b.regionId);
+  const regionPops = new RegionPops(w);
+  const rate = TUNE.wageMarketRate;
+  for (const r of w.regions) {
+    const tenant = subsistenceWage(w, r);
+    const wages = ensureWages(w, r, tenant);
+    const tab = labourTable(w, r, localOf.get(r.id) ?? NO_BUILDINGS, regionPops.of(r.id), comp, tenant, (s) => wages[s]);
+    const avg = (r.wageAvg ??= { ...wages });
+    for (const s of SKILLS) {
+      const cell = tab[s];
+      let v = wages[s];
+      if (!(cell.jobs > 1e-9)) v = startWage(wages, s, tenant);
+      else if (cell.qualified > 1e-9) {
+        const m = Math.min(cell.jobs, cell.willing);
+        v *= 1 + rate * (m > 1e-9 ? clamp((cell.jobs - cell.willing) / m, -1, 1) : 1);
+      }
+      wages[s] = clampWage(s, v);
+      avg[s] += (wages[s] - avg[s]) / WAGE_AVG_DAYS;
+    }
+  }
+  syncCompanyWages(w);
+}
+
+/** 새 세계 (TUNE.wageMarket = 1): 모든 지역의 시작 시장 임금과 회사 대표 임금표 */
+export function initMarketWages(w: World) {
+  for (const r of w.regions) ensureWages(w, r);
+  syncCompanyWages(w);
+}
+
+/**
+ * 회사 임금표(Company.wages)를 대표값으로 맞춘다 (TUNE.wageMarket = 1): 그 회사 생산 건물이 있는 지역 시장 임금(웃돈 포함)의 고용 가중 평균.
+ * 고용이 없는 직종은 그 왕국 지역들의 평균. 실제 지급은 지역 임금(wagesAt)이고, 이 표는 화면과 지역을 정하지 않은 추정에 쓴다
+ */
+export function syncCompanyWages(w: World) {
+  const mineOf = groupBuildings(w, (b) => b.companyId);
+  for (const c of w.companies) {
+    const paid = emptyJobs(), n = emptyJobs();
+    for (const b of mineOf.get(c.id) ?? NO_BUILDINGS) {
+      if (BUILDING_BY_ID[b.typeId].auto || (c.state && isGovernment(b.typeId))) continue;
+      const t = wagesAt(c, b.typeId, w, b.regionId);
+      for (const s of SKILLS) if (b.employed[s] > 0) { paid[s] += b.employed[s] * t[s]; n[s] += b.employed[s]; }
+    }
+    let fallback: Record<Skill, number> | null = null;
+    for (const s of SKILLS) {
+      if (n[s] > 0) { c.wages[s] = paid[s] / n[s]; continue; }
+      fallback ??= kingdomWageMean(w, c.kingdomId, (r) => (c.wageOffset ? offsetWages(r.wages!, c.wageOffset) : r.wages!));
+      if (fallback) c.wages[s] = fallback[s];
+    }
+  }
+}
+
+/** 왕국 지역들의 임금표 평균 (지역 시장 임금이 있는 지역만). 없으면 null */
+export function kingdomWageMean(w: World, kingdomId: number, table: (r: Region) => Record<Skill, number>): Record<Skill, number> | null {
+  const sum = emptyJobs();
+  let k = 0;
+  for (const r of w.regions) {
+    if (r.kingdomId !== kingdomId || !r.wages) continue;
+    const t = table(r);
+    for (const s of SKILLS) sum[s] += t[s];
+    k++;
+  }
+  if (!k) return null;
+  for (const s of SKILLS) sum[s] /= k;
+  return sum;
 }
 
 // ---------------------------------------------------------------- 이주
@@ -367,7 +527,7 @@ export function migrate(w: World) {
   const byId = buildingMap(w);
   const localOf = groupBuildings(w, (b) => b.regionId);
   /** 건물 주인이 그 자리에 주는 임금 (왕실 정부 건물은 국영 임금) */
-  const seatPay = (b: Building, s: Skill): number => { const c = comp.get(b.companyId); return c ? wagesAt(c, b.typeId)[s] : 0; };
+  const seatPay = (b: Building, s: Skill): number => { const c = comp.get(b.companyId); return c ? wagesAt(c, b.typeId, w, b.regionId)[s] : 0; };
   const regionPops = new RegionPops(w);
   const subWage = new Map<number, number>();
   const subsistence = (r: Region): number => {

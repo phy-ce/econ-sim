@@ -505,6 +505,15 @@ export interface Region {
    * 없으면 0 (16판에서 생겼다)
    */
   trade?: { buy: number; cut: number; margin: number };
+  /**
+   * 지역 시장 임금 (TUNE.wageMarket = 1, labor.ts updateMarketWages): 직종마다 하나. 이 지역의 모든 임금 건물(왕실 생산 건물 포함)이 이것을 준다.
+   * 없으면 시작 임금 규칙(labor.ts startWage)으로 채운다 (18판 안에서 더한 칸이라 판을 올리지 않았다). wageMarket = 0 이면 생기지 않는다
+   */
+  wages?: Record<Skill, number>;
+  /** wages 의 52주 이동평균 (날마다 1/364 씩 다가간다). AI 투자 판단 임금 (outlook.ts longRunWages) */
+  wageAvg?: Record<Skill, number>;
+  /** 이 지역 왕실 정부 건물의 국영 임금 = wages × 국영 임금 단계 배율 (매주, finance.ts applyStateWages). wageMarket = 1 일 때만 */
+  stateWages?: Record<Skill, number>;
 }
 
 export interface Kingdom {

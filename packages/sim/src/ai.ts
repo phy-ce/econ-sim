@@ -83,7 +83,8 @@ export function runAi(w: World) {
     if (c.isPlayer) continue;
     // 왕실은 세법과 정책 단계(정부 건물의 국영 임금 포함)를 정한다. 생산 건물 임금은 민간과 왕실 모두 같은 규칙으로 정한다
     if (c.state) { chooseTaxLaw(w, c); adjustBudget(w, c); }
-    adjustWages(w, c);
+    // TUNE.wageMarket = 1: 임금은 지역 시장 임금이 정한다 (labor.ts updateMarketWages). AI 는 자리(가동률·증설·철거)만 정한다
+    if (!TUNE.wageMarket) adjustWages(w, c);
     manageBuildings(w, c, outlook, switchPools, spare);
     if (c.state) planResearch(w, c, outlook);
     if (c.state && TUNE.crownPrivatize === 'all') for (const b of w.buildings) if (b.companyId === c.id && sellsShares(b.typeId)) b.privatize = true;
@@ -134,6 +135,8 @@ const ownRegions = (w: World, c: Company) => w.regions.filter((r) => r.kingdomId
  */
 function officeStaffable(w: World, c: Company, r: Region, m: MethodDef, byId: Map<number, Building>): number {
   const reach = Math.min(1, TUNE.switchRate * STAFFING_HORIZON);
+  // 사무소가 주는 임금: 국영 임금 (TUNE.wageMarket = 1 이면 그 지역 국영 임금)
+  const mine = TUNE.wageMarket ? (r.stateWages ?? c.stateWages ?? c.wages) : (c.stateWages ?? c.wages);
   let best = Infinity;
   for (const s of SKILLS) {
     const per = m.workers[s] ?? 0;
@@ -143,7 +146,7 @@ function officeStaffable(w: World, c: Company, r: Region, m: MethodDef, byId: Ma
       if (p.regionId !== r.id || p.prof !== s || p.work === 0) continue;
       const b = byId.get(p.work);
       const o = b && !paysShare(b, s) ? companyById(w, b.companyId) : undefined;
-      if (o && b && wagesAt(o, b.typeId)[s] * TUNE.switchPremium < (c.stateWages ?? c.wages)[s]) n += workforce(p) * reach;
+      if (o && b && wagesAt(o, b.typeId, w, b.regionId)[s] * TUNE.switchPremium < mine[s]) n += workforce(p) * reach;
     }
     for (const b of w.buildings) {
       if (b.companyId !== c.id || b.regionId !== r.id || !getMethod(b.typeId, b.methodId).construction) continue;
@@ -479,7 +482,7 @@ export const TRADE_TURN = 0.5;
  */
 export function tradeValuation(w: World, c: Company, r: Region, m: MethodDef, levels: number, self?: Building): { wageCost: number; profit: number } {
   const t = r.trade;
-  const wageCost = wageCostOf(m, longRunWages(c, TRADING_POST), c.state) * levels;
+  const wageCost = wageCostOf(m, longRunWages(c, TRADING_POST, w, r), c.state) * levels;
   if (!t) return { wageCost, profit: -wageCost };
   let others = 0;
   for (const x of w.buildings) if (x !== self && x.typeId === TRADING_POST && x.regionId === r.id) others += x.level * tradeReserveOf(x.methodId) * TRADE_TURN;
@@ -513,7 +516,7 @@ function manageBuildings(w: World, c: Company, o: Outlook, pools: Map<string, nu
       if (b.utilization < 1) applyCommand(w, c.id, { type: 'setUtilization', buildingId: b.id, utilization: 1 });
       continue;
     }
-    const wages = wagesAt(c, b.typeId);
+    const wages = wagesAt(c, b.typeId, w, b.regionId);
     const current = estimateMethod(w, b.regionId, b.typeId, b.methodId, wages, c.state);
 
     // 건축사무소: 자재를 구할 수 있는 방식 중 하루 포인트가 가장 많은 것 (가동률은 늘 100%)
@@ -1147,7 +1150,7 @@ function planTrials(w: World, c: Company, canStart: () => boolean, free: () => n
         if (!Number.isFinite(cost) || free() < cost) continue;
         for (const m of availableMethods(c, t.id)) {
           if (!((m.outputs[g] ?? 0) > 0) || laborAvailability(w, r, m, 1, c.state, pools, c) < MIN_STAFFING()) continue;
-          const v = estimateMethod(w, r.id, t.id, m.id, wagesAt(c, t.id), c.state).profit;
+          const v = estimateMethod(w, r.id, t.id, m.id, wagesAt(c, t.id, w, r.id), c.state).profit;
           if (!best || v > best.score) best = { regionId: r.id, typeId: t.id, methodId: m.id, levels: 1, score: v };
         }
       }
@@ -1435,7 +1438,7 @@ function growGain(w: World, c: Company, b: Building, g: GoodId): number {
   const mk = ownMarket(w, c, b.regionId, g);
   if (!mk) return Infinity;
   const o = (getMethod(b.typeId, b.methodId).outputs[g] ?? 0) * (1 + regionPerk(b.regionId, b.typeId));
-  const e = estimateMethod(w, b.regionId, b.typeId, b.methodId, wagesAt(c, b.typeId), c.state);
+  const e = estimateMethod(w, b.regionId, b.typeId, b.methodId, wagesAt(c, b.typeId, w, b.regionId), c.state);
   return ownSales(g, mk.D, mk.S + o, mk.Q + o) - ownSales(g, mk.D, mk.S, mk.Q) - (e.inputCost + e.wageCost);
 }
 
