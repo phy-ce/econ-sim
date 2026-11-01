@@ -11,7 +11,8 @@ export { aiRand, aiRandTrace, strKey } from './rng/aiRand';
 export function createWorld(seed = 1, opts: CreateWorldOptions = {}) {
   return stampRules(createBareWorld(seed, opts));
 }
-export { postCap, postUsable } from './market';
+export { postCap, postUsable, wealthDrivers } from './market';
+export { subsistenceWage } from './labor';
 export { officeLoad } from './production';
 export type { CreateWorldOptions } from './world';
 export { step, recordHistory, needSplit, birthRateAt, mortalityAt, growthAt, STARVATION_LINE } from './tick';

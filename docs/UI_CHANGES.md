@@ -1119,7 +1119,7 @@ sim 변경 (wt-research):
   - `Region.wages?: Record<Skill, number>` (`types.ts:527`): 지금 시장 임금. 하루에 최대 ±0.25% 움직인다 (`wageMarketRate` 0.0025). 저장값은 반올림하지 않는다.
   - `Region.wageAvg?: Record<Skill, number>` (`:529`): `wages`의 52주 이동평균 (`WAGE_AVG_DAYS` 364일, 날마다 1/364씩 다가감). AI 투자 판단 임금.
   - `Region.stateWages?: Record<Skill, number>` (`:531`): 그 지역 정부 건물(행정청·건축사무소·학교)의 국영 임금 = `wages` × 국영 임금 단계 배율, 매주, 소수 둘째 자리로 저장 (`finance.ts:147~151`).
-  - 소작 1인 소득: `subsistenceWage(w, r)` (`labor.ts:93`). 소작농 1인 하루 소득 가치 (판매 대금 − 지대·토지세 + 쓴 현물, 기상 조건 포함). 노동자·농부 시작 임금과 고용 0 대체값의 기준 (× `switchPremium` 1.1). **sim 쪽 필요: `index.ts`가 이 함수를 내보내지 않는다** (3장).
+  - 소작 1인 소득: `subsistenceWage(w, r)` (`labor.ts:93`). 소작농 1인 하루 소득 가치 (판매 대금 − 지대·토지세 + 쓴 현물, 기상 조건 포함). 노동자·농부 시작 임금과 고용 0 대체값의 기준 (× `switchPremium` 1.1). **sim 준비됨 (`subsistenceWage`, wt-sim2).**
   - 실업: `regionUnemployment(world, r.id, s)` (`economy.ts:726`, 0~1, 노동 인구 기준).
   - 세 `Region` 칸은 `wageMarket` 0이거나 옛 저장의 첫날이면 없다 (`undefined`).
 - 지금 화면: 지역 시장 임금이 어디에도 없다. 지역 개요 칸(`RegionPanel.tsx:96~113`)에는 임금이 없고, 재정 창의 `Wages`(`CompanyPanel.tsx:326~349`)가 보이는 "시장임금"은 `marketWage(world, s, me.id)` (`economy.ts:716`) = 세계 전체(다른 왕국 포함) 회사들의 고용 가중 평균이라 어느 지역의 지급액도 아니다 (2-81).
@@ -1134,7 +1134,7 @@ sim 변경 (wt-research):
 - 완료 기준: 같은 날 표의 값이 `r.wages`·`r.wageAvg`·`r.stateWages`를 소수 둘째 자리로 반올림한 값과 같다. `TUNE.wageMarket = 0` 세계에서 창이 없다. 420×560 창에서 다섯 열이 넘치지 않는다 (ko/en). 다크 모드에서 실업 막대가 보인다. typecheck.
 - 사용자 결정: 필요 없음. 자리는 추천안이다: 지역 개요가 지역 사실을 모으는 곳이고 시장 임금은 지역 값이다. 노동 상세(`Workforce.tsx`)는 건물 하나의 일꾼 표라 지역 표를 넣을 자리가 아니다.
 
-### 2-80. 국영 임금 상세는 지역 시장 임금 × 단계 (main c952e65, DESIGN 7.3·9.2, sim 대기)
+### 2-80. 국영 임금 상세는 지역 시장 임금 × 단계 (main c952e65, DESIGN 7.3·9.2, sim 준비됨 (`WageDrillJob.marketWage`, wt-sim2))
 - 지금 화면: 재정 창 국영 임금 줄의 자세히 보기 (`FinancePanel.tsx:68` → `BudgetJobs.tsx:12`)가 1인/일 값과 식 툴팁 `기준 임금 × 임금 지수 × 단계`를 보인다. 값은 sim `drillWages` (`budget.ts:370~389`)의 `WageDrillJob.perHead`이고, 거기서 임금 지수 = `marketWages(w, 왕실 id)[s] ÷ baseWage` (`budget.ts:117`, `:380`) = 세계 전체 회사 고용 가중 평균 기준이다.
 - 실제 지급: 정부 건물은 그 건물 지역의 `Region.stateWages[s]` = round2(`Region.wages[s]` × 단계 배율) (`finance.ts:147~151`, `economy.ts:353`). 지역마다 다르다. 그래서 지금 상세의 1인/일·주간 값은 실제 지급과 다르다 (행 합과 줄 합의 차이는 `smoothing`으로 흡수되어 겉으로 드러나지 않는다).
 - sim 쪽 필요 (3장): `drillWages`가 `wageMarket` 1이면 행 건물 지역의 시장 임금으로 센다. `WageDrillJob`에 새 칸 `marketWage?: number` (= 그 행 지역 `Region.wages[s]`, 1인 하루 ƒ), `perHead` = `marketWage × stepMult` (단계 미리보기 `steps`도 같은 식), `wageIndex` = `marketWage ÷ baseWage` (호환용으로 남김). `budgetModel`의 `wageBase`·`firmBase`(`budget.ts:261~266`)도 같은 지역 임금으로.
@@ -1166,7 +1166,7 @@ sim 변경 (wt-research):
 - 빼는 것: `:331`·`:344`의 세계 평균 `marketWage` 비교.
 - 완료 기준: 방식 비교의 임금비가 그 건물 지역 임금으로 센 값이다 (같은 방식이면 `b.last.wageCost`와 가동률·인원 차이만큼만 다르다). 임금 탭 지역 범위가 2-79 표의 최소·최대와 같다. typecheck.
 
-### 2-82. 저축과 부 이동 (main c952e65, DESIGN 5장 부 이동, DECISIONS 7-37·7-38, sim 대기)
+### 2-82. 저축과 부 이동 (main c952e65, DESIGN 5장 부 이동, DECISIONS 7-37·7-38, sim 준비됨 (`wealthDrivers`, wt-sim2))
 - sim에서 바뀐 것: 부 이동(`market.ts:1007 updateWealth`)의 소득 = 현금 소득 이동평균(`Pop.incomeEma`) + 그날 쓴 현물의 시장가. c952e65부터 하층(소작농·노동자·농부, `CLASS_DEFS[prof].stratum === 'lower'`)은 여기에 max(0, `savings` − 지금 단계 하루 생활비 × 7 × `wealthSavBuffer` 8) ÷ (`wealthSavWeeks` 52 × 7)을 더한다 (`:1012~1015`). 이 소득이 다음 단계 생활비의 102%를 넘으면 하루 최대 +0.03, 지금 단계의 98%에 못 미치면 하루 최대 −0.03.
 - 지금 화면: pop 상세(`BuildingPops.tsx:30~38`)에 부 단계(`:30`, `toFixed(1)`)와 저축(`:37`)은 있지만 생활비와 저축 몫이 없어 부가 왜 오르고 내리는지 숫자로 읽을 수 없다. 생활비 함수(`market.ts:953 basketCostAt`)는 `index.ts`가 내보내지 않는다.
 - sim 쪽 필요 (3장): `wealthDrivers(w: World, p: Pop): { income: number; inKind: number; fromSavings: number; costNow: number; costNext: number; drift: number }`. 돈 칸은 모두 그 pop 합계 하루 값 (ƒ/일), `drift`는 하루 부 변화 (단계/일, `updateWealth`와 같은 식, 세계를 바꾸지 않는다). `fromSavings`는 하층이 아니면 0. `costNext`는 최고 단계면 `costNow`와 같게.
@@ -1191,9 +1191,6 @@ sim 변경 (wt-research):
 - 완료 기준: `TUNE.quakeChance = 1` 개발 세계 2년차에 칩이 나오고 사건 열 문장과 같은 % · 남은 날. 0이면 칩 없음. typecheck.
 
 ## 3. sim 쪽 필요 사항 (Claude가 처리할 것, UI 작업자는 요청만)
-- **2-79 소작 1인 소득 (2026-11-02):** `index.ts`에서 `subsistenceWage` (`labor.ts:93`) export. 지역 임금 창의 소작 칸이 쓴다.
-- **2-80 국영 임금 상세 (2026-11-02):** `drillWages`·`budgetModel` (`budget.ts:117`·`:261~266`·`:370~389`)이 `wageMarket` 1이면 세계 평균 `marketWages` 대신 행 지역 `Region.wages × 단계`로 센다. `WageDrillJob.marketWage?` 새 칸 (그 지역 `Region.wages[s]`).
-- **2-82 부 이동 요인 (2026-11-02):** `wealthDrivers(w, p)` export: `{ income, inKind, fromSavings, costNow, costNext, drift }` (pop 합계 ƒ/일, `drift` 단계/일, `market.ts updateWealth`와 같은 식, 세계를 바꾸지 않는다).
 - **2-59 주 단위 수지 (요청됨, 2026-10-22):** `BuildingEcon`에 `week: { sales, tax, inputs, wages, profit }` (건물 `revenue`·`tax`·`inputCost`·`wageCost`의 이동평균 × 7, `profitEma`와 같은 기간). 들어오면 2-59-3 폭포 라벨을 `/주`로.
 - **2-49 (선택):** 회수 자재 lot에 `buildingId`를 넣고 `salvageOf(w, b)` export.
 - **2-17 정리 (UI 반영 끝, 2026-10-21 확인):** 클라이언트가 `isDistressed`·`SEIZURE_WEEKS`·`DISTRESS_DEBT_RATIO`·`landlordJobs`·`setResearchBudget`·`MAX_RESEARCH_BUDGET`·`Company.distressWeeks`를 더 쓰지 않는다 (grep 0건). sim은 `compat.ts`의 이 껍데기를 지워도 된다. 100배 값 사본(2-27)은 2026-10-22 클라이언트 전환 완료. UI_DONE의 근거 참조.

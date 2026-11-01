@@ -29,6 +29,7 @@
 - 검증: `npm run typecheck`, `npm run test:core` (22 파일 70개), `methods_audit` 종료 0. 전체 vitest·장기·클라이언트 시험은 사용자 지시로 생략. 골든은 손대지 않음 (합친 뒤 `npm run golden:update`).
 - 알려진 문제: 소작농이 0 에 가까워지면 노동자 소득이 무너지는 판 (사용자: 나중 확장 몫), 노동자가 소작보다 못 버는 기간 (7-33 수용), 민간 회사 현금 0 함정 (microA 발견 2), 완공 정산의 금고 음수 (0-1101b), README 의 AI 절은 옛 판단을 설명한다 (임금·국영 임금·부 줄만 고쳤다).
 - 다음 할 일: (1) premerge → main, golden:update. (2) 새 기본값 대 main 확인 비교 (20년 × 시드 1·2 × salt 0..3, `cli/lab.sh`) 를 돌려 DESIGN 11장 `wageMarket` 행에 더한다. (3) 민간 회사 현금 0 함정: 주인이 운전자금을 넣는 AI 후보 (DECISIONS 7-38). (4) `tenantSlack` 다시 물을 때 근거는 2026-11-02-combo kgsd·all.
+- wt-sim2 (2026-11-02, 284cb52 위): UI 요청 셋 처리 (`subsistenceWage`·`wealthDrivers` export, 예산 국영 임금 상세가 지역 시장 임금 × 단계, `WageDrillJob.marketWage`), DECISIONS 7-39 (왕실 웃돈 열지 않음). **남은 일: 민간 회사 현금 0 함정 (DECISIONS 7-40) — 시작 전에 멈춤 (사용자 종료). callCapital 이 왜 못 막는지 확인부터.** typecheck·test:core 통과, premerge 전.
 - **화면에 넘길 것 (ui-ux 가 UI_CHANGES 로 옮긴다)**:
   - 지역 시장 임금 표: 지역마다 직종별 `Region.wages` (노동자·농부·기술자·전문가·하급 귀족…) 와 소작 1인 소득 (`subsistenceWage`), 52주 평균 `Region.wageAvg`. 사전 `market-wage` 제목에서 "(비교 중)" 을 뺐다.
   - 국영 임금 상세: 정부 건물 임금 = 그 지역 시장 임금 × 국영 임금 단계 배율 (`Region.stateWages`, 매주). 왕실 `stateWages` 는 왕국 지역 평균 (대표값).

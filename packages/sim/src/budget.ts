@@ -79,10 +79,19 @@ function govBuildings(w: World, k: Kingdom): Building[] {
   return gov ? w.buildings.filter((b) => b.companyId === gov.id && !BUILDING_BY_ID[b.typeId].auto) : [];
 }
 
-/** 건물의 하루 임금 (지금 고용 × 시장 임금(mw), 국영 임금 수준 배율 1) */
-function wageDayAt1(mw: Record<Skill, number>, b: Building): number {
+/** 정부 건물 한 곳의 시장 임금표 (국영 임금 단계 배율 1): TUNE.wageMarket 이고 그 지역 시장 임금(Region.wages)이 있으면 그 값
+ *  (실제 지급 Region.stateWages = 그 값 × 단계, finance.ts applyStateWages), 아니면 세계 평균 marketWages(왕실) */
+type WageTable = (b: Building) => Record<Skill, number>;
+function govMarketWages(w: World, govId: number): WageTable {
+  const world = marketWages(w, govId);
+  return (b) => (TUNE.wageMarket ? regionById(w, b.regionId).wages : undefined) ?? world;
+}
+
+/** 건물의 하루 임금 (지금 고용 × 그 건물 지역 시장 임금(mw), 국영 임금 수준 배율 1) */
+function wageDayAt1(mw: WageTable, b: Building): number {
+  const t = mw(b);
   let day = 0;
-  for (const s of SKILLS) day += b.employed[s] * mw[s];
+  for (const s of SKILLS) day += b.employed[s] * t[s];
   return day;
 }
 
@@ -114,7 +123,7 @@ function firmWeek(b: Building): { sales: number; inputs: number } {
 function officeModel(w: World, k: Kingdom) {
   const gov = companyById(w, k.governmentId);
   const offices = govBuildings(w, k).filter((b) => getMethod(b.typeId, b.methodId).construction);
-  const mw = marketWages(w, k.governmentId);
+  const mw = govMarketWages(w, k.governmentId);
   let P = 0, fixedDay = 0, wageDay = 0;
   for (const b of offices) {
     if (b.idle) continue;
@@ -318,8 +327,9 @@ export interface BudgetDrillBase {
   smoothing: number;
 }
 
-/** 정부 건물 한 곳의 직종별 임금. wageIndex = 시장 임금 ÷ baseWage, perHead = baseWage × wageIndex × stepMult (1인 하루) */
-export interface WageDrillJob { skill: Skill; employed: number; jobs: number; baseWage: number; wageIndex: number; stepMult: number; perHead: number; weekly: number }
+/** 정부 건물 한 곳의 직종별 임금. marketWage = 그 건물 지역 시장 임금 (Region.wages, 1인 하루, TUNE.wageMarket 0 이거나 지역 임금이 아직 없으면 undefined),
+ *  wageIndex = 시장 임금 ÷ baseWage (호환용), perHead = 시장 임금 × stepMult = baseWage × wageIndex × stepMult (1인 하루) */
+export interface WageDrillJob { skill: Skill; employed: number; jobs: number; baseWage: number; wageIndex: number; stepMult: number; perHead: number; weekly: number; marketWage?: number }
 export interface WageDrillRow { buildingId: number; typeId: string; regionId: number; level: number; employed: number; jobs: number; weekly: number; jobsBy: WageDrillJob[] }
 export interface WageDrill extends BudgetDrillBase { key: 'wages'; wageIndex: number; stepMult: number; rows: WageDrillRow[] }
 
@@ -372,14 +382,17 @@ export function drillWages(w: World, kid: number, steps: Steps = {}): WageDrill 
   const rows: WageDrillRow[] = [];
   for (const b of govBuildings(w, k)) {
     if (!isBudgetFunded(b.typeId)) continue;
+    const regional = !!TUNE.wageMarket && !!regionById(w, b.regionId).wages;
     const jobsBy: WageDrillJob[] = [];
     let employed = 0, jobs = 0, weekly = 0;
     for (const s of SKILLS) {
       const n = b.employed[s], j = slots(b, s);
       if (n <= 0 && j <= 0) continue;
-      const idx = mw[s] / SKILL_DEFS[s].baseWage, perHead = SKILL_DEFS[s].baseWage * idx * mult;
+      const market = mw(b)[s], idx = market / SKILL_DEFS[s].baseWage, perHead = market * mult;
       const wk = -n * perHead * TICKS_PER_WEEK;
-      jobsBy.push({ skill: s, employed: n, jobs: j, baseWage: SKILL_DEFS[s].baseWage, wageIndex: idx, stepMult: mult, perHead, weekly: wk });
+      const job: WageDrillJob = { skill: s, employed: n, jobs: j, baseWage: SKILL_DEFS[s].baseWage, wageIndex: idx, stepMult: mult, perHead, weekly: wk };
+      if (regional) job.marketWage = market;
+      jobsBy.push(job);
       employed += n; jobs += j; weekly += wk;
     }
     rows.push({ buildingId: b.id, typeId: b.typeId, regionId: b.regionId, level: b.level, employed, jobs, weekly, jobsBy });

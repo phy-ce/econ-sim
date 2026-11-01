@@ -1005,19 +1005,41 @@ export function affordableWealth(r: Region, size: number, income: number): numbe
  * 물건이 없어 필요를 못 채운 것은 생활수준(popSol)에만 나타난다
  */
 function updateWealth(p: Pop, rd: RegionDay, plan: PopPlan) {
-  // 소득 = 판 돈(현금 소득에 들어 있다) + 먹고 쓴 현물
-  let income = Math.max(0, p.incomeEma) + plan.inKindValue;
   const L = wealthOf(p);
   const costCur = basketCostDay(rd, p.size, L);
-  // 저축을 부에 넣기 (TUNE.wealthSavWeeks > 0, 기본 52): 생활비 wealthSavBuffer 주치를 넘는 저축 ÷ wealthSavWeeks 주 (wealthSavLower 1 이면 하층만)
-  if (TUNE.wealthSavWeeks > 0 && (!TUNE.wealthSavLower || CLASS_DEFS[p.prof].stratum === 'lower')) {
-    income += Math.max(0, p.savings - TUNE.wealthSavBuffer * TICKS_PER_WEEK * costCur) / (TUNE.wealthSavWeeks * TICKS_PER_WEEK);
-  }
   const costNext = basketCostDay(rd, p.size, Math.min(WEALTH_MAX, L + 1));
-  let d = 0;
-  if (L < WEALTH_MAX && income > costNext * 1.02) d = Math.min(0.03, 0.03 * (income / costNext - 1));
-  else if (costCur > 0 && income < costCur * 0.98) d = -Math.min(0.03, 0.015 * (1 - income / costCur));
-  p.wealth = clamp(p.wealth + d, WEALTH_MIN, WEALTH_MAX);
+  p.wealth = clamp(p.wealth + wealthMove(p, L, plan.inKindValue, costCur, costNext).drift, WEALTH_MIN, WEALTH_MAX);
+}
+
+/** 부 이동 한 번의 셈 (updateWealth·wealthDrivers 가 같이 쓴다): 소득 = 현금 소득 이동평균 + 쓴 현물 (+ 하층 저축 몫), 하루 부 변화 drift */
+function wealthMove(p: Pop, L: number, inKind: number, costCur: number, costNext: number) {
+  // 소득 = 판 돈(현금 소득에 들어 있다) + 먹고 쓴 현물
+  const income = Math.max(0, p.incomeEma);
+  // 저축을 부에 넣기 (TUNE.wealthSavWeeks > 0, 기본 52): 생활비 wealthSavBuffer 주치를 넘는 저축 ÷ wealthSavWeeks 주 (wealthSavLower 1 이면 하층만)
+  const fromSavings = TUNE.wealthSavWeeks > 0 && (!TUNE.wealthSavLower || CLASS_DEFS[p.prof].stratum === 'lower')
+    ? Math.max(0, p.savings - TUNE.wealthSavBuffer * TICKS_PER_WEEK * costCur) / (TUNE.wealthSavWeeks * TICKS_PER_WEEK) : 0;
+  const total = income + inKind + fromSavings;
+  let drift = 0;
+  if (L < WEALTH_MAX && total > costNext * 1.02) drift = Math.min(0.03, 0.03 * (total / costNext - 1));
+  else if (costCur > 0 && total < costCur * 0.98) drift = -Math.min(0.03, 0.015 * (1 - total / costCur));
+  return { income, inKind, fromSavings, costNow: costCur, costNext, drift };
+}
+
+/**
+ * pop 하나의 부 이동 요인 (화면용 읽기 함수, 세계를 바꾸지 않는다): updateWealth 와 같은 식(wealthMove).
+ * 돈 칸은 그 pop 합계 하루 값 (ƒ/일): income = 현금 소득 이동평균, inKind = 어제 쓴 현물(Pop.inKind)의 지금 지역 시장가,
+ * fromSavings = 하층 저축 몫 (생활비 wealthSavBuffer 주치를 넘는 저축 ÷ wealthSavWeeks 주, 하층이 아니면 0),
+ * costNow·costNext = 지금·다음 단계 생활비 (최고 단계면 같다, 지금 지역 가격). drift = 하루 부 변화 (단계/일).
+ * 가격은 하루 끝에 움직이므로 현물·생활비는 updateWealth 가 그날 쓴 값과 조금 다를 수 있다
+ */
+export function wealthDrivers(w: World, p: Pop): { income: number; inKind: number; fromSavings: number; costNow: number; costNext: number; drift: number } {
+  const r = w.regions.find((x) => x.id === p.regionId)!;
+  const L = wealthOf(p);
+  let inKind = 0;
+  for (const g in p.inKind) inKind += (p.inKind[g as GoodId] ?? 0) * r.market[g as GoodId].price;
+  const costNow = basketCostAt(r, p.size, L);
+  const costNext = L < WEALTH_MAX ? basketCostAt(r, p.size, Math.min(WEALTH_MAX, L + 1)) : costNow;
+  return wealthMove(p, L, inKind, costNow, costNext);
 }
 
 // ---------------------------------------------------------------- 가격
