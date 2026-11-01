@@ -458,6 +458,9 @@ export function scaleBonus(level: number): number {
  *   switchPremium 배일 때 switchRate 이고 소득 배율의 차이에 비례해 늘어 switchMax 에서 멈춘다 (labor.ts switchShare)
  * - cashBufferDays: 팝이 금고(저택·금융가)로 보내지 않고 들고 있는 돈 (생활비 + 세금의 며칠분)
  * - peasantKeepWeeks: 소작농이 들고 있는 저축 상한 (생활비 + 세금의 주 수). 넘는 돈은 그 지역 저택 금고로 간다
+ * - manorTargetMult: 저택이 거두는 양을 앉은 귀족의 필요로 묶는다 (market.ts manorNeed). 0 이면 끔 (peasantKeepWeeks 를 넘는 몫을 다 거둔다).
+ *   0 보다 크면 저택은 앉은 귀족 1몫의 하루 몫(shareWage)이 목표(그 지역 민간 전문가 임금 × manorTargetMult)에 모자란 만큼 × 앉은 몫 합까지만 하루에 거둔다
+ * - manorGentrySeats: 저택의 하급 귀족 자리 = 상급 귀족 자리 × manorGentrySeats ÷ 100. 0 이면 끔 (일자리 없는 하급 귀족이 다 앉는다, 저택 레벨이 그만큼 커진다)
  * - landTax, pollTax, incomeTax: 세금 수준 3단계(보통)의 토지세(소작농 1인당 하루), 인두세(소작농을 뺀 1인당 하루), 소득세율(소작농을 뺀 소득).
  *   세 세율을 같은 배율로 비교했다 (빅토리아3 보통 단계 기준 ×1·×1.5·×2·×2.5, 20년 × 시드 1~4). ×2는 ×1보다 건물 레벨이
  *   10년차 약 50%, 20년차 약 13% 많고 실업이 낮다 (×1은 세금 단계를 1~5 모두 쓰지만 건물이 가장 적다). ×2.5는 노동자 생활수준이 가장 낮다
@@ -550,6 +553,8 @@ export const TUNE = {
   taxCurve: 'hyp' as 'exp' | 'hyp',
   cashBufferDays: 10,
   peasantKeepWeeks: 8,
+  manorTargetMult: 0, // 비교 전 (0 = 끔, 후보 2·3)
+  manorGentrySeats: 0, // 비교 전 (0 = 끔, 후보 100·50·25)
   pollTax: 0.6, // 인두세: 소작농을 뺀 1인당 하루 (세금 수준 3단계 기준)
   incomeTax: 0.3,
   officeTargetDays: 30,

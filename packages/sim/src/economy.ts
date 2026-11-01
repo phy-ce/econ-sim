@@ -315,7 +315,17 @@ export function disbanded(b: Building): boolean {
 export function slots(b: Building, skill: Skill): number {
   if (!b.active || disbanded(b)) return 0;
   if (skill === 'aristocrat' && b.nobleSeats !== undefined) return b.nobleSeats;
+  if (skill === 'gentry') { const g = manorGentrySeats(b); if (g !== undefined) return g; }
   return (getMethod(b.typeId, b.methodId).workers[skill] ?? 0) * b.level * b.utilization;
+}
+
+/**
+ * 저택 하급 귀족 자리 (TUNE.manorGentrySeats > 0, 저택 상급 귀족 자리 규칙이 있을 때): 상급 귀족 자리 × manorGentrySeats ÷ 100.
+ * 아니면 undefined (방식 자리 × 레벨, 저택 레벨은 일자리 없는 하급 귀족이 다 앉을 만큼 커진다, production.ts updateOwnership)
+ */
+export function manorGentrySeats(b: Building): number | undefined {
+  if (!(TUNE.manorGentrySeats > 0) || b.typeId !== 'manor' || b.nobleSeats === undefined) return undefined;
+  return (b.nobleSeats * TUNE.manorGentrySeats) / 100;
 }
 
 /** 정부 건물: 행정청, 건축사무소, 학교 (왕국 운영에 쓰는 건물). 왕실 것은 늘 다 가동하고, 민영화하지 않는다 */

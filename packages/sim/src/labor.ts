@@ -1,6 +1,6 @@
 import {recordPopIncome} from './popIncome';
 import { ABS_LIMITS, BUILDING_BY_ID, CLASS_DEFS, SKILL_DEFS, TUNE, getMethod } from './data';
-import { borrow, disbanded, emptyJobs, emptyStats, isGovernment, isSubsistence, offsetWages, paysDividend, paysShare, peasantSlots, shareWage, wagesAt } from './economy';
+import { borrow, disbanded, emptyJobs, emptyStats, isGovernment, isSubsistence, manorGentrySeats, offsetWages, paysDividend, paysShare, peasantSlots, shareWage, wagesAt } from './economy';
 import { tenantIncomePerWorker } from './market';
 import { findPop, getPop, movePeople, workforce } from './pops';
 import { clamp } from './rng';
@@ -83,6 +83,7 @@ function methodOf(b: Building): MethodDef | null {
 function slotsWith(b: Building, m: MethodDef | null, s: Skill): number {
   if (!m) return 0;
   if (s === 'aristocrat' && b.nobleSeats !== undefined) return b.nobleSeats;
+  if (s === 'gentry') { const g = manorGentrySeats(b); if (g !== undefined) return g; }
   return (m.workers[s] ?? 0) * b.level * b.utilization;
 }
 

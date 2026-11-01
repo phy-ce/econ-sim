@@ -23,7 +23,7 @@ import {
 import { borderCost, kingdomById, DEFAULT_TARIFF } from './kingdoms';
 import {
   CARGO_DECAY, CARGO_MIN, FLOW_EMA, INVEST_RATE, PRICE_MAX, PRICE_MIN, PRICE_SPEED, SAVINGS_DRAW, SHIP_RATE, STALE_SIGNAL, SUBSTITUTION_EXP,
-  basketCostAt, harvestShares, needSharesAt, splitHarvest, tenantIncomePerWorker,
+  basketCostAt, harvestShares, manorNeed, needSharesAt, splitHarvest, tenantIncomePerWorker,
 } from './market';
 import {
   LITERACY_DOWN, LITERACY_PER_WEALTH, LITERACY_UP, QUAL_DECAY, QUAL_FACTOR, QUAL_FROM, QUAL_RATE, SEVERE_STARVATION, STARVATION_LINE,
@@ -914,7 +914,7 @@ export const ENCYCLOPEDIA: EncEntry[] = [
     id: 'cash-surplus', category: 'people', title: t('남는 현금', 'Surplus cash'),
     rule: t('투자법이 허용한 계층은 (생활비 + 세금) × {0}일을 넘는 현금의 {1}로 매일 그 지역 금융가 지분을 산다. 소작농은 (생활비 + 세금) × {2}주를 넘는 저축이 그 지역 저택 금고로 간다 (지분도 대가도 없다). 그 밖의 계층은 저축을 들고 있는다.', 'Classes allowed by the investment law spend {1} of cash above {0} days of (living costs + taxes) each day on units of the regional financial district. Peasant savings above {2} weeks of (living costs + taxes) go to the regional manor treasury (no units, nothing in return). Other classes keep their savings.'),
     params: [tune('cashBufferDays', '쥐는 일수', 'Buffer days', 'day'), p('하루 투자 비율', 'Daily investment rate', () => INVEST_RATE, 'pct'), tune('peasantKeepWeeks', '소작농 저축 상한', 'Peasant savings cap', 'week')],
-    related: ['owner-treasury', 'orders'], seenIn: ['finance'], source: ['market.ts investSurplus'], design: ['5', '9.3'],
+    related: ['owner-treasury', 'orders', 'manor-take'], seenIn: ['finance'], source: ['market.ts investSurplus'], design: ['5', '9.3'],
   },
 
   // ================================================================ 소작
@@ -945,6 +945,18 @@ export const ENCYCLOPEDIA: EncEntry[] = [
     },
     live: { pick: [], run: (w) => ({ rows: w.regions.map((r) => ({ label: regionLabel(r), value: quakeLabel(w, r.id) ?? '-' })) }) },
     related: ['tenant-farms', 'harvest-conditions', 'best-seat', 'migration'], seenIn: ['region', 'alerts'], source: ['economy.ts quakeAt', 'production.ts updateSubsistence'], design: ['4'],
+  },
+  {
+    id: 'manor-take', category: 'tenants', title: t('저택 거둠', 'Manor skim'),
+    rule: t('소작농 저축이 (생활비 + 세금) × {0}주를 넘으면 넘는 몫을 그 지역 저택이 가져간다. {1}이 0보다 크면 저택은 앉은 귀족 1몫의 하루 몫이 그 지역 전문가 임금 × {1}에 못 미치는 만큼만 가져가고 나머지는 소작농에게 남는다. {2}가 0보다 크면 저택의 하급 귀족 자리는 상급 귀족 자리 × {2} ÷ 100이다. 둘 다 0이면 끈 것이다.', 'Peasant savings above {0} weeks of (living costs + taxes) are taken by the regional manor. If {1} is above 0, the manor takes only what its seated nobles lack for one share to reach the regional expert wage × {1}; the rest stays with the peasants. If {2} is above 0, manor gentry seats = high-noble seats × {2} ÷ 100. At 0 both are off.'),
+    formula: 'take = min(savings − keep, max(0, expertWage × {1} × shares − manorIncome) × peasants ÷ manorPeasants)',
+    params: [tune('peasantKeepWeeks', '소작농 저축 상한', 'Peasant savings cap', 'week'), tune('manorTargetMult', '저택 목표 배율', 'Manor target multiple', 'x'), tune('manorGentrySeats', '상급 귀족 100명당 하급 귀족 자리', 'Gentry seats per 100 high-noble seats', 'people')],
+    live: {
+      pick: [], run: (w) => ({
+        rows: w.buildings.filter((b) => b.typeId === 'manor').map((b) => row(w.regions.find((r) => r.id === b.regionId)?.name ?? '-', regionNameEn(b.regionId), TUNE.manorTargetMult > 0 ? r2(manorNeed(w, b)) : '-', 'florin')),
+      }),
+    },
+    related: ['cash-surplus', 'owner-buildings', 'owner-treasury'], seenIn: ['finance'], source: ['market.ts investSurplus', 'market.ts manorNeed', 'economy.ts manorGentrySeats'], design: ['4', '5', '9.3'],
   },
   {
     id: 'tenant-output', category: 'tenants', title: t('소작 산출', 'Tenant output'),

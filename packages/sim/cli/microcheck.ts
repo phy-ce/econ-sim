@@ -8,6 +8,8 @@
 //                       [--arableslack 1] [--moneypeople 400]  (소작지 칸 배율, 돈 문턱을 셀 인구: 시작 인구만 줄이는 비교용, micro.ts MicroOptions)
 //                       [--quakeloss 0.25 --quakeyears 3]  (quake·quaketwo 실행의 소작지 손실 비율·기간)
 //                       [--sections abcdj]  (j = 노동시장 판정 J1~J4·M 시나리오·해마다 직종 소득 표)
+//                       (m = 저택 거둠 표: 소작농 저축·부·생활수준, 상급·하급 귀족 1인 소득·부·생활수준·자리, 저택 금고·필요·거둠, 공산품 지출·소비재 공장 레벨,
+//                        민간 공사 약정, 직종 소득 순서. 조합은 --tune 으로 실행마다 바꾼다: manorTargetMult, manorGentrySeats)
 //   (빠르게: bash cli/fast.sh microcheck.ts ...)
 // 실행마다 <접두>-<이름>.jsonl 에 관측 줄(src/lab/microtrace.ts, --every 일마다: pop·건물·시장·노동시장·회사·화폐 전부)과 끝에 요약 줄 하나를 쓴다.
 // 판정은 시험 실패가 아니라 표다 (사용자: 시험은 코드 문제만 판정한다). 종료 코드는 늘 0 (실행 오류만 1).
@@ -34,8 +36,11 @@
 //   (q) 재해 실행(quake·quaketwo, 재해 없는 실행은 같은 날짜 대조): 지역마다 소작지 칸·일하는 소작농·노동자·실업 소작농·인구, 노동자 시장 임금, 소작 1인 소득, 곡물 S/D·값, 생활수준. 해마다와 재해 앞뒤 주
 import { mkdirSync, writeFileSync, appendFileSync } from 'node:fs';
 import { dirname } from 'node:path';
-import { BUILDING_BY_ID, TICKS_PER_WEEK, TICKS_PER_YEAR, TUNE } from '../src/data';
-import { isGovernment } from '../src/economy';
+import { BUILDING_BY_ID, TICKS_PER_WEEK, TICKS_PER_YEAR, TUNE, getMethod } from '../src/data';
+import { companyById, isGovernment, wagesAt } from '../src/economy';
+import { FLOW } from '../src/kingdoms';
+import { manorNeed } from '../src/market';
+import { workforce } from '../src/pops';
 import { step } from '../src/index';
 import { createHash } from 'node:crypto';
 import { applyMicroShock, createMicroWorld, microInfo, restoreMicroScale } from '../src/lab/micro';
@@ -113,6 +118,63 @@ export interface Week {
   cls: Record<string, number>;
   /** 재해 표(q)용, 지역 id 순서: 소작지 칸, 일하는 소작농·일하는 노동자(노동자+농부)·실업 소작농 (노동 인구), 인구, 노동자 시장 임금, 소작 1인 소득, 곡물 S/D·값/기본가, 노동자·소작 생활수준 */
   reg: RegWeek[];
+  /** 저택 거둠 표(m)용 (run 이 세계에서 직접 잰다) */
+  mn?: ManorWeek;
+}
+interface Per { inc: number; sav: number; wealth: number; sol: number; n: number }
+/**
+ * 저택 거둠 표(m): 1인 값(식구 포함, 소득은 incomeEma ÷ 인원), 저택 금고 합·하루 필요 합(market.ts manorNeed)·지난주 거둔 돈·금고 돌려줌,
+ * 공산품 하루 지출(수요 이동평균 × 값)·상품별 수요, 소비재 공장 레벨, 민간 공사 수·남은 약정, 지역 0 민간 전문가 임금
+ */
+interface ManorWeek {
+  peas: Per; work: Per; arist: Per; gentry: Per;
+  gSeat: number; gOther: number; gIdle: number; aSeat: number;
+  cash: number; need: number; skim: number; release: number; cons: Record<string, number>; consSpend: number; consLv: number; pledge: number; privCons: number; expertW: number;
+}
+const CONS_GOODS = ['cloth', 'furniture', 'liquor', 'luxury_cloth', 'luxury_furniture'];
+let flowLast = { skim: 0, release: 0 };
+function manorWeek(w: World): ManorWeek {
+  const acc = (): Per => ({ inc: 0, sav: 0, wealth: 0, sol: 0, n: 0 });
+  const peas = acc(), work = acc(), arist = acc(), gentry = acc();
+  let gSeat = 0, gOther = 0, gIdle = 0, aSeat = 0;
+  const manorIds = new Set(w.buildings.filter((b) => b.typeId === 'manor').map((b) => b.id));
+  for (const p of w.pops) {
+    if (p.size <= 0) continue;
+    const a = p.prof === 'peasant' ? peas : (p.prof === 'unskilled' || p.prof === 'farmer') && p.work ? work : p.prof === 'aristocrat' ? arist : p.prof === 'gentry' ? gentry : null;
+    if (p.prof === 'gentry') { if (manorIds.has(p.work)) gSeat += workforce(p); else if (p.work) gOther += workforce(p); else gIdle += workforce(p); }
+    if (p.prof === 'aristocrat' && manorIds.has(p.work)) aSeat += workforce(p);
+    if (!a) continue;
+    a.inc += p.incomeEma; a.sav += p.savings; a.wealth += p.wealth * p.size; a.sol += p.sol * p.size; a.n += p.size;
+  }
+  for (const a of [peas, work, arist, gentry]) if (a.n > 0) { a.inc /= a.n; a.sav /= a.n; a.wealth /= a.n; a.sol /= a.n; }
+  let cash = 0, need = 0;
+  for (const b of w.buildings) if (b.typeId === 'manor') { cash += b.cash ?? 0; need += manorNeed(w, b); }
+  const skimNow = FLOW['skim.manor'] ?? 0, relNow = FLOW['release.manor'] ?? 0;
+  const skim = skimNow - flowLast.skim, release = relNow - flowLast.release;
+  flowLast = { skim: skimNow, release: relNow };
+  const cons: Record<string, number> = {};
+  let consSpend = 0;
+  for (const r of w.regions) for (const g of CONS_GOODS) {
+    const m = r.market[g as keyof typeof r.market];
+    if (!m) continue;
+    cons[g] = (cons[g] ?? 0) + m.demandEma;
+    consSpend += m.demandEma * m.price;
+  }
+  let consLv = 0;
+  for (const b of w.buildings) {
+    if (BUILDING_BY_ID[b.typeId].auto || isGovernment(b.typeId)) continue;
+    const out = getMethod(b.typeId, b.methodId).outputs as Record<string, number | undefined>;
+    if (CONS_GOODS.some((g) => (out[g] ?? 0) > 0)) consLv += b.level;
+  }
+  let pledge = 0, privCons = 0;
+  for (const k of w.constructions) {
+    if (!k.funders) continue;
+    privCons++;
+    pledge += Math.max(0, Object.values(k.funders).reduce((x, y) => x + y, 0) - k.spent);
+  }
+  const k0 = w.kingdoms[0], firm = k0 ? companyById(w, k0.privateIds[0]) : undefined;
+  const expertW = firm ? wagesAt(firm, 'manor', w, w.regions[0].id).expert : NaN;
+  return { peas, work, arist, gentry, gSeat, gOther, gIdle, aSeat, cash, need, skim, release, cons, consSpend, consLv, pledge, privCons, expertW };
 }
 interface RegWeek { cells: number; tenants: number; workers: number; idle: number; pop: number; wage: number; tenantInc: number; grainSD: number; grainP: number; solW: number; solT: number }
 
@@ -237,6 +299,7 @@ function run(def: RunDef): RunResult {
   let buf: string[] = [];
   const write = (row: MicroRow) => { if (!file) return; buf.push(JSON.stringify(row)); rows++; if (buf.length >= 50) { appendFileSync(file, buf.join('\n') + '\n'); buf = []; } };
   write(microTrace(w));
+  flowLast = { skim: FLOW['skim.manor'] ?? 0, release: FLOW['release.manor'] ?? 0 };
   for (let d = 0; d < YEARS * TICKS_PER_YEAR; d++) {
     for (const s of shocks) if (s.t === w.tick) applyShock(w, s, tuneSaved);
     step(w);
@@ -246,7 +309,7 @@ function run(def: RunDef): RunResult {
     const sample = w.tick % TICKS_PER_WEEK === 0, out = w.tick % EVERY === 0;
     if (sample || out) {
       const row = microTrace(w);
-      if (sample) weeks.push(summarizeWeek(row));
+      if (sample) { const wk = summarizeWeek(row); if (SECTIONS.includes('m')) wk.mn = manorWeek(w); weeks.push(wk); }
       if (out) write(row);
     }
   }
@@ -419,6 +482,51 @@ function quakeTable(r: RunResult) {
   }
 }
 
+/** (m) 저택 거둠 표: 해마다 평균 (1인 값은 식구 포함, 소득은 하루) */
+function manorTable(r: RunResult) {
+  const yw = byYear(r);
+  const ys = yw.map((ws) => ws.map((wk) => wk.mn).filter((x): x is ManorWeek => !!x));
+  const m = (xs: ManorWeek[], f: (x: ManorWeek) => number) => mean(xs.map(f).filter((v) => Number.isFinite(v)));
+  const tag = `${r.def.name} manorTargetMult=${TUNE_SET.manorTargetMult ?? TUNE.manorTargetMult} manorGentrySeats=${TUNE_SET.manorGentrySeats ?? TUNE.manorGentrySeats}`;
+  console.log(`\n(m1) 하층 [${tag}]: 소작농(모든 소작 pop)·노동자(일하는 노동자·농부) 1인 저축·부·생활수준·하루 소득(현물 빼고), 곡물 S/D·값/기본가`);
+  console.log('년'.padEnd(4) + ['소작저축', '소작부', '소작SoL', '소작소득', '노동저축', '노동부', '노동SoL', '노동소득', '곡물S/D', '곡물값'].map((c) => pad(c, 9)).join(''));
+  ys.forEach((xs, y) => {
+    const ws = yw[y];
+    const sd = gmean(ws.map((wk) => (wk.goods.grain && wk.goods.grain.D > 1e-6 ? wk.goods.grain.S / wk.goods.grain.D : NaN)));
+    const gp = mean(ws.filter((wk) => wk.goods.grain).map((wk) => wk.goods.grain.p / wk.goods.grain.base));
+    console.log(String(y + 1).padEnd(4) + [m(xs, (x) => x.peas.sav), m(xs, (x) => x.peas.wealth), m(xs, (x) => x.peas.sol), m(xs, (x) => x.peas.inc), m(xs, (x) => x.work.sav), m(xs, (x) => x.work.wealth), m(xs, (x) => x.work.sol), m(xs, (x) => x.work.inc), sd, gp].map((v) => pad(f2(v), 9)).join(''));
+  });
+  console.log(`\n(m2) 귀족 [${tag}]: 상급·하급 귀족 1인 하루 소득·부·생활수준, 노동 인구(저택에 앉음), 하급 귀족 다른 일자리·실업, 지역 0 전문가 임금, 귀족 1인 소득 ÷ 전문가 임금`);
+  console.log('년'.padEnd(4) + ['귀족소득', '귀족부', '귀족SoL', '귀족앉음', '하급소득', '하급부', '하급SoL', '하급앉음', '하급딴일', '하급실업', '전문가임금', '귀족/전문'].map((c) => pad(c, 9)).join(''));
+  ys.forEach((xs) => {
+    const ai = m(xs, (x) => x.arist.inc), ew = m(xs, (x) => x.expertW);
+    console.log(String(ys.indexOf(xs) + 1).padEnd(4) + [ai, m(xs, (x) => x.arist.wealth), m(xs, (x) => x.arist.sol), m(xs, (x) => x.aSeat), m(xs, (x) => x.gentry.inc), m(xs, (x) => x.gentry.wealth), m(xs, (x) => x.gentry.sol), m(xs, (x) => x.gSeat), m(xs, (x) => x.gOther), m(xs, (x) => x.gIdle), ew, ai / ew].map((v) => pad(f2(v), 9)).join(''));
+  });
+  console.log(`\n(m3) 돈의 길 [${tag}]: 저택 금고(연 평균)·하루 필요 합·거둔 돈(1년 합)·금고 돌려줌(1년 합), 공산품 하루 지출(수요 × 값)·의복 수요, 소비재 공장 레벨, 민간 공사 수·남은 약정, 생산 레벨`);
+  console.log('년'.padEnd(4) + ['저택금고', '필요/일', '거둠/년', '돌려줌/년', '공산지출', '의복수요', '소비재Lv', '민간공사', '약정', '생산Lv'].map((c) => pad(c, 10)).join(''));
+  ys.forEach((xs, y) => {
+    const sum = (f: (x: ManorWeek) => number) => xs.reduce((a, x) => a + f(x), 0);
+    console.log(String(y + 1).padEnd(4) + [m(xs, (x) => x.cash), m(xs, (x) => x.need), sum((x) => x.skim), sum((x) => x.release), m(xs, (x) => x.consSpend), m(xs, (x) => x.cons.cloth ?? 0), m(xs, (x) => x.consLv), m(xs, (x) => x.privCons), m(xs, (x) => x.pledge), mean(yw[y].map((wk) => wk.levels))].map((v) => pad(f2(v), 10)).join(''));
+  });
+  const order = ['tenant', 'labour', 'skilled', 'expert', 'gentry', 'aristocrat', 'capitalist'];
+  console.log(`\n(m4) 직종 1인 하루 소득 (일하는 pop, 소작은 현물 포함) [${tag}]: 순서 판정 = (소작 ≈ 노동자) < 기술자 < 전문가 < 귀족·자본가 (있는 직종만)`);
+  console.log('년'.padEnd(4) + order.map((c) => pad(c, 11)).join('') + '  순서');
+  yw.forEach((ws, y) => {
+    const v = Object.fromEntries(order.map((k) => [k, mean(ws.map((wk) => wk.cls[k]).filter((x): x is number => Number.isFinite(x)))]));
+    const low = Math.max(v.tenant, Number.isFinite(v.labour) ? v.labour : -Infinity);
+    const tops = ['aristocrat', 'capitalist'].map((k) => v[k]).filter((x) => Number.isFinite(x));
+    const chain = [low, v.skilled, v.expert, tops.length ? Math.min(...tops) : NaN].filter((x) => Number.isFinite(x));
+    const ok = chain.every((x, i) => i === 0 || x > chain[i - 1]);
+    console.log(String(y + 1).padEnd(4) + order.map((k) => pad(f2(v[k]), 11)).join('') + '  ' + (ok ? '맞음' : '어긋남'));
+  });
+  return ys.map((xs, y) => ({
+    year: y + 1, peasSav: m(xs, (x) => x.peas.sav), peasWealth: m(xs, (x) => x.peas.wealth), peasSol: m(xs, (x) => x.peas.sol), workWealth: m(xs, (x) => x.work.wealth), workSol: m(xs, (x) => x.work.sol),
+    aristInc: m(xs, (x) => x.arist.inc), aristWealth: m(xs, (x) => x.arist.wealth), aristSol: m(xs, (x) => x.arist.sol), gentryInc: m(xs, (x) => x.gentry.inc), gentrySol: m(xs, (x) => x.gentry.sol),
+    gSeat: m(xs, (x) => x.gSeat), gOther: m(xs, (x) => x.gOther), gIdle: m(xs, (x) => x.gIdle), expertW: m(xs, (x) => x.expertW),
+    cash: m(xs, (x) => x.cash), skim: xs.reduce((a, x) => a + x.skim, 0), consSpend: m(xs, (x) => x.consSpend), consLv: m(xs, (x) => x.consLv), pledge: m(xs, (x) => x.pledge),
+  }));
+}
+
 // ---------------------------------------------------------------- 실행
 
 const results: RunResult[] = [];
@@ -435,6 +543,7 @@ for (const name of RUNS) {
     goods: SECTIONS.includes('a') ? goodsCheck(r) : undefined, labor: SECTIONS.includes('b') ? laborCheck(r) : undefined, classes: SECTIONS.includes('c') ? classCheck(r) : undefined,
     money: { drift: r.drift, abs: r.driftAbs, tick: r.driftTick },
     judge: SECTIONS.includes('j') ? laborJudge(r, AT, YEARS) : undefined, yearly: SECTIONS.includes('j') ? laborYearly(r, YEARS) : undefined,
+    manor: SECTIONS.includes('m') ? manorTable(r) : undefined,
   };
   if (OUT) appendFileSync(`${OUT}-${name}.jsonl`, JSON.stringify(summary) + '\n');
   if (SECTIONS.includes('q')) quakeTable(r);

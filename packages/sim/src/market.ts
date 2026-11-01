@@ -1,12 +1,12 @@
-import { ABS_LIMITS, CONSUMPTION_PER_CAPITA, GOOD_IDS, GOODS, NEEDS, SUBSISTENCE, TRADING_POST, TUNE, WORKFORCE_RATIO, getMethod, needsAt, rawMax, tenantYield, tradeReserveOf } from './data';
-import { CARTAGE_RATE, RAIL_RATE, borrow, harvestFactor, priceBounds, priceFormula, regionById, sellThrough, shippingRate, isSubsistence } from './economy';
+import { ABS_LIMITS, CONSUMPTION_PER_CAPITA, GOOD_IDS, GOODS, NEEDS, SKILL_DEFS, SUBSISTENCE, TRADING_POST, TUNE, WORKFORCE_RATIO, getMethod, needsAt, rawMax, tenantYield, tradeReserveOf } from './data';
+import { CARTAGE_RATE, RAIL_RATE, borrow, companyById, harvestFactor, priceBounds, priceFormula, regionById, sellThrough, shareWeight, shippingRate, isSubsistence, wagesAt } from './economy';
 import { financeIdle, treasuryOver, payRent, paySalvage, taxDue, taxRates } from './finance';
 import { borderCost, kingdomById, kingdomOf, payTariff, toTreasury } from './kingdoms';
 import { INVEST_CLASSES } from './policy';
 import { addFund, findPop, payPops, payProf, workforce } from './pops';
 import { clamp } from './rng';
 import { ipow } from './rng/ipow';
-import { POP_CLASSES, WEALTH_MAX, WEALTH_MIN, crewOf, wealthOf } from './types';
+import { POP_CLASSES, SKILLS, WEALTH_MAX, WEALTH_MIN, crewOf, wealthOf } from './types';
 import type { Building, Company, GoodBag, GoodId, MarketGood, NeedDef, NeedId, Pop, Region, SalvageLot, Shipment, World } from './types';
 
 // 시장 (지역마다 하나): 그날 나온 구매 주문과 판매 제안을 한 가격으로 체결한다.
@@ -828,15 +828,18 @@ export const INVEST_RATE = 0.05;
  * 팝의 남는 현금 (빅토리아3 투자 풀 대신 금융가 펀드): 생활비와 세금의 며칠분(TUNE.cashBufferDays)을 넘는 현금의 INVEST_RATE 가 매일
  * 그 지역 금융가 지분을 사는 데 쓰인다 (투자법이 허용한 계층만). 이것이 민간 투자의 재원이다. 쓰고 남는 소득이 꾸준하면 부 단계가 올라 쓰는 양이 는다.
  * 투자법 밖 계층은 저축을 그대로 들고 있는다. 소작농만 예외: 생활비와 세금의 TUNE.peasantKeepWeeks 주치를 넘는 저축은 그날 그 지역 저택 금고로 간다
- * (지분도 대가도 없다. 저택이 없는 지역이면 그 왕국에서 id 가 가장 작은 저택).
+ * (지분도 대가도 없다. 저택이 없는 지역이면 그 왕국에서 id 가 가장 작은 저택). TUNE.manorTargetMult > 0 이면 저택은 앉은 귀족의 몫이 목표에 못 미치는 만큼만 거둔다
+ * (manorNeed, 소작농 인원 비율로 나눈다). 나머지는 소작농 저축에 남는다.
  * 세금은 걷는 쪽과 같은 계산(taxDue)이다: 토지 기반 세법이면 pop 이 현금으로 낼 세금은 없다.
  */
 function investSurplus(w: World, p: Pop, cashCost: number) {
   const daily = Math.max(0, cashCost) + taxDue(w, p);
   if (p.prof === 'peasant') {
-    const extra = p.savings - daily * 7 * TUNE.peasantKeepWeeks;
+    let extra = p.savings - daily * 7 * TUNE.peasantKeepWeeks;
     const m = extra > 0 ? manorOf(w, p.regionId) : undefined;
     if (!m) return;
+    if (TUNE.manorTargetMult > 0) extra = Math.min(extra, manorTake(w, m, p));
+    if (!(extra > 0)) return;
     p.savings -= extra;
     toTreasury(m, extra, 'skim');
     return;
@@ -854,8 +857,9 @@ function investSurplus(w: World, p: Pop, cashCost: number) {
 }
 
 /** 소작농 저축이 가는 저택: 그 지역 저택, 없으면 그 왕국에서 id 가 가장 작은 저택 (날마다 같은 세계면 다시 찾지 않는다) */
-const manorCache = new WeakMap<World, { tick: number; byRegion: Map<number, Building>; byKingdom: Map<number, Building> }>();
-function manorOf(w: World, regionId: number): Building | undefined {
+interface ManorCache { tick: number; byRegion: Map<number, Building>; byKingdom: Map<number, Building>; need?: Map<number, number>; peasants?: Map<number, number> }
+const manorCache = new WeakMap<World, ManorCache>();
+function manorCacheOf(w: World): ManorCache {
   let c = manorCache.get(w);
   if (!c || c.tick !== w.tick) {
     c = { tick: w.tick, byRegion: new Map(), byKingdom: new Map() };
@@ -867,7 +871,44 @@ function manorOf(w: World, regionId: number): Building | undefined {
     }
     manorCache.set(w, c);
   }
+  return c;
+}
+function manorOf(w: World, regionId: number): Building | undefined {
+  const c = manorCacheOf(w);
   return c.byRegion.get(regionId) ?? c.byKingdom.get(kingdomOf(w, regionId));
+}
+
+/**
+ * 저택의 하루 필요 (TUNE.manorTargetMult > 0): 앉은 귀족 1몫의 목표 = 그 지역 민간 전문가 임금 × manorTargetMult.
+ * 필요 = max(0, 목표 × 앉은 몫 합 − 받은 배당·지대 이동평균) = 앉은 몫 합 × (목표 − 1몫의 하루 몫 shareWage). 앉은 사람이 없으면 0
+ */
+export function manorNeed(w: World, m: Building): number {
+  const k = kingdomById(w, kingdomOf(w, m.regionId));
+  const firm = companyById(w, k.privateIds[0]);
+  const expert = firm ? wagesAt(firm, m.typeId, w, m.regionId).expert : SKILL_DEFS.expert.baseWage;
+  let shares = 0;
+  for (const s of SKILLS) shares += shareWeight(s) * m.employed[s];
+  return Math.max(0, expert * TUNE.manorTargetMult * shares - Math.max(0, m.profitEma));
+}
+
+/**
+ * 소작농 pop p 에게서 저택 m 이 오늘 거둘 수 있는 한도: 저택의 하루 필요(manorNeed) × p 인원 ÷ 그 저택으로 저축이 가는 소작농 인원.
+ * 인원 비율로 나누므로 pop 순서와 상관없다. 둘 다 그날 처음 물을 때 정한다
+ */
+function manorTake(w: World, m: Building, p: Pop): number {
+  const c = manorCacheOf(w);
+  if (!c.need) {
+    c.need = new Map(); c.peasants = new Map();
+    for (const q of w.pops) {
+      if (q.prof !== 'peasant' || q.size <= 0) continue;
+      const mq = c.byRegion.get(q.regionId) ?? c.byKingdom.get(kingdomOf(w, q.regionId));
+      if (mq) c.peasants.set(mq.id, (c.peasants.get(mq.id) ?? 0) + q.size);
+    }
+  }
+  let need = c.need.get(m.id);
+  if (need === undefined) { need = manorNeed(w, m); c.need.set(m.id, need); }
+  const n = c.peasants!.get(m.id) ?? 0;
+  return n > 0 ? (need * p.size) / n : 0;
 }
 
 /** 지역의 금융가 (지역 id → 건물, 날마다 같은 세계면 다시 찾지 않는다) */

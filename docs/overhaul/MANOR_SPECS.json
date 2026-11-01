@@ -1,0 +1,304 @@
+{
+ "about": "저택 거둠을 저택의 필요와 고용인 수로 조절 (2026-11-01 사용자 \"저축은 플레이어가 고치게 하지 말고, 귀족이 충분히 부유하면서도 소작농도 부가 쌓일 수 있게 저택 고용인 수를 조절하던가\", TUNE.manorTargetMult·manorGentrySeats, DESIGN 4장) 본 게임 1차 거름 명세. 모두 지역 시장 임금(wageMarket 1, wageMarketRate 0.005) 위. m0 = 둘 다 끔(지금 규칙, 대조), t3 = 저택 목표 = 그 지역 민간 전문가 임금 × 3 (앉은 귀족 1몫이 목표에 못 미치는 만큼만 거둔다), g100 / g50 / g25 = 저택 하급 귀족 자리 = 상급 귀족 자리 × 100 / 50 / 25 ÷ 100, t3g50 = 둘 다. 10년 × 시드 1·2 × salt 0..1. 돌리기 (packages/sim 에서): PAR=3 bash cli/lab.sh <out.jsonl> ../../docs/overhaul/MANOR_SPECS.json. 요약: python cli/labsum.py <out.jsonl> --compare m0.",
+ "code": "wt-labor (지역 시장 임금 + lab 지표 + 소작지 재해 시제품 + 저택 거둠 스위치)",
+ "counts": {
+  "specs (10년)": 24
+ },
+ "choices": [
+  "후보: 목표 배율은 지시의 2 / 3 중 3 하나만 (마이크로 세계에서 2·3 모두 첫해 뒤 거둠이 0 이 되어 같은 결과였다). 하급 귀족 자리는 지시의 100 / 50 / 25 전부. 둘을 합친 t3g50 하나.",
+  "마이크로 세계 결과 (cli/microcheck.ts --preset labor --sections cm, wageMarket 1, 10년 × 시드 1·2): 목표를 켜면(2·3·10) 소작농 저축이 1인 약 2 → 120~180 으로 쌓이지만 부·생활수준은 1.00~1.10 그대로이고, 그 돈이 돌지 않아 곡물값이 바닥(기본가 0.25배)에 붙고 공산품 지출이 절반 아래로, 민간 공사가 0 이 됐다. 하급 귀족 자리만 줄이면(100·50·25) 생산 레벨·소비재 공장·소작·노동자 생활수준이 대조보다 높았다 (자리를 잃은 하급 귀족이 노동자·농부·소작 자리로 가고, 그 저축이 소작 거둠으로 저택 금고에 들어가 첫 3년 공사가 늘었다).",
+  "본 게임은 마이크로와 다르다: 고정 저장(18판 8년)에서 저택 1몫 ÷ 전문가 임금이 지역마다 2.8~18, 새 세계 시드 1 의 3년차는 0.6~2.9 라 목표 3 이면 거둠이 0 이 아니라 줄어든다. 앉은 하급 귀족은 상급 귀족의 약 9배 (시드 1 3년차 15,031 / 1,699) 라 자리 100 이면 하급 귀족 약 13,000명(노동 인구)이 저택을 떠난다.",
+  "보는 지표: cls.peasant 의 dSav·inc·spend·sol, solPeas·solUnsk, cls.aristocrat·gentry 의 inc·sol, savNoble, vault (소유 건물 금고), pledgeNew·startLv (민간 투자), gdp, 생산 레벨, grainAvg, ordViol, jobless. 판단: 귀족 1인 소득이 전문가보다 훨씬 위로 남는가, 소작농 저축과 생활수준이 오르는가, 공산품 지출(cls.*.spend)과 민간 투자가 m0 보다 줄지 않는가.",
+  "플레이어 왕실 방치(withPlayer 기본) + 고정 연구 순서(research 기본 fixed)."
+ ],
+ "specs": [
+  {
+   "item": "MANOR-1",
+   "name": "m0",
+   "seed": 1,
+   "salt": 0,
+   "years": 10,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.005
+   }
+  },
+  {
+   "item": "MANOR-1",
+   "name": "m0",
+   "seed": 1,
+   "salt": 1,
+   "years": 10,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.005
+   }
+  },
+  {
+   "item": "MANOR-1",
+   "name": "m0",
+   "seed": 2,
+   "salt": 0,
+   "years": 10,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.005
+   }
+  },
+  {
+   "item": "MANOR-1",
+   "name": "m0",
+   "seed": 2,
+   "salt": 1,
+   "years": 10,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.005
+   }
+  },
+  {
+   "item": "MANOR-1",
+   "name": "t3",
+   "seed": 1,
+   "salt": 0,
+   "years": 10,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.005,
+    "manorTargetMult": 3
+   }
+  },
+  {
+   "item": "MANOR-1",
+   "name": "t3",
+   "seed": 1,
+   "salt": 1,
+   "years": 10,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.005,
+    "manorTargetMult": 3
+   }
+  },
+  {
+   "item": "MANOR-1",
+   "name": "t3",
+   "seed": 2,
+   "salt": 0,
+   "years": 10,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.005,
+    "manorTargetMult": 3
+   }
+  },
+  {
+   "item": "MANOR-1",
+   "name": "t3",
+   "seed": 2,
+   "salt": 1,
+   "years": 10,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.005,
+    "manorTargetMult": 3
+   }
+  },
+  {
+   "item": "MANOR-1",
+   "name": "g100",
+   "seed": 1,
+   "salt": 0,
+   "years": 10,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.005,
+    "manorGentrySeats": 100
+   }
+  },
+  {
+   "item": "MANOR-1",
+   "name": "g100",
+   "seed": 1,
+   "salt": 1,
+   "years": 10,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.005,
+    "manorGentrySeats": 100
+   }
+  },
+  {
+   "item": "MANOR-1",
+   "name": "g100",
+   "seed": 2,
+   "salt": 0,
+   "years": 10,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.005,
+    "manorGentrySeats": 100
+   }
+  },
+  {
+   "item": "MANOR-1",
+   "name": "g100",
+   "seed": 2,
+   "salt": 1,
+   "years": 10,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.005,
+    "manorGentrySeats": 100
+   }
+  },
+  {
+   "item": "MANOR-1",
+   "name": "g50",
+   "seed": 1,
+   "salt": 0,
+   "years": 10,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.005,
+    "manorGentrySeats": 50
+   }
+  },
+  {
+   "item": "MANOR-1",
+   "name": "g50",
+   "seed": 1,
+   "salt": 1,
+   "years": 10,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.005,
+    "manorGentrySeats": 50
+   }
+  },
+  {
+   "item": "MANOR-1",
+   "name": "g50",
+   "seed": 2,
+   "salt": 0,
+   "years": 10,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.005,
+    "manorGentrySeats": 50
+   }
+  },
+  {
+   "item": "MANOR-1",
+   "name": "g50",
+   "seed": 2,
+   "salt": 1,
+   "years": 10,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.005,
+    "manorGentrySeats": 50
+   }
+  },
+  {
+   "item": "MANOR-1",
+   "name": "g25",
+   "seed": 1,
+   "salt": 0,
+   "years": 10,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.005,
+    "manorGentrySeats": 25
+   }
+  },
+  {
+   "item": "MANOR-1",
+   "name": "g25",
+   "seed": 1,
+   "salt": 1,
+   "years": 10,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.005,
+    "manorGentrySeats": 25
+   }
+  },
+  {
+   "item": "MANOR-1",
+   "name": "g25",
+   "seed": 2,
+   "salt": 0,
+   "years": 10,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.005,
+    "manorGentrySeats": 25
+   }
+  },
+  {
+   "item": "MANOR-1",
+   "name": "g25",
+   "seed": 2,
+   "salt": 1,
+   "years": 10,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.005,
+    "manorGentrySeats": 25
+   }
+  },
+  {
+   "item": "MANOR-1",
+   "name": "t3g50",
+   "seed": 1,
+   "salt": 0,
+   "years": 10,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.005,
+    "manorTargetMult": 3,
+    "manorGentrySeats": 50
+   }
+  },
+  {
+   "item": "MANOR-1",
+   "name": "t3g50",
+   "seed": 1,
+   "salt": 1,
+   "years": 10,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.005,
+    "manorTargetMult": 3,
+    "manorGentrySeats": 50
+   }
+  },
+  {
+   "item": "MANOR-1",
+   "name": "t3g50",
+   "seed": 2,
+   "salt": 0,
+   "years": 10,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.005,
+    "manorTargetMult": 3,
+    "manorGentrySeats": 50
+   }
+  },
+  {
+   "item": "MANOR-1",
+   "name": "t3g50",
+   "seed": 2,
+   "salt": 1,
+   "years": 10,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.005,
+    "manorTargetMult": 3,
+    "manorGentrySeats": 50
+   }
+  }
+ ]
+}
