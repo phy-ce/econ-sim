@@ -1,6 +1,6 @@
 # 고정 창과 좁은 통계 화면
 
-> 고정 좌우 슬롯·최대 두 창 요구는 폐기되었습니다. 원문과 당시 검증 기록만 보관합니다. 현재 상태와 우선순위는 [UI_STATUS](UI_STATUS.md), [UI_CHANGES](UI_CHANGES.md) 참조.
+> 고정 좌우 슬롯·최대 두 창 요구는 폐기되었습니다. 원문과 당시 검증 기록만 보관합니다. 현재 상태와 우선순위는 [UI_STATUS](../UI_STATUS.md), [UI_CHANGES](../UI_CHANGES.md) 참조.
 
 UI_CHANGES 2-53·2-34를 우선 적용. 2-27은 완료하여 UI_DONE으로 이동.
 
