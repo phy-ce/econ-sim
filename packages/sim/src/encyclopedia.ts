@@ -30,7 +30,7 @@ import {
   birthRateAt, mortalityAt, workforce,
 } from './pops';
 import { HIRE_RATE, MIGRATE_FULL, MIGRATE_MAX, MIGRATE_START, UNPAID_QUIT, subsistenceWage, switchShare } from './labor';
-import { CREW_RATE, EXP_GAIN } from './production';
+import { CREW_RATE, EXP_GAIN, officeLoad } from './production';
 import {
   DAILY_INTEREST, KEEP_SHARE, TREASURY_RELEASE, MINT_BASE, MINT_RATE, RESERVE_SHARE, kingdomLiteracy, researchPoints, adminCapacityOf, reserveCap, taxCapacity, taxRates,
   weeklyOutputValue,
@@ -604,7 +604,7 @@ export const ENCYCLOPEDIA: EncEntry[] = [
         const k = kingdomOfCtx(w, ctx), gov = govOf(w, k);
         if (!gov) return {};
         const est = constructionEstimate(w, gov, 'farm');
-        return { rows: [row('하루 포인트', 'Points per day', r2(est.pointsPerDay), 'pt'), row('하루 사무소 비용', 'Office cost per day', r2(est.costPerDay), 'florin'), row('대기 공사', 'Queued projects', w.constructions.filter((c) => kingdomById(w, regionById(w, c.regionId).kingdomId) === k).length)] };
+        return { rows: [row('하루 능력', 'Capacity per day', r2(est.pointsPerDay), 'pt'), row('오늘 가동 비율', "Today's load", r2(officeLoad(w, gov)), 'pct'), row('다 가동할 때 하루 비용', 'Cost per day at full load', r2(est.costPerDay), 'florin'), row('대기 공사', 'Queued projects', w.constructions.filter((c) => kingdomById(w, regionById(w, c.regionId).kingdomId) === k).length)] };
       },
     },
     related: ['build-cost', 'ai-office', 'input-fill'], seenIn: ['company', 'finance'], source: ['production.ts allocateConstruction', 'production.ts officeLoad', 'economy.ts builderOf'], design: ['8'],
@@ -619,8 +619,8 @@ export const ENCYCLOPEDIA: EncEntry[] = [
       const firm = companyById(w, k.privateIds[0]) ?? gov;
       const est = constructionEstimate(w, gov, 'farm'), priv = constructionEstimate(w, firm, 'farm');
       return {
-        inputs: [row('곡물 농장 포인트', 'Grain farm points', est.required, 'pt'), row('사무소 하루 포인트', 'Office points/day', r2(est.pointsPerDay), 'pt'), row('사무소 하루 비용', 'Office cost/day', r2(est.costPerDay), 'florin')],
-        steps: [row('포인트당 비용', 'Cost per point', r2(est.costPerDay / est.pointsPerDay), 'florin'), row('포인트당 수수료', 'Fee per point', r2((est.costPerDay / est.pointsPerDay) * priv.feeMult), 'florin'), row('공사 일수', 'Days', r2(est.days), 'day')],
+        inputs: [row('곡물 농장 포인트', 'Grain farm points', est.required, 'pt'), row('사무소 하루 능력', 'Office capacity/day', r2(est.pointsPerDay), 'pt'), row('다 가동할 때 사무소 하루 비용', 'Office cost/day at full load', r2(est.costPerDay), 'florin'), row('오늘 가동 비율', "Today's load", r2(officeLoad(w, gov)), 'pct')],
+        steps: [row('포인트당 비용 (다 가동할 때)', 'Cost per point (at full load)', r2(est.costPerDay / est.pointsPerDay), 'florin'), row('포인트당 수수료 (다 가동할 때)', 'Fee per point (at full load)', r2((est.costPerDay / est.pointsPerDay) * priv.feeMult), 'florin'), row('공사 일수', 'Days', r2(est.days), 'day')],
         result: [row('1레벨 수수료 (민간, 시드 1 첫날)', 'Fee for one level (private, seed 1, day 0)', Math.round(priv.cost), 'florin'), row('1레벨 사무소 운영비 (왕실 실제 비용)', 'Office upkeep for one level (crown\'s real cost)', Math.round(est.cost), 'florin')],
       };
     },

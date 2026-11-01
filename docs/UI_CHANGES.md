@@ -27,7 +27,8 @@
 
 ### 우선순위
 깨진 화면
-- 없음. 2-69(왕실 임금 읽기 전용)는 코드 완료 (`e1d700f`, 화면 미검증, UI_DONE).
+- **건축사무소 가동 비율 (2-78, sim wt-officeuse)**: 사무소 원료 양이 실제보다 크게 보인다. 원료 양에 `officeLoad(world, company)`를 곱한다 (`CompanyPanel.tsx:57`, `FlowRow.tsx:16`). 산출 칸에 가동 비율을 숫자로 보인다 (`CompanyPanel.tsx:67`, `FlowRow.tsx:21`, `GroupDetail.tsx:19`).
+- 2-69(왕실 임금 읽기 전용)는 코드 완료 (`e1d700f`, 화면 미검증, UI_DONE).
 
 사용자 요청
 0. **작은 아이콘·막대 키우기 (2-77, 사용자 2026-11-01)**: 시세 창 수요·공급 구성의 사람 아이콘 16px(`SourceBreakdown.tsx:17`, 칸 `styles.css:289`)을 24px로. 같은 문제의 범례·표 아이콘, 6~7px 점, 3~5px 막대, 9px 글자를 UI_DESIGN 4.3 최소 크기로.
@@ -1562,6 +1563,14 @@ sim 변경 (wt-research):
 - 빼거나 지울 것: `strategy.css:143`의 14px 범례 규칙. 크기를 다시 정하는 중복 규칙이 생기면 한 곳(`workspace.css` 또는 `system-ui.css`)에만 둔다.
 - 완료 기준: 위 1~5항의 file:line이 기준 크기 이상 (코드 검색으로 16px 이하 `Sprite` 계열 `size`가 남지 않음, 지도 SVG 안 `SvgSprite`는 지도 확대에 따르므로 제외). `npm run typecheck`. 헤드리스 스크린샷 1920×1080 (UI_DESIGN 12장): 시장 창 수요·공급 칸을 한국어 낮·영어 밤으로 한 장씩, 경제 추이 범례·인구 표 한 장. 420×560 창에서 가로 넘침 없음.
 - 사용자 결정이 필요한 것: 없음. 기준값(24·10·6·10px)은 지금 코드에서 이미 쓰는 크기에 맞춘 추천이고 근거는 UI_DESIGN 4.3에 있다.
+
+### 2-78. 건축사무소는 맡은 공사만큼만 가동 (sim wt-officeuse, DESIGN 8장, DECISIONS 7-30)
+- sim: 사무소는 그날 맡은 공사에 필요한 포인트만 만들고 그만큼의 자재만 쓰고 산다. 일자리·임금은 그대로다.
+- `officeLoad(w, c)` (`production.ts`, `@econ/sim`에서 import): 회사 c의 오늘 가동 비율 = min(1, 필요 포인트 ÷ 능력). 회사의 사무소 모두 같은 값이고, 맡은 공사가 없으면 0.
+- 사무소 원료 사용 = 방식 원료 × 레벨 × 가동률 × 작업 인원 × 기상 배율 × 가동 비율 × `b.last.inputFill`. `b.last.points` = 능력 × 가동 비율 × 자재 충족.
+- 가동 비율이 0인 날 sim은 `b.last.inputFill = 1`로 두고(`b.idle`은 false일 수 있다) 원료를 쓰지 않는다. 지금 화면(`CompanyPanel.tsx:54·57`, `FlowRow.tsx:16`)은 그날 원료를 능력 전부만큼 쓴 것으로 보인다.
+- `CompanyPanel.tsx:67` outMax와 `FlowRow.tsx:21`은 `b.last.points`를 능력 전부와 견주므로, 일이 적은 사무소가 모자란 것처럼 보인다. 산출 칸에 가동 비율을 숫자로 함께 보인다 (`GroupDetail.tsx:19` 합계도).
+- 완료 기준: 같은 날 패널의 사무소 원료 양이 `per*run*crew*harvest*officeLoad*inputFill`과 소수 둘째 자리까지 같다.
 
 ## 3. sim 쪽 필요 사항 (Claude가 처리할 것, UI 작업자는 요청만)
 - **2-59 주 단위 수지 (요청됨, 2026-10-22):** `BuildingEcon`에 `week: { sales, tax, inputs, wages, profit }` (건물 `revenue`·`tax`·`inputCost`·`wageCost`의 이동평균 × 7, `profitEma`와 같은 기간). 들어오면 2-59-3 폭포 라벨을 `/주`로.
