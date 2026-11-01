@@ -11,7 +11,7 @@ import { policyStatus } from './policy';
 import { subsistenceWage } from './labor';
 import { baseValue, longRunWages, marketOutlook, techValue, valueMethod } from './outlook';
 import type { Outlook } from './outlook';
-import { kingdomById } from './kingdoms';
+import { kingdomById, toTreasury } from './kingdoms';
 import { STAFFING_HORIZON, expectedStaffing, labourPool, laborAvailability, takeFromPool } from './staffing';
 import { LITERACY_PER_WEALTH, workforce } from './pops';
 import { clamp } from './rng';
@@ -1215,6 +1215,7 @@ function reserveLevels(w: World, c: Company, canStart: () => boolean, free: () =
     const at = TUNE.aiGrowWhere ? growRegion(w, c, b) : b.regionId;
     if (roomFor(w, at, b.typeId) < 1) continue;
     const cost = constructionEstimate(w, c, b.typeId).cost;
+    if (TUNE.aiReserveFund && !c.state && !c.isPlayer && Number.isFinite(cost) && free() < cost) fundFromReserve(w, c, b, at, cost - free());
     if (!Number.isFinite(cost) || free() < cost) continue;
     if (start({ regionId: at, typeId: b.typeId, methodId: b.methodId, levels: 1, score: 0 }, 'reserve')) delete b.richWeeks;
   }
@@ -1243,6 +1244,23 @@ function growRegion(w: World, c: Company, b: Building): number {
     if (sd !== null && sd < low) { low = sd; best = r.id; }
   }
   return best;
+}
+
+/**
+ * 유보로 증설비 (TUNE.aiReserveFund = 1, 2026-11-01 마이크로 시제품 microB S8): 민간 AI 회사 c 의 건물 b 증설이 저택·금융가 금고(ownerFunds)가 need 만큼 모자라 막힐 때,
+ * b 의 유보 자산과 회사 현금이 모두 need 이상이면 need 를 회사 현금에서 빼고 b 의 유보 자산을 그만큼 줄여, 왕국 저택·금융가 중 새 일에 쓸 돈이 0 이상이고
+ * 그 지역·종류에 낼 마음(funderWeight)이 가장 큰 곳(같으면 쓸 돈이 많은 곳, id 순, chooseFunders 와 같은 순서)의 금고에 넣는다. 돈은 옮길 뿐이다 (화폐 보존).
+ * 모자라면 아무것도 하지 않는다 (나눠 내지 않는다). 공사 명령이 그 금고에서 공사비를 고른다
+ */
+function fundFromReserve(w: World, c: Company, b: Building, regionId: number, need: number) {
+  if (!(need > 0) || (b.reserve ?? 0) < need || c.cash < need) return;
+  const o = ownerBuildings(w, c.kingdomId).map((x) => ({ x, free: treasuryFree(w, x), wt: funderWeight(x, regionId, b.typeId) }))
+    .filter((y) => y.free >= 0).sort((p, q) => q.wt - p.wt || q.free - p.free || p.x.id - q.x.id)[0]?.x;
+  if (!o) return;
+  b.reserve = (b.reserve ?? 0) - need;
+  c.cash -= need;
+  toTreasury(o, need, 'reserveFund');
+  aiTrace.on?.(w, c, 'reserveFund', b.typeId, b.methodId, 0, undefined, regionId);
 }
 
 /**
