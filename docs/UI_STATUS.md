@@ -155,3 +155,6 @@ DetailWindow 독립 NavigationProvider/버튼, BuildingPops 및 ResourceInspecto
 
 - 0장 감사 후속: EconomyCharts 빈 차트/비교 선택 안내 문장은 —로 바꾸고 툴팁에 보존. 정지·도달 사유의 비활성 opacity를1로 보강. root typecheck/client48시험 통과. 변경 후 화면 미검증.
 
+
+- 소유권 탐색 기본 경로: 헤드리스 스크린샷 확인(1920×1080), C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/ownership-institution.png 및 ownership-history.png. 소작지→저택→벌목장→뒤로 저택→앞으로 벌목장 모두true, 소유권본문 scrollWidth=clientWidth391 확인. 혼합·극소 지분·기관 소멸은 아직 미검증.
+
