@@ -41,6 +41,23 @@ export const MIXED_LEVELS = 2;
 /** 짓기 기준: 공사 기간 안에 일자리의 이 비율 이상을 채울 사람이 있어야 한다 (건축사무소는 대신 채울 수 있는 레벨 수 officeStaffable 을 본다) */
 // TUNE.laborStrict: 일손이 다 차야(1) 짓는다
 const MIN_STAFFING = () => (TUNE.laborStrict ? 1 : TUNE.minStaffing);
+/** TUNE.aiAdminWage: 왕실 행정청의 레벨 가중 충원율이 이 값 아래면 일손이 모자란 것으로 본다 (근거 없음) */
+export const ADMIN_STAFFED = 0.9;
+
+/** 징수율 하한 (TUNE.aiAdminFloor > 0, 오버홀 07 A4): 그 왕국 징수율(taxRatio)이 하한 아래인가 */
+function belowAdminFloor(k: Kingdom | undefined): boolean {
+  return TUNE.aiAdminFloor > 0 && !!k && (k.taxRatio ?? 1) < TUNE.aiAdminFloor;
+}
+
+/** 왕실 행정청(징세 한도가 있는 방식, 켜진 건물)의 레벨 가중 충원율. 행정청이 없으면 1 */
+function adminStaffing(w: World, c: Company): number {
+  let st = 0, lv = 0;
+  for (const b of w.buildings) {
+    if (b.companyId !== c.id || !b.active || !getMethod(b.typeId, b.methodId).taxCapacity) continue;
+    st += b.last.staffing * b.level; lv += b.level;
+  }
+  return lv > 0 ? st / lv : 1;
+}
 
 /**
  * 진단용 (cli/builddiag.ts): AI가 공사를 넣고(levels > 0), 헐고(< 0), 방식을 바꿀 때 그 길(path)과 함께 부른다.
@@ -214,6 +231,8 @@ export function treasuryTight(w: World, c: Company, k: Kingdom): boolean {
  * - 풂 (TUNE.treasuryHighWeeks 주치 초과, 줄지 않았다): 세금을 내린다.
  * - 기술을 다 연 왕국: 풂 조건에서 임금 지수가 1 이하면 국영 임금을 TUNE.doneWageMax 단계까지 올리고,
  *   임금 지수가 1을 넘으면 보통(3)으로 되돌린다. 그 밖에는 국영 임금을 보통 위로 올리지 않는다
+ * - 행정청 일손 (TUNE.aiAdminWage, 오버홀 07 A4): 징수율이 TUNE.aiAdminFloor 아래인 동안 국영 임금을 내리지 않고, 행정청 충원율이 ADMIN_STAFFED 아래면
+ *   그 점검에서는 다른 손잡이보다 먼저 국영 임금을 한 칸 올린다 (5까지). 행정청 일꾼은 국영 임금을 받으므로, 국고가 조일 때 임금을 깎으면 징수율이 더 떨어진다
  * - 복지 (cutWelfare·raiseWelfare): 조임에서는 복지를 가장 먼저 줄인다 (단계를 1까지, 빚이 있으면 그다음 복지법을 끈다). 조이지 않는데 국고가 줄며
  *   TUNE.welfareWeeks 의 절반 주치 아래면 복지 단계를 내린다. 다른 손잡이를 움직이지 않은 점검에서는 복지를 켜거나 올린다 (raiseWelfare)
  */
@@ -227,16 +246,21 @@ function adjustBudget(w: World, c: Company) {
   let step: [BudgetItem, number] | null = null;
   // 기술을 다 연 왕국: 국영 임금을 보통 위로 TUNE.doneWageMax 단계까지 올릴 수 있다 (임금 지수 1 이하, 국고 넉넉할 때)
   const done = !c.research.current && researchableTechs(c).length === 0;
-  if (treasuryTight(w, c, k)) {
+  // TUNE.aiAdminWage: 징수율이 하한 아래면 국영 임금을 내리지 않는다 (cut = false)
+  const guard = !!TUNE.aiAdminWage && belowAdminFloor(k);
+  const cut = !guard;
+  if (guard && b.wages < BUDGET_STEPS && adminStaffing(w, c) < ADMIN_STAFFED) {
+    step = ['wages', b.wages + 1];
+  } else if (treasuryTight(w, c, k)) {
     if (losing && !cutWelfare(w, c, k)) {
-      if (b.wages > 3) step = ['wages', b.wages - 1];
+      if (b.wages > 3 && cut) step = ['wages', b.wages - 1];
       else if (b.tax < BUDGET_STEPS) step = ['tax', b.tax + 1];
-      else if (b.wages > 1) step = ['wages', b.wages - 1];
+      else if (b.wages > 1 && cut) step = ['wages', b.wages - 1];
       else if (c.debt > 0) shrinkSchools(w, c);
     }
   } else if (!losing) {
     const rich = treasuryRich(w, c, k);
-    if (b.wages > 3 && (k.wageIndex ?? 1) > 1) step = ['wages', b.wages - 1];
+    if (b.wages > 3 && (k.wageIndex ?? 1) > 1 && cut) step = ['wages', b.wages - 1];
     else if (b.wages < 3) step = ['wages', b.wages + 1];
     else if (done && rich && b.wages < TUNE.doneWageMax && (k.wageIndex ?? 1) <= 1) step = ['wages', b.wages + 1];
     else if (rich && b.tax > 1) step = ['tax', b.tax - 1];
@@ -970,6 +994,12 @@ function reviewLevels(w: World, c: Company, o: Outlook, pointsPerDay: number) {
     if (w.constructions.some((k) => k.targetBuildingId === b.id)) { b.negWeeks = 0; delete b.staffPeak; continue; }
     // 굶는 건물은 지금 투입 충족으로 잰다 (장기 전망은 투입을 다 산다고 본다)
     const hungry = starving(b);
+    // 징수율 하한 (TUNE.aiAdminFloor, 오버홀 07 A4): 왕국 징수율이 하한 아래인 동안 행정청은 헐지 않는다 (적자 주를 세지 않고, 올려 둔 철거 대기를 거둔다)
+    if (c.state && getMethod(b.typeId, b.methodId).taxCapacity && belowAdminFloor(w.kingdoms.find((x) => x.id === regionById(w, b.regionId).kingdomId))) {
+      if (b.shrinking && !b.swap) b.shrinking = 0;
+      b.negWeeks = 0;
+      continue;
+    }
     const v = levelValue(w, c, o, b, pointsPerDay, hungry ? b.last.inputFill : undefined);
     if (b.shrinking) {
       if (v > 0 && !b.swap) b.shrinking = 0;

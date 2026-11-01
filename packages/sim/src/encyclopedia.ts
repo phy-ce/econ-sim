@@ -35,7 +35,7 @@ import {
   DAILY_INTEREST, KEEP_SHARE, TREASURY_RELEASE, MINT_BASE, MINT_RATE, RESERVE_SHARE, kingdomLiteracy, researchPoints, adminCapacityOf, reserveCap, taxCapacity, taxRates,
   weeklyOutputValue,
 } from './finance';
-import { AI_JITTER, CHUNKS, INPUT_SUPPLY_MIN, MIXED_LEVELS, RAISE_FILL, RESERVE_FULL, RESERVE_STREAK, STARVE_FILL, TRIAL_PRICE, SWITCH_MARGIN, SWITCH_MIN_WAGE_SHARE, LAW_COOLDOWN, LAW_SWITCH, WELFARE_COOLDOWN, WELFARE_SWITCH, OFFICE_BLOCK, OFFICE_GROWTH, STAFFING_HORIZON, SWITCH_COOLDOWN } from './ai';
+import { AI_JITTER, CHUNKS, INPUT_SUPPLY_MIN, MIXED_LEVELS, RAISE_FILL, RESERVE_FULL, RESERVE_STREAK, STARVE_FILL, TRIAL_PRICE, SWITCH_MARGIN, SWITCH_MIN_WAGE_SHARE, LAW_COOLDOWN, LAW_SWITCH, WELFARE_COOLDOWN, WELFARE_SWITCH, OFFICE_BLOCK, OFFICE_GROWTH, STAFFING_HORIZON, SWITCH_COOLDOWN, ADMIN_STAFFED } from './ai';
 import { budgetPreview } from './budget';
 import { ownershipAssets } from './policy';
 import { welfareIncome, welfareTarget, welfareWeekly } from './welfare';
@@ -1225,8 +1225,9 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   },
   {
     id: 'ai-budget', category: 'ai', title: t('정책 사다리', 'Policy ladder'),
-    rule: t('4주마다 한 칸 움직인다. 빚이 있거나 국고가 지출 {0}주치 미만이고 줄었으면 긴축 쪽으로, {1}주치를 넘고 줄지 않았으면 세금을 내린다. 사다리: 국영 임금 4 → 세금 1~5 → 국영 임금 2·1. 기술을 다 열면 풀 때 임금 지수 1 이하에서 국영 임금을 {2}단계까지 올리고, 지수가 1을 넘으면 되돌린다.', 'Every 4 weeks one step: toward austerity if in debt or below {0} weeks of spending and falling; tax cuts above {1} weeks and not falling. Ladder: state wages 4 → tax 1–5 → state wages 2·1. With every tech researched, loosening raises state wages up to step {2} while the wage index is at most 1, and steps back when it exceeds 1.'),
-    params: [tune('treasuryLowWeeks', '조이는 선', 'Tighten below', 'week'), tune('treasuryHighWeeks', '푸는 선', 'Loosen above', 'week'), tune('doneWageMax', '기술 완료 후 임금 상한', 'Wage cap after research')],
+    rule: t('4주마다 한 칸 움직인다. 빚이 있거나 국고가 지출 {0}주치 미만이고 줄었으면 긴축 쪽으로, {1}주치를 넘고 줄지 않았으면 세금을 내린다. 사다리: 국영 임금 4 → 세금 1~5 → 국영 임금 2·1. 기술을 다 열면 풀 때 임금 지수 1 이하에서 국영 임금을 {2}단계까지 올리고, 지수가 1을 넘으면 되돌린다. {3} = 1이면 징수율이 {4} 아래인 동안 국영 임금을 내리지 않고, 행정청 충원율이 {5} 아래면 다른 손잡이보다 먼저 국영 임금을 한 칸 올린다.', 'Every 4 weeks one step: toward austerity if in debt or below {0} weeks of spending and falling; tax cuts above {1} weeks and not falling. Ladder: state wages 4 → tax 1–5 → state wages 2·1. With every tech researched, loosening raises state wages up to step {2} while the wage index is at most 1, and steps back when it exceeds 1. With {3} = 1, while the collection rate is below {4} state wages are never cut, and if administration staffing is below {5} state wages go up one step before any other dial.'),
+    params: [tune('treasuryLowWeeks', '조이는 선', 'Tighten below', 'week'), tune('treasuryHighWeeks', '푸는 선', 'Loosen above', 'week'), tune('doneWageMax', '기술 완료 후 임금 상한', 'Wage cap after research'),
+      tune('aiAdminWage', '행정청 일손 임금', 'Administration staffing wages'), tune('aiAdminFloor', '행정청 징수율 하한', 'Administration collection floor', 'pct'), p('행정청 충원 기준', 'Administration staffed at', () => ADMIN_STAFFED, 'pct')],
     related: ['budget-steps', 'treasury', 'ai-schools', 'ai-welfare'], seenIn: ['finance'], source: ['ai.ts adjustBudget'], design: ['10'],
   },
   {
@@ -1278,8 +1279,8 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   },
   {
     id: 'ai-demolition', category: 'ai', title: t('철거 판단', 'Demolition review'),
-    rule: t('유보 자산으로 메우는 건물은 세지 않는다. 다만 투입 충족 < {2}가 {1}주 이어진 건물은 세고, 마지막 1레벨 손익을 지금 투입 충족으로 잰다. 마지막 1레벨의 장기 손익이 {0}주 연속 마이너스면 레벨의 1/4(최소 1)을 철거 대기에 올린다. 다시 이익이면 취소한다. 720일이 지나도 50% 미만인 공사는 취소한다.', 'Buildings covering losses from reserves are skipped, except those whose input fill stayed under {2} for {1} weeks; for them the last level is valued at the current input fill. If the last level\'s long-run profit is negative for {0} weeks, a quarter of the levels (min 1) are queued for demolition; cancelled if profitable again. Projects under 50% after 720 days are cancelled.'),
-    params: [tune('shrinkWeeks', '연속 주 수', 'Weeks', 'week'), tune('starveWeeks', '굶은 주 수', 'Starved weeks', 'week'), p('굶는 투입 충족', 'Starving fill', () => STARVE_FILL, 'pct')],
+    rule: t('유보 자산으로 메우는 건물은 세지 않는다. 다만 투입 충족 < {2}가 {1}주 이어진 건물은 세고, 마지막 1레벨 손익을 지금 투입 충족으로 잰다. 마지막 1레벨의 장기 손익이 {0}주 연속 마이너스면 레벨의 1/4(최소 1)을 철거 대기에 올린다. 다시 이익이면 취소한다. {3} > 0이면 왕실 행정청은 왕국 징수율이 {3} 아래인 동안 헐지 않는다 (철거 대기도 거둔다). 720일이 지나도 50% 미만인 공사는 취소한다.', 'Buildings covering losses from reserves are skipped, except those whose input fill stayed under {2} for {1} weeks; for them the last level is valued at the current input fill. If the last level\'s long-run profit is negative for {0} weeks, a quarter of the levels (min 1) are queued for demolition; cancelled if profitable again. With {3} > 0, crown administration is never demolished while the kingdom\'s collection rate is below {3} (queued demolition is withdrawn). Projects under 50% after 720 days are cancelled.'),
+    params: [tune('shrinkWeeks', '연속 주 수', 'Weeks', 'week'), tune('starveWeeks', '굶은 주 수', 'Starved weeks', 'week'), p('굶는 투입 충족', 'Starving fill', () => STARVE_FILL, 'pct'), tune('aiAdminFloor', '행정청 징수율 하한', 'Administration collection floor', 'pct')],
     related: ['demolition', 'ai-swap', 'reserves'], seenIn: ['company'], source: ['ai.ts reviewLevels'], design: ['10'],
   },
   {

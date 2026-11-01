@@ -591,6 +591,12 @@ export const TUNE = {
   // 공급 이동평균 + 모든 회사의 공사 중 레벨 산출, ÷ 수요 이동평균)가 이 값을 넘는 주는 증설하지 않는다. 0 = 검사 없음 (그 전과 같음).
   // 후보 1.25 / 1.5 / 1.75 와 0 을 비교 중 (docs/overhaul/0BP_5-1_SPECS.json), 근거 없음
   aiGlutSD: 0,
+  // 행정청 징수율 하한 (오버홀 07 A4, 0b′, AI 판단, 이슈 #4): > 0 이면 AI 왕실은 왕국 징수율(taxRatio)이 이 값 아래인 동안 행정청 레벨을 헐지 않는다
+  // (reviewLevels 가 적자 주를 세지 않고, 올려 둔 행정청 철거 대기를 거둔다). 0 = 하한 없음 (그 전과 같음). 후보 0.6 / 0.7 / 0.8 과 0 을 비교 중 (docs/overhaul/0BP_A4_SPECS.json), 근거 없음
+  aiAdminFloor: 0,
+  // 1 = 징수율이 aiAdminFloor 아래인 동안 AI 왕실은 국영 임금을 내리지 않고, 행정청 충원율이 ADMIN_STAFFED 아래면 4주 점검마다 국영 임금을 한 칸 올린다 (5까지, ai.ts adjustBudget).
+  // 0 = 끔 (그 전과 같음). aiAdminFloor 가 0 이면 아무것도 하지 않는다. 0b 시드 2 왕국 3 의 징수율 0 은 행정청 철거보다 먼저 세습 관료(하급 귀족)가 저택 자리로 떠나서 생겼다 (0BP_A4_SPECS.json about). 근거 없음
+  aiAdminWage: 0,
   aiMixedMethods: 0, // 1 = 건물 전체를 바꿀 수 없을 때 같은 지역에 더 나은 방식 1~2레벨을 따로 짓는다 (세계 규칙이 바뀌어 사용자 결정 필요, DECISIONS 7-21)
   officeRichWeeks: 52,
   officeSelfPay: 0,

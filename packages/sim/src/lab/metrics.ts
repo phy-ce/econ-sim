@@ -185,6 +185,8 @@ class Acc {
   // 정책 (05 S0): 날마다 세금·복지·국영 임금 단계, 세금 1·5 단계 날 수, 부채 ÷ 한도 (주)
   taxStep = 0; tax1 = 0; tax5 = 0; welStep = 0; wageStep = 0;
   debtMax = 0; debt75 = 0;
+  // 0b′ A4 (07 8.3 (d)): 징수율 날마다 최저(61일부터)·합 (대륙 범위는 왕국 중 최저·왕국 단순 평균)
+  trMin = Infinity; trSum = 0;
   lawFails = 0;
   // 0b′ 5-1 비교 지표 (03 5장 1번): 팔린 비율(가치), 짓고 부수기 (레벨), 금고 새 약정, 유보 증설 착공·과잉 검사로 막힌 증설
   soldV = 0; supV = 0;
@@ -427,6 +429,9 @@ export class Collector {
         a.taxStep += k.budget.tax * f; a.welStep += k.budget.welfare * f; a.wageStep += k.budget.wages * f;
         if (k.budget.tax === 1) a.tax1 += f;
         if (k.budget.tax === 5) a.tax5 += f;
+        // 최저는 처음 60일(시작 행정청이 사람을 뽑는 동안 징수율이 0 에서 오른다)을 빼고 센다
+        if (w.tick > 60) a.trMin = Math.min(a.trMin, k.taxRatio ?? 0);
+        a.trSum += (k.taxRatio ?? 0) * f;
       }
     });
   }
@@ -696,11 +701,11 @@ export class Collector {
     }
     const wageOf = (s: Skill) => div(paid[SKILLS.indexOf(s)], emp[SKILLS.indexOf(s)]);
     // 0b′ 5-1: 저택·금융가 금고 합, 남은 금고 공사 약정액 (약정 − 낸 공사비, finance.ts pledgeLeft 의 합), 행정청 인원·레벨
-    let vault = 0, pledge = 0, adminStaff = 0, adminLv = 0;
+    let vault = 0, pledge = 0, adminStaff = 0, adminLv = 0, adminSt = 0;
     for (const b of w.buildings) {
       if (!inScope(b.regionId)) continue;
       if (isOwnerBuilding(b.typeId)) vault += b.cash ?? 0;
-      if (b.typeId === 'admin') { adminLv += b.level; for (const s of SKILLS) adminStaff += b.employed[s]; }
+      if (b.typeId === 'admin') { adminLv += b.level; adminSt += b.last.staffing * b.level; for (const s of SKILLS) adminStaff += b.employed[s]; }
     }
     for (const x of w.constructions) {
       if (!x.funders || !inScope(x.regionId)) continue;
@@ -818,6 +823,8 @@ export class Collector {
       vault: sig(vault / M), vaultG: sig(this.vault0[i] > 0 ? (vault - this.vault0[i]) / this.vault0[i] : NaN), pledge: sig(pledge / M), pledgeNew: sig(a.pledgeNew / M),
       startLv: a.startLv, builtLv: a.builtLv, demoLv: a.demoLv, quickDemo: a.quickDemo, quickIdx: sig(div(a.quickDemo, a.startLv) ?? NaN),
       growStarts: a.growStarts, glutBlock: a.glutBlock, lvProd: lvTot, adminStaff: sig(adminStaff / K), adminLv,
+      // 0b′ A4: 행정청 레벨 가중 충원율 (연말), 징수율 해 안 최저·평균 (날마다)
+      adminSt: sig(div(adminSt, adminLv) ?? NaN), taxRatioMin: sig(a.trMin), taxRatioAvg: sig(a.trSum / d),
       // X08-H (왕국 단위 요약), 08 3.5 한계
       harvDays: a.harvDays, k4Share: sig(div(k4n, k4d) ?? NaN), lim,
       ...tech,

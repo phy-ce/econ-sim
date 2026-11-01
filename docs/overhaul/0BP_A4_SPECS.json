@@ -1,0 +1,627 @@
+{
+ "about": "0b′ A4 (행정청 징수율 하한) 비교 명세. docs/overhaul/07_RIVALS_AI.md 3.4 A4·4.5 (b)·5.5·8.3, 이슈 #4. specs: TUNE.aiAdminFloor 0(하한 없음 = 지금 코드) / 0.6 / 0.7 / 0.8 × 시드 1·2 × salt 0..3 × 20년 (32회). specsWage (optional, 24회): 같은 하한 + TUNE.aiAdminWage 1 (하한 아래에서 국영 임금을 내리지 않고, 행정청 충원율 < 0.9 면 4주마다 한 칸 올림), 대조 a0. 플레이어 왕실 방치(withPlayer 기본) + 고정 연구 순서(research 기본 'fixed', 0B_PREREG 1장)로 0b 기준선 팔과 같다 (0b 시드 2 왕국 3 의 징수율 0 이 나온 조건). 돌리기 (packages/sim 에서): bash cli/lab.sh <out.jsonl> ../../docs/overhaul/0BP_A4_SPECS.json, 임금 팔은 KEY=specsWage OPTIONAL=1 bash cli/lab.sh <outw.jsonl> ../../docs/overhaul/0BP_A4_SPECS.json. 요약: python cli/labsum.py <out.jsonl> --compare a0 --metrics taxRatio,taxRatioMin,taxRatioAvg,tax1Sh,tax5Sh,taxStep,debtMax,debt75,adminLv,adminSt,adminStaff,gdp,gdpPre,solPeas,solUnsk,wageStep (왕국별은 --k 2, --k 3: AI 왕국).",
+ "code": "wt-0bp (8a31e51 + A4 aiAdminFloor·aiAdminWage, lab 지표 adminSt·taxRatioMin·taxRatioAvg)",
+ "counts": {
+  "specs (20년)": 32,
+  "specsWage (20년, optional)": 24
+ },
+ "diagnosis": "짧은 진단 (wt-0bp, 시드 2, salt 0, 0b 기준선 조건, 왕국 3): 징수율은 1년차 150~300일에 0.54 → 0.01 로 떨어졌고 이때 행정청 레벨은 11 그대로였다 (첫 철거는 511일 −3, 707일 −2). 떨어진 원인은 세습 관료제 행정청의 하급 귀족 일꾼이 저택 자리로 옮긴 것이다: 행정청 충원율 1.00(150일) → 0.52(180일) → 0.04(240일) → 0, 같은 때 저택의 하급 귀족 1명 몫(shareWage)이 16~25 로 국영 하급 귀족 임금(시장 임금 × 국영 임금 단계, 12.7 → 10.2) 의 1.1배(switchPremium)를 넘었다. 그 뒤 국고가 조여 세금 3→5 (196·224일), 국영 임금 3→1 (300·330일). 인쇄술은 1년차에 알았지만 왕국에 종이 건물이 없어 전문 관료제로 못 바꿨다.",
+ "choices": [
+  "후보 0.6 / 0.7 / 0.8 은 07 4.5 (b) 그대로. 시작 징수율은 adminStart 1·taxCurve hyp 에서 약 0.5 (이 진단의 왕국 3: 0.52) 라 세 후보 모두 0일부터 하한 아래다 (AI 가 행정청을 늘려 하한을 넘기 전까지는 '행정청을 헐지 않음' 과 같다). 07 4.5 (b) 의 '시작 값보다 높으면 처음부터 막힌다' 에 해당한다. 0.5 이하 후보는 이 명세에 없다.",
+  "a0 은 5-1 명세의 g0 과 같은 코드(aiGlutSD 0)지만 새 지표(adminSt·taxRatioMin·taxRatioAvg)가 없어 다시 돈다.",
+  "임금 팔(specsWage)은 원인 진단에서 나온 두 번째 AI 판단 수정이다. 짧은 확인(시드 2, salt 0, 8년, 하한 0.7)에서 왕국 3 의 충원율이 3년차 0.68 까지 돌아왔다가 6년차 0.04 로 다시 떨어지고, 부채 ÷ 한도 최대가 8년차 3.14 (하한만: 1.83, 끔: 1.16) 로 커졌다. 그래서 optional 로 둔다.",
+  "새 lab 지표: adminSt = 행정청 레벨 가중 충원율 (연말), taxRatioMin = 그해 날마다 징수율 최저 (61일부터: 시작 행정청이 사람을 뽑는 첫 주 동안 징수율이 0 에서 오른다), taxRatioAvg = 그해 날마다 평균. 대륙 줄은 왕국 중 최저·왕국 단순 평균. 세금 끝값 체류는 기존 tax1Sh·tax5Sh, 부채 ÷ 한도는 debtMax·debt75."
+ ],
+ "specs": [
+  {
+   "item": "X07-A4",
+   "name": "a0",
+   "seed": 1,
+   "salt": 0,
+   "years": 20
+  },
+  {
+   "item": "X07-A4",
+   "name": "a0",
+   "seed": 1,
+   "salt": 1,
+   "years": 20
+  },
+  {
+   "item": "X07-A4",
+   "name": "a0",
+   "seed": 1,
+   "salt": 2,
+   "years": 20
+  },
+  {
+   "item": "X07-A4",
+   "name": "a0",
+   "seed": 1,
+   "salt": 3,
+   "years": 20
+  },
+  {
+   "item": "X07-A4",
+   "name": "a0",
+   "seed": 2,
+   "salt": 0,
+   "years": 20
+  },
+  {
+   "item": "X07-A4",
+   "name": "a0",
+   "seed": 2,
+   "salt": 1,
+   "years": 20
+  },
+  {
+   "item": "X07-A4",
+   "name": "a0",
+   "seed": 2,
+   "salt": 2,
+   "years": 20
+  },
+  {
+   "item": "X07-A4",
+   "name": "a0",
+   "seed": 2,
+   "salt": 3,
+   "years": 20
+  },
+  {
+   "item": "X07-A4",
+   "name": "a60",
+   "seed": 1,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "aiAdminFloor": 0.6
+   }
+  },
+  {
+   "item": "X07-A4",
+   "name": "a60",
+   "seed": 1,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "aiAdminFloor": 0.6
+   }
+  },
+  {
+   "item": "X07-A4",
+   "name": "a60",
+   "seed": 1,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "aiAdminFloor": 0.6
+   }
+  },
+  {
+   "item": "X07-A4",
+   "name": "a60",
+   "seed": 1,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "aiAdminFloor": 0.6
+   }
+  },
+  {
+   "item": "X07-A4",
+   "name": "a60",
+   "seed": 2,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "aiAdminFloor": 0.6
+   }
+  },
+  {
+   "item": "X07-A4",
+   "name": "a60",
+   "seed": 2,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "aiAdminFloor": 0.6
+   }
+  },
+  {
+   "item": "X07-A4",
+   "name": "a60",
+   "seed": 2,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "aiAdminFloor": 0.6
+   }
+  },
+  {
+   "item": "X07-A4",
+   "name": "a60",
+   "seed": 2,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "aiAdminFloor": 0.6
+   }
+  },
+  {
+   "item": "X07-A4",
+   "name": "a70",
+   "seed": 1,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "aiAdminFloor": 0.7
+   }
+  },
+  {
+   "item": "X07-A4",
+   "name": "a70",
+   "seed": 1,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "aiAdminFloor": 0.7
+   }
+  },
+  {
+   "item": "X07-A4",
+   "name": "a70",
+   "seed": 1,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "aiAdminFloor": 0.7
+   }
+  },
+  {
+   "item": "X07-A4",
+   "name": "a70",
+   "seed": 1,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "aiAdminFloor": 0.7
+   }
+  },
+  {
+   "item": "X07-A4",
+   "name": "a70",
+   "seed": 2,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "aiAdminFloor": 0.7
+   }
+  },
+  {
+   "item": "X07-A4",
+   "name": "a70",
+   "seed": 2,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "aiAdminFloor": 0.7
+   }
+  },
+  {
+   "item": "X07-A4",
+   "name": "a70",
+   "seed": 2,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "aiAdminFloor": 0.7
+   }
+  },
+  {
+   "item": "X07-A4",
+   "name": "a70",
+   "seed": 2,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "aiAdminFloor": 0.7
+   }
+  },
+  {
+   "item": "X07-A4",
+   "name": "a80",
+   "seed": 1,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "aiAdminFloor": 0.8
+   }
+  },
+  {
+   "item": "X07-A4",
+   "name": "a80",
+   "seed": 1,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "aiAdminFloor": 0.8
+   }
+  },
+  {
+   "item": "X07-A4",
+   "name": "a80",
+   "seed": 1,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "aiAdminFloor": 0.8
+   }
+  },
+  {
+   "item": "X07-A4",
+   "name": "a80",
+   "seed": 1,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "aiAdminFloor": 0.8
+   }
+  },
+  {
+   "item": "X07-A4",
+   "name": "a80",
+   "seed": 2,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "aiAdminFloor": 0.8
+   }
+  },
+  {
+   "item": "X07-A4",
+   "name": "a80",
+   "seed": 2,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "aiAdminFloor": 0.8
+   }
+  },
+  {
+   "item": "X07-A4",
+   "name": "a80",
+   "seed": 2,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "aiAdminFloor": 0.8
+   }
+  },
+  {
+   "item": "X07-A4",
+   "name": "a80",
+   "seed": 2,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "aiAdminFloor": 0.8
+   }
+  }
+ ],
+ "specsWage": [
+  {
+   "item": "X07-A4w",
+   "name": "aw60",
+   "seed": 1,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "aiAdminFloor": 0.6,
+    "aiAdminWage": 1
+   },
+   "control": "a0",
+   "optional": true
+  },
+  {
+   "item": "X07-A4w",
+   "name": "aw60",
+   "seed": 1,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "aiAdminFloor": 0.6,
+    "aiAdminWage": 1
+   },
+   "control": "a0",
+   "optional": true
+  },
+  {
+   "item": "X07-A4w",
+   "name": "aw60",
+   "seed": 1,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "aiAdminFloor": 0.6,
+    "aiAdminWage": 1
+   },
+   "control": "a0",
+   "optional": true
+  },
+  {
+   "item": "X07-A4w",
+   "name": "aw60",
+   "seed": 1,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "aiAdminFloor": 0.6,
+    "aiAdminWage": 1
+   },
+   "control": "a0",
+   "optional": true
+  },
+  {
+   "item": "X07-A4w",
+   "name": "aw60",
+   "seed": 2,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "aiAdminFloor": 0.6,
+    "aiAdminWage": 1
+   },
+   "control": "a0",
+   "optional": true
+  },
+  {
+   "item": "X07-A4w",
+   "name": "aw60",
+   "seed": 2,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "aiAdminFloor": 0.6,
+    "aiAdminWage": 1
+   },
+   "control": "a0",
+   "optional": true
+  },
+  {
+   "item": "X07-A4w",
+   "name": "aw60",
+   "seed": 2,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "aiAdminFloor": 0.6,
+    "aiAdminWage": 1
+   },
+   "control": "a0",
+   "optional": true
+  },
+  {
+   "item": "X07-A4w",
+   "name": "aw60",
+   "seed": 2,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "aiAdminFloor": 0.6,
+    "aiAdminWage": 1
+   },
+   "control": "a0",
+   "optional": true
+  },
+  {
+   "item": "X07-A4w",
+   "name": "aw70",
+   "seed": 1,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "aiAdminFloor": 0.7,
+    "aiAdminWage": 1
+   },
+   "control": "a0",
+   "optional": true
+  },
+  {
+   "item": "X07-A4w",
+   "name": "aw70",
+   "seed": 1,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "aiAdminFloor": 0.7,
+    "aiAdminWage": 1
+   },
+   "control": "a0",
+   "optional": true
+  },
+  {
+   "item": "X07-A4w",
+   "name": "aw70",
+   "seed": 1,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "aiAdminFloor": 0.7,
+    "aiAdminWage": 1
+   },
+   "control": "a0",
+   "optional": true
+  },
+  {
+   "item": "X07-A4w",
+   "name": "aw70",
+   "seed": 1,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "aiAdminFloor": 0.7,
+    "aiAdminWage": 1
+   },
+   "control": "a0",
+   "optional": true
+  },
+  {
+   "item": "X07-A4w",
+   "name": "aw70",
+   "seed": 2,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "aiAdminFloor": 0.7,
+    "aiAdminWage": 1
+   },
+   "control": "a0",
+   "optional": true
+  },
+  {
+   "item": "X07-A4w",
+   "name": "aw70",
+   "seed": 2,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "aiAdminFloor": 0.7,
+    "aiAdminWage": 1
+   },
+   "control": "a0",
+   "optional": true
+  },
+  {
+   "item": "X07-A4w",
+   "name": "aw70",
+   "seed": 2,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "aiAdminFloor": 0.7,
+    "aiAdminWage": 1
+   },
+   "control": "a0",
+   "optional": true
+  },
+  {
+   "item": "X07-A4w",
+   "name": "aw70",
+   "seed": 2,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "aiAdminFloor": 0.7,
+    "aiAdminWage": 1
+   },
+   "control": "a0",
+   "optional": true
+  },
+  {
+   "item": "X07-A4w",
+   "name": "aw80",
+   "seed": 1,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "aiAdminFloor": 0.8,
+    "aiAdminWage": 1
+   },
+   "control": "a0",
+   "optional": true
+  },
+  {
+   "item": "X07-A4w",
+   "name": "aw80",
+   "seed": 1,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "aiAdminFloor": 0.8,
+    "aiAdminWage": 1
+   },
+   "control": "a0",
+   "optional": true
+  },
+  {
+   "item": "X07-A4w",
+   "name": "aw80",
+   "seed": 1,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "aiAdminFloor": 0.8,
+    "aiAdminWage": 1
+   },
+   "control": "a0",
+   "optional": true
+  },
+  {
+   "item": "X07-A4w",
+   "name": "aw80",
+   "seed": 1,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "aiAdminFloor": 0.8,
+    "aiAdminWage": 1
+   },
+   "control": "a0",
+   "optional": true
+  },
+  {
+   "item": "X07-A4w",
+   "name": "aw80",
+   "seed": 2,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "aiAdminFloor": 0.8,
+    "aiAdminWage": 1
+   },
+   "control": "a0",
+   "optional": true
+  },
+  {
+   "item": "X07-A4w",
+   "name": "aw80",
+   "seed": 2,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "aiAdminFloor": 0.8,
+    "aiAdminWage": 1
+   },
+   "control": "a0",
+   "optional": true
+  },
+  {
+   "item": "X07-A4w",
+   "name": "aw80",
+   "seed": 2,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "aiAdminFloor": 0.8,
+    "aiAdminWage": 1
+   },
+   "control": "a0",
+   "optional": true
+  },
+  {
+   "item": "X07-A4w",
+   "name": "aw80",
+   "seed": 2,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "aiAdminFloor": 0.8,
+    "aiAdminWage": 1
+   },
+   "control": "a0",
+   "optional": true
+  }
+ ]
+}
