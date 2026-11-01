@@ -29,7 +29,7 @@
 깨진 화면
 - 2-78 코드 완료: officeLoad를 실제 투입량에 반영하고 사무소/그룹 가동 비율 표시. UI_DONE 참조.
 - 2-69(왕실 임금 읽기 전용)는 코드 완료 (`e1d700f`, 화면 미검증, UI_DONE).
-- **2-81 왕실 임금 탭·건물 방식 비교 임금 (main c952e65)**: 지역 시장 임금이 기본이 되어 `marketWage` 비교값·`owner.wages` 추정이 실제 지급과 다르다. 방식 비교는 `wagesAt(owner, b.typeId, world, b.regionId)`, 임금 탭은 왕국 지역 임금 범위. 웃돈 손잡이는 결정 대기.
+- **2-81 왕실 임금 탭·건물 방식 비교 임금 (main c952e65)**: 지역 시장 임금이 기본이 되어 `marketWage` 비교값·`owner.wages` 추정이 실제 지급과 다르다. 방식 비교는 `wagesAt(owner, b.typeId, world, b.regionId)`, 임금 탭은 왕국 지역 임금 범위. 웃돈 손잡이는 열지 않는다 (2026-11-02 사용자 결정: 플레이어 왕실 임금은 읽기 전용).
 - **2-80 국영 임금 상세 식**: 지금 1인/일이 실제 지급(`Region.stateWages`)과 다르다. sim `drillWages` 수정(3장)이 들어온 뒤 `BudgetJobs.tsx:12` 식을 "시장 임금 × 단계"로. 그 전에는 화면 할 일 없음.
 
 사용자 요청

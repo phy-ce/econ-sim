@@ -9,6 +9,13 @@
 - 클라우드 세션(claude.ai/code)으로 이어서 할 수 있다. 규칙은 CLAUDE.md "클라우드 세션"을 본다.
 - 옛 세션 기록: `docs/log/` (2026-10-25 이전 HANDOFF 절은 `docs/log/HANDOFF_2026-10-18_to_10-25.md`, 날짜별 UI 기록도 여기). 다른 문서의 "HANDOFF 0-ind3"·"HANDOFF 0-aifix" 같은 옛 절 참조는 그 파일에 있다.
 
+## 0-1102b. 2026-11-02 세션 끝 (사용자가 컴퓨터를 끔)
+- main c952e65 (+284cb52 UI 명세)까지 푸시됨: wt-labor 병합(0b′, 기준 임금 재계산, 지역 시장 임금, 마이크로 도구, S7·S5·S8·D2 기본 켬). 시험은 사용자 지시로 typecheck·test:core 만 돌렸다. premerge 와 새 기본값 대 옛 main 확인 비교(20년 × 시드 1·2 × salt 0..3)는 아직 안 했다 → 다음 세션 첫 일.
+- 진행 중 브랜치 `wt-sim2` (origin 에 올림): UI_CHANGES 3장 sim 요청 셋(`subsistenceWage` export, 예산 국영 임금 상세를 지역 `Region.stateWages` 로, `wealthDrivers` export)과 민간 회사 현금 0 함정(주인 운전자금 AI, `callCapital` 이 왜 못 막는지). 끝난 부분만 커밋됐을 수 있다: `git log main..wt-sim2` 와 브랜치의 HANDOFF·커밋 메시지를 보고 이어서 한다.
+- 사용자 결정 (2026-11-02): 왕실 생산 건물 임금 웃돈을 플레이어에게 열지 않는다 (UI_CHANGES 2-81, DECISIONS). 소작지 수확 체감(`tenantSlack`)은 메모만 (DECISIONS 7-38).
+- Codex(herdr front, w1:p2)는 사용량 한도로 멈춤 (한도 해제 2026-11-02 03:22). 커밋 안 한 클라이언트 변경이 main 체크아웃에 남아 있다 (PolicyPanel.tsx, system-ui.css, 지도 파일 등): 건드리지 않는다. 한도가 풀리면 UI_CHANGES 0장(2-81·2-79·2-75·2-83 등)을 이어서 하게 한다. Codex 에 일을 보내기 전에 `herdr agent read front` 로 한도 문구를 먼저 본다.
+- 정리 거리: git 워크트리 86개·브랜치 81개 (대부분 합쳐진 옛 것). 지우는 일은 사용자 확인 뒤.
+
 ## 0-1102. 2026-11-02: wt-labor 를 main 에 합칠 준비 (0b′ + 기준 임금 + 지역 시장 임금 + 마이크로 + 조합)
 - 사용자 결정 (DECISIONS 7-38): "소작지 수확 체감은 일단 메모만 해 두고, all 의 나머지를 넣어서 메인에 합쳐 봐", "테스트는 일단 생략" → 확인 비교(새 기본값 대 main 20년 × salt 묶음)는 돌리지 않았다. 근거는 보고서 2026-11-02-combo (all 판, `tenantSlack` 0.5 포함).
 - 이 브랜치가 가져오는 것:
