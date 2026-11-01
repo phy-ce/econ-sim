@@ -1,5 +1,5 @@
 import { BUILDING_BY_ID, buildPointsOf, GOODS, GOOD_IDS, TICKS_PER_WEEK, MAX_POINTS_PER_LEVEL_DAY, OWNER_SEATS_PER_LEVEL, OWNERSHIP_SEATS, TUNE, WORKFORCE_RATIO, getMethod } from './data';
-import { addOwnerLevels, ownBuildingAt, builderOf, companyById, efficiency, harvestFactor, isBudgetFunded, isGovernment, landFree, logEvent, newBuilding, officeFeeMult, regionById } from './economy';
+import { addOwnerLevels, ownBuildingAt, builderOf, companyById, efficiency, harvestFactor, isBudgetFunded, isGovernment, landFree, logEvent, newBuilding, officeFeeMult, quakeAt, quakeLabel, quakeLostCells, regionById } from './economy';
 import { SKILLS } from './types';
 import { workforce } from './pops';
 import { flow, kingdomById, toTreasury } from './kingdoms';
@@ -16,10 +16,20 @@ export const CREW_RATE = 0.08;
 /**
  * 소작지는 지역의 빈 농지 전부다. 농장이 들어서면 줄고, 헐리면 다시 늘어난다.
  * 지역마다 하나이고 그 지역 왕국 민간의 소유로 둔다. 짓거나 헐 수 없다.
+ * 소작지 재해(economy.ts quakeAt, 기본 끔)가 걸린 동안은 그 칸의 손실 비율만큼 빠진다. 넘친 소작농은 노동시장(labor.ts laborMarket)이 실업으로 돌린다.
+ * 재해가 시작하는 날과 끝나는 날에 그 지역 왕실에게 사건을 남긴다.
  */
 export function updateSubsistence(w: World) {
   for (const r of w.regions) {
-    const level = Math.max(0, Math.floor(landFree(w, r.id, 'arable')));
+    const free = Math.max(0, Math.floor(landFree(w, r.id, 'arable')));
+    const q = quakeAt(w, r.id);
+    const level = free - quakeLostCells(free, q);
+    if (q && q.start === w.tick) {
+      logEvent(w, kingdomById(w, r.kingdomId).governmentId, `${r.name} ${quakeLabel(w, r.id)}`, { kind: 'warn', regionId: r.id, en: `${regionNameEn(r.id)} ${quakeLabel(w, r.id, true)}` });
+    } else if (!q && w.tick > 0) {
+      const prev = quakeAt(w, r.id, w.tick - 1);
+      if (prev && prev.end === w.tick) logEvent(w, kingdomById(w, r.kingdomId).governmentId, `${r.name} 소작지 복구`, { kind: 'info', regionId: r.id, en: `${regionNameEn(r.id)} tenant land restored` });
+    }
     let b = w.buildings.find((x) => x.regionId === r.id && x.typeId === 'subsistence');
     const owner = kingdomById(w, r.kingdomId).privateIds[0];
     if (!b) {

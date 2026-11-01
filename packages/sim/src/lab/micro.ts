@@ -12,8 +12,8 @@
 // - 사람·양의 고정 문턱(ABS_LIMITS hireMin·shareMin·seekMin·unsuppliedQty)은 × s, 돈 문턱(baseCredit·mintBase·reserveBase)은 × 인구 비율
 //   (마이크로 인구 ÷ 본 게임 같은 왕국 시작 인구). 소작지 1칸 인원(SUBSISTENCE.workersPerCell)·무역소 유보액(TUNE.tradeReserve)도 × s.
 // - 저택·금융가 크기 규칙(OWNERSHIP_SEATS·OWNER_SEATS_PER_LEVEL·financeStaff)은 레벨 단위의 비율이라 표 축소만으로 맞는다.
-import { ABS_LIMITS, BUILDING_BY_ID, BUILDING_TYPES, GOOD_IDS, SUBSISTENCE, TAX_PEOPLE_PER_LEVEL, TIERS, TRADING_POST, TUNE, WORKFORCE_RATIO, tradeReserveOf } from '../data';
-import { collectionRatio, newBuilding, paysDividend, slots } from '../economy';
+import { ABS_LIMITS, BUILDING_BY_ID, BUILDING_TYPES, GOOD_IDS, SUBSISTENCE, TAX_PEOPLE_PER_LEVEL, TICKS_PER_YEAR, TIERS, TRADING_POST, TUNE, WORKFORCE_RATIO, tradeReserveOf } from '../data';
+import { SCRIPTED_QUAKES, collectionRatio, newBuilding, paysDividend, slots } from '../economy';
 import { applyStateWages, taxCapacity, updateWageIndex } from '../finance';
 import { createWorld } from '../index';
 import { initMarketWages, syncEmployment } from '../labor';
@@ -106,6 +106,7 @@ function takeSnapshot(): Snapshot {
 
 /** 표를 본 게임 값으로 되돌린다 (축소가 꺼져 있으면 아무것도 안 한다). 충격으로 바꾼 TUNE.needMul 도 되돌린다 */
 export function restoreMicroScale(): void {
+  SCRIPTED_QUAKES.length = 0;
   if (!snapshot || !active) return;
   for (const s of snapshot.methods) {
     Object.assign(s.m.workers, s.workers);
@@ -336,7 +337,9 @@ export type MicroShock =
   /** 소작농 n 명(식구 포함, 저축 0)을 더한다 */
   | { t: number; kind: 'people'; n: number; region?: number }
   /** 건물 하나를 없앤다 (종류·지역의 첫 건물). 일꾼은 다음 날 실업자가 된다 */
-  | { t: number; kind: 'remove'; type: string; region?: number };
+  | { t: number; kind: 'remove'; type: string; region?: number }
+  /** 소작지 재해: t 일부터 years 년 동안 소작지 칸의 loss 를 못 쓴다 (economy.ts SCRIPTED_QUAKES, restoreMicroScale 이 지운다) */
+  | { t: number; kind: 'quake'; loss: number; years: number; region?: number };
 
 export function applyMicroShock(w: World, s: MicroShock): void {
   if (s.kind === 'need') { Object.assign(TUNE.needMul, s.mul); return; }
@@ -347,6 +350,10 @@ export function applyMicroShock(w: World, s: MicroShock): void {
     const subs = w.buildings.find((b) => b.regionId === r.id && b.typeId === 'subsistence')!;
     const p = getPop(w, r.id, 'peasant', subs.id);
     p.size += s.n;
+    return;
+  }
+  if (s.kind === 'quake') {
+    SCRIPTED_QUAKES.push({ kind: 'quake', regionId: r.id, loss: s.loss, start: s.t, end: s.t + Math.round(s.years * TICKS_PER_YEAR) });
     return;
   }
   if (s.kind === 'remove') {

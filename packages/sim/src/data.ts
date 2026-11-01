@@ -509,6 +509,8 @@ export function scaleBonus(level: number): number {
  * - harvestIntensity: 강도 범위 [최소, 최대]. 강도 1당 산출 −5% (HARVEST_STEP)
  *   확률 0.03·0.05·0.1 × 강도 [2,6]·[4,8] 비교 (20년 × 시드 1·2): 0.03이 장기 생활수준 손실이 가장 작았고, 둥근 값 0.05를 쓴다.
  *   강도 [4,8]은 지역 최저 식량이 기아선 0.4 근처까지 간다. 숫자는 DECISIONS 7-6
+ * - quakeChance, quakeLoss, quakeYears: 소작지 재해 (시제품, 기본 끔). 해마다 지역마다 quakeChance 확률로 지진·홍수가 나서 그 지역 소작지 칸의 quakeLoss(반올림)가
+ *   quakeYears 년 동안 소작농을 받지 못한다 (economy.ts quakeAt, production.ts updateSubsistence). 넘친 소작농은 지금 규칙대로 실업이 되어 일자리·이주를 찾는다
  * - prospectStart: 시작할 때 알려진 광맥 = 잠재량(REGIONS veins) × 이 비율 (10 단위로 반올림)
  * - prospectChance: 탐광. 계절(90일)마다 지역·자원마다 남은 잠재량이 있으면 이 확률로 광맥을 찾는다
  * - prospectFind: 한 번 찾을 때 늘어나는 광맥 = 잠재량 × 이 비율 (10 단위로 반올림, 최소 10, 남은 잠재량까지)
@@ -609,6 +611,11 @@ export const TUNE = {
   wageLossCut: true,
   harvestChance: 0.05, // 계절마다 지역마다 5% (측정에서 가장 나았던 0.03에 가장 가까운 둥근 값, DECISIONS 7-6)
   harvestIntensity: [2, 6] as [number, number], // 빅토리아3 가뭄과 같은 범위 (−10~−30%)
+  // 소작지 재해 (2026-11-01 사용자 "소작지가 지진 같은 것에 의해 변동이 있게 해서 노동자로 보내볼까", 시제품, DESIGN 4): 0 = 끔.
+  // 후보 확률 0.02 / 0.05, 손실 10% / 25%, 기간 1 / 3년 (docs/overhaul/QUAKE_SPECS.json). 비교 전, 근거 없음
+  quakeChance: 0,
+  quakeLoss: 0.25,
+  quakeYears: 3,
   prospectStart: 0.3,
   prospectChance: 0.1, // 0.05·0.1·0.2 비교 (20년 × 시드 1~4, DECISIONS 7-8): 0.1과 0.2는 결과가 거의 같고 0.2는 10년차에 광맥이 거의 다 찾아진다
   prospectFind: 0.1,

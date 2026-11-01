@@ -1,14 +1,14 @@
 import {
   ABS_LIMITS, BUILDING_BY_ID, BUILDING_TYPES, GOOD_IDS, GOODS, HARVEST_KINDS, HARVEST_MAX_SEASONS, HARVEST_SEASON_DAYS, HARVEST_SPREAD, HARVEST_STEP, LAW_TECH, LAND_NAMES, LAND_NAMES_EN,
   MAX_POINTS_PER_LEVEL_DAY, REGIONS, SKILL_DEFS, SUBSISTENCE, TECH_BY_ID, VEIN_NAMES, VEIN_NAMES_EN, getMethod, regionPerk, scaleBonus, TUNE,
-  buildPointsOf, TRADING_POST,
+  buildPointsOf, TRADING_POST, TICKS_PER_YEAR,
 } from './data';
 import { regionNameEn } from './i18n';
 import { borderCost } from './kingdoms';
 import { clamp } from './rng';
 import { DEPOSITS, OWNERS, SKILLS, WEALTH_MIN, crewOf, expOf, wealthOf } from './types';
 import type {
-  Building, BuildingTypeDef, Company, DepositId, EventKind, EventTopic, GoodBag, GoodId, HarvestCondition, InvestLaw, LandType, MethodDef, Pop, PopClass, Region, Skill, TaxLaw, World,
+  Building, BuildingTypeDef, Company, DepositId, EventKind, EventTopic, GoodBag, GoodId, HarvestCondition, InvestLaw, LandType, MethodDef, Pop, PopClass, Quake, QuakeKind, Region, Skill, TaxLaw, World,
 } from './types';
 
 // ---------------------------------------------------------------- 지역·시장
@@ -180,6 +180,57 @@ export function harvestLabel(w: World, regionId: number, en = false): string | n
   return en
     ? `${def.nameEn} ${c.lands.map((l) => LAND_NAMES_EN[l].toLowerCase()).join(', ')} −${pct}% · ${days} d`
     : `${def.name} ${c.lands.map((l) => LAND_NAMES[l]).join('·')} −${pct}% · ${days}일`;
+}
+
+// ---------------------------------------------------------------- 소작지 재해 (시제품, TUNE.quakeChance 기본 0 = 끔)
+//
+// 한 줄 규칙: 재해(지진·홍수)가 나면 그 지역 소작지 칸의 quakeLoss(반올림)가 quakeYears 년 동안 소작농을 받지 못한다.
+// 기상 조건과 같이 저장하는 상태가 없다: 해 y(1부터)에 지역 r 에서 재해가 나는지, 그해 며칠째인지, 종류는 (시드, r, y) 해시로 정한다.
+// 한 지역에 재해가 겹치면 손실은 더하지 않고 늦게 난 것이 끝날 때까지 이어진다. 칸이 준 뒤의 일(넘친 소작농 해고 → 실업 → 채용·이주)은 지금 규칙 그대로다.
+
+const QUAKE_KINDS: { id: QuakeKind; name: string; nameEn: string }[] = [
+  { id: 'quake', name: '지진', nameEn: 'Earthquake' },
+  { id: 'flood', name: '홍수', nameEn: 'Flood' },
+];
+
+/** 정해 둔 재해 (실험·시나리오가 넣는다. 본 게임은 빈 목록이고 저장하지 않는다. src/lab/micro.ts 'quake' 충격) */
+export const SCRIPTED_QUAKES: Quake[] = [];
+
+/** 해 y 에 지역 regionId 에서 나는 재해 (없으면 null). 첫해(0)에는 없다 */
+function quakeOrigin(seed: number, regionId: number, y: number): Quake | null {
+  if (y < 1 || !(hash01(seed, regionId, y, 1001) < TUNE.quakeChance)) return null;
+  const start = y * TICKS_PER_YEAR + Math.floor(hash01(seed, regionId, y, 1002) * TICKS_PER_YEAR);
+  const kind = QUAKE_KINDS[Math.floor(hash01(seed, regionId, y, 1003) * QUAKE_KINDS.length)].id;
+  return { kind, regionId, loss: TUNE.quakeLoss, start, end: start + Math.round(TUNE.quakeYears * TICKS_PER_YEAR) };
+}
+
+/** 이 지역에 tick 날 걸린 소작지 재해 (여럿이면 늦게 시작한 것, 없으면 null) */
+export function quakeAt(w: World, regionId: number, tick = w.tick): Quake | null {
+  let best: Quake | null = null;
+  for (const q of SCRIPTED_QUAKES) if (q.regionId === regionId && q.start <= tick && tick < q.end && (!best || q.start > best.start)) best = q;
+  if (TUNE.quakeChance > 0 && tick >= 0) {
+    const y = Math.floor(tick / TICKS_PER_YEAR);
+    for (let k = y - Math.ceil(TUNE.quakeYears) - 1; k <= y; k++) {
+      const q = quakeOrigin(w.seed, regionId, k);
+      if (q && q.start <= tick && tick < q.end && (!best || q.start > best.start)) best = q;
+    }
+  }
+  return best;
+}
+
+/** 재해로 못 쓰는 소작지 칸: 빈 농지 칸 free 중 손실 비율만큼 (반올림). 재해가 없으면 0 */
+export function quakeLostCells(free: number, q: Quake | null): number {
+  return q ? Math.round(free * q.loss) : 0;
+}
+
+/** 라벨: "지진 소작지 −25% (3칸) · 1080일" / "Earthquake tenant land −25% (3 cells) · 1080 d" (재해가 없으면 null). 사건 열과 사전이 같이 쓴다 */
+export function quakeLabel(w: World, regionId: number, en = false): string | null {
+  const q = quakeAt(w, regionId);
+  if (!q) return null;
+  const def = QUAKE_KINDS.find((d) => d.id === q.kind)!;
+  const cells = quakeLostCells(Math.max(0, Math.floor(landFree(w, regionId, 'arable'))), q);
+  const pct = Math.round(q.loss * 100), days = q.end - w.tick;
+  return en ? `${def.nameEn} tenant land −${pct}% (${cells} cells) · ${days} d` : `${def.name} 소작지 −${pct}% (${cells}칸) · ${days}일`;
 }
 
 // ---------------------------------------------------------------- 탐광

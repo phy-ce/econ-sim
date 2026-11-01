@@ -70,6 +70,19 @@ export interface HarvestCondition {
   end: number;
 }
 
+/** 소작지 재해 종류 (이름만 다르고 효과는 같다) */
+export type QuakeKind = 'quake' | 'flood';
+/** 한 지역에 걸린 소작지 재해 (economy.ts quakeAt). 저장하지 않고 시드·지역·해로 다시 계산한다 */
+export interface Quake {
+  kind: QuakeKind;
+  regionId: number;
+  /** 못 쓰는 소작지 칸의 비율 (그날 빈 농지 칸 × 이것, 반올림) */
+  loss: number;
+  /** 시작 틱, 끝 틱 (end 틱부터 다시 쓴다) */
+  start: number;
+  end: number;
+}
+
 /** 매장량 자원 */
 export type DepositId = 'iron' | 'coal';
 export const DEPOSITS: DepositId[] = ['iron', 'coal'];

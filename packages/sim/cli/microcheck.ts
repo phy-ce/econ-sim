@@ -5,6 +5,7 @@
 //                       [--typescale "workshop=0.15,textile=0.25"]  (건물 종류별 추가 축소, micro.ts MicroOptions.typeScale)
 //                       [--preset labor]  (노동시장 검증용 살아 있는 세계: typescale workshop=0.15,textile=0.25,fiber_farm=0.25 + TUNE reserveShrinkWeeks 1e9.
 //                                         기본 세계는 공방·방직 1레벨이 지역 수요의 몇 배라 값이 바닥에 붙어 적자 → 유보 규칙으로 헐리고 → 공구가 끊겨 3년차에 생산 건물이 0 이 된다)
+//                       [--quakeloss 0.25 --quakeyears 3]  (quake·quaketwo 실행의 소작지 손실 비율·기간)
 //                       [--sections abcdj]  (j = 노동시장 판정 J1~J4·M 시나리오·해마다 직종 소득 표)
 //   (빠르게: bash cli/fast.sh microcheck.ts ...)
 // 실행마다 <접두>-<이름>.jsonl 에 관측 줄(src/lab/microtrace.ts, --every 일마다: pop·건물·시장·노동시장·회사·화폐 전부)과 끝에 요약 줄 하나를 쓴다.
@@ -21,12 +22,15 @@
 //   rent    --at 일에 지대(TUNE.rentShare) +0.2, 26주 뒤 되돌림 (바깥 선택지 충격, M4)
 //   skill   --at 일에 장인 가구(furniture_luxury) 2레벨: 기술자 자리 약 +5, 자격자보다 많다 (숙련 부족, M5)
 //   two     지역 2개 (인구 --people 씩), 시작 건물은 지역 0 에만 (지역 0 일손 부족·지역 1 과잉, M6)
+//   quake   --at 일에 소작지 재해: 지역 0 소작지 칸의 --quakeloss(기본 25%)를 --quakeyears(기본 3)년 동안 못 쓴다 (economy.ts SCRIPTED_QUAKES, 2026-11-01 사용자 "소작지가 지진 같은 것에 의해 변동")
+//   quaketwo 지역 2개(two 와 같은 시작)에서 지역 0 에 같은 재해 (이주를 보려고)
 //
 // 점검 (주 단위 표본):
 //   (a) 상품: S/D(공급·수요 이동평균의 비) > 1.05 인 주에 다음 주 가격이 내렸나(또는 바닥), < 0.95 면 올랐나(또는 천장). 12주 뒤 |ln S/D| 가 줄었나. 해마다 S/D
 //   (b) 노동: 회사·직종별 빈자리율 > 5% 인 주에 다음 주 임금이 올랐나, < 2% 면 내렸나. 실업(구직자) > 빈자리 인 주에 임금이 내렸나. 임금이 오른 뒤 4주 안에 고용이 늘었나
 //   (c) 노동자(일하는 노동자·농부) 1인 소득·부·생활수준 대 소작농. 해마다
 //   (d) 화폐: 매일 moneyIdentity 어긋남 (화폐 총량 대비)
+//   (q) 재해 실행(quake·quaketwo, 재해 없는 실행은 같은 날짜 대조): 지역마다 소작지 칸·일하는 소작농·노동자·실업 소작농·인구, 노동자 시장 임금, 소작 1인 소득, 곡물 S/D·값, 생활수준. 해마다와 재해 앞뒤 주
 import { mkdirSync, writeFileSync, appendFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { BUILDING_BY_ID, TICKS_PER_WEEK, TICKS_PER_YEAR, TUNE } from '../src/data';
@@ -59,6 +63,8 @@ const TUNE_SET: Record<string, unknown> = { ...(PRESET === 'labor' ? { reserveSh
 const TYPESCALE_ARG = arg('typescale', PRESET === 'labor' ? 'workshop=0.15,textile=0.25,fiber_farm=0.25' : '');
 const typeScale: Record<string, number> | undefined = TYPESCALE_ARG ? Object.fromEntries(TYPESCALE_ARG.split(',').map((x) => { const [k, v] = x.split('='); return [k, Number(v)]; })) : undefined;
 const SECTIONS = arg('sections', 'abcd');
+/** 재해 실행(quake·quaketwo)의 손실 비율·기간(년) */
+const QLOSS = Number(arg('quakeloss', '0.25')), QYEARS = Number(arg('quakeyears', '3'));
 
 /** 실행 안의 TUNE 충격 (관측용 개입, 실행이 끝나면 되돌린다) */
 type LabShock = MicroShock | { t: number; kind: 'tune'; set: Record<string, number> };
@@ -75,6 +81,8 @@ const DEFS: Record<string, RunDef> = {
   two: { name: 'two', opts: { ...baseOpts, people: [PEOPLE, PEOPLE] }, shocks: [] },
   cloth: { name: 'cloth', opts: baseOpts, shocks: [{ t: AT, kind: 'need', mul: { clothing: 1.5, standard_clothing: 1.5 } }] },
   people: { name: 'people', opts: baseOpts, shocks: [{ t: AT, kind: 'people', n: Math.round(PEOPLE / 4) }] },
+  quake: { name: 'quake', opts: baseOpts, shocks: [{ t: AT, kind: 'quake', loss: QLOSS, years: QYEARS }] },
+  quaketwo: { name: 'quaketwo', opts: { ...baseOpts, people: [PEOPLE, PEOPLE] }, shocks: [{ t: AT, kind: 'quake', loss: QLOSS, years: QYEARS, region: 0 }] },
   control: { name: 'control', opts: { ...baseOpts, scale: 1, people: [PEOPLE * Math.round(1 / SCALE)], personUnit: Math.round(1 / SCALE) }, shocks: [] },
 };
 
@@ -98,7 +106,10 @@ export interface Week {
   tenantBy: Record<number, number>;
   /** 계층 1인 하루 소득 (식구 포함, 일하는 사람만, 소작은 현물 포함): 소작·노동자(노동자+농부)·기술자·전문가·하급 귀족·상급 귀족·자본가 */
   cls: Record<string, number>;
+  /** 재해 표(q)용, 지역 id 순서: 소작지 칸, 일하는 소작농·일하는 노동자(노동자+농부)·실업 소작농 (노동 인구), 인구, 노동자 시장 임금, 소작 1인 소득, 곡물 S/D·값/기본가, 노동자·소작 생활수준 */
+  reg: RegWeek[];
 }
+interface RegWeek { cells: number; tenants: number; workers: number; idle: number; pop: number; wage: number; tenantInc: number; grainSD: number; grainP: number; solW: number; solT: number }
 
 function summarizeWeek(row: MicroRow): Week {
   const goods: Week['goods'] = {};
@@ -136,7 +147,31 @@ function summarizeWeek(row: MicroRow): Week {
     lab: row.labor.map((l) => ({ r: l.r, s: l.s, w: l.market, D: l.D, S: l.S, emp: l.emp, vac: l.vac })),
     tenantBy: Object.fromEntries(row.labor.filter((l) => l.s === 'unskilled').map((l) => [l.r, l.tenantInc])),
     cls: classIncome(row),
+    reg: regionSummary(row),
   };
+}
+
+/** 재해 표(q)용 지역별 요약 (지역 id 순서) */
+function regionSummary(row: MicroRow): RegWeek[] {
+  const ids = [...new Set(row.labor.map((l) => l.r))].sort((a, b) => a - b);
+  return ids.map((r) => {
+    let tenants = 0, workers = 0, idle = 0, pop = 0, solW = 0, nW = 0, solT = 0, nT = 0;
+    for (const p of row.pops) {
+      if (p.r !== r) continue;
+      pop += p.size;
+      if (p.prof === 'peasant' && p.workType === 'subsistence') { tenants += p.wf; solT += p.sol * p.size; nT += p.size; }
+      else if (p.prof === 'peasant' && !p.work) idle += p.wf;
+      else if ((p.prof === 'unskilled' || p.prof === 'farmer') && p.work) { workers += p.wf; solW += p.sol * p.size; nW += p.size; }
+    }
+    const g = row.mkts.find((m) => m.r === r && m.g === 'grain');
+    const lab = row.labor.find((l) => l.r === r && l.s === 'unskilled');
+    return {
+      cells: row.blds.find((b) => b.r === r && b.type === 'subsistence')?.lvl ?? 0, tenants, workers, idle, pop,
+      wage: lab?.market ?? NaN, tenantInc: lab?.tenantInc ?? NaN,
+      grainSD: g && g.Dema > 1e-6 ? g.Sema / g.Dema : NaN, grainP: g ? g.p / g.base : NaN,
+      solW: nW > 0 ? solW / nW : NaN, solT: nT > 0 ? solT / nT : NaN,
+    };
+  });
 }
 
 /** 계층 1인 하루 소득 (일하는 pop 만): (incomeEma + 현물) ÷ 인원 */
@@ -355,6 +390,30 @@ function shockTable(base: RunResult, others: RunResult[]) {
   }
 }
 
+/** (q) 재해 표: 지역마다 해마다 평균과 재해 앞뒤 주 (재해가 없는 실행은 --at·--quakeyears 날짜로 같은 표) */
+function quakeTable(r: RunResult) {
+  // 재해 없는 실행(base)은 같은 날짜로 대조 표를 낸다
+  const q = (r.def.shocks.find((x) => x.kind === 'quake') as { t: number; years: number } | undefined) ?? { t: AT, years: QYEARS };
+  const end = q.t + Math.round(q.years * TICKS_PER_YEAR);
+  const nReg = r.weeks[0]?.reg.length ?? 0;
+  const cols = '칸 소작 노동자 실업소작 인구 시장임금 소작소득 곡물S/D 곡물값 노동SoL 소작SoL'.split(' ');
+  const line = (label: string, xs: RegWeek[]) => {
+    const m = (f: (x: RegWeek) => number) => mean(xs.map(f).filter((v) => Number.isFinite(v)));
+    const vals = [m((x) => x.cells), m((x) => x.tenants), m((x) => x.workers), m((x) => x.idle), m((x) => x.pop), m((x) => x.wage), m((x) => x.tenantInc), m((x) => x.grainSD), m((x) => x.grainP), m((x) => x.solW), m((x) => x.solT)];
+    console.log(label.padEnd(12) + vals.map((v, i) => pad(i < 5 ? (Number.isFinite(v) ? v.toFixed(1) : '-') : f2(v), 9)).join(''));
+  };
+  for (let ri = 0; ri < nReg; ri++) {
+    console.log('');
+    console.log(`(q) 재해 [${r.def.name}] 지역 ${ri}${!r.def.shocks.some((x) => x.kind === 'quake') ? ' (재해 없음, 같은 날짜 대조)' : ri === 0 ? ' (재해 지역)' : ''}: ${q.t}일 ~ ${end}일. 노동 인구(칸·인구 제외), 시장 임금 = 노동자 (wageMarket 0 이면 고용 가중 평균), 소득은 1인 하루`);
+    console.log('년/주'.padEnd(12) + cols.map((c) => pad(c, 9)).join(''));
+    byYear(r).forEach((ws, y) => line(`${y + 1}년`, ws.map((wk) => wk.reg[ri]).filter(Boolean)));
+    const at = (t: number) => r.weeks.filter((wk) => wk.t > t - TICKS_PER_WEEK && wk.t <= t).map((wk) => wk.reg[ri]).filter(Boolean);
+    const marks: [string, number][] = [['재해 전 1주', q.t], ['+1주', q.t + 7], ['+2주', q.t + 14], ['+4주', q.t + 28], ['+13주', q.t + 91], ['+26주', q.t + 182], ['+52주', q.t + 364], ['+104주', q.t + 728],
+      ['끝 직전', end], ['끝 +1주', end + 7], ['끝 +4주', end + 28], ['끝 +13주', end + 91], ['끝 +26주', end + 182], ['끝 +52주', end + 364]];
+    for (const [label, t] of marks) if (t <= YEARS * TICKS_PER_YEAR) line(label, at(t));
+  }
+}
+
 // ---------------------------------------------------------------- 실행
 
 const results: RunResult[] = [];
@@ -373,6 +432,7 @@ for (const name of RUNS) {
     judge: SECTIONS.includes('j') ? laborJudge(r, AT, YEARS) : undefined, yearly: SECTIONS.includes('j') ? laborYearly(r, YEARS) : undefined,
   };
   if (OUT) appendFileSync(`${OUT}-${name}.jsonl`, JSON.stringify(summary) + '\n');
+  if (SECTIONS.includes('q')) quakeTable(r);
 }
 const base = results.find((r) => r.def.name === 'base');
 if (base && SECTIONS.includes('d')) shockTable(base, results.filter((r) => r.def.shocks.length > 0));

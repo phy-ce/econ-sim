@@ -17,7 +17,7 @@ import {
 } from './data';
 import {
   BASE_CREDIT, CARTAGE_RATE, RAIL_RATE, STATE_CREDIT_GDP, collectionRatio, companyById, constructionEstimate, creditLimit, efficiencyParts,
-  harvestCondition, harvestFactor, holdingsOf, kingdomGdp, levelOwnersOf, knownVeins, landFree, landUsed, moneyIdentity, netMinted, popSol,
+  harvestCondition, harvestFactor, holdingsOf, quakeLabel, quakeLostCells, kingdomGdp, levelOwnersOf, knownVeins, landFree, landUsed, moneyIdentity, netMinted, popSol,
   FLOW_ZERO, isOwnerBuilding, officeMargin, priceFormula, regionById, sellThrough, shareWage, shippingRate, staffing, totalMoney, wagesAt,
 } from './economy';
 import { borderCost, kingdomById, DEFAULT_TARIFF } from './kingdoms';
@@ -926,7 +926,23 @@ export const ENCYCLOPEDIA: EncEntry[] = [
         return { rows: [row('소작지 칸', 'Tenant cells', b?.level ?? 0, 'level'), row('일하는 소작농 (노동 인구)', 'Tenant workers', Math.round(w.pops.filter((x) => b && x.work === b.id).reduce((a, x) => a + workforce(x), 0)), 'people')] };
       },
     },
-    related: ['tenant-output', 'land', 'start-state'], seenIn: ['region'], source: ['production.ts updateSubsistence'], design: ['4', '1'],
+    related: ['tenant-output', 'land', 'start-state', 'tenant-disaster'], seenIn: ['region'], source: ['production.ts updateSubsistence'], design: ['4', '1'],
+  },
+  {
+    id: 'tenant-disaster', category: 'tenants', title: t('소작지 재해 (시제품)', 'Tenant land disasters (prototype)'),
+    rule: t('해마다 지역마다 {0} 확률로 지진·홍수가 나면 그 지역 소작지 칸의 {1}(반올림)가 {2}년 동안 소작농을 받지 못한다. 넘친 소작농은 실업이 되어 일자리를 찾거나 이주한다. 확률이 0이면 재해가 없다.', 'Each year each region has a {0} chance of an earthquake or flood; then {1} of its tenant cells (rounded) take no tenants for {2} years. Excess tenants become unemployed and look for jobs or migrate. At chance 0 there are no disasters.'),
+    formula: 'cells = free − round(free × {1})',
+    params: [tune('quakeChance', '해마다 확률', 'Yearly chance', 'pct'), tune('quakeLoss', '못 쓰는 칸', 'Cells lost', 'pct'), tune('quakeYears', '기간 (년)', 'Duration (years)')],
+    example: () => {
+      const free = 12, lost = quakeLostCells(free, { kind: 'quake', regionId: 0, loss: TUNE.quakeLoss, start: 0, end: 1 });
+      return {
+        inputs: [row('빈 농지 칸', 'Free farmland cells', free, 'level'), row('못 쓰는 칸 비율', 'Share lost', TUNE.quakeLoss, 'pct')],
+        steps: [row('못 쓰는 칸', 'Cells lost', lost, 'level')],
+        result: [row('소작지 칸', 'Tenant cells', free - lost, 'level'), row('소작농 자리', 'Tenant seats', (free - lost) * SUBSISTENCE.workersPerCell, 'people')],
+      };
+    },
+    live: { pick: [], run: (w) => ({ rows: w.regions.map((r) => ({ label: regionLabel(r), value: quakeLabel(w, r.id) ?? '-' })) }) },
+    related: ['tenant-farms', 'harvest-conditions', 'best-seat', 'migration'], seenIn: ['region', 'alerts'], source: ['economy.ts quakeAt', 'production.ts updateSubsistence'], design: ['4'],
   },
   {
     id: 'tenant-output', category: 'tenants', title: t('소작 산출', 'Tenant output'),

@@ -4,8 +4,8 @@
 // 날마다 세는 값(체류일·바닥에 붙은 주·한계 켜진 날)은 after() 가 step 뒤에 센다. 지표 정의가 문서에 없는 것은 넣지 않는다 (DEFINED_NOT 목록).
 import { BUILDING_BY_ID, BUILDING_TYPES, CLASS_DEFS, CONSUMPTION_PER_CAPITA, GOOD_IDS, GOODS, NEEDS, SKILL_DEFS, TECH_BY_ID, TECH_COST, TICKS_PER_WEEK, TICKS_PER_YEAR, TRADING_POST, TUNE, WORKFORCE_RATIO, getMethod, needsAt } from '../data';
 import {
-  FLOW_ZERO, builderOf, companyById, constructionEstimate, creditLimit, estimateMethod, harvestCondition, harvestFactor, isGovernment, isOwnerBuilding, kingdomGdp, paysDividend,
-  slots, totalMoney, wagesAt,
+  FLOW_ZERO, builderOf, companyById, constructionEstimate, creditLimit, estimateMethod, harvestCondition, harvestFactor, isGovernment, isOwnerBuilding, kingdomGdp, landFree, paysDividend,
+  quakeAt, quakeLostCells, slots, totalMoney, wagesAt,
 } from '../economy';
 import { kingdomLiteracy } from '../finance';
 import { FLOW } from '../kingdoms';
@@ -166,6 +166,8 @@ class Acc {
   grain = 0; grainN = 0;
   // 기상 걸린 지역·날
   harvDays = 0;
+  // 소작지 재해 (TUNE.quakeChance, 관측 전용): 걸린 지역·날, 못 쓰는 소작지 칸 (지역·날 합), 실업 소작농 노동 인구 (날 합)
+  quakeDays = 0; quakeCells = 0; peasIdle = 0;
   // 허브 상품 공급·수요 (하루 합)
   hubS = new Float64Array(HUB_GOODS.length);
   hubD = new Float64Array(HUB_GOODS.length);
@@ -398,6 +400,12 @@ export class Collector {
       ra.grain += gr;
       const cond = harvestCondition(w, r.id);
       if (cond) { ra.cond++; if (s >= 0) this.acc[s].harvDays++; all.harvDays++; }
+      // 재해: 오늘 소작지 칸을 정한 날(step 안, w.tick − 1)의 재해와 지금 빈 농지로 센다
+      const quake = quakeAt(w, r.id, w.tick - 1);
+      if (quake) {
+        const cells = quakeLostCells(Math.max(0, Math.floor(landFree(w, r.id, 'arable'))), quake);
+        for (const a of s >= 0 ? [this.acc[s], all] : [all]) { a.quakeDays++; a.quakeCells += cells; }
+      }
       ra.hf += harvestFactor(w, r.id, 'arable');
       ra.floor += subsistenceWage(w, r) * TUNE.wageOutside;
       for (const g of GOOD_IDS) {
@@ -424,6 +432,13 @@ export class Collector {
         if (hi >= 0) for (const a of s >= 0 ? [this.acc[s], all] : [all]) { a.hubS[hi] += m.supply; a.hubD[hi] += m.demand; }
       }
     });
+    // 실업 소작농 (재해로 쫓겨난 사람이 여기 든다. 재해 없이도 칸이 줄면 생긴다)
+    for (const p of w.pops) {
+      if (p.prof !== 'peasant' || p.work !== 0 || p.size <= 0) continue;
+      const s = this.scopeOf(p.regionId), wf = workforce(p);
+      if (s >= 0) this.acc[s].peasIdle += wf;
+      all.peasIdle += wf;
+    }
     // 대륙 S/D (지역 합 이동평균의 비, 수요 이동평균이 FLOW_ZERO 이하인 날은 세지 않는다)
     for (const g of GOOD_IDS) {
       let s = 0, d = 0;
@@ -919,6 +934,8 @@ export class Collector {
       adminSt: sig(div(adminSt, adminLv) ?? NaN), taxRatioMin: sig(a.trMin), taxRatioAvg: sig(a.trSum / d),
       // X08-H (왕국 단위 요약), 08 3.5 한계
       harvDays: a.harvDays, k4Share: sig(div(k4n, k4d) ?? NaN), lim,
+      // 소작지 재해 (관측 전용): 걸린 지역·날, 못 쓰는 소작지 칸 (날 평균, 지역 합), 실업 소작농 노동 인구 (날 평균, 천 명)
+      quakeDays: a.quakeDays, quakeCells: sig(a.quakeCells / d), peasIdle: sig(a.peasIdle / d / K),
       ...tech,
       ...(isAll ? { lvType: Object.fromEntries(Object.entries(lvByType).map(([t, v]) => [t, Object.fromEntries(v.map((x, j) => [j, x]).filter(([j, x]) => j > 0 && x > 0))])) } : {}),
     };
