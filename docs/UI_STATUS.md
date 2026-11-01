@@ -90,3 +90,6 @@ DetailWindow 독립 NavigationProvider/버튼, BuildingPops 및 ResourceInspecto
 
 - K(2-70) 코드 완료, 화면 미검증. 루트 typecheck/공개 Vite 빌드 통과, estera-trace 산출물 0건. 다운로드 실사용은 미검증. 2-76을 다음으로 진행.
 
+
+- 2-76 코드 완료, 화면 미검증. 타입 검사 및 언어 저장/실패 회귀 2개 통과. 다음 C(2-71·2-72) 진행.
+

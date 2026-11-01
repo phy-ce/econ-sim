@@ -1,3 +1,5 @@
+import {hasStoredLang,chooseLang} from './lang';
+import {LanguagePick} from './views/LanguagePick';
 import {trace,TraceTools} from './trace';
 import {GameWindow,type ScreenRequest,type ScreenRoute} from './views/GameWindow';
 
@@ -62,6 +64,7 @@ function Popover({ button, label, children, className = '' }: { button: ReactNod
 
 export function App() {
   const game = useGame();
+  const [langChosen,setLangChosen]=useState(hasStoredLang);
   const [opened, setOpened] = useState<WindowId[]>(['map']);
   const [revealRequest,setRevealRequest] = useState(0);
   const [screenRequest,setScreenRequest]=useState<ScreenRequest|null>(null);
@@ -113,6 +116,7 @@ export function App() {
     return () => document.removeEventListener('keydown', onKey);
   }, []);
 
+  if (!langChosen) return <LanguagePick onPick={lang=>{chooseLang(lang);setLangChosen(true);}}/>;
   if (!world) return <div className="boot" role="status" aria-label={T.booting}><Sprite name="crest" size={48} /></div>;
   const me = playerCompany(world);
   const region = regionById(world, regionId);

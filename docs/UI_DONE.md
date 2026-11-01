@@ -586,3 +586,51 @@ DemolitionProgress: 남는 레벨·철거 대기·이번 주 1레벨, 다음/전
 ### 2026-11-01 2-70 K 개발 계측 (코드 완료, 화면 미검증)
 개발 빌드 + trace=1일 때만 trace.dev 동적 로드. 세션/창 열기·닫기·포커스/클릭/명령/오류/속도 기록, 최대 20,000건, localStorage 실패 무시, 메뉴 로컬 JSON 내보내기. world를 읽거나 변경하지 않고 tick 숫자만 전달. 네트워크 호출 없음. 루트 typecheck 통과, Vite 공개 빌드 성공(.tmp-ui-prod), 결과물 estera-trace 검색 0건. 실제 개발 브라우저 JSON 다운로드·이벤트 순서 검증은 미실시. tooltip은 선택 항목으로 미추가.
 
+
+### 2-70. K 시험용 계측 (오버홀 09 단위 K, 3.8·U7)
+- 목적: 1a 사람 시험 기록 일곱 가지 중 1~4·6·7의 숫자(숫자 → 처방 클릭 수, 첫 처방까지 분, 연구 선택 → 첫 재생 초, 창 열림 순서, 정지 구간, 처방 뒤 확인 행동)를 사람이 세지 않아도 되게 한다. sim은 이 기록을 읽지 않는다.
+- 켜는 조건: 개발 빌드(`import.meta.env.DEV`)이고 URL에 `?trace=1`이 있을 때만. 공개 빌드에는 코드가 들어가지 않게 `import.meta.env.DEV` 분기 안에 둔다 (U7 기본값 "개발 빌드만"). 외부 전송 없음: `fetch`·`sendBeacon`·이미지 핑을 쓰지 않는다.
+- 기록 (새 파일 `src/trace.ts`, 메모리 배열 + `localStorage` `estera-trace-v1`, 최대 20,000건, 넘으면 앞에서 자름. 저장 실패는 무시):
+  - 한 건 = `{ t: 시작부터 벽시계 ms, tick: world.tick, kind, ... }`.
+  - `session`: 시작 시각(ISO), 언어, 테마, `innerWidth`·`innerHeight`, `devicePixelRatio`.
+  - `window`: 창 id, `open`/`close`/`focus` (`App.tsx` `showWindow`·`openLinkedWindow`, `WindowWorkspace.tsx:21~22` `focus`·`close`). DetailWindow 열기/닫기도 제목과 함께.
+  - `speed`: 이전·다음 ticksPerSecond와 원인 `user`/`key`/`danger`/`reached` (`useGame.ts:49` `setSpeed`, `:80~84` 위험 정지, 단축키 `App.tsx` keydown).
+  - `command`: 명령 객체 그대로 (`useGame.ts:125`). 오류는 `error` 건으로 따로 (worker `errors`, `useGame.ts:67`).
+  - `click`: 문서 `pointerdown` 캡처 한 곳에서. 창 id(가장 가까운 `section.strategy-panel`의 `window-*` 클래스 또는 DetailWindow 제목), 대상 라벨(`aria-label` → `data-help` 첫 줄 → 텍스트 앞 40자).
+  - `tooltip`: 툴팁이 뜬 라벨 (`TooltipLayer.tsx`, 선택).
+- 내보내기: 메뉴(`App.tsx:178` Popover)에 계측이 켜졌을 때만 버튼 하나. 누르면 `{ version: 1, startedAt, events }`를 `estera-trace-<YYYYMMDD-HHmm>.json`으로 내려받는다 (Blob + `a download`). 버튼 옆 건수 숫자.
+- 문자열: "기록 내보내기" / "Export trace" (개발 전용).
+- 완료 기준: `?trace=1` 개발 서버에서 내보낸 JSON에 위 kind가 다 나온다. 공개 빌드(`npm run build`) 결과물에 `estera-trace` 문자열 0건. 코드에 네트워크 호출 없음. 계측을 켜도 world 상태가 같다 (기록은 world를 건드리지 않는다). typecheck.
+
+
+
+### 2-76. 처음 실행할 때 KR / EN 선택 (사용자 요청 2026-11-01: "KR/EN 선택을 게임 시작할 때 나오게 할 것")
+- 지금:
+  - 언어는 `lang.ts:6~8` `loadLang()`이 `localStorage['estera-lang']`을 읽어 `'en'`이면 영어, 그 밖(키 없음·읽기 실패 포함)은 모두 한국어. 묻지 않는다.
+  - `setLang` (`lang.ts:15~20`)은 `lang === current`이면 바로 돌아가므로 저장하지 않는다. 그래서 한국어로만 해 온 사람은 키가 한 번도 저장되지 않았다.
+  - 바꾸는 길은 메뉴 팝오버의 KO / EN (`App.tsx:193~198`) 하나뿐.
+  - 시작 화면은 없다. `App.tsx:116`은 세계가 오기 전 문장 표시(`.boot`, `styles.css:75`)만 보이고, `useGame.ts:99~101`이 저장을 질문 없이 불러온다. 시작 속도는 0 (`useGame.ts:31`, 정지 상태로 시작).
+- 바꿀 동작:
+  1. 저장된 언어가 없으면 (`localStorage['estera-lang']`이 `'ko'`도 `'en'`도 아니거나 읽기 실패) 게임 화면 대신 언어 선택 화면을 먼저 보인다. 새 게임이든 저장 불러오기든 같다.
+  2. 고르면 `localStorage['estera-lang']`에 쓰고 바로 게임 화면으로 간다. 다음 실행부터는 묻지 않는다.
+  3. 저장에 실패하면 (사생활 모드 등) 이번 실행은 고른 언어로 그대로 진행하고, 다음 실행에서 다시 묻는다. 경고·토스트는 띄우지 않는다.
+  4. 메뉴의 KO / EN (`App.tsx:193~198`)은 그대로 둔다.
+  5. 기본 강조 (추천안): `navigator.language`가 `ko`로 시작하면 "한국어", 아니면 "English"를 강조하고 그 버튼에 `autoFocus` (Enter로 고를 수 있게). 강조만 하고 저절로 넘어가지 않는다. 고르는 것은 사용자. 이유: 클릭 한 번으로 끝나고, 틀리게 고를 일이 줄어든다.
+- 고칠 곳:
+  - `lang.ts`: `hasStoredLang(): boolean` (저장값이 `'ko'`·`'en'`이면 true, 읽기 실패면 false)와 `chooseLang(lang: Lang)`을 더한다. `chooseLang`은 `lang === current`여도 저장을 시도하고 (위 `setLang` 조기 반환 때문에 "한국어"를 고르면 저장되지 않는 문제를 피한다), 바뀌었으면 구독자에게 알린다. 기존 `setLang`·`getLang`·`subscribeLang`은 그대로.
+  - 처음 `current`: 저장값이 없으면 브라우저 언어로 정해도 된다 (선택 화면이 바로 덮으므로 보이는 차이 없음). 바꾸지 않아도 된다.
+  - 선택 화면: 새 파일 `views/LanguagePick.tsx`. `App.tsx`에 `const [langChosen, setLangChosen] = useState(hasStoredLang)`를 다른 훅들과 같이 두고, `App.tsx:116`의 `if (!world)` 바로 앞에 `if (!langChosen) return <LanguagePick onPick={(l) => { chooseLang(l); setLangChosen(true); }} />`. 워커(`useGame`)는 그 사이 뒤에서 세계를 불러와도 된다 (속도 0이라 시간이 흐르지 않는다). 저장에 실패해도 `langChosen`은 이번 실행 동안 true로 남는다.
+  - 모양: `.boot`와 같은 가운데 정렬, 문장(`crest`) 48px 위에 버튼 둘을 가로로. 기존 `.segmented`·`aria-pressed` 양식이나 큰 버튼 둘 (최소 높이 44px). 강조는 `aria-pressed="true"`처럼 `--ink` 바탕 / `--sheet` 글자로, 다크 모드(`:root[data-theme="dark"]`)에서도 강조와 보통 버튼이 구분돼야 한다. 테마는 이미 저장된 값(`App.tsx:39` `loadTheme`)을 따른다. 1920×1080 한 화면, 스크롤 없음.
+  - 각 버튼에 `lang="ko"` / `lang="en"`. 그룹 `role="group"`, `aria-label="언어 / Language"` (아직 언어를 모르므로 둘 다).
+- 문자열: 버튼 라벨은 각자 제 언어로 고정: "한국어", "English". `strings.ts` KO·EN 둘 다에 같은 값 `languageNames: { ko: '한국어', en: 'English' }`로 두거나 컴포넌트 상수로 둔다. 그룹 라벨 "언어 / Language". 제목·안내 문구는 넣지 않는다.
+- 빼거나 지울 것: 없음.
+- 알려진 영향: 지금까지 한국어로만 해 온 사람(키 없음)도 이 변경 뒤 처음 한 번은 묻는다. 의도한 동작으로 본다.
+- 오버홀 Q16(`docs/overhaul/12_DECISIONS_NEEDED.md:227`, 새 게임 시작 화면·시작 상태 프리셋)과 단위 M의 "이어하기 / 새 판"(09 3.8, `09_UI_UX.md:312`)과 겹치지 않는다. 이 선택 화면은 그 결정과 상관없이 지금 넣는다. 나중에 시작 화면이 생기면 언어 선택은 그 앞에 한 번 나온다.
+- 완료 기준: 키가 없을 때 첫 실행에 선택 화면, 고르면 `estera-lang` 저장 ("한국어"를 골라도 저장됨), 새로고침하면 바로 게임, 메뉴 KO / EN 그대로 동작, `npm run typecheck` 통과. 화면 미검증 표시 허용 (Codex는 브라우저를 못 연다).
+- 사용자 결정이 필요한 것: 없음.
+
+
+
+### 2026-11-01 2-76 첫 실행 언어 선택 (화면 미검증)
+저장 언어 없으면 LanguagePick 표시, 브라우저 언어에 따른 강조/포커스, 선택 후 진입. chooseLang은 같은 언어도 저장하며 실패 시 세션 진행. 기존 메뉴 보존. 루트 타입 검사 통과, 언어 저장·저장 실패 회귀 2개 통과.
+
