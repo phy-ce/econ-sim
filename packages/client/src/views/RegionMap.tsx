@@ -20,14 +20,14 @@ const fallback=(id:number,index:number)=>{const x=600+(index%4)*220,y=220+Math.f
 const clampCamera=(c:{x:number;y:number;zoom:number})=>({...c,x:Math.max(-WIDTH*.1,Math.min(WIDTH-WIDTH/c.zoom+WIDTH*.1,c.x)),y:Math.max(-HEIGHT*.1,Math.min(HEIGHT-HEIGHT/c.zoom+HEIGHT*.1,c.y))});
 
 /** 지역 1인당 평균 부 → 4단계 색 (이름표는 그릴 때 언어에 맞춰 만든다) */
-export const WEALTH_STEPS = [
-  { max: 4, color: '#b8573b', label: () => t().poor(4) },
-  { max: 6, color: '#d9a35b', label: () => '4–6' },
-  { max: 9, color: '#a9b38a', label: () => '6–9' },
-  { max: Infinity, color: '#5f8592', label: () => t().comfortable(9) },
-];
-export const wealthColor = (w: number) => WEALTH_STEPS.find((s) => w < s.max)!.color;
-
+export const WEALTH_STOPS=[{value:2,color:'#b8573b'},{value:5,color:'#d9a35b'},{value:7.5,color:'#a9b38a'},{value:11,color:'#5f8592'}];
+export const SOL_STOPS=WEALTH_STOPS;
+export function wealthColor(value:number,stops=WEALTH_STOPS):string{
+ if(!Number.isFinite(value))return 'var(--ink2)';
+ if(value<=stops[0].value)return stops[0].color;
+ for(let i=1;i<stops.length;i++){const low=stops[i-1],high=stops[i];if(value<=high.value){const weight=(value-low.value)/(high.value-low.value)*100;return `color-mix(in oklab, ${low.color} ${(100-weight).toFixed(4)}%, ${high.color} ${weight.toFixed(4)}%)`;}}
+ return stops.at(-1)!.color;
+}
 export function RegionMap({ world, selected, onSelect }: { world: World; selected: number; onSelect: (id: number) => void }) {
   const [camera,setCamera]=useState({x:0,y:0,zoom:1});
   const drag=useRef<{x:number;y:number;cx:number;cy:number;scale:number;moved:boolean}|null>(null);
@@ -38,7 +38,7 @@ export function RegionMap({ world, selected, onSelect }: { world: World; selecte
   const [layer,setLayer]=useState<'kingdom'|'wealth'|'sol'>('kingdom');
   const kingdomOf=(id:number)=>world.kingdoms.find(k=>k.id===id);
   const kingdomName=(id:number)=>{const k=kingdomOf(id);return k?(ko?k.name:k.nameEn):'—';};
-  const regionColor=(r:World['regions'][number])=>layer==='kingdom'?(kingdomOf(r.kingdomId)?.color??'#777'):wealthColor(layer==='sol'?regionLivingStandard(r):regionAvgWealth(r));
+  const regionColor=(r:World['regions'][number])=>layer==='kingdom'?(kingdomOf(r.kingdomId)?.color??'#777'):wealthColor(layer==='sol'?regionLivingStandard(r):regionAvgWealth(r),layer==='sol'?SOL_STOPS:WEALTH_STOPS);
   const [sort,setSort] = useState('population');
   const [direction,setDirection] = useState(-1);
   const regions = [...world.regions].sort((a,b)=>(sort==='name'?regionName(a).localeCompare(regionName(b)):sort==='sol'?regionLivingStandard(a)-regionLivingStandard(b):sort==='wealth'?regionAvgWealth(a)-regionAvgWealth(b):regionPopulation(a)-regionPopulation(b))*direction);
@@ -88,8 +88,8 @@ export function RegionMap({ world, selected, onSelect }: { world: World; selecte
       <div className="map-legend">
         <div className="kingdom-legend">{world.kingdoms.map((k,i)=><span key={k.id}><b style={{color:k.color}}>{['●','◆','▲'][i]}</b>{ko?k.name:k.nameEn}{world.companies.some(c=>c.kingdomId===k.id&&c.isPlayer)&&<strong title={T.playerOwner}>★</strong>}</span>)}</div>
         {layer!=='kingdom'&&<><span className="lbl">{layer==='sol'?T.standardOfLiving:T.wealthPerHead}</span>
-        <div className="scale-bar">{WEALTH_STEPS.map((s) => <span key={s.color} style={{ background: s.color }} />)}</div>
-        <div className="scale-ticks lbl">{WEALTH_STEPS.map((s) => <span key={s.color}>{s.label()}</span>)}</div>
+        <div className="scale-bar" style={{background:'linear-gradient(90deg in oklab, #b8573b 0%, #d9a35b 33.333%, #a9b38a 61.111%, #5f8592 100%)'}}/>
+        <div className="scale-ticks lbl">{WEALTH_STOPS.map((s,i) => <span key={s.color}>{i===0?'≤':i===WEALTH_STOPS.length-1?'≥':null}{s.value}</span>)}</div>
         </>}<div className="map-keys lbl">
           <span><i className="key-rail" /> {T.keyRail}</span>
           <span>★ {T.keyMine}</span>

@@ -167,3 +167,6 @@ DetailWindow 독립 NavigationProvider/버튼, BuildingPops 및 ResourceInspecto
 
 - 2-26 감사 후속 완료(화면 미검증): RegionCircles 광산 부지 합계를 철/석탄 각각의 사용/발견량으로 분리. 건설 대기도 depositFree와 같은 산식으로 포함, 잠재량은 표시하지 않음. root typecheck/client48시험 통과.
 
+
+- 2-33 감사 후속: wealthColor를 고정정점2/5/7.5/11의 OKLab 연속 보간으로 교체, 단일 연속 범례·정점 눈금. SOL_STOPS는 같은 정점으로 명시(장기분포에 따른 별도 범위 선택은 미실시). root typecheck/client48시험 통과. 헤드리스 스크린샷 확인(1920×1080): C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/wealth-gradient.png. CSS OKLab 지원true,5.99/6/6.01 보간비 연속 변화 확인.
+
