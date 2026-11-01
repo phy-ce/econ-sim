@@ -9,6 +9,14 @@
 - 클라우드 세션(claude.ai/code)으로 이어서 할 수 있다. 규칙은 CLAUDE.md "클라우드 세션"을 본다.
 - 옛 세션 기록: `docs/log/` (2026-10-25 이전 HANDOFF 절은 `docs/log/HANDOFF_2026-10-18_to_10-25.md`, 날짜별 UI 기록도 여기). 다른 문서의 "HANDOFF 0-ind3"·"HANDOFF 0-aifix" 같은 옛 절 참조는 그 파일에 있다.
 
+## 0-1101b. 2026-11-01: 장기 시험은 코드 문제만 판정 (`wt-tests`)
+- 사용자 지시 (2026-11-01): "테스트에는 코딩적인 문제가 없는지만 점검하라. 데이터를 취득해서 나중에 로직에 문제가 없는지 본다" (DECISIONS 7-29).
+- `test/long/longRun.ts`: 판정은 20년 완주, 화폐 보존(해마다 최대·끝 < 1e-9), 매일 상태 값 범위(`test/helpers.ts stateFlags`, `test/core/ranges.test.ts`와 함께 씀)만 한다. 뺀 단언: 4단계 기술 연도 ≥ 7, 소작농→노동자 이동 > 0, 노동자 식량 최저 > 35%·평균 > 80%. 이 값들은 이제 데이터로 남는다 (era4Y, mob["peasant>unskilled"], foodUnskMin·foodUnskAvg·foodUnsk).
+- 데이터: `src/lab/metrics.ts` Collector가 해마다 쓰는 왕국별·대륙 줄을 `.tmp/test-data/long-<시드>.jsonl`에 남긴다 (첫 줄 meta: 커밋·dirty·음수 금고 날 수). `LONG_DATA=0`으로 끄고 `LONG_DATA_DIR`로 위치를 바꾼다. 보고서는 `python cli/report.py <id> ../../.tmp/test-data/long-1.jsonl ../../.tmp/test-data/long-2.jsonl`. `report.py` LAB에 라벨 4개를 더했다.
+- 비용 (bb28119, 이 PC): tsx 시드 1 20년에서 수집기 3.9초 ÷ step 48.8초 = 약 8%. vitest test/long 두 시드 병렬은 끔 54초, 켬 64~72초 (두 번 잼).
+- 알려진 문제 (판정 안 함, 콘솔·meta에서 셈): 민간 공사 완공 정산(`production.ts giveLevels`)이 약정 몫보다 레벨을 더 받은 저택·금융가의 금고를 확인하지 않고 차액을 빼서 금고가 음수가 된다 (시드 2, 226일, 저택 1046: 32만 → −25만). GitHub 이슈로 올리고 고칠지 정한다. 고치면 `stateFlags`의 건물 금고 검사를 `>= -1e-6`로 되돌린다.
+- 문서: `docs/overhaul/10_ARCHITECTURE.md`·`06_INDUSTRY_TECH.md`·`11_ROADMAP.md`·`12_DECISIONS_NEEDED.md`·`01_VISION.md`·`00_INDEX.md`·`docs/NUMBERS_SPEC.md` 8장·`.claude/agents/tester.md`의 `tier4 ≥ 7`·식량 하한 기준 문장에 시험에서 빠졌다고 적었다 (D10-S11은 이 지시로 답이 났다).
+
 ## 0-1101. 2026-11-01: 문서 정리 (`wt-docs`, 문서만, sim·client 코드 안 바꿈)
 - HANDOFF 의 2026-10-19 ~ 10-25 세션 절(464줄)을 `docs/log/HANDOFF_2026-10-18_to_10-25.md` 로 잘라 옮겼다. 날짜가 붙은 UI 기록 9개를 `docs/log/` 로 옮겼다 (`UI_IMPLEMENTATION.md` → `UI_IMPLEMENTATION_2026-10-18.md`). 목록은 `docs/log/README.md`.
 - UI_CHANGES·UI_DESIGN 13장·UI_STATUS 의 링크를 `log/` 로 고쳤다. CLAUDE.md 문서 목록에 `docs/log/` 를 더했고, 화면 규칙의 지금 기준은 `docs/UI_DESIGN.md` 라고 적었다.

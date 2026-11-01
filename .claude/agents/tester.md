@@ -11,7 +11,7 @@ effort: high
 - 검증 순서: `npm run typecheck` (sim + 클라이언트) → `npm run test:core` (화폐 보존·결정성·범위) → `cd packages/sim && npx vitest run` (전체) → `cd packages/client && npx vitest run`.
 - 실패하면 원인을 찾는다: 재현 시드·날짜, 처음 어긋나는 틱, 관련 코드 file:line. 결정성 문제는 `cli/fingerprint.ts`로 저장/불러오기 전후 해시를 비교한다.
 - 새 규칙·새 저장 필드에는 테스트를 더한다: 화폐 보존(새 돈 흐름), 저장/불러오기 결정성(새 필드), 보이는 값(기록·lastBudget·investmentPool)의 소수 둘째 자리(round.ts roundAll·writePool, test/core/decimals.test.ts), 옛 저장 변환(migrateWorld), 순수 함수는 세계를 바꾸지 않는지.
-- 장기 테스트(test/long)의 설계 기준(기술 연도, 식량 최저 등)이 깨지면 기준을 고치지 말고 해마다 값과 원인을 보고한다. 기준 변경은 사용자 결정이다.
+- 장기 테스트(test/long)는 코드 문제(20년 완주·화폐 보존·상태 값 범위 stateFlags)만 판정한다 (2026-11-01 사용자). 경제 지표(시대 IV 첫 기술 era4Y, 노동자 식량 foodUnsk·foodUnskMin·foodUnskAvg, 계층 이동 mob)는 `.tmp/test-data/long-<시드>.jsonl` 해마다 데이터로 보고, 이상하면 해마다 값과 원인을 보고한다. 판정 항목을 바꾸는 것은 사용자 결정이다.
 - 성능: `bash packages/sim/cli/fast.sh perf.ts 2` 로 하루 시간을 재고 이전과 비교한다.
 
 ## 보고 형식
