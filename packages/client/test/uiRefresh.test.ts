@@ -4,6 +4,12 @@ import { captureConstruction, constructionActivity } from '../src/constructionAc
 import { spriteAsset } from '../src/spriteAtlas';
 
 describe('UI refresh invariants',()=>{
+  it('uses separate atlas cells for the previously aliased icons',()=>{
+    for(const [a,b,family] of [['paper','cloth','goods'],['paper_mill','workshop','building'],['farmer','peasant','general'],['gentry','aristocrat','general'],['ranch','farm','building'],['meat','food','goods'],['luxury_furniture','furniture','goods'],['luxury_cloth','cloth','goods']] as const){
+      const first=spriteAsset(a,family),second=spriteAsset(b,family);
+      expect([first?.file,first?.index],a).not.toEqual([second?.file,second?.index]);
+    }
+  });
   it('keeps completed projects in daily construction totals and uses the level cap',()=>{
     const world=createWorld(42);
     const project={id:999,companyId:100,regionId:1,typeId:'farm',methodId:'',levels:2,points:5,required:100,spent:0,ticksElapsed:0};

@@ -9,14 +9,14 @@ import type { Game } from '../useGame';
 import { BuildList, Projects } from './CompanyPanel';
 import { playerCompany, educationOf } from '@econ/sim';
 import { OwnerBadge } from './OwnerBadge';
-import { regionLivingStandard } from '../systemMetrics';
+import { regionLivingStandard,lowerJobUnemployment } from '../systemMetrics';
 import { HarvestBadge } from './HarvestBadge';
 import { SortHeader } from './SortHeader';
 import { SectionStack } from './SectionStack';
 import { useMemo, useState, useEffect, useRef } from 'react';
 import {
   GOOD_IDS, REGIONS, GOODS, LAND_TYPES,
-  companyById, landUsed, regionAvgWealth, regionPopulation, regionUnemployment,
+  companyById, landUsed, regionAvgWealth, regionPopulation,
 } from '@econ/sim';
 import type { PopClass, GoodId, HistoryPoint, Region, World } from '@econ/sim';
 import { MapPin, Package, Factory, Users } from 'lucide-react';
@@ -51,9 +51,9 @@ function RegionPanelView({ world, region, history, selectedGood, onSelectGood, o
   const T = useT();
   const pop = regionPopulation(r);
   const allBuildings = world.buildings.filter(b => b.regionId === r.id);
-  const lower = r.households.peasant.population + r.households.unskilled.population;
+  const lower = r.households.peasant.population + r.households.unskilled.population + r.households.farmer.population;
   const laborer = r.households.unskilled;
-  const unemp = regionUnemployment(world, r.id, 'unskilled');
+  const unemp = lowerJobUnemployment(world,r.id);
   const tenantShare = lower > 0 ? r.households.peasant.population / lower : 0;
   const headline = `region-${r.id}`;
   const [sort, setSort] = useState<{ key: SortKey; dir: 1 | -1 }>({ key: 'value', dir: -1 });

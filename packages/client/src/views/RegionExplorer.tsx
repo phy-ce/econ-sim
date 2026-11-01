@@ -1,7 +1,7 @@
 import {t as uiCopy} from '../i18n';
 import {DetailExplorer} from './DetailExplorer';
 import {OwnershipBar} from './OwnershipBar';
-import { educationOf, literacyOf, regionPopulation, regionUnemployment } from '@econ/sim';
+import { educationOf, literacyOf, regionPopulation } from '@econ/sim';
 import type { PopClass, Region, World } from '@econ/sim';
 import { useLang, useT, buildingName } from '../i18n';
 import { compact, pct } from '../format';

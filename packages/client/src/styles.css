@@ -18,6 +18,7 @@
   /* 계층 색 (도넛·차트·표 공통) */
   --c-peasant: #8a3b1f;
   --c-unskilled: #c98a2e;
+  --c-farmer: #677b2f;
   --c-skilled: #2f6b4f;
   --c-expert: #6b4f8a;
   --c-capitalist: #3d5f8a;
@@ -43,6 +44,7 @@
   font-variant-numeric: tabular-nums;
 }
 :root[data-theme="dark"] {
+  --c-farmer: #a8be62;
   color-scheme: dark;
   --paper: #1c1712; --sheet: #25201a; --ink: #efe5d2; --ink2: #bfae93; --rule: #4a3f31; --grid: #352c22;
   --accent: #e08a5f; --gold: #d4a855; --good: #7cc29b; --bad: #ef8a6f; --chip: #2f281f;

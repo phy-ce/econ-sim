@@ -45,7 +45,7 @@
 
 정리
 9. **2-50 코드 완료**: 6c8119a (UI_DONE 참조).
-10. **왕국 통계·정책·연구·재정·에셋 감사** (2-35 코드 완료, UI_DONE; 2-26·2-28·2-34 완료; 2-30·2-60·2-31 코드 완료): 1·2장 옛 절과 지금 코드를 대조. 오래된 목록만 보고 미구현/완료로 단정하지 않는다.
+10. **왕국 통계·정책·연구·재정·에셋 감사** (2-35 코드 완료, UI_DONE; 2-26·2-28·2-34 완료; 2-30·2-60·2-31 코드 완료; 2-37 농부 토큰/하층 집계 완료): 1·2장 옛 절과 지금 코드를 대조. 오래된 목록만 보고 미구현/완료로 단정하지 않는다.
 
 sim 대기 · 결정 대기
 - **2-33 지도 정점 분포**: 연속 보간 구현. seed42·360일 부1.14~1.27/생활수준1.07~1.24가 고정 첫 정점2 아래에 몰림. 고정 정점 유지와 가운데 정점에 모이게 하라는 옛 요구의 범위 재선택은 결정 대기(UI_STATUS).
@@ -176,21 +176,6 @@ sim 대기 · 결정 대기
 - 새 export (`economy.ts`): `paysShare(b, s)` 이 자리가 임금 대신 몫을 받는가 (`paysDividend`는 그대로 있다), `shareWage(b, s)` 한 사람의 기대 하루 몫 (= labor `dividendWage`), `shareWeight(cls)` 1명 몫.
 - 넣을 곳: 건물 카드에서 "배당" 표시를 `paysShare(b, s)`로 바꾸면 저택의 하급 귀족도 몫으로 보인다 (`CompanyPanel.tsx` 152행은 `paysDividend(c.state, s)`). 저택 툴팁에 직종별 1명 몫(`shareWage`)을 보일 수 있다 (선택).
 - 저장 형식 그대로. 옛 저장은 다음 날 저택이 커지고 실업 하급 귀족이 차차 앉는다.
-
-### 2-37. 농부 계층 (2026-10-21)
-- 새 직종 `farmer` (농부 / Farmers, 하층, 기본 임금 10). `SKILLS`·`POP_CLASSES`에서 `unskilled` 바로 뒤에 있다. `SKILL_DEFS.farmer`, `CLASS_DEFS.farmer`에 이름이 있다.
-- 곡물 농장·섬유 농장·목장(`farm`·`fiber_farm`·`ranch`)의 모든 방식에서 노동자 자리가 농부 자리가 되었다 (`workers.farmer`). 다른 건물은 그대로 노동자다.
-- 자리 규칙은 노동자와 같다: 귀족·자본가 말고 누구나 자격 없이 들어간다. 임금은 회사가 직종별로 정한다 (`company.wages.farmer`, 플레이어 시장임금 정책 `wageOffset.farmer`). 국영 임금도 직종별로 나온다.
-- 새 export: `LOWER_JOBS` (`['unskilled', 'farmer']`), `isLowerJob(cls)`.
-- 지표: `KingdomMetrics.labor.farmer`, `popBy/solBy/wealthBy/foodBy/growthBy.farmer`, `HistoryPoint.sol/population/unemployment.farmer`, `region.households.farmer`, `building.employed.farmer`. 기아 알림에 농부가 생겼다 (`famine:<지역>:farmer`).
-- 저장 형식 7판. 옛 6판은 `migrateWorld`가 농장·목장의 노동자를 농부로 바꾸고 농부 칸을 채운다 (임금은 그 회사 노동자 임금에서 시작).
-- sim 작업자가 컴파일·테스트를 맞추려고 고친 곳 (임시, 화면 작업자가 다시 정한다):
-  - `packages/client/src/ui.tsx` 8: `CLASS_COLOR.farmer = 'var(--c-farmer, #8a9a3c)'` (styles.css에 `--c-farmer` 토큰은 아직 없다, 다크 모드 값도 필요)
-  - `packages/client/src/ui.tsx` 11: `SKILL_COLOR.farmer`
-  - `packages/client/src/spriteAtlas.ts` 13: 별칭 `farmer:'peasant'` (전용 아이콘이 없어 소작농 아이콘을 쓴다. `uiRefresh.test.ts`가 모든 계층에 아이콘을 요구한다)
-- 넣을 곳: 직종 목록을 손으로 적은 곳에 농부를 더한다. 예: `sprites.tsx` 23·26의 계층 아이콘 목록, `RegionPanel.tsx` 62~64 하층 합계(소작농 + 노동자 → + 농부)와 실업률, `RegionExplorer.tsx` 27 실업률(노동자만 본다), 그 밖에 `'unskilled'`를 직접 쓰는 곳.
-
----
 
 ### 2-36. 종이 (새 상품·종이 공장)
 - 새 상품 `paper` (종이 / Paper, 기본가 4). `GOOD_IDS` 맨 끝에 붙였다. 상품 목록·시장 표는 `GOOD_IDS`·`GOODS`로 그리면 저절로 나온다.

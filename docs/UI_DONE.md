@@ -1158,3 +1158,23 @@ ownershipAssets API로 소유 기관 소재지 기준 왕국/지역 막대, 내 
 - 건물 패널 (**2-59-3 유보 줄이 대신한다**) (`ResourceInspector.tsx` `BuildingInspector`, 32행 지표 줄 근처): `hasReserve(b)`이면 "유보 자산" 라벨과 `reserve / reserveCap(b)` 막대, 숫자 두 개.
 - 합계는 2-35 왕국 경제 창의 민간 자금 상자와 건물 표에 둔다 (회사 현금 안의 몫이다. 현금에 더하지 않는다).
 - 저장 형식은 그대로(v6). 옛 저장은 `reserve`가 없어 0으로 시작한다.
+
+## 2026-11-01 · 2-37 농부 계층 표시 완료
+- farmer 전용 색 토큰을 라이트#677b2f/다크#a8be62로 만들고 임시 fallback을 제거했다. --sheet 기준 상대 명도 대비는 라이트4.37:1/다크7.85:1로3:1을 넘는다. 기존 녹색 계열에서 대비를 확보한 UI 색이며 경제 수치는 바꾸지 않는다.
+- 옛 RegionPanel의 하층 합계에 농부를 포함하고 노동자만 보던 실업률을 노동자+농부 노동 인구 가중치로 수정했다. 현재 장부형 개요에서는 이 옛 추가 지표가 CSS로 숨겨져 있어 해당 값의 실제 화면은 미검증이며 계산 시험으로 확인했다. RegionExplorer는 더 이상 노동자 단독 실업률을 그리지 않는다.
+- 농부·소작농은 이미 전용 아틀라스 셀이다. uiRefresh에 과거 임시 별칭8쌍의 다른 셀 회귀 검증을 추가했다. 읽기 전용 아이콘 검사(list.ts):72개 고유 그림, sim id 누락/별칭 없음. 미커밋 지도 생성 파일을 보존하기 위해 build-map이 포함된 전체 assets:check 대신 아이콘 검사만 직접 실행했다.
+- root typecheck/client21파일55시험 통과(가중 실업률/빈 집단2시험, 별도 아이콘 셀1시험 추가). 헤드리스 스크린샷 확인(1920×1080): C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/farmer-en-dark.png, farmer-ko-light.png. 농부35.7k,24px 그림, 각 테마 토큰 색, 본문418/scroll418 확인. 다른 화면의 모든 농부 표시·실제 취업 이동은 화면 미검증이다.
+### 2-37. 농부 계층 (2026-10-21)
+- 새 직종 `farmer` (농부 / Farmers, 하층, 기본 임금 10). `SKILLS`·`POP_CLASSES`에서 `unskilled` 바로 뒤에 있다. `SKILL_DEFS.farmer`, `CLASS_DEFS.farmer`에 이름이 있다.
+- 곡물 농장·섬유 농장·목장(`farm`·`fiber_farm`·`ranch`)의 모든 방식에서 노동자 자리가 농부 자리가 되었다 (`workers.farmer`). 다른 건물은 그대로 노동자다.
+- 자리 규칙은 노동자와 같다: 귀족·자본가 말고 누구나 자격 없이 들어간다. 임금은 회사가 직종별로 정한다 (`company.wages.farmer`, 플레이어 시장임금 정책 `wageOffset.farmer`). 국영 임금도 직종별로 나온다.
+- 새 export: `LOWER_JOBS` (`['unskilled', 'farmer']`), `isLowerJob(cls)`.
+- 지표: `KingdomMetrics.labor.farmer`, `popBy/solBy/wealthBy/foodBy/growthBy.farmer`, `HistoryPoint.sol/population/unemployment.farmer`, `region.households.farmer`, `building.employed.farmer`. 기아 알림에 농부가 생겼다 (`famine:<지역>:farmer`).
+- 저장 형식 7판. 옛 6판은 `migrateWorld`가 농장·목장의 노동자를 농부로 바꾸고 농부 칸을 채운다 (임금은 그 회사 노동자 임금에서 시작).
+- sim 작업자가 컴파일·테스트를 맞추려고 고친 곳 (임시, 화면 작업자가 다시 정한다):
+  - `packages/client/src/ui.tsx` 8: `CLASS_COLOR.farmer = 'var(--c-farmer, #8a9a3c)'` (styles.css에 `--c-farmer` 토큰은 아직 없다, 다크 모드 값도 필요)
+  - `packages/client/src/ui.tsx` 11: `SKILL_COLOR.farmer`
+  - `packages/client/src/spriteAtlas.ts` 13: 별칭 `farmer:'peasant'` (전용 아이콘이 없어 소작농 아이콘을 쓴다. `uiRefresh.test.ts`가 모든 계층에 아이콘을 요구한다)
+- 넣을 곳: 직종 목록을 손으로 적은 곳에 농부를 더한다. 예: `sprites.tsx` 23·26의 계층 아이콘 목록, `RegionPanel.tsx` 62~64 하층 합계(소작농 + 노동자 → + 농부)와 실업률, `RegionExplorer.tsx` 27 실업률(노동자만 본다), 그 밖에 `'unskilled'`를 직접 쓰는 곳.
+
+---
