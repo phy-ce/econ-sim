@@ -9,7 +9,7 @@ import {
 } from '../economy';
 import { kingdomLiteracy } from '../finance';
 import { FLOW } from '../kingdoms';
-import { subsistenceWage } from '../labor';
+import { labourTable, subsistenceWage } from '../labor';
 import { PRICE_MAX, PRICE_MIN, basketCostAt, needSharesAt, postUsable } from '../market';
 import { lawUnlocked } from '../policy';
 import { workforce } from '../pops';
@@ -196,6 +196,8 @@ class Acc {
   sdCut = 0; sdDemo = 0; utilUp = 0; lossCut = 0;
   // 0b′ 곡물 균형 후보: A2 설비 철거('sellDemo', 레벨), A3 자기 값 효과 철거('marginDemo', 레벨), A3 가 막은('marginBlock')·허용한('marginOk') 증설 (건물·주)
   sellDemo = 0; marginDemo = 0; marginBlock = 0; marginOk = 0;
+  // 노동시장 개편 (LABOR_MARKET.md 9.2): 주마다 노동자·농부 임금 (고용 가중) 표본. 연말에 주간 변화(로그) 표준편차를 낸다
+  wkWage: number[] = [];
   constructor() { for (let c = 0; c < NC; c++) this.burdenRing.push(new Float64Array(0)); }
 }
 
@@ -220,6 +222,22 @@ function capLevels(w: World): Map<GoodId, number> {
   return m;
 }
 
+/** 직종 순서 위반 수: 노동자 < 소작 소득, 기술자 ≤ 노동자, 전문가 ≤ 기술자 (값이 없는 비교는 세지 않는다) */
+function ordViolations(wU: number | null, peas: number | null, wS: number | null, wE: number | null): number {
+  let n = 0;
+  if (wU != null && peas != null && wU < peas) n++;
+  if (wU != null && wS != null && wS <= wU) n++;
+  if (wS != null && wE != null && wE <= wS) n++;
+  return n;
+}
+/** 주 표본의 로그 변화 표준편차 */
+function weeklySd(xs: number[]): number {
+  const d: number[] = [];
+  for (let i = 1; i < xs.length; i++) if (xs[i] > 0 && xs[i - 1] > 0) d.push(Math.log(xs[i] / xs[i - 1]));
+  if (d.length < 2) return NaN;
+  const m = d.reduce((x, y) => x + y, 0) / d.length;
+  return Math.sqrt(d.reduce((x, y) => x + (y - m) ** 2, 0) / d.length);
+}
 const sig = (x: number) => (Number.isFinite(x) ? (x === 0 || Number.isInteger(x) ? x : Number(x.toPrecision(6))) : null);
 const div = (a: number, b: number) => (b !== 0 ? a / b : null);
 const M = 1e6, K = 1e3;
@@ -328,6 +346,27 @@ export class Collector {
       if (s >= 0) this.acc[s].sav0[CI[p.prof]] += p.savings;
       this.acc[this.nk].sav0[CI[p.prof]] += p.savings;
     }
+  }
+
+  /** 직종별 노동시장 표 합 (범위 안 지역): 빈자리율, 오려는 사람 ÷ 자리 */
+  private labourRows(w: World, inScope: (regionId: number) => boolean, wageAll: (s: Skill) => number | null): Record<string, { vac: number | null; willing: number | null }> {
+    const comp = new Map(w.companies.map((c) => [c.id, c] as const));
+    const D = new Float64Array(WAGE_JOBS.length), S = new Float64Array(WAGE_JOBS.length), V = new Float64Array(WAGE_JOBS.length);
+    for (const r of w.regions) {
+      if (!inScope(r.id)) continue;
+      const local = w.buildings.filter((b) => b.regionId === r.id);
+      const pops = w.pops.filter((p) => p.regionId === r.id && p.size > 0);
+      const seat = (s: Skill) => {
+        let e = 0, v = 0;
+        for (const b of local) { const c = comp.get(b.companyId); if (c && b.employed[s] > 0 && !BUILDING_BY_ID[b.typeId].auto) { e += b.employed[s]; v += b.employed[s] * wagesAt(c, b.typeId, w, r.id)[s]; } }
+        return e > 0 ? v / e : wageAll(s) ?? 0;
+      };
+      const tab = labourTable(w, r, local, pops, comp, subsistenceWage(w, r), (s) => r.wages?.[s] ?? seat(s));
+      WAGE_JOBS.forEach((s, j) => { D[j] += tab[s].jobs; S[j] += tab[s].willing; V[j] += Math.max(0, tab[s].jobs - tab[s].employed); });
+    }
+    const out: Record<string, { vac: number | null; willing: number | null }> = {};
+    WAGE_JOBS.forEach((s, j) => { out[s] = { vac: sig(div(V[j], D[j]) ?? NaN), willing: sig(div(S[j], D[j]) ?? NaN) }; });
+    return out;
   }
 
   private gov(w: World, i: number): Company | undefined { return companyById(w, this.kingdoms[i].governmentId); }
@@ -535,6 +574,22 @@ export class Collector {
   private weekly(w: World) {
     const nk = this.nk, all = this.acc[nk];
     for (const a of this.acc) a.weeks++;
+    // 노동자·농부 임금 표본 (고용 가중, 지역 시장 임금이면 그 지역 임금)
+    {
+      const paid = new Float64Array(nk + 1), emp = new Float64Array(nk + 1);
+      for (const b of w.buildings) {
+        if (BUILDING_BY_ID[b.typeId].auto) continue;
+        const e = b.employed.unskilled + b.employed.farmer;
+        if (!(e > 0)) continue;
+        const c = companyById(w, b.companyId);
+        if (!c) continue;
+        const t = wagesAt(c, b.typeId, w, b.regionId);
+        const v = b.employed.unskilled * t.unskilled + b.employed.farmer * t.farmer;
+        const sc = this.scopeOf(b.regionId);
+        for (const si of sc >= 0 ? [sc, nk] : [nk]) { paid[si] += v; emp[si] += e; }
+      }
+      for (let si = 0; si <= nk; si++) if (emp[si] > 0) this.acc[si].wkWage.push(paid[si] / emp[si]);
+    }
     const regionById = new Map(w.regions.map((r) => [r.id, r] as const));
     const floorOf = new Map<number, number>();
     for (const r of w.regions) floorOf.set(r.id, subsistenceWage(w, r) * TUNE.wageOutside);
@@ -721,7 +776,7 @@ export class Collector {
     for (const b of w.buildings) {
       if (!inScope(b.regionId) || BUILDING_BY_ID[b.typeId].auto) continue;
       const c = companyById(w, b.companyId);
-      SKILLS.forEach((s, j) => { emp[j] += b.employed[s]; paid[j] += b.employed[s] * (c ? wagesAt(c, b.typeId)[s] : 0); });
+      SKILLS.forEach((s, j) => { emp[j] += b.employed[s]; paid[j] += b.employed[s] * (c ? wagesAt(c, b.typeId, w, b.regionId)[s] : 0); });
       if (b.typeId === TRADING_POST && b.level > 0 && postUsable(b) > 0) posts++;
       if (isProduction(b)) {
         const t = Math.min(MAX_TIER, methodTier(b.typeId, b.methodId));
@@ -730,6 +785,9 @@ export class Collector {
       }
     }
     const wageOf = (s: Skill) => div(paid[SKILLS.indexOf(s)], emp[SKILLS.indexOf(s)]);
+    // 노동시장 개편 (LABOR_MARKET.md 9.2, 관측만): 지역·직종 노동시장 표(labor.ts labourTable)의 합 — 빈자리율 = Σ max(0, 자리 − 재직) ÷ Σ 자리,
+    // 오려는 사람 ÷ 자리. 자리 임금은 지역 시장 임금 (없으면 그 지역 고용 가중 임금, 고용이 없으면 직종 전체 임금)
+    const lab = this.labourRows(w, inScope, wageOf);
     // 0b′ 5-1: 저택·금융가 금고 합, 남은 금고 공사 약정액 (약정 − 낸 공사비, finance.ts pledgeLeft 의 합), 행정청 인원·레벨
     let vault = 0, pledge = 0, adminStaff = 0, adminLv = 0, adminSt = 0;
     for (const b of w.buildings) {
@@ -833,6 +891,9 @@ export class Collector {
       // 04 L6·L7
       lowInc: sig(div(ring[0], ring[1]) ?? NaN), lowIncAvg: sig(div(a.lowNum, a.lowDen) ?? NaN),
       wagePeas: sig(wU != null && peasantIncome ? wU / peasantIncome : NaN), peasantIncome: sig(peasantIncome ?? NaN),
+      // 노동시장 개편 (LABOR_MARKET.md 9.2): 직종 순서 위반 수 (연말 고용 가중 임금: 노동자 < 소작 소득, 기술자 ≤ 노동자, 전문가 ≤ 기술자, 0~3),
+      // 직종별 빈자리율·오려는 사람 ÷ 자리, 노동자·농부 임금 주간 변화 표준편차
+      ordViol: ordViolations(wU, peasantIncome, wageOf('skilled'), wageOf('expert')), labour: lab, wageSdW: sig(weeklySd(a.wkWage)),
       wage, realW: real, realWageU04: sig(wU != null && bkw > 0 ? wU / (bkWorker / bkw) : NaN),
       // 06 6.6 검토 후보
       hub, labShare: sig(div(wSum, wSum + dSum) ?? NaN), labShareVA: sig(div(wSum, vaSum) ?? NaN), backlog: sig(div(backlog, backlogN) ?? NaN),

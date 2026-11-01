@@ -1,0 +1,533 @@
+{
+ "about": "노동시장 개편 1단계 (지역 시장 임금, TUNE.wageMarket, docs/overhaul/LABOR_MARKET.md 9.2·13장) 본 게임 비교 명세. w0 = 지금 규칙 (wageMarket 0, 비트 동일 대조), wm25 / wm50 / wm100 = 지역 시장 임금, 하루 속도 wageMarketRate 0.0025 / 0.005 / 0.01. 1차 거름 specs: 10년 × 시드 1·2 × salt 0..1. 2차 specs20: 20년 × 시드 1·2 × salt 0..3 (1차에서 남은 후보만 돌려도 된다: 이름 필터). 돌리기 (packages/sim 에서): PAR=3 bash cli/lab.sh <out10.jsonl> ../../docs/overhaul/LABOR_SPECS.json, KEY=specs20 PAR=3 bash cli/lab.sh <out20.jsonl> ../../docs/overhaul/LABOR_SPECS.json ['^(w0|wm50)$']. 요약: python cli/labsum.py <out.jsonl> --compare w0.",
+ "code": "wt-labor (지역 시장 임금 96c14fd + lab 지표 ordViol·labour·wageSdW)",
+ "counts": {
+  "specs (10년)": 16,
+  "specs20 (20년)": 32
+ },
+ "choices": [
+  "마이크로 세계 판정(LABOR_MARKET.md 13장)에서 J1(화폐·결정성)은 섰고 J3(노동자 시장 임금 ≥ 소작 1인 소득)은 모든 속도에서 서지 않았다 (base 10년 × 시드 1·2 에서 514주 중 40~146주). 본 게임은 소작지 여유·지역 수가 달라 결과가 다를 수 있어 명세는 만들어 두었다. 돌릴지는 13장의 결정 뒤에 정한다.",
+  "판정 지표 (LABOR_MARKET.md 9.2 채택 기준): wagePeas (노동자 ÷ 소작 소득) ∈ [1.05, 1.5], ordViol (직종 순서 위반 수, 연말 고용 가중 임금) 0, labShareVA < 0.9, basket1·basket5 가 w0 보다 해마다 10% 넘게 오르는 추세 없음, peas ≤ w0 + 0.05, wageSdW (노동자·농부 임금 주간 변화 표준편차) < 2%. 빈자리율·오려는 사람 ÷ 자리는 labour.<직종>.vac·willing.",
+  "실행 이름: labsum --compare 의 후보 이름. 10년판과 20년판은 같은 이름이라 출력 파일을 나눠 요약한다. 플레이어 왕실 방치(withPlayer 기본) + 고정 연구 순서(research 기본 fixed)."
+ ],
+ "specs": [
+  {
+   "item": "LABOR-1",
+   "name": "w0",
+   "seed": 1,
+   "salt": 0,
+   "years": 10
+  },
+  {
+   "item": "LABOR-1",
+   "name": "w0",
+   "seed": 1,
+   "salt": 1,
+   "years": 10
+  },
+  {
+   "item": "LABOR-1",
+   "name": "w0",
+   "seed": 2,
+   "salt": 0,
+   "years": 10
+  },
+  {
+   "item": "LABOR-1",
+   "name": "w0",
+   "seed": 2,
+   "salt": 1,
+   "years": 10
+  },
+  {
+   "item": "LABOR-1",
+   "name": "wm25",
+   "seed": 1,
+   "salt": 0,
+   "years": 10,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.0025
+   },
+   "control": "w0"
+  },
+  {
+   "item": "LABOR-1",
+   "name": "wm25",
+   "seed": 1,
+   "salt": 1,
+   "years": 10,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.0025
+   },
+   "control": "w0"
+  },
+  {
+   "item": "LABOR-1",
+   "name": "wm25",
+   "seed": 2,
+   "salt": 0,
+   "years": 10,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.0025
+   },
+   "control": "w0"
+  },
+  {
+   "item": "LABOR-1",
+   "name": "wm25",
+   "seed": 2,
+   "salt": 1,
+   "years": 10,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.0025
+   },
+   "control": "w0"
+  },
+  {
+   "item": "LABOR-1",
+   "name": "wm50",
+   "seed": 1,
+   "salt": 0,
+   "years": 10,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.005
+   },
+   "control": "w0"
+  },
+  {
+   "item": "LABOR-1",
+   "name": "wm50",
+   "seed": 1,
+   "salt": 1,
+   "years": 10,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.005
+   },
+   "control": "w0"
+  },
+  {
+   "item": "LABOR-1",
+   "name": "wm50",
+   "seed": 2,
+   "salt": 0,
+   "years": 10,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.005
+   },
+   "control": "w0"
+  },
+  {
+   "item": "LABOR-1",
+   "name": "wm50",
+   "seed": 2,
+   "salt": 1,
+   "years": 10,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.005
+   },
+   "control": "w0"
+  },
+  {
+   "item": "LABOR-1",
+   "name": "wm100",
+   "seed": 1,
+   "salt": 0,
+   "years": 10,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.01
+   },
+   "control": "w0"
+  },
+  {
+   "item": "LABOR-1",
+   "name": "wm100",
+   "seed": 1,
+   "salt": 1,
+   "years": 10,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.01
+   },
+   "control": "w0"
+  },
+  {
+   "item": "LABOR-1",
+   "name": "wm100",
+   "seed": 2,
+   "salt": 0,
+   "years": 10,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.01
+   },
+   "control": "w0"
+  },
+  {
+   "item": "LABOR-1",
+   "name": "wm100",
+   "seed": 2,
+   "salt": 1,
+   "years": 10,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.01
+   },
+   "control": "w0"
+  }
+ ],
+ "specs20": [
+  {
+   "item": "LABOR-1",
+   "name": "w0",
+   "seed": 1,
+   "salt": 0,
+   "years": 20
+  },
+  {
+   "item": "LABOR-1",
+   "name": "w0",
+   "seed": 1,
+   "salt": 1,
+   "years": 20
+  },
+  {
+   "item": "LABOR-1",
+   "name": "w0",
+   "seed": 1,
+   "salt": 2,
+   "years": 20
+  },
+  {
+   "item": "LABOR-1",
+   "name": "w0",
+   "seed": 1,
+   "salt": 3,
+   "years": 20
+  },
+  {
+   "item": "LABOR-1",
+   "name": "w0",
+   "seed": 2,
+   "salt": 0,
+   "years": 20
+  },
+  {
+   "item": "LABOR-1",
+   "name": "w0",
+   "seed": 2,
+   "salt": 1,
+   "years": 20
+  },
+  {
+   "item": "LABOR-1",
+   "name": "w0",
+   "seed": 2,
+   "salt": 2,
+   "years": 20
+  },
+  {
+   "item": "LABOR-1",
+   "name": "w0",
+   "seed": 2,
+   "salt": 3,
+   "years": 20
+  },
+  {
+   "item": "LABOR-1",
+   "name": "wm25",
+   "seed": 1,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.0025
+   },
+   "control": "w0"
+  },
+  {
+   "item": "LABOR-1",
+   "name": "wm25",
+   "seed": 1,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.0025
+   },
+   "control": "w0"
+  },
+  {
+   "item": "LABOR-1",
+   "name": "wm25",
+   "seed": 1,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.0025
+   },
+   "control": "w0"
+  },
+  {
+   "item": "LABOR-1",
+   "name": "wm25",
+   "seed": 1,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.0025
+   },
+   "control": "w0"
+  },
+  {
+   "item": "LABOR-1",
+   "name": "wm25",
+   "seed": 2,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.0025
+   },
+   "control": "w0"
+  },
+  {
+   "item": "LABOR-1",
+   "name": "wm25",
+   "seed": 2,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.0025
+   },
+   "control": "w0"
+  },
+  {
+   "item": "LABOR-1",
+   "name": "wm25",
+   "seed": 2,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.0025
+   },
+   "control": "w0"
+  },
+  {
+   "item": "LABOR-1",
+   "name": "wm25",
+   "seed": 2,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.0025
+   },
+   "control": "w0"
+  },
+  {
+   "item": "LABOR-1",
+   "name": "wm50",
+   "seed": 1,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.005
+   },
+   "control": "w0"
+  },
+  {
+   "item": "LABOR-1",
+   "name": "wm50",
+   "seed": 1,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.005
+   },
+   "control": "w0"
+  },
+  {
+   "item": "LABOR-1",
+   "name": "wm50",
+   "seed": 1,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.005
+   },
+   "control": "w0"
+  },
+  {
+   "item": "LABOR-1",
+   "name": "wm50",
+   "seed": 1,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.005
+   },
+   "control": "w0"
+  },
+  {
+   "item": "LABOR-1",
+   "name": "wm50",
+   "seed": 2,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.005
+   },
+   "control": "w0"
+  },
+  {
+   "item": "LABOR-1",
+   "name": "wm50",
+   "seed": 2,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.005
+   },
+   "control": "w0"
+  },
+  {
+   "item": "LABOR-1",
+   "name": "wm50",
+   "seed": 2,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.005
+   },
+   "control": "w0"
+  },
+  {
+   "item": "LABOR-1",
+   "name": "wm50",
+   "seed": 2,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.005
+   },
+   "control": "w0"
+  },
+  {
+   "item": "LABOR-1",
+   "name": "wm100",
+   "seed": 1,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.01
+   },
+   "control": "w0"
+  },
+  {
+   "item": "LABOR-1",
+   "name": "wm100",
+   "seed": 1,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.01
+   },
+   "control": "w0"
+  },
+  {
+   "item": "LABOR-1",
+   "name": "wm100",
+   "seed": 1,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.01
+   },
+   "control": "w0"
+  },
+  {
+   "item": "LABOR-1",
+   "name": "wm100",
+   "seed": 1,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.01
+   },
+   "control": "w0"
+  },
+  {
+   "item": "LABOR-1",
+   "name": "wm100",
+   "seed": 2,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.01
+   },
+   "control": "w0"
+  },
+  {
+   "item": "LABOR-1",
+   "name": "wm100",
+   "seed": 2,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.01
+   },
+   "control": "w0"
+  },
+  {
+   "item": "LABOR-1",
+   "name": "wm100",
+   "seed": 2,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.01
+   },
+   "control": "w0"
+  },
+  {
+   "item": "LABOR-1",
+   "name": "wm100",
+   "seed": 2,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.01
+   },
+   "control": "w0"
+  }
+ ]
+}
