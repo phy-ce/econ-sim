@@ -11,7 +11,7 @@ describe('compact display with exact values',()=>{
     expect(compact(999999)).toBe('1M');
     expect(money(30000000)).toBe('ƒ30M');
     expect(exactNumber(1321500)).toBe('1,321,500');
-    expect(exactNumber(1234.567)).toBe('1,234.567');
+    expect(exactNumber(1234.567)).toBe('1,234.57');
     for(const format of [money,compactMoney]){expect(format(.56)).toBe('ƒ0.56');expect(format(99.9)).toBe('ƒ99.90');expect(format(100)).toBe('ƒ100');expect(format(-.56)).toBe('−ƒ0.56');}
     for(const format of [signedMoney,signedCompactMoney]){expect(format(.56)).toBe('+ƒ0.56');expect(format(-.56)).toBe('−ƒ0.56');}
     expect(compact(Infinity)).toBe('—');

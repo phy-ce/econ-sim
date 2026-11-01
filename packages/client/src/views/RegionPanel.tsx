@@ -1,3 +1,4 @@
+import {t as uiCopy} from '../i18n';
 import {memo, useCallback} from 'react';
 import { RegionIndustry } from './RegionIndustry';
 import { BuildingEconomics } from './BuildingEconomics';
@@ -110,18 +111,18 @@ function RegionPanelView({ world, region, history, selectedGood, onSelectGood, o
           <div className="stat"><span className="stat-label"><HelpText text={T.help.education}>{T.education}</HelpText></span><span className="stat-value">{pct(educationOf(r))}</span><Bar value={educationOf(r)} tone="pos" size="sm" label={T.education} /></div>
           <div className="stat"><span className="stat-label"><HelpText text={T.help.tenants}>{T.tenants}</HelpText></span><span className="stat-value accent">{pct(tenantShare)}</span><Bar value={tenantShare} tone="accent" size="sm" label={T.tenants} /></div>
         </div>}
-        {tab !== 'industry' && <button className="region-buildings-link" onClick={() => { if (onViewBuildings) onViewBuildings(); else setTab('industry'); }}><Factory size={15}/>{lang === 'ko' ? '지역 건물 전체 보기' : 'All regional buildings'} <b>{allBuildings.length}</b></button>}
+        {tab !== 'industry' && <button className="region-buildings-link" onClick={() => { if (onViewBuildings) onViewBuildings(); else setTab('industry'); }}><Factory size={15}/>{uiCopy().screenText['allRegionalBuildings']} <b>{allBuildings.length}</b></button>}
 
       </header>
 
-      {!mode && <nav className="region-tabs" aria-label={lang === 'ko' ? '지역 정보' : 'Region views'}>
-        <button aria-pressed={tab === 'overview'} onClick={() => setTab('overview')}><Users size={18}/>{lang === 'ko' ? '지역 개요' : 'Overview'}</button>
+      {!mode && <nav className="region-tabs" aria-label={uiCopy().screenText['regionViews']}>
+        <button aria-pressed={tab === 'overview'} onClick={() => setTab('overview')}><Users size={18}/>{uiCopy().screenText['overview207']}</button>
         <button aria-pressed={tab === 'market'} onClick={() => setTab('market')}><Package size={18}/>{T.market}</button>
         <button aria-pressed={tab === 'industry'} onClick={() => setTab('industry')}><Factory size={18}/>{T.buildings}<span className="count-pill">{allBuildings.length}</span></button>
       </nav>}
       {tab === 'overview' && <RegionExplorer world={world} region={r} onBuildings={()=>{if(onViewBuildings)onViewBuildings();else setTab('industry');}} onPops={prof=>onViewPops?.(r.id,prof)}/>}
       {tab === 'market' && <section className="block market-workspace">
-        <SectionStack explorer revealId="resource" revealKey={resourceRequest} storageKey="market" items={[{ id: 'prices', title: lang === 'ko' ? '전체 시세표' : 'Market prices', height: 174, content: <section className="market-ledger unified-market">
+        <SectionStack explorer revealId="resource" revealKey={resourceRequest} storageKey="market" items={[{ id: 'prices', title: uiCopy().screenText['marketPrices'], height: 174, content: <section className="market-ledger unified-market">
 
         <div className="table-scroll">
           <table className="goods">
@@ -148,9 +149,9 @@ function RegionPanelView({ world, region, history, selectedGood, onSelectGood, o
           </table>
         </div>
         </section>
-        }, { id: 'resource', shortTitle:lang==='ko'?'상품 상세':'Good details', title: lang === 'ko' ? '선택 상품 · 관련 건물' : 'Selected good · Buildings', height: 290, content: <ResourceInspector game={game} key={`${r.id}-${selectedGood}`} world={world} region={r} good={selectedGood} onGood={selectGood} onCompany={onViewCompany}/>
-        }, { id: 'sources', shortTitle:lang==='ko'?'수요·공급':'Supply / demand', title: lang === 'ko' ? '수요·공급 구성' : 'Supply and demand', height: 210, content: <SourceBreakdown good={selectedGood} m={r.market[selectedGood]} />
-        }, { id: 'history', title: lang === 'ko' ? '가격 추이' : 'Price history', height: 190, content: <div className="price-chart">
+        }, { id: 'resource', shortTitle:uiCopy().screenText['goodDetails'], title: uiCopy().screenText['selectedGoodBuildings'], height: 290, content: <ResourceInspector game={game} key={`${r.id}-${selectedGood}`} world={world} region={r} good={selectedGood} onGood={selectGood} onCompany={onViewCompany}/>
+        }, { id: 'sources', shortTitle:uiCopy().screenText['supplyDemand'], title: uiCopy().screenText['supplyAndDemand'], height: 210, content: <SourceBreakdown good={selectedGood} m={r.market[selectedGood]} />
+        }, { id: 'history', title: uiCopy().screenText['priceHistory'], height: 190, content: <div className="price-chart">
           <div className="card-head">
             <span className="good-name strong"><GoodSprite g={selectedGood} /> {T.priceTrend(goodName(selectedGood))}</span>
             <span className="lbl">{T.basePriceOf(money(GOODS[selectedGood].basePrice))}</span>

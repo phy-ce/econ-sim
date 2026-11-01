@@ -1,3 +1,4 @@
+import {t as uiCopy} from '../i18n';
 import {DemolitionProgress} from './DemolitionProgress';
 import {FlowRow} from './FlowRow';
 import {useNavigationState} from '../NavigationHistory';
@@ -38,7 +39,7 @@ export function BuildingInspector({ building: input, world, onGood, onCompany, g
     <div className="inspector-heading"><BuildingSprite typeId={b.typeId} size={88} /><div><h3>{buildingName(b.typeId)} ×{b.level}</h3><p>{methodName(getMethod(b.typeId, b.methodId))}</p>
       <button className="link-btn" onClick={() => onCompany(b.companyId)}><OwnerBadge company={owner} world={world}/> <ChevronRight size={14} /></button></div></div>
     <DemolitionProgress world={world} building={b} game={game}/>
-    {!isOwnerBuilding(b.typeId)&&<div className="inspector-metrics">{!isOwnerBuilding(b.typeId)&&<span><HelpText text={T.help.utilization}>{ko ? '가동률' : 'Utilization'}</HelpText><b>{b.active && !b.idle ? pct(b.utilization) : '0%'}</b></span>}<span><HelpText text={T.help.staffing}>{ko ? '충원율' : 'Staffing'}</HelpText><b>{pct(b.last.staffing)}</b></span>{!isOwnerBuilding(b.typeId)&&<span><HelpText text={T.help.inputFill}>{ko ? '원료 충족' : 'Input coverage'}</HelpText><b>{pct(b.last.inputFill)}</b></span>}</div>}
+    {!isOwnerBuilding(b.typeId)&&<div className="inspector-metrics">{!isOwnerBuilding(b.typeId)&&<span><HelpText text={T.help.utilization}>{uiCopy().screenText['utilization']}</HelpText><b>{b.active && !b.idle ? pct(b.utilization) : '0%'}</b></span>}<span><HelpText text={T.help.staffing}>{uiCopy().screenText['staffing236']}</HelpText><b>{pct(b.last.staffing)}</b></span>{!isOwnerBuilding(b.typeId)&&<span><HelpText text={T.help.inputFill}>{uiCopy().screenText['inputCoverage']}</HelpText><b>{pct(b.last.inputFill)}</b></span>}</div>}
     <BuildingEconomics world={world} building={b} game={game} onBuilding={setOwnerId}/>{!isOwnerBuilding(b.typeId)&&<><Workforce building={b}/><FlowRow world={world} building={b} onGood={onGood}/></>}
 
     {game&&<BuildingControls building={b} game={game} world={world}/>}
@@ -67,19 +68,19 @@ export function ResourceInspector({ world, region, good, onGood, onCompany, game
   const detail = rows.find(b => b.id === selected);
   const market = scopeMarket??region.market[good];
   return <section className="resource-inspector">
-    <div className="inspector-heading"><span className="resource-emblem"><GoodSprite g={good} size={48} /></span><div><span className="lbl">{scopeLabel??(ko ? '선택한 자원 · 지역 시장' : 'Selected good · Local market')}</span><h2>{goodName(good)}</h2></div><strong className="resource-price"><NumericValue value={market.price} format="money"/></strong></div>
-    <div className="inspector-metrics"><span><ArrowUpFromLine size={16} /><HelpText text={T.help.supply}>{ko ? '공급' : 'Supply'}</HelpText><b><NumericValue value={market.supplyEma} format="compact"/></b></span><span><ArrowDownToLine size={16} /><HelpText text={T.help.demand}>{ko ? '수요' : 'Demand'}</HelpText><b><NumericValue value={market.demandEma} format="compact"/></b></span><span><HelpText text={T.help.inventory}>{ko ? '재고' : 'Inventory'}</HelpText><b><NumericValue value={market.inventory} format="compact"/></b></span></div>
-    <div className="relation-tabs" role="group" aria-label={ko ? '자원과 건물 관계' : 'Building relationships'}>
-      <button data-help={T.help.consumers} aria-pressed={side === 'inputs'} onClick={() => { setSide('inputs'); setSelected(null); }}><ArrowDownToLine size={18} />{ko ? '소비 건물' : 'Consumers'}<b>{related('inputs').length}</b></button>
-      <button data-help={T.help.producers} aria-pressed={side === 'outputs'} onClick={() => { setSide('outputs'); setSelected(null); }}><ArrowUpFromLine size={18} />{ko ? '생산 건물' : 'Producers'}<b>{related('outputs').length}</b></button>
+    <div className="inspector-heading"><span className="resource-emblem"><GoodSprite g={good} size={48} /></span><div><span className="lbl">{scopeLabel??(uiCopy().screenText['selectedGoodLocalMarket'])}</span><h2>{goodName(good)}</h2></div><strong className="resource-price"><NumericValue value={market.price} format="money"/></strong></div>
+    <div className="inspector-metrics"><span><ArrowUpFromLine size={16} /><HelpText text={T.help.supply}>{uiCopy().screenText['supply']}</HelpText><b><NumericValue value={market.supplyEma} format="compact"/></b></span><span><ArrowDownToLine size={16} /><HelpText text={T.help.demand}>{uiCopy().screenText['demand']}</HelpText><b><NumericValue value={market.demandEma} format="compact"/></b></span><span><HelpText text={T.help.inventory}>{uiCopy().screenText['inventory']}</HelpText><b><NumericValue value={market.inventory} format="compact"/></b></span></div>
+    <div className="relation-tabs" role="group" aria-label={uiCopy().screenText['buildingRelationships']}>
+      <button data-help={T.help.consumers} aria-pressed={side === 'inputs'} onClick={() => { setSide('inputs'); setSelected(null); }}><ArrowDownToLine size={18} />{uiCopy().screenText['consumers']}<b>{related('inputs').length}</b></button>
+      <button data-help={T.help.producers} aria-pressed={side === 'outputs'} onClick={() => { setSide('outputs'); setSelected(null); }}><ArrowUpFromLine size={18} />{uiCopy().screenText['producers']}<b>{related('outputs').length}</b></button>
     </div>
-    <ListTools value={sort} onChange={setSort} direction={direction} onDirection={() => setDirection(-direction)} search={search} onSearch={setSearch} count={rows.length} options={ko ? [['quantity','자원 기준량'],['name','건물 이름'],['owner','소유 회사'],['level','규모'],['utilization','가동률'],['profit','손익']] : [['quantity','Resource volume'],['name','Name'],['owner','Owner'],['level','Levels'],['utilization','Utilization'],['profit','Profit']]}/>
+    <ListTools value={sort} onChange={setSort} direction={direction} onDirection={() => setDirection(-direction)} search={search} onSearch={setSearch} count={rows.length} options={uiCopy().screenLists.resourceSort}/>
     <div className="industry-list">{rows.map(b => {
       const c = companyById(world,b.companyId);
       const stopped = !b.active || b.idle;
       return <button key={b.id} className="industry-row" aria-pressed={b.id === selected} onClick={() => setSelected(b.id === selected ? null : b.id)}>
-        <BuildingSprite typeId={b.typeId} size={64} /><span className="industry-name"><strong>{buildingName(b.typeId)}</strong><HarvestBadge world={world} regionId={b.regionId} typeId={b.typeId}/>{scopeRegions&&scopeRegions.length>1&&<small>{regionName(world.regions.find(r=>r.id===b.regionId)!)}</small>}<small><OwnerBadge company={c} world={world}/> ×{b.level}</small>{(b.shrinking??0)>0&&<small className="demolition-badge">{T.demolitionQueue(b.shrinking!)}</small>}<small>{stopped ? <><Pause size={12} /> {ko ? '정지 / 대기' : 'Paused / idle'}</> : methodName(getMethod(b.typeId, b.methodId))}</small></span>
-        <span className="industry-amount"><NumericValue value={(getMethod(b.typeId,b.methodId)[side][good] ?? 0)*b.level} format="compact"/><small>{ko ? '기준 / 일' : 'base / day'}</small></span><ChevronRight size={16} />
+        <BuildingSprite typeId={b.typeId} size={64} /><span className="industry-name"><strong>{buildingName(b.typeId)}</strong><HarvestBadge world={world} regionId={b.regionId} typeId={b.typeId}/>{scopeRegions&&scopeRegions.length>1&&<small>{regionName(world.regions.find(r=>r.id===b.regionId)!)}</small>}<small><OwnerBadge company={c} world={world}/> ×{b.level}</small>{(b.shrinking??0)>0&&<small className="demolition-badge">{T.demolitionQueue(b.shrinking!)}</small>}<small>{stopped ? <><Pause size={12} /> {uiCopy().screenText['pausedIdle']}</> : methodName(getMethod(b.typeId, b.methodId))}</small></span>
+        <span className="industry-amount"><NumericValue value={(getMethod(b.typeId,b.methodId)[side][good] ?? 0)*b.level} format="compact"/><small>{uiCopy().screenText['baseDay']}</small></span><ChevronRight size={16} />
       </button>;
     })}</div>
     {!rows.length && <div className="inspector-empty"><Factory size={28}/><span>{search ? T.noMatches : T.noBuildings}</span></div>}

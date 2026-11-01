@@ -1,3 +1,4 @@
+import {t as uiCopy} from '../i18n';
 import {OwnerSummary} from './OwnerSummary';
 import {FlowRow} from './FlowRow';
 import { isGovernment, crewOf, depositFree, harvestFactor,isOwnerBuilding } from '@econ/sim';
@@ -209,7 +210,7 @@ function House({ game, world, owner, mine, projects }: { game?: Game; world: Wor
                 </button>
               ))}
             </div>
-            <ListTools value={sort} onChange={v=>setSort(v as SortKey)} direction={direction} onDirection={()=>setDirection(-direction)} search={search} onSearch={setSearch} count={shown.length} options={ko ? [['pl','손익'],['margin','이익률'],['name','이름'],['level','규모'],['region','지역'],['staff','충원율'],['input','원료 충족']] : [['pl','Profit'],['margin','Margin'],['name','Name'],['level','Levels'],['region','Region'],['staff','Staffing'],['input','Input coverage']]}/>
+            <ListTools value={sort} onChange={v=>setSort(v as SortKey)} direction={direction} onDirection={()=>setDirection(-direction)} search={search} onSearch={setSearch} count={shown.length} options={uiCopy().screenLists.companySort}/>
 
           </div>
           <div className="hlist">
@@ -468,10 +469,10 @@ export function BuildList({ game, world, me, region, projects, includeTypes, exc
   const shown=candidates.filter(c=>filter==='all'||(filter==='ready'?!c.blockers.length:c.blockers.length>0)).filter(c=>buildingName(c.bt.id).toLocaleLowerCase().includes(query.trim().toLocaleLowerCase())).sort((a,b)=>sort==='cost'?a.cost-b.cost||buildingName(a.bt.id).localeCompare(buildingName(b.bt.id)):sort==='name'?buildingName(a.bt.id).localeCompare(buildingName(b.bt.id)):Number(!!a.blockers.length)-Number(!!b.blockers.length)||buildingName(a.bt.id).localeCompare(buildingName(b.bt.id)));
   return (
    <div className="build-catalogue">
-    <div className="catalogue-context"><strong>{regionName(region)}</strong><span>{ko?'건설 가능':'Available'} <b>{ready}</b> / {candidates.length}</span></div>
-    <div className="notice-filters" role="group" aria-label={ko?'건설 조건':'Construction availability'}>{[['all',ko?'전체':'All'],['ready',ko?'건설 가능':'Available'],['blocked',ko?'조건 미충족':'Unavailable']].map(([id,label])=><button key={id} aria-pressed={filter===id} onClick={()=>setFilter(id)}>{label}</button>)}</div>
-    <div className="catalogue-tools"><input aria-label={ko?'건물 검색':'Search buildings'} placeholder={ko?'건물 검색':'Search buildings'} value={query} onChange={e=>setQuery(e.target.value)}/><select aria-label={ko?'건물 정렬':'Sort buildings'} value={sort} onChange={e=>setSort(e.target.value)}><option value="ready">{ko?'건설 가능순':'Availability'}</option><option value="name">{ko?'이름순':'Name'}</option><option value="cost">{ko?'비용 낮은순':'Lowest cost'}</option></select></div>
-    {!shown.length&&<div className="catalogue-empty">{ko?'일치하는 건물 없음':'No matching buildings'}<button onClick={()=>{setQuery('');setFilter('all');}}>{ko?'필터 초기화':'Reset filters'}</button></div>}
+    <div className="catalogue-context"><strong>{regionName(region)}</strong><span>{uiCopy().screenText['available']} <b>{ready}</b> / {candidates.length}</span></div>
+    <div className="notice-filters" role="group" aria-label={uiCopy().screenText['constructionAvailability']}>{[['all',uiCopy().screenText['all']],['ready',uiCopy().screenText['available']],['blocked',uiCopy().screenText['unavailable']]].map(([id,label])=><button key={id} aria-pressed={filter===id} onClick={()=>setFilter(id)}>{label}</button>)}</div>
+    <div className="catalogue-tools"><input aria-label={uiCopy().screenText['searchBuildings']} placeholder={uiCopy().screenText['searchBuildings']} value={query} onChange={e=>setQuery(e.target.value)}/><select aria-label={uiCopy().screenText['sortBuildings']} value={sort} onChange={e=>setSort(e.target.value)}><option value="ready">{uiCopy().screenText['availability']}</option><option value="name">{uiCopy().screenText['name']}</option><option value="cost">{uiCopy().screenText['lowestCost']}</option></select></div>
+    {!shown.length&&<div className="catalogue-empty">{uiCopy().screenText['noMatchingBuildings']}<button onClick={()=>{setQuery('');setFilter('all');}}>{uiCopy().screenText['resetFilters']}</button></div>}
     <div className="cat-grid">
       {shown.map(({bt,blockers}) => {
         const free = bt.land ? landFree(world, region.id, bt.land) : Infinity;
@@ -484,14 +485,14 @@ export function BuildList({ game, world, me, region, projects, includeTypes, exc
         const isOpen = open === bt.id;
         return (
           <div key={bt.id} className={`cat ${isOpen ? 'open' : ''} ${blockers.length ? 'blocked' : ''}`}>
-            <button className="cat-head" data-help={blockers.length?blockers.join(' · '):(ko?'클릭하여 생산 방식·비용 확인':'Inspect methods and construction cost')} aria-expanded={isOpen} onClick={() => setOpen(isOpen ? null : bt.id)}>
+            <button className="cat-head" data-help={blockers.length?blockers.join(' · '):(uiCopy().screenText['inspectMethodsAndConstructionCost'])} aria-expanded={isOpen} onClick={() => setOpen(isOpen ? null : bt.id)}>
               <span className="tile md"><Sprite64 id={bt.id} size={40} /></span>
               <span className="cat-name">{buildingName(bt.id)}{bt.land && <small className="muted">{landName(bt.land)} <span className="pxnum">{free}</span></small>}{!bt.land && <small className="muted">{bt.methods[0].seats ? <>{T.schoolSeats} <NumericValue value={bt.methods[0].seats} format="compact"/></> : bt.methods[0].taxCapacity ? <>{T.taxCapacity} <NumericValue value={bt.methods[0].taxCapacity*TUNE.adminScale} format="compact"/></> : null}</small>}</span>
               <span className="cat-figure">
                 {locked ? <span className="muted">{T.techNeeded}</span>
                   : free < 1 ? <span className="neg">{T.noLand}</span>
                   : isOffice ? <span className="muted">{est.required}pt</span>
-                  : <span className={best!=null&&best>=0?'pos':'neg'}>{best==null?'—':<NumericValue value={best} format="signedCompactMoney"/>}<small>{ko?'예상 / 일':'est. / day'}</small></span>}
+                  : <span className={best!=null&&best>=0?'pos':'neg'}>{best==null?'—':<NumericValue value={best} format="signedCompactMoney"/>}<small>{uiCopy().screenText['estDay']}</small></span>}
                 {!locked && free >= 1 && !isOffice && <small className="muted">{payback ? `${T.payback} ${payback > 1800 ? T.fiveYearsPlus : T.nDays(payback)}` : '—'}</small>}
               </span>
             </button>

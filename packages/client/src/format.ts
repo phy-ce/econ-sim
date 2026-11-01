@@ -31,7 +31,7 @@ export function compact(v:number):string {
   if(rounded>=1000&&unit<3){unit++;rounded=1;}
   return `${sign}${rounded}${units[unit]}`;
 }
-export const exactNumber=(v:number)=>Number.isFinite(v)?new Intl.NumberFormat('en-US',{maximumFractionDigits:6}).format(v):'—';
+export const exactNumber=(v:number)=>Number.isFinite(v)?new Intl.NumberFormat('en-US',{maximumFractionDigits:2}).format(v):'—';
 export const compactMoney = money;
 export const signedCompactMoney = (v: number) => `${v >= 0 ? '+' : '−'}ƒ${moneyAmount(Math.abs(v))}`;
 

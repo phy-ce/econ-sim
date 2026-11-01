@@ -1,3 +1,5 @@
+import {t as uiCopy} from '../i18n';
+import {DetailWindow} from './DetailWindow';
 import {BuildingMetricBars} from './BuildingMetricBars';
 import {ReserveBar} from './ReserveBar';
 import {OwnerSummary} from './OwnerSummary';
@@ -45,6 +47,7 @@ export function RegionIndustry({world,region,game,request,onGood,onCompany,onOpe
  return <section className="region-industry">
   <div className="industry-total">{G.types} {groups.length} · L <NumericValue value={groups.reduce((n,g)=>n+g.levels,0)} format="compact"/></div>
   <ListTools placeholder={G.search} value={sort} onChange={setSort} direction={direction} onDirection={()=>setDirection(-direction)} search={search} onSearch={setSearch} count={filtered.length} options={[["level",G.levels],["name",G.name],["utilization",T.utilisation],["staffing",G.staffing],["profit",S.weekProfit]]}/>
+  {me&&region.kingdomId===me.kingdomId&&<DetailWindow title={G.newBuilding} help={uiCopy().screenText['searchBuildingsAvailabilityCostComparison']} open={build} onOpenChange={setBuild}><BuildList game={game} world={world} me={me} region={region} projects={world.constructions.filter(c=>c.companyId===me.id).length} excludeTypes={groups.map(g=>g.typeId)}/></DetailWindow>}
   {filtered.map(g=>{
    const open=selected===g.typeId,items=g.buildings.filter(b=>view==='all'||(view==='state'?b.stateOwned:!b.stateOwned));
    const projects=g.projects.filter(c=>view==='all'||(view==='state')===!!world.companies.find(o=>o.id===c.companyId)?.state),data=summarizeBuildings(world,items);
@@ -62,6 +65,6 @@ export function RegionIndustry({world,region,game,request,onGood,onCompany,onOpe
    </article>;
   })}
   {!filtered.length&&<p className="empty">{T.noMatches}</p>}
-  {me&&region.kingdomId===me.kingdomId&&<><button className="industry-new" aria-expanded={build} onClick={()=>setBuild(!build)}>{G.newBuilding}</button>{build&&<BuildList game={game} world={world} me={me} region={region} projects={world.constructions.filter(c=>c.companyId===me.id).length} excludeTypes={groups.map(g=>g.typeId)}/>}</>}
+
  </section>;
 }

@@ -119,3 +119,6 @@ DetailWindow 독립 NavigationProvider/버튼, BuildingPops 및 ResourceInspecto
 
 - 폐기 좌우 고정/격자 코드 제거 중: WindowId overview/industry 제거, 옛 배치 모듈 빈 모듈로 정리(파일 삭제 명령 금지 준수). 시험을 현재 자유 창 3개 동시 표시·경계로 교체.
 
+
+- UI_DESIGN 문자열 정리 진행: 25개 화면의 한/영 조건 277곳·문구252개와 목록4개를 strings.ts로 이동. 데이터 이름(왕국/산업)은 기존 sim 번역 필드 유지. 언어 선택 버튼은 자국어 고정. exactNumber도 최대 소수2자리로 규칙 통일.
+

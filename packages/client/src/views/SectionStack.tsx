@@ -1,3 +1,4 @@
+import {t as uiCopy} from '../i18n';
 import {useNavigationState} from '../NavigationHistory';
 import { useEffect, useId, useState, useRef, type ReactNode } from 'react';
 import { ChevronDown, ChevronRight, ArrowUp, ArrowDown, RotateCcw } from 'lucide-react';
@@ -47,14 +48,14 @@ export function SectionStack({ storageKey, items, revealId, revealKey, explorer=
   });
   return <div className="section-stack" ref={root}>
     {browse?<div className="information-explorer">
-      <nav className="explorer-rail" aria-label={ko?'정보 분류':'Information categories'}>
+      <nav className="explorer-rail" aria-label={uiCopy().screenText['informationCategories']}>
         {prefs.map(p=>items.find(i=>i.id===p.id)).filter((item):item is Item=>!!item).map(item=><button key={item.id} aria-pressed={active===item.id} aria-controls={`${prefix}-detail`} data-help={item.title} onClick={()=>setSelected(item.id)}>{item.shortTitle??item.title}</button>)}
       </nav>
       <section className="explorer-detail" id={`${prefix}-detail`} aria-label={items.find(i=>i.id===active)?.title}>
         {items.map(item=><div key={item.id} hidden={active!==item.id} data-section={item.id}><h3 className="explorer-heading">{item.title}</h3>{item.content}</div>)}
       </section>
     </div>:<>
-    <div className="section-settings"><button onClick={() => setPrefs(defaults())} title={ko ? '구역 순서·접기 초기화' : 'Reset section layout'}><RotateCcw size={12}/></button></div>
+    <div className="section-settings"><button onClick={() => setPrefs(defaults())} title={uiCopy().screenText['resetSectionLayout']}><RotateCcw size={12}/></button></div>
     {prefs.map((p, index) => {
       const item = items.find(i => i.id === p.id);
       if (!item) return null;
@@ -64,8 +65,8 @@ export function SectionStack({ storageKey, items, revealId, revealKey, explorer=
           <button className="section-toggle" aria-expanded={!p.collapsed} aria-controls={bodyId} onClick={() => setPrefs(ps => ps.map(v => v.id === p.id ? { ...v, collapsed: !v.collapsed } : v))}>
             {p.collapsed ? <ChevronRight size={14}/> : <ChevronDown size={14}/>}<h3>{item.title}</h3>
           </button>
-          <button disabled={index === 0} aria-label={`${item.title} ${ko ? '위로 이동' : 'move up'}`} onClick={() => move(index, -1)}><ArrowUp size={13}/></button>
-          <button disabled={index === prefs.length - 1} aria-label={`${item.title} ${ko ? '아래로 이동' : 'move down'}`} onClick={() => move(index, 1)}><ArrowDown size={13}/></button>
+          <button disabled={index === 0} aria-label={`${item.title} ${uiCopy().screenText['moveUp']}`} onClick={() => move(index, -1)}><ArrowUp size={13}/></button>
+          <button disabled={index === prefs.length - 1} aria-label={`${item.title} ${uiCopy().screenText['moveDown']}`} onClick={() => move(index, 1)}><ArrowDown size={13}/></button>
         </header>
         <div id={bodyId} hidden={p.collapsed}>
           <div className="section-content" >{item.content}</div>

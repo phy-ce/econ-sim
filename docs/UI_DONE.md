@@ -677,3 +677,7 @@ CompanyPanel BuildingRow의 저택·금융가는 별도 행으로 분기: 자리
 ### 2026-11-01 폐기 배치 코드 정리
 좌우 slotRect/placeWindows 및 격자 swap/resize/windowTracks 구현 제거. 파일 삭제 명령 없이 빈 모듈 표식 유지. WindowId overview/industry 제거. 옛 규칙 시험 10개를 현재 경계·자유 창3개 동시 표시 3개로 교체. root typecheck/client48시험 통과. 화면 동작 변경 없음.
 
+
+### 2026-11-01 화면 문자열 사전 정리
+25개 화면 한/영 조건277곳의 문구252개·라벨 목록4개를 strings.ts의 screenText/screenLists로 이동, Dict로 짝 검사. 데이터 이름은 sim 번역 필드 유지. 첫 언어 선택은 언어별 고정 라벨 유지. exactNumber 최대 소수2자리로 통일. root typecheck/client48시험 통과. 헤드리스 스크린샷 확인(1920×1080): scratch strings-language-first.png(한국어/English 버튼·밤 테마). 나머지 추출 화면 전체의 시각 회귀는 미검증.
+
