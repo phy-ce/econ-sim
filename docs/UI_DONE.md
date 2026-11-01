@@ -634,3 +634,22 @@ DemolitionProgress: 남는 레벨·철거 대기·이번 주 1레벨, 다음/전
 ### 2026-11-01 2-76 첫 실행 언어 선택 (화면 미검증)
 저장 언어 없으면 LanguagePick 표시, 브라우저 언어에 따른 강조/포커스, 선택 후 진입. chooseLang은 같은 언어도 저장하며 실패 시 세션 진행. 기존 메뉴 보존. 루트 타입 검사 통과, 언어 저장·저장 실패 회귀 2개 통과.
 
+
+### 2-71. C 국가 창: 정책 + 재정을 탭 둘로 (오버홀 09 단위 C, 3.3·6.4)
+- 지금: 창 둘. `policies`(PolicyPanel)과 `finance`(FinancePanel)가 도크에 따로 있고 아이콘도 같다 (`App.tsx:208`, 둘 다 Landmark). 라우팅 `GameWindow.tsx:40~41`. 재정 → 정책 링크 `FinancePanel.tsx:32` (`onPolicies`), 국고 칩 → 재정 `App.tsx:153`, 소식 목적지 `eventDestination.ts:3`(법 소식 → policies)·`:8`(빚·재정 글 → finance).
+- 바꿀 것:
+  1. 창 하나 `state`. 제목 "국가" / "State", 아이콘 Landmark. 도크 버튼이 7 → 6 (장부 창은 단위 D에서 더한다).
+  2. 창 머리 아래 탭 둘: "예산" / "Budget" = FinancePanel 본문 그대로, "법" / "Laws" = PolicyPanel 본문 그대로 (재작성 아님, 09 3.3 "합쳐도 본문은 그대로 탭 안에").
+  3. 탭은 창 탐색 이력에 넣는다: `useNavigationState<'budget'|'laws'>('state:tab','budget')`. 뒤로/앞으로가 탭 전환을 되돌린다. 두 본문의 기존 이력 키(`views/FinancePanel.tsx:detail`, `policy:kind` 등)는 그대로.
+  4. `ScreenRoute`에 `tab?: 'budget'|'laws'`. 국고 칩 → `{kind:'state', tab:'budget'}`, 소식 법 → `{kind:'state', tab:'laws'}`, 소식 빚·재정 → `{kind:'state', tab:'budget'}`.
+  5. FinancePanel의 "정책 ↗" 링크(`:32`)는 지운다 (탭이 바로 위에 있다). PolicyPanel → 연구 링크는 그대로 (연구 창을 연다).
+- 지울 것: `WindowId`의 `'policies'`·`'finance'`와 그 참조 (`App.tsx:153·208`, `GameWindow.tsx:40~41`, `eventDestination.ts:3·8`). 열린 창 목록은 저장하지 않으므로 (`App.tsx:64` useState) 옮길 저장값이 없다.
+- 같이 할 것: 2-72 1항 (복지 다이얼 잠금). 왕실 임금 읽기 전용(2-69)은 끝났으니 예산 탭으로 옮길 때 되돌리지 않는다.
+- 문자열: 창 "국가"/"State", 탭 "예산"/"Budget", "법"/"Laws".
+- 완료 기준 (09 단위 C 인수 조건 "기능 회귀 없음"): 예산 탭의 단계 1~5 `setBudget`·호버/포커스 미리보기·줄 상세 DetailWindow·시장 임금, 법 탭의 분야 선택·법 선택·전환·취소·조건·사전 책 아이콘·연구 링크가 지금과 같이 동작. 국고 칩·법 소식·빚 소식이 맞는 탭을 연다. 뒤로/앞으로가 탭을 오간다. 420×560 창에서 가로 넘침 없음 (ko/en). typecheck.
+
+
+
+### 2026-11-01 C(2-71·2-72 1항)
+정책·재정 → 국가 예산/법 탭. 기존 본문과 명령 유지, 탭/법 소식/국고·빚 소식 목적지 연결. 복지법 없음 단계 5개 disabled, 잠금 칩이 법·복지 분야로 이동. 루트 typecheck 및 client 17파일 53시험 통과. 헤드리스 스크린샷 확인(1920×1080): Temp/estera-ui-cdp/state-budget.png, state-laws.png. 예산 왕실 range 0, 복지 disabled 5, 법·복지 활성, 가로폭 418=scrollWidth 418 확인. 상세 조작 전체 회귀의 실사용 검증은 별도.
+

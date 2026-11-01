@@ -93,3 +93,7 @@ DetailWindow 독립 NavigationProvider/버튼, BuildingPops 및 ResourceInspecto
 
 - 2-76 코드 완료, 화면 미검증. 타입 검사 및 언어 저장/실패 회귀 2개 통과. 다음 C(2-71·2-72) 진행.
 
+
+- C(2-71·2-72 1항): 코드 완료, 헤드리스 스크린샷 확인(1920×1080). 경로 C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/state-budget.png 및 state-laws.png. typecheck/client 전체 53시험 통과.
+- 2-76: 헤드리스 스크린샷 확인(1920×1080). 같은 scratch의 first.png, language-ko.png. 한국어 클릭 저장값 ko·진입 확인. 재실행/영어·밤 추가 확인 예정.
+

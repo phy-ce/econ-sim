@@ -6,6 +6,7 @@ import { particle } from './format';
 type S = string;
 
 export const KO = {
+ stateTitle:"국가",stateBudget:"예산",stateLaws:"법",
  exportTrace: "기록 내보내기",
  buildingGroups: {workforce:"직종별 인력",flows:"투입 · 산출",coverage:"원료 충족",inputs:"투입",outputs:"산출",controls:"조작",search:"건물 이름 검색",expandFive:"5레벨 증설",types:"종류",levels:"규모",name:"이름",staffing:"충원율",newBuilding:"+ 새 건물"},
  marketScope: {world:"세계",kingdom:"왕국",scope:"시세 범위",follow:"지도 선택 지역"},
@@ -303,6 +304,7 @@ export const KO = {
 export type Dict = typeof KO;
 
 export const EN: Dict = {
+ stateTitle:"State",stateBudget:"Budget",stateLaws:"Laws",
  exportTrace: "Export trace",
  buildingGroups: {workforce:"Workforce",flows:"Inputs / outputs",coverage:"Input coverage",inputs:"Inputs",outputs:"Outputs",controls:"Controls",search:"Search building name",expandFive:"Expand by 5",types:"Types",levels:"Levels",name:"Name",staffing:"Staffing",newBuilding:"+ New building"},
  marketScope: {world:"World",kingdom:"Kingdom",scope:"Market scope",follow:"Selected map region"},

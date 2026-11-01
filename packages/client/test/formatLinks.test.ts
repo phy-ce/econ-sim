@@ -28,7 +28,7 @@ describe('notification destinations',()=>{
   it('routes research, finance and company-only notices without dead links',()=>{
     const world=createWorld(42),base={tick:0,kind:'info' as const,companyId:null};
     expect(eventDestination(world,{...base,text:'연구 완료'})).toEqual({kind:'research'});
-    expect(eventDestination(world,{...base,text:'대출 한도'})).toEqual({kind:'finance'});
+    expect(eventDestination(world,{...base,text:'대출 한도'})).toEqual({kind:'state',tab:'budget'});
     expect(eventDestination(world,{...base,text:'소식',companyId:world.companies[0].id})).toEqual({kind:'company',id:world.companies[0].id});
     expect(eventDestination(world,{...base,text:'소식'})).toBeNull();
   });

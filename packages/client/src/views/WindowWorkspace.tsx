@@ -5,7 +5,7 @@ import {useEffect,useRef,useState} from 'react';
 import type {PointerEvent,ReactNode} from 'react';
 import {X} from 'lucide-react';
 import {useT,useLang} from '../i18n';
-export type WindowId='region'|'policies'|'map'|'overview'|'market'|'industry'|'finance'|'research'|'trends'|'construction';
+export type WindowId='region'|'state'|'map'|'overview'|'market'|'industry'|'research'|'trends'|'construction';
 export interface WindowDefinition{id:WindowId;title:string;icon:ReactNode;content:ReactNode}
 type Point={x:number;y:number};
 export function WindowWorkspace({windows,opened,onOpened}:{windows:WindowDefinition[];opened:WindowId[];onOpened:(ids:WindowId[])=>void;revealRequest?:number}){

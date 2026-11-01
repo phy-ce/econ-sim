@@ -1,3 +1,4 @@
+import {useEffect} from 'react';
 import {useNavigationState} from '../NavigationHistory';
 import {BookOpen} from 'lucide-react';
 import { policyStatus, TUNE } from '@econ/sim';
@@ -7,9 +8,10 @@ import { useT, techName } from '../i18n';
 import { NumericValue } from '../NumericValue';
 import { pct } from '../format';
 import { Bar } from '../ui';
-export function PolicyPanel({world,game,kingdomId,onResearch}:{world:World;game:Game;kingdomId:number;onResearch:()=>void}) {
+export function PolicyPanel({world,game,kingdomId,onResearch,domainRequest}:{domainRequest?:{kind:'welfare';sequence:number}|null;world:World;game:Game;kingdomId:number;onResearch:()=>void}) {
  const T=useT(),S=T.system,st=policyStatus(world,kingdomId),k=world.kingdoms.find(k=>k.id===kingdomId)!;
  const [kind,setKind]=useNavigationState<'tax'|'invest'|'welfare'>('policy:kind','tax');
+ useEffect(()=>{if(domainRequest)setKind(domainRequest.kind);},[domainRequest]);
  const [choices,setChoices]=useNavigationState<Partial<Record<'tax'|'invest'|'welfare',string>>>('policy:choices',{});
  const status=st[kind],pending=status.pending;
  const selected=status.options.find(o=>o.id===choices[kind])??status.options.find(o=>o.id===status.current)!;
