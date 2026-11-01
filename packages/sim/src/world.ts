@@ -6,6 +6,7 @@ import { syncEmployment } from './labor';
 import { affordableTenantWealth, affordableWealth } from './market';
 import { applyStateWages, taxCapacity, updateWageIndex } from './finance';
 import { writePool } from './round';
+import { round2 } from './rng';
 import type { Company, GoodId, Kingdom, MarketGood, PopClass, Region, Skill, World } from './types';
 import { SKILLS, emptyLedger, isLowerJob } from './types';
 
@@ -89,7 +90,8 @@ export function splitKingdoms(seed: number, count = KINGDOMS.length): Record<num
 }
 
 function newCompany(id: number, name: string, color: string, kingdomId: number, state: boolean, isPlayer: boolean, cash: number): Company {
-  const wages = Object.fromEntries(SKILLS.map((s) => [s, SKILL_DEFS[s].baseWage * (isPlayer ? 1 : 0.8)])) as Record<Skill, number>;
+  // 보이는 값이라 소수 둘째 자리로 (기본 임금 3.5 × 0.8 = 2.8000…03)
+  const wages = Object.fromEntries(SKILLS.map((s) => [s, round2(SKILL_DEFS[s].baseWage * (isPlayer ? 1 : 0.8))])) as Record<Skill, number>;
   return {
     id, name, color, isPlayer, kingdomId, state, cash, wages,
     // 플레이어는 시장임금 정책(시장 임금 + 0%)으로 시작한다. 왕실도 생산 건물 임금은 이것으로 정하고, 정부 건물 임금은 국영 임금 단계가 정한다

@@ -11,7 +11,7 @@
 import {
   BUILDING_BY_ID, BUILDING_TYPES, CLASS_DEFS, CONSUMPTION_PER_CAPITA, DEPENDENT_CONSUMPTION, EDUCATION_FLOOR, EDUCATION_RANGE, GOODS, GOOD_IDS,
   HARVEST_KINDS, HARVEST_MAX_SEASONS, HARVEST_SEASON_DAYS, HARVEST_SPREAD, HARVEST_STEP, LAW_TECH, MAX_POINTS_PER_LEVEL_DAY, NEEDS, OWNERSHIP_SEATS,
-  OWNER_SEATS_PER_LEVEL, REGIONS, STEP_PROFIT_MULT, BUILD_POINT_FACTOR, INDUSTRIES, INDUSTRY_SKILL_TOL, INDUSTRY_UPPER_INPUT_TOL, industryOf, SKILL_DEFS, SUBSISTENCE, tenantYield, TAX_PEOPLE_PER_LEVEL, TECHS, TECH_BY_ID, TECH_COST, TICKS_PER_WEEK, TICKS_PER_YEAR,
+  OWNER_SEATS_PER_LEVEL, REGIONS, STEP_PROFIT_MULT, BUILD_POINT_FACTOR, INDUSTRIES, INDUSTRY_SKILL_TOL, INDUSTRY_UPPER_INPUT_TOL, industryOf, SKILL_DEFS, SUBSISTENCE, tenantIncomeAtBase, tenantYield, TAX_PEOPLE_PER_LEVEL, TECHS, TECH_BY_ID, TECH_COST, TICKS_PER_WEEK, TICKS_PER_YEAR,
   TIERS, TIER_JITTER, TUNE, WORKFORCE_RATIO, getMethod, needsAt, rawMax, regionPerk, scaleBonus,
   buildPointsOf, TRADING_POST, TRADE_STEP_MULT, TRADE_ESCROW_SHARE, tradeReserveOf,
 } from './data';
@@ -465,8 +465,8 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   },
   {
     id: 'methods-rule', category: 'production', title: t('건물 숫자 규칙', 'Building numbers rule'),
-    rule: t('기본가와 기본 임금에서 기본 방식은 이익률 {3}, 한 단계 오를 때마다 레벨당 이익이 ×{4}다. 일꾼 수와 원료 비중은 산업 유형마다 다르다: 1차는 {5}명에 원료 {9} 이하, 가공은 {6}명에 원료 {10}, 중공업은 {7}명(기술자 {13})에 원료 {11}, 숙련(사치품)은 {8}명(기술자 {14})에 원료 {12}, 운송은 {20}명에 원료 {21}. 단계가 오르면 일꾼은 줄고 기술자·전문가 비율과 공구·석탄·철·기계 사용이 는다. 공사 포인트는 기본 방식 하루 이익 × {15}.',
-      'At base prices and wages the basic method has a {3} margin, and each step up multiplies profit per level by {4}. Headcount and input share depend on the industry type: primary {5} workers with inputs at most {9} of revenue, processing {6} workers with inputs {10}, heavy industry {7} workers ({13} skilled) with inputs {11}, skilled crafts (luxuries) {8} workers ({14} skilled) with inputs {12}, transport {20} workers with inputs {21}. Higher steps employ fewer people, a larger share of skilled workers and experts, and more tools, coal, iron and machinery. Construction points = basic daily profit × {15}.'),
+    rule: t('기본 임금(노동자 {0})은 모든 상품이 기본가일 때 소작농 1인 하루 소득 {23} × 임금 바닥 배율 {22}를 0.5 단위로 둥글게 한 값이다 (기술자·전문가는 그 1.5·4배). 기본가와 기본 임금에서 기본 방식은 이익률 {3}, 한 단계 오를 때마다 레벨당 이익이 ×{4}다. 일꾼 수와 원료 비중은 산업 유형마다 다르다: 1차는 {5}명에 원료 {9} 이하, 가공은 {6}명에 원료 {10}, 중공업은 {7}명(기술자 {13})에 원료 {11}, 숙련(사치품)은 {8}명(기술자 {14})에 원료 {12}, 운송은 {20}명에 원료 {21}. 단계가 오르면 일꾼은 줄고 기술자·전문가 비율과 공구·석탄·철·기계 사용이 는다. 공사 포인트는 기본 방식 하루 이익 × {15}.',
+      'The labourer base wage ({0}) is the daily income of one tenant farmer at base prices for every good ({23}) × the wage floor multiple {22}, rounded to 0.5 (skilled and experts get 1.5× and 4×). At base prices and wages the basic method has a {3} margin, and each step up multiplies profit per level by {4}. Headcount and input share depend on the industry type: primary {5} workers with inputs at most {9} of revenue, processing {6} workers with inputs {10}, heavy industry {7} workers ({13} skilled) with inputs {11}, skilled crafts (luxuries) {8} workers ({14} skilled) with inputs {12}, transport {20} workers with inputs {21}. Higher steps employ fewer people, a larger share of skilled workers and experts, and more tools, coal, iron and machinery. Construction points = basic daily profit × {15}.'),
     formula: 'margin = (Σ out × base − Σ in × base − Σ jobs × baseWage) ÷ revenue; input share = Σ in × base ÷ revenue',
     params: [
       p('노동자 기본 임금', 'Labourer base wage', () => SKILL_DEFS.unskilled.baseWage, 'florin'), p('기술자 기본 임금', 'Skilled base wage', () => SKILL_DEFS.skilled.baseWage, 'florin'),
@@ -490,6 +490,8 @@ export const ENCYCLOPEDIA: EncEntry[] = [
       p('윗단계 원료 비중 허용 폭', 'Upper-step input share tolerance', () => INDUSTRY_UPPER_INPUT_TOL, 'pct'),
       p('운송 기본 일꾼', 'Transport basic workers', () => INDUSTRIES.transport.workers, 'people'),
       p('운송 원료/매출', 'Transport input share', () => shareRange('transport')),
+      tune('wageOutside', '임금 바닥 배율', 'Wage floor multiple', 'x'),
+      p('기본가 소작 소득', 'Tenant income at base prices', () => r2(tenantIncomeAtBase()), 'florin'),
     ],
     example: () => {
       const farm = methodMarginAtBase('farm', 'farm_basic'), food = methodMarginAtBase('foodplant', 'food_manual');
@@ -512,7 +514,7 @@ export const ENCYCLOPEDIA: EncEntry[] = [
         };
       },
     },
-    related: ['buildings', 'production', 'tech'], seenIn: ['company'], source: ['data.ts BUILDING_TYPES', 'data.ts INDUSTRIES', 'cli/methods_audit.ts'], design: ['7.1'],
+    related: ['buildings', 'production', 'tech', 'ai-wages', 'classes'], seenIn: ['company'], source: ['data.ts BUILDING_TYPES', 'data.ts INDUSTRIES', 'data.ts ruleBaseWage', 'cli/methods_audit.ts', 'cli/rebasewage.ts'], design: ['7.1'],
   },
   {
     id: 'buildings', category: 'production', title: t('건물과 방식', 'Buildings and methods'),

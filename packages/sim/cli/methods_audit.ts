@@ -5,18 +5,21 @@
 //     상위 원료(공구·석탄·철·기계) 값과 레벨당 산출 값은 는다
 //  4. 전문가는 증기 시대 방식(증기기관이거나 증기기관이 선행인 기술)과 사치품 방식에만, 레벨당 20명까지
 //     (대륙 전문가는 약 1천 명이고 거의 다 금융가에 있다. 그 전 방식이 전문가를 쓰면 아무도 바꾸지 못한다)
-//  5. 기본 방식은 공구 10~30 (광산·벌목 30: 빅토리아3 광산 기본 방식이 공구를 쓰는 1차 산업이라 원료가 공구뿐이다. 목공구 tools_wood 만 0)
+//  5. 기본 방식은 공구 10~30 (빅토리아3 광산 기본 방식이 공구를 쓰는 1차 산업이라 원료가 공구뿐이다. 목공구 tools_wood 만 0. 2026-11-01 기준 임금 재계산 뒤 모두 10)
 //  6. 둥근 수: 일자리 10 단위 (합은 되도록 50 단위, 상황에 따라 10 단위라 확인하지 않는다), 1,000 이상인 양은 50 단위, 그 아래는 10 단위
 //  7. 산업 유형 (data.ts INDUSTRIES): 기본 방식 일꾼 합계 = 유형 값, 숙련(기술자+전문가) 비율 = 유형 값 ± INDUSTRY_SKILL_TOL
 //     (농부만 쓰는 농장·목장은 0), 원료비/매출이 유형 범위 안. 윗단계 원료비/매출은 유형 범위 ± INDUSTRY_UPPER_INPUT_TOL
 //  8. 공사 포인트 = 기본 방식(건물의 첫 방식) 하루 이익 × BUILD_POINT_FACTOR, 50 단위 (산업 유형이 있는 건물)
+//  9. 기본 임금 = 규칙 값 (2026-11-01 사용자 결정): 기본가에서 소작농 1인 하루 소득 × TUNE.wageOutside × 직종 배율, 0.5 단위 (data.ts ruleBaseWage)
 // 무역소(trading_post)는 산출이 없어 이익·원료·산업 유형 규칙(1·2·5·7·8)과 상위 원료·산출 규칙을 보지 않는다 (정부 건물처럼 예외).
 // 둥근 수(6), 전문가(4), 단계가 오르면 일꾼 합계는 줄고 숙련 비율은 줄지 않는다(3의 앞부분)는 본다
 // 어긋나면 줄마다 '!' 로 찍고 끝에 실패 수를 내며 종료 코드 1 로 끝난다.
 import {
-  BUILDING_TYPES, BUILD_POINT_FACTOR, GOODS, INDUSTRIES, INDUSTRY_SKILL_TOL, INDUSTRY_UPPER_INPUT_TOL, SKILL_DEFS, STEP_PROFIT_MULT, TECH_BY_ID, TRADING_POST, industryOf,
+  BUILDING_TYPES, BUILD_POINT_FACTOR, GOODS, INDUSTRIES, INDUSTRY_SKILL_TOL, INDUSTRY_UPPER_INPUT_TOL, SKILL_DEFS, STEP_PROFIT_MULT, TECH_BY_ID, TRADING_POST, TUNE, industryOf,
+  ruleBaseWage, tenantIncomeAtBase,
 } from '../src/data';
 import type { GoodId, MethodDef, Skill } from '../src/types';
+import { SKILLS } from '../src/types';
 
 const ADVANCED: GoodId[] = ['tools', 'fuel', 'metal', 'electronics'];
 const NO_TOOLS_BASE = new Set(['tools_wood']);
@@ -43,6 +46,14 @@ for (const t of BUILDING_TYPES) for (const m of t.methods) {
   const o = Object.entries(m.outputs).map(([g, q]) => `${g} ${q}`).join(', ') || (m.construction ? `건설 ${m.construction} (포인트당 ${Math.round((wage + input) / m.construction)})` : m.taxCapacity ? `징세 ${m.taxCapacity}` : '');
   const ind = industryOf(t.id, m.id);
   console.log(`${t.id}/${m.id}${ind ? ` [${INDUSTRIES[ind].name}]` : ''} | ${w} | ${i || '-'} → ${o} | 임금 ${wage} 원료 ${input}${rev > 0 ? ` (${pct(input / rev)})` : ''} 매출 ${rev} | 이익 ${rev - wage - input} (${rev > 0 ? pct((rev - wage - input) / rev) : '-'})`);
+}
+
+// 9. 기본 임금 = 규칙 값
+console.log(`\n--- 기본 임금: 기본가 소작 소득 ${tenantIncomeAtBase().toFixed(4)} × ${TUNE.wageOutside} = ${(tenantIncomeAtBase() * TUNE.wageOutside).toFixed(4)}`);
+for (const s of SKILLS) {
+  const want = ruleBaseWage(s);
+  console.log(`${s}: ${SKILL_DEFS[s].baseWage} (규칙 ${want})`);
+  if (SKILL_DEFS[s].baseWage !== want) bad(`${s}: 기본 임금 ${SKILL_DEFS[s].baseWage} ≠ 규칙 ${want}`);
 }
 
 console.log('\n--- 규칙 점검 (사다리: 건물·산출 상품별, 정의 순서)');

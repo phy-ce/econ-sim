@@ -8,6 +8,13 @@
 - 사용자 결정 대기: 아래 0장 "결정 대기". 화면 작업자에게 넘길 것: `docs/UI_CHANGES.md` 맨 위 "0. 지금 할 일".
 - 클라우드 세션(claude.ai/code)으로 이어서 할 수 있다. 규칙은 CLAUDE.md "클라우드 세션"을 본다.
 
+## 0-1101-basewage. 기준 임금 재계산 (`wt-basewage`, 06bab20 위, 합치기 전)
+
+- 사용자 결정 2026-11-01 (DECISIONS 7-31): 기본 임금 = 기본가 소작 1인 하루 소득 2.95 (`data.ts tenantIncomeAtBase`) × `wageOutside` 1.2 → 0.5 단위 3.5. 기술자 5.5, 하급 귀족 10.5, 전문가·자본가·상급 귀족 14 (`ruleBaseWage`, `methods_audit` 9번 규칙).
+- 방식 숫자는 `cli/rebasewage.ts`로 다시 셌다 (일꾼 그대로, 원료·산출·공사 포인트 약 0.35배). 사무소 포인트 0.7·1.4·2.1, `MAX_POINTS_PER_LEVEL_DAY` 3.5, 학교 300·행정청 150·사무소 50, 전문 관료제 종이 70. `methods_audit` 통과.
+- 시드 1 × salt 0 × 10년 (06bab20 → 이 브랜치): 곡물 S/D 10년차 1.65 → 1.34, 농장 이익률 59% → 10%, 노동자 생활수준 2.96 → 1.28, 세전 총생산 296 → 242. 표는 DECISIONS 7-31. 묶음 비교는 안 했다.
+- 남은 일: DESIGN 11장 비교값 61개 "재검증 필요". `financeWage` 20(전문가 기본 임금 14보다 높음), `START_CASH`·`START_FIRM_CASH`(레벨 공사비가 약 0.35배라 상대적으로 약 3배), 국영 임금 단계 AI 문턱(임금 지수 1)은 값 그대로. 합치기 전 premerge, 합친 뒤 `npm run golden:update`.
+
 ## 0-1030. 2026-10-30 세션: 오버홀 설계 문서, A0 안전망, 0a AI 난수 분리
 
 **오버홀 설계 (`docs/overhaul/`, main 9b46c2d)**: 경제 샌드박스 틀(사용자 고정). 시작점은 `00_INDEX.md`, 실행 순서는 `11_ROADMAP.md`, 사용자 결정 Q1~Q20 은 `12_DECISIONS_NEEDED.md`.
