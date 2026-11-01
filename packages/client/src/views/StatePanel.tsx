@@ -5,7 +5,7 @@ import {useNavigationState} from '../NavigationHistory';
 import {useT} from '../i18n';
 import {FinancePanel} from './FinancePanel';
 import {PolicyPanel} from './PolicyPanel';
-export function StatePanel({game,world,me,onBuilding,onResearch,requestedTab,sequence,active=true}:{active?:boolean;game:Game;world:World;me:Company;onBuilding:(id:number)=>void;onResearch:()=>void;requestedTab?:'budget'|'laws';sequence:number}){
+export function StatePanel({game,world,me,onBuilding,onResearch,requestedTab,sequence,active=true}:{active?:boolean;game:Game;world:World;me:Company;onBuilding:(id:number)=>void;onResearch:(techId?:string)=>void;requestedTab?:'budget'|'laws';sequence:number}){
  const T=useT(),[tab,setTab]=useNavigationState<'budget'|'laws'>('state:tab',requestedTab??'budget');
  const [domain,setDomain]=useState<{kind:'welfare';sequence:number}|null>(null);
  useEffect(()=>{if(requestedTab)setTab(requestedTab);},[requestedTab,sequence]);

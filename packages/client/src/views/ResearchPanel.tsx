@@ -12,11 +12,13 @@ import {Bar} from '../ui';
 import {pct,compact} from '../format';
 import {DetailWindow} from './DetailWindow';
 const layout=researchLayout(TECHS);
-export function ResearchPanel({world,game,me}:{world:World;game:Game;me:Company}){
+export function ResearchPanel({world,game,me,request}:{world:World;game:Game;me:Company;request?:{id:string;sequence:number}|null}){
  const T=useT(),ko=useLang()==='ko',S=T.system,r=me.research,options=researchableTechs(me);
- const [selected,setSelected]=useNavigationState('views/ResearchPanel.tsx:selected',r.current??options[0]??TECHS[0].id);
- const [filter,setFilter]=useNavigationState<'available'|'locked'|'known'|'all'>('research:filter','available');
+ const requested=TECHS.some(t=>t.id===request?.id)?request?.id:undefined;
+ const [selected,setSelected]=useNavigationState('views/ResearchPanel.tsx:selected',requested??r.current??options[0]??TECHS[0].id);
+ const [filter,setFilter]=useNavigationState<'available'|'locked'|'known'|'all'>('research:filter',requested?'all':'available');
  const [query,setQuery]=useState('');
+ useEffect(()=>{if(requested){setSelected(requested);setFilter('all');setQuery('');}},[requested,request?.sequence]);
  const tech=TECHS.find(t=>t.id===selected)??TECHS[0],unlocks=unlocksOf(tech.id);
  const status=(id:string)=>r.known.includes(id)?'known':r.current===id?'current':options.includes(id)?'available':'locked';
  const labels={known:uiCopy().screenText['known'],current:uiCopy().screenText['researching'],available:uiCopy().screenText['available210'],locked:uiCopy().screenText['locked']};

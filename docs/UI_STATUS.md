@@ -1,4 +1,4 @@
-# UI 현재 상태 — 2026-11-01
+# UI 현재 상태 — 2026-11-02
 
 UI 문서의 시작점. 사용자 최신 요청이 과거 문서보다 우선한다. 상태는 기능 구현과 검증을 구분한다.
 
@@ -219,3 +219,10 @@ DetailWindow 독립 NavigationProvider/버튼, BuildingPops 및 ResourceInspecto
 - root typecheck/client21파일55시험 통과. 가중 집계2시험·과거 임시 별칭8쌍의 고유 셀1시험 추가. 읽기 전용 icons/list.ts:72고유 그림·누락/별칭 없음. 헤드리스 스크린샷 확인(1920×1080): C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/farmer-en-dark.png, farmer-ko-light.png. 농부35.7k/24px·다크rgb168,190,98/라이트rgb103,123,47, 본문418/scroll418. 실제 취업 이동·전 경로는 화면 미검증. 원문 UI_DONE 이동.
 
 - 2-36·2-39 완료: 종이/종이 공장과 옛 별칭8쌍 모두 별도 셀, icons/list.ts 72고유 그림. 지역 가격 기록의 결측0 대체를 marketPriceHistory로 통일(결측 키 생략·실제0 보존). root typecheck/client55시험 통과. 헤드리스 스크린샷 확인(1920×1080): C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/paper-market-ko-light.png, paper-mill-ko-light.png. 종이ƒ2.28/생산2곳·종이 공장 실제 상세709/일, 본문418/scroll418. 원본 buildings-b.webp도 이미지 확인. 과거 저장 결측 재생·새 종이 영문다크·전 아이콘 쌍 시각 비교는 미검증. 원문 UI_DONE 이동. 농부 커밋169f97b.
+
+## 2026-11-02 정책·연구 연결 및 전환 상태 보완
+- 2-45·2-56 부분 완료: 법의 기술 링크가 연구 창에서 해당 기술을 선택한다. 잠긴 기술도 필터를 전체로 바꿔 표시하며 연구 시작 명령은 보내지 않는다. 같은 기술 재요청도 sequence로 반영한다.
+- 전환 중 다른 법 시행 차단. 조건 미달이면 진행 막대와 현재/필요 비율을 빨강으로 표시하고, 비율은 소수 둘째 자리까지. 실패 시점은 틱 대신 게임 날짜로 표시한다.
+- 헤드리스 스크린샷 확인(1920×1080): C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/policy-tech-selected-ko.png, policy-pending-invalid-ko.png. 잠긴 증기 철도 선택·현재 연구 불변, 검증용 투자법 전환의 8%/15%·150일·다른 시행 버튼 disabled, 본문418/scroll418. 검증용 세계는 원래 저장 상태로 복원. 새로고침 런타임 오류0.
+- 잔여: 법별 실제 세율 툴팁, 투자 직종 아이콘 및 완료/실패 소식의 모든 경로. 이번 수정의 영문·다크 및 전환 완료 자체는 화면 미검증. 따라서 2-45·2-56 전체 원문은 UI_CHANGES에 유지한다.
+- 검증: 루트 npm.cmd run typecheck 통과, 클라이언트 vitest 21파일56시험 통과.
