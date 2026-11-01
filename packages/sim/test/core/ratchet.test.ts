@@ -16,6 +16,8 @@ const ASSIGN = new RegExp(String.raw`\.(${FIELDS})\s*=(?![=>])`);
 
 /** 파일 → [±= 줄 수, 대입 줄 수]. 2026-10-30 wt-a0 (main 9b46c2d) 에서 센 값: ±= 48줄, 대입 30줄 */
 const EXPECTED: Record<string, [number, number]> = {
+  // 유보로 증설비 (TUNE.aiReserveFund, 시제품 기본 끔): ai.ts fundFromReserve 가 민간 회사 현금을 빼서 toTreasury(kingdoms.ts, 흐름 'reserveFund')로 금고에 넣는다
+  'ai.ts': [1, 0],
   'commands.ts': [3, 2],
   'compat.ts': [1, 2],
   'economy.ts': [4, 5],
