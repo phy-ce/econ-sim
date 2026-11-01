@@ -110,3 +110,6 @@ DetailWindow 독립 NavigationProvider/버튼, BuildingPops 및 ResourceInspecto
 
 - J(2-74) 완료: typecheck/client55시험 통과. 헤드리스 스크린샷 확인(1920×1080) year-end-reached.png, tick359→360 정확한 정지/도달 칩 확인. 위험 에피소드는 순수 클라이언트 시험 확인, 실제 위험 클릭 화면은 미검증.
 
+
+- 2-50 잔여 코드 완료, 화면 미검증. 옛 상회 소유 기관 행도 자리/금고 전용. typecheck/client55시험 통과.
+

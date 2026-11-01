@@ -665,3 +665,7 @@ ConstructionPanel 지역 칩·짓기/대기열 탭, 내 왕국 지역만 활성,
 ### 2026-11-01 J(2-74) 기간 진행·정지 사유
 프로토콜 runUntil/reached, 워커 advance의 틱 경계 정지, 수동 속도·새 판/불러오기 목표 취소. 연말 분할 버튼·정지/위험/도달 사유 칩, 위험 소식 목적지 이동. 위험 키 숫자 정규화·35틱 에피소드, 반복 토스트는 유지. root typecheck/client55시험 통과(위험 반복·공백·건물별·정지중 사례 2시험 포함). 헤드리스 스크린샷 확인(1920×1080): C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/year-end-reached.png. 테스트 저장 tick359에서 실행 → tick360, Reached · Year end 확인. sim 수정 없음.
 
+
+### 2026-11-01 2-50 옛 상회 행 잔여 (화면 미검증)
+CompanyPanel BuildingRow의 저택·금융가는 별도 행으로 분기: 자리·금고 OwnerSummary와 펼침 인력만 표시. 원료·산출·이익률 공장 칸 제거. root typecheck/client55시험 통과.
+
