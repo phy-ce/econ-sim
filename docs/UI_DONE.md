@@ -789,3 +789,8 @@ ownershipAssets API로 소유 기관 소재지 기준 왕국/지역 막대, 내 
 ### 2026-11-01 2-35 왕국 요약 합산 (부분)
 통계 summary를 왕실 회사 요약에서 왕국 영토의 정부·민간 합산으로 전환. 저택·금융가는 고용 합계에만 포함하고 생산 수입·비용·손익은 제외. 국고는 왕실 순금고/한도로 별도 유지. 주간 이익은 소유 기관을 제외한 건물 profitEma×7 합. root typecheck/client48시험 통과. 헤드리스 스크린샷 확인(1920×1080): C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/kingdom-summary.png, 창폭418=scroll418. 회사 선택·순위의 왕국 전환은 미완료.
 
+
+### 2026-11-01 · 2-35 부분: 왕국 선택·비교 입구
+- 기존 회사 6개 선택과 상회 순위를 왕국 3개 선택·비교 표로 합쳤다. 왕국 경제는 영토의 건물(소유 기관 제외)을 표시하고 기존 회사 ID 링크를 소속 왕국으로 받는다.
+- 왕실 금고와 민간 순자금은 분리한다. 주간 생산 이익은 정부·소유 기관 이익을 제외한다. 소유 레벨은 현재 API의 국가/저택/금융가와 미배정 몫으로 표시한다.
+- root typecheck·클라이언트 50시험 통과. 헤드리스 스크린샷 확인(1920×1080): C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/kingdom-comparison-fixed.png, kingdom-comparison-right.png, kingdom-economy.png. 영문 다크, 3행 및 상세 진입 확인. 전체 2-35는 미완료로 원문을 UI_CHANGES에 유지한다.

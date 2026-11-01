@@ -1,25 +1,21 @@
+import {KingdomEconomy,KingdomComparison} from './KingdomEconomy';
 import {OwnershipAssets} from './OwnershipAssets';
 import {t as uiCopy} from '../i18n';
 import {EconomyCharts} from './EconomyCharts';
-import {memo, useCallback} from 'react';
-import {useNavigationState} from '../NavigationHistory';
+import {memo} from 'react';
 import { PopTable, type PopRequest } from './PopTable';
-import { NumericValue } from '../NumericValue';
 import type { Game } from '../useGame';
-import { CompanySummary,KingdomSummary, CompanyView, Projects } from './CompanyPanel';
+import {KingdomSummary} from './CompanyPanel';
 import { playerCompany, companyById } from '@econ/sim';
-import { OwnerBadge } from './OwnerBadge';
 import { SectionStack } from './SectionStack';
-import { SortHeader } from './SortHeader';
-import { useMemo, useState } from 'react';
-import { POP_CLASSES, kingdomGdp } from '@econ/sim';
+import {useMemo} from 'react';
+import {POP_CLASSES} from '@econ/sim';
 import type { HistoryPoint, World, GameEvent,GoodId } from '@econ/sim';
 import { TimeChart } from './Chart';
 import { Notifications } from './Notifications';
 import { ClassSprite } from '../sprites';
 import { CLASS_COLOR } from '../ui';
-import { compactMoney, signedCompactMoney } from '../format';
-import { className, companyName, useT, useLang } from '../i18n';
+import {className,useT} from '../i18n';
 
 function BottomPanelView({ world, history, lastReadTick, onRead, onJump, viewedId, onViewCompany, game, onEvent, popRequest, onBuilding,onGood }: {onGood?:(g:GoodId)=>void;
   popRequest:PopRequest|null; onBuilding:(id:number)=>void;
@@ -30,22 +26,16 @@ function BottomPanelView({ world, history, lastReadTick, onRead, onJump, viewedI
   const T = useT();
   const me=playerCompany(world);
   const viewed=viewedId!==null?companyById(world,viewedId):me;
-  const lang = useLang();
-  const [sort,setSort] = useNavigationState('views/BottomPanel.tsx:sort','net');
-  const [dir,setDir] = useNavigationState('views/BottomPanel.tsx:dir',-1);
   const wealthData = useMemo(() => history.map((p) => ({ tick: p.tick, ...p.sol })), [history]);
   const series = POP_CLASSES.map((c) => ({ key: c, name: className(c), color: CLASS_COLOR[c] }));
-  const rows = world.companies
-    .map((c) => ({ c, levels: world.buildings.filter((b) => b.companyId === c.id).reduce((a, b) => a + b.level, 0), net: c.cash - c.debt }))
-    .sort((a,b) => (sort==='name' ? companyName(a.c).localeCompare(companyName(b.c)) : sort==='levels' ? a.levels-b.levels : sort==='profit' ? a.c.lastWeekProfit-b.c.lastWeekProfit : a.net-b.net)*dir);
 
   return (
     <SectionStack explorer revealId={popRequest?'pops':'company'} revealKey={popRequest?.sequence??viewedId} storageKey="trends-v2" items={[
       {id:'economy',shortTitle:uiCopy().screenText['trends'],title:uiCopy().screenText['economicPopulationAndFiscalTrends'],height:520,content:<EconomyCharts world={world}/>},
       ...(me?[{id:'summary',shortTitle:uiCopy().screenText['summary'],title:T.kingdomSummary,height:220,content:<KingdomSummary world={world} government={me}/>}]:[]),
       {id:'pops',shortTitle:uiCopy().screenText['pops'],title:T.popList,height:360,content:<PopTable world={world} request={popRequest} onRegion={onJump} onBuilding={onBuilding}/>},
-      ...(viewed?[{id:'company',shortTitle:uiCopy().screenText['house'],title:T.companyDetails,height:310,content:<CompanyView onGood={onGood} world={world} company={viewed} onView={onViewCompany}/>}]:[]),
-{ id: 'kingdoms',shortTitle:uiCopy().screenText['kingdoms'], title: T.kingdomAccounts, height: 174, content: <table className="kingdom-accounts"><thead><tr><th>{T.kingdomLabel}</th><th>{T.investmentPool}</th><th>{T.annualGdp}</th></tr></thead><tbody>{world.kingdoms.map(k=><tr key={k.id}><th><i className="swatch" style={{background:k.color}}/>{lang==='ko'?k.name:k.nameEn}</th><td><NumericValue value={k.investmentPool} format="compactMoney"/></td><td><NumericValue value={kingdomGdp(world,k.id)} format="compactMoney"/></td></tr>)}</tbody></table> }, {id:'assets',title:T.assetsTitle,shortTitle:T.assetsTitle,height:360,content:<OwnershipAssets world={world}/>}, { id: 'wealth' , title: T.wealthByClassTitle, shortTitle:uiCopy().screenText['living'], height: 236, content: <>
+      ...(viewed?[{id:'company',shortTitle:T.kingdomEconomy,title:T.kingdomEconomy,height:520,content:<KingdomEconomy world={world} id={viewed.kingdomId} onSelect={id=>{const k=world.kingdoms.find(k=>k.id===id);if(k)onViewCompany(k.governmentId);}} onGood={onGood}/>}]:[]),
+      {id:'kingdoms',shortTitle:T.kingdomCompare,title:T.kingdomCompare,height:300,content:<KingdomComparison world={world} onSelect={id=>{const k=world.kingdoms.find(k=>k.id===id);if(k)onViewCompany(k.governmentId);}}/>}, {id:'assets',title:T.assetsTitle,shortTitle:T.assetsTitle,height:360,content:<OwnershipAssets world={world}/>}, { id: 'wealth' , title: T.wealthByClassTitle, shortTitle:uiCopy().screenText['living'], height: 236, content: <>
       
         <div className="card-head">
           
@@ -56,26 +46,7 @@ function BottomPanelView({ world, history, lastReadTick, onRead, onJump, viewedI
           </ul>
         </div>
         <TimeChart data={wealthData} series={series} format={(v) => v.toFixed(0)} height={220} reference={{ y: 5, label: T.povertyLine, color: 'var(--bad)' }} />
-      </> }, {id:'weather',title:T.weatherRegions,shortTitle:uiCopy().screenText['weather'],height:164,content:<TimeChart data={(world.metrics??[]).map(p=>({tick:p.tick,affected:p.harvestRegions??0}))} series={[{key:'affected',name:T.weatherRegions,color:'var(--bad)'}]} format={v=>v.toFixed(0)} height={120}/>}, { id: 'rankings',shortTitle:uiCopy().screenText['ranks'], title: T.rankings, height: 220, content: <>
-
-        <div className="table-scroll"><table className="ranks">
-          <thead><tr>{[['name',T.colHouse],['net',T.colNet],['levels',T.colBuildings],['profit',T.colLastWeek]].map(([key,label])=><SortHeader key={key} label={label} active={sort===key} direction={dir} onClick={()=>{setSort(key);setDir(sort===key?-dir:key==='name'?1:-1);}}/>)}</tr></thead>
-          <tbody>
-            {rows.map(({ c, levels, net }) => (
-              <tr key={c.id} className={`${c.isPlayer ? 'me' : ''} ${viewedId === c.id ? 'selected' : ''}`}>
-                <td>
-                  <button className="name-link" onClick={() => onViewCompany(c.id)} aria-current={viewedId === c.id ? 'true' : undefined}>
-                    <OwnerBadge company={c} world={world}/>
-                  </button>
-                </td>
-                <td className={net < 0 ? 'neg' : ''}><NumericValue value={net} format="compactMoney"/></td>
-                <td>{levels}</td>
-                <td className={c.lastWeekProfit >= 0 ? 'pos' : 'neg'}><NumericValue value={c.lastWeekProfit} format="signedCompactMoney"/></td>
-              </tr>
-            ))}
-          </tbody>
-        </table></div>
-      </> }, { id: 'news',shortTitle:uiCopy().screenText['news'], title: T.news, height: 190, content: <>
+      </> }, {id:'weather',title:T.weatherRegions,shortTitle:uiCopy().screenText['weather'],height:164,content:<TimeChart data={(world.metrics??[]).map(p=>({tick:p.tick,affected:p.harvestRegions??0}))} series={[{key:'affected',name:T.weatherRegions,color:'var(--bad)'}]} format={v=>v.toFixed(0)} height={120}/>}, { id: 'news',shortTitle:uiCopy().screenText['news'], title: T.news, height: 190, content: <>
         <Notifications onEvent={onEvent} onCompany={onViewCompany} world={world} lastReadTick={lastReadTick} onRead={onRead} onJump={onJump} />
       </> }]} />
   );

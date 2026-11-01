@@ -182,3 +182,7 @@ DetailWindow 독립 NavigationProvider/버튼, BuildingPops 및 ResourceInspecto
 
 - 왕국 주간 생산 이익은 isGovernment와 소유 기관을 제외하도록 보정. 정부100·소유기관1000·생산2의 profitEma를 둔 회귀에서 주간생산14만 집계 확인. root typecheck/client49시험 통과.
 
+
+- 2-35 부분 구현: 통계의 회사 6개 선택·순위를 왕국 3개 선택·비교로 합침. 비교의 모든 열 정렬, 행 클릭 → 왕국 경제, 영토 기준 건물 목록(소유 기관 제외), 민간 순자금(cash−debt), 왕실·저택·금융가/미배정 레벨 집계. 최신 2-52 규칙에 따라 폐기된 privateShare/stake를 새로 쓰지 않음. 기존 회사 ID 링크는 소속 왕국으로 연결해 호환 유지.
+- 검증: root typecheck 및 client vitest 20파일 50시험 통과. 헤드리스 스크린샷 확인(1920×1080): C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/kingdom-comparison-fixed.png, kingdom-comparison-right.png, kingdom-economy.png. 3행, 본문391px/scrollWidth391px, 비교 표790px는 내부 가로 스크롤. 영문 다크 확인; 한국어 및 다른 왕국 전환은 추가 확인 예정.
+- 2-35 남음: 공통 합계 타일의 인구·주간 GDP·소유 구성, 민간 자금 세부 내역, 소유 필터·유보 정렬을 갖춘 건물 표, 왕국 추이 차트, 회사 라우팅/미사용 코드 정리. 원문을 UI_DONE으로 전부 옮기지 않음.

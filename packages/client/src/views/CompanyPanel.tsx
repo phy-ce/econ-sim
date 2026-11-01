@@ -171,7 +171,7 @@ export function CompanyView({ world, company: c, onView,onGood }: {onGood?:(g:Go
 type Filter = 'all' | 'staff' | 'input' | 'loss';
 type SortKey = 'pl' | 'margin' | 'name' | 'level' | 'region' | 'staff' | 'input';
 
-function House({ game, world, owner, mine, projects,onGood }: {onGood?:(g:GoodId)=>void; game?: Game; world: World; owner: Company; mine: Building[]; projects: World['constructions'] }) {
+export function House({ game, world, owner, mine, projects,onGood,hideSummary=false }: {hideSummary?:boolean;onGood?:(g:GoodId)=>void; game?: Game; world: World; owner: Company; mine: Building[]; projects: World['constructions'] }) {
   const T = useT();
   const [filter, setFilter] = useState<Filter>('all');
   const [sort, setSort] = useState<SortKey>('pl');
@@ -199,7 +199,7 @@ function House({ game, world, owner, mine, projects,onGood }: {onGood?:(g:GoodId
 
   return (
     <div className="house">
-      {rows.length > 0 && <Summary rows={rows} />}
+      {!hideSummary&&rows.length > 0 && <Summary rows={rows} />}
       {projects.length > 0 && <Projects game={game} world={world} owner={owner} projects={projects} />}
       {rows.length > 0 && (
         <>

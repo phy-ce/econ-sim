@@ -6,6 +6,7 @@ import { particle } from './format';
 type S = string;
 
 export const KO = {
+ kingdomEconomy:"왕국 경제",kingdomCompare:"왕국 비교",
  kingdomSummary:"왕국 요약",
  assetsTitle:"저택·금융가 자산",assetsKingdoms:"왕국",assetsRegions:"지역",
  officeLoad:"가동 비율",
@@ -566,6 +567,7 @@ export const KO = {
 export type Dict = typeof KO;
 
 export const EN: Dict = {
+ kingdomEconomy:"Kingdom economy",kingdomCompare:"Kingdoms",
  kingdomSummary:"Kingdom summary",
  assetsTitle:"Manor vs finance assets",assetsKingdoms:"Kingdoms",assetsRegions:"Regions",
  officeLoad:"Workload",

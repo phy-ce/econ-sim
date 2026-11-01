@@ -1,0 +1,4 @@
+.strategy-panel .kingdom-comparison { min-width: 790px; table-layout: fixed; }
+.strategy-panel .kingdom-comparison th, .strategy-panel .kingdom-comparison td { white-space: nowrap; overflow-wrap: normal; width: 110px; padding: 8px; }
+.strategy-panel .kingdom-comparison th:first-child { width: 130px; }
+.strategy-panel .kingdom-comparison .th-sort { white-space: normal; }
