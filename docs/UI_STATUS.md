@@ -84,3 +84,6 @@ DetailWindow 독립 NavigationProvider/버튼, BuildingPops 및 ResourceInspecto
 
 - 2-42·2-59: 그룹 서비스 합계·일간 Waterfall·ownerless 배당 링크 추가. 주간 내역은 sim week API 대기(3장 기존 요청). 화면 미검증.
 
+
+- 2-49: 다음 철거/전체 완료 일수·레벨 목표·진행 막대·취소 구현 중. 막힘(회수 자재 건물별 귀속): SalvageLot에는 buildingId가 없어 같은 지역/회사 건물 몫을 구분할 수 없음. 기존 3장 요청 유지. 지역 자재를 특정 건물 몫으로 표시하지 않음.
+

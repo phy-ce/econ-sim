@@ -1,3 +1,4 @@
+import {DemolitionProgress} from './DemolitionProgress';
 import {FlowRow} from './FlowRow';
 import {useNavigationState} from '../NavigationHistory';
 import { BuildingEconomics } from './BuildingEconomics';
@@ -36,7 +37,7 @@ export function BuildingInspector({ building: input, world, onGood, onCompany, g
   return <section className="building-inspector" aria-label={buildingName(b.typeId)}>
     <div className="inspector-heading"><BuildingSprite typeId={b.typeId} size={88} /><div><h3>{buildingName(b.typeId)} ×{b.level}</h3><p>{methodName(getMethod(b.typeId, b.methodId))}</p>
       <button className="link-btn" onClick={() => onCompany(b.companyId)}><OwnerBadge company={owner} world={world}/> <ChevronRight size={14} /></button></div></div>
-    {(b.shrinking??0)>0&&<div className="demolition-status"><strong>{T.demolitionQueue(b.shrinking!)}</strong><div className="demolition-levels" role="img" aria-label={T.demolitionQueue(b.shrinking!)}><i style={{flex:b.level-(b.shrinking??0)}}/><i className="pending" style={{flex:b.shrinking}}/></div></div>}
+    <DemolitionProgress world={world} building={b} game={game}/>
     {!isOwnerBuilding(b.typeId)&&<div className="inspector-metrics">{!isOwnerBuilding(b.typeId)&&<span><HelpText text={T.help.utilization}>{ko ? '가동률' : 'Utilization'}</HelpText><b>{b.active && !b.idle ? pct(b.utilization) : '0%'}</b></span>}<span><HelpText text={T.help.staffing}>{ko ? '충원율' : 'Staffing'}</HelpText><b>{pct(b.last.staffing)}</b></span>{!isOwnerBuilding(b.typeId)&&<span><HelpText text={T.help.inputFill}>{ko ? '원료 충족' : 'Input coverage'}</HelpText><b>{pct(b.last.inputFill)}</b></span>}</div>}
     <BuildingEconomics world={world} building={b} game={game} onBuilding={setOwnerId}/>{!isOwnerBuilding(b.typeId)&&<><Workforce building={b}/><FlowRow world={world} building={b} onGood={onGood}/></>}
 
