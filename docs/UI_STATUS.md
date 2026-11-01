@@ -164,3 +164,6 @@ DetailWindow 독립 NavigationProvider/버튼, BuildingPops 및 ResourceInspecto
 
 - K 실사용 후속: trace=1에서 session/click/window/command/speed 5종, version1·9events 로컬 저장 확인(trace-events.png). 내보내기 Blob 링크는 DOM에 붙여 클릭 후1초 뒤 해제하도록 보강. Edge 헤드리스 내보내기 클릭은 되지만 지정 scratch/downloads 파일 생성은 확인 못함(다운로드 패널 대상이 추가됨). 이를 다운로드 성공으로 판정하지 않음. root typecheck/client48시험 통과.
 
+
+- 2-26 감사 후속 완료(화면 미검증): RegionCircles 광산 부지 합계를 철/석탄 각각의 사용/발견량으로 분리. 건설 대기도 depositFree와 같은 산식으로 포함, 잠재량은 표시하지 않음. root typecheck/client48시험 통과.
+
