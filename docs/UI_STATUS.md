@@ -149,3 +149,6 @@ DetailWindow 독립 NavigationProvider/버튼, BuildingPops 및 ResourceInspecto
 
 - 서브윈도우 이력: 헤드리스 스크린샷 확인(1920×1080), C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/detail-history-back.png. 인구 구성→소작농 목록→개별 팝→거주지→뒤로 순서 실제 클릭. 목록/선택/거주지 렌더와 뒤로 시 선택 팝 복원 true, 부모 지역 창 앞80자 동일 확인. 토지·교육·앞으로·다른 팝 경로는 아직 별도 검증 필요.
 
+
+- 서브윈도우 추가 조작: 인구 앞으로 복원true, 토지→지역 건물 목록→뒤로 링 복원true, 교육→지역 건물 목록7링크→뒤로 교육 지표 복원true. 헤드리스 스크린샷 확인(1920×1080): C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/land-history.png, education-history.png. 부모 Port Belmar 유지. 기관 소멸/극소 지분은 별도 미검증.
+
