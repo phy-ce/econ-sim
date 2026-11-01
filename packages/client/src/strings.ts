@@ -6,6 +6,10 @@ import { particle } from './format';
 type S = string;
 
 export const KO = {
+ yearEnd:"연말",destination:"목적지",reasonDanger:"위험",reasonReached:"도달",
+ constructionBuild:"짓기",constructionQueue:"대기열",
+ stateTitle:"국가",stateBudget:"예산",stateLaws:"법",
+ exportTrace: "기록 내보내기",
  buildingGroups: {workforce:"직종별 인력",flows:"투입 · 산출",coverage:"원료 충족",inputs:"투입",outputs:"산출",controls:"조작",search:"건물 이름 검색",expandFive:"5레벨 증설",types:"종류",levels:"규모",name:"이름",staffing:"충원율",newBuilding:"+ 새 건물"},
  marketScope: {world:"세계",kingdom:"왕국",scope:"시세 범위",follow:"지도 선택 지역"},
  policyHelp: {"land": "소작농 인구에 정액 세금을 부과합니다.", "poll": "소작농을 제외한 인구에 정액 세금을 부과합니다.", "income": "소작농을 제외한 팝의 평균 현금 소득에 비례해 과세합니다.", "nobles": "귀족 계층만 금융가 지분을 살 수 있습니다.", "upper": "귀족과 전문가가 금융가 지분을 살 수 있습니다.", "middle": "금융가 투자 자격을 기술자까지 넓힙니다.", "lower": "금융가 투자 자격을 노동자·농부까지 넓힙니다.", "none": "왕실의 생활수준 보조금을 지급하지 않습니다.", "poor": "귀족 계층을 제외한 소작농·실업자의 목표 생활수준 미달 소득을 보조합니다.", "wage": "귀족 계층을 제외한 임금 일자리 팝의 목표 생활수준 미달 소득을 보조합니다.", "universal": "귀족·자본가를 제외한 모든 팝의 목표 생활수준 미달 소득을 보조합니다."},
@@ -302,6 +306,10 @@ export const KO = {
 export type Dict = typeof KO;
 
 export const EN: Dict = {
+ yearEnd:"Year end",destination:"Destination",reasonDanger:"Danger",reasonReached:"Reached",
+ constructionBuild:"Build",constructionQueue:"Queue",
+ stateTitle:"State",stateBudget:"Budget",stateLaws:"Laws",
+ exportTrace: "Export trace",
  buildingGroups: {workforce:"Workforce",flows:"Inputs / outputs",coverage:"Input coverage",inputs:"Inputs",outputs:"Outputs",controls:"Controls",search:"Search building name",expandFive:"Expand by 5",types:"Types",levels:"Levels",name:"Name",staffing:"Staffing",newBuilding:"+ New building"},
  marketScope: {world:"World",kingdom:"Kingdom",scope:"Market scope",follow:"Selected map region"},
  policyHelp: {"land": "Charges a fixed tax per tenant.", "poll": "Charges a fixed tax per person, excluding tenants.", "income": "Taxes average cash income proportionally, excluding tenants.", "nobles": "Only noble classes may buy fund units.", "upper": "Nobles and experts may buy fund units.", "middle": "Extends eligibility to buy fund units to skilled workers.", "lower": "Extends eligibility to buy fund units to labourers and farmers.", "none": "Pays no crown living-standard support.", "poor": "Supports income below the target living standard for tenants and unemployed people, excluding noble classes.", "wage": "Supports income below the target living standard for employed non-tenant pops, excluding noble classes.", "universal": "Supports income below the target living standard for all pops except nobles and capitalists."},

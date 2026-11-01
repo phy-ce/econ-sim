@@ -18,7 +18,7 @@
 ## 0. 지금 할 일 — 2026-11-01
 
 상태와 검증 범위는 [UI_STATUS.md](UI_STATUS.md). 과거 우선순위 원문은 [보관 파일](log/UI_BACKLOG_ARCHIVE_2026-10-28.md).
-화면 작업자(Codex)는 브라우저를 열 수 없다. 코드로 끝낸 항목은 "화면 미검증"을 붙여 UI_DONE으로 옮기고, 화면 검증은 맨 아래 "검증" 줄에 모은다.
+화면 작업자(Codex)는 사람처럼 브라우저를 쓰지는 못하지만, 2026-11-01부터 헤드리스 Edge/Chrome 스크린샷으로 화면을 확인한다 (UI_DESIGN 12장). 스크린샷으로 본 항목은 그 사실과 파일 이름을 적고, 보지 못한 항목만 "화면 미검증"을 붙여 UI_DONE으로 옮긴다. 남은 화면 검증은 맨 아래 "검증" 줄에 모은다.
 
 ### 최신 적용 기준
 - 좌우 고정 두 자리/최대 두 창 규칙은 폐기. 여러 주 창 자유 이동, 창별 독립 탐색 이력.
@@ -30,8 +30,9 @@
 - 없음. 2-69(왕실 임금 읽기 전용)는 코드 완료 (`e1d700f`, 화면 미검증, UI_DONE).
 
 사용자 요청
+0. **작은 아이콘·막대 키우기 (2-77, 사용자 2026-11-01)**: 시세 창 수요·공급 구성의 사람 아이콘 16px(`SourceBreakdown.tsx:17`, 칸 `styles.css:289`)을 24px로. 같은 문제의 범례·표 아이콘, 6~7px 점, 3~5px 막대, 9px 글자를 UI_DESIGN 4.3 최소 크기로.
 1. **서브윈도우 이력 잔여**: 코드 완료, 화면 미검증. UI_DONE의 2026-11-01 내부 경로 명세 참조.
-2. **공통 투입·산출 UI (2-51)**: 실제 양·단가·금액·충족/판매·방식 비교. 지금은 `ResourceInspector.tsx:38` recipe만 있다.
+2. **공통 투입·산출 UI (2-51, 진행)**: 실제 양·단가·금액·충족/판매·방식 비교. 지금은 `ResourceInspector.tsx:38` recipe만 있다.
 3. **건물 그룹 잔여 (2-42, 2-59)**: 서비스 합계, 손익 워터폴, 소유주 미지정 배당. 기존 그룹·소유권 바(`RegionIndustry.tsx:56·58`)는 다시 만들지 않는다.
 4. **철거 진행 (2-49)**: 대기 레벨 막대·배지(`ResourceInspector.tsx:36·76`)는 있다. 남은 일정·회수 자재.
 
@@ -62,8 +63,8 @@ sim 대기 · 결정 대기
 - N 목표 카드·표지: 대기 (1b·1c, V1 결정·08 문서. 1a 사람 시험 전에 하지 않는다).
 - P 정적 시제품: 화면 작업자 일이 아니다 (보고서 앱 `tools/reports`, Claude 쪽).
 
-검증 (브라우저를 열 수 있는 작업자 또는 사용자)
-- 화면 미검증: 2-68 연구 계통도, 소유권 탐색 (소유주 → 기관 → 건물, 뒤로/앞으로, 혼합·극소 지분, 기관 소멸), 2-50 OwnerSummary, 서브윈도우 이력, 유보자산·건물 요약 바, 지도 다크 모드.
+검증 (헤드리스 스크린샷, 브라우저를 열 수 있는 작업자 또는 사용자)
+- 화면 미검증: 2-76 첫 실행 언어 선택 (코드 끝: `lang.ts:15·18`, `App.tsx:67·119`, `views/LanguagePick.tsx:5~6`, UI_DONE), 2-68 연구 계통도, 소유권 탐색 (소유주 → 기관 → 건물, 뒤로/앞으로, 혼합·극소 지분, 기관 소멸), 2-50 OwnerSummary, 서브윈도우 이력, 유보자산·건물 요약 바, 지도 다크 모드.
 - 실사용 환경: 일반 Edge 최대화, Windows 배율, 브라우저 확대, 영어/다크 모드. 내장 브라우저의 강제 viewport는 사용자 실환경 검증을 대체하지 않는다.
 
 ### 메모
@@ -1480,34 +1481,6 @@ sim 변경 (wt-research):
   5. 상인 현금을 보이던 곳(통계의 `traders` 선 등)이 있으면 이름을 "무역소 금고"로.
   설명 문구는 넣지 않는다 (규칙은 README·사전 `trade`·`trading-post`).
 
-### 2-70. K 시험용 계측 (오버홀 09 단위 K, 3.8·U7)
-- 목적: 1a 사람 시험 기록 일곱 가지 중 1~4·6·7의 숫자(숫자 → 처방 클릭 수, 첫 처방까지 분, 연구 선택 → 첫 재생 초, 창 열림 순서, 정지 구간, 처방 뒤 확인 행동)를 사람이 세지 않아도 되게 한다. sim은 이 기록을 읽지 않는다.
-- 켜는 조건: 개발 빌드(`import.meta.env.DEV`)이고 URL에 `?trace=1`이 있을 때만. 공개 빌드에는 코드가 들어가지 않게 `import.meta.env.DEV` 분기 안에 둔다 (U7 기본값 "개발 빌드만"). 외부 전송 없음: `fetch`·`sendBeacon`·이미지 핑을 쓰지 않는다.
-- 기록 (새 파일 `src/trace.ts`, 메모리 배열 + `localStorage` `estera-trace-v1`, 최대 20,000건, 넘으면 앞에서 자름. 저장 실패는 무시):
-  - 한 건 = `{ t: 시작부터 벽시계 ms, tick: world.tick, kind, ... }`.
-  - `session`: 시작 시각(ISO), 언어, 테마, `innerWidth`·`innerHeight`, `devicePixelRatio`.
-  - `window`: 창 id, `open`/`close`/`focus` (`App.tsx` `showWindow`·`openLinkedWindow`, `WindowWorkspace.tsx:21~22` `focus`·`close`). DetailWindow 열기/닫기도 제목과 함께.
-  - `speed`: 이전·다음 ticksPerSecond와 원인 `user`/`key`/`danger`/`reached` (`useGame.ts:49` `setSpeed`, `:80~84` 위험 정지, 단축키 `App.tsx` keydown).
-  - `command`: 명령 객체 그대로 (`useGame.ts:125`). 오류는 `error` 건으로 따로 (worker `errors`, `useGame.ts:67`).
-  - `click`: 문서 `pointerdown` 캡처 한 곳에서. 창 id(가장 가까운 `section.strategy-panel`의 `window-*` 클래스 또는 DetailWindow 제목), 대상 라벨(`aria-label` → `data-help` 첫 줄 → 텍스트 앞 40자).
-  - `tooltip`: 툴팁이 뜬 라벨 (`TooltipLayer.tsx`, 선택).
-- 내보내기: 메뉴(`App.tsx:178` Popover)에 계측이 켜졌을 때만 버튼 하나. 누르면 `{ version: 1, startedAt, events }`를 `estera-trace-<YYYYMMDD-HHmm>.json`으로 내려받는다 (Blob + `a download`). 버튼 옆 건수 숫자.
-- 문자열: "기록 내보내기" / "Export trace" (개발 전용).
-- 완료 기준: `?trace=1` 개발 서버에서 내보낸 JSON에 위 kind가 다 나온다. 공개 빌드(`npm run build`) 결과물에 `estera-trace` 문자열 0건. 코드에 네트워크 호출 없음. 계측을 켜도 world 상태가 같다 (기록은 world를 건드리지 않는다). typecheck.
-
-### 2-71. C 국가 창: 정책 + 재정을 탭 둘로 (오버홀 09 단위 C, 3.3·6.4)
-- 지금: 창 둘. `policies`(PolicyPanel)과 `finance`(FinancePanel)가 도크에 따로 있고 아이콘도 같다 (`App.tsx:208`, 둘 다 Landmark). 라우팅 `GameWindow.tsx:40~41`. 재정 → 정책 링크 `FinancePanel.tsx:32` (`onPolicies`), 국고 칩 → 재정 `App.tsx:153`, 소식 목적지 `eventDestination.ts:3`(법 소식 → policies)·`:8`(빚·재정 글 → finance).
-- 바꿀 것:
-  1. 창 하나 `state`. 제목 "국가" / "State", 아이콘 Landmark. 도크 버튼이 7 → 6 (장부 창은 단위 D에서 더한다).
-  2. 창 머리 아래 탭 둘: "예산" / "Budget" = FinancePanel 본문 그대로, "법" / "Laws" = PolicyPanel 본문 그대로 (재작성 아님, 09 3.3 "합쳐도 본문은 그대로 탭 안에").
-  3. 탭은 창 탐색 이력에 넣는다: `useNavigationState<'budget'|'laws'>('state:tab','budget')`. 뒤로/앞으로가 탭 전환을 되돌린다. 두 본문의 기존 이력 키(`views/FinancePanel.tsx:detail`, `policy:kind` 등)는 그대로.
-  4. `ScreenRoute`에 `tab?: 'budget'|'laws'`. 국고 칩 → `{kind:'state', tab:'budget'}`, 소식 법 → `{kind:'state', tab:'laws'}`, 소식 빚·재정 → `{kind:'state', tab:'budget'}`.
-  5. FinancePanel의 "정책 ↗" 링크(`:32`)는 지운다 (탭이 바로 위에 있다). PolicyPanel → 연구 링크는 그대로 (연구 창을 연다).
-- 지울 것: `WindowId`의 `'policies'`·`'finance'`와 그 참조 (`App.tsx:153·208`, `GameWindow.tsx:40~41`, `eventDestination.ts:3·8`). 열린 창 목록은 저장하지 않으므로 (`App.tsx:64` useState) 옮길 저장값이 없다.
-- 같이 할 것: 2-72 1항 (복지 다이얼 잠금). 왕실 임금 읽기 전용(2-69)은 끝났으니 예산 탭으로 옮길 때 되돌리지 않는다.
-- 문자열: 창 "국가"/"State", 탭 "예산"/"Budget", "법"/"Laws".
-- 완료 기준 (09 단위 C 인수 조건 "기능 회귀 없음"): 예산 탭의 단계 1~5 `setBudget`·호버/포커스 미리보기·줄 상세 DetailWindow·시장 임금, 법 탭의 분야 선택·법 선택·전환·취소·조건·사전 책 아이콘·연구 링크가 지금과 같이 동작. 국고 칩·법 소식·빚 소식이 맞는 탭을 연다. 뒤로/앞으로가 탭을 오간다. 420×560 창에서 가로 넘침 없음 (ko/en). typecheck.
-
 ### 2-72. 0b 결과에서 화면이 알아야 할 것: 복지 다이얼, 인두세 부담 (docs/overhaul/0B_RESULTS.md 2.4·2.9·2.10)
 1. **복지 다이얼은 복지법이 없으면 아무 일도 안 한다 (지금 할 일, 2-71과 같이).**
    - 사실: 플레이어 왕국의 복지법은 시작부터 `none` (`world.ts:173`). `welfareCovers('none', g)`는 어느 무리도 덮지 않아 (`welfare.ts:25~27`) 복지 단계 `k.budget.welfare`는 읽히지 않는다 (`welfare.ts:87~88`). 0b (main be7e72f, 20년 × 시드 1·2 × salt 0..3)에서 복지 단계 1과 5의 결과가 기준선과 같았다.
@@ -1565,6 +1538,31 @@ sim 변경 (wt-research):
 - 완료 기준: wt-0bp가 main에 합쳐진 뒤. 카드의 세 숫자가 같은 날 `projectedSD`/`currentSD` 직접 호출 값과 같다 (소수 둘째 자리). 수요 0 상품은 "—". 다크 모드에서 점·눈금이 구분된다. 420×560에서 넘침 없음 (ko/en). typecheck.
 - 사용자 결정이 필요한 것: 없음 (3·6항은 추천안, 반대하면 바꾼다).
 
+### 2-77. 작은 아이콘·막대·점·글자를 1920×1080에서 읽히게 (사용자 요청 2026-11-01: "시세-수요/공급 사람 아이콘이 너무 작아서 잘 안 보인다. 이런 것 좀 개선해 달라.")
+- 기준: UI_DESIGN 4.3 "최소 크기·대비" 줄 (이 절과 같은 커밋). 게임 그림(`Sprite`·`Sprite64`·`GoodSprite`·`ClassSprite`·`BuildingSprite`) 24px, 색 견본·점 10px, 값을 보이는 막대 높이 6px, 글자 10px, 색 표식·막대 채움은 바탕과 3:1.
+- 왜 그림이 특히 작아 보이나: 아틀라스 그림은 480px 칸에 여백이 최소 48px씩이라 (UI_DESIGN 4.3) 그림이 칸의 80% 안쪽만 차지한다. 16px로 그리면 실제 그림은 약 13px 이하, 24px이면 약 19px. 밤 테마에서는 그림 뒤에 양피지 네모가 깔려(`styles.css:83`) 작은 그림이 더 묻힌다. `lucide-react` 조작 아이콘은 여백이 없어 이 기준에서 뺀다.
+- 고칠 곳 (먼저 1, 그다음 차례로):
+  1. **시세 창 수요·공급 구성** (`SourceBreakdown.tsx`, 시장 창 `MarketWindow.tsx:59`와 지역 창 `RegionPanel.tsx:152`의 "수요·공급" 칸):
+     - 계층(사람) 아이콘 `ClassSprite` 기본 16px (`SourceBreakdown.tsx:17`, 기본값 `sprites.tsx:20`), 건물 `BuildingSprite size={16}` (`:21`), 배·밀·동전 `Sprite` 기본 16px (`:28~33`, `:44`) → 모두 24px.
+     - 줄 칸 `grid-template-columns: 10px 16px …` (`styles.css:289`)의 아이콘 칸 16px → 24px. 상품 그림 `GoodSprite`는 지금도 32px로 그려져(`sprites.tsx:18`, `max(32, size×2)`) 16px 칸을 넘친다. `.src-list .spr { width: 24px; height: 24px }`로 한 크기에 맞춘다.
+     - 줄 높이는 아이콘에 맞게 (최소 26px). 글자 크기는 그대로 (`workspace.css:102` 11px).
+  2. **그 밖의 게임 그림 16~18px**:
+     - 경제 추이 계층 범례 `ClassSprite size={16}` (`BottomPanel.tsx:52`). 또 `.strategy-panel .legend .spr {14px}` (`strategy.css:143`)가 선택자가 더 구체적이라 `.legend-sp .spr {28px}` (`workspace.css:216`)를 이길 수 있다. 범례 그림은 24px 하나로 정리하고 14px 규칙은 지운다.
+     - 인구 표 계층 아이콘 `ClassSprite size={18}` (`PopTable.tsx:44`) → 24px.
+     - 지역 특산 태그 `BuildingSprite size={16}` (`RegionPanel.tsx:88`). `.perks .spr {28px}` (`workspace.css:216`)가 덮는지 스크린샷으로 보고, 16px로 보이면 24px.
+     - 지도 범례 밀·나무·광산 `size={16}` (`RegionMap.tsx:96`) → 24px. 같은 범례의 글자 9px (`strategy.css:53` `.map-keys`) → 10px.
+     - 상단 바 국고 동전 `size={16}` (`App.tsx:158`) → 24px (상단 바 높이 안에 들어가는지 스크린샷으로).
+     - 메뉴 낮 테마 해 `size={16}` (`App.tsx:195`) → 24px (밤 테마 쪽은 lucide `Moon`이라 그대로).
+  3. **10px보다 작은 색 점·견본** → 10×10px: `.ownership-ring-row i` 7px (`strategy.css:106`), `.market-scope-chips i` 6px (`system-ui.css:22`), `.region-directory i`·`.region-directory-table i` 7px (`workspace.css:113`, `:156`), `.notice-unread-dot` 6px (`strategy.css:239`). `.ownership-key` 12×5px (`workspace.css:171`)는 12×10px.
+  4. **6px보다 낮은 값 막대** → 높이 6px: 상단 바 칩 막대 3px (`strategy.css:49`), `.strategy-panel .stat .bar` 3px (`strategy.css:62`, `workspace.css:94`의 5px를 덮는다), 그룹 지표 막대 3px (`system-ui.css:48` `.group-metrics .bar`), 그룹 상세 장부 막대 3px (`system-ui.css:50`), 소유 나눔 막대 5px·4px (`system-ui.css:9` `.ownership-split`, `:48` `.industry-group .ownership-split`). 막대 둘레선(`--ink` 2px)이 있는 막대는 채움이 6px 이상 보이게 한다.
+     - 빼는 것: 값이 아닌 조작 손잡이·표시 (`.section-resize` `strategy.css:61`·`workspace.css:146`, 창 가장자리 `.edge-n/.edge-s` `strategy.css:98`, 도크 열림 표시 `strategy.css:99`·`workspace.css:90`).
+  5. **9px 글자** → 10px: `strategy.css`의 9px 규칙 19곳 (`:48` `.brand-name`, `:53`, `:61` 둘, `:62` 둘, `:63`, `:64`, `:66`, `:67`, `:70`, `:77`, `:78` `.harvest-badge`, `:85` `.gauge-label`, `:104`, `:106`, `:250`, `:263`, `:264`). 420×560 창에서 줄이 넘치면 그 줄만 말줄임 + 툴팁 (`title`).
+- 대비: 밤 테마에서 3·4항의 점·막대 채움 색이 `--sheet` 바탕과 3:1 이상인지 본다 (WCAG 2.1 1.4.11 비텍스트 대비 기준값). 모자라면 토큰을 바꾸지 말고 1px `--ink` 둘레선을 더한다.
+- 문자열: 없음.
+- 빼거나 지울 것: `strategy.css:143`의 14px 범례 규칙. 크기를 다시 정하는 중복 규칙이 생기면 한 곳(`workspace.css` 또는 `system-ui.css`)에만 둔다.
+- 완료 기준: 위 1~5항의 file:line이 기준 크기 이상 (코드 검색으로 16px 이하 `Sprite` 계열 `size`가 남지 않음, 지도 SVG 안 `SvgSprite`는 지도 확대에 따르므로 제외). `npm run typecheck`. 헤드리스 스크린샷 1920×1080 (UI_DESIGN 12장): 시장 창 수요·공급 칸을 한국어 낮·영어 밤으로 한 장씩, 경제 추이 범례·인구 표 한 장. 420×560 창에서 가로 넘침 없음.
+- 사용자 결정이 필요한 것: 없음. 기준값(24·10·6·10px)은 지금 코드에서 이미 쓰는 크기에 맞춘 추천이고 근거는 UI_DESIGN 4.3에 있다.
+
 ## 3. sim 쪽 필요 사항 (Claude가 처리할 것, UI 작업자는 요청만)
 - **2-59 주 단위 수지 (요청됨, 2026-10-22):** `BuildingEcon`에 `week: { sales, tax, inputs, wages, profit }` (건물 `revenue`·`tax`·`inputCost`·`wageCost`의 이동평균 × 7, `profitEma`와 같은 기간). 들어오면 2-59-3 폭포 라벨을 `/주`로.
 - **2-49 (선택):** 회수 자재 lot에 `buildingId`를 넣고 `salvageOf(w, b)` export.
@@ -1576,4 +1574,16 @@ sim 변경 (wt-research):
 - **2-72·단위 F 인두세 부담 (2026-11-01):** S3 안에 직종별 부담률(걷힘 ÷ 세금·복지 전 소득, 05 L-S1)을 읽는 함수. 05 C-2 결정 뒤.
 - **오버홀 1a·1b 선행 (09 7.1 S1~S8, 2026-11-01 옮김):** S1 몫의 장부(단위 D), S2 분해 체인(E), S3 1차 효과 미리보기·바닥 전후 값(F), S4 `GameEvent` 종류 코드·숫자 칸(L), S5 슬롯 메타(M), S6 사전 "처음 하는 법"·말단 항목 id 테스트(G), S7 출생·사망·순이주 월 지표(L), S8 노드 월 경계 기록(L). 정의는 09 7.1.
 - 이미 export되는 것: `paysDividend`, `kingdomGdp`, `kingdomById`, `builderOf`, `companyById`, `peasantSlots`, `disbanded`, `slots`, `harvestCondition`, `harvestLabel`, `HARVEST_KINDS`, `taxRates`, `taxCapacity`, `holdingsOf`, `levelOwnersOf`, `buildingEcon` (2-59, wt-regionecon), `RESERVE_SHARE`, `KEEP_SHARE`, `budgetPreview`, `reserveCap`, `hasReserve`, `weeklyOutputValue`, `creditLimit`, `isGovernment`, `crewOf`, `wealthOf`, `literacyOf`, `educationOf`
+
+
+- K(2-70): 코드 완료, 화면 미검증. UI_DONE 참조.
+
+
+- 진행 C(2-71·2-72 1항): 국가 예산/법 탭 통합, 외부 링크 탭 목적지, 복지법 없음 잠금. 본문/명령 재사용.
+
+
+- 진행 H(2-73): 지역 칩·짓기/대기열·지도 선택 연동·BuildList 재사용.
+
+
+- 진행 J(2-74): 워커 틱 경계 목표 정지, 이유 칩, 위험 에피소드 35틱 거르기. sim 파일 변경 없음.
 

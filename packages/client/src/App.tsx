@@ -1,3 +1,6 @@
+import {hasStoredLang,chooseLang} from './lang';
+import {LanguagePick} from './views/LanguagePick';
+import {trace,TraceTools} from './trace';
 import {GameWindow,type ScreenRequest,type ScreenRoute} from './views/GameWindow';
 
 import { regionName } from './i18n';
@@ -61,12 +64,13 @@ function Popover({ button, label, children, className = '' }: { button: ReactNod
 
 export function App() {
   const game = useGame();
+  const [langChosen,setLangChosen]=useState(hasStoredLang);
   const [opened, setOpened] = useState<WindowId[]>(['map']);
   const [revealRequest,setRevealRequest] = useState(0);
   const [screenRequest,setScreenRequest]=useState<ScreenRequest|null>(null);
-  const openLinkedWindow=useCallback((route:ScreenRoute)=>{setOpened(current=>[...current.filter(w=>w!==route.kind),route.kind]);setScreenRequest(p=>({target:route.kind,route,sequence:(p?.sequence??0)+1}));},[]);
+  const openLinkedWindow=useCallback((route:ScreenRoute)=>{trace('window',{id:route.kind,action:'open'});setOpened(current=>[...current.filter(w=>w!==route.kind),route.kind]);setScreenRequest(p=>({target:route.kind,route,sequence:(p?.sequence??0)+1}));},[]);
   const requestScreen=(target:WindowId,route:ScreenRoute)=>setScreenRequest(p=>({target,route,sequence:(p?.sequence??0)+1}));
-  const showWindow = (id: WindowId) => { setOpened(current=>id==='map'?current:[...current.filter(w=>w!==id),id]); setRevealRequest(v=>v+1); };
+  const showWindow = (id: WindowId) => {trace('window',{id,action:'open'}); setOpened(current=>id==='map'?current:[...current.filter(w=>w!==id),id]); setRevealRequest(v=>v+1); };
   const [popRequest,setPopRequest]=useState<PopRequest|null>(null);
   const [buildingRequest,setBuildingRequest]=useState<{id:number;sequence:number}|null>(null);
   const [regionTabRequest,setRegionTabRequest]=useState({tab:'overview' as 'overview'|'industry',sequence:0});
@@ -112,6 +116,7 @@ export function App() {
     return () => document.removeEventListener('keydown', onKey);
   }, []);
 
+  if (!langChosen) return <LanguagePick onPick={lang=>{chooseLang(lang);setLangChosen(true);}}/>;
   if (!world) return <div className="boot" role="status" aria-label={T.booting}><Sprite name="crest" size={48} /></div>;
   const me = playerCompany(world);
   const region = regionById(world, regionId);
@@ -126,7 +131,7 @@ export function App() {
     if(destination.kind==='building'){requestScreen('region',{kind:'region',regionId:destination.regionId,buildingId:destination.id});setRegionId(destination.regionId);setBuildingRequest(previous=>({id:destination.id,sequence:(previous?.sequence??0)+1}));showWindow('region');}
     else if(destination.kind==='region')selectRegion(destination.id);
     else if(destination.kind==='company')viewCompany(destination.id);
-    else showWindow(destination.kind);
+    else openLinkedWindow(destination);
   };
   const selectGood = (id: GoodId) => { setGood(id); showWindow('market'); };
   const kingdom = world.kingdoms.find(k => k.id === me?.kingdomId);
@@ -150,7 +155,7 @@ export function App() {
 
         {me && (
           <div className="ledger">
-            <button className="chip loan-chip" onClick={()=>showWindow('finance')} aria-label={T.finance} data-help={`${T.system.netTreasury}\n${T.cash}: ${me.cash.toFixed(2)} · ${T.loan}: ${me.debt.toFixed(2)}`}><span className="chip-label"><Sprite name="coin" size={16}/>{T.treasury}</span><span className="chip-value"><NumericValue value={me.cash-me.debt} format="money"/> / <NumericValue value={limit} format="money"/></span></button>
+            <button className="chip loan-chip" onClick={()=>openLinkedWindow({kind:'state',tab:'budget'})} aria-label={T.finance} data-help={`${T.system.netTreasury}\n${T.cash}: ${me.cash.toFixed(2)} · ${T.loan}: ${me.debt.toFixed(2)}`}><span className="chip-label"><Sprite name="coin" size={16}/>{T.treasury}</span><span className="chip-value"><NumericValue value={me.cash-me.debt} format="money"/> / <NumericValue value={limit} format="money"/></span></button>
             <dl className={`chip ${me.lastWeekProfit >= 0 ? 'good' : 'bad'}`}><dt>{T.lastWeekPL}</dt><dd><NumericValue value={me.lastWeekProfit} format="signedMoney"/></dd></dl>
             <dl className={`chip ${collection < .8 ? 'warn' : ''}`}><dt>{T.taxCollection}</dt><dd>{Math.round(collection*100)}%</dd><Bar value={collection} tone={collection < .8 ? 'gold' : 'pos'} size="sm" label={T.taxCollection}/></dl>
           </div>
@@ -166,6 +171,8 @@ export function App() {
             <button onClick={game.stepOnce} disabled={running} title={T.stepDay} aria-label={T.stepDay}><SkipForward size={14} aria-hidden="true" /></button>
           </div>
 
+          <div className="segmented"><button onClick={()=>game.runUntilYearEnd(game.speed||4*BASE_TPS)}>▸ {T.yearEnd}</button><Popover label={T.destination} button={<>▾</>}>{close=><button onClick={()=>{game.runUntilYearEnd(game.speed||4*BASE_TPS);close();}}>{T.yearEnd}</button>}</Popover></div>
+          {!running&&<button className="pause-reason" onClick={()=>{if(game.pauseReason.event)openEvent(game.pauseReason.event);}} disabled={!game.pauseReason.event}>{game.pauseReason.kind==='danger'?T.reasonDanger:game.pauseReason.kind==='yearEnd'?`${T.reasonReached} · ${T.yearEnd}`:T.pause}</button>}
           <Popover label={T.notifications(unread)} className="bell"
             button={<><Sprite name="bell" size={20} />{unread > 0 && <span className="badge">{unread > 99 ? '99+' : unread}</span>}</>}>
             {(close) => (
@@ -177,7 +184,7 @@ export function App() {
 
           <Popover label={T.menu} button={<Menu size={18} aria-hidden="true" />}>
             {(close) => (
-              <div className="menu">
+              <div className="menu"><TraceTools/>
                 <button onClick={() => { game.save(); close(); }}>{T.save}</button>
                 <button onClick={() => { game.load(); close(); }}>{T.load}</button>
                 <button onClick={() => { if (confirm(T.confirmNewGame)) { game.newGame(); setViewId(null); } close(); }}>{T.newGame}</button>
@@ -205,7 +212,7 @@ export function App() {
 
       <WindowWorkspace opened={opened} onOpened={setOpened} windows={[
         {id:'map',title:T.paneMap,icon:<Map size={18}/>,content:<RegionMap world={world} selected={regionId} onSelect={selectRegion}/>},
-        ...([{id:'region',title:T.system.region,icon:<Users size={18}/>},{id:'market',title:T.market,icon:<Package size={18}/>},{id:'policies',title:T.system.policies,icon:<Landmark size={18}/>},{id:'finance',title:T.finance,icon:<Landmark size={18}/>},{id:'research',title:T.research,icon:<FlaskConical size={18}/>},{id:'construction',title:T.construct,icon:<HardHat size={18}/>},{id:'trends',title:lang==='ko'?'통계 · 소식':'Statistics',icon:<ChartNoAxesCombined size={18}/>} ] as const).map(w=>({...w,content:<GameWindow id={w.id} game={game} mapRegionId={regionId} request={screenRequest} onOpenWindow={openLinkedWindow}/>}))
+        ...([{id:'region',title:T.system.region,icon:<Users size={18}/>},{id:'market',title:T.market,icon:<Package size={18}/>},{id:'state',title:T.stateTitle,icon:<Landmark size={18}/>},{id:'research',title:T.research,icon:<FlaskConical size={18}/>},{id:'construction',title:T.construct,icon:<HardHat size={18}/>},{id:'trends',title:lang==='ko'?'통계 · 소식':'Statistics',icon:<ChartNoAxesCombined size={18}/>} ] as const).map(w=>({...w,content:<GameWindow id={w.id} game={game} mapRegionId={regionId} request={screenRequest} onOpenWindow={openLinkedWindow}/>}))
       ]}/>
 
 

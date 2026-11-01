@@ -78,3 +78,35 @@ DetailWindow 독립 NavigationProvider/버튼, BuildingPops 및 ResourceInspecto
 - UI_DESIGN 2.3·3장: 인구·토지·교육 상세 내부 탐색 경로를 DetailExplorer로 연결. 부모 창 이동 대신 상세별 이력 사용. PopTable의 상세 경로 복원 시 초기화 방지. 루트 타입 검사 통과, 화면 미검증.
 - UI_DESIGN 10장 어긋남 1~8 확인. 기본 집계·소유권 색 토큰·문자열·빈 목록 문장·폐기 코드 정리는 이 변경에 포함하지 않음. 사전 단위 G와 화면 실측은 기존 대기 유지.
 
+
+- 2-51: FlowRow를 개별 상세·상회 펼침·건설 방식에 연결, 실제/1레벨 기준 구분. 상회 방식 비교 추가. 사전 패키지 라벨 수정은 허용 범위 밖(막힘: packages/encyclopedia). 화면 미검증. 상회 상품 링크·일부 요약 공통화는 잔여로 추적.
+
+
+- 2-42·2-59: 그룹 서비스 합계·일간 Waterfall·ownerless 배당 링크 추가. 주간 내역은 sim week API 대기(3장 기존 요청). 화면 미검증.
+
+
+- 2-49: 다음 철거/전체 완료 일수·레벨 목표·진행 막대·취소 구현 중. 막힘(회수 자재 건물별 귀속): SalvageLot에는 buildingId가 없어 같은 지역/회사 건물 몫을 구분할 수 없음. 기존 3장 요청 유지. 지역 자재를 특정 건물 몫으로 표시하지 않음.
+
+
+- K(2-70) 코드 완료, 화면 미검증. 루트 typecheck/공개 Vite 빌드 통과, estera-trace 산출물 0건. 다운로드 실사용은 미검증. 2-76을 다음으로 진행.
+
+
+- 2-76 코드 완료, 화면 미검증. 타입 검사 및 언어 저장/실패 회귀 2개 통과. 다음 C(2-71·2-72) 진행.
+
+
+- C(2-71·2-72 1항): 코드 완료, 헤드리스 스크린샷 확인(1920×1080). 경로 C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/state-budget.png 및 state-laws.png. typecheck/client 전체 53시험 통과.
+- 2-76: 헤드리스 스크린샷 확인(1920×1080). 같은 scratch의 first.png, language-ko.png. 한국어 클릭 저장값 ko·진입 확인. 재실행/영어·밤 추가 확인 예정.
+
+
+- ownerSummary NavigationProvider 시험 수정 커밋 c5e9e47. client 전체 17파일 53시험 통과 확인. 이후 각 커밋 전에 root typecheck와 client 전체 시험을 실행.
+- 2-77 진행: 수요/공급 생성 아이콘 32px·행 38px·배경 대비, 범례/팝 표 24px·최소 막대 6px·보조 글자 11px. 헤드리스 검증 예정.
+
+
+- 2-77 완료: 헤드리스 스크린샷 확인(1920×1080), scratch market-icons-ko.png / market-icons-en-dark.png. 아이콘 32px, 시세창 가로 넘침 없음, 영어/다크 대비 이미지 확인. typecheck와 client 전체53시험 통과.
+
+
+- H(2-73) 코드 완료. 헤드리스 스크린샷 확인(1920×1080) construction-fixed.png, 내 지역 활성/외국 잠금/가로 넘침 없음. typecheck/client55시험 통과.
+
+
+- J(2-74) 완료: typecheck/client55시험 통과. 헤드리스 스크린샷 확인(1920×1080) year-end-reached.png, tick359→360 정확한 정지/도달 칩 확인. 위험 에피소드는 순수 클라이언트 시험 확인, 실제 위험 클릭 화면은 미검증.
+

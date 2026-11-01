@@ -570,3 +570,98 @@ sim이 아래 제도를 없앴다. 화면이 계속 컴파일되도록 `packages
 - 코드 완료, 화면 미검증. DetailExplorer 신규: 상세별 route 상태와 실존 대상 검사. RegionExplorer의 인구·토지·교육 내부 링크 연결. PopTable preserveSelection 모드로 뒤로 이동 시 선택 팝·직종을 초기화하지 않음. 기존 주 창의 요청 동작 유지.
 - 검증: 루트 npm.cmd run typecheck 전체 통과. 한/영 라벨, 기존 테마 클래스 사용. sim 변경 없음. 실제 클릭·뒤로/앞으로·영어 밤 검증은 남음.
 
+
+### 2026-11-01 2-51 공통 흐름 1차 (부분, 화면 미검증)
+FlowRow: 실제 투입(충원·기상·충족), 실제 산출, 지역 단가/금액, 충족/판매 추정 막대, 서비스·소작·소유 기관 분기. 상세·상회 펼침·건설 방식·방식 비교 적용. root typecheck 통과. 전체 2-51 잔여는 UI_STATUS 참조.
+
+
+### 2026-11-01 2-42·2-59 그룹 잔여 (화면 미검증)
+GroupDetail에 세금 한도·학교 자리·실제 건설 포인트 합계, 일간 수지 Waterfall, 미지정 배당 수령 기관 링크 추가. 기존 그룹/OwnershipBar 유지. 루트 타입 검사 통과. 주간 수지 분해는 sim week API 대기로 남음.
+
+
+### 2026-11-01 2-49 철거 일정 (부분, 화면 미검증)
+DemolitionProgress: 남는 레벨·철거 대기·이번 주 1레벨, 다음/전체 완료 일수, 주기 막대, 취소, reduced-motion 대응. 루트 타입 검사 통과. 개별 회수 자재는 buildingId 부재로 막힘(UI_STATUS).
+
+
+### 2026-11-01 2-70 K 개발 계측 (코드 완료, 화면 미검증)
+개발 빌드 + trace=1일 때만 trace.dev 동적 로드. 세션/창 열기·닫기·포커스/클릭/명령/오류/속도 기록, 최대 20,000건, localStorage 실패 무시, 메뉴 로컬 JSON 내보내기. world를 읽거나 변경하지 않고 tick 숫자만 전달. 네트워크 호출 없음. 루트 typecheck 통과, Vite 공개 빌드 성공(.tmp-ui-prod), 결과물 estera-trace 검색 0건. 실제 개발 브라우저 JSON 다운로드·이벤트 순서 검증은 미실시. tooltip은 선택 항목으로 미추가.
+
+
+### 2-70. K 시험용 계측 (오버홀 09 단위 K, 3.8·U7)
+- 목적: 1a 사람 시험 기록 일곱 가지 중 1~4·6·7의 숫자(숫자 → 처방 클릭 수, 첫 처방까지 분, 연구 선택 → 첫 재생 초, 창 열림 순서, 정지 구간, 처방 뒤 확인 행동)를 사람이 세지 않아도 되게 한다. sim은 이 기록을 읽지 않는다.
+- 켜는 조건: 개발 빌드(`import.meta.env.DEV`)이고 URL에 `?trace=1`이 있을 때만. 공개 빌드에는 코드가 들어가지 않게 `import.meta.env.DEV` 분기 안에 둔다 (U7 기본값 "개발 빌드만"). 외부 전송 없음: `fetch`·`sendBeacon`·이미지 핑을 쓰지 않는다.
+- 기록 (새 파일 `src/trace.ts`, 메모리 배열 + `localStorage` `estera-trace-v1`, 최대 20,000건, 넘으면 앞에서 자름. 저장 실패는 무시):
+  - 한 건 = `{ t: 시작부터 벽시계 ms, tick: world.tick, kind, ... }`.
+  - `session`: 시작 시각(ISO), 언어, 테마, `innerWidth`·`innerHeight`, `devicePixelRatio`.
+  - `window`: 창 id, `open`/`close`/`focus` (`App.tsx` `showWindow`·`openLinkedWindow`, `WindowWorkspace.tsx:21~22` `focus`·`close`). DetailWindow 열기/닫기도 제목과 함께.
+  - `speed`: 이전·다음 ticksPerSecond와 원인 `user`/`key`/`danger`/`reached` (`useGame.ts:49` `setSpeed`, `:80~84` 위험 정지, 단축키 `App.tsx` keydown).
+  - `command`: 명령 객체 그대로 (`useGame.ts:125`). 오류는 `error` 건으로 따로 (worker `errors`, `useGame.ts:67`).
+  - `click`: 문서 `pointerdown` 캡처 한 곳에서. 창 id(가장 가까운 `section.strategy-panel`의 `window-*` 클래스 또는 DetailWindow 제목), 대상 라벨(`aria-label` → `data-help` 첫 줄 → 텍스트 앞 40자).
+  - `tooltip`: 툴팁이 뜬 라벨 (`TooltipLayer.tsx`, 선택).
+- 내보내기: 메뉴(`App.tsx:178` Popover)에 계측이 켜졌을 때만 버튼 하나. 누르면 `{ version: 1, startedAt, events }`를 `estera-trace-<YYYYMMDD-HHmm>.json`으로 내려받는다 (Blob + `a download`). 버튼 옆 건수 숫자.
+- 문자열: "기록 내보내기" / "Export trace" (개발 전용).
+- 완료 기준: `?trace=1` 개발 서버에서 내보낸 JSON에 위 kind가 다 나온다. 공개 빌드(`npm run build`) 결과물에 `estera-trace` 문자열 0건. 코드에 네트워크 호출 없음. 계측을 켜도 world 상태가 같다 (기록은 world를 건드리지 않는다). typecheck.
+
+
+
+### 2-76. 처음 실행할 때 KR / EN 선택 (사용자 요청 2026-11-01: "KR/EN 선택을 게임 시작할 때 나오게 할 것")
+- 지금:
+  - 언어는 `lang.ts:6~8` `loadLang()`이 `localStorage['estera-lang']`을 읽어 `'en'`이면 영어, 그 밖(키 없음·읽기 실패 포함)은 모두 한국어. 묻지 않는다.
+  - `setLang` (`lang.ts:15~20`)은 `lang === current`이면 바로 돌아가므로 저장하지 않는다. 그래서 한국어로만 해 온 사람은 키가 한 번도 저장되지 않았다.
+  - 바꾸는 길은 메뉴 팝오버의 KO / EN (`App.tsx:193~198`) 하나뿐.
+  - 시작 화면은 없다. `App.tsx:116`은 세계가 오기 전 문장 표시(`.boot`, `styles.css:75`)만 보이고, `useGame.ts:99~101`이 저장을 질문 없이 불러온다. 시작 속도는 0 (`useGame.ts:31`, 정지 상태로 시작).
+- 바꿀 동작:
+  1. 저장된 언어가 없으면 (`localStorage['estera-lang']`이 `'ko'`도 `'en'`도 아니거나 읽기 실패) 게임 화면 대신 언어 선택 화면을 먼저 보인다. 새 게임이든 저장 불러오기든 같다.
+  2. 고르면 `localStorage['estera-lang']`에 쓰고 바로 게임 화면으로 간다. 다음 실행부터는 묻지 않는다.
+  3. 저장에 실패하면 (사생활 모드 등) 이번 실행은 고른 언어로 그대로 진행하고, 다음 실행에서 다시 묻는다. 경고·토스트는 띄우지 않는다.
+  4. 메뉴의 KO / EN (`App.tsx:193~198`)은 그대로 둔다.
+  5. 기본 강조 (추천안): `navigator.language`가 `ko`로 시작하면 "한국어", 아니면 "English"를 강조하고 그 버튼에 `autoFocus` (Enter로 고를 수 있게). 강조만 하고 저절로 넘어가지 않는다. 고르는 것은 사용자. 이유: 클릭 한 번으로 끝나고, 틀리게 고를 일이 줄어든다.
+- 고칠 곳:
+  - `lang.ts`: `hasStoredLang(): boolean` (저장값이 `'ko'`·`'en'`이면 true, 읽기 실패면 false)와 `chooseLang(lang: Lang)`을 더한다. `chooseLang`은 `lang === current`여도 저장을 시도하고 (위 `setLang` 조기 반환 때문에 "한국어"를 고르면 저장되지 않는 문제를 피한다), 바뀌었으면 구독자에게 알린다. 기존 `setLang`·`getLang`·`subscribeLang`은 그대로.
+  - 처음 `current`: 저장값이 없으면 브라우저 언어로 정해도 된다 (선택 화면이 바로 덮으므로 보이는 차이 없음). 바꾸지 않아도 된다.
+  - 선택 화면: 새 파일 `views/LanguagePick.tsx`. `App.tsx`에 `const [langChosen, setLangChosen] = useState(hasStoredLang)`를 다른 훅들과 같이 두고, `App.tsx:116`의 `if (!world)` 바로 앞에 `if (!langChosen) return <LanguagePick onPick={(l) => { chooseLang(l); setLangChosen(true); }} />`. 워커(`useGame`)는 그 사이 뒤에서 세계를 불러와도 된다 (속도 0이라 시간이 흐르지 않는다). 저장에 실패해도 `langChosen`은 이번 실행 동안 true로 남는다.
+  - 모양: `.boot`와 같은 가운데 정렬, 문장(`crest`) 48px 위에 버튼 둘을 가로로. 기존 `.segmented`·`aria-pressed` 양식이나 큰 버튼 둘 (최소 높이 44px). 강조는 `aria-pressed="true"`처럼 `--ink` 바탕 / `--sheet` 글자로, 다크 모드(`:root[data-theme="dark"]`)에서도 강조와 보통 버튼이 구분돼야 한다. 테마는 이미 저장된 값(`App.tsx:39` `loadTheme`)을 따른다. 1920×1080 한 화면, 스크롤 없음.
+  - 각 버튼에 `lang="ko"` / `lang="en"`. 그룹 `role="group"`, `aria-label="언어 / Language"` (아직 언어를 모르므로 둘 다).
+- 문자열: 버튼 라벨은 각자 제 언어로 고정: "한국어", "English". `strings.ts` KO·EN 둘 다에 같은 값 `languageNames: { ko: '한국어', en: 'English' }`로 두거나 컴포넌트 상수로 둔다. 그룹 라벨 "언어 / Language". 제목·안내 문구는 넣지 않는다.
+- 빼거나 지울 것: 없음.
+- 알려진 영향: 지금까지 한국어로만 해 온 사람(키 없음)도 이 변경 뒤 처음 한 번은 묻는다. 의도한 동작으로 본다.
+- 오버홀 Q16(`docs/overhaul/12_DECISIONS_NEEDED.md:227`, 새 게임 시작 화면·시작 상태 프리셋)과 단위 M의 "이어하기 / 새 판"(09 3.8, `09_UI_UX.md:312`)과 겹치지 않는다. 이 선택 화면은 그 결정과 상관없이 지금 넣는다. 나중에 시작 화면이 생기면 언어 선택은 그 앞에 한 번 나온다.
+- 완료 기준: 키가 없을 때 첫 실행에 선택 화면, 고르면 `estera-lang` 저장 ("한국어"를 골라도 저장됨), 새로고침하면 바로 게임, 메뉴 KO / EN 그대로 동작, `npm run typecheck` 통과. 화면 미검증 표시 허용 (Codex는 브라우저를 못 연다).
+- 사용자 결정이 필요한 것: 없음.
+
+
+
+### 2026-11-01 2-76 첫 실행 언어 선택 (화면 미검증)
+저장 언어 없으면 LanguagePick 표시, 브라우저 언어에 따른 강조/포커스, 선택 후 진입. chooseLang은 같은 언어도 저장하며 실패 시 세션 진행. 기존 메뉴 보존. 루트 타입 검사 통과, 언어 저장·저장 실패 회귀 2개 통과.
+
+
+### 2-71. C 국가 창: 정책 + 재정을 탭 둘로 (오버홀 09 단위 C, 3.3·6.4)
+- 지금: 창 둘. `policies`(PolicyPanel)과 `finance`(FinancePanel)가 도크에 따로 있고 아이콘도 같다 (`App.tsx:208`, 둘 다 Landmark). 라우팅 `GameWindow.tsx:40~41`. 재정 → 정책 링크 `FinancePanel.tsx:32` (`onPolicies`), 국고 칩 → 재정 `App.tsx:153`, 소식 목적지 `eventDestination.ts:3`(법 소식 → policies)·`:8`(빚·재정 글 → finance).
+- 바꿀 것:
+  1. 창 하나 `state`. 제목 "국가" / "State", 아이콘 Landmark. 도크 버튼이 7 → 6 (장부 창은 단위 D에서 더한다).
+  2. 창 머리 아래 탭 둘: "예산" / "Budget" = FinancePanel 본문 그대로, "법" / "Laws" = PolicyPanel 본문 그대로 (재작성 아님, 09 3.3 "합쳐도 본문은 그대로 탭 안에").
+  3. 탭은 창 탐색 이력에 넣는다: `useNavigationState<'budget'|'laws'>('state:tab','budget')`. 뒤로/앞으로가 탭 전환을 되돌린다. 두 본문의 기존 이력 키(`views/FinancePanel.tsx:detail`, `policy:kind` 등)는 그대로.
+  4. `ScreenRoute`에 `tab?: 'budget'|'laws'`. 국고 칩 → `{kind:'state', tab:'budget'}`, 소식 법 → `{kind:'state', tab:'laws'}`, 소식 빚·재정 → `{kind:'state', tab:'budget'}`.
+  5. FinancePanel의 "정책 ↗" 링크(`:32`)는 지운다 (탭이 바로 위에 있다). PolicyPanel → 연구 링크는 그대로 (연구 창을 연다).
+- 지울 것: `WindowId`의 `'policies'`·`'finance'`와 그 참조 (`App.tsx:153·208`, `GameWindow.tsx:40~41`, `eventDestination.ts:3·8`). 열린 창 목록은 저장하지 않으므로 (`App.tsx:64` useState) 옮길 저장값이 없다.
+- 같이 할 것: 2-72 1항 (복지 다이얼 잠금). 왕실 임금 읽기 전용(2-69)은 끝났으니 예산 탭으로 옮길 때 되돌리지 않는다.
+- 문자열: 창 "국가"/"State", 탭 "예산"/"Budget", "법"/"Laws".
+- 완료 기준 (09 단위 C 인수 조건 "기능 회귀 없음"): 예산 탭의 단계 1~5 `setBudget`·호버/포커스 미리보기·줄 상세 DetailWindow·시장 임금, 법 탭의 분야 선택·법 선택·전환·취소·조건·사전 책 아이콘·연구 링크가 지금과 같이 동작. 국고 칩·법 소식·빚 소식이 맞는 탭을 연다. 뒤로/앞으로가 탭을 오간다. 420×560 창에서 가로 넘침 없음 (ko/en). typecheck.
+
+
+
+### 2026-11-01 C(2-71·2-72 1항)
+정책·재정 → 국가 예산/법 탭. 기존 본문과 명령 유지, 탭/법 소식/국고·빚 소식 목적지 연결. 복지법 없음 단계 5개 disabled, 잠금 칩이 법·복지 분야로 이동. 루트 typecheck 및 client 17파일 53시험 통과. 헤드리스 스크린샷 확인(1920×1080): Temp/estera-ui-cdp/state-budget.png, state-laws.png. 예산 왕실 range 0, 복지 disabled 5, 법·복지 활성, 가로폭 418=scrollWidth 418 확인. 상세 조작 전체 회귀의 실사용 검증은 별도.
+
+
+### 2026-11-01 2-77 아이콘·막대 가독성
+수요/공급 사람·건물 아이콘 32px, 행 38px, 표식 10px, 배경·그림자 대비. 범례·팝 표 아이콘 24px, 막대 최소 6px/테두리1px, 보조 글자 최소11px. 헤드리스 스크린샷 확인(1920×1080): C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/market-icons-ko.png, market-icons-en-dark.png. 실제 아이콘 32×32, 시세창 clientWidth=scrollWidth=418, 새 Runtime 예외 없음. root typecheck 및 client 53시험 통과.
+
+
+### 2026-11-01 H(2-73) 건설 입구
+ConstructionPanel 지역 칩·짓기/대기열 탭, 내 왕국 지역만 활성, 지도 내 지역 선택 연동, ScreenRoute 지역 이력, 기존 BuildList/Projects 재사용. 지역 전환 시 카드만 닫고 검색/필터/정렬 유지. 헤드리스 스크린샷 확인(1920×1080): C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/construction-fixed.png. 외국 칩 disabled, 탭 두 개, 가로폭418=scroll418. root typecheck/client55시험 통과. 실제 build 명령 클릭 경로 전체 실사용 검증은 남음.
+
+
+### 2026-11-01 J(2-74) 기간 진행·정지 사유
+프로토콜 runUntil/reached, 워커 advance의 틱 경계 정지, 수동 속도·새 판/불러오기 목표 취소. 연말 분할 버튼·정지/위험/도달 사유 칩, 위험 소식 목적지 이동. 위험 키 숫자 정규화·35틱 에피소드, 반복 토스트는 유지. root typecheck/client55시험 통과(위험 반복·공백·건물별·정지중 사례 2시험 포함). 헤드리스 스크린샷 확인(1920×1080): C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/year-end-reached.png. 테스트 저장 tick359에서 실행 → tick360, Reached · Year end 확인. sim 수정 없음.
+

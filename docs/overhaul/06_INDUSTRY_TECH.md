@@ -368,7 +368,7 @@
 | `encyclopedia.ts` `tech`·`research`·`ai-research`·`buildings` 항목 (`:536`, `:1149~1163`) | 변경 | "4단계" → "시대", 새 기술·R3 항목, 몫 표지 live 값 | C·D |
 | `DESIGN.md` 7.1·8·9.1·10·11 | 변경 | 규칙·근거 칸. 값마다 "재검증 필요" 표기 | 전부 |
 | `NUMBERS_SPEC.md` | 버림 (보관 표시) | 근거로 쓰지 않음 (01 문서 8.4) | |
-| 테스트 | 변경 | `rules.test` 첫 기술 90~270일, `longRun` 의 `tier4 ≥ 7` (시대 IV 첫 기술 연도 7년 이상)은 V23 이 새 트리를 채택할 때만 개정 대상이고, 개정 여부는 10 문서 D10-S11 과 V23 에 함께 올린다; `laws.test`, `decimals.test`, 클라이언트 `researchLayout.test` | C·D |
+| 테스트 | 변경 | `rules.test` 첫 기술 90~270일, `longRun` 의 `tier4 ≥ 7` 은 2026-11-01 시험에서 빠졌다 (시대 IV 첫 기술 연도는 era4Y 데이터로만 기록); `laws.test`, `decimals.test`, 클라이언트 `researchLayout.test` | C·D |
 | 클라이언트 (직접 안 고침) | UI_CHANGES 로 | 시대 띠, 실제 값 API, 몫 표지, 건설 막대, 노동 몫 줄 | A |
 
 ---

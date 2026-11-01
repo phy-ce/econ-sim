@@ -65,6 +65,7 @@
 - 작은 막대는 `ui.tsx` `Bar` (tone pos/neg/gold/in/out). 채움은 0~100%로 자르고 숫자는 실제 값을 쓴다.
 - 그림: 게임 소품은 생성 아이콘 아틀라스 (`Sprite`, `Sprite64`, 480px 셀·최소 48px 여백, 상품·건물·계층·지역·기상·사건 72개, `npm run assets:check`가 sim id 대응을 검사). 조작 단추는 `lucide-react` 아이콘.
 - 지도: 생성 해안 바탕 + 공유 SVG 경계, 레이어 셋 (왕국 / 부 / 생활수준, `RegionMap.tsx:37`), 확대 100~300%, 이름표는 확대해도 같은 크기.
+- 최소 크기·대비 (1920×1080, 사용자 2026-11-01 "아이콘이 너무 작아서 잘 안 보인다", UI_CHANGES 2-77): 게임 그림(`Sprite` 계열) 24px, 색 견본·점 10px, 값을 보이는 막대 높이 6px, 글자 10px, 색 표식·막대 채움은 바탕과 3:1 이상 (WCAG 2.1 1.4.11 비텍스트 대비). `lucide-react` 조작 아이콘과 값이 아닌 손잡이(창 가장자리·섹션 크기 손잡이)는 뺀다. 근거: 24px는 지금 목록 아이콘이 이미 쓰는 크기(`workspace.css:101` 투입·산출, `system-ui.css:33` 시장 합산 표, `strategy.css:186` 서브윈도우 타일)이자 4.3 아이콘 바 높이와 같고, 아틀라스 그림은 여백 때문에 칸의 80% 안쪽만 차지해 16px면 그림이 약 13px로 줄어든다. 10px는 지금 견본(`styles.css:290` `.src-sw`)과 같다. 6px는 지금 읽히는 막대(`workspace.css:94` 5px, `workspace.css:252` 7px) 사이의 둥근 값이다. 글자 10px는 지금 가장 작은 글자 9px 한 단계 위다. 6px·10px는 비교로 고른 값이 아니라 추천이다.
 - 글꼴: 제목 `--serif` (Gowun Batang), 본문 `--sans` (Noto Sans KR), 숫자 칸 `--pixel` (Silkscreen, `.pxnum`). 숫자는 `tabular-nums`.
 
 ## 5. 숫자 표기 (`format.ts`, `NumericValue.tsx`)
@@ -110,7 +111,8 @@
 - 루트 `npm run typecheck` (sim + client + 사전). 클라이언트 시험은 범위를 좁혀 `npx vitest run packages/client/test` (루트에서 넓게 돌리면 `.tmp` 작업 사본까지 수집한다).
 - `npm run build` (client): 지도 이웃(7지역·9쌍)과 아이콘 목록 검사(`assets:check`) 포함.
 - 개발 서버: `cd packages/client && npx vite --port 5199`.
-- 눈 확인: 1920×1028 viewport, 한국어 낮 + 영어 밤, 가로 넘침 없음, 콘솔 오류 없음. 브라우저를 열 수 없는 작업자는 "화면 미검증"으로 적고 UI_CHANGES 0장 "검증" 줄에 남긴다. 예전 검증 결과를 새 변경에 이어 쓰지 않는다.
+- 헤드리스 스크린샷 확인 (2026-11-01부터 화면 작업자의 검증 수단): 1920×1080, 개발 서버를 띄운 뒤 `msedge --headless=new --window-size=1920,1080 --screenshot=<파일>.png http://localhost:5199/` 또는 Chrome DevTools Protocol 스크립트(창 열기·클릭·`localStorage`의 `estera-lang`·테마 설정 뒤 캡처). 새 프로필이면 첫 화면은 언어 선택(UI_CHANGES 2-76)이다. 헤드리스는 브라우저 테두리가 없어 viewport가 창 크기와 같으므로, 아래 눈 확인 기준 1920×1028과 맞추려면 `--window-size=1920,1028`로도 한 장 찍는다. 스크린샷으로 본 항목은 파일 이름과 함께 적는다.
+- 눈 확인: 1920×1028 viewport, 한국어 낮 + 영어 밤, 가로 넘침 없음, 콘솔 오류 없음. 스크린샷도 찍지 못한 작업자는 "화면 미검증"으로 적고 UI_CHANGES 0장 "검증" 줄에 남긴다. 예전 검증 결과를 새 변경에 이어 쓰지 않는다.
 
 ## 13. 기록 (날짜별 파일, 지우지 않고 보관)
 | 파일 | 한 줄 |

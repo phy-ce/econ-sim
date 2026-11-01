@@ -1,3 +1,5 @@
+import {ConstructionPanel} from './ConstructionPanel';
+import {StatePanel} from './StatePanel';
 import {memo, useCallback} from 'react';
 import {useEffect,useMemo} from 'react';
 import {useNavigationState} from '../NavigationHistory';
@@ -13,7 +15,7 @@ import {PolicyPanel} from './PolicyPanel';
 import {ResearchPanel} from './ResearchPanel';
 import {Projects} from './CompanyPanel';
 import {eventDestination} from '../eventDestination';
-export type ScreenRoute={kind:WindowId;regionId?:number;buildingId?:number;good?:GoodId;companyId?:number;prof?:PopClass;industry?:boolean;sequence?:number};
+export type ScreenRoute={kind:WindowId;regionId?:number;buildingId?:number;good?:GoodId;companyId?:number;prof?:PopClass;industry?:boolean;sequence?:number;tab?:'budget'|'laws'};
 export type ScreenRequest={target:WindowId;route:ScreenRoute;sequence:number};
 function GameWindowView({id,game,mapRegionId,request,onOpenWindow}:{onOpenWindow:(route:ScreenRoute)=>void;id:WindowId;game:Game;mapRegionId:number;request:ScreenRequest|null}){
  const world=game.world!;
@@ -22,13 +24,14 @@ function GameWindowView({id,game,mapRegionId,request,onOpenWindow}:{onOpenWindow
  const me=playerCompany(world),region=regionById(world,route.regionId??mapRegionId);
  const go=useCallback((next:ScreenRoute)=>{if(next.kind!==id){onOpenWindow(next);return;}setRoute(previous=>({...next,sequence:(previous.sequence??0)+1}));},[id,onOpenWindow,setRoute]);
  useEffect(()=>{if(request?.target===id)go(request.route);},[request?.sequence]);
+ useEffect(()=>{if(id==='construction'&&world.regions.some(r=>r.id===mapRegionId&&r.kingdomId===me?.kingdomId))go({kind:'construction',regionId:mapRegionId});},[id,mapRegionId]);
  const onBuilding=useCallback((bid:number)=>{const b=world.buildings.find(b=>b.id===bid);if(b)go({kind:'region',regionId:b.regionId,buildingId:bid});},[world,go]);
  const onRegion=useCallback((rid:number)=>go({kind:'region',regionId:rid}),[go]);
  const onGood=useCallback((good:GoodId)=>go({kind:'market',regionId:region.id,good}),[region.id,go]);
  const onCompany=useCallback((companyId:number)=>go({kind:'trends',companyId}),[go]);
  const onPops=useCallback((regionId:number,prof:PopClass)=>go({kind:'region',regionId,prof}),[go]);
  const onBuildings=useCallback((regionId:number)=>go({kind:'region',regionId,industry:true}),[go]);
- const onEvent=useCallback((event:GameEvent)=>{const d=eventDestination(world,event);if(!d)return;if(d.kind==='building')onBuilding(d.id);else if(d.kind==='region')onRegion(d.id);else if(d.kind==='company')onCompany(d.id);else go({kind:d.kind});},[world,onBuilding,onRegion,onCompany,go]);
+ const onEvent=useCallback((event:GameEvent)=>{const d=eventDestination(world,event);if(!d)return;if(d.kind==='building')onBuilding(d.id);else if(d.kind==='region')onRegion(d.id);else if(d.kind==='company')onCompany(d.id);else go(d);},[world,onBuilding,onRegion,onCompany,go]);
  const sequence=route.sequence??0;
  const tabRequest=useMemo(()=>({tab:route.industry?'industry' as const:'overview' as const,sequence}),[route.industry,sequence]);
  const buildingRequest=useMemo(()=>route.buildingId===undefined?null:{id:route.buildingId,sequence},[route.buildingId,sequence]);
@@ -37,10 +40,9 @@ function GameWindowView({id,game,mapRegionId,request,onOpenWindow}:{onOpenWindow
  if(route.kind==='market')return <MarketWindow game={game} world={world} scope={scope} onScope={setScope} mapRegionId={region.id} history={game.history} good={route.good??'food'} onGood={onGood} onCompany={onCompany} onBuildings={onBuildings}/>;
  if(route.kind==='trends')return <BottomPanel game={game} world={world} history={game.history} lastReadTick={game.lastReadTick} onRead={game.markRead} onJump={onRegion} viewedId={route.companyId??null} onViewCompany={onCompany} onBuilding={onBuilding} onEvent={onEvent} popRequest={null}/>;
  if(!me)return null;
- if(route.kind==='finance')return <FinancePanel active game={game} world={world} me={me} onBuilding={onBuilding} onPolicies={()=>go({kind:'policies'})}/>;
- if(route.kind==='policies')return <PolicyPanel game={game} world={world} kingdomId={me.kingdomId} onResearch={()=>go({kind:'research'})}/>;
+ if(route.kind==='state')return <StatePanel game={game} world={world} me={me} onBuilding={onBuilding} onResearch={()=>go({kind:'research'})} requestedTab={route.tab} sequence={sequence}/>;
  if(route.kind==='research')return <ResearchPanel game={game} world={world} me={me}/>;
- if(route.kind==='construction')return <Projects game={game} world={world} owner={me} projects={world.constructions}/>;
+ if(route.kind==='construction')return <ConstructionPanel game={game} world={world} me={me} regionId={region.id} onRegion={regionId=>go({kind:'construction',regionId})}/>;
  return null;
 }
 
