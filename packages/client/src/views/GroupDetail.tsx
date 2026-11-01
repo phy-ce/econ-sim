@@ -1,3 +1,4 @@
+import {DemolitionProgress} from './DemolitionProgress';
 import {officeLoadFor} from '../officeLoad';
 import {FlowRow} from './FlowRow';
 
@@ -30,6 +31,7 @@ export function GroupDetail({world,buildings,game,onGood,onOwner,showControls}:{
   {!allOwner&&<><div className="system-facts">{[[T.taxCapacity,services.tax],[T.schoolSeats,services.seats],[T.buildPts,services.points]].filter(([,v])=>Number(v)>0).map(([label,value])=><span key={label}>{label}<b><NumericValue value={Number(value)} format="compact"/></b></span>)}</div><details><summary>{T.balance} / {S.day}</summary><Waterfall rev={econ.day.sales} raw={econ.day.inputs} wage={econ.day.wages} labels={[T.wfRev,T.wfRaw,T.wfWage,T.wfProfit]}/></details></>}
   {Object.keys(econ.ownerless).length>0&&<details><summary>{S.dividend} · —</summary><table className="system-table"><tbody>{Object.entries(econ.ownerless).map(([id,value])=><tr key={id}><th>{Number(id)>0?<button className="entity-link" onClick={()=>onOwner(Number(id))}>#{id} ↗</button>:'—'}</th><td><NumericValue value={value} format="money"/></td></tr>)}</tbody></table></details>}
   {econ.owners.length>0&&<details><summary>{S.owner} · {S.dividend} <NumericValue value={econ.dividendsWeek} format="money"/></summary><table className="system-table"><thead><tr><th>{S.owner}</th><th>L / %</th><th>{S.dividend}</th></tr></thead><tbody>{econ.owners.map((o,i)=><tr key={i}><th>{o.ownerBuildingId!==undefined?<button className="entity-link" onClick={()=>onOwner(o.ownerBuildingId!)}>{S[o.owner]} ↗</button>:S[o.owner]}{o.regionId!==undefined&&<small>{regionName(world.regions.find(r=>r.id===o.regionId)!)}</small>}</th><td><NumericValue value={o.levels} format="compact"/> / {pct(o.share)}</td><td><NumericValue value={o.dividendWeek} format="money"/></td></tr>)}</tbody></table></details>}
+  {buildings.filter(b=>(b.shrinking??0)>0).map(b=><section key={b.id}><strong>#{b.id}</strong><DemolitionProgress world={world} building={b} game={game}/></section>)}
   {showControls&&crown&&<details><summary>{G.controls} · {S.state} ×{crown.level}</summary><BuildingControls world={world} game={game} building={crown}/></details>}
  </div>;
 }

@@ -158,3 +158,6 @@ DetailWindow 독립 NavigationProvider/버튼, BuildingPops 및 ResourceInspecto
 
 - 소유권 탐색 기본 경로: 헤드리스 스크린샷 확인(1920×1080), C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/ownership-institution.png 및 ownership-history.png. 소작지→저택→벌목장→뒤로 저택→앞으로 벌목장 모두true, 소유권본문 scrollWidth=clientWidth391 확인. 혼합·극소 지분·기관 소멸은 아직 미검증.
 
+
+- 2-49 그룹 후속: GroupDetail에도 건물id별 DemolitionProgress 연결, 같은 취소 권한 판정·다음/전체 완료 일수·레벨막대 재사용. root typecheck/client48시험 통과. 화면 미검증. 회수 자재 귀속은 기존sim 요청 대기.
+
