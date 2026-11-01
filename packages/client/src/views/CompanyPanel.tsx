@@ -1,7 +1,8 @@
+import {officeLoadFor} from '../officeLoad';
 import {t as uiCopy} from '../i18n';
 import {OwnerSummary} from './OwnerSummary';
 import {FlowRow} from './FlowRow';
-import { isGovernment, crewOf, depositFree, harvestFactor,isOwnerBuilding } from '@econ/sim';
+import { isGovernment, crewOf, depositFree, harvestFactor,isOwnerBuilding,officeLoad } from '@econ/sim';
 import { NumericValue } from '../NumericValue';
 import { OwnerBadge } from './OwnerBadge';
 import { Workforce } from './Workforce';
@@ -56,7 +57,7 @@ export function rowOf(world: World, b: Building): Row {
   const fill = b.active&&!b.idle ? b.last.inputFill : 0;
   const price = (g: GoodId) => region.market[g].price;
   const inputs = GOOD_IDS.filter((g) => method.inputs[g]).map((g) => {
-    const need = method.inputs[g]! * run * crew * harvestFactor(world,b.regionId,BUILDING_BY_ID[b.typeId].land);
+    const need = method.inputs[g]! * run * crew * harvestFactor(world,b.regionId,BUILDING_BY_ID[b.typeId].land)*(method.construction?officeLoadFor(world,b):1);
     const cur = need * fill;
     return { g, cur, max: need, price: price(g), value: cur * price(g) };
   });

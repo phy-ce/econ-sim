@@ -143,3 +143,6 @@ DetailWindow 독립 NavigationProvider/버튼, BuildingPops 및 ResourceInspecto
 - 흐름 화면 캡처 정정: flow-group.png는 스크롤 아래 흐름이 가려져 있었음. 실제 흐름이 보이는 헤드리스 확인 근거는 C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/flow-group-visible.png(1920×1080).
 - 2-68: 헤드리스 스크린샷 확인(1920×1080), 같은 scratch research-tree.png. 영어 밤17노드, 깊이별6/3/2/6 한 행, 가로scrollWidth1230 확인. 모든 노드 선택/툴팁 조작은 별도 미검증.
 
+
+- 2-78 코드 완료: 원료 officeLoad 반영·사무소/그룹 가동 비율 표시. typecheck/client48시험 통과, CDP 읽기 검증 사무소3개 load0/모든 원료0. 화면 미검증(office-load-check.png는 코드 조회 장면이며 사무소 화면 검증 근거가 아님).
+

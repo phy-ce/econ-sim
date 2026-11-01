@@ -751,3 +751,17 @@ CompanyPanel BuildingRow의 저택·금융가는 별도 행으로 분기: 자리
 ### 2026-11-01 2-51 공통 요약·합계 마무리
 상회 요약의 원료/산출/매출 막대를 FlowRow로 통일. 그룹 합계도 같은 FlowRow에 실제 합산량/가중 단가/금액/충족/판매 추정을 전달. 가상 Building 합성 없이 집계값 사용. 타입 검사/client48시험 통과. 헤드리스 스크린샷 확인(1920×1080): C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/flow-group.png, 흐름 clientWidth=scrollWidth=382. 상회 요약 화면은 미검증. packages/encyclopedia 라벨은 범위 밖 요청으로 남음.
 
+
+### 2-78. 건축사무소는 맡은 공사만큼만 가동 (sim wt-officeuse, DESIGN 8장, DECISIONS 7-30)
+- sim: 사무소는 그날 맡은 공사에 필요한 포인트만 만들고 그만큼의 자재만 쓰고 산다. 일자리·임금은 그대로다.
+- `officeLoad(w, c)` (`production.ts`, `@econ/sim`에서 import): 회사 c의 오늘 가동 비율 = min(1, 필요 포인트 ÷ 능력). 회사의 사무소 모두 같은 값이고, 맡은 공사가 없으면 0.
+- 사무소 원료 사용 = 방식 원료 × 레벨 × 가동률 × 작업 인원 × 기상 배율 × 가동 비율 × `b.last.inputFill`. `b.last.points` = 능력 × 가동 비율 × 자재 충족.
+- 가동 비율이 0인 날 sim은 `b.last.inputFill = 1`로 두고(`b.idle`은 false일 수 있다) 원료를 쓰지 않는다. 지금 화면(`CompanyPanel.tsx:54·57`, `FlowRow.tsx:16`)은 그날 원료를 능력 전부만큼 쓴 것으로 보인다.
+- `CompanyPanel.tsx:67` outMax와 `FlowRow.tsx:21`은 `b.last.points`를 능력 전부와 견주므로, 일이 적은 사무소가 모자란 것처럼 보인다. 산출 칸에 가동 비율을 숫자로 함께 보인다 (`GroupDetail.tsx:19` 합계도).
+- 완료 기준: 같은 날 패널의 사무소 원료 양이 `per*run*crew*harvest*officeLoad*inputFill`과 소수 둘째 자리까지 같다.
+
+
+
+### 2026-11-01 2-78 사무소 가동 비율 (화면 미검증)
+rowOf/FlowRow 원료에 officeLoad 곱, 사무소 서비스 칩에 가동 비율 표시, 그룹은 레벨 가중 가동 비율 전달. 회사가 없는 옛 대상은 조회 예외 방지. root typecheck/client48시험 통과. CDP 현재 테스트 세계 사무소3개 모두 load0·원료 섬유/목재/공구0 확인(읽기만). 화면 가동0/부분/전체 비율 스크린샷 대조는 남음. sim 수정 없음.
+

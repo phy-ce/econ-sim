@@ -27,7 +27,7 @@
 
 ### 우선순위
 깨진 화면
-- **건축사무소 가동 비율 (2-78, sim wt-officeuse)**: 사무소 원료 양이 실제보다 크게 보인다. 원료 양에 `officeLoad(world, company)`를 곱한다 (`CompanyPanel.tsx:57`, `FlowRow.tsx:16`). 산출 칸에 가동 비율을 숫자로 보인다 (`CompanyPanel.tsx:67`, `FlowRow.tsx:21`, `GroupDetail.tsx:19`).
+- 2-78 코드 완료: officeLoad를 실제 투입량에 반영하고 사무소/그룹 가동 비율 표시. UI_DONE 참조.
 - 2-69(왕실 임금 읽기 전용)는 코드 완료 (`e1d700f`, 화면 미검증, UI_DONE).
 
 사용자 요청
@@ -1509,14 +1509,6 @@ sim 변경 (wt-research):
 - 문자열: "공급 ÷ 수요"/"Supply ÷ demand", "지금"/"Now", "+1", "+5", "공급"/"Supply", "수요"/"Demand", 위 AI 눈금 셋.
 - 완료 기준: wt-0bp가 main에 합쳐진 뒤. 카드의 세 숫자가 같은 날 `projectedSD`/`currentSD` 직접 호출 값과 같다 (소수 둘째 자리). 수요 0 상품은 "—". 다크 모드에서 점·눈금이 구분된다. 420×560에서 넘침 없음 (ko/en). typecheck.
 - 사용자 결정이 필요한 것: 없음 (3·6항은 추천안, 반대하면 바꾼다).
-
-### 2-78. 건축사무소는 맡은 공사만큼만 가동 (sim wt-officeuse, DESIGN 8장, DECISIONS 7-30)
-- sim: 사무소는 그날 맡은 공사에 필요한 포인트만 만들고 그만큼의 자재만 쓰고 산다. 일자리·임금은 그대로다.
-- `officeLoad(w, c)` (`production.ts`, `@econ/sim`에서 import): 회사 c의 오늘 가동 비율 = min(1, 필요 포인트 ÷ 능력). 회사의 사무소 모두 같은 값이고, 맡은 공사가 없으면 0.
-- 사무소 원료 사용 = 방식 원료 × 레벨 × 가동률 × 작업 인원 × 기상 배율 × 가동 비율 × `b.last.inputFill`. `b.last.points` = 능력 × 가동 비율 × 자재 충족.
-- 가동 비율이 0인 날 sim은 `b.last.inputFill = 1`로 두고(`b.idle`은 false일 수 있다) 원료를 쓰지 않는다. 지금 화면(`CompanyPanel.tsx:54·57`, `FlowRow.tsx:16`)은 그날 원료를 능력 전부만큼 쓴 것으로 보인다.
-- `CompanyPanel.tsx:67` outMax와 `FlowRow.tsx:21`은 `b.last.points`를 능력 전부와 견주므로, 일이 적은 사무소가 모자란 것처럼 보인다. 산출 칸에 가동 비율을 숫자로 함께 보인다 (`GroupDetail.tsx:19` 합계도).
-- 완료 기준: 같은 날 패널의 사무소 원료 양이 `per*run*crew*harvest*officeLoad*inputFill`과 소수 둘째 자리까지 같다.
 
 ## 3. sim 쪽 필요 사항 (Claude가 처리할 것, UI 작업자는 요청만)
 - **2-59 주 단위 수지 (요청됨, 2026-10-22):** `BuildingEcon`에 `week: { sales, tax, inputs, wages, profit }` (건물 `revenue`·`tax`·`inputCost`·`wageCost`의 이동평균 × 7, `profitEma`와 같은 기간). 들어오면 2-59-3 폭포 라벨을 `/주`로.

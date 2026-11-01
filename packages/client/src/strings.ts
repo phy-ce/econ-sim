@@ -6,6 +6,7 @@ import { particle } from './format';
 type S = string;
 
 export const KO = {
+ officeLoad:"가동 비율",
  screenLists: {"incomeLabels":{"wages":"임금·성과급","dividends":"배당","rent":"지대","sales":"판매 수입","welfare":"복지","other":"기타·금고 환급","tax":"세금"},"companySort":[["pl","손익"],["margin","이익률"],["name","이름"],["level","규모"],["region","지역"],["staff","충원율"],["input","원료 충족"]] as [string,string][],"metricLabels":{"gdp":"경제 규모 · 연간 GDP","perHead":"1인당 연간 GDP","pop":"인구","sol":"평균 생활수준","unemployment":"실업 인구 비율","literacy":"문해력","treasury":"국고 현금","debt":"국채 잔액","savings":"가계 저축"},"resourceSort":[["quantity","자원 기준량"],["name","건물 이름"],["owner","소유 회사"],["level","규모"],["utilization","가동률"],["profit","손익"]] as [string,string][]},
 
  screenText: {
@@ -563,6 +564,7 @@ export const KO = {
 export type Dict = typeof KO;
 
 export const EN: Dict = {
+ officeLoad:"Workload",
  screenLists: {"incomeLabels":{"wages":"Wages / bonuses","dividends":"Dividends","rent":"Rent","sales":"Sales","welfare":"Welfare","other":"Other / treasury releases","tax":"Tax"},"companySort":[["pl","Profit"],["margin","Margin"],["name","Name"],["level","Levels"],["region","Region"],["staff","Staffing"],["input","Input coverage"]] as [string,string][],"metricLabels":{"gdp":"Economy · annual GDP","perHead":"Annual GDP per capita","pop":"Population","sol":"Mean living standard","unemployment":"Jobless population share","literacy":"Literacy","treasury":"Treasury cash","debt":"Government debt","savings":"Household savings"},"resourceSort":[["quantity","Resource volume"],["name","Name"],["owner","Owner"],["level","Levels"],["utilization","Utilization"],["profit","Profit"]] as [string,string][]},
 
  screenText: {
