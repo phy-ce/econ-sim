@@ -51,6 +51,11 @@ export interface MicroOptions {
   adminFit?: boolean;
   /** 계층 인원을 이 단위의 정수배로 반올림한다 (기본 1명). 축소 대조 실행(배율 1, 인구 × 50)은 50 을 줘서 축소 세계와 같은 계층 비율로 시작한다 */
   personUnit?: number;
+  /**
+   * 돈 문턱(baseCredit·mintBase·reserveBase)의 인구 비율에 쓰는 인구 (기본: 지역 인구 합). 시작 인구만 줄이는 비교(본 게임 TUNE.startPopScale 과 같은 질문)는
+   * 원래 인구를 줘서 돈 문턱을 그대로 둔다 (본 게임에서 startPopScale 은 돈 문턱을 바꾸지 않는다)
+   */
+  moneyPeople?: number;
   /** 고정 문턱(ABS_LIMITS)도 축소한다 (기본 true). false 는 축소가 무엇을 깨는지 보는 비교용 */
   floors?: boolean;
   /**
@@ -189,7 +194,7 @@ export function createMicroWorld(opts: MicroOptions = {}): World {
   }
   const ids = chosen.map((r) => r.id);
   const total = people.reduce((a, b) => a + b, 0);
-  const popRatio = total / fullPeople;
+  const popRatio = (opts.moneyPeople ?? total) / fullPeople;
   const adminK = (opts.adminFit ?? true) ? (total * TUNE.adminStart / TUNE.adminScale) / (TAX_PEOPLE_PER_LEVEL * scale) : 1;
 
   // 2) 축소를 켠다

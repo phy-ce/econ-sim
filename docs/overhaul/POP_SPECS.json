@@ -1,0 +1,821 @@
+{
+ "about": "시작 인구 배율 비교 (2026-11-01 사용자 \"노동자 공급을 받아 주면서 임금을 유지할 만큼의 산업 성장이 일어나지 않는 것 같은데. 초기 인구를 좀 줄여볼까?\"). 모두 지역 시장 임금 위 (wageMarket 1, wageMarketRate 0.005). p100 = 지금 시작 세계 (startPopScale 1, 대조), p75 / p50 = 시작 인구 × 0.75 / 0.5, l0 = 소작지도 줄어든 인구로 센다 (startPopLand 0), l1 = 소작지는 원래 인구대로 (startPopLand 1). 시작 생산 건물·부지·회사 시작 돈·학교·건축사무소는 원래 인구로 세어 그대로, 행정청은 줄어든 인구로 센다 (지금 규칙). 1차 specs: 10년 × 시드 1·2 × salt 0..1. 2차 specs20: 20년 × 시드 1·2 × salt 0..3. 돌리기 (packages/sim 에서): PAR=8 bash cli/lab.sh <out10.jsonl> ../../docs/overhaul/POP_SPECS.json, KEY=specs20 PAR=8 bash cli/lab.sh <out20.jsonl> ../../docs/overhaul/POP_SPECS.json. 요약: python cli/labsum.py <out.jsonl> --compare p100.",
+ "code": "wt-labor (3a05eae + TUNE.startPopScale·startPopLand + lab 지표 unskK·farmerK·wfLowK·jobsLowK·empLowK)",
+ "counts": {
+  "specs (10년)": 20,
+  "specs20 (20년)": 40
+ },
+ "choices": [
+  "사용자 질문의 뜻: 같은 산업(시작 건물·성장 능력)에 사람이 적으면 일손이 귀해져 임금이 유지되는가. 그래서 사람과 사람에서 나오는 것(계층 인원, 저축, l0 이면 소작지 칸)만 줄이고 산업 쪽(시작 생산 건물·부지·돈)은 그대로 둔다.",
+  "판정 지표: 생산 건물 하층 일자리 증가 ÷ 하층 노동 인구 증가 (jobsLowK, wfLowK), wagePeas (노동자 시장 임금 ÷ 소작 1인 소득), peas (소작 비율), wage.unskilled, solPeas·solUnsk, peasIdle, gdpPre (와 1인당), sd.grain·grain, treasury, pop.",
+  "실행 이름: labsum --compare 의 후보 이름. 10년판과 20년판은 같은 이름이라 출력 파일을 나눠 요약한다. 플레이어 왕실 방치(withPlayer 기본) + 고정 연구 순서(research 기본 fixed)."
+ ],
+ "specs": [
+  {
+   "item": "POP-1",
+   "name": "p100",
+   "seed": 1,
+   "salt": 0,
+   "years": 10,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.005
+   }
+  },
+  {
+   "item": "POP-1",
+   "name": "p100",
+   "seed": 1,
+   "salt": 1,
+   "years": 10,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.005
+   }
+  },
+  {
+   "item": "POP-1",
+   "name": "p100",
+   "seed": 2,
+   "salt": 0,
+   "years": 10,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.005
+   }
+  },
+  {
+   "item": "POP-1",
+   "name": "p100",
+   "seed": 2,
+   "salt": 1,
+   "years": 10,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.005
+   }
+  },
+  {
+   "item": "POP-1",
+   "name": "p75l0",
+   "seed": 1,
+   "salt": 0,
+   "years": 10,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.005,
+    "startPopScale": 0.75,
+    "startPopLand": 0
+   },
+   "control": "p100"
+  },
+  {
+   "item": "POP-1",
+   "name": "p75l0",
+   "seed": 1,
+   "salt": 1,
+   "years": 10,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.005,
+    "startPopScale": 0.75,
+    "startPopLand": 0
+   },
+   "control": "p100"
+  },
+  {
+   "item": "POP-1",
+   "name": "p75l0",
+   "seed": 2,
+   "salt": 0,
+   "years": 10,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.005,
+    "startPopScale": 0.75,
+    "startPopLand": 0
+   },
+   "control": "p100"
+  },
+  {
+   "item": "POP-1",
+   "name": "p75l0",
+   "seed": 2,
+   "salt": 1,
+   "years": 10,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.005,
+    "startPopScale": 0.75,
+    "startPopLand": 0
+   },
+   "control": "p100"
+  },
+  {
+   "item": "POP-1",
+   "name": "p75l1",
+   "seed": 1,
+   "salt": 0,
+   "years": 10,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.005,
+    "startPopScale": 0.75,
+    "startPopLand": 1
+   },
+   "control": "p100"
+  },
+  {
+   "item": "POP-1",
+   "name": "p75l1",
+   "seed": 1,
+   "salt": 1,
+   "years": 10,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.005,
+    "startPopScale": 0.75,
+    "startPopLand": 1
+   },
+   "control": "p100"
+  },
+  {
+   "item": "POP-1",
+   "name": "p75l1",
+   "seed": 2,
+   "salt": 0,
+   "years": 10,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.005,
+    "startPopScale": 0.75,
+    "startPopLand": 1
+   },
+   "control": "p100"
+  },
+  {
+   "item": "POP-1",
+   "name": "p75l1",
+   "seed": 2,
+   "salt": 1,
+   "years": 10,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.005,
+    "startPopScale": 0.75,
+    "startPopLand": 1
+   },
+   "control": "p100"
+  },
+  {
+   "item": "POP-1",
+   "name": "p50l0",
+   "seed": 1,
+   "salt": 0,
+   "years": 10,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.005,
+    "startPopScale": 0.5,
+    "startPopLand": 0
+   },
+   "control": "p100"
+  },
+  {
+   "item": "POP-1",
+   "name": "p50l0",
+   "seed": 1,
+   "salt": 1,
+   "years": 10,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.005,
+    "startPopScale": 0.5,
+    "startPopLand": 0
+   },
+   "control": "p100"
+  },
+  {
+   "item": "POP-1",
+   "name": "p50l0",
+   "seed": 2,
+   "salt": 0,
+   "years": 10,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.005,
+    "startPopScale": 0.5,
+    "startPopLand": 0
+   },
+   "control": "p100"
+  },
+  {
+   "item": "POP-1",
+   "name": "p50l0",
+   "seed": 2,
+   "salt": 1,
+   "years": 10,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.005,
+    "startPopScale": 0.5,
+    "startPopLand": 0
+   },
+   "control": "p100"
+  },
+  {
+   "item": "POP-1",
+   "name": "p50l1",
+   "seed": 1,
+   "salt": 0,
+   "years": 10,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.005,
+    "startPopScale": 0.5,
+    "startPopLand": 1
+   },
+   "control": "p100"
+  },
+  {
+   "item": "POP-1",
+   "name": "p50l1",
+   "seed": 1,
+   "salt": 1,
+   "years": 10,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.005,
+    "startPopScale": 0.5,
+    "startPopLand": 1
+   },
+   "control": "p100"
+  },
+  {
+   "item": "POP-1",
+   "name": "p50l1",
+   "seed": 2,
+   "salt": 0,
+   "years": 10,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.005,
+    "startPopScale": 0.5,
+    "startPopLand": 1
+   },
+   "control": "p100"
+  },
+  {
+   "item": "POP-1",
+   "name": "p50l1",
+   "seed": 2,
+   "salt": 1,
+   "years": 10,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.005,
+    "startPopScale": 0.5,
+    "startPopLand": 1
+   },
+   "control": "p100"
+  }
+ ],
+ "specs20": [
+  {
+   "item": "POP-1",
+   "name": "p100",
+   "seed": 1,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.005
+   }
+  },
+  {
+   "item": "POP-1",
+   "name": "p100",
+   "seed": 1,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.005
+   }
+  },
+  {
+   "item": "POP-1",
+   "name": "p100",
+   "seed": 1,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.005
+   }
+  },
+  {
+   "item": "POP-1",
+   "name": "p100",
+   "seed": 1,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.005
+   }
+  },
+  {
+   "item": "POP-1",
+   "name": "p100",
+   "seed": 2,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.005
+   }
+  },
+  {
+   "item": "POP-1",
+   "name": "p100",
+   "seed": 2,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.005
+   }
+  },
+  {
+   "item": "POP-1",
+   "name": "p100",
+   "seed": 2,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.005
+   }
+  },
+  {
+   "item": "POP-1",
+   "name": "p100",
+   "seed": 2,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.005
+   }
+  },
+  {
+   "item": "POP-1",
+   "name": "p75l0",
+   "seed": 1,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.005,
+    "startPopScale": 0.75,
+    "startPopLand": 0
+   },
+   "control": "p100"
+  },
+  {
+   "item": "POP-1",
+   "name": "p75l0",
+   "seed": 1,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.005,
+    "startPopScale": 0.75,
+    "startPopLand": 0
+   },
+   "control": "p100"
+  },
+  {
+   "item": "POP-1",
+   "name": "p75l0",
+   "seed": 1,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.005,
+    "startPopScale": 0.75,
+    "startPopLand": 0
+   },
+   "control": "p100"
+  },
+  {
+   "item": "POP-1",
+   "name": "p75l0",
+   "seed": 1,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.005,
+    "startPopScale": 0.75,
+    "startPopLand": 0
+   },
+   "control": "p100"
+  },
+  {
+   "item": "POP-1",
+   "name": "p75l0",
+   "seed": 2,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.005,
+    "startPopScale": 0.75,
+    "startPopLand": 0
+   },
+   "control": "p100"
+  },
+  {
+   "item": "POP-1",
+   "name": "p75l0",
+   "seed": 2,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.005,
+    "startPopScale": 0.75,
+    "startPopLand": 0
+   },
+   "control": "p100"
+  },
+  {
+   "item": "POP-1",
+   "name": "p75l0",
+   "seed": 2,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.005,
+    "startPopScale": 0.75,
+    "startPopLand": 0
+   },
+   "control": "p100"
+  },
+  {
+   "item": "POP-1",
+   "name": "p75l0",
+   "seed": 2,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.005,
+    "startPopScale": 0.75,
+    "startPopLand": 0
+   },
+   "control": "p100"
+  },
+  {
+   "item": "POP-1",
+   "name": "p75l1",
+   "seed": 1,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.005,
+    "startPopScale": 0.75,
+    "startPopLand": 1
+   },
+   "control": "p100"
+  },
+  {
+   "item": "POP-1",
+   "name": "p75l1",
+   "seed": 1,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.005,
+    "startPopScale": 0.75,
+    "startPopLand": 1
+   },
+   "control": "p100"
+  },
+  {
+   "item": "POP-1",
+   "name": "p75l1",
+   "seed": 1,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.005,
+    "startPopScale": 0.75,
+    "startPopLand": 1
+   },
+   "control": "p100"
+  },
+  {
+   "item": "POP-1",
+   "name": "p75l1",
+   "seed": 1,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.005,
+    "startPopScale": 0.75,
+    "startPopLand": 1
+   },
+   "control": "p100"
+  },
+  {
+   "item": "POP-1",
+   "name": "p75l1",
+   "seed": 2,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.005,
+    "startPopScale": 0.75,
+    "startPopLand": 1
+   },
+   "control": "p100"
+  },
+  {
+   "item": "POP-1",
+   "name": "p75l1",
+   "seed": 2,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.005,
+    "startPopScale": 0.75,
+    "startPopLand": 1
+   },
+   "control": "p100"
+  },
+  {
+   "item": "POP-1",
+   "name": "p75l1",
+   "seed": 2,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.005,
+    "startPopScale": 0.75,
+    "startPopLand": 1
+   },
+   "control": "p100"
+  },
+  {
+   "item": "POP-1",
+   "name": "p75l1",
+   "seed": 2,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.005,
+    "startPopScale": 0.75,
+    "startPopLand": 1
+   },
+   "control": "p100"
+  },
+  {
+   "item": "POP-1",
+   "name": "p50l0",
+   "seed": 1,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.005,
+    "startPopScale": 0.5,
+    "startPopLand": 0
+   },
+   "control": "p100"
+  },
+  {
+   "item": "POP-1",
+   "name": "p50l0",
+   "seed": 1,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.005,
+    "startPopScale": 0.5,
+    "startPopLand": 0
+   },
+   "control": "p100"
+  },
+  {
+   "item": "POP-1",
+   "name": "p50l0",
+   "seed": 1,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.005,
+    "startPopScale": 0.5,
+    "startPopLand": 0
+   },
+   "control": "p100"
+  },
+  {
+   "item": "POP-1",
+   "name": "p50l0",
+   "seed": 1,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.005,
+    "startPopScale": 0.5,
+    "startPopLand": 0
+   },
+   "control": "p100"
+  },
+  {
+   "item": "POP-1",
+   "name": "p50l0",
+   "seed": 2,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.005,
+    "startPopScale": 0.5,
+    "startPopLand": 0
+   },
+   "control": "p100"
+  },
+  {
+   "item": "POP-1",
+   "name": "p50l0",
+   "seed": 2,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.005,
+    "startPopScale": 0.5,
+    "startPopLand": 0
+   },
+   "control": "p100"
+  },
+  {
+   "item": "POP-1",
+   "name": "p50l0",
+   "seed": 2,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.005,
+    "startPopScale": 0.5,
+    "startPopLand": 0
+   },
+   "control": "p100"
+  },
+  {
+   "item": "POP-1",
+   "name": "p50l0",
+   "seed": 2,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.005,
+    "startPopScale": 0.5,
+    "startPopLand": 0
+   },
+   "control": "p100"
+  },
+  {
+   "item": "POP-1",
+   "name": "p50l1",
+   "seed": 1,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.005,
+    "startPopScale": 0.5,
+    "startPopLand": 1
+   },
+   "control": "p100"
+  },
+  {
+   "item": "POP-1",
+   "name": "p50l1",
+   "seed": 1,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.005,
+    "startPopScale": 0.5,
+    "startPopLand": 1
+   },
+   "control": "p100"
+  },
+  {
+   "item": "POP-1",
+   "name": "p50l1",
+   "seed": 1,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.005,
+    "startPopScale": 0.5,
+    "startPopLand": 1
+   },
+   "control": "p100"
+  },
+  {
+   "item": "POP-1",
+   "name": "p50l1",
+   "seed": 1,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.005,
+    "startPopScale": 0.5,
+    "startPopLand": 1
+   },
+   "control": "p100"
+  },
+  {
+   "item": "POP-1",
+   "name": "p50l1",
+   "seed": 2,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.005,
+    "startPopScale": 0.5,
+    "startPopLand": 1
+   },
+   "control": "p100"
+  },
+  {
+   "item": "POP-1",
+   "name": "p50l1",
+   "seed": 2,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.005,
+    "startPopScale": 0.5,
+    "startPopLand": 1
+   },
+   "control": "p100"
+  },
+  {
+   "item": "POP-1",
+   "name": "p50l1",
+   "seed": 2,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.005,
+    "startPopScale": 0.5,
+    "startPopLand": 1
+   },
+   "control": "p100"
+  },
+  {
+   "item": "POP-1",
+   "name": "p50l1",
+   "seed": 2,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "wageMarket": 1,
+    "wageMarketRate": 0.005,
+    "startPopScale": 0.5,
+    "startPopLand": 1
+   },
+   "control": "p100"
+  }
+ ]
+}

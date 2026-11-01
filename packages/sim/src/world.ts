@@ -117,11 +117,12 @@ function newMarket(): Record<GoodId, MarketGood> {
 }
 
 /** 시드로 정한 지역 시작값: 티어, 인구(계층별), 교육, 경작지·부지 칸, 시작 농장 레벨 */
-interface RegionStart { tier: number; population: Record<PopClass, number>; education: number; arable: number; plot: number; farms: number }
+interface RegionStart { tier: number; population: Record<PopClass, number>; education: number; arable: number; plot: number; farms: number; /** TUNE.startPopScale 을 곱하기 전 인구 (시작 생산 건물·부지·돈을 센다) */ people0: number }
 
 /**
  * 지역 티어를 시드로 배정하고(TIER_COUNTS, 각 왕국에 티어 2 이상 하나 이상), 티어 수치에 ±TIER_JITTER 를 준다.
  * 경작지 = 소작농 노동 인구 ÷ 소작지 1칸 인원 × arableSlack + 시작 농장 칸
+ * TUNE.startPopScale (비교용, 기본 1): 계층 인원은 인구 × 배율로 센다. 시작 농장·부지는 원래 인구로 센다. 경작지는 startPopLand 0 이면 줄어든 인구, 1 이면 원래 인구로 센다
  */
 export function regionStarts(seed: number, owner: Record<number, number>): Map<number, RegionStart> {
   const rnd = seeded(seed * 104729 + 3);
@@ -141,15 +142,19 @@ export function regionStarts(seed: number, owner: Record<number, number>): Map<n
   for (const id of ids) {
     const t = TIERS[tierOf[id]];
     const total = Math.round((t.pop[0] + rnd() * (t.pop[1] - t.pop[0])) / 1000) * 1000;
-    const aristocrat = Math.round(total * t.aristocrat * TUNE.aristStart * jit()), skilled = Math.round(total * t.skilled * jit()), expert = Math.round(total * t.expert * jit());
-    const gentry = Math.round(total * t.gentry);
-    const peasant = total - aristocrat - gentry - skilled - expert;
+    const people = TUNE.startPopScale === 1 ? total : Math.round(total * TUNE.startPopScale);
+    const ja = jit(), js = jit(), je = jit();
+    const aristocrat = Math.round(people * t.aristocrat * TUNE.aristStart * ja), skilled = Math.round(people * t.skilled * js), expert = Math.round(people * t.expert * je);
+    const gentry = Math.round(people * t.gentry);
+    const peasant = people - aristocrat - gentry - skilled - expert;
     const farms = Math.round((total / 100_000) * t.farms * jit());
-    const arable = Math.ceil(((peasant + skilled + expert) * WORKFORCE_RATIO / SUBSISTENCE.workersPerCell) * t.arableSlack * jit()) + farms;
+    // 소작지를 채울 하층 (소작농 + 자격만 가진 기술자·전문가): startPopLand 1 이면 원래 인구의 하층
+    const lower = TUNE.startPopLand && people !== total ? total - Math.round(total * t.aristocrat * TUNE.aristStart * ja) - Math.round(total * t.gentry) : peasant + skilled + expert;
+    const arable = Math.ceil((lower * WORKFORCE_RATIO / SUBSISTENCE.workersPerCell) * t.arableSlack * jit()) + farms;
     out.set(id, {
       tier: tierOf[id] + 1,
       population: { peasant, unskilled: 0, farmer: 0, skilled, expert, gentry, capitalist: 0, aristocrat },
-      education: Math.round(t.education * jit() * 100) / 100, arable, plot: Math.ceil((total / 100_000) * t.plot * jit()), farms,
+      education: Math.round(t.education * jit() * 100) / 100, arable, plot: Math.ceil((total / 100_000) * t.plot * jit()), farms, people0: total,
     });
   }
   return out;
@@ -200,7 +205,7 @@ export function createWorld(seed = 1, opts: CreateWorldOptions = {}): World {
     const admin = getMethod('admin', 'admin_hereditary');
     w.buildings.push(newBuilding(w.nextId++, 'admin', home.id, c.id, admin.id, Math.max(1, Math.ceil((people * TUNE.adminStart) / (admin.taxCapacity! * TUNE.adminScale))), true));
     // 학교 START_SCHOOL_LEVELS 레벨 (귀족 가정교사, 기술 없이 여는 방식): 왕국에서 인구가 가장 많은 지역. 문해력이 연구 속도를 정한다
-    const popOf = (r: Region) => Object.values(starts.get(r.id)!.population).reduce((x, y) => x + y, 0);
+    const popOf = (r: Region) => starts.get(r.id)!.people0;
     const capital = [...mine].sort((a, b) => popOf(b) - popOf(a) || a.id - b.id)[0];
     w.buildings.push(newBuilding(w.nextId++, 'school', capital.id, c.id, 'school_tutor', START_SCHOOL_LEVELS, true));
     // 무역소 START_TRADE_LEVELS 레벨: 같은 지역(인구가 가장 많은 지역), 그 왕국 민간 상회 것. 금고는 레벨 × 기본 유보액 (새 돈이 아니라 시작 세계의 돈이다)
@@ -216,8 +221,8 @@ export function createWorld(seed = 1, opts: CreateWorldOptions = {}): World {
     const firm = companies.find((c) => !c.state && c.kingdomId === r.kingdomId);
     const levels = Math.min(starts.get(r.id)!.farms, r.land.arable);
     if (firm && levels > 0) w.buildings.push(newBuilding(w.nextId++, 'farm', r.id, firm.id, 'farm_basic', levels, false));
-    // 시작 벌목장·섬유 농장: 인구 10만 명당 TUNE.startLumber·startFiber 레벨 (소작지는 목재·섬유를 조금만 낸다)
-    const people = Object.values(starts.get(r.id)!.population).reduce((a, b) => a + b, 0) / 100_000;
+    // 시작 벌목장·섬유 농장: 인구 10만 명당 TUNE.startLumber·startFiber 레벨 (소작지는 목재·섬유를 조금만 낸다). startPopScale 을 곱하기 전 인구로 센다
+    const people = starts.get(r.id)!.people0 / 100_000;
     const lumber = Math.min(r.land.forest, Math.round(people * TUNE.startLumber));
     if (firm && lumber > 0) w.buildings.push(newBuilding(w.nextId++, 'lumber', r.id, firm.id, 'lumber_manual', lumber, false));
     const fiber = Math.round(people * TUNE.startFiber);
@@ -240,7 +245,7 @@ export function createWorld(seed = 1, opts: CreateWorldOptions = {}): World {
   // 시작 금고: 민간 시작 돈 중 상회 운영 자금을 뺀 나머지 (왕국마다 지역 인구 비례, 저택·금융가 반씩)
   for (const k of kingdoms) {
     const mine = regions.filter((r) => r.kingdomId === k.id);
-    const people = (r: Region) => Object.values(starts.get(r.id)!.population).reduce((a, b) => a + b, 0);
+    const people = (r: Region) => starts.get(r.id)!.people0;
     const total = mine.reduce((a, r) => a + people(r), 0);
     for (const r of mine) for (const typeId of ['manor', 'finance']) {
       const o = w.buildings.find((x) => x.regionId === r.id && x.typeId === typeId)!;

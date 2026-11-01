@@ -5,6 +5,7 @@
 //                       [--typescale "workshop=0.15,textile=0.25"]  (건물 종류별 추가 축소, micro.ts MicroOptions.typeScale)
 //                       [--preset labor]  (노동시장 검증용 살아 있는 세계: typescale workshop=0.15,textile=0.25,fiber_farm=0.25 + TUNE reserveShrinkWeeks 1e9.
 //                                         기본 세계는 공방·방직 1레벨이 지역 수요의 몇 배라 값이 바닥에 붙어 적자 → 유보 규칙으로 헐리고 → 공구가 끊겨 3년차에 생산 건물이 0 이 된다)
+//                       [--arableslack 1] [--moneypeople 400]  (소작지 칸 배율, 돈 문턱을 셀 인구: 시작 인구만 줄이는 비교용, micro.ts MicroOptions)
 //                       [--quakeloss 0.25 --quakeyears 3]  (quake·quaketwo 실행의 소작지 손실 비율·기간)
 //                       [--sections abcdj]  (j = 노동시장 판정 J1~J4·M 시나리오·해마다 직종 소득 표)
 //   (빠르게: bash cli/fast.sh microcheck.ts ...)
@@ -69,7 +70,11 @@ const QLOSS = Number(arg('quakeloss', '0.25')), QYEARS = Number(arg('quakeyears'
 /** 실행 안의 TUNE 충격 (관측용 개입, 실행이 끝나면 되돌린다) */
 type LabShock = MicroShock | { t: number; kind: 'tune'; set: Record<string, number> };
 export interface RunDef { name: string; opts: MicroOptions; shocks: LabShock[] }
-const baseOpts: MicroOptions = { seed: SEED, scale: SCALE, people: [PEOPLE], floors: FLOORS, ...(buildings ? { buildings } : {}), ...(typeScale ? { typeScale } : {}) };
+const SLACK = arg('arableslack', ''), MONEY_PEOPLE = arg('moneypeople', '');
+const baseOpts: MicroOptions = {
+  seed: SEED, scale: SCALE, people: [PEOPLE], floors: FLOORS, ...(buildings ? { buildings } : {}), ...(typeScale ? { typeScale } : {}),
+  ...(SLACK ? { arableSlack: Number(SLACK) } : {}), ...(MONEY_PEOPLE ? { moneyPeople: Number(MONEY_PEOPLE) } : {}),
+};
 const RENT0 = TUNE.rentShare;
 const DEFS: Record<string, RunDef> = {
   base: { name: 'base', opts: baseOpts, shocks: [] },

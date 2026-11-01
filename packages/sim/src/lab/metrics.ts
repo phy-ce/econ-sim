@@ -786,7 +786,7 @@ export class Collector {
     // 임금 (고용 가중, metrics.ts labor 와 같은 셈) 과 소작 소득
     const paid = new Float64Array(SKILLS.length), emp = new Float64Array(SKILLS.length);
     const tierLv = new Float64Array(MAX_TIER + 1);
-    let posts = 0;
+    let posts = 0, jobsLow = 0, empLow = 0;
     const lvByType: Record<string, number[]> = {};
     for (const b of w.buildings) {
       if (!inScope(b.regionId) || BUILDING_BY_ID[b.typeId].auto) continue;
@@ -794,6 +794,9 @@ export class Collector {
       SKILLS.forEach((s, j) => { emp[j] += b.employed[s]; paid[j] += b.employed[s] * (c ? wagesAt(c, b.typeId, w, b.regionId)[s] : 0); });
       if (b.typeId === TRADING_POST && b.level > 0 && postUsable(b) > 0) posts++;
       if (isProduction(b)) {
+        // 시작 인구 비교 (POP_SPECS): 생산 건물의 하층 일자리 (노동자·농부, 레벨 × 방식 정원, 가동률 무시)와 그 재직자
+        const mw = getMethod(b.typeId, b.methodId).workers;
+        jobsLow += ((mw.unskilled ?? 0) + (mw.farmer ?? 0)) * b.level; empLow += b.employed.unskilled + b.employed.farmer;
         const t = Math.min(MAX_TIER, methodTier(b.typeId, b.methodId));
         tierLv[t] += b.level;
         (lvByType[b.typeId] ??= new Array(MAX_TIER + 1).fill(0))[t] += b.level;
@@ -936,6 +939,8 @@ export class Collector {
       harvDays: a.harvDays, k4Share: sig(div(k4n, k4d) ?? NaN), lim,
       // 소작지 재해 (관측 전용): 걸린 지역·날, 못 쓰는 소작지 칸 (날 평균, 지역 합), 실업 소작농 노동 인구 (날 평균, 천 명)
       quakeDays: a.quakeDays, quakeCells: sig(a.quakeCells / d), peasIdle: sig(a.peasIdle / d / K),
+      // 시작 인구 비교 (POP_SPECS, 관측 전용, 천 명, 연말): 노동자·농부 인원, 하층(소작농·노동자·농부) 노동 인구, 생산 건물 하층 일자리·재직자
+      unskK: sig(n[CI.unskilled] / K), farmerK: sig(n[CI.farmer] / K), wfLowK: sig((wf[CI.peasant] + wf[CI.unskilled] + wf[CI.farmer]) / K), jobsLowK: sig(jobsLow / K), empLowK: sig(empLow / K),
       ...tech,
       ...(isAll ? { lvType: Object.fromEntries(Object.entries(lvByType).map(([t, v]) => [t, Object.fromEntries(v.map((x, j) => [j, x]).filter(([j, x]) => j > 0 && x > 0))])) } : {}),
     };

@@ -251,6 +251,8 @@ export const ENCYCLOPEDIA: EncEntry[] = [
       p('시작 기술', 'Starting techs', () => START_TECHS.join(', ')),
       tune('startLumber', '시작 벌목장 (10만 명당)', 'Start lumber camps (per 100k)', 'level'), tune('startFiber', '시작 섬유 농장 (10만 명당)', 'Start fibre farms (per 100k)', 'level'),
       tune('startWorkshop', '시작 목공구 공방 (왕국마다, 건축사무소 지역)', 'Start wooden-tool workshop (per kingdom, office region)', 'level'),
+      tune('startPopScale', '시작 인구 배율 (비교용, 건물·부지·돈은 그대로)', 'Starting population multiple (comparison; buildings, plots, money unchanged)', 'x'),
+      tune('startPopLand', '농지는 원래 인구로 (1) / 줄인 인구로 (0)', 'Farmland from original (1) / scaled (0) population'),
     ],
     example: () => {
       const tier = TIERS[0];
