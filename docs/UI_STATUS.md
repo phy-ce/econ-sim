@@ -139,3 +139,7 @@ DetailWindow 독립 NavigationProvider/버튼, BuildingPops 및 ResourceInspecto
 - 2-51 공통 요약·그룹 흐름 코드 완료. typecheck/client48시험 통과, 헤드리스 flow-group.png(1920×1080) 폭382·넘침없음 확인. 상회 요약 시각검증 및 사전 패키지 라벨은 남음.
 - 이전 우선순위 문서 편집이 상세 절의 번호5~9에도 적용된 것을 발견해 f251b54 이전 원문으로 해당 상세 줄만 복구. 이제 완료 표시는 0장 범위에만 적용.
 
+
+- 흐름 화면 캡처 정정: flow-group.png는 스크롤 아래 흐름이 가려져 있었음. 실제 흐름이 보이는 헤드리스 확인 근거는 C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/flow-group-visible.png(1920×1080).
+- 2-68: 헤드리스 스크린샷 확인(1920×1080), 같은 scratch research-tree.png. 영어 밤17노드, 깊이별6/3/2/6 한 행, 가로scrollWidth1230 확인. 모든 노드 선택/툴팁 조작은 별도 미검증.
+
