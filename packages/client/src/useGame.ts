@@ -1,3 +1,4 @@
+import {trace,traceTick} from './trace';
 import type { ConstructionActivity } from './constructionActivity';
 import { useCallback, useMemo, useEffect, useRef, useState } from 'react';
 import type { Command, GameEvent, HistoryPoint, World } from '@econ/sim';
@@ -47,6 +48,7 @@ export function useGame() {
   const send = useCallback((msg: ToWorker) => workerRef.current?.postMessage(msg), []);
 
   const setSpeed = useCallback((ticksPerSecond: number) => {
+    trace('speed',{previous:speedRef.current,next:ticksPerSecond,reason:'user'});
     speedRef.current = ticksPerSecond;
     setSpeedState(ticksPerSecond);
     send({ type: 'speed', ticksPerSecond });
@@ -59,12 +61,13 @@ export function useGame() {
     worker.onmessage = (e: MessageEvent<FromWorker>) => {
       const msg = e.data;
       if (msg.type === 'state') {
+        traceTick(msg.world.tick);
         setWorld(msg.world);
         setConstructionActivity(msg.constructionActivity);
         setHour(msg.hour);
         if (import.meta.env.DEV) (globalThis as { __world?: World }).__world = msg.world;
         setHistory((h) => (msg.resetHistory ? msg.history : msg.history.length ? [...h, ...msg.history] : h));
-        for (const err of msg.errors) toast(err, 'error');
+        for (const err of msg.errors) {trace('error',{...err});toast(err, 'error');}
 
         // 내 상회·왕국 전체에 생긴 새 소식: 주의 이상은 알림으로 띄우고, 위험은 게임을 멈춘다
         const keys = new Set(msg.world.events.map(eventKey));
@@ -78,6 +81,7 @@ export function useGame() {
             if (ev.kind === 'danger' && ev.companyId === 100) pause = true;
           }
           if (pause && prefsRef.current.pauseOnDanger && speedRef.current > 0) {
+            trace('speed',{previous:speedRef.current,next:0,reason:'danger'});
             speedRef.current = 0;
             setSpeedState(0);
             worker.postMessage({ type: 'speed', ticksPerSecond: 0 } satisfies ToWorker);
@@ -122,7 +126,7 @@ export function useGame() {
     markRead: () => { if (world) setLastReadTick(world.tick); },
     dismissToast: (id: number) => setToasts((t) => t.filter((x) => x.id !== id)),
     setSpeed,
-    command: (cmd: Command) => send({ type: 'command', cmd }),
+    command: (cmd: Command) => {trace('command',{command:cmd});send({ type: 'command', cmd });},
     stepOnce: () => send({ type: 'stepOnce' }),
     save: () => send({ type: 'save' }),
     load: () => {

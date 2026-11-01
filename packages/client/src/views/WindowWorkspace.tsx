@@ -1,3 +1,4 @@
+import {trace} from '../trace';
 import {clampWindow,createWindowDrag} from '../windowDrag';
 import {NavigationButtons,NavigationProvider} from '../NavigationHistory';
 import {useEffect,useRef,useState} from 'react';
@@ -18,8 +19,8 @@ export function WindowWorkspace({windows,opened,onOpened}:{windows:WindowDefinit
  const clampRef=useRef(clamp);clampRef.current=clamp;
  const position=(id:WindowId,index:number)=>clamp(positions[id]??{x:24+index*76,y:16+index*36});
  useEffect(()=>{const observer=new ResizeObserver(([e])=>setBounds({width:e.contentRect.width,height:e.contentRect.height}));if(area.current)observer.observe(area.current);return()=>observer.disconnect();},[]);
- const focus=(id:WindowId)=>{if(active!==id)onOpened([...visible.filter(w=>w!==id),id]);};
- const close=(id:WindowId)=>onOpened(visible.filter(w=>w!==id));
+ const focus=(id:WindowId)=>{trace('window',{id,action:'focus'});if(active!==id)onOpened([...visible.filter(w=>w!==id),id]);};
+ const close=(id:WindowId)=>{trace('window',{id,action:'close'});onOpened(visible.filter(w=>w!==id));};
  const finish=()=>{const d=drag.current;if(!d)return;drag.current=null;d.controller.finish();d.element.style.willChange='';};
  useEffect(()=>()=>{const d=drag.current;d?.controller.dispose();if(d)d.element.style.willChange='';drag.current=null;},[]);
  useEffect(()=>{if(drag.current&&!opened.includes(drag.current.id))finish();},[opened]);

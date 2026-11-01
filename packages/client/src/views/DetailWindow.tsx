@@ -1,5 +1,6 @@
+import {trace} from '../trace';
 import {NavigationProvider,NavigationButtons} from '../NavigationHistory';
-import {useRef,useState,useLayoutEffect,type ReactNode} from 'react';
+import {useRef,useState,useLayoutEffect,useEffect,type ReactNode} from 'react';
 import {createPortal} from 'react-dom';
 import {useLang} from '../i18n';
 
@@ -8,6 +9,7 @@ let front=200;
 export function DetailWindow({title,summary,help,children,triggerContent,open:controlledOpen,onOpenChange,hideTrigger=false}:{open?:boolean;onOpenChange?:(open:boolean)=>void;hideTrigger?:boolean;title:string;summary?:ReactNode;help:string;children:ReactNode;triggerContent?:ReactNode}){
  const ko=useLang()==='ko',[localOpen,setLocalOpen]=useState(false),[position,setPosition]=useState({x:480,y:100}),[layer,setLayer]=useState(200);
  const open=controlledOpen??localOpen;
+ useEffect(()=>{if(open)trace('window',{id:title,action:'open',detail:true});return()=>{if(open)trace('window',{id:title,action:'close',detail:true});};},[open,title]);
  const setOpen=(value:boolean)=>{setLocalOpen(value);onOpenChange?.(value);};
  const trigger=useRef<HTMLButtonElement>(null),panel=useRef<HTMLElement>(null);
  const drag=useRef<{x:number;y:number;left:number;top:number}|null>(null);

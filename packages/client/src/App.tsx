@@ -1,3 +1,4 @@
+import {trace,TraceTools} from './trace';
 import {GameWindow,type ScreenRequest,type ScreenRoute} from './views/GameWindow';
 
 import { regionName } from './i18n';
@@ -64,9 +65,9 @@ export function App() {
   const [opened, setOpened] = useState<WindowId[]>(['map']);
   const [revealRequest,setRevealRequest] = useState(0);
   const [screenRequest,setScreenRequest]=useState<ScreenRequest|null>(null);
-  const openLinkedWindow=useCallback((route:ScreenRoute)=>{setOpened(current=>[...current.filter(w=>w!==route.kind),route.kind]);setScreenRequest(p=>({target:route.kind,route,sequence:(p?.sequence??0)+1}));},[]);
+  const openLinkedWindow=useCallback((route:ScreenRoute)=>{trace('window',{id:route.kind,action:'open'});setOpened(current=>[...current.filter(w=>w!==route.kind),route.kind]);setScreenRequest(p=>({target:route.kind,route,sequence:(p?.sequence??0)+1}));},[]);
   const requestScreen=(target:WindowId,route:ScreenRoute)=>setScreenRequest(p=>({target,route,sequence:(p?.sequence??0)+1}));
-  const showWindow = (id: WindowId) => { setOpened(current=>id==='map'?current:[...current.filter(w=>w!==id),id]); setRevealRequest(v=>v+1); };
+  const showWindow = (id: WindowId) => {trace('window',{id,action:'open'}); setOpened(current=>id==='map'?current:[...current.filter(w=>w!==id),id]); setRevealRequest(v=>v+1); };
   const [popRequest,setPopRequest]=useState<PopRequest|null>(null);
   const [buildingRequest,setBuildingRequest]=useState<{id:number;sequence:number}|null>(null);
   const [regionTabRequest,setRegionTabRequest]=useState({tab:'overview' as 'overview'|'industry',sequence:0});
@@ -177,7 +178,7 @@ export function App() {
 
           <Popover label={T.menu} button={<Menu size={18} aria-hidden="true" />}>
             {(close) => (
-              <div className="menu">
+              <div className="menu"><TraceTools/>
                 <button onClick={() => { game.save(); close(); }}>{T.save}</button>
                 <button onClick={() => { game.load(); close(); }}>{T.load}</button>
                 <button onClick={() => { if (confirm(T.confirmNewGame)) { game.newGame(); setViewId(null); } close(); }}>{T.newGame}</button>

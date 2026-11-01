@@ -582,3 +582,7 @@ GroupDetail에 세금 한도·학교 자리·실제 건설 포인트 합계, 일
 ### 2026-11-01 2-49 철거 일정 (부분, 화면 미검증)
 DemolitionProgress: 남는 레벨·철거 대기·이번 주 1레벨, 다음/전체 완료 일수, 주기 막대, 취소, reduced-motion 대응. 루트 타입 검사 통과. 개별 회수 자재는 buildingId 부재로 막힘(UI_STATUS).
 
+
+### 2026-11-01 2-70 K 개발 계측 (코드 완료, 화면 미검증)
+개발 빌드 + trace=1일 때만 trace.dev 동적 로드. 세션/창 열기·닫기·포커스/클릭/명령/오류/속도 기록, 최대 20,000건, localStorage 실패 무시, 메뉴 로컬 JSON 내보내기. world를 읽거나 변경하지 않고 tick 숫자만 전달. 네트워크 호출 없음. 루트 typecheck 통과, Vite 공개 빌드 성공(.tmp-ui-prod), 결과물 estera-trace 검색 0건. 실제 개발 브라우저 JSON 다운로드·이벤트 순서 검증은 미실시. tooltip은 선택 항목으로 미추가.
+
