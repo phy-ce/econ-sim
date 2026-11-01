@@ -161,3 +161,6 @@ DetailWindow 독립 NavigationProvider/버튼, BuildingPops 및 ResourceInspecto
 
 - 2-49 그룹 후속: GroupDetail에도 건물id별 DemolitionProgress 연결, 같은 취소 권한 판정·다음/전체 완료 일수·레벨막대 재사용. root typecheck/client48시험 통과. 화면 미검증. 회수 자재 귀속은 기존sim 요청 대기.
 
+
+- K 실사용 후속: trace=1에서 session/click/window/command/speed 5종, version1·9events 로컬 저장 확인(trace-events.png). 내보내기 Blob 링크는 DOM에 붙여 클릭 후1초 뒤 해제하도록 보강. Edge 헤드리스 내보내기 클릭은 되지만 지정 scratch/downloads 파일 생성은 확인 못함(다운로드 패널 대상이 추가됨). 이를 다운로드 성공으로 판정하지 않음. root typecheck/client48시험 통과.
+

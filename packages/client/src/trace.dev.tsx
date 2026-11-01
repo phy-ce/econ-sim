@@ -16,5 +16,5 @@ document.addEventListener('pointerdown',event=>{
  record('click',{window:panel?.getAttribute('aria-label')??panel?.className??null,label:(el.getAttribute('aria-label')??el.getAttribute('data-help')?.split('\n')[0]??el.textContent??'').trim().slice(0,40)});
 },true);
 export function TraceExport(){const T=useT(),[count,setCount]=useState(events.length);useEffect(()=>{const timer=setInterval(()=>setCount(events.length),1000);return()=>clearInterval(timer);},[]);
- return <button onClick={()=>{const url=URL.createObjectURL(new Blob([JSON.stringify({version:1,startedAt,events},null,2)],{type:'application/json'}));const a=document.createElement('a');a.href=url;a.download=`estera-trace-${new Date().toISOString().replace(/[-:]/g,'').slice(0,13)}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(url),0);}}>{T.exportTrace} · {count}</button>;
+ return <button onClick={()=>{const url=URL.createObjectURL(new Blob([JSON.stringify({version:1,startedAt,events},null,2)],{type:'application/json'}));const a=document.createElement('a');a.href=url;a.download=`estera-trace-${new Date().toISOString().replace(/[-:]/g,'').slice(0,13)}.json`;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);}}>{T.exportTrace} · {count}</button>;
 }
