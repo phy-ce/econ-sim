@@ -196,7 +196,7 @@ class Acc {
   sdCut = 0; sdDemo = 0; utilUp = 0; lossCut = 0;
   // 0b′ 곡물 균형 후보: A2 설비 철거('sellDemo', 레벨), A3 자기 값 효과 철거('marginDemo', 레벨), A3 가 막은('marginBlock')·허용한('marginOk') 증설 (건물·주)
   sellDemo = 0; marginDemo = 0; marginBlock = 0; marginOk = 0;
-  // 노동시장 개편 (LABOR_MARKET.md 9.2): 주마다 노동자·농부 임금 (고용 가중) 표본. 연말에 주간 변화(로그) 표준편차를 낸다
+  // 노동시장 개편 (LABOR_MARKET.md 9.2): 주마다 노동자·농부 임금 (고용 가중) 표본. 연말에 주간 변화율 표준편차를 낸다
   wkWage: number[] = [];
   constructor() { for (let c = 0; c < NC; c++) this.burdenRing.push(new Float64Array(0)); }
 }
@@ -230,13 +230,13 @@ function ordViolations(wU: number | null, peas: number | null, wS: number | null
   if (wS != null && wE != null && wE <= wS) n++;
   return n;
 }
-/** 주 표본의 로그 변화 표준편차 */
+/** 주 표본의 변화율(이번 주 ÷ 지난주 − 1) 표준편차 (엔진마다 같은 사칙연산·sqrt 만 쓴다, test/core/mathgrep) */
 function weeklySd(xs: number[]): number {
   const d: number[] = [];
-  for (let i = 1; i < xs.length; i++) if (xs[i] > 0 && xs[i - 1] > 0) d.push(Math.log(xs[i] / xs[i - 1]));
+  for (let i = 1; i < xs.length; i++) if (xs[i] > 0 && xs[i - 1] > 0) d.push(xs[i] / xs[i - 1] - 1);
   if (d.length < 2) return NaN;
   const m = d.reduce((x, y) => x + y, 0) / d.length;
-  return Math.sqrt(d.reduce((x, y) => x + (y - m) ** 2, 0) / d.length);
+  return Math.sqrt(d.reduce((x, y) => x + (y - m) * (y - m), 0) / d.length);
 }
 const sig = (x: number) => (Number.isFinite(x) ? (x === 0 || Number.isInteger(x) ? x : Number(x.toPrecision(6))) : null);
 const div = (a: number, b: number) => (b !== 0 ? a / b : null);
@@ -892,7 +892,7 @@ export class Collector {
       lowInc: sig(div(ring[0], ring[1]) ?? NaN), lowIncAvg: sig(div(a.lowNum, a.lowDen) ?? NaN),
       wagePeas: sig(wU != null && peasantIncome ? wU / peasantIncome : NaN), peasantIncome: sig(peasantIncome ?? NaN),
       // 노동시장 개편 (LABOR_MARKET.md 9.2): 직종 순서 위반 수 (연말 고용 가중 임금: 노동자 < 소작 소득, 기술자 ≤ 노동자, 전문가 ≤ 기술자, 0~3),
-      // 직종별 빈자리율·오려는 사람 ÷ 자리, 노동자·농부 임금 주간 변화 표준편차
+      // 직종별 빈자리율·오려는 사람 ÷ 자리, 노동자·농부 임금 주간 변화율 표준편차
       ordViol: ordViolations(wU, peasantIncome, wageOf('skilled'), wageOf('expert')), labour: lab, wageSdW: sig(weeklySd(a.wkWage)),
       wage, realW: real, realWageU04: sig(wU != null && bkw > 0 ? wU / (bkWorker / bkw) : NaN),
       // 06 6.6 검토 후보
