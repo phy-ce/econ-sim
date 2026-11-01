@@ -1147,3 +1147,14 @@ ownershipAssets API로 소유 기관 소재지 기준 왕국/지역 막대, 내 
 
 - 있는 것: `T.budgetLines.*`(86·376행, `wages`는 이미 `정부 건물 인건비`), `T.budgetNet`, `T.policyLevel`, `T.weeklyBudget`, `T.taxLaw`·`landBased`·`pollTax`·`incomeTax`.
 - 화면 규칙: 설명 문구 없음. 식과 정확한 값은 툴팁에만.
+
+## 2026-11-01 · 2-31 유보 자산 표시 감사 완료
+- 개별 건물/왕국 장부는 buildingEcon의 hasReserve/reserve/reserveCap/reserveWeek를 공통 ReserveBar에 연결한다. 채움은0~100%로 자르지만 수치와 툴팁은 실제 값을 보인다. 민간 유보 합계는 자금 상자에 분리하며 현금에 다시 더하지 않는다.
+- 헤드리스 스크린샷 확인(1920×1080): C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/reserve-detail-en-dark.png. 곡물 농장 유보ƒ200.3k/ƒ224k·89%, 상세 주간 적립+ƒ14.2k, 본문338/scroll338. 코드 경로: BuildingEconomics.tsx:20, KingdomBuildings.tsx:39, KingdomMoney.tsx:11, ReserveBar.tsx:9. 기존 검증된 코드8606391의 root typecheck/client52시험 통과.
+- 화면 미검증: 상한 초과/상한0/누락 reserve의 실제 장면, 새 한국어 라이트의 유보 상세. 0·누락 및 채움 잘림은 코드 대조만 확인했다. 아래 원문의 유보율·건축사무소 예외·저장판은 현재 sim API/2-62가 우선한다.
+### 2-31. 건물 유보 자산
+- 파는 건물(정부 건물·학교·건축사무소 제외)은 이익의 35%를 유보 자산에 쌓는다. 상한 = 레벨 × 레벨당 주간 산출 가치(기본가) × 0.5주 (`TUNE.reserveWeeks`, 2026-10-21 변경: 레벨당 고정 50,000을 없앴다). 방식을 바꾸면 상한이 바뀐다 (줄면 다음 주 정산 전까지 잠깐 상한을 넘을 수 있으니 막대는 100%에서 자른다). 다 차면 이익을 모두 배당한다. 적자는 유보 자산에서 먼저 빠지고, 바닥나면 가동률을 줄이고 철거한다.
+- 필드: `Building.reserve?: number` (없으면 0, 소수 둘째 자리). index에서 `reserveCap(b)`(상한), `hasReserve(b)`(쌓는 건물인가), `weeklyOutputValue(typeId, methodId)`(방식 1레벨의 주간 산출 가치, 기본가)를 export한다.
+- 건물 패널 (**2-59-3 유보 줄이 대신한다**) (`ResourceInspector.tsx` `BuildingInspector`, 32행 지표 줄 근처): `hasReserve(b)`이면 "유보 자산" 라벨과 `reserve / reserveCap(b)` 막대, 숫자 두 개.
+- 합계는 2-35 왕국 경제 창의 민간 자금 상자와 건물 표에 둔다 (회사 현금 안의 몫이다. 현금에 더하지 않는다).
+- 저장 형식은 그대로(v6). 옛 저장은 `reserve`가 없어 0으로 시작한다.
