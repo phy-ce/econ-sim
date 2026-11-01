@@ -33,18 +33,18 @@
 사용자 요청
 0. **2-77 코드 완료**: 6bf2b2d 및 후속 최소크기 보강. UI_DONE·UI_STATUS의 헤드리스 확인 근거 참조.
 1. **서브윈도우 이력 잔여**: 코드 완료, 화면 미검증. UI_DONE의 2026-11-01 내부 경로 명세 참조.
-2. **공통 투입·산출 UI (2-51, 진행)**: 실제 양·단가·금액·충족/판매·방식 비교. 지금은 `ResourceInspector.tsx:38` recipe만 있다.
+2. **2-51 클라이언트 공통 흐름 코드 완료**: 상세·상회 요약·그룹 합계·건설·방식 비교 공통 FlowRow. 사전 패키지 라벨은 수정 범위 밖. UI_DONE 참조.
 3. **건물 그룹 (2-42·2-59)**: 서비스 합계·일간 폭포·미지정 배당 코드 완료(28df87c). 주간 폭포 내역은 막힘(sim week API 대기).
 4. **철거 진행 (2-49)**: 일정·남는 레벨·취소 코드 완료(895f1de). 회수 자재는 막힘(SalvageLot buildingId 없음, 3장 요청).
 
 오버홀 1a 단위 (09 7.2 순서 K → C → H → J)
-5. **K 코드 완료**: 013001e (검증 범위 UI_DONE·UI_STATUS 참조).
-6. **C 코드 완료**: 2822912 (검증 범위 UI_DONE·UI_STATUS 참조).
-7. **H 코드 완료**: 8919ade (검증 범위 UI_DONE·UI_STATUS 참조).
-8. **J 코드 완료**: 10db9d2 (검증 범위 UI_DONE·UI_STATUS 참조).
+5. **K 코드 완료**: 013001e (UI_DONE 참조).
+6. **C 코드 완료**: 2822912 (UI_DONE 참조).
+7. **H 코드 완료**: 8919ade (UI_DONE 참조).
+8. **J 코드 완료**: 10db9d2 (UI_DONE 참조).
 
 정리
-9. **2-50 코드 완료**: 6c8119a (검증 범위 UI_DONE·UI_STATUS 참조).
+9. **2-50 코드 완료**: 6c8119a (UI_DONE 참조).
 10. **왕국 통계·정책·연구·재정·에셋 감사**: 1·2장 옛 절과 지금 코드를 대조. 오래된 목록만 보고 미구현/완료로 단정하지 않는다.
 
 sim 대기 · 결정 대기
@@ -818,8 +818,8 @@ Keep the exact composition, coastline and every border position of the chosen ma
 2. **다음 철거까지:** 7일 주기 진행 막대와 `n일`. 한 레벨이 헐리는 순간 막대가 한 칸 줄어드는 짧은 전환(0.3초).
 3. **회수 자재:** `w.salvage` 중 그 건물 몫을 상품 아이콘 + 남은 양 + 남은 날 `목재 1.2만 · 21일`, 옆에 남은 날/28 작은 막대.
 4. **목록 아이콘:** 지역 건물 행(2-42)과 지도 지역 아이콘에 작은 망치 아이콘 + 남은 철거 레벨 수.
-5. **K 코드 완료**: 013001e (검증 범위 UI_DONE·UI_STATUS 참조).
-6. **C 코드 완료**: 2822912 (검증 범위 UI_DONE·UI_STATUS 참조).
+5. **조작:** 막대 옆에 `철거 취소` 버튼(지금 있음). 누르면 빗금 칸이 사라지는 전환.
+6. **소식:** 철거 시작·완료만 소식에 남기고, 한 레벨씩의 진행은 막대로만.
 - 설명 문구 금지 (숫자·막대·아이콘). `prefers-reduced-motion`이면 애니메이션 끔. 다크 모드에서 빗금 대비 확인.
 - sim 쪽 필요(선택): 회수 자재 lot에 `buildingId`, `salvageOf(w, b)` export (지금은 `companyId`·`regionId`로 거르면 되지만 같은 지역 다른 건물 철거와 섞일 수 있다) → 3장.
 
@@ -987,11 +987,11 @@ Cells, top row left to right, then bottom row:
 2. **왼쪽 분류 줄이 너비를 먹는다.** 탐색 모드 `.information-explorer {grid-template-columns:88px minmax(0,1fr)}` (`strategy.css` 5)에 테두리·여백까지 더해 상세 칸은 창 너비 −114px다 (560→446, 440→326). 그래서 아래 3·4번이 생긴다.
 3. **왕실 요약·상회 상세의 세 칸(인력/투입 부족/수지)이 좁은 칸에서 넘친다.** `.strategy-panel .hsum {grid-template-columns:repeat(3,minmax(0,1fr))}`, `.srow {grid-template-columns:60px minmax(30px,1fr) auto}` (`strategy.css` 70), `.wf-val {min-width:64px}` (`styles.css` 134). 560에서는 가운데 `투입 부족` 칸이 거의 비어 있는데 `수지` 칸은 `이익률 −896%`가 두 줄로 꺾인다 (`min-0.png`). 440에서는 수지 금액이 잘리고 창 전체에 가로 스크롤바가 생긴다 (window-body 469/438, `w440-0.png`, `w440-2.png`).
 4. **상회 상세 머리:** 상회 선택 `<select>`가 배지 아래로 떨어지고, 임금 목록이 두 칸으로 꺾여 7줄이 된다 (`w440-2.png`).
-5. **K 코드 완료**: 013001e (검증 범위 UI_DONE·UI_STATUS 참조).
-6. **C 코드 완료**: 2822912 (검증 범위 UI_DONE·UI_STATUS 참조).
-7. **H 코드 완료**: 8919ade (검증 범위 UI_DONE·UI_STATUS 참조).
-8. **J 코드 완료**: 10db9d2 (검증 범위 UI_DONE·UI_STATUS 참조).
-9. **2-50 코드 완료**: 6c8119a (검증 범위 UI_DONE·UI_STATUS 참조).
+5. **순위 (`BottomPanel.tsx` 55~71):** 4열. `table-layout:fixed`, 상회 칸 46%, 배지는 `max-width:100%;overflow:hidden;text-overflow:ellipsis`.
+6. **소식 (`Notifications.tsx` 51~):** `<h2>{T.news}</h2>` (53) 삭제 (탭 제목과 중복). 필터 칩과 `모두 읽음`을 한 줄 (`.notices-head {flex-wrap:nowrap}`, 칩 `min-height:24px;font-size:10px`). 창 안에서는 `.events {max-height:none;overflow:visible}` (`styles.css` 448, `.bell-panel`처럼 184). 행: 아이콘 26px, 본문 11px 두 줄까지 (`-webkit-line-clamp:2`, 전체는 `title`), 메타 줄(날짜·상회 배지·지역·건물)은 `flex-wrap:nowrap;overflow:hidden`이고 상회 배지는 아이콘+짧은 이름.
+7. **스크롤바가 생기면 내용이 옆으로 밀린다.** `.strategy-panel .window-body {scrollbar-gutter:auto}` (`strategy.css` 57). 상회 상세처럼 내용이 길어지면 스크롤바 15px가 생기며 `탐색/전체 보기` 버튼과 표가 왼쪽으로 밀린다 (`min-0.png`와 `min-2.png` 비교).
+8. **최소 높이 280** (`windowGeometry.ts` 11·13)에서는 분류 줄(279px)만으로 창이 찬다. 크기 조절을 없애면 이 경우는 사라진다.
+9. **다른 창 (440×1000에서 확인):** 지역 개요·시세도 같은 88px 분류 줄(상세 326px)을 쓴다. 재정 표·연구·건설은 440에서 넘침 없음. 지역 건물은 넘침 없음. 재정의 `정보 구역 / 초기화` 줄과 구역 높이 손잡이(`workspace.css` 146)는 좁은 창에서 공간만 먹는다.
 
 #### 2-53-2. 바꿀 동작: 크기 조절 없앰, 왼쪽·오른쪽 두 자리
 - **창 크기는 사용자가 바꾸지 않는다.** 모서리·변 끌기, 최대화 버튼, 제목 줄 두 번 누르기(최대화), Enter(최대화), Shift+방향키(크기)를 모두 없앤다.
@@ -1033,8 +1033,8 @@ Cells, top row left to right, then bottom row:
    - 높이: `.pop-directory {height:auto}` (`strategy.css` 43·66의 360/280 삭제), 표 스크롤을 없애고 창 스크롤 하나로. 머리 줄은 `position:sticky;top:<탭 줄 높이>`.
 3. **왕국 (`BottomPanel.tsx` 42 `kingdom-accounts`):** 3열이라 그대로 들어간다. `width:100%;table-layout:fixed`만.
 4. **생활수준·기상 그래프 (`Chart.tsx`):** `ResponsiveContainer width="100%"`는 그대로. 부모에 `min-width:0` (`.explorer-detail > div`). `YAxis width` 52 → 34 (27), `XAxis minTickGap` 36 → 48 (26). `빈곤선` 글자는 그래프 안에 두지 않고 범례 줄 끝에 점선 표본 + `빈곤선 5`로 (36~37의 `label` 삭제, 선은 남김). 범례(`BottomPanel.tsx` 46~50)는 아이콘 14px·글자 10px·간격 2px 8px로 8개가 두 줄 안에. 높이: 생활수준 200 → 220, 기상 145 → 120 (탭이라 세로 여유가 있다, 982px 창).
-5. **K 코드 완료**: 013001e (검증 범위 UI_DONE·UI_STATUS 참조).
-6. **C 코드 완료**: 2822912 (검증 범위 UI_DONE·UI_STATUS 참조).
+5. **순위 (`BottomPanel.tsx` 55~71):** 4열. `table-layout:fixed`, 상회 칸 46%, 배지는 `max-width:100%;overflow:hidden;text-overflow:ellipsis`.
+6. **소식 (`Notifications.tsx` 51~):** `<h2>{T.news}</h2>` (53) 삭제 (탭 제목과 중복). 필터 칩과 `모두 읽음`을 한 줄 (`.notices-head {flex-wrap:nowrap}`, 칩 `min-height:24px;font-size:10px`). 창 안에서는 `.events {max-height:none;overflow:visible}` (`styles.css` 448, `.bell-panel`처럼 184). 행: 아이콘 26px, 본문 11px 두 줄까지 (`-webkit-line-clamp:2`, 전체는 `title`), 메타 줄(날짜·상회 배지·지역·건물)은 `flex-wrap:nowrap;overflow:hidden`이고 상회 배지는 아이콘+짧은 이름.
 
 #### 2-53-6. 다른 창 (같은 종류의 깨짐, 440×982 기준)
 - **지역 개요 / 시세 (`RegionExplorer.tsx` 25, `RegionPanel.tsx` 133):** 같은 88px 분류 줄 → 2-53-4의 위 탭으로. 지역 개요 도넛은 상세가 넓어지므로 `.strategy-panel .explorer-detail .donut {width:154px}` (`strategy.css` 17) 그대로, 계층 줄 숫자는 한 줄.
@@ -1195,7 +1195,7 @@ Cells, top row left to right, then bottom row:
    - **주 단위 폭포는 sim 쪽 필요** (3장): `day`는 하루 값이라 흔들린다. sim이 `week: { sales, tax, inputs, wages, profit }`(이동평균 × 7)를 더하면 라벨을 `T.balanceWeek`로 바꾸고 그 값을 쓴다. 그 전에는 `T.balance`.
 3. **이익 줄**: `주간 이익 ±ƒ /주` · `레벨당 ±ƒ /lv` (칩 둘, 음수 `neg`).
 4. **유보 줄** (`hasReserve`인 건물이 하나라도 있을 때): 라벨 `유보` · 막대 `Σ reserve / Σ reserveCap` (100%에서 자름) · `ƒ… / ƒ…` · 지난주 증감 `±ƒ…` (음수 `neg`). 툴팁 `적립 35%` (`RESERVE_SHARE`).
-5. **K 코드 완료**: 013001e (검증 범위 UI_DONE·UI_STATUS 참조).
+5. **주인 표** (`owners`가 있을 때. 국영 보기는 국가 한 줄):
 
 | 열 | 값 |
 |---|---|

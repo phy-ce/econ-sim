@@ -215,7 +215,7 @@ function House({ game, world, owner, mine, projects,onGood }: {onGood?:(g:GoodId
           </div>
           <div className="hlist">
             <div className="hcols lbl" aria-hidden="true">
-              <span /><span>{T.colBuilding}</span><span>{T.hStaff}</span><span>{T.hInputs}</span><span>{T.hOutput}</span><span>{T.hMoney}</span><span className="num">{T.hDaily}</span>
+              <span /><span>{T.colBuilding}</span><span>{T.hStaff}</span><span className="num">{T.hDaily}</span>
             </div>
             {shown.length === 0 && <p className="empty">0</p>}
             {shown.map((r) => (
@@ -316,7 +316,7 @@ function BuildingRow({ r, game, world, owner, open, onToggle,onGood }: {onGood?:
   const marginText = r.margin === null ? '—' : spct(r.margin);
   return (
     <article className={`hrow ${open ? 'open' : ''} ${b.active ? '' : 'off'} ${b.unpaid ? 'alarm' : ''}`}>
-      <button className="hrow-head" aria-expanded={open} onClick={onToggle}
+      <button className="hrow-head" style={{gridTemplateColumns:'40px minmax(0,1fr) 90px auto'}} aria-expanded={open} onClick={onToggle}
         aria-label={T.rowAria(r.name, b.level, signedMoney(r.profit), marginText)}>
         <span className="tile md"><Sprite64 id={b.typeId} size={40} /></span>
         <span className="hc-name">
@@ -329,24 +329,9 @@ function BuildingRow({ r, game, world, owner, open, onToggle,onGood }: {onGood?:
             : <Bar value={0} none />}
           <span className="hc-sub"><span className="pxnum"><NumericValue value={r.emp} format="int"/>/<NumericValue value={r.jobs} format="int"/></span></span>
         </span>
-        <span className="hc-in">
-          {r.inputs.length && !b.idle ? <Bar value={r.inFill} tone="in" vac /> : <Bar value={0} none />}
-          <span className={`pxnum hc-sub ${r.inShort ? 'neg' : ''}`}>{r.inputs.length && !b.idle ? pct(r.inFill) : '—'}</span>
-        </span>
-        <span className="hc-out">
-          {getMethod(b.typeId,b.methodId).taxCapacity ? <><span className="lbl">{T.taxCapacity}</span><b className="pxnum"><NumericValue value={getMethod(b.typeId,b.methodId).taxCapacity! * b.level * TUNE.adminScale} format="compact"/></b></> : <><span className="pxnum hc-sub">{qty(r.outCur)}{r.office ? 'pt' : ''}</span></>}
-        </span>
-        <span className="hc-money">
-          <span className="mm"><span className="mm-l">{T.wfRev}</span><span className="mini"><i style={{ width: `${(r.rev / scale) * 100}%`, background: 'var(--wf-rev)' }} /></span></span>
-          <span className="mm"><span className="mm-l">{T.cost}</span><span className="mini">
-            <i style={{ width: `${(r.raw / scale) * 100}%`, background: 'var(--wf-raw)' }} />
-            <i style={{ left: `${(r.raw / scale) * 100}%`, width: `${(r.wage / scale) * 100}%`, background: 'var(--wf-wage)' }} />
-          </span></span>
-          <span className="hc-sub"><span className="lbl">{T.margin}</span> <b className={`pxnum ${good ? 'pos' : 'neg'}`}>{marginText}</b></span>
-        </span>
         <span className="hc-pl"><span className={`pl-badge pxnum ${good ? 'pos' : 'neg'}`}><NumericValue value={r.profit} format="signedCompactMoney"/></span><ChevronDown size={16} className={`chev ${open ? 'up' : ''}`} aria-hidden="true" /></span>
       </button>
-
+      <FlowRow world={world} building={b} onGood={onGood}/>
       {open && (
         <div className="hdetail">
           {game && !BUILDING_BY_ID[b.typeId].auto && <Controls r={r} game={game} world={world} owner={owner} />}
@@ -358,7 +343,7 @@ function BuildingRow({ r, game, world, owner, open, onToggle,onGood }: {onGood?:
 
             <section className="hd-sec" aria-label={T.hInputs}>
               <h4 className="hd-h"><span>{T.hInputs} → {T.hOutput}</span><span className="lbl">{regionName(r.region)}</span></h4>
-              <FlowRow world={world} building={b} onGood={onGood}/>
+
             </section>
 
             <section className="hd-sec" aria-label={T.balance}>
