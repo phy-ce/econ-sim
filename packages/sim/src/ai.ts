@@ -1205,6 +1205,7 @@ function reserveLevels(w: World, c: Company, canStart: () => boolean, free: () =
     const nr = rich ? (b.richWeeks ?? 0) + 1 : 0, nb = broke ? (b.brokeWeeks ?? 0) + 1 : 0;
     if (nr) b.richWeeks = nr; else delete b.richWeeks;
     if (nb) b.brokeWeeks = nb; else delete b.brokeWeeks;
+    if (nb >= TUNE.reserveShrinkWeeks && keepLast(w, b)) { aiTrace.on?.(w, c, 'keepLast', b.typeId, b.methodId, 0, undefined, b.regionId); delete b.brokeWeeks; continue; }
     if (nb >= TUNE.reserveShrinkWeeks) {
       if (!applyCommand(w, c.id, { type: 'demolish', buildingId: b.id, levels: 1 })) aiTrace.on?.(w, c, 'reserveShrink', b.typeId, b.methodId, -1);
       delete b.brokeWeeks;
@@ -1218,6 +1219,28 @@ function reserveLevels(w: World, c: Company, canStart: () => boolean, free: () =
 }
 
 interface Pick { regionId: number; typeId: string; methodId: string; levels: number; score: number; fallback?: boolean }
+
+/**
+ * 마지막 공급자 지킴 (TUNE.aiKeepLastSupplier = 1, 2026-11-01 마이크로 시제품 microB S7): 건물 b 의 남는 레벨(레벨 − 철거 대기)이 1 이하이고,
+ * b 가 왕국에서 그 산출 상품(mainOutput)을 내는 마지막 건물이며 (자동 건물 제외, 남는 레벨 > 0 인 건물만 센다), 왕국의 다른 건물(자동 제외)이 그 상품을 원료로 쓰면 true.
+ * AI 철거 경로(reserveLevels 유보 철거, sdExit 5-2, sellDemo A2, marginExit A3)는 이런 건물을 헐지 않는다 (적자여도).
+ * 이유 (마이크로 기본 세계, 시드 1~8): 공방이 유보 0·적자로 헐리면 공구가 끊겨 공구를 쓰는 건물이 차례로 무너졌다.
+ * 소작지(자동 건물)가 같은 상품을 내도 세지 않는다. 공사 중인 새 생산 건물도 세지 않는다
+ */
+function keepLast(w: World, b: Building): boolean {
+  if (!TUNE.aiKeepLastSupplier || b.level - (b.shrinking ?? 0) > 1) return false;
+  const g = mainOutput(b.typeId, b.methodId);
+  if (!g) return false;
+  const kingdomId = regionById(w, b.regionId).kingdomId;
+  let used = false;
+  for (const x of w.buildings) {
+    if (x === b || x.level - (x.shrinking ?? 0) <= 0 || BUILDING_BY_ID[x.typeId].auto || regionById(w, x.regionId).kingdomId !== kingdomId) continue;
+    const m = getMethod(x.typeId, x.methodId);
+    if ((m.outputs[g] ?? 0) > 0) return false;
+    if ((m.inputs[g] ?? 0) > 0) used = true;
+  }
+  return used;
+}
 
 // ---------------------------------------------------------------- 팔리지 않음 기준 가동률 감축·철거 (TUNE.aiCutSD·aiDemoSD, 오버홀 03 5-2, 0b′)
 //
@@ -1286,7 +1309,7 @@ function sdExit(w: World) {
         if (b && c && !applyCommand(w, c.id, { type: 'setUtilization', buildingId: b.id, utilization: Math.max(UTIL_FLOOR, b.utilization - 0.1) })) aiTrace.on?.(w, c, 'sdCut', b.typeId, b.methodId, 0, undefined, r.id);
       }
       if ((dw[g] ?? 0) >= need) {
-        const b = worst(list.filter((x) => (!x.active || x.utilization <= UTIL_FLOOR + 1e-9) && !x.shrinking && !w.constructions.some((k) => k.targetBuildingId === x.id)));
+        const b = worst(list.filter((x) => (!x.active || x.utilization <= UTIL_FLOOR + 1e-9) && !x.shrinking && !w.constructions.some((k) => k.targetBuildingId === x.id) && !keepLast(w, x)));
         const c = b && ai.get(b.companyId);
         if (b && c && !applyCommand(w, c.id, { type: 'demolish', buildingId: b.id, levels: 1 })) aiTrace.on?.(w, c, 'sdDemo', b.typeId, b.methodId, -1, undefined, r.id);
       }
@@ -1378,7 +1401,7 @@ function sellDemo(w: World) {
       if ((sw[g] ?? 0) < need) continue;
       const list = groups.get(`${r.id}|${g}`);
       if (!list) continue;
-      const b = worstPerLevel(list.filter((x) => !x.shrinking && !expanding(w, x)));
+      const b = worstPerLevel(list.filter((x) => !x.shrinking && !expanding(w, x) && !keepLast(w, x)));
       const c = b && ai.get(b.companyId);
       if (b && c && !applyCommand(w, c.id, { type: 'demolish', buildingId: b.id, levels: 1 })) aiTrace.on?.(w, c, 'sellDemo', b.typeId, b.methodId, -1, undefined, r.id);
     }
@@ -1477,7 +1500,7 @@ function marginExit(w: World) {
     const r = regionById(w, regionId), key = `${c.id}|${g}`, prev = r.marginWeeks?.[key] ?? 0;
     const put = (n: number) => { if (n > 0) { const m = next.get(regionId) ?? {}; m[key] = n; next.set(regionId, m); } };
     if (list.some((x) => x.shrinking)) { put(prev); continue; }
-    const b = worstPerLevel(list.filter((x) => x.active && !expanding(w, x) && w.tick - (x.builtTick ?? 0) >= RAMP_WEEKS * TICKS_PER_WEEK));
+    const b = worstPerLevel(list.filter((x) => x.active && !expanding(w, x) && w.tick - (x.builtTick ?? 0) >= RAMP_WEEKS * TICKS_PER_WEEK && !keepLast(w, x)));
     if (!b || !(shrinkGain(w, c, b, g) > 0)) continue;
     const n = prev + 1;
     put(n);
