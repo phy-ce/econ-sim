@@ -863,9 +863,9 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   },
   {
     id: 'wealth', category: 'people', title: t('부와 생활수준', 'Wealth and standard of living'),
-    rule: t('소득(현금 + 쓴 현물)이 다음 단계 묶음 비용의 102%를 넘으면 부가 하루 최대 +0.03, 지금 단계의 98%에 못 미치면 최대 −0.03 움직인다. 생활수준 = max(1, 부 × 충족률).', 'If income (cash + in-kind used) exceeds 102% of the next step\'s basket, wealth rises up to 0.03 a day; below 98% of the current basket it falls up to 0.03. SoL = max(1, wealth × fulfilment).'),
-    formula: 'SoL = max(1, W × fulfilment)',
-    params: [],
+    rule: t('소득(현금 + 쓴 현물)이 다음 단계 묶음 비용의 102%를 넘으면 부가 하루 최대 +0.03, 지금 단계의 98%에 못 미치면 최대 −0.03 움직인다. 생활수준 = max(1, 부 × 충족률). {0}이 0보다 크면 생활비 {1}주치를 넘는 저축 ÷ {0}주도 이 소득에 더한다 ({2} = 1이면 하층만, 시제품). {0}이 0이면 끈 것이다.', 'If income (cash + in-kind used) exceeds 102% of the next step\'s basket, wealth rises up to 0.03 a day; below 98% of the current basket it falls up to 0.03. SoL = max(1, wealth × fulfilment). If {0} is above 0, savings above {1} weeks of living costs ÷ {0} weeks also count as this income (lower strata only when {2} = 1, prototype). At {0} = 0 it is off.'),
+    formula: 'SoL = max(1, W × fulfilment); income += max(0, savings − cost × 7 × {1}) ÷ (7 × {0})',
+    params: [tune('wealthSavWeeks', '저축을 나눌 주', 'Weeks to spread savings', 'week'), tune('wealthSavBuffer', '남겨 둘 생활비', 'Living costs kept', 'week'), tune('wealthSavLower', '하층만', 'Lower strata only')],
     live: {
       pick: ['region'], run: (w, ctx) => {
         const r = regionOf(w, ctx);

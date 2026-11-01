@@ -553,6 +553,12 @@ export const TUNE = {
   taxCurve: 'hyp' as 'exp' | 'hyp',
   cashBufferDays: 10,
   peasantKeepWeeks: 8,
+  // 저축을 부에 넣기 (2026-11-01 마이크로 시제품 microA D2, 세계 규칙, 사용자 결정 대기 DECISIONS 7-37): wealthSavWeeks > 0 이면 부 단계를 정하는 소득(market.ts updateWealth)에
+  // max(0, 저축 − 생활비 × wealthSavBuffer 주) ÷ wealthSavWeeks 주를 더한다. wealthSavLower 1 = 하층(소작농·노동자·농부)만, 0 = 모든 pop.
+  // wealthSavWeeks 0 = 끔 (21ea2ff 와 같음). 후보 52 (버퍼 8, 하층만, 마이크로 시제품 1위), 본 게임 비교 전, 근거: 마이크로 시제품 (DESIGN 11)
+  wealthSavWeeks: 0,
+  wealthSavBuffer: 8,
+  wealthSavLower: 1,
   manorTargetMult: 0, // 비교 전 (0 = 끔, 후보 2·3)
   manorGentrySeats: 0, // 비교 전 (0 = 끔, 후보 100·50·25)
   pollTax: 0.6, // 인두세: 소작농을 뺀 1인당 하루 (세금 수준 3단계 기준)

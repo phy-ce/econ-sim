@@ -1,4 +1,4 @@
-import { ABS_LIMITS, CONSUMPTION_PER_CAPITA, GOOD_IDS, GOODS, NEEDS, SKILL_DEFS, SUBSISTENCE, TRADING_POST, TUNE, WORKFORCE_RATIO, getMethod, needsAt, rawMax, tenantYield, tradeReserveOf } from './data';
+import { ABS_LIMITS, CLASS_DEFS, CONSUMPTION_PER_CAPITA, GOOD_IDS, GOODS, NEEDS, SKILL_DEFS, SUBSISTENCE, TICKS_PER_WEEK, TRADING_POST, TUNE, WORKFORCE_RATIO, getMethod, needsAt, rawMax, tenantYield, tradeReserveOf } from './data';
 import { CARTAGE_RATE, RAIL_RATE, borrow, companyById, harvestFactor, priceBounds, priceFormula, regionById, sellThrough, shareWeight, shippingRate, isSubsistence, wagesAt } from './economy';
 import { financeIdle, treasuryOver, payRent, paySalvage, taxDue, taxRates } from './finance';
 import { borderCost, kingdomById, kingdomOf, payTariff, toTreasury } from './kingdoms';
@@ -994,15 +994,20 @@ export function affordableWealth(r: Region, size: number, income: number): numbe
 }
 
 /**
- * 부 단계 이동: 실제 소득(현금 소득 + 직접 쓴 현물)과 생활비로만 정한다. 저축을 꺼내 쓰는 돈과, 내놓았지만 안 팔리고 사라진 물건은 소득이 아니다.
+ * 부 단계 이동: 실제 소득(현금 소득 + 직접 쓴 현물)과 생활비로만 정한다. 저축을 꺼내 쓰는 돈과, 내놓았지만 안 팔리고 사라진 물건은 소득이 아니다
+ * (시제품 TUNE.wealthSavWeeks > 0 이면 생활비 wealthSavBuffer 주치를 넘는 저축 ÷ wealthSavWeeks 주를 소득에 더한다).
  * 소득이 다음 단계 묶음 비용의 102%를 넘으면 오르고, 지금 단계의 98%에 못 미치면 내린다.
  * 물건이 없어 필요를 못 채운 것은 생활수준(popSol)에만 나타난다
  */
 function updateWealth(p: Pop, rd: RegionDay, plan: PopPlan) {
   // 소득 = 판 돈(현금 소득에 들어 있다) + 먹고 쓴 현물
-  const income = Math.max(0, p.incomeEma) + plan.inKindValue;
+  let income = Math.max(0, p.incomeEma) + plan.inKindValue;
   const L = wealthOf(p);
   const costCur = basketCostDay(rd, p.size, L);
+  // 저축을 부에 넣기 (시제품 TUNE.wealthSavWeeks > 0): 생활비 wealthSavBuffer 주치를 넘는 저축 ÷ wealthSavWeeks 주 (wealthSavLower 1 이면 하층만)
+  if (TUNE.wealthSavWeeks > 0 && (!TUNE.wealthSavLower || CLASS_DEFS[p.prof].stratum === 'lower')) {
+    income += Math.max(0, p.savings - TUNE.wealthSavBuffer * TICKS_PER_WEEK * costCur) / (TUNE.wealthSavWeeks * TICKS_PER_WEEK);
+  }
   const costNext = basketCostDay(rd, p.size, Math.min(WEALTH_MAX, L + 1));
   let d = 0;
   if (L < WEALTH_MAX && income > costNext * 1.02) d = Math.min(0.03, 0.03 * (income / costNext - 1));
