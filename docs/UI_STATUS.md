@@ -113,3 +113,6 @@ DetailWindow 독립 NavigationProvider/버튼, BuildingPops 및 ResourceInspecto
 
 - 2-50 잔여 코드 완료, 화면 미검증. 옛 상회 소유 기관 행도 자리/금고 전용. typecheck/client55시험 통과.
 
+
+- UI_DESIGN 어긋남 1·2·4 정리 중: 팝 기본 1인당, 빈 집단 —, 소유권 바 CSS 토큰과 밤 색 분리. sim 변경 없음.
+

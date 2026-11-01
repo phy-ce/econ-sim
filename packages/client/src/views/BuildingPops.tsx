@@ -17,13 +17,13 @@ export function BuildingPops({world,buildings,onGood,popIds}:{world:World;buildi
  const rows=pops.filter(p=>p.prof===prof),size=rows.reduce((n,p)=>n+p.size,0);
  const sum=(key:'lastIncome'|'lastSpend'|'savings'|'incomeEma')=>rows.reduce((n,p)=>n+p[key],0);
  const avg=(key:'sol'|'food'|'fulfillment'|'literacy'|'growth'|'wealth')=>size?rows.reduce((n,p)=>n+p[key]*p.size,0)/size:0;
- const [perHead,setPerHead]=useNavigationState(scope+':per-head',false),divisor=perHead?Math.max(1,size):1;
+ const [perHead,setPerHead]=useNavigationState(scope+':per-head',true),divisor=perHead?Math.max(1,size):1;
  const region=world.regions.find(r=>r.id===(pops[0]?.regionId??buildings[0]?.regionId));
  const goods=GOOD_IDS.map(g=>({g,qty:rows.reduce((n,p)=>n+(p.inKind[g]??0),0)})).filter(x=>x.qty>0);
  if(!region)return null;
  return <details className="building-pops" open><summary>{ko?'팝 통계':'Pop statistics'} · <NumericValue value={pops.reduce((n,p)=>n+p.size,0)} format="compact"/></summary>
  <div className="system-tabs" role="group" aria-label={ko?'건물 팝 직종':'Building pop profession'}>{professions.map(c=><button key={c} aria-pressed={prof===c} onClick={()=>setSelected(c)}>{className(c)} ↗</button>)}</div>
- {!rows.length?<p className="muted">{ko?'이 건물에 속한 팝이 없습니다.':'No pops attached to these buildings.'}</p>:<>
+ {!rows.length?<p className="muted">—</p>:<>
  <h4>{regionName(region)} · {className(prof)}</h4>
  <p className="muted" tabIndex={0} data-help={ko?'선택한 팝만 집계합니다. 인구는 부양가족을 포함하므로 위의 노동 인원과 다릅니다. 평균은 인구 가중치입니다.':'Only the selected population group. Population includes dependants; averages are population weighted.'}>{ko?'부양가족 포함 · 선택 팝 기준':'Includes dependants · selected pops'}</p>
  <div className="system-facts"><span>{ko?'인구':'Population'}<b><NumericValue value={size} format="compact"/></b></span><span>{ko?'팝 집단':'Groups'}<b>{rows.length}</b></span><span>{ko?'생활수준':'Living standard'}<b>{avg('sol').toFixed(1)}</b></span><span>{ko?'부 단계':'Wealth level'}<b>{avg('wealth').toFixed(1)}</b></span></div>

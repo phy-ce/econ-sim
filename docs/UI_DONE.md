@@ -669,3 +669,7 @@ ConstructionPanel 지역 칩·짓기/대기열 탭, 내 왕국 지역만 활성,
 ### 2026-11-01 2-50 옛 상회 행 잔여 (화면 미검증)
 CompanyPanel BuildingRow의 저택·금융가는 별도 행으로 분기: 자리·금고 OwnerSummary와 펼침 인력만 표시. 원료·산출·이익률 공장 칸 제거. root typecheck/client55시험 통과.
 
+
+### 2026-11-01 UI_DESIGN 어긋남 1·2·4 (화면 미검증)
+팝 집계 기본 1인당, 빈 집단 — 표시. OwnershipBar의 왕실/저택/금융가/미지정 색을 CSS 토큰으로 바꾸고 다크 팔레트 추가. 원래 왕실 토큰 재사용. root typecheck/client55시험 통과.
+

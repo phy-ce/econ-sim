@@ -1,3 +1,4 @@
+import '../ownership-theme.css';
 import {OwnershipBrowser,shareLabel} from './OwnershipBrowser';
 import {buildingEcon,BUILDING_BY_ID} from '@econ/sim';
 import type {World,Building} from '@econ/sim';
@@ -6,7 +7,7 @@ import {buildingName,companyName,regionName,useLang} from '../i18n';
 import {NumericValue} from '../NumericValue';
 import {DetailWindow} from './DetailWindow';
 import {pct} from '../format';
-const colors={state:'#a64240',manor:'#87601c',finance:'#246f96',none:'#687078'};
+const colors={state:'var(--royal-owner)',manor:'var(--manor-owner)',finance:'var(--finance-owner)',none:'var(--unassigned-owner)'};
 const icons={state:Crown,manor:House,finance:Landmark,none:Minus};
 type Kind=keyof typeof colors;
 export function OwnershipBar({world,buildings}:{world:World;buildings:Building[]}){
