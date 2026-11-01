@@ -30,8 +30,7 @@
 - 없음. 2-69(왕실 임금 읽기 전용)는 코드 완료 (`e1d700f`, 화면 미검증, UI_DONE).
 
 사용자 요청
-0a. **처음 실행할 때 KR / EN 선택 (2-76, 사용자 2026-11-01)**: 저장된 언어가 없으면 게임 전에 "한국어" / "English" 두 버튼. 고르면 저장, 다음부터 바로 게임. 지금 하던 항목이 끝나면 이것부터.
-0b. **작은 아이콘·막대 키우기 (2-77, 사용자 2026-11-01)**: 시세 창 수요·공급 구성의 사람 아이콘 16px(`SourceBreakdown.tsx:17`, 칸 `styles.css:289`)을 24px로. 같은 문제의 범례·표 아이콘, 6~7px 점, 3~5px 막대, 9px 글자를 UI_DESIGN 4.3 최소 크기로.
+0. **작은 아이콘·막대 키우기 (2-77, 사용자 2026-11-01)**: 시세 창 수요·공급 구성의 사람 아이콘 16px(`SourceBreakdown.tsx:17`, 칸 `styles.css:289`)을 24px로. 같은 문제의 범례·표 아이콘, 6~7px 점, 3~5px 막대, 9px 글자를 UI_DESIGN 4.3 최소 크기로.
 1. **서브윈도우 이력 잔여**: 코드 완료, 화면 미검증. UI_DONE의 2026-11-01 내부 경로 명세 참조.
 2. **공통 투입·산출 UI (2-51, 진행)**: 실제 양·단가·금액·충족/판매·방식 비교. 지금은 `ResourceInspector.tsx:38` recipe만 있다.
 3. **건물 그룹 잔여 (2-42, 2-59)**: 서비스 합계, 손익 워터폴, 소유주 미지정 배당. 기존 그룹·소유권 바(`RegionIndustry.tsx:56·58`)는 다시 만들지 않는다.
@@ -64,8 +63,8 @@ sim 대기 · 결정 대기
 - N 목표 카드·표지: 대기 (1b·1c, V1 결정·08 문서. 1a 사람 시험 전에 하지 않는다).
 - P 정적 시제품: 화면 작업자 일이 아니다 (보고서 앱 `tools/reports`, Claude 쪽).
 
-검증 (브라우저를 열 수 있는 작업자 또는 사용자)
-- 화면 미검증: 2-68 연구 계통도, 소유권 탐색 (소유주 → 기관 → 건물, 뒤로/앞으로, 혼합·극소 지분, 기관 소멸), 2-50 OwnerSummary, 서브윈도우 이력, 유보자산·건물 요약 바, 지도 다크 모드.
+검증 (헤드리스 스크린샷, 브라우저를 열 수 있는 작업자 또는 사용자)
+- 화면 미검증: 2-76 첫 실행 언어 선택 (코드 끝: `lang.ts:15·18`, `App.tsx:67·119`, `views/LanguagePick.tsx:5~6`, UI_DONE), 2-68 연구 계통도, 소유권 탐색 (소유주 → 기관 → 건물, 뒤로/앞으로, 혼합·극소 지분, 기관 소멸), 2-50 OwnerSummary, 서브윈도우 이력, 유보자산·건물 요약 바, 지도 다크 모드.
 - 실사용 환경: 일반 Edge 최대화, Windows 배율, 브라우저 확대, 영어/다크 모드. 내장 브라우저의 강제 viewport는 사용자 실환경 검증을 대체하지 않는다.
 
 ### 메모
@@ -1538,6 +1537,31 @@ sim 변경 (wt-research):
 - 문자열: "공급 ÷ 수요"/"Supply ÷ demand", "지금"/"Now", "+1", "+5", "공급"/"Supply", "수요"/"Demand", 위 AI 눈금 셋.
 - 완료 기준: wt-0bp가 main에 합쳐진 뒤. 카드의 세 숫자가 같은 날 `projectedSD`/`currentSD` 직접 호출 값과 같다 (소수 둘째 자리). 수요 0 상품은 "—". 다크 모드에서 점·눈금이 구분된다. 420×560에서 넘침 없음 (ko/en). typecheck.
 - 사용자 결정이 필요한 것: 없음 (3·6항은 추천안, 반대하면 바꾼다).
+
+### 2-77. 작은 아이콘·막대·점·글자를 1920×1080에서 읽히게 (사용자 요청 2026-11-01: "시세-수요/공급 사람 아이콘이 너무 작아서 잘 안 보인다. 이런 것 좀 개선해 달라.")
+- 기준: UI_DESIGN 4.3 "최소 크기·대비" 줄 (이 절과 같은 커밋). 게임 그림(`Sprite`·`Sprite64`·`GoodSprite`·`ClassSprite`·`BuildingSprite`) 24px, 색 견본·점 10px, 값을 보이는 막대 높이 6px, 글자 10px, 색 표식·막대 채움은 바탕과 3:1.
+- 왜 그림이 특히 작아 보이나: 아틀라스 그림은 480px 칸에 여백이 최소 48px씩이라 (UI_DESIGN 4.3) 그림이 칸의 80% 안쪽만 차지한다. 16px로 그리면 실제 그림은 약 13px 이하, 24px이면 약 19px. 밤 테마에서는 그림 뒤에 양피지 네모가 깔려(`styles.css:83`) 작은 그림이 더 묻힌다. `lucide-react` 조작 아이콘은 여백이 없어 이 기준에서 뺀다.
+- 고칠 곳 (먼저 1, 그다음 차례로):
+  1. **시세 창 수요·공급 구성** (`SourceBreakdown.tsx`, 시장 창 `MarketWindow.tsx:59`와 지역 창 `RegionPanel.tsx:152`의 "수요·공급" 칸):
+     - 계층(사람) 아이콘 `ClassSprite` 기본 16px (`SourceBreakdown.tsx:17`, 기본값 `sprites.tsx:20`), 건물 `BuildingSprite size={16}` (`:21`), 배·밀·동전 `Sprite` 기본 16px (`:28~33`, `:44`) → 모두 24px.
+     - 줄 칸 `grid-template-columns: 10px 16px …` (`styles.css:289`)의 아이콘 칸 16px → 24px. 상품 그림 `GoodSprite`는 지금도 32px로 그려져(`sprites.tsx:18`, `max(32, size×2)`) 16px 칸을 넘친다. `.src-list .spr { width: 24px; height: 24px }`로 한 크기에 맞춘다.
+     - 줄 높이는 아이콘에 맞게 (최소 26px). 글자 크기는 그대로 (`workspace.css:102` 11px).
+  2. **그 밖의 게임 그림 16~18px**:
+     - 경제 추이 계층 범례 `ClassSprite size={16}` (`BottomPanel.tsx:52`). 또 `.strategy-panel .legend .spr {14px}` (`strategy.css:143`)가 선택자가 더 구체적이라 `.legend-sp .spr {28px}` (`workspace.css:216`)를 이길 수 있다. 범례 그림은 24px 하나로 정리하고 14px 규칙은 지운다.
+     - 인구 표 계층 아이콘 `ClassSprite size={18}` (`PopTable.tsx:44`) → 24px.
+     - 지역 특산 태그 `BuildingSprite size={16}` (`RegionPanel.tsx:88`). `.perks .spr {28px}` (`workspace.css:216`)가 덮는지 스크린샷으로 보고, 16px로 보이면 24px.
+     - 지도 범례 밀·나무·광산 `size={16}` (`RegionMap.tsx:96`) → 24px. 같은 범례의 글자 9px (`strategy.css:53` `.map-keys`) → 10px.
+     - 상단 바 국고 동전 `size={16}` (`App.tsx:158`) → 24px (상단 바 높이 안에 들어가는지 스크린샷으로).
+     - 메뉴 낮 테마 해 `size={16}` (`App.tsx:195`) → 24px (밤 테마 쪽은 lucide `Moon`이라 그대로).
+  3. **10px보다 작은 색 점·견본** → 10×10px: `.ownership-ring-row i` 7px (`strategy.css:106`), `.market-scope-chips i` 6px (`system-ui.css:22`), `.region-directory i`·`.region-directory-table i` 7px (`workspace.css:113`, `:156`), `.notice-unread-dot` 6px (`strategy.css:239`). `.ownership-key` 12×5px (`workspace.css:171`)는 12×10px.
+  4. **6px보다 낮은 값 막대** → 높이 6px: 상단 바 칩 막대 3px (`strategy.css:49`), `.strategy-panel .stat .bar` 3px (`strategy.css:62`, `workspace.css:94`의 5px를 덮는다), 그룹 지표 막대 3px (`system-ui.css:48` `.group-metrics .bar`), 그룹 상세 장부 막대 3px (`system-ui.css:50`), 소유 나눔 막대 5px·4px (`system-ui.css:9` `.ownership-split`, `:48` `.industry-group .ownership-split`). 막대 둘레선(`--ink` 2px)이 있는 막대는 채움이 6px 이상 보이게 한다.
+     - 빼는 것: 값이 아닌 조작 손잡이·표시 (`.section-resize` `strategy.css:61`·`workspace.css:146`, 창 가장자리 `.edge-n/.edge-s` `strategy.css:98`, 도크 열림 표시 `strategy.css:99`·`workspace.css:90`).
+  5. **9px 글자** → 10px: `strategy.css`의 9px 규칙 19곳 (`:48` `.brand-name`, `:53`, `:61` 둘, `:62` 둘, `:63`, `:64`, `:66`, `:67`, `:70`, `:77`, `:78` `.harvest-badge`, `:85` `.gauge-label`, `:104`, `:106`, `:250`, `:263`, `:264`). 420×560 창에서 줄이 넘치면 그 줄만 말줄임 + 툴팁 (`title`).
+- 대비: 밤 테마에서 3·4항의 점·막대 채움 색이 `--sheet` 바탕과 3:1 이상인지 본다 (WCAG 2.1 1.4.11 비텍스트 대비 기준값). 모자라면 토큰을 바꾸지 말고 1px `--ink` 둘레선을 더한다.
+- 문자열: 없음.
+- 빼거나 지울 것: `strategy.css:143`의 14px 범례 규칙. 크기를 다시 정하는 중복 규칙이 생기면 한 곳(`workspace.css` 또는 `system-ui.css`)에만 둔다.
+- 완료 기준: 위 1~5항의 file:line이 기준 크기 이상 (코드 검색으로 16px 이하 `Sprite` 계열 `size`가 남지 않음, 지도 SVG 안 `SvgSprite`는 지도 확대에 따르므로 제외). `npm run typecheck`. 헤드리스 스크린샷 1920×1080 (UI_DESIGN 12장): 시장 창 수요·공급 칸을 한국어 낮·영어 밤으로 한 장씩, 경제 추이 범례·인구 표 한 장. 420×560 창에서 가로 넘침 없음.
+- 사용자 결정이 필요한 것: 없음. 기준값(24·10·6·10px)은 지금 코드에서 이미 쓰는 크기에 맞춘 추천이고 근거는 UI_DESIGN 4.3에 있다.
 
 ## 3. sim 쪽 필요 사항 (Claude가 처리할 것, UI 작업자는 요청만)
 - **2-59 주 단위 수지 (요청됨, 2026-10-22):** `BuildingEcon`에 `week: { sales, tax, inputs, wages, profit }` (건물 `revenue`·`tax`·`inputCost`·`wageCost`의 이동평균 × 7, `profitEma`와 같은 기간). 들어오면 2-59-3 폭포 라벨을 `/주`로.
