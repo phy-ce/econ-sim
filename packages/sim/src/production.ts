@@ -1,5 +1,4 @@
-import { BUILDING_BY_ID, buildPointsOf, GOODS, GOOD_IDS, TICKS_PER_WEEK, MAX_POINTS_PER_LEVEL_DAY, OWNER_SEATS_PER_LEVEL, OWNERSHIP_SEATS, TUNE, WORKFORCE_RATIO, getMethod } from './data';
-import { addOwnerLevels, ownBuildingAt, builderOf, companyById, efficiency, harvestFactor, isBudgetFunded, isGovernment, landFree, logEvent, newBuilding, officeFeeMult, regionById } from './economy';
+import { BUILDING_BY_ID, buildPointsOf, GOODS, GOOD_IDS, TICKS_PER_WEEK, MAX_POINTS_PER_LEVEL_DAY, OWNER_SEATS_PER_LEVEL, OWNERSHIP_SEATS, TUNE, WORKFORCE_RATIO, getMethod } from './data';import { addOwnerLevels, ownBuildingAt, builderOf, companyById, efficiency, harvestFactor, isBudgetFunded, isGovernment, landFree, logEvent, newBuilding, officeFeeMult, regionById } from './economy';
 import { SKILLS } from './types';
 import { workforce } from './pops';
 import { flow, kingdomById, toTreasury } from './kingdoms';
@@ -125,6 +124,48 @@ export function updateIdleOffices(w: World) {
   }
 }
 
+/**
+ * 건축사무소 회사가 오늘 맡은 공사에 쓸 수 있는 포인트 (allocateConstruction 의 한도와 같다):
+ * 쉬지 않는 공사마다 min(레벨 × MAX_POINTS_PER_LEVEL_DAY, 남은 포인트). 낼 돈이 없는 민간 공사(약정 금고가 없거나, 내는 금고 중 하나가 비었다)는 0
+ */
+export function officeNeed(w: World, builder: Company): number {
+  let need = 0;
+  let byId: Map<number, Building> | undefined;
+  for (const k of w.constructions) {
+    if (k.paused) continue;
+    const owner = companyById(w, k.companyId);
+    if (!owner || builderOf(w, owner) !== builder) continue;
+    if (owner !== builder) {
+      if (k.funders) {
+        const funds = funderShares(k, (byId ??= new Map(w.buildings.map((b) => [b.id, b] as const))));
+        if (!funds.length || funds.some(([o]) => !((o.cash ?? 0) > 0))) continue;
+      } else if (!(owner.cash > 0)) continue;
+    }
+    need += Math.min(MAX_POINTS_PER_LEVEL_DAY * (k.levels ?? 1), Math.max(0, k.required - k.points));
+  }
+  return need;
+}
+
+/** 오늘 produce 에서 쓸 작업 인원 (produce 가 b.crew 를 이 값으로 옮긴다) */
+const nextCrew = (b: Building) => { const crew = b.crew ?? b.last.staffing; return crew + (b.last.staffing - crew) * CREW_RATE; };
+
+/**
+ * 건축사무소의 오늘 가동 비율 (회사의 사무소 모두 같은 값) = min(1, 필요 포인트(officeNeed) ÷ 능력).
+ * 능력 = 사무소마다 방식 포인트 × 레벨 × 가동률 × 작업 인원 × 효율 (자재 충족 전). 사무소는 이 비율만큼만 자재를 쓰고 포인트를 만든다. 일자리·임금은 그대로다
+ */
+export function officeLoad(w: World, builder: Company): number {
+  const need = officeNeed(w, builder);
+  if (!(need > 0)) return 0;
+  let cap = 0;
+  for (const b of w.buildings) {
+    if (b.companyId !== builder.id || !b.active || b.idle) continue;
+    const m = getMethod(b.typeId, b.methodId);
+    if (!m.construction) continue;
+    cap += m.construction * b.level * b.utilization * nextCrew(b) * harvestFactor(w, b.regionId, BUILDING_BY_ID[b.typeId].land) * efficiency(b);
+  }
+  return cap > 0 ? Math.min(1, need / cap) : 1;
+}
+
 /** 오늘 왕실 공사가 자기 사무소에 낸 수수료, 왕국 id 별 (저장하지 않는다. 예산 미리보기용) */
 const crownFee = new Map<number, number>();
 /** 오늘 사무소 운영비 × 방식별 수수료 배율의 합, 회사 id 별 (저장하지 않는다) */
@@ -135,31 +176,41 @@ export function produce(w: World) {
   crownFee.clear();
   buildFee.clear();
   const ran: { b: Building; c: Company }[] = [];
+  // 건축사무소 가동 비율은 crew·효율이 바뀌기 전에 회사마다 한 번 센다
+  const load = new Map<number, number>();
+  for (const b of w.buildings) {
+    if (b.active && !load.has(b.companyId) && getMethod(b.typeId, b.methodId).construction) {
+      const c = companyById(w, b.companyId);
+      if (c) load.set(c.id, officeLoad(w, c));
+    }
+  }
   for (const b of w.buildings) {
     if (!b.active || BUILDING_BY_ID[b.typeId].auto) continue;
     const c = companyById(w, b.companyId);
     if (!c) continue;
     ran.push({ b, c });
     const method = getMethod(b.typeId, b.methodId);
-    const crew = b.crew ?? b.last.staffing;
-    const st = (b.crew = crew + (b.last.staffing - crew) * CREW_RATE);
+    const st = (b.crew = nextCrew(b));
     b.last.points = 0;
     b.last.output = {};
     if (st > 1e-4) {
       // 기상 조건은 농지·산림·광맥 건물의 투입과 산출을 함께 줄인다 (빅토리아3 throughput, 일자리는 그대로). 효율은 행정청·사무소도 쓰므로 따로
-      const run = b.level * b.utilization * st * harvestFactor(w, b.regionId, BUILDING_BY_ID[b.typeId].land);
+      // 건축사무소는 맡은 공사에 필요한 만큼(가동 비율 officeLoad)만 자재를 쓰고 포인트를 만든다. 일자리·임금은 기상 조건처럼 그대로다
+      const office = method.construction ? (load.get(c.id) ?? 0) : 1;
+      const idle = b.idle || !(office > 0);
+      const run = b.level * b.utilization * st * harvestFactor(w, b.regionId, BUILDING_BY_ID[b.typeId].land) * office;
       let fill = 1;
-      for (const g of GOOD_IDS) {
+      if (!idle) for (const g of GOOD_IDS) {
         const per = method.inputs[g];
         if (per) fill = Math.min(fill, (b.stock[g] ?? 0) / (per * run));
       }
-      fill = b.idle ? 0 : clamp(fill, 0, 1);
+      fill = idle ? 0 : clamp(fill, 0, 1);
       for (const g of GOOD_IDS) {
         const per = method.inputs[g];
         if (per) b.stock[g] = Math.max(0, (b.stock[g] ?? 0) - per * run * fill);
       }
-      b.last.inputFill = b.idle ? 1 : fill;
-      if (!b.idle && Object.keys(method.inputs).length) b.fillEma = (b.fillEma ?? 1) * 0.95 + fill * 0.05;
+      b.last.inputFill = idle ? 1 : fill;
+      if (!idle && Object.keys(method.inputs).length) b.fillEma = (b.fillEma ?? 1) * 0.95 + fill * 0.05;
       const scale = run * fill * efficiency(b);
       for (const g of GOOD_IDS) {
         const per = method.outputs[g];
@@ -168,7 +219,7 @@ export function produce(w: World) {
         b.last.output[g] = q;
         b.outStock[g] = q;
       }
-      if (method.construction && !b.idle) {
+      if (method.construction && !idle) {
         b.last.points = method.construction * scale;
         c.buildPoints += b.last.points;
         c.buildCost += b.last.wageCost + b.last.inputCost;

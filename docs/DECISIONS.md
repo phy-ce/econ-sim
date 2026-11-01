@@ -928,3 +928,6 @@ AI 노동자 임금 바닥 (기본값 0.03 · 2~6):
 - Q10: 시험을 core / gate / long 으로 나누고 CLAUDE.md '실행과 검증'을 고칠지 (추천: 나눔). 답 전에는 test/gate/{migrate,interleave}.test.ts 가 test:core 밖이고 전체 vitest run 에서만 돈다. 자세히: 12_DECISIONS_NEEDED.md Q10.
 - E7 남은 지표 확인 (0b, 2026-10-30): 빈 해 판정에 소작 비율·징수율·곡물 가격비·노동자 생활수준 4개를 쓸지 (실업은 E7 0/12 로 탈락). 확인되면 `labsum.py --empty peas,taxRatio,grain,solUnsk`. 근거: docs/overhaul/0B_RESULTS.md 1장 E7.
 - 미추적 test/core/_wd.test.ts (단언 없는 진단 출력, 사용자 PC main 체크아웃) 정리 여부: 사용자 확인 필요 (10_ARCHITECTURE.md 10.2).
+
+### 7-29. 건축사무소는 필요한 만큼만 자재를 산다 (2026-11-01 사용자 결정, 브랜치 wt-officeuse, 결정됨)
+- 사용자: "건축사무소 재료가 저렇게 작동하는 건 이상함, 필요한 만큼 재료를 사야 됨." → 사무소는 그날 맡은 공사에 필요한 포인트만 만들고 그만큼의 자재만 쓰고 산다 (일자리·임금은 그대로). 규칙과 비교 숫자: DESIGN.md 8장 "한 줄 규칙".
