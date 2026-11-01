@@ -1,13 +1,18 @@
-# 인수인계 (2026-10-30 기준)
+# 인수인계 (2026-11-01 기준)
 
 에스테라 왕국 경제 시뮬레이션. 빅토리아3의 경제 루프에서 영감을 받은 근세 왕국 경영 게임이다. 공개 배포가 목표다.
 
 - 폴더: `C:\Users\phyju\Desktop\Coding_Desk\2026\estera economy sim`
 - 저장소: https://github.com/phy-ce/econ-sim (main). 검증된 병합마다 푸시한다(2026-10-19 사용자 지시).
 - 작업 규칙: `CLAUDE.md`. 경제 규칙 요약: `docs/DESIGN.md`. 빅토리아3 근거: `docs/VIC3_REFERENCE.md`.
-- 사용자 결정 대기: 아래 0장 "결정 대기". 화면 작업자에게 넘길 것: `docs/UI_CHANGES.md` 맨 위 "0. 지금 할 일".
+- 사용자 결정 대기: `docs/overhaul/12_DECISIONS_NEEDED.md`(Q1~Q20)와 `docs/DECISIONS.md`. 지금 답을 기다리는 것은 아래 0-1030 절 0b′ 의 "사용자 답 대기" 줄. 화면 작업자에게 넘길 것: `docs/UI_CHANGES.md` 맨 위 "0. 지금 할 일".
 - 클라우드 세션(claude.ai/code)으로 이어서 할 수 있다. 규칙은 CLAUDE.md "클라우드 세션"을 본다.
 - 옛 세션 기록: `docs/log/` (2026-10-25 이전 HANDOFF 절은 `docs/log/HANDOFF_2026-10-18_to_10-25.md`, 날짜별 UI 기록도 여기). 다른 문서의 "HANDOFF 0-ind3"·"HANDOFF 0-aifix" 같은 옛 절 참조는 그 파일에 있다.
+
+## 0-1101. 2026-11-01: 문서 정리 (`wt-docs`, 문서만, sim·client 코드 안 바꿈)
+- HANDOFF 의 2026-10-19 ~ 10-25 세션 절(464줄)을 `docs/log/HANDOFF_2026-10-18_to_10-25.md` 로 잘라 옮겼다. 날짜가 붙은 UI 기록 9개를 `docs/log/` 로 옮겼다 (`UI_IMPLEMENTATION.md` → `UI_IMPLEMENTATION_2026-10-18.md`). 목록은 `docs/log/README.md`.
+- UI_CHANGES·UI_DESIGN 13장·UI_STATUS 의 링크를 `log/` 로 고쳤다. CLAUDE.md 문서 목록에 `docs/log/` 를 더했고, 화면 규칙의 지금 기준은 `docs/UI_DESIGN.md` 라고 적었다.
+- 남은 일: `docs/UI_WINDOWS_2026-10-28.md` 는 사용자 PC main 체크아웃에 커밋 안 한 수정이 있어 아직 안 옮겼다. 화면 작업자가 그 수정을 커밋한 뒤 `docs/log/` 로 옮기고, UI_DESIGN.md:126·UI_STATUS.md:10·UI_DONE.md:465 의 참조를 고친다.
 
 ## 0-1030. 2026-10-30 세션: 오버홀 설계 문서, A0 안전망, 0a AI 난수 분리
 
