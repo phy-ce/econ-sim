@@ -17,25 +17,26 @@ import { ClassSprite } from '../sprites';
 import { CLASS_COLOR } from '../ui';
 import {className,useT} from '../i18n';
 
-function BottomPanelView({ world, history, lastReadTick, onRead, onJump, viewedId, onViewCompany, game, onEvent, popRequest, onBuilding,onGood,onFinance }: {onGood?:(g:GoodId)=>void;onFinance?:()=>void;
+function BottomPanelView({ world, history, lastReadTick, onRead, onJump, kingdomId, onViewKingdom, sequence,game, onEvent, popRequest, onBuilding,onGood,onFinance }: {onGood?:(g:GoodId)=>void;onFinance?:()=>void;sequence?:number;
   popRequest:PopRequest|null; onBuilding:(id:number)=>void;
   onEvent:(event:GameEvent)=>void; game:Game; world: World; history: HistoryPoint[];
   lastReadTick: number; onRead: () => void; onJump: (regionId: number) => void;
-  viewedId: number | null; onViewCompany: (companyId: number) => void;
+  kingdomId: number | null; onViewKingdom: (kingdomId: number) => void;
 }) {
   const T = useT();
   const me=playerCompany(world);
-  const viewed=viewedId!==null?companyById(world,viewedId):me;
+  const viewed=world.kingdoms.find(k=>k.id===(kingdomId??me?.kingdomId));
+  const onViewCompany=(id:number)=>{const company=companyById(world,id);if(company)onViewKingdom(company.kingdomId);};
   const wealthData = useMemo(() => history.map((p) => ({ tick: p.tick, ...p.sol })), [history]);
   const series = POP_CLASSES.map((c) => ({ key: c, name: className(c), color: CLASS_COLOR[c] }));
 
   return (
-    <SectionStack explorer revealId={popRequest?'pops':'company'} revealKey={popRequest?.sequence??viewedId} storageKey="trends-v2" items={[
+    <SectionStack explorer revealId={popRequest?'pops':'kingdom'} revealKey={popRequest?.sequence??sequence??kingdomId} storageKey="trends-v2" items={[
       {id:'economy',shortTitle:uiCopy().screenText['trends'],title:uiCopy().screenText['economicPopulationAndFiscalTrends'],height:520,content:<EconomyCharts world={world}/>},
       ...(me?[{id:'summary',shortTitle:uiCopy().screenText['summary'],title:T.kingdomSummary,height:220,content:<KingdomSummary world={world} government={me} onFinance={onFinance}/>}]:[]),
       {id:'pops',shortTitle:uiCopy().screenText['pops'],title:T.popList,height:360,content:<PopTable world={world} request={popRequest} onRegion={onJump} onBuilding={onBuilding}/>},
-      ...(viewed?[{id:'company',shortTitle:T.kingdomEconomy,title:T.kingdomEconomy,height:520,content:<KingdomEconomy world={world} id={viewed.kingdomId} onSelect={id=>{const k=world.kingdoms.find(k=>k.id===id);if(k)onViewCompany(k.governmentId);}} onBuilding={onBuilding} onFinance={onFinance}/>}]:[]),
-      {id:'kingdoms',shortTitle:T.kingdomCompare,title:T.kingdomCompare,height:300,content:<KingdomComparison world={world} onSelect={id=>{const k=world.kingdoms.find(k=>k.id===id);if(k)onViewCompany(k.governmentId);}}/>}, {id:'assets',title:T.assetsTitle,shortTitle:T.assetsTitle,height:360,content:<OwnershipAssets world={world}/>}, { id: 'wealth' , title: T.wealthByClassTitle, shortTitle:uiCopy().screenText['living'], height: 236, content: <>
+      ...(viewed?[{id:'kingdom',shortTitle:T.kingdomEconomy,title:T.kingdomEconomy,height:520,content:<KingdomEconomy world={world} id={viewed.id} onSelect={onViewKingdom} onBuilding={onBuilding} onFinance={onFinance}/>}]:[]),
+      {id:'kingdoms',shortTitle:T.kingdomCompare,title:T.kingdomCompare,height:300,content:<KingdomComparison world={world} onSelect={onViewKingdom}/>}, {id:'assets',title:T.assetsTitle,shortTitle:T.assetsTitle,height:360,content:<OwnershipAssets world={world}/>}, { id: 'wealth' , title: T.wealthByClassTitle, shortTitle:uiCopy().screenText['living'], height: 236, content: <>
       
         <div className="card-head">
           

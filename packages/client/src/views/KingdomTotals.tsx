@@ -13,7 +13,7 @@ export function KingdomTotals({world,id}:{world:World;id:number}){
  return <div className="kingdom-totals">
  <div><span>{T.population}</span><b><NumericValue value={d.population} format="compact"/></b></div>
  <div><span>{T.weeklyGdp}</span><b><NumericValue value={d.gdp/360*7} format="money"/></b></div>
- <div><span>{T.colBuildings}</span><b><NumericValue value={d.levels} format="compact"/></b>{bar(d.parts)}</div>
+ <div><span>{T.buildingGroups.levels}</span><b><NumericValue value={d.levels} format="compact"/></b>{bar(d.parts)}</div>
  <div><span>{T.hStaff}</span><b><NumericValue value={d.employed} format="compact"/> / <NumericValue value={d.jobs} format="compact"/></b>{bar(d.employment)}</div>
  <div><span>{T.system.weekProfit}</span><b className={d.profit<0?'neg':'pos'}><NumericValue value={d.profit} format="signedMoney"/></b>{bar(d.profits)}</div>
  </div>;

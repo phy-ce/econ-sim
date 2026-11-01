@@ -1,4 +1,5 @@
 import {t as uiCopy} from '../i18n';
+import {ownershipLabel} from '../ownershipLabel';
 import {DemolitionProgress} from './DemolitionProgress';
 import {FlowRow} from './FlowRow';
 import {useNavigationState} from '../NavigationHistory';
@@ -17,7 +18,7 @@ import { ArrowDownToLine, ArrowUpFromLine, ArrowRight, Factory, Pause, ChevronRi
 import { TUNE, getMethod, companyById } from '@econ/sim';
 import type { Building, GoodBag, GoodId, Region, World } from '@econ/sim';
 import { BuildingSprite, GoodSprite } from '../sprites';
-import { buildingName, goodName, regionName, companyName, methodName, useLang, useT } from '../i18n';
+import { buildingName, goodName, regionName, methodName, useLang, useT } from '../i18n';
 import { compact, money, pct } from '../format';
 
 export function BuildingInspector({ building: input, world, onGood, onCompany, game }: {
@@ -60,9 +61,9 @@ export function ResourceInspector({ world, region, good, onGood, onCompany, game
   const regionIds=new Set((scopeRegions??[region]).map(r=>r.id));
   const local = world.buildings.filter(b => regionIds.has(b.regionId));
   const related = (s: 'inputs' | 'outputs') => local.filter(b => (getMethod(b.typeId, b.methodId)[s][good] ?? 0) > 0);
-  const rows = related(side).filter(b => `${buildingName(b.typeId)} ${companyById(world,b.companyId) ? companyName(companyById(world,b.companyId)!) : ''}`.toLocaleLowerCase().includes(search.toLocaleLowerCase())).sort((a,b) => {
+  const rows = related(side).filter(b => `${buildingName(b.typeId)} ${regionName(world.regions.find(r=>r.id===b.regionId)!)} ${ownershipLabel(world,b)}`.toLocaleLowerCase().includes(search.toLocaleLowerCase())).sort((a,b) => {
     const value = (b: Building) => sort === 'quantity' ? (rowOf(world,b)[side].find(f=>f.g===good)?.cur??0) : sort === 'level' ? b.level : sort === 'utilization' ? (b.active && !b.idle ? b.utilization : 0) : b.profitEma;
-    const label = (b: Building) => sort === 'name' ? buildingName(b.typeId) : companyById(world,b.companyId) ? companyName(companyById(world,b.companyId)!) : '';
+    const label = (b: Building) => sort === 'name' ? buildingName(b.typeId) : ownershipLabel(world,b);
     return (['name','owner'].includes(sort) ? label(a).localeCompare(label(b)) : value(a)-value(b))*direction || a.id-b.id;
   });
   const detail = rows.find(b => b.id === selected);
@@ -74,12 +75,12 @@ export function ResourceInspector({ world, region, good, onGood, onCompany, game
       <button data-help={T.help.consumers} aria-pressed={side === 'inputs'} onClick={() => { setSide('inputs'); setSelected(null); }}><ArrowDownToLine size={18} />{uiCopy().screenText['consumers']}<b>{related('inputs').length}</b></button>
       <button data-help={T.help.producers} aria-pressed={side === 'outputs'} onClick={() => { setSide('outputs'); setSelected(null); }}><ArrowUpFromLine size={18} />{uiCopy().screenText['producers']}<b>{related('outputs').length}</b></button>
     </div>
-    <ListTools value={sort} onChange={setSort} direction={direction} onDirection={() => setDirection(-direction)} search={search} onSearch={setSearch} count={rows.length} options={uiCopy().screenLists.resourceSort}/>
+    <ListTools value={sort} onChange={setSort} direction={direction} onDirection={() => setDirection(-direction)} search={search} onSearch={setSearch} placeholder={T.resourceSearch} count={rows.length} options={uiCopy().screenLists.resourceSort}/>
     <div className="industry-list">{rows.map(b => {
       const c = companyById(world,b.companyId);
       const stopped = !b.active || b.idle;
       return <button key={b.id} className="industry-row" aria-pressed={b.id === selected} onClick={() => setSelected(b.id === selected ? null : b.id)}>
-        <BuildingSprite typeId={b.typeId} size={64} /><span className="industry-name"><strong>{buildingName(b.typeId)}</strong><HarvestBadge world={world} regionId={b.regionId} typeId={b.typeId}/>{scopeRegions&&scopeRegions.length>1&&<small>{regionName(world.regions.find(r=>r.id===b.regionId)!)}</small>}<small><OwnerBadge company={c} world={world}/> ×{b.level}</small>{(b.shrinking??0)>0&&<small className="demolition-badge">{T.demolitionQueue(b.shrinking!)}</small>}<small>{stopped ? <><Pause size={12} /> {uiCopy().screenText['pausedIdle']}</> : methodName(getMethod(b.typeId, b.methodId))}</small></span>
+        <BuildingSprite typeId={b.typeId} size={64} /><span className="industry-name"><strong>{buildingName(b.typeId)}</strong><HarvestBadge world={world} regionId={b.regionId} typeId={b.typeId}/>{scopeRegions&&scopeRegions.length>1&&<small>{regionName(world.regions.find(r=>r.id===b.regionId)!)}</small>}<small>{ownershipLabel(world,b)} ×{b.level}</small>{(b.shrinking??0)>0&&<small className="demolition-badge">{T.demolitionQueue(b.shrinking!)}</small>}<small>{stopped ? <><Pause size={12} /> {uiCopy().screenText['pausedIdle']}</> : methodName(getMethod(b.typeId, b.methodId))}</small></span>
         <span className="industry-amount"><NumericValue value={(rowOf(world,b)[side].find(f=>f.g===good)?.cur??0)} format="compact"/><small>{T.perDay}</small></span><ChevronRight size={16} />
       </button>;
     })}</div>

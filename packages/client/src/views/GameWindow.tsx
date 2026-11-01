@@ -15,7 +15,7 @@ import {PolicyPanel} from './PolicyPanel';
 import {ResearchPanel} from './ResearchPanel';
 import {Projects} from './CompanyPanel';
 import {eventDestination} from '../eventDestination';
-export type ScreenRoute={kind:WindowId;regionId?:number;buildingId?:number;good?:GoodId;companyId?:number;prof?:PopClass;industry?:boolean;sequence?:number;tab?:'budget'|'laws'};
+export type ScreenRoute={kind:WindowId;regionId?:number;buildingId?:number;good?:GoodId;kingdomId?:number;companyId?:number;prof?:PopClass;industry?:boolean;sequence?:number;tab?:'budget'|'laws'};
 export type ScreenRequest={target:WindowId;route:ScreenRoute;sequence:number};
 function GameWindowView({id,game,mapRegionId,request,onOpenWindow}:{onOpenWindow:(route:ScreenRoute)=>void;id:WindowId;game:Game;mapRegionId:number;request:ScreenRequest|null}){
  const world=game.world!;
@@ -28,7 +28,8 @@ function GameWindowView({id,game,mapRegionId,request,onOpenWindow}:{onOpenWindow
  const onBuilding=useCallback((bid:number)=>{const b=world.buildings.find(b=>b.id===bid);if(b)go({kind:'region',regionId:b.regionId,buildingId:bid});},[world,go]);
  const onRegion=useCallback((rid:number)=>go({kind:'region',regionId:rid}),[go]);
  const onGood=useCallback((good:GoodId)=>go({kind:'market',regionId:region.id,good}),[region.id,go]);
- const onCompany=useCallback((companyId:number)=>go({kind:'trends',companyId}),[go]);
+ const onKingdom=useCallback((kingdomId:number)=>go({kind:'trends',kingdomId}),[go]);
+ const onCompany=useCallback((companyId:number)=>{const company=world.companies.find(c=>c.id===companyId);if(company)onKingdom(company.kingdomId);},[world.companies,onKingdom]);
  const onPops=useCallback((regionId:number,prof:PopClass)=>go({kind:'region',regionId,prof}),[go]);
  const onBuildings=useCallback((regionId:number)=>go({kind:'region',regionId,industry:true}),[go]);
  const onEvent=useCallback((event:GameEvent)=>{const d=eventDestination(world,event);if(!d)return;if(d.kind==='building')onBuilding(d.id);else if(d.kind==='region')onRegion(d.id);else if(d.kind==='company')onCompany(d.id);else go(d);},[world,onBuilding,onRegion,onCompany,go]);
@@ -38,7 +39,7 @@ function GameWindowView({id,game,mapRegionId,request,onOpenWindow}:{onOpenWindow
  const popRequest=useMemo(()=>route.prof?{regionId:region.id,prof:route.prof,sequence}:null,[route.prof,region.id,sequence]);
  if(route.kind==='region')return <RegionWindow key={`region-${sequence}`} game={game} world={world} region={region} history={game.history} selectedGood={route.good??'food'} onSelectGood={onGood} onViewCompany={onCompany} onViewPops={onPops} onOpenBuilding={onBuilding} tabRequest={tabRequest} buildingRequest={buildingRequest} popRequest={popRequest}/>;
  if(route.kind==='market')return <MarketWindow game={game} world={world} scope={scope} onScope={setScope} mapRegionId={region.id} history={game.history} good={route.good??'food'} onGood={onGood} onCompany={onCompany} onBuildings={onBuildings}/>;
- if(route.kind==='trends')return <BottomPanel onFinance={()=>go({kind:'state',tab:'budget'})} onGood={onGood} game={game} world={world} history={game.history} lastReadTick={game.lastReadTick} onRead={game.markRead} onJump={onRegion} viewedId={route.companyId??null} onViewCompany={onCompany} onBuilding={onBuilding} onEvent={onEvent} popRequest={null}/>;
+ if(route.kind==='trends')return <BottomPanel onFinance={()=>go({kind:'state',tab:'budget'})} onGood={onGood} game={game} world={world} history={game.history} lastReadTick={game.lastReadTick} onRead={game.markRead} onJump={onRegion} kingdomId={route.kingdomId??world.companies.find(c=>c.id===route.companyId)?.kingdomId??null} onViewKingdom={onKingdom} sequence={route.kingdomId!==undefined||route.companyId!==undefined?sequence:undefined} onBuilding={onBuilding} onEvent={onEvent} popRequest={null}/>;
  if(!me)return null;
  if(route.kind==='state')return <StatePanel game={game} world={world} me={me} onBuilding={onBuilding} onResearch={()=>go({kind:'research'})} requestedTab={route.tab} sequence={sequence}/>;
  if(route.kind==='research')return <ResearchPanel game={game} world={world} me={me}/>;

@@ -6,11 +6,11 @@ import { particle } from './format';
 type S = string;
 
 export const KO = {
- kingdomEconomy:"왕국 경제",kingdomCompare:"왕국 비교",
+ resourceSearch:"건물·지역·소유 검색",kingdomEconomy:"왕국 경제",kingdomCompare:"왕국 비교",
  kingdomSummary:"왕국 요약",weeklyGdp:"GDP / 주",reserveIncludedInPrivateCash:"민간 현금에 포함된 유보 자산. 별도로 더하지 않습니다.",
  assetsTitle:"저택·금융가 자산",assetsKingdoms:"왕국",assetsRegions:"지역",
  officeLoad:"가동 비율",
- screenLists: {"incomeLabels":{"wages":"임금·성과급","dividends":"배당","rent":"지대","sales":"판매 수입","welfare":"복지","other":"기타·금고 환급","tax":"세금"},"companySort":[["pl","손익"],["margin","이익률"],["name","이름"],["level","규모"],["region","지역"],["staff","충원율"],["input","원료 충족"]] as [string,string][],"metricLabels":{"gdp":"경제 규모 · 연간 GDP","perHead":"1인당 연간 GDP","pop":"인구","sol":"평균 생활수준","unemployment":"실업 인구 비율","literacy":"문해력","treasury":"국고 현금","debt":"국채 잔액","savings":"가계 저축"},"resourceSort":[["quantity","자원 기준량"],["name","건물 이름"],["owner","소유 회사"],["level","규모"],["utilization","가동률"],["profit","손익"]] as [string,string][]},
+ screenLists: {"incomeLabels":{"wages":"임금·성과급","dividends":"배당","rent":"지대","sales":"판매 수입","welfare":"복지","other":"기타·금고 환급","tax":"세금"},"companySort":[["pl","손익"],["margin","이익률"],["name","이름"],["level","규모"],["region","지역"],["staff","충원율"],["input","원료 충족"]] as [string,string][],"metricLabels":{"gdp":"경제 규모 · 연간 GDP","perHead":"1인당 연간 GDP","pop":"인구","sol":"평균 생활수준","unemployment":"실업 인구 비율","literacy":"문해력","treasury":"국고 현금","debt":"국채 잔액","savings":"가계 저축"},"resourceSort":[["quantity","자원 기준량"],["name","건물 이름"],["owner","소유"],["level","규모"],["utilization","가동률"],["profit","손익"]] as [string,string][]},
 
  screenText: {
 "statistics": "통계 · 소식",
@@ -339,10 +339,10 @@ export const KO = {
 
   weeklyProfit: '주간 손익', foreignTerritory: '다른 왕국 영토',
   territory: '영토', mapLayers: '지도 표시',
-  finance: '재정', weeklyAccounts: '주간 수지', currentWeek: '이번 주', previousWeek: '지난주', receipts: '수입', expenses: '지출', capitalFlows: '자본 흐름', incomeTaxRates: '소득세율', lowerStratum: '하층', middleStratum: '중층', upperStratum: '상층', construct: '건설', kingdomQueue: '왕국 공사', mySummary: '왕실 요약', companyDetails: '상회 상세', dailyCap: '일일 공사 상한', receivedToday: '오늘 받은 포인트', stage: '단계',
+  finance: '재정', weeklyAccounts: '주간 수지', currentWeek: '이번 주', previousWeek: '지난주', receipts: '수입', expenses: '지출', capitalFlows: '자본 흐름', incomeTaxRates: '소득세율', lowerStratum: '하층', middleStratum: '중층', upperStratum: '상층', construct: '건설', kingdomQueue: '왕국 공사', mySummary: '왕국 요약', dailyCap: '일일 공사 상한', receivedToday: '오늘 받은 포인트', stage: '단계',
   ledgerLabels: {sales:'판매',tax:'세금',mint:'주조',buildFees:'민간 공사 수수료',wages:'정부 임금',inputs:'국영 건물 원료',research:'연구',interest:'이자',welfare:'복지',dividends:'배당 지급',investment:'자본 유입',buildPaid:'공사비 지급'},
 
-  kingdomLabel: '왕국', stateOwner: '왕실', privateOwner: '민간', playerOwner: '플레이어', dividend: '배당', sharedResearch: '왕실 기술 공유', taxCollection: '세금 징수율', taxCapacity: '세금 역량', investmentPool: '저택·금융가 금고', annualGdp: 'GDP / 년', kingdomAccounts: '왕국 재정', standardOfLiving: '생활수준', wealthLevel: '부', portClosed: '항구 폐쇄', ownership: '건물 소유', landlord: '지주', noBuildings: '건물 없음', noMatches: '검색 결과 없음',
+  kingdomLabel: '왕국', stateOwner: '왕실', privateOwner: '민간', playerOwner: '플레이어', dividend: '배당', taxCollection: '세금 징수율', taxCapacity: '세금 역량', investmentPool: '저택·금융가 금고', annualGdp: 'GDP / 년', standardOfLiving: '생활수준', wealthLevel: '부', portClosed: '항구 폐쇄', ownership: '건물 소유', landlord: '지주', noBuildings: '건물 없음', noMatches: '검색 결과 없음',
 
   language: '언어',
 
@@ -388,9 +388,6 @@ export const KO = {
   wealthByClass: '계층별 생활수준',
   wealthByClassTitle: '계층별 생활수준 · 전체 왕국',
   povertyLine: '빈곤선 5',
-  rankings: '상회 순위',
-  colHouse: '상회',
-  colNet: '순자산',
   colBuildings: '건물',
   colLastWeek: '지난주',
   youSuffix: (name: S) => `${name} (나)`,
@@ -478,8 +475,6 @@ export const KO = {
   food: (p: S) => `식량 ${p}`,
 
   // 상회 패널
-  viewOther: '상회 고르기',
-  myHouseNamed: (name: S) => `내 상회 (${name})`,
   manage: '상회 관리',
   projectsPill: (n: number) => `공사 ${n}건`,
   buildIn: (region: S) => `${region}에 짓기`,
@@ -488,7 +483,6 @@ export const KO = {
   inProgress: '진행 중',
   wages: '임금',
   govWages: '정부 임금',
-  readOnly: '읽기 전용',
   cash: '현금',
   lastWeek: '지난주',
   researchProgress: '연구 진행',
@@ -567,7 +561,7 @@ export const KO = {
 export type Dict = typeof KO;
 
 export const EN: Dict = {
- kingdomEconomy:"Kingdom economy",kingdomCompare:"Kingdoms",
+ resourceSearch:"Search building, region or owner",kingdomEconomy:"Kingdom economy",kingdomCompare:"Kingdoms",
  kingdomSummary:"Kingdom summary",weeklyGdp:"GDP / week",reserveIncludedInPrivateCash:"Reserves are included in private cash and are not added again.",
  assetsTitle:"Manor vs finance assets",assetsKingdoms:"Kingdoms",assetsRegions:"Regions",
  officeLoad:"Workload",
@@ -900,10 +894,10 @@ export const EN: Dict = {
 
   weeklyProfit: 'Weekly profit', foreignTerritory: 'Foreign territory',
   territory: 'Territory', mapLayers: 'Map layers',
-  finance: 'Finance', weeklyAccounts: 'Weekly accounts', currentWeek: 'This week', previousWeek: 'Last week', receipts: 'Revenue', expenses: 'Expenses', capitalFlows: 'Capital flows', incomeTaxRates: 'Income tax', lowerStratum: 'Lower', middleStratum: 'Middle', upperStratum: 'Upper', construct: 'Build', kingdomQueue: 'Kingdom construction', mySummary: 'Royal summary', companyDetails: 'Company details', dailyCap: 'Daily construction cap', receivedToday: 'Points received today', stage: 'Stage',
+  finance: 'Finance', weeklyAccounts: 'Weekly accounts', currentWeek: 'This week', previousWeek: 'Last week', receipts: 'Revenue', expenses: 'Expenses', capitalFlows: 'Capital flows', incomeTaxRates: 'Income tax', lowerStratum: 'Lower', middleStratum: 'Middle', upperStratum: 'Upper', construct: 'Build', kingdomQueue: 'Kingdom construction', mySummary: 'Kingdom summary', dailyCap: 'Daily construction cap', receivedToday: 'Points received today', stage: 'Stage',
   ledgerLabels: {sales:'Sales',tax:'Taxes',mint:'Minting',buildFees:'Private construction fees',wages:'Government wages',inputs:'State building inputs',research:'Research',interest:'Interest',welfare:'Welfare',dividends:'Dividends paid',investment:'Capital inflow',buildPaid:'Construction paid'},
 
-  kingdomLabel: 'Kingdom', stateOwner: 'Royal', privateOwner: 'Private', playerOwner: 'Player', dividend: 'Dividend', sharedResearch: 'Shared royal technology', taxCollection: 'Tax collection', taxCapacity: 'Tax capacity', investmentPool: 'Owner treasuries', annualGdp: 'GDP / year', kingdomAccounts: 'Kingdom accounts', standardOfLiving: 'Living standard', wealthLevel: 'Wealth', portClosed: 'Port closed', ownership: 'Building ownership', landlord: 'Landlords', noBuildings: 'No buildings', noMatches: 'No results',
+  kingdomLabel: 'Kingdom', stateOwner: 'Royal', privateOwner: 'Private', playerOwner: 'Player', dividend: 'Dividend', taxCollection: 'Tax collection', taxCapacity: 'Tax capacity', investmentPool: 'Owner treasuries', annualGdp: 'GDP / year', standardOfLiving: 'Living standard', wealthLevel: 'Wealth', portClosed: 'Port closed', ownership: 'Building ownership', landlord: 'Landlords', noBuildings: 'No buildings', noMatches: 'No results',
 
   language: 'Language',
 
@@ -946,9 +940,6 @@ export const EN: Dict = {
   wealthByClass: 'Living standard by class',
   wealthByClassTitle: 'Living standard by class · all kingdoms',
   povertyLine: 'Poverty line 5',
-  rankings: 'House rankings',
-  colHouse: 'House',
-  colNet: 'Net worth',
   colBuildings: 'Buildings',
   colLastWeek: 'Last wk',
   youSuffix: (name) => `${name} (you)`,
@@ -1029,8 +1020,6 @@ export const EN: Dict = {
   share: 'Share',
   food: (p) => `Food ${p}`,
 
-  viewOther: 'Choose house',
-  myHouseNamed: (name) => `My house (${name})`,
   manage: 'Manage house',
   projectsPill: (n) => `${n} underway`,
   buildIn: (region) => `Build in ${region}`,
@@ -1039,7 +1028,6 @@ export const EN: Dict = {
   inProgress: 'In progress',
   wages: 'Wages',
   govWages: 'Government wages',
-  readOnly: 'Read-only',
   cash: 'Cash',
   lastWeek: 'Last week',
   researchProgress: 'Research progress',

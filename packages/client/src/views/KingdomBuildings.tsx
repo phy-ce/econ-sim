@@ -27,7 +27,7 @@ export function KingdomBuildings({world,id,onBuilding}:{world:World;id:number;on
  const byId=new Map(rows.map(r=>[r.b.id,r]));
  const shown=order.map(id=>byId.get(id)!).filter(r=>r&&matches(r,filter)&&`${buildingName(r.b.typeId)} ${regionName(r.region)}`.toLocaleLowerCase().includes(search.toLocaleLowerCase()));
  const filters=[['all',T.system.all],['state',T.stateOwner],['manor',T.system.manor],['finance',T.system.finance]];
- const options:[string,string][]=[['profit',T.system.weekProfit],['levels',T.colBuildings],['name',T.colBuilding],['region',T.popRegion],['staff',T.buildingGroups.staffing],['reserve',T.system.reserve]];
+ const options:[string,string][]=[['profit',T.system.weekProfit],['levels',T.buildingGroups.levels],['name',T.buildingGroups.name],['region',T.popRegion],['staff',T.buildingGroups.staffing],['reserve',T.system.reserve]];
  return <div className="kingdom-buildings">
  <div className="fchips">{filters.map(([kind,label])=><button key={kind} aria-pressed={kind===filter} onClick={()=>setFilter(kind)}>{label} <NumericValue value={rows.filter(r=>matches(r,kind)).length} format="int"/></button>)}</div>
  <ListTools value={sort} onChange={setSort} direction={direction} onDirection={()=>setDirection(-direction)} options={options} search={search} onSearch={setSearch} placeholder={T.buildingGroups.search} count={shown.length}/>

@@ -78,8 +78,6 @@ export function App() {
   const showRegionBuildings=()=>{setRegionTabRequest(r=>({tab:'industry',sequence:r.sequence+1}));showWindow('region');};
   const [regionId, setRegionId] = useState(1);
   const [good, setGood] = useState<GoodId>('food');
-  /** 다른 상회를 들여다보는 중이면 그 회사 id (내 회사면 null) */
-  const [viewId, setViewId] = useState<number | null>(null);
   const [theme, setTheme] = useState<'light' | 'dark'>(loadTheme);
   const { world } = game;
   const marketScope='world' as const;
@@ -121,10 +119,9 @@ export function App() {
   if (!world) return <div className="boot" role="status" aria-label={T.booting}><Sprite name="crest" size={48} /></div>;
   const me = playerCompany(world);
   const region = regionById(world, regionId);
-  const viewed = viewId != null ? companyById(world, viewId) : undefined;
-  const viewCompany = (id: number) => { requestScreen('trends',{kind:'trends',companyId:id}); setPopRequest(null);setViewId(id); showWindow('trends'); };
+  const viewCompany = (id:number) => {const company=companyById(world,id);if(!company)return;requestScreen('trends',{kind:'trends',kingdomId:company.kingdomId});setPopRequest(null);showWindow('trends');};
   const selectRegion = (id: number) => { requestScreen('region',{kind:'region',regionId:id}); setRegionId(id);setRegionTabRequest(r=>({tab:'overview',sequence:r.sequence+1})); showWindow('region'); };
-  const openPops=(regionId:number,prof:PopClass)=>{setRegionId(regionId);setViewId(null);setPopRequest(p=>({regionId,prof,sequence:(p?.sequence??0)+1}));showWindow('region');};
+  const openPops=(regionId:number,prof:PopClass)=>{setRegionId(regionId);setPopRequest(p=>({regionId,prof,sequence:(p?.sequence??0)+1}));showWindow('region');};
   const openBuilding=(id:number)=>{const b=world.buildings.find(b=>b.id===id);if(b){requestScreen('region',{kind:'region',regionId:b.regionId,buildingId:id});setRegionId(b.regionId);setBuildingRequest(p=>({id,sequence:(p?.sequence??0)+1}));showWindow('region');}};
   const openEvent=(event:GameEvent)=>{
     const destination=eventDestination(world,event);
@@ -188,7 +185,7 @@ export function App() {
               <div className="menu"><TraceTools/>
                 <button onClick={() => { game.save(); close(); }}>{T.save}</button>
                 <button onClick={() => { game.load(); close(); }}>{T.load}</button>
-                <button onClick={() => { if (confirm(T.confirmNewGame)) { game.newGame(); setViewId(null); } close(); }}>{T.newGame}</button>
+                <button onClick={() => { if (confirm(T.confirmNewGame)) { game.newGame(); } close(); }}>{T.newGame}</button>
                 <hr />
                 <label className="check">
                   <input type="checkbox" checked={game.prefs.pauseOnDanger} onChange={(e) => game.setPrefs({ pauseOnDanger: e.target.checked })} />

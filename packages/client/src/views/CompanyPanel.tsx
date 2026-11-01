@@ -86,88 +86,6 @@ export function rowOf(world: World, b: Building): Row {
 
 // ---------------------------------------------------------------- 머리: 내 상회 ↔ 다른 상회
 
-function ViewSelect({ world, current, onView }: { world: World; current: number; onView: (id: number) => void }) {
-  const T = useT();
-  return (
-    <select className="view-select" value={current} aria-label={T.viewOther} onChange={(e) => onView(Number(e.target.value))}>
-      {[...world.companies].sort((a, b) => Number(b.isPlayer) - Number(a.isPlayer)).map((c) => (
-        <option key={c.id} value={c.id}>{c.isPlayer ? T.myHouseNamed(companyName(c)) : companyName(c)}</option>
-      ))}
-    </select>
-  );
-}
-
-type Tab = 'buildings' | 'build' | 'research' | 'wages';
-
-export function CompanyPanel({ game, world, me, region, onViewCompany }: { game: Game; world: World; me: Company; region: Region; onViewCompany: (id: number) => void }) {
-  const T = useT();
-  const [sub, setSub] = useState<Tab>('buildings');
-  const mine = world.buildings.filter((b) => b.companyId === me.id);
-  const projects = world.constructions.filter((k) => companyById(world,k.companyId)?.kingdomId === me.kingdomId);
-  const levels = mine.reduce((a, b) => a + b.level, 0);
-
-  return (
-    <>
-      <div className="title-row between">
-        <h2><OwnerBadge company={me} world={world}/></h2>
-        <ViewSelect world={world} current={me.id} onView={onViewCompany} />
-      </div>
-      <div className="tabs" role="tablist" aria-label={T.manage}>
-        <button role="tab" aria-selected={sub === 'buildings'} onClick={() => setSub('buildings')}>
-          {T.buildings} <span className="pxnum">{levels}</span>{projects.length > 0 && <span className="count-pill accent" aria-label={T.projectsPill(projects.length)}>{projects.length}</span>}
-        </button>
-        <button role="tab" aria-selected={sub === 'build'} onClick={() => setSub('build')}>{T.buildTab(regionName(region))}</button>
-        <button role="tab" aria-selected={sub === 'research'} onClick={() => setSub('research')}>{T.research}{me.research.current ? <span className="dot-live" aria-label={T.inProgress} /> : null}</button>
-        <button role="tab" aria-selected={sub === 'wages'} onClick={() => setSub('wages')}>{T.wages}</button>
-      </div>
-      {sub === 'buildings' && <House game={game} world={world} owner={me} mine={mine} projects={projects} />}
-      {sub === 'build' && <BuildList game={game} world={world} me={me} region={region} projects={projects.filter(k=>k.companyId===me.id).length} />}
-      {sub === 'research' && <Research game={game} me={me} />}
-      {sub === 'wages' && <Wages game={game} world={world} me={me} />}
-    </>
-  );
-}
-
-/** 다른 상회 보기 (읽기 전용): 조작 없이 재무·임금·연구와 건물 막대만 */
-export function CompanyView({ world, company: c, onView,onGood }: {onGood?:(g:GoodId)=>void; world: World; company: Company; onView: (id: number) => void }) {
-  const T = useT();
-  const owned = world.buildings.filter((b) => b.companyId === c.id);
-  const projects = world.constructions.filter((k) => k.companyId === c.id);
-  const research = (c.state ? c : world.companies.find(owner=>owner.state && owner.kingdomId===c.kingdomId) ?? c).research;
-  const tech = c.research.current ? TECHS.find((x) => x.id === c.research.current) ?? null : null;
-  const limit = creditLimit(world, c);
-  return (
-    <>
-      <div className="title-row between">
-        <h2><OwnerBadge company={c} world={world}/> <span className="readonly-tag">{T.readOnly}</span></h2>
-        <ViewSelect world={world} current={c.id} onView={onView} />
-      </div>
-      <div className="stats">
-        <div className="stat"><span className="stat-label">{T.cash}</span><span className="stat-value"><NumericValue value={c.cash} format="compactMoney"/></span></div>
-        <div className="stat" hidden={!c.state}>
-          <span className="stat-label">{T.loanLimit}</span>
-          <span className="stat-value"><NumericValue value={c.debt} format="compactMoney"/></span>
-          <Bar value={limit > 0 ? c.debt / limit : 0} tone={limit > 0 && c.debt / limit >= 0.7 ? 'neg' : 'gold'} size="sm" label={T.loanLimit} />
-        </div>
-        <div className="stat"><span className="stat-label">{T.lastWeek}</span><span className={`stat-value ${c.lastWeekProfit >= 0 ? 'pos' : 'neg'}`}><NumericValue value={c.lastWeekProfit} format="signedCompactMoney"/></span></div>
-      </div>
-      <dl className="facts">
-        <div><dt>{T.wages}</dt><dd>{SKILLS.map((s) => {
-          const market = marketWage(world, s, c.id);
-          const off = market > 0 ? c.wages[s] / market - 1 : 0;
-          if (paysDividend(c.state, s)) return <span key={s} className="fact-item"><i className="sw" style={{background:SKILL_COLOR[s]}}/>{skillName(s)} <Coins size={13}/>{T.dividend}</span>;
-          return <span key={s} className="fact-item"><i className="sw" style={{ background: SKILL_COLOR[s] }} />{skillName(s)} <span className="pxnum">ƒ<NumericValue value={c.wages[s]} format="two"/></span> <span className={`pxnum small ${off >= 0 ? 'pos' : 'neg'}`}>{spct(off)}</span></span>;
-        })}</dd></div>
-        <div><dt>{T.research}</dt><dd>{!c.state ? <span className="fact-item"><Crown size={14}/>{T.sharedResearch}</span> : tech
-          ? <span className="fact-item">{techName(tech.id)} <Bar value={(c.research.progress[tech.id] ?? 0) / tech.cost} size="sm" label={T.researchProgress} className="fact-bar" /> <span className="pxnum small"><NumericValue value={c.research.points} format="two"/> pt / {T.system.week}</span></span>
-          : <span className="muted">—</span>}</dd></div>
-        {research.known.length > 0 && <div><dt>{T.knownTechs}</dt><dd>{research.known.map((x) => <span key={x} className="tag-soft">{techName(x)}</span>)}</dd></div>}
-      </dl>
-      <House onGood={onGood} world={world} owner={c} mine={owned} projects={projects} />
-    </>
-  );
-}
-
 // ---------------------------------------------------------------- 건물 탭: 상회 요약 + 공사 + 걸러 보기 + 건물 줄
 
 type Filter = 'all' | 'staff' | 'input' | 'loss';
@@ -572,11 +490,6 @@ export function BuildingControls({building,game,world}:{building:Building;game:G
   if (!owner?.isPlayer || BUILDING_BY_ID[building.typeId].auto) return null;
   return <Controls r={rowOf(world,building)} game={game} world={world} owner={owner}/>;
 }
-export function CompanySummary({world,company}:{world:World;company:Company}) {
-  const T=useT();
-  return <><div className="stats"><div className="stat"><span>{T.cash}</span><b><NumericValue value={company.cash} format="compactMoney"/></b></div><div className="stat"><span>{T.loanLimit}</span><b><NumericValue value={company.debt} format="compactMoney"/></b></div><div className="stat"><span>{T.lastWeekPL}</span><b className={company.lastWeekProfit<0?'neg':'pos'}><NumericValue value={company.lastWeekProfit} format="signedCompactMoney"/></b></div></div><Summary rows={world.buildings.filter(b=>b.companyId===company.id).map(b=>rowOf(world,b))}/></>;
-}
-
 export function KingdomSummary({world,government,onFinance,includePrivate=false}:{world:World;government:Company;onFinance?:()=>void;includePrivate?:boolean}){
  const T=useT(),regions=new Set(world.regions.filter(r=>r.kingdomId===government.kingdomId).map(r=>r.id));
  const buildings=world.buildings.filter(b=>regions.has(b.regionId));

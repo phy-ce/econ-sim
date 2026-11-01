@@ -22,9 +22,10 @@ export function SectionStack({ storageKey, items, revealId, revealKey, explorer=
       if (!Array.isArray(saved)) return defaults();
       const result: Preference[] = [];
       for (const p of saved) {
-        if (!p || !items.some(i => i.id === p.id) || result.some(i => i.id === p.id)) continue;
-        const fallback = items.find(i => i.id === p.id)!;
-        result.push({ id: p.id, collapsed: p.collapsed === true, height: typeof p.height === 'number' && Number.isFinite(p.height) ? clamp(p.height) : fallback.height });
+        const id=storageKey==='trends-v2'&&p?.id==='company'?'kingdom':p?.id;
+        if (!p || !items.some(i => i.id === id) || result.some(i => i.id === id)) continue;
+        const fallback = items.find(i => i.id === id)!;
+        result.push({ id, collapsed: p.collapsed === true, height: typeof p.height === 'number' && Number.isFinite(p.height) ? clamp(p.height) : fallback.height });
       }
       return [...result, ...defaults().filter(p => !result.some(i => i.id === p.id))];
     } catch { return defaults(); }
