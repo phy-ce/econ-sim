@@ -9,6 +9,12 @@
 - 클라우드 세션(claude.ai/code)으로 이어서 할 수 있다. 규칙은 CLAUDE.md "클라우드 세션"을 본다.
 - 옛 세션 기록: `docs/log/` (2026-10-25 이전 HANDOFF 절은 `docs/log/HANDOFF_2026-10-18_to_10-25.md`, 날짜별 UI 기록도 여기). 다른 문서의 "HANDOFF 0-ind3"·"HANDOFF 0-aifix" 같은 옛 절 참조는 그 파일에 있다.
 
+## 0-1101c. 2026-11-01: 건축사무소는 필요한 만큼만 자재를 산다 (`wt-officeuse`)
+- 사용자 결정 DECISIONS 7-30. 가동 비율 = min(1, 필요 포인트 ÷ 능력) (`production.ts officeNeed`·`officeLoad`). 자재 주문은 그 비율의 2일분 (`market.ts collectOrders`). 일자리·임금은 그대로. 규칙과 숫자: DESIGN 8장 "한 줄 규칙".
+- 숫자 (main 974a705 대 ededa2d, 20년 × 시드 1·2 × salt 0~3, `cli/officecmp.ts`, 보고서 `2026-11-01-officeuse`): 버린 포인트 몫 22~47% → 1~6%. 사무소 목재 20년 평균 49,400 → 40,300/일. 사무소 손익 −60,700 → +64,600 (1년차), −2,300 → +7,100 (20년차). 포인트당 수수료 20년 평균 +21%. 국고는 8회 모두 5·10·20년차에 높다. 총생산 20년 평균은 8회 모두 높고, 5년차는 8회 중 3회만 높다.
+- 열린 문제: `constructionEstimate`가 다 가동할 때의 비용으로 봐서 가동 비율이 낮으면 공사비를 싸게 본다 (사전 공사비 예시·건설 포인트 live도 "다 가동할 때"로 적고 오늘 가동 비율을 함께 보인다). 민간 금고가 내는 몫만큼의 포인트는 아직 버린다. 예산 미리보기는 오늘 포인트로 한 주를 센다. 사무소 능력 90 → 126 증가 원인은 진단하지 않았다. `officeShrinkWeeks`·`officeIdleDays`·`officeRichWeeks` 재검증 필요 (DESIGN 11장).
+- 화면: UI_CHANGES 2-78 (사무소 원료 양에 가동 비율을 곱하고 산출 칸에 가동 비율을 보인다).
+
 ## 0-1101b. 2026-11-01: 장기 시험은 코드 문제만 판정 (`wt-tests`)
 - 사용자 지시 (2026-11-01): "테스트에는 코딩적인 문제가 없는지만 점검하라. 데이터를 취득해서 나중에 로직에 문제가 없는지 본다" (DECISIONS 7-29).
 - `test/long/longRun.ts`: 판정은 20년 완주, 화폐 보존(해마다 최대·끝 < 1e-9), 매일 상태 값 범위(`test/helpers.ts stateFlags`, `test/core/ranges.test.ts`와 함께 씀)만 한다. 뺀 단언: 4단계 기술 연도 ≥ 7, 소작농→노동자 이동 > 0, 노동자 식량 최저 > 35%·평균 > 80%. 이 값들은 이제 데이터로 남는다 (era4Y, mob["peasant>unskilled"], foodUnskMin·foodUnskAvg·foodUnsk).

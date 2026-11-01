@@ -30,7 +30,7 @@ import {
   birthRateAt, mortalityAt, workforce,
 } from './pops';
 import { HIRE_RATE, MIGRATE_FULL, MIGRATE_MAX, MIGRATE_START, UNPAID_QUIT, subsistenceWage, switchShare } from './labor';
-import { CREW_RATE, EXP_GAIN } from './production';
+import { CREW_RATE, EXP_GAIN, officeLoad } from './production';
 import {
   DAILY_INTEREST, KEEP_SHARE, TREASURY_RELEASE, MINT_BASE, MINT_RATE, RESERVE_SHARE, kingdomLiteracy, researchPoints, adminCapacityOf, reserveCap, taxCapacity, taxRates,
   weeklyOutputValue,
@@ -403,7 +403,7 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   // ================================================================ 생산
   {
     id: 'production', category: 'production', title: t('생산', 'Production'),
-    rule: t('산출 = 방식 산출 × 레벨 × 가동률 × 작업 인원 × 투입 충족 × 효율 × 기상 배율. 작업 인원은 충원율을 하루 {0}씩 따라간다. 투입재는 2일분을 목표로 산다.', 'Output = method output × level × utilisation × crew × input fill × efficiency × weather. Crew follows staffing by {0} a day. Inputs are bought toward two days\' stock.'),
+    rule: t('산출 = 방식 산출 × 레벨 × 가동률 × 작업 인원 × 투입 충족 × 효율 × 기상 배율. 작업 인원은 충원율을 하루 {0}씩 따라간다. 투입재는 2일분을 목표로 산다 (건축사무소는 그날 가동 비율의 2일분).', 'Output = method output × level × utilisation × crew × input fill × efficiency × weather. Crew follows staffing by {0} a day. Inputs are bought toward two days\' stock (construction offices: two days at today\'s load).'),
     formula: 'out = m.out × lvl × util × crew × fill × eff × harvest',
     params: [p('작업 인원 추종 (하루)', 'Crew catch-up (daily)', () => CREW_RATE, 'pct')],
     live: {
@@ -596,22 +596,22 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   // ================================================================ 건설
   {
     id: 'build-points', category: 'construction', title: t('건설 포인트', 'Construction points'),
-    rule: t('모든 공사는 왕실 건축사무소의 포인트로 짓는다. 포인트의 절반은 왕실 공사, 절반은 민간 공사에 순서대로 준다. 한 공사는 레벨당 하루 {0}점까지 받는다. 사무소가 {1}일 넘게 쉬면 인부를 해산한다.', 'All construction uses the crown\'s construction-office points: half to crown projects, half to private ones, in queue order. A project takes at most {0} points per level per day. An office idle for more than {1} days disbands its crew.'),
-    formula: 'points = method pts × level × util × crew × eff × fill',
+    rule: t('모든 공사는 왕실 건축사무소의 포인트로 짓는다. 포인트의 절반은 왕실 공사, 절반은 민간 공사에 순서대로 준다. 한 공사는 레벨당 하루 {0}점까지 받는다. 사무소는 그날 맡은 공사에 필요한 포인트만 만들고, 그만큼의 자재만 쓰고 산다 (일자리·임금은 그대로). 사무소가 {1}일 넘게 쉬면 인부를 해산한다.', 'All construction uses the crown\'s construction-office points: half to crown projects, half to private ones, in queue order. A project takes at most {0} points per level per day. Offices make only the points their projects can take that day, and use and buy only those materials (jobs and wages stay). An office idle for more than {1} days disbands its crew.'),
+    formula: 'points = method pts × level × util × crew × eff × fill × load; load = min(1, Σ projects min(level × max, left) ÷ capacity)',
     params: [p('레벨당 하루 최대', 'Max per level per day', () => MAX_POINTS_PER_LEVEL_DAY, 'pt'), tune('officeIdleDays', '쉬는 유예', 'Idle grace', 'day'), tune('buildCostMult', '공사 포인트 배율', 'Build points multiplier')],
     live: {
       pick: ['kingdom'], run: (w, ctx) => {
         const k = kingdomOfCtx(w, ctx), gov = govOf(w, k);
         if (!gov) return {};
         const est = constructionEstimate(w, gov, 'farm');
-        return { rows: [row('하루 포인트', 'Points per day', r2(est.pointsPerDay), 'pt'), row('하루 사무소 비용', 'Office cost per day', r2(est.costPerDay), 'florin'), row('대기 공사', 'Queued projects', w.constructions.filter((c) => kingdomById(w, regionById(w, c.regionId).kingdomId) === k).length)] };
+        return { rows: [row('하루 능력', 'Capacity per day', r2(est.pointsPerDay), 'pt'), row('오늘 가동 비율', "Today's load", r2(officeLoad(w, gov)), 'pct'), row('다 가동할 때 하루 비용', 'Cost per day at full load', r2(est.costPerDay), 'florin'), row('대기 공사', 'Queued projects', w.constructions.filter((c) => kingdomById(w, regionById(w, c.regionId).kingdomId) === k).length)] };
       },
     },
-    related: ['build-cost', 'ai-office', 'input-fill'], seenIn: ['company', 'finance'], source: ['production.ts allocateConstruction', 'economy.ts builderOf'], design: ['8'],
+    related: ['build-cost', 'ai-office', 'input-fill'], seenIn: ['company', 'finance'], source: ['production.ts allocateConstruction', 'production.ts officeLoad', 'economy.ts builderOf'], design: ['8'],
   },
   {
     id: 'build-cost', category: 'construction', title: t('공사비', 'Construction cost'),
-    rule: t('건축사무소는 모든 공사(왕실 것도)에 쓴 포인트 × 포인트당 비용 ÷ (1 − 이익률)을 수수료로 받는다. 이익률은 방식 단계에 따라 {0} / {1} / {2}다 (목조 / 목재 비계 / 철골). 포인트당 비용 = 그날 사무소 (임금 + 자재) ÷ 포인트. 수수료는 사무소의 매출이고, 사무소는 다른 왕실 건물처럼 이익을 유보 자산에 쌓고 나머지를 국고에 남긴다. 민간은 낼 현금만큼만 포인트를 받는다. 왕실 공사는 국고가 자기 사무소에 내므로 국고의 실제 공사비는 사무소 운영비다.', 'The construction office charges every project (crown ones too) points used × cost per point ÷ (1 − margin). The margin depends on the method stage: {0} / {1} / {2} (timber / scaffolding / iron frames). Cost per point = the office\'s daily (wages + materials) ÷ points. The fee is the office\'s sales; like other crown buildings it puts part of its profit into a reserve and leaves the rest in the treasury. Private builders only get as many points as they can pay for. Crown projects pay the crown\'s own office, so the treasury\'s real cost is the office\'s upkeep.'),
+    rule: t('건축사무소는 모든 공사(왕실 것도)에 쓴 포인트 × 포인트당 비용 ÷ (1 − 이익률)을 수수료로 받는다. 이익률은 방식 단계에 따라 {0} / {1} / {2}다 (목조 / 목재 비계 / 철골). 포인트당 비용 = 그날 사무소 (임금 + 자재) ÷ 포인트 (남는 능력의 임금도 들어간다). 수수료는 사무소의 매출이고, 사무소는 다른 왕실 건물처럼 이익을 유보 자산에 쌓고 나머지를 국고에 남긴다. 민간은 낼 현금만큼만 포인트를 받는다. 왕실 공사는 국고가 자기 사무소에 내므로 국고의 실제 공사비는 사무소 운영비다.', 'The construction office charges every project (crown ones too) points used × cost per point ÷ (1 − margin). The margin depends on the method stage: {0} / {1} / {2} (timber / scaffolding / iron frames). Cost per point = the office\'s daily (wages + materials) ÷ points (wages of spare capacity included). The fee is the office\'s sales; like other crown buildings it puts part of its profit into a reserve and leaves the rest in the treasury. Private builders only get as many points as they can pay for. Crown projects pay the crown\'s own office, so the treasury\'s real cost is the office\'s upkeep.'),
     formula: 'fee per point = Σ office (wages + materials) ÷ (1 − margin) ÷ points; private cost = buildPoints × fee per point',
     params: BUILDING_BY_ID.builder.methods.map((m) => p(`${m.name} 이익률`, `${m.nameEn ?? m.id} margin`, () => officeMargin(m.id), 'pct')),
     example: () => {
@@ -619,8 +619,8 @@ export const ENCYCLOPEDIA: EncEntry[] = [
       const firm = companyById(w, k.privateIds[0]) ?? gov;
       const est = constructionEstimate(w, gov, 'farm'), priv = constructionEstimate(w, firm, 'farm');
       return {
-        inputs: [row('곡물 농장 포인트', 'Grain farm points', est.required, 'pt'), row('사무소 하루 포인트', 'Office points/day', r2(est.pointsPerDay), 'pt'), row('사무소 하루 비용', 'Office cost/day', r2(est.costPerDay), 'florin')],
-        steps: [row('포인트당 비용', 'Cost per point', r2(est.costPerDay / est.pointsPerDay), 'florin'), row('포인트당 수수료', 'Fee per point', r2((est.costPerDay / est.pointsPerDay) * priv.feeMult), 'florin'), row('공사 일수', 'Days', r2(est.days), 'day')],
+        inputs: [row('곡물 농장 포인트', 'Grain farm points', est.required, 'pt'), row('사무소 하루 능력', 'Office capacity/day', r2(est.pointsPerDay), 'pt'), row('다 가동할 때 사무소 하루 비용', 'Office cost/day at full load', r2(est.costPerDay), 'florin'), row('오늘 가동 비율', "Today's load", r2(officeLoad(w, gov)), 'pct')],
+        steps: [row('포인트당 비용 (다 가동할 때)', 'Cost per point (at full load)', r2(est.costPerDay / est.pointsPerDay), 'florin'), row('포인트당 수수료 (다 가동할 때)', 'Fee per point (at full load)', r2((est.costPerDay / est.pointsPerDay) * priv.feeMult), 'florin'), row('공사 일수', 'Days', r2(est.days), 'day')],
         result: [row('1레벨 수수료 (민간, 시드 1 첫날)', 'Fee for one level (private, seed 1, day 0)', Math.round(priv.cost), 'florin'), row('1레벨 사무소 운영비 (왕실 실제 비용)', 'Office upkeep for one level (crown\'s real cost)', Math.round(est.cost), 'florin')],
       };
     },
@@ -1257,7 +1257,7 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   },
   {
     id: 'ai-office', category: 'ai', title: t('사무소 늘리고 줄이기', 'Growing and shrinking offices'),
-    rule: t('쓰인 포인트가 능력의 {0} 이상이고 대기가 {1}일을 넘으면, 빚 없고 국고가 넉넉할 때 늘린다 (사무소는 쓰지 않는 포인트에도 임금·자재를 내므로 수수료로 메워지지 않는다) (최소 max({2}, 지금의 {3})). 빈 레벨이나 남는 포인트가 {4}주 이어지면 헌다.', 'Grow when used points reach {0} of capacity and the queue exceeds {1} days, with no debt and a full treasury (unused points still cost wages and materials, which fees do not cover) (at least max({2}, {3} of current)). Shrink after {4} weeks of empty levels or spare points.'),
+    rule: t('쓰인 포인트가 능력의 {0} 이상이고 대기가 {1}일을 넘으면, 빚 없고 국고가 넉넉할 때 늘린다 (남는 능력에도 임금은 낸다) (최소 max({2}, 지금의 {3})). 빈 레벨이나 남는 포인트가 {4}주 이어지면 헌다.', 'Grow when used points reach {0} of capacity and the queue exceeds {1} days, with no debt and a full treasury (spare capacity still costs wages) (at least max({2}, {3} of current)). Shrink after {4} weeks of empty levels or spare points.'),
     params: [tune('officeUseFull', '사용률', 'Use threshold', 'pct'), tune('officeTargetDays', '대기 목표', 'Queue target', 'day'), p('최소 증설', 'Min block', () => OFFICE_BLOCK, 'level'), p('증설 비율', 'Growth share', () => OFFICE_GROWTH, 'pct'), tune('officeShrinkWeeks', '철거 주 수', 'Shrink weeks', 'week')],
     related: ['build-points', 'ai-demolition'], seenIn: ['company'], source: ['ai.ts planConstruction', 'ai.ts reviewLevels'], design: ['10'],
   },
