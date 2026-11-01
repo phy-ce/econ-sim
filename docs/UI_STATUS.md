@@ -179,3 +179,6 @@ DetailWindow 독립 NavigationProvider/버튼, BuildingPops 및 ResourceInspecto
 
 - 2-35 왕국 요약 합산 부분 완료: 정부·민간 모두 포함, 소유 기관 손익 이중계산 제외, 국고 분리. typecheck/client48시험 통과, 헤드리스 kingdom-summary.png(1920×1080) 확인. 나머지 회사 선택/순위/왕국경제 상세 전환은 남음.
 
+
+- 왕국 주간 생산 이익은 isGovernment와 소유 기관을 제외하도록 보정. 정부100·소유기관1000·생산2의 profitEma를 둔 회귀에서 주간생산14만 집계 확인. root typecheck/client49시험 통과.
+
