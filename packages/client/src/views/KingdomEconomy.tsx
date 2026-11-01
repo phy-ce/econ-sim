@@ -4,15 +4,16 @@ import {useNavigationState} from '../NavigationHistory';
 import {useLang,useT} from '../i18n';
 import {kingdomStats} from '../kingdomStats';
 import {NumericValue} from '../NumericValue';
-import {House,KingdomSummary} from './CompanyPanel';
+import {KingdomSummary} from './CompanyPanel';
+import {KingdomBuildings} from './KingdomBuildings';
 import {SortHeader} from './SortHeader';
 const colors={royal:'var(--royal-owner)',manor:'var(--manor-owner)',finance:'var(--finance-owner)',unassigned:'var(--unassigned-owner)'};
-export function KingdomEconomy({world,id,onSelect,onGood}:{world:World;id:number;onSelect:(id:number)=>void;onGood?:(g:GoodId)=>void}){
+export function KingdomEconomy({world,id,onSelect,onBuilding}:{world:World;id:number;onSelect:(id:number)=>void;onBuilding:(id:number)=>void}){
  const T=useT(),ko=useLang()==='ko',data=kingdomStats(world,id);
  if(!data.government)return <span>—</span>;
  return <><nav className="system-tabs">{world.kingdoms.map(k=><button key={k.id} aria-pressed={id===k.id} onClick={()=>onSelect(k.id)}><i className="swatch" style={{background:k.color}}/>{ko?k.name:k.nameEn}</button>)}</nav>
  <KingdomSummary world={world} government={data.government}/><div className="system-facts"><span>{T.privateOwner}<b><NumericValue value={data.privateFunds} format="money"/></b></span><span>{T.investmentPool}<b><NumericValue value={data.pool} format="money"/></b></span></div>
- <House world={world} owner={data.government} mine={data.production} projects={[]} onGood={onGood} hideSummary/></>;
+ <KingdomBuildings key={id} world={world} id={id} onBuilding={onBuilding}/></>;
 }
 export function KingdomComparison({world,onSelect}:{world:World;onSelect:(id:number)=>void}){
  const T=useT(),ko=useLang()==='ko';

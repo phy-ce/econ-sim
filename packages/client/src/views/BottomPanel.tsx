@@ -34,7 +34,7 @@ function BottomPanelView({ world, history, lastReadTick, onRead, onJump, viewedI
       {id:'economy',shortTitle:uiCopy().screenText['trends'],title:uiCopy().screenText['economicPopulationAndFiscalTrends'],height:520,content:<EconomyCharts world={world}/>},
       ...(me?[{id:'summary',shortTitle:uiCopy().screenText['summary'],title:T.kingdomSummary,height:220,content:<KingdomSummary world={world} government={me}/>}]:[]),
       {id:'pops',shortTitle:uiCopy().screenText['pops'],title:T.popList,height:360,content:<PopTable world={world} request={popRequest} onRegion={onJump} onBuilding={onBuilding}/>},
-      ...(viewed?[{id:'company',shortTitle:T.kingdomEconomy,title:T.kingdomEconomy,height:520,content:<KingdomEconomy world={world} id={viewed.kingdomId} onSelect={id=>{const k=world.kingdoms.find(k=>k.id===id);if(k)onViewCompany(k.governmentId);}} onGood={onGood}/>}]:[]),
+      ...(viewed?[{id:'company',shortTitle:T.kingdomEconomy,title:T.kingdomEconomy,height:520,content:<KingdomEconomy world={world} id={viewed.kingdomId} onSelect={id=>{const k=world.kingdoms.find(k=>k.id===id);if(k)onViewCompany(k.governmentId);}} onBuilding={onBuilding}/>}]:[]),
       {id:'kingdoms',shortTitle:T.kingdomCompare,title:T.kingdomCompare,height:300,content:<KingdomComparison world={world} onSelect={id=>{const k=world.kingdoms.find(k=>k.id===id);if(k)onViewCompany(k.governmentId);}}/>}, {id:'assets',title:T.assetsTitle,shortTitle:T.assetsTitle,height:360,content:<OwnershipAssets world={world}/>}, { id: 'wealth' , title: T.wealthByClassTitle, shortTitle:uiCopy().screenText['living'], height: 236, content: <>
       
         <div className="card-head">
