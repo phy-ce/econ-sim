@@ -771,7 +771,7 @@ function planConstruction(w: World, c: Company, o: Outlook) {
   // 사무소는 왕실만 늘린다. 사무소는 실제로 쓰인 포인트(buildUsed)로 크기를 정한다: 포인트를 거의 다 쓰고(TUNE.officeUseFull 이상)
   // 공사가 한 달 넘게 밀려 있으면, 그 지역에서 채울 수 있는 레벨만큼만 늘린다 (officeStaffable: 사무소의 지금 빈자리를 먼저 뺀다).
   // 남는 포인트와 한 해 내내 빈 레벨은 reviewLevels 가 줄인다.
-  // 사무소는 수수료로 운영비를 벌지만 쓰지 못한 포인트는 손실이고 증설비는 국고가 내므로, 국고가 넉넉할 때(지출 TUNE.treasuryHighWeeks 주치 초과, 빚 없음)만 늘린다.
+  // 사무소는 수수료로 운영비를 벌지만 남는 능력에도 임금은 내고(포인트당 수수료가 오른다) 증설비는 국고가 내므로, 국고가 넉넉할 때(지출 TUNE.treasuryHighWeeks 주치 초과, 빚 없음)만 늘린다.
   // 국고 몇 주치의 지출(expenseEma)에는 사무소 손익이 들어 있다 (finance.ts spendBudget)
   if (builder === c) {
     const offices = w.buildings.filter((b) => b.companyId === c.id && b.typeId === 'builder');

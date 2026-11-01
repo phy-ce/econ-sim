@@ -66,17 +66,17 @@ HANDOFF 다음 할 일 6 은 "가격 범위 3곳, 360일 7곳, 화폐 발행 공
 
 | 규칙 | 적힌 곳 | 비고 |
 |---|---|---|
-| 가격 범위 0.25~1.75 | `market.ts:952~953 PRICE_MIN/MAX`, `economy.ts:502` 리터럴 `[0.25, 1.75]`, `test/core/ranges.test.ts:16~17` 리터럴 | 3곳. 테스트가 코드 상수를 안 읽는다 |
+| 가격 범위 0.25~1.75 | `market.ts:952~953 PRICE_MIN/MAX`, `economy.ts:502` 리터럴 `[0.25, 1.75]`, `test/helpers.ts:35~36 stateFlags` 리터럴 (ranges.test.ts 와 test/long 이 같이 씀) | 3곳. 테스트가 코드 상수를 안 읽는다 |
 | 360 (연 일수) | `data.ts:846 TICKS_PER_YEAR`, `pops.ts:339 DAYS_PER_YEAR`, `economy.ts:681`, `budget.ts:277·353·496`, `finance.ts:719` | `metrics.ts:19 METRICS_CAP = 360` 은 "30년 × 월 12"라 다른 뜻 |
 | 주조 공식 `MINT_BASE + 주간 GDP × MINT_RATE` | `finance.ts:719`, `budget.ts:277·496` | 2곳(미리보기가 실제 식을 베낌) |
 | 국채 한도 | `economy.ts:688~690 BASE_CREDIT`, `STATE_CREDIT_GDP` | 한 곳이나 02 문서 5.2 가 "손댈 수 없음" 라벨로 이름·값을 보여야 한다 |
 | 임금 범위 | `ai.ts:177` 기준 임금 × 0.1~3, `commands.ts:152`·`tick.ts` `applyWagePolicy` 는 × 0.1~10 | 불일치 |
 
-[해석] 01 문서가 요구하는 "말단에 상수 이름과 값을 그대로 보인다"(P1)와 사전의 "숫자는 옮겨 적지 않고 코드 상수를 읽는다"(CLAUDE.md)는, 상수가 한 곳에 이름을 갖고 있어야 성립한다. 지금은 `ranges.test.ts` 가 값을 베껴 적었고 미리보기가 주조 식을 베껴 적은 만큼 어긋날 수 있다.
+[해석] 01 문서가 요구하는 "말단에 상수 이름과 값을 그대로 보인다"(P1)와 사전의 "숫자는 옮겨 적지 않고 코드 상수를 읽는다"(CLAUDE.md)는, 상수가 한 곳에 이름을 갖고 있어야 성립한다. 지금은 `test/helpers.ts stateFlags` 가 값을 베껴 적었고 미리보기가 주조 식을 베껴 적은 만큼 어긋날 수 있다.
 
 ### 2.4 화폐 장부와 읽기 층의 재료 [사실]
 
-- 보존식: `moneyIdentity = totalMoney − netMinted` (`economy.ts:661~680`, A0 뒤 줄 번호). `totalMoney` = 주인 없는 돈 + `mapMoney` 와 같은 계정(무역상·회사·pop 저축·건물 금고·공사 에스크로)을 같은 순서로 직접 더한 값 (A0 부터 `mapMoney` 를 부르지 않는 읽기 함수). `money.test.ts` 가 시드 7 로 3년을 매일 확인하고(허용 오차 총량 × 1e-12, 주석 근거: 같은 조건에서 최대 8e-15), 20년 시험은 해마다 1e-9 를 본다 (`longRun.ts:33`).
+- 보존식: `moneyIdentity = totalMoney − netMinted` (`economy.ts:661~680`, A0 뒤 줄 번호). `totalMoney` = 주인 없는 돈 + `mapMoney` 와 같은 계정(무역상·회사·pop 저축·건물 금고·공사 에스크로)을 같은 순서로 직접 더한 값 (A0 부터 `mapMoney` 를 부르지 않는 읽기 함수). `money.test.ts` 가 시드 7 로 3년을 매일 확인하고(허용 오차 총량 × 1e-12, 주석 근거: 같은 조건에서 최대 8e-15), 20년 시험은 해마다 1e-9 를 본다 (`longRun.ts:92~93`).
 - pop 의 소득 원천은 `recordPopIncome`(`popIncome.ts`)이 `incomeBreakdown`(wages·dividends·rent·sales·welfare·other·tax)에 쌓지만 이 칸은 하루마다 비워진다 (`market.ts:178`, "reset with lastIncome"). 해·주 단위로 쌓는 곳이 없다. 따라서 몫의 장부(01 P3, 04 문서)는 새 누적기가 필요하다.
 - 돈이 움직이는 곳은 많다: `.savings ±=`, `.cash ±=`, `.fund ±=` 가 파일 10곳에 45줄 나오고, `escrow`·`debt` 의 `±=` 가 3줄, `o.cash = (o.cash ?? 0) - pay` 같은 대입형이 30줄(초기화와 `mapMoney` 포함) 더 있다 (grep, 2026-10-30 작업 트리: main `5fdefe7` + 클라이언트 미커밋 변경, sim 은 같다. `economy.ts:652~658 mapMoney` 의 계정 목록에서 필드를 잡았다). 코드로 확인된 이동이 둘 있다: 이주는 pop 의 저축을 비율로 옮기고(`pops.ts:142~143`, 직종이 다를 때만 칸이 바뀐다), 사망한 pop 의 저축은 상속인 또는 `w.fund` 로 간다(`pops.ts:168~176`). 나머지 중 몇 곳이 `recordPopIncome` 을 거치는지는 확인 못 함. 그래서 "장부가 닫히는가"는 새 측정으로 재야 한다 (3.6, 7.2 의 A0 탐침).
 - `metrics.ts recordMetrics` 는 하루 평균 0.041ms(0.7%), `recordHistory` 0.017ms (m3). 기록 비용은 작다.
@@ -123,12 +123,12 @@ HANDOFF 다음 할 일 6 은 "가격 범위 3곳, 360일 7곳, 화폐 발행 공
 |---|---|---|---|
 | `test/core` | determinism, money, ranges, harvest, prospect, laws, welfare, buildingecon, popIncome, decimals, budget, encyclopedia | 변경마다(약 10초). 화폐 매일, 범위, 결정성, 옛 저장 변환(decimals) | 결정성 200일·시드 42. 읽기 함수 순수성은 `readonly.test.ts`(얼린 세계), 저장 왕복 JSON 안정성은 `roundtrip.test.ts` (A0 에서 추가) |
 | `test/` 루트 | `rules.test.ts`, `limits.test.ts` | 규칙 시나리오, 한도 | |
-| `test/long` | `seed1/2.test.ts` → `longRun.ts` | 20년 × 시드 1·2(AI 대체), 화폐 1e-9, 4단계 기술 연도, 식량 | 결정성·저장 왕복·성능·크기는 안 본다 |
+| `test/long` | `seed1/2.test.ts` → `longRun.ts` | 20년 × 시드 1·2(AI 대체), 완주·화폐 1e-9·상태 값 범위(test/helpers.ts stateFlags) 판정. 경제 지표(era4Y·노동자 식량·계층 이동)는 판정 없이 `.tmp/test-data/long-<시드>.jsonl` 에 해마다 기록 (2026-11-01 wt-tests) | 결정성·저장 왕복·성능·크기는 안 본다 |
 | 임시 | `test/core/_wd.test.ts` (git 미추적) | 예산 미리보기 진단 출력 | `test:core` 안에 있어 같이 돈다. 단언이 없어 늘 통과한다 |
 
 - 알려진 실패: 예산 미리보기 테스트 2개(state-firm fee, 8주 미리보기. 브리프 01 P7, 원인 미조사). 02 문서 5.2 는 1a 착수 전에 원인을 보라고 한다.
 - `encyclopedia.test.ts` 가 DESIGN 절 목록과 TUNE 키가 사전에 실렸는지 본다. DESIGN 11장 표(`| 키 | 값 | 뜻 | 근거 |`)의 행이 있는지, 근거 칸이 비었는지는 기계로 안 본다 (premerge 워크플로의 에이전트 검토가 맡는다, `.claude/workflows/premerge.js`).
-- 기대값이 박힌 숫자 테스트(`ranges.test.ts` 의 0.25·1.75, `rules.test.ts` 의 일수 등)는 0a·RT 단계(RULES·TUNE 정리) 때 점검 목록이다 (3.2, 7.2).
+- 기대값이 박힌 숫자 테스트(`test/helpers.ts stateFlags` 의 0.25·1.75, `rules.test.ts` 의 일수 등)는 0a·RT 단계(RULES·TUNE 정리) 때 점검 목록이다 (3.2, 7.2).
 
 ### 2.8 도구 [사실]
 
@@ -233,8 +233,8 @@ src/
 - 옛 저장(≤18)을 0a 코드로 불러오면 그 시점부터 새 난수를 쓴다. 이어 달린 결과는 옛 코드로 이어 달린 것과 다르다. 결정성은 같은 코드끼리 약속이다 (C1).
 
 **기대값 점검 목록** (0a 의 통과 조건, 01 문서 10장). 둘로 가른다.
-- (가) 설계 기준: `longRun.ts:36` 의 `tier4 ≥ 7`(4단계 기술 연도), 식량 하한, 화폐 해마다 1e-9. 갱신하지 않는다 (`tier4 ≥ 7` 만 V23 이 새 기술 트리를 채택할 때 개정 대상이고 그때 V23 과 함께 묻는다, D10-S11). 깨지면 해마다 값과 원인을 보고하고 D10-S11 로 묻는다 (CLAUDE.md tester 지침: 기준을 고치지 않고 해마다 값과 원인을 보고).
-- (나) 박힌 리터럴·시나리오 수치 단언: `ranges.test.ts` 의 0.25·1.75 리터럴(RT 에서 `TUNE.priceRange` 를 읽게 한다), `rules.test.ts`·`laws.test.ts`·`welfare.test.ts`·`budget.test.ts`·`buildingecon.test.ts` 중 AI 가 개입하는 시나리오의 수치 단언. 원인을 HANDOFF 에 적은 뒤에만 갱신할 수 있다.
+- (가) 설계 기준: `longRun.ts:36` 의 `tier4 ≥ 7`(4단계 기술 연도), 식량 하한, 화폐 해마다 1e-9. 갱신하지 않는다 (`tier4 ≥ 7` 만 V23 이 새 기술 트리를 채택할 때 개정 대상이고 그때 V23 과 함께 묻는다, D10-S11). 깨지면 해마다 값과 원인을 보고하고 D10-S11 로 묻는다 (CLAUDE.md tester 지침: 기준을 고치지 않고 해마다 값과 원인을 보고). (2026-11-01 wt-tests 이후: `tier4 ≥ 7` 과 식량 하한은 시험에서 빠졌다. 사용자 지시로 test/long 은 완주·화폐 1e-9·상태 값 범위만 판정하고, era4Y·foodUnskMin·foodUnskAvg 는 `.tmp/test-data/long-<시드>.jsonl` 데이터로만 남긴다. 아래 601·636·659·678 행의 'tier4 ≥ 7, 식량 하한' 도 같다.)
+- (나) 박힌 리터럴·시나리오 수치 단언: `test/helpers.ts stateFlags` 의 0.25·1.75 리터럴(RT 에서 `TUNE.priceRange` 를 읽게 한다), `rules.test.ts`·`laws.test.ts`·`welfare.test.ts`·`budget.test.ts`·`buildingecon.test.ts` 중 AI 가 개입하는 시나리오의 수치 단언. 원인을 HANDOFF 에 적은 뒤에만 갱신할 수 있다.
 - 보고서 `tools/reports/public/data/*.json` 중 0a 이전 것에는 "조건 바뀜 (AI 난수 분리 전)" 라벨을 단다.
 
 **0a 병합 판정**: 0a 브랜치에서 20년 × 시드 1~4 × salt 0..3 (16회, 22~42초 × 16 = 6~11분 직렬, `PAR=3` 이면 2~4분)으로 (가)의 통과 여부를 시드 × salt 표로 낸다. 0a 직전 커밋의 시드 1~4 결과(4회)를 나란히 둔다. 통과가 시드·salt 마다 갈리면 그것도 보고한다. 옛 코드 값이 새 앙상블의 min–max 안에 드는지는 '단서'로만 적는다: 실행 하나와 대역의 비교라 효과가 0 이어도 밖에 놓일 확률이 2/(K+1) 이다 (K=4 면 40%, 3.8). (가)가 깨지면 D10-S11 이다.
@@ -348,7 +348,7 @@ src/
 ### 3.9 규칙 데이터화 (C5)
 
 - `RULES`: 얼린 객체(`Object.freeze`, 타입은 `as const`). **비교 실행으로 바꾸지 않기로 한 상수만** 둔다: 달력(`ticksPerYear` 360, `ticksPerWeek` 7), 기록 보관 상한(`history.cap`, `metrics.cap`, `events.cap`). 분류 기준 한 줄: "sweep 이나 V15 에서 바꿀 수 있어야 하면 TUNE, 아니면 RULES". 기존 `export const` 이름(`TICKS_PER_YEAR`, …)은 RULES 에서 만들어 다시 내보낸다 (클라이언트·테스트가 쓰는 이름 그대로).
-- 가격 범위(0.25~1.75), 주조(`mint.base`, `mint.rate` 0.03), 국채(`credit.base` 300,000, `credit.gdpShare` 0.25, `credit.dailyInterest` 0.00025), 임금 범위(`wage.lo` 0.1, `wage.hi` 10; AI 의 3배는 AI 계수 쪽)는 01 V3·V15 와 05 가 비교 후보로 내놓은 조정값이라 `TUNE` 에 `[world]` 태그로 둔다. CLAUDE.md 가 "조정값은 여러 값을 비교해 데이터로 고른다"고 하므로 얼리지 않는다. 기본값은 한 곳에만 적는다. 가격 범위는 이미 있는 `TUNE.priceRange` 를 쓴다: `priceBounds()` 의 리터럴 `[0.25, 1.75]`(`economy.ts:500~503`)를 없애고, `PRICE_MIN/MAX`(`market.ts:952~953`)와 `ranges.test.ts` 는 이 값을 읽는다. 지금 `priceRange` 기본값은 `[0.01, 10]`(`data.ts:597`, `priceExp > 0` 비교 경로용)이라 기본 범위를 `[0.25, 1.75]` 로 맞추고 비교 경로는 비교 실행이 `priceRange` 를 덮어쓴다. 꺼진 경로의 기본 범위가 바뀌지만 기본 실행의 비트는 같아야 한다 (구현 때 `samecheck` 로 확인). 이 변경은 `priceExp > 0` 경로를 쓰는 옛 sweep·보고서의 조건을 바꾼다 (TUNE 에 `priceExp` 만 주고 돌린 옛 실행은 `[0.01, 10]` 으로 돌았고, RT 이후 같은 JSON 은 `[0.25, 1.75]` 로 돈다). RT 에서 할 일 셋: (a) `cli/sweep.ts` 는 TUNE JSON 에 `priceExp > 0` 이 있고 `priceRange` 가 없으면 경고를 낸다. (b) RT 커밋 메시지와 DESIGN 11장 `priceRange` 행에 '기본값 변경 (조건 바뀜: priceExp 꺼진 경로)'을 적는다. (c) `tools/reports/public/data` 에서 `priceExp` 를 쓴 보고서를 grep 으로 찾아 '조건 바뀜' 라벨을 단다.
+- 가격 범위(0.25~1.75), 주조(`mint.base`, `mint.rate` 0.03), 국채(`credit.base` 300,000, `credit.gdpShare` 0.25, `credit.dailyInterest` 0.00025), 임금 범위(`wage.lo` 0.1, `wage.hi` 10; AI 의 3배는 AI 계수 쪽)는 01 V3·V15 와 05 가 비교 후보로 내놓은 조정값이라 `TUNE` 에 `[world]` 태그로 둔다. CLAUDE.md 가 "조정값은 여러 값을 비교해 데이터로 고른다"고 하므로 얼리지 않는다. 기본값은 한 곳에만 적는다. 가격 범위는 이미 있는 `TUNE.priceRange` 를 쓴다: `priceBounds()` 의 리터럴 `[0.25, 1.75]`(`economy.ts:500~503`)를 없애고, `PRICE_MIN/MAX`(`market.ts:952~953`)와 `test/helpers.ts stateFlags` 는 이 값을 읽는다. 지금 `priceRange` 기본값은 `[0.01, 10]`(`data.ts:597`, `priceExp > 0` 비교 경로용)이라 기본 범위를 `[0.25, 1.75]` 로 맞추고 비교 경로는 비교 실행이 `priceRange` 를 덮어쓴다. 꺼진 경로의 기본 범위가 바뀌지만 기본 실행의 비트는 같아야 한다 (구현 때 `samecheck` 로 확인). 이 변경은 `priceExp > 0` 경로를 쓰는 옛 sweep·보고서의 조건을 바꾼다 (TUNE 에 `priceExp` 만 주고 돌린 옛 실행은 `[0.01, 10]` 으로 돌았고, RT 이후 같은 JSON 은 `[0.25, 1.75]` 로 돈다). RT 에서 할 일 셋: (a) `cli/sweep.ts` 는 TUNE JSON 에 `priceExp > 0` 이 있고 `priceRange` 가 없으면 경고를 낸다. (b) RT 커밋 메시지와 DESIGN 11장 `priceRange` 행에 '기본값 변경 (조건 바뀜: priceExp 꺼진 경로)'을 적는다. (c) `tools/reports/public/data` 에서 `priceExp` 를 쓴 보고서를 grep 으로 찾아 '조건 바뀜' 라벨을 단다.
 - `TUNE` 은 지금처럼 한 객체이고 갈래로 쪼개지 않는다. 키마다 주석 태그 `[world]`(세계 조정값) · `[ai]`(AI 판단 계수) · `[lab]`(기본값이 꺼진 비교 스위치 16개 + 옛 경로 매개변수) 중 하나를 단다. 이름과 327개 참조는 그대로이고, `ai.ts` 의 `export const` 를 `TUNE` 으로 옮기는 일은 RT 가 아니라 07 문서 소관의 선택 작업이다 (5장). 갈래 포함 시험과 별도 분류표(`keys.ts`)는 만들지 않는다: 어떤 게이트도 요구하지 않고, 세 갈래로 쪼개면 AI 계수 sweep 을 `config.tune` 에 저장·재생하지 못하게 된다.
 - 시험 `rules.test.ts`(새): (a) 모든 `RULES`·`TUNE` 키가 DESIGN 11장 표에 행이 있고 근거 칸이 비어 있지 않다 (표 형식 `| 키 | 값 | 뜻 | 근거 |`, 2.7). 근거 칸이 "근거 없음"인 것은 허용하되 센다. (b) 금지 리터럴 grep: `src/` 에서 `rules.ts` 밖의 `\b360\b`, `\[0\.25, 1\.75\]`, `* 7 / 360` 이 0 개 (찾은 중복마다 목록에 더한다. 모르는 중복은 못 찾는다). (c) `encyclopedia.ts` 가 `RULES` 를 읽는다. (d) 모든 `TUNE` 키가 태그 하나를 가진다.
 - 규칙 식별 `rulesHash` (T10): 입력은 `RULES` + `TUNE` 전 키 + 데이터 표(`BUILDING_TYPES` + `GOODS` + `TECHS` + `INDUSTRIES` + `NEEDS`)이고, 키를 정렬한 정규화 JSON 의 해시를 `config.rulesHash` 에 저장한다. 건물·방식·기술 표는 `TUNE` 밖이고 `sweep`·`worldtune` 이 직접 고치므로, `TUNE` 만 덮는 `tuneHash` 대신 이 해시를 쓴다. 코드는 `save/rulesHash.ts` 에 두고 처음 불릴 때 계산한다 (`data.ts` 의 표가 모듈 평가 때 만들어지므로 평가 순서 문제를 피한다). 구조를 옮기면 값이 바뀌므로 효과값 평탄표로 해시하는 안도 생각했으나 기계가 하나 더 늘어서 쓰지 않는다. 코드(AI 판단·식)가 바뀐 것은 이 해시에 안 잡히므로 골든 이력이 맡는다. 소스 해시를 만들거나 규칙 판마다 sim 번들을 2~3개 보관하는 안도 쓰지 않는다: 주석만 고쳐도 거짓 불일치가 나고 배포 구조가 무거워진다. `rulesHash` 는 플레이어에게 보이지 않는 내부 값이다. 재생·공유의 '일치' 판정과 T10 에만 쓴다. RT 는 비트가 같은데도 `rulesHash` 를 한 번 바꾸지만(`RULES` 가 입력에 새로 들어가고 `priceRange` 기본값이 바뀐다), 재생할 옛 명령 기록이 1b 에서야 생기고 RT 는 1b 보다 앞이므로 영향이 없다.
@@ -495,7 +495,7 @@ aiRand(seed, salt, tag, k1..kn):
 | `world.ts createWorld` | 변경 | 옵션 `aiSalt`, `tune` | 0a |
 | `compat.ts migrateWorld` | 변경 | `compat.ts` 는 단계 함수를 내보내기만 하고, `save/migrate.ts` 가 그것을 import 해 목록으로 감싼다 (방향 save → 기존, 동작 같음, T11). `migrateWorld` 는 같은 이름으로 `save/migrate` 에서 내보낸다 (`index.ts:8`). 죽은 껍데기(`isDistressed`, `SEIZURE_WEEKS`, `DISTRESS_DEBT_RATIO`, `landlordJobs`)는 UI_CHANGES 2-17 반영 뒤 삭제 | 1b |
 | `data.ts TUNE`, `TICKS_*` | 변경 | `TUNE` 은 한 객체 그대로, 키마다 주석 태그 `[world]`/`[ai]`/`[lab]` 를 단다. 달력·기록 상한은 `RULES`. 이름·참조 그대로 | RT |
-| `market.ts PRICE_MIN/MAX`, `economy.ts:500~503`, `ranges.test.ts` | 변경 | `TUNE.priceRange` 한 곳 (리터럴 `[0.25, 1.75]` 제거). 기본값이 `[0.01, 10]` 에서 바뀌므로 `priceExp > 0` 경로의 옛 sweep·보고서 조건이 바뀐다: sweep 경고, 커밋 메시지·DESIGN 11장 표기, 보고서 라벨 (3.9) | RT |
+| `market.ts PRICE_MIN/MAX`, `economy.ts:500~503`, `test/helpers.ts stateFlags` | 변경 | `TUNE.priceRange` 한 곳 (리터럴 `[0.25, 1.75]` 제거). 기본값이 `[0.01, 10]` 에서 바뀌므로 `priceExp > 0` 경로의 옛 sweep·보고서 조건이 바뀐다: sweep 경고, 커밋 메시지·DESIGN 11장 표기, 보고서 라벨 (3.9) | RT |
 | `finance.ts:719`, `budget.ts:277·353·496` | 변경 | 주조 식 `mintAmount` 를 `finance.ts` 에서 내보내 `budget.ts` 가 부름 | A |
 | `labor.ts`, `commands.ts:152`, `ai.ts:177` | 변경 | `wageFloor` 를 `labor.ts` 에서 내보냄. 임금 범위(0.1~3 대 0.1~10) 불일치 정리 | A |
 | `economy.ts:681`, `pops.ts:339` | 변경 | `RULES.ticksPerYear` | RT |
@@ -656,7 +656,7 @@ aiRand(seed, salt, tag, k1..kn):
 | D10-S8 | RT 단계(RULES·TUNE 정리, 순서상 0.5 결정 뒤)를 병합하는 시점. 그날 진행 중인 `wt-*` 브랜치는 충돌을 풀어야 한다 | 작업 방식(병렬 브랜치) | (가) 0.5 결정 직후 하루 안에 짧게 (나) 진행 중인 `wt-*` 브랜치가 없을 때만 | (가), 날짜는 사용자 |
 | D10-S9 | 시험 분류와 CLAUDE.md '실행과 검증' 개정: `test:core` / `test:gate` / `test:long` 으로 나누고 premerge 절차에 gate 를 넣을지 | CLAUDE.md '실행과 검증'의 명령 목록·premerge 절차 (사용자 규칙) | (가) core 약 30초(기존 + 짧은 새 시험, 추정) + gate 는 premerge 필수, premerge 마지막 단계에 main 을 합친 상태의 `golden:update` 와 `golden.json` 덧붙임 확인 (나) 지금처럼 core 하나에 모두 넣기(약 2분, 추정) (다) 새 시험을 모두 premerge 에만 | (가). 지금의 화폐·결정성 시험은 core 에 그대로 남고 장부 축소판이 더해진다. 장부 3년·재생·번갈아 돌리기·`burn` 쌍·연보 원자성(T16)만 gate 로 빠지고, 골든은 premerge 단계다 (8.1) |
 | D10-S10 | 자동 저장 단위 (플레이어에게 보이는 저장 동작). 자동 저장에 대한 유일한 결정이다: 09 문서의 D09-U9(자동 저장 시점·슬롯 수)를 합쳤다 | 되감기 경험(루프 5번 "되감아 다른 처방"), 저장소 크기, 슬롯 목록의 고리 줄(3.5) | (가) 처방 직전 고리 N개(플레이어 명령이 성공할 때 직전 상태, 하루 첫 명령만) + 연초 체크포인트 고리(해마다 1개, 최근 20개, 보통 슬롯) + 시간 간격 크래시 보험 (나) 시간 간격 고리만 | (가). 90일 × 5 고리는 약 1.25년분이라 몇 년 전으로 못 돌아간다. 처방 직전 고리도 '최근 N번의 처방 날'을 덮을 뿐이라 처방 빈도에 따라 덮는 시간이 달라 범위 보장이 없다. 연초 체크포인트는 처방 빈도와 상관없이 해 단위로 되감게 한다. 슬롯 하나는 20년에 약 1.3 MB(gz, 외삽)이고 연초 20개는 합이 크므로 슬롯 목록은 자동 고리를 고리 줄로 묶어 보인다(3.5). 연초 슬롯의 annals 는 그 해까지분이라 20개 합이 약 1.3 MB × 21/2 ≈ 14 MB(외삽)로, 처방 직전 고리(N=10 이면 13 MB 안팎)에 더해진다. 20년 실측은 0b (3.5, 4.6) |
-| D10-S11 | 0a 가 설계 기준(`tier4 ≥ 7`, 식량 하한, 화폐 해마다 1e-9)을 깨면 어떻게 할까 (3.2) | 0a 병합, CLAUDE.md tester 지침("기준을 고치지 말고 해마다 값과 원인을 보고") | (가) 0a 를 보류하고 원인을 조사한다 (나) 기준을 개정한다 | (가). tester 지침과 맞고, 기준을 바꾸면 이후 모든 비교의 잣대가 흔들린다. 기준 동결의 범위: `tier4 ≥ 7` 은 V23(기술 트리를 바꿀지, 01 문서 12장)이 새 트리를 채택할 때만 개정 대상이고, 그때 V23 과 함께 묻는다. 식량 하한과 화폐 해마다 1e-9 는 개정 대상이 아니다 |
+| D10-S11 | 0a 가 설계 기준(`tier4 ≥ 7`, 식량 하한, 화폐 해마다 1e-9)을 깨면 어떻게 할까 (3.2). 2026-11-01 사용자 지시로 `tier4 ≥ 7`·식량 하한은 시험에서 빠졌다 (DECISIONS 7-29) | 0a 병합, CLAUDE.md tester 지침("기준을 고치지 말고 해마다 값과 원인을 보고") | (가) 0a 를 보류하고 원인을 조사한다 (나) 기준을 개정한다 | (가). tester 지침과 맞고, 기준을 바꾸면 이후 모든 비교의 잣대가 흔들린다. 기준 동결의 범위: `tier4 ≥ 7` 은 V23(기술 트리를 바꿀지, 01 문서 12장)이 새 트리를 채택할 때만 개정 대상이고, 그때 V23 과 함께 묻는다. 식량 하한과 화폐 해마다 1e-9 는 개정 대상이 아니다 |
 
 ### 10.2 기본값으로 진행
 

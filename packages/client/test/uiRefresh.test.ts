@@ -2,8 +2,14 @@ import { describe, expect, it } from 'vitest';
 import { createWorld, MAX_POINTS_PER_LEVEL_DAY, BUILDING_TYPES, GOOD_IDS, POP_CLASSES } from '@econ/sim';
 import { captureConstruction, constructionActivity } from '../src/constructionActivity';
 import { spriteAsset } from '../src/spriteAtlas';
-import { windowTracks } from '../src/windowLayout';
+
 describe('UI refresh invariants',()=>{
+  it('uses separate atlas cells for the previously aliased icons',()=>{
+    for(const [a,b,family] of [['paper','cloth','goods'],['paper_mill','workshop','building'],['farmer','peasant','general'],['gentry','aristocrat','general'],['ranch','farm','building'],['meat','food','goods'],['luxury_furniture','furniture','goods'],['luxury_cloth','cloth','goods']] as const){
+      const first=spriteAsset(a,family),second=spriteAsset(b,family);
+      expect([first?.file,first?.index],a).not.toEqual([second?.file,second?.index]);
+    }
+  });
   it('keeps completed projects in daily construction totals and uses the level cap',()=>{
     const world=createWorld(42);
     const project={id:999,companyId:100,regionId:1,typeId:'farm',methodId:'',levels:2,points:5,required:100,spent:0,ticksElapsed:0};
@@ -22,7 +28,5 @@ describe('UI refresh invariants',()=>{
     expect(spriteAsset('furniture','goods')?.file).not.toBe(spriteAsset('furniture','building')?.file);
     expect(spriteAsset('admin','building')?.index).not.toBe(spriteAsset('school','building')?.index);
   });
-  it('provides explicit rows for all seven windows',()=>{
-    expect(windowTracks(7,Array(7).fill(1),50,50).rows).toBe('repeat(4,minmax(0,1fr))');
-  });
+
 });

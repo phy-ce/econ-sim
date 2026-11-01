@@ -4,6 +4,7 @@ import { financeIdle, treasuryOver, payRent, paySalvage, taxDue, taxRates } from
 import { borderCost, kingdomById, kingdomOf, payTariff, toTreasury } from './kingdoms';
 import { INVEST_CLASSES } from './policy';
 import { addFund, findPop, payPops, payProf, workforce } from './pops';
+import { officeLoad } from './production';
 import { clamp } from './rng';
 import { ipow } from './rng/ipow';
 import { POP_CLASSES, SKILLS, WEALTH_MAX, WEALTH_MIN, crewOf, wealthOf } from './types';
@@ -318,16 +319,20 @@ const FOOD_Q = new Float64Array(NG);
 export function collectOrders(w: World, book: Book) {
   const days = regionDays(w);
   // 기업: 투입재 (2일분 보유 목표). 모자라면 왕실은 국채로 빌리고, 그래도 모자라면(민간은 바로) 현금만큼 줄인다
+  // 건축사무소는 오늘 가동 비율(production.ts officeLoad)의 2일분만 채운다 (맡은 공사가 없으면 사지 않는다. 있는 재고는 그대로 둔다)
   for (const c of w.companies) {
     const operating: Order[] = [];
+    let load: number | undefined;
     for (const b of w.buildings) {
       if (b.companyId !== c.id || !b.active) continue;
       const method = getMethod(b.typeId, b.methodId);
       const st = Math.max(b.last.staffing, b.crew ?? 0);
+      const run = method.construction ? (b.idle ? 0 : (load ??= officeLoad(w, c))) : 1;
+      if (!(run > 0)) continue;
       for (const g of GOOD_IDS) {
         const per = method.inputs[g];
         if (!per) continue;
-        const want = Math.max(0, per * b.level * b.utilization * st * 2 - (b.stock[g] ?? 0));
+        const want = Math.max(0, per * b.level * b.utilization * st * 2 * run - (b.stock[g] ?? 0));
         if (want <= 1e-9) continue;
         operating.push({
           src: bldSrc(b.typeId), regionId: b.regionId, good: g, qty: want, payer: { kind: 'company', c },

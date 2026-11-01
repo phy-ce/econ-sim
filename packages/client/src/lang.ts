@@ -12,6 +12,16 @@ const listeners = new Set<() => void>();
 
 export const getLang = (): Lang => current;
 
+export function hasStoredLang():boolean {
+  try {const value=localStorage.getItem(KEY);return value==='ko'||value==='en';}catch{return false;}
+}
+export function chooseLang(lang:Lang){
+  try{localStorage.setItem(KEY,lang);}catch{/* this session still proceeds */}
+  if(current===lang)return;
+  current=lang;
+  for(const f of listeners)f();
+}
+
 export function setLang(lang: Lang) {
   if (lang === current) return;
   current = lang;

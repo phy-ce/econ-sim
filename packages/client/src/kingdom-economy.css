@@ -1,0 +1,20 @@
+.strategy-panel .kingdom-comparison { min-width: 790px; table-layout: fixed; }
+.strategy-panel .kingdom-comparison th, .strategy-panel .kingdom-comparison td { white-space: nowrap; overflow-wrap: normal; width: 110px; padding: 8px; }
+.strategy-panel .kingdom-comparison th:first-child { width: 130px; }
+.strategy-panel .kingdom-comparison .th-sort { white-space: normal; }
+.kingdom-totals { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px; margin:6px 0; }
+.kingdom-totals>div { display:flex; flex-direction:column; gap:4px; border:1px solid var(--rule); padding:6px; }
+.kingdom-totals>div:last-child { grid-column:1 / -1; }
+.kingdom-totals>div>span:first-child { font-size:11px; color:var(--ink2); }
+.kingdom-total-bar { display:flex; height:8px; border:1px solid var(--ink); background:var(--sheet); }
+.kingdom-total-bar i { display:block; height:100%; }
+.kingdom-building-row { display:flex; flex-direction:column; gap:5px; border-bottom:1px solid var(--rule); padding:7px 0; }
+.strategy-panel .kingdom-building-link { display:grid; grid-template-columns:32px minmax(0,1fr) auto; align-items:center; gap:6px; padding:0; text-align:left; border:0; background:none; }
+.kingdom-building-link>span { font-size:10px; color:var(--ink2); max-width:110px; }
+.kingdom-building-facts { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.kingdom-building-facts>span { display:flex; flex-direction:column; gap:3px; font-size:11px; }
+.kingdom-building-facts b { font-size:12px; }
+.kingdom-money { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px; margin:6px 0; }
+.strategy-panel .kingdom-money-card { display:flex; flex-direction:column; align-items:flex-start; justify-content:flex-start; gap:4px; border:1px solid var(--rule); padding:7px; background:var(--sheet); text-align:left; color:var(--ink); }
+.kingdom-money-card>span { font-size:11px; color:var(--ink2); }
+.kingdom-money-card>b { font-size:12px; margin-bottom:3px; }

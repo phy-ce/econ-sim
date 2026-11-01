@@ -1,3 +1,5 @@
+import {t as uiCopy} from '../i18n';
+import {marketPriceHistory} from '../marketScope';
 import {memo, useCallback} from 'react';
 import { RegionIndustry } from './RegionIndustry';
 import { BuildingEconomics } from './BuildingEconomics';
@@ -8,14 +10,14 @@ import type { Game } from '../useGame';
 import { BuildList, Projects } from './CompanyPanel';
 import { playerCompany, educationOf } from '@econ/sim';
 import { OwnerBadge } from './OwnerBadge';
-import { regionLivingStandard } from '../systemMetrics';
+import { regionLivingStandard,lowerJobUnemployment } from '../systemMetrics';
 import { HarvestBadge } from './HarvestBadge';
 import { SortHeader } from './SortHeader';
 import { SectionStack } from './SectionStack';
 import { useMemo, useState, useEffect, useRef } from 'react';
 import {
   GOOD_IDS, REGIONS, GOODS, LAND_TYPES,
-  companyById, landUsed, regionAvgWealth, regionPopulation, regionUnemployment,
+  companyById, landUsed, regionAvgWealth, regionPopulation,
 } from '@econ/sim';
 import type { PopClass, GoodId, HistoryPoint, Region, World } from '@econ/sim';
 import { MapPin, Package, Factory, Users } from 'lucide-react';
@@ -50,13 +52,13 @@ function RegionPanelView({ world, region, history, selectedGood, onSelectGood, o
   const T = useT();
   const pop = regionPopulation(r);
   const allBuildings = world.buildings.filter(b => b.regionId === r.id);
-  const lower = r.households.peasant.population + r.households.unskilled.population;
+  const lower = r.households.peasant.population + r.households.unskilled.population + r.households.farmer.population;
   const laborer = r.households.unskilled;
-  const unemp = regionUnemployment(world, r.id, 'unskilled');
+  const unemp = lowerJobUnemployment(world,r.id);
   const tenantShare = lower > 0 ? r.households.peasant.population / lower : 0;
   const headline = `region-${r.id}`;
   const [sort, setSort] = useState<{ key: SortKey; dir: 1 | -1 }>({ key: 'value', dir: -1 });
-  const priceData = useMemo(() => history.map((p) => ({ tick: p.tick, price: p.prices[r.id]?.[selectedGood] ?? 0 })), [history, r.id, selectedGood]);
+  const priceData = useMemo(() => marketPriceHistory(history,[r.id],selectedGood), [history, r.id, selectedGood]);
 
   // 순서는 정렬 기준·지역이 바뀔 때와 게임 속 일주일마다만 다시 매긴다 (값이 매 순간 바뀌어 행이 뛰지 않게)
   const week = Math.floor(world.tick / 7);
@@ -85,7 +87,7 @@ function RegionPanelView({ world, region, history, selectedGood, onSelectGood, o
             <span className="perks">
               {Object.entries(REGIONS.find((d) => d.id === r.id)!.perks).map(([t, v]) => (
                 <span key={t} className="tag-soft" tabIndex={0} data-help={T.help.perk}>
-                  <BuildingSprite typeId={t} size={16} /> {buildingName(t)} +{Math.round((v ?? 0) * 100)}%
+                  <BuildingSprite typeId={t} size={24} /> {buildingName(t)} +{Math.round((v ?? 0) * 100)}%
                 </span>
               ))}
             </span>
@@ -110,18 +112,18 @@ function RegionPanelView({ world, region, history, selectedGood, onSelectGood, o
           <div className="stat"><span className="stat-label"><HelpText text={T.help.education}>{T.education}</HelpText></span><span className="stat-value">{pct(educationOf(r))}</span><Bar value={educationOf(r)} tone="pos" size="sm" label={T.education} /></div>
           <div className="stat"><span className="stat-label"><HelpText text={T.help.tenants}>{T.tenants}</HelpText></span><span className="stat-value accent">{pct(tenantShare)}</span><Bar value={tenantShare} tone="accent" size="sm" label={T.tenants} /></div>
         </div>}
-        {tab !== 'industry' && <button className="region-buildings-link" onClick={() => { if (onViewBuildings) onViewBuildings(); else setTab('industry'); }}><Factory size={15}/>{lang === 'ko' ? '지역 건물 전체 보기' : 'All regional buildings'} <b>{allBuildings.length}</b></button>}
+        {tab !== 'industry' && <button className="region-buildings-link" onClick={() => { if (onViewBuildings) onViewBuildings(); else setTab('industry'); }}><Factory size={15}/>{uiCopy().screenText['allRegionalBuildings']} <b>{allBuildings.length}</b></button>}
 
       </header>
 
-      {!mode && <nav className="region-tabs" aria-label={lang === 'ko' ? '지역 정보' : 'Region views'}>
-        <button aria-pressed={tab === 'overview'} onClick={() => setTab('overview')}><Users size={18}/>{lang === 'ko' ? '지역 개요' : 'Overview'}</button>
+      {!mode && <nav className="region-tabs" aria-label={uiCopy().screenText['regionViews']}>
+        <button aria-pressed={tab === 'overview'} onClick={() => setTab('overview')}><Users size={18}/>{uiCopy().screenText['overview207']}</button>
         <button aria-pressed={tab === 'market'} onClick={() => setTab('market')}><Package size={18}/>{T.market}</button>
         <button aria-pressed={tab === 'industry'} onClick={() => setTab('industry')}><Factory size={18}/>{T.buildings}<span className="count-pill">{allBuildings.length}</span></button>
       </nav>}
       {tab === 'overview' && <RegionExplorer world={world} region={r} onBuildings={()=>{if(onViewBuildings)onViewBuildings();else setTab('industry');}} onPops={prof=>onViewPops?.(r.id,prof)}/>}
       {tab === 'market' && <section className="block market-workspace">
-        <SectionStack explorer revealId="resource" revealKey={resourceRequest} storageKey="market" items={[{ id: 'prices', title: lang === 'ko' ? '전체 시세표' : 'Market prices', height: 174, content: <section className="market-ledger unified-market">
+        <SectionStack explorer revealId="resource" revealKey={resourceRequest} storageKey="market" items={[{ id: 'prices', title: uiCopy().screenText['marketPrices'], height: 174, content: <section className="market-ledger unified-market">
 
         <div className="table-scroll">
           <table className="goods">
@@ -148,9 +150,9 @@ function RegionPanelView({ world, region, history, selectedGood, onSelectGood, o
           </table>
         </div>
         </section>
-        }, { id: 'resource', shortTitle:lang==='ko'?'상품 상세':'Good details', title: lang === 'ko' ? '선택 상품 · 관련 건물' : 'Selected good · Buildings', height: 290, content: <ResourceInspector game={game} key={`${r.id}-${selectedGood}`} world={world} region={r} good={selectedGood} onGood={selectGood} onCompany={onViewCompany}/>
-        }, { id: 'sources', shortTitle:lang==='ko'?'수요·공급':'Supply / demand', title: lang === 'ko' ? '수요·공급 구성' : 'Supply and demand', height: 210, content: <SourceBreakdown good={selectedGood} m={r.market[selectedGood]} />
-        }, { id: 'history', title: lang === 'ko' ? '가격 추이' : 'Price history', height: 190, content: <div className="price-chart">
+        }, { id: 'resource', shortTitle:uiCopy().screenText['goodDetails'], title: uiCopy().screenText['selectedGoodBuildings'], height: 290, content: <ResourceInspector game={game} key={`${r.id}-${selectedGood}`} world={world} region={r} good={selectedGood} onGood={selectGood} onCompany={onViewCompany}/>
+        }, { id: 'sources', shortTitle:uiCopy().screenText['supplyDemand'], title: uiCopy().screenText['supplyAndDemand'], height: 210, content: <SourceBreakdown good={selectedGood} m={r.market[selectedGood]} />
+        }, { id: 'history', title: uiCopy().screenText['priceHistory'], height: 190, content: <div className="price-chart">
           <div className="card-head">
             <span className="good-name strong"><GoodSprite g={selectedGood} /> {T.priceTrend(goodName(selectedGood))}</span>
             <span className="lbl">{T.basePriceOf(money(GOODS[selectedGood].basePrice))}</span>

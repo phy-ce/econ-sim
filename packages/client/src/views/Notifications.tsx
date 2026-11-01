@@ -1,13 +1,14 @@
-import { ArrowUpRight, MapPin, Factory } from 'lucide-react';
+import {t as uiCopy} from '../i18n';
+import { ArrowUpRight, MapPin, Factory, Search, CheckCheck, Bell, X } from 'lucide-react';
 import { eventDestination } from '../eventDestination';
 import { OwnerBadge } from './OwnerBadge';
-import { useState } from 'react';
-import { companyById } from '@econ/sim';
+import { useState, Fragment } from 'react';
+import { companyById, playerCompany } from '@econ/sim';
 import type { GameEvent, World } from '@econ/sim';
 import { Sprite } from '../sprites';
 import type { SpriteName } from '../sprites';
 import { shortDate } from '../format';
-import { companyName, regionName, buildingName, eventText, t, useT } from '../i18n';
+import { companyName, regionName, buildingName, eventText, t, useT, useLang } from '../i18n';
 
 type Filter = 'all' | 'mine' | 'alerts';
 const PLAYER_ID = 100;
@@ -40,26 +41,31 @@ export function Notifications({ world, lastReadTick, onRead, onJump, onCompany, 
   onRead: () => void;
   onJump: (regionId: number) => void;
 }) {
-  const T = useT();
+  const T = useT(), ko=useLang()==='ko';
+  const [query,setQuery]=useState(''),[onlyUnread,setOnlyUnread]=useState(false),[sort,setSort]=useState('recent'),[limit,setLimit]=useState(40);
+  const player=playerCompany(world),playerId=player?.id??PLAYER_ID;
+  const ownCompanies=new Set(world.companies.filter(c=>player?.kingdomId!==undefined&&c.kingdomId===player.kingdomId).map(c=>c.id));
   const [filter, setFilter] = useState<Filter>('mine');
-  const match = (e: GameEvent) =>
-    filter === 'all' ? true : filter === 'mine' ? e.companyId === PLAYER_ID || e.companyId === null : e.kind !== 'info';
-  const events = [...world.events].reverse().filter(match).slice(0, 80);
-  const unread = world.events.filter((e) => e.tick > lastReadTick && (e.companyId === PLAYER_ID || e.companyId === null)).length;
+  const mine=(e:GameEvent)=>e.companyId===playerId||e.companyId===null||ownCompanies.has(e.companyId);
+  const counts={all:world.events.length,mine:world.events.filter(mine).length,alerts:world.events.filter(e=>e.kind!=='info').length};
+  const matching=[...world.events].reverse().filter(e=>filter==='all'||(filter==='mine'?mine(e):e.kind!=='info')).filter(e=>!onlyUnread||e.tick>lastReadTick).filter(e=>{
+   const region=world.regions.find(r=>r.id===e.regionId),company=e.companyId===null?undefined:companyById(world,e.companyId),building=world.buildings.find(b=>b.id===e.buildingId);
+   return [eventText(e),region?regionName(region):'',company?companyName(company):'',building?buildingName(building.typeId):''].join(' ').toLocaleLowerCase().includes(query.trim().toLocaleLowerCase());
+  }).sort((a,b)=>sort==='oldest'?a.tick-b.tick:sort==='priority'?({danger:3,warn:2,info:1}[b.kind]??0)-({danger:3,warn:2,info:1}[a.kind]??0)||b.tick-a.tick:b.tick-a.tick);
+  const events=matching.slice(0,limit);
+  const unread=world.events.filter(e=>e.tick>lastReadTick&&mine(e)).length;
+  const reset=()=>{setQuery('');setOnlyUnread(false);setFilter('all');setLimit(40);};
 
   return (
     <div className="notices">
-      <div className="notices-head">
-        <h2>{T.news}</h2>
-        <div className="chips" role="tablist" aria-label={T.newsFilter}>
-          {([['mine', T.filterMine], ['alerts', T.filterAlerts], ['all', T.filterAll]] as const).map(([id, label]) => (
-            <button key={id} role="tab" aria-selected={filter === id} onClick={() => setFilter(id)}>{label}</button>
-          ))}
-        </div>
-        {unread > 0 && <button className="link-btn" onClick={onRead}>{T.markAllRead(unread)}</button>}
+      <div className="notice-toolbar">
+       <div className="notice-status"><span><Bell size={14}/><strong>{uiCopy().screenText['dispatches']}</strong><small>{matching.length}</small></span><button className="notice-read" disabled={!unread} data-help={uiCopy().screenText['markOwnAndSharedDispatchesAsRead']} onClick={onRead}><CheckCheck size={14}/>{uiCopy().screenText['markRead']}</button></div>
+       <div className="notice-filters" role="group" aria-label={T.newsFilter}>{([['mine',uiCopy().screenText['myKingdom']],['alerts',T.filterAlerts],['all',T.filterAll]] as const).map(([id,label])=><button key={id} aria-pressed={filter===id} onClick={()=>{setFilter(id);setLimit(40);}}>{label}<small>{counts[id]}</small></button>)}</div>
+       <div className="notice-search"><Search size={14}/><input aria-label={uiCopy().screenText['searchDispatches']} placeholder={uiCopy().screenText['searchNewsRegionsBuildings']} value={query} onChange={e=>{setQuery(e.target.value);setLimit(40);}}/>{query&&<button aria-label={uiCopy().screenText['clearSearch']} onClick={()=>setQuery('')}><X size={13}/></button>}</div>
+       <div className="notice-options"><button aria-pressed={onlyUnread} onClick={()=>{setOnlyUnread(v=>!v);setLimit(40);}}><i className="notice-unread-dot"/>{uiCopy().screenText['unreadOnly']}</button><select aria-label={uiCopy().screenText['sortDispatches']} value={sort} onChange={e=>{setSort(e.target.value);setLimit(40);}}><option value="recent">{uiCopy().screenText['newestFirst']}</option><option value="oldest">{uiCopy().screenText['oldestFirst']}</option><option value="priority">{uiCopy().screenText['priorityFirst']}</option></select></div>
       </div>
-      <ol className="events">
-        {events.length === 0 && <li className="empty">—</li>}
+      <ol className="events notice-timeline">
+        {events.length===0&&<li className="notice-empty"><Bell size={25}/><strong>{uiCopy().screenText['noDispatches']}</strong>{(query||onlyUnread||filter!=='all')&&<button onClick={reset}>{uiCopy().screenText['resetFilters']}</button>}</li>}
         {events.map((e, i) => {
           const c = e.companyId != null ? companyById(world, e.companyId) : undefined;
           const region=world.regions.find(r=>r.id===e.regionId);
@@ -68,21 +74,22 @@ export function Notifications({ world, lastReadTick, onRead, onJump, onCompany, 
           const fresh = e.tick > lastReadTick;
           const k = kindOf(e);
           return (
-            <li key={`${e.tick}-${i}`} className={`ev ${k.cls} ${fresh ? 'fresh' : ''}`}>
-              <span className="ev-icon"><Sprite name={k.sprite} size={40} label={k.label} /></span>
+            <Fragment key={`${e.tick}-${i}`} >{(i===0||events[i-1].tick!==e.tick)&&<li className="notice-date"><time>{shortDate(e.tick)}</time></li>}<li className={`ev ${k.cls} ${fresh ? 'fresh' : ''}`}>
+              <span className="ev-icon"><Sprite name={k.sprite} size={28} label={k.label} /></span>
               <div className="ev-main">
                 {destination?<button className="ev-text event-link" onClick={()=>onEvent(e)}>{eventText(e)}<ArrowUpRight size={14} aria-hidden="true"/></button>:<span className="ev-text">{eventText(e)}</span>}
                 <span className="ev-meta lbl">
-                  <time>{shortDate(e.tick)}</time>
+                  <span className="notice-kind">{k.label}</span>{fresh&&<span className="notice-fresh">{uiCopy().screenText['unread']}</span>}
                   {c && <button className="entity-link" onClick={()=>onCompany(c.id)} title={companyName(c)}><OwnerBadge company={c} world={world}/><ArrowUpRight size={12}/></button>}
                   {region&&<button className="entity-link" onClick={()=>onJump(region.id)}><MapPin size={12}/>{regionName(region)}</button>}
                   {building&&<button className="entity-link" onClick={()=>onEvent(e)}><Factory size={12}/>{buildingName(building.typeId)}</button>}
                 </span>
               </div>
-            </li>
+            </li></Fragment>
           );
         })}
       </ol>
+      {matching.length>limit&&<button className="notice-more" onClick={()=>setLimit(n=>n+40)}>{uiCopy().screenText['showMore']} · {events.length} / {matching.length}</button>}
     </div>
   );
 }
