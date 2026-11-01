@@ -128,3 +128,10 @@ DetailWindow 독립 NavigationProvider/버튼, BuildingPops 및 ResourceInspecto
 
 - 2-51 후속: 실제 관련 건물 양/그룹 단가·금액/상회 상품 링크 구현, typecheck/client48시험 통과. 화면 미검증. 전체 공통 요약 레이아웃 잔여와 허용 범위 밖 packages/encyclopedia 라벨은 미완료로 유지.
 
+
+### 2026-11-01 중단 복구 후 검증 상태
+- 2-77 후속 dbd4b49: 최소크기 검색/타입/클라이언트48시험 통과. 계층 범례 추가 헤드리스 스크린샷 확인(1920×1080): C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/icons-class-legend.png. 8개 범례 아이콘24px, 창scrollWidth418. 인구 표 icons-pop-table.png도24px. 단순 Trends 장면에는 계층 범례가 없으므로 범례 근거는 이 파일로 정정.
+- 2-51 실제값/링크 후속 9529187. 남은 것은 공통 요약 레이아웃 통일(미완료)과 사전 라벨(범위 밖).
+- K/C/H/J·2-50·기본 집계/테마/문구/폐기코드/문자열 커밋 완료. 0장에 완료 상태 반영. 시각 검증 범위는 항목별 기록을 따른다.
+- 주간 수지 내역과 개별 철거 자재 귀속은 sim 요청 대기. sim 파일 수정·push 없음.
+

@@ -33,17 +33,17 @@
 0. **2-77 코드 완료**: 6bf2b2d 및 후속 최소크기 보강. UI_DONE·UI_STATUS의 헤드리스 확인 근거 참조.
 1. **서브윈도우 이력 잔여**: 코드 완료, 화면 미검증. UI_DONE의 2026-11-01 내부 경로 명세 참조.
 2. **공통 투입·산출 UI (2-51, 진행)**: 실제 양·단가·금액·충족/판매·방식 비교. 지금은 `ResourceInspector.tsx:38` recipe만 있다.
-3. **건물 그룹 잔여 (2-42, 2-59)**: 서비스 합계, 손익 워터폴, 소유주 미지정 배당. 기존 그룹·소유권 바(`RegionIndustry.tsx:56·58`)는 다시 만들지 않는다.
-4. **철거 진행 (2-49)**: 대기 레벨 막대·배지(`ResourceInspector.tsx:36·76`)는 있다. 남은 일정·회수 자재.
+3. **건물 그룹 (2-42·2-59)**: 서비스 합계·일간 폭포·미지정 배당 코드 완료(28df87c). 주간 폭포 내역은 막힘(sim week API 대기).
+4. **철거 진행 (2-49)**: 일정·남는 레벨·취소 코드 완료(895f1de). 회수 자재는 막힘(SalvageLot buildingId 없음, 3장 요청).
 
 오버홀 1a 단위 (09 7.2 순서 K → C → H → J)
-5. **K 시험용 계측 (2-70)**: 개발 빌드 전용 로컬 JSON 기록·내보내기.
-6. **C 국가 창 합침 (2-71)**: 정책·재정 창을 탭 둘(예산 / 법)의 창 하나로. 같은 작업에서 복지 다이얼 잠금(2-72 1항)도 한다.
-7. **H 건설 창 입구 (2-73)**: 건설 창에 지역 칩 + 건물 카드 목록.
-8. **J "~까지 ▸" (2-74)**: 연말까지 진행 분할 버튼, 정지·도달 사유 라벨, 같은 위험 경보 되풀이 정지 거르기.
+5. **K 코드 완료**: 013001e (검증 범위 UI_DONE·UI_STATUS 참조).
+6. **C 코드 완료**: 2822912 (검증 범위 UI_DONE·UI_STATUS 참조).
+7. **H 코드 완료**: 8919ade (검증 범위 UI_DONE·UI_STATUS 참조).
+8. **J 코드 완료**: 10db9d2 (검증 범위 UI_DONE·UI_STATUS 참조).
 
 정리
-9. **2-50 잔여**: 옛 상회 보기(`BottomPanel.tsx:45` CompanyView → `CompanyPanel.tsx:160` House)의 저택·금융가 행에 원료·산출·이익률 칸이 남아 있다 (`CompanyPanel.tsx:328~343`).
+9. **2-50 코드 완료**: 6c8119a (검증 범위 UI_DONE·UI_STATUS 참조).
 10. **왕국 통계·정책·연구·재정·에셋 감사**: 1·2장 옛 절과 지금 코드를 대조. 오래된 목록만 보고 미구현/완료로 단정하지 않는다.
 
 sim 대기 · 결정 대기
@@ -817,15 +817,11 @@ Keep the exact composition, coastline and every border position of the chosen ma
 2. **다음 철거까지:** 7일 주기 진행 막대와 `n일`. 한 레벨이 헐리는 순간 막대가 한 칸 줄어드는 짧은 전환(0.3초).
 3. **회수 자재:** `w.salvage` 중 그 건물 몫을 상품 아이콘 + 남은 양 + 남은 날 `목재 1.2만 · 21일`, 옆에 남은 날/28 작은 막대.
 4. **목록 아이콘:** 지역 건물 행(2-42)과 지도 지역 아이콘에 작은 망치 아이콘 + 남은 철거 레벨 수.
-5. **조작:** 막대 옆에 `철거 취소` 버튼(지금 있음). 누르면 빗금 칸이 사라지는 전환.
-6. **소식:** 철거 시작·완료만 소식에 남기고, 한 레벨씩의 진행은 막대로만.
+5. **K 코드 완료**: 013001e (검증 범위 UI_DONE·UI_STATUS 참조).
+6. **C 코드 완료**: 2822912 (검증 범위 UI_DONE·UI_STATUS 참조).
 - 설명 문구 금지 (숫자·막대·아이콘). `prefers-reduced-motion`이면 애니메이션 끔. 다크 모드에서 빗금 대비 확인.
 - sim 쪽 필요(선택): 회수 자재 lot에 `buildingId`, `salvageOf(w, b)` export (지금은 `companyId`·`regionId`로 거르면 되지만 같은 지역 다른 건물 철거와 섞일 수 있다) → 3장.
 
-
-### 2-50. 저택·금융가에는 가동률·원료 충족을 보이지 않는다 (사용자 2026-10-21) — 남은 부분
-> 2026-11-01: 지역 그룹·개별 상세·소유권 상세는 끝 (UI_DONE 2026-11-01, 화면 미검증). 아래만 남았다.
-- 옛 상회 보기(`BottomPanel.tsx:45` CompanyView → `CompanyPanel.tsx:160` House → `BuildingRow`)에서 `isOwnerBuilding(b.typeId)`인 행은 원료 충족 칸(`CompanyPanel.tsx:328~331`), 산출 막대(`:332~334`), 이익률·매출/비용 막대(`:335~343`)를 그리지 않고, 자리 충원 막대(`:322~327`)와 금고 `b.cash`만 둔다. 2-35가 상회 상세를 왕국 경제 창으로 바꾸면서 이 경로를 없애면 이 항목도 끝난다.
 
 ### 2-51. 투입·산출 표시 다시 설계 (사용자 요청 2026-10-21: "투입·산출 지금 조잡함")
 **문제 (2026-10-21 main 기준).** 투입·산출이 여러 곳에서 서로 다른 모양·단위·분모로 나온다.
@@ -990,11 +986,11 @@ Cells, top row left to right, then bottom row:
 2. **왼쪽 분류 줄이 너비를 먹는다.** 탐색 모드 `.information-explorer {grid-template-columns:88px minmax(0,1fr)}` (`strategy.css` 5)에 테두리·여백까지 더해 상세 칸은 창 너비 −114px다 (560→446, 440→326). 그래서 아래 3·4번이 생긴다.
 3. **왕실 요약·상회 상세의 세 칸(인력/투입 부족/수지)이 좁은 칸에서 넘친다.** `.strategy-panel .hsum {grid-template-columns:repeat(3,minmax(0,1fr))}`, `.srow {grid-template-columns:60px minmax(30px,1fr) auto}` (`strategy.css` 70), `.wf-val {min-width:64px}` (`styles.css` 134). 560에서는 가운데 `투입 부족` 칸이 거의 비어 있는데 `수지` 칸은 `이익률 −896%`가 두 줄로 꺾인다 (`min-0.png`). 440에서는 수지 금액이 잘리고 창 전체에 가로 스크롤바가 생긴다 (window-body 469/438, `w440-0.png`, `w440-2.png`).
 4. **상회 상세 머리:** 상회 선택 `<select>`가 배지 아래로 떨어지고, 임금 목록이 두 칸으로 꺾여 7줄이 된다 (`w440-2.png`).
-5. **생활수준 그래프:** `ResponsiveContainer`는 칸 너비(437/317px)를 잘 따른다. 다만 범례 8개가 두 줄(43px)이고, `빈곤선` 글자(`Chart.tsx` 36~37, `position:'insideTopRight'`)가 오른쪽 끝 선들 위에 겹친다 (`min-4.png`). Y축 폭 52px (`Chart.tsx` 27)도 좁은 창에는 크다.
-6. **소식:** 탭 제목 `소식` 아래에 `<h2>소식</h2>` (`Notifications.tsx` 53)가 한 번 더 나와 한 줄을 버린다. `.events {max-height:300px; overflow-y:auto}` (`styles.css` 448) 때문에 창 스크롤 안에 목록 스크롤이 또 있다 (스크롤 갇힘).
-7. **스크롤바가 생기면 내용이 옆으로 밀린다.** `.strategy-panel .window-body {scrollbar-gutter:auto}` (`strategy.css` 57). 상회 상세처럼 내용이 길어지면 스크롤바 15px가 생기며 `탐색/전체 보기` 버튼과 표가 왼쪽으로 밀린다 (`min-0.png`와 `min-2.png` 비교).
-8. **최소 높이 280** (`windowGeometry.ts` 11·13)에서는 분류 줄(279px)만으로 창이 찬다. 크기 조절을 없애면 이 경우는 사라진다.
-9. **다른 창 (440×1000에서 확인):** 지역 개요·시세도 같은 88px 분류 줄(상세 326px)을 쓴다. 재정 표·연구·건설은 440에서 넘침 없음. 지역 건물은 넘침 없음. 재정의 `정보 구역 / 초기화` 줄과 구역 높이 손잡이(`workspace.css` 146)는 좁은 창에서 공간만 먹는다.
+5. **K 코드 완료**: 013001e (검증 범위 UI_DONE·UI_STATUS 참조).
+6. **C 코드 완료**: 2822912 (검증 범위 UI_DONE·UI_STATUS 참조).
+7. **H 코드 완료**: 8919ade (검증 범위 UI_DONE·UI_STATUS 참조).
+8. **J 코드 완료**: 10db9d2 (검증 범위 UI_DONE·UI_STATUS 참조).
+9. **2-50 코드 완료**: 6c8119a (검증 범위 UI_DONE·UI_STATUS 참조).
 
 #### 2-53-2. 바꿀 동작: 크기 조절 없앰, 왼쪽·오른쪽 두 자리
 - **창 크기는 사용자가 바꾸지 않는다.** 모서리·변 끌기, 최대화 버튼, 제목 줄 두 번 누르기(최대화), Enter(최대화), Shift+방향키(크기)를 모두 없앤다.
@@ -1036,8 +1032,8 @@ Cells, top row left to right, then bottom row:
    - 높이: `.pop-directory {height:auto}` (`strategy.css` 43·66의 360/280 삭제), 표 스크롤을 없애고 창 스크롤 하나로. 머리 줄은 `position:sticky;top:<탭 줄 높이>`.
 3. **왕국 (`BottomPanel.tsx` 42 `kingdom-accounts`):** 3열이라 그대로 들어간다. `width:100%;table-layout:fixed`만.
 4. **생활수준·기상 그래프 (`Chart.tsx`):** `ResponsiveContainer width="100%"`는 그대로. 부모에 `min-width:0` (`.explorer-detail > div`). `YAxis width` 52 → 34 (27), `XAxis minTickGap` 36 → 48 (26). `빈곤선` 글자는 그래프 안에 두지 않고 범례 줄 끝에 점선 표본 + `빈곤선 5`로 (36~37의 `label` 삭제, 선은 남김). 범례(`BottomPanel.tsx` 46~50)는 아이콘 14px·글자 10px·간격 2px 8px로 8개가 두 줄 안에. 높이: 생활수준 200 → 220, 기상 145 → 120 (탭이라 세로 여유가 있다, 982px 창).
-5. **순위 (`BottomPanel.tsx` 55~71):** 4열. `table-layout:fixed`, 상회 칸 46%, 배지는 `max-width:100%;overflow:hidden;text-overflow:ellipsis`.
-6. **소식 (`Notifications.tsx` 51~):** `<h2>{T.news}</h2>` (53) 삭제 (탭 제목과 중복). 필터 칩과 `모두 읽음`을 한 줄 (`.notices-head {flex-wrap:nowrap}`, 칩 `min-height:24px;font-size:10px`). 창 안에서는 `.events {max-height:none;overflow:visible}` (`styles.css` 448, `.bell-panel`처럼 184). 행: 아이콘 26px, 본문 11px 두 줄까지 (`-webkit-line-clamp:2`, 전체는 `title`), 메타 줄(날짜·상회 배지·지역·건물)은 `flex-wrap:nowrap;overflow:hidden`이고 상회 배지는 아이콘+짧은 이름.
+5. **K 코드 완료**: 013001e (검증 범위 UI_DONE·UI_STATUS 참조).
+6. **C 코드 완료**: 2822912 (검증 범위 UI_DONE·UI_STATUS 참조).
 
 #### 2-53-6. 다른 창 (같은 종류의 깨짐, 440×982 기준)
 - **지역 개요 / 시세 (`RegionExplorer.tsx` 25, `RegionPanel.tsx` 133):** 같은 88px 분류 줄 → 2-53-4의 위 탭으로. 지역 개요 도넛은 상세가 넓어지므로 `.strategy-panel .explorer-detail .donut {width:154px}` (`strategy.css` 17) 그대로, 계층 줄 숫자는 한 줄.
@@ -1198,7 +1194,7 @@ Cells, top row left to right, then bottom row:
    - **주 단위 폭포는 sim 쪽 필요** (3장): `day`는 하루 값이라 흔들린다. sim이 `week: { sales, tax, inputs, wages, profit }`(이동평균 × 7)를 더하면 라벨을 `T.balanceWeek`로 바꾸고 그 값을 쓴다. 그 전에는 `T.balance`.
 3. **이익 줄**: `주간 이익 ±ƒ /주` · `레벨당 ±ƒ /lv` (칩 둘, 음수 `neg`).
 4. **유보 줄** (`hasReserve`인 건물이 하나라도 있을 때): 라벨 `유보` · 막대 `Σ reserve / Σ reserveCap` (100%에서 자름) · `ƒ… / ƒ…` · 지난주 증감 `±ƒ…` (음수 `neg`). 툴팁 `적립 35%` (`RESERVE_SHARE`).
-5. **주인 표** (`owners`가 있을 때. 국영 보기는 국가 한 줄):
+5. **K 코드 완료**: 013001e (검증 범위 UI_DONE·UI_STATUS 참조).
 
 | 열 | 값 |
 |---|---|
@@ -1493,31 +1489,6 @@ sim 변경 (wt-research):
    - 사실: `setTaxLaw`는 기술 해금과 금융가 자산 비율만 본다 (`commands.ts:249~255`). 소득 대비 30% 상한(`pollTaxIncomeCap` 0.3)은 AI 판단에만 있다 (`ai.ts:343~344`). 0b (같은 조건, 인두세를 개발용으로 강제)에서 시드 1의 5년차 총생산이 13.6 (대조 101~122), 노동자 세금 ÷ 소득이 0.70~0.97까지 올랐다. 플레이어 왕국은 고정 연구 순서에서 5.7~6.3년차에 인두세를 열었다.
    - 화면이 할 것: 지금은 없다. 단위 F(1차 효과 미리보기)의 "부담률" 줄(05 L-S1: 걷힘 ÷ 세금·복지 전 소득, 직종별)이 이 값을 보인다. 결정 대기: 05 C-2 (`pollTax` 세율 재교정 또는 "인두세는 소득의 30%까지" 정책 예외, 사용자 결정). sim 대기: S3 (3장).
    - 화면 쪽에서 미리 계산식을 만들지 않는다 (sim 함수가 생기면 그것을 읽는다).
-
-### 2-73. H 건설 창 입구 (오버홀 09 단위 H, 3.3·6.5, X3)
-- 지금: 건설 창은 대기열(`Projects`)만 그린다 (`GameWindow.tsx:43`). 새 건물은 지도 → 지역 창 → 건물 탭 → "새 건물" DetailWindow(`RegionIndustry.tsx:49`) → 카드 → 버튼으로 5단계다 (09 X3).
-- 바꿀 것:
-  1. 건설 창 맨 위: 지역 칩 줄. `world.regions` 전부, 내 왕국 지역(`region.kingdomId === me.kingdomId`)만 활성, 나머지는 `disabled`. 칩 = 지역 이름 + 대기 공사 수 숫자(그 지역의 내 공사, 0이면 숫자 없음).
-  2. 그 아래 탭 둘: "짓기" / "Build" (기본), "대기열" / "Queue" + 공사 수. 짓기 탭 = 선택 지역의 `BuildList` (`CompanyPanel.tsx:487`, props `game, world, me, region, projects = world.constructions.filter(k => k.companyId === me.id).length`) 그대로. 대기열 탭 = 지금 `Projects` 그대로.
-  3. 선택 지역은 창 탐색 이력에: `ScreenRoute.regionId` (`{kind:'construction', regionId}`). 기본값: `mapRegionId`가 내 왕국 지역이면 그것, 아니면 내 왕국 지역 중 id가 가장 작은 것 (지금 id 1, 09 X10).
-  4. 지도 연동: 건설 창이 열려 있을 때 지도에서 내 왕국 지역을 고르면 칩이 따라 바뀐다 (`mapRegionId` prop, `GameWindow.tsx:18`). 내 왕국이 아닌 지역을 고르면 칩은 그대로.
-  5. 지역을 바꾸면 BuildList의 펼친 카드(`open`)는 닫는다. 검색어·필터·정렬은 유지.
-- 그대로 둘 것: 지역 창 건물 탭의 "새 건물" 입구 (회귀 없음). 철거·방식 교체·가동률 손잡이는 지역 창 건물 카드에 그대로.
-- 2-75(공급 ÷ 수요)가 들어오면 같은 `BuildCard`에 붙으므로 여기서도 보인다.
-- 문자열: "짓기"/"Build", "대기열"/"Queue".
-- 완료 기준 (09 단위 H 인수 조건 "클릭 수 ≤ 설계 경로"): 도크 → (지역 칩) → 카드 → 짓기 = 3~4번 클릭으로 `build` 명령이 들어간다. 남의 왕국 칩은 눌리지 않는다. 창이 열린 채 지도 클릭이 칩을 바꾼다. 대기열 순서·정지·취소가 지금과 같다. 420×560에서 가로 넘침 없음 (ko/en). typecheck.
-
-### 2-74. J "~까지 ▸" 분할 버튼 + 정지·도달 사유 라벨 + 위험 정지 거르기 (오버홀 09 단위 J, 3.5·3.11·H9·R8·R9)
-- 지금: 속도 줄은 정지·1·2·3·4·10배·하루 (`App.tsx:159~167`). 위험 자동 정지는 내 상회 `danger` 소식이 새로 생기면 멈춘다 (`useGame.ts:69~85`). 멈춘 이유는 토스트(12초)뿐이고, 같은 경보가 4주 쿨다운(`alerts.ts:9` `COOLDOWN = TICKS_PER_WEEK * 4`)마다 다시 나오면 그때마다 멈춘다.
-- 바꿀 것:
-  1. **분할 버튼 하나** (속도 줄 오른쪽): 왼쪽 "▸ 연말" = 마지막에 고른 목적지로 진행, 오른쪽 ▾ = 목적지 목록. 목록: "연말" (늘 보임). "신호"(1c 표지 뒤), "기한"(목표 카드 N 뒤)은 그 단위가 생길 때 더한다 (지금 숨김). 진행 속도는 직전 속도(`App.tsx:95` `lastSpeed`), 정지 중이었으면 4배속.
-  2. **도달 판정은 워커에서 틱 단위로** (09 7.1): `protocol.ts`에 `{ type: 'runUntil'; tick: number | null }`(null = 취소)과 `{ type: 'reached'; reason: 'yearEnd'; tick: number }`. `sim.worker.ts` `advance` 반복 안에서 `world.tick >= target`이면 그 틱에서 멈추고 (`ticksPerSecond = 0`), `publish()` 뒤 `reached`를 보낸다. 연말 목표 = 다음 해 1월 1일: `(Math.floor(tick / TICKS_PER_YEAR) + 1) * TICKS_PER_YEAR` (`TICKS_PER_YEAR` 360, sim `data.ts:847`). 사용자가 속도·정지를 바꾸거나 새 판·불러오기를 하면 목표를 지운다.
-  3. **사유 라벨 한 자리** (분할 버튼 옆, 멈췄을 때만): 칩 하나 = 아이콘 + 종류 (+ 지역). 종류 넷: 정지(사용자), 위험(지역 이름, 누르면 그 소식 목적지 `openEvent`, `App.tsx:123`), 도달("연말"), 사전(단위 G 뒤). 다시 진행하면 사라진다. 끄기 버튼은 두지 않는다 (끄기는 메뉴의 위험 정지 하나 그대로, `App.tsx:186`).
-  4. **위험 정지 거르기 (H9)**: 같은 경보 키가 한 번 정지를 일으킨 뒤 쿨다운 주기로 되풀이되면 다시 멈추지 않는다. 키를 마지막으로 본 틱에서 5주(`TICKS_PER_WEEK * 5` = 35틱, 쿨다운 4주 + 1주)보다 오래 안 나왔다가 다시 나오면 새 사유로 보고 멈춘다. "~까지" 진행 중에도 같다. 토스트와 소식함에는 그대로 남는다. 상태(키 → 마지막 본 틱, 정지를 일으켰는지)는 `useGame` ref에 두고 새 판·불러오기 때 비운다.
-     - 경보 키: `GameEvent`에 경보 키가 없다 (`types.ts:631~641`, `alertOnce`의 key는 `economy.ts:765~773`에서 쓰고 버린다). 그 전까지 화면 키 = `${companyId}|${buildingId ?? ''}|${regionId ?? ''}|${textEn ?? text에서 숫자를 지운 글}`. sim이 `GameEvent.key`를 주면 그것으로 바꾼다 (3장, 선택).
-- 그대로 둘 것: 10배속 (V17 결정 전), 단축키 Space·1~5, 하루 진행.
-- 문자열: "연말"/"Year end", 분할 ▾ `aria-label` "목적지"/"Destination", 사유 칩 "정지"/"Paused", "위험"/"Danger", "도달"/"Reached".
-- 완료 기준 (09 단위 J): 연말 목표가 다음 해 1월 1일 틱에서 정확히 멈추고 사유 칩 "도달 · 연말"이 뜬다. 위험 정지 때 사유 칩이 뜨고 누르면 목적지가 열린다. 같은 경보 키가 4주마다 되풀이되면 두 번째부터 멈추지 않는다. 5주 넘게 없다가 다시 나오면 멈춘다. 메뉴의 위험 정지 끄기가 그대로 동작한다. 같은 시드·같은 명령이면 "~까지"로 간 세계와 그냥 진행한 세계가 같은 틱에서 같다 (워커 정지는 명령이 아니다). typecheck.
 
 ### 2-75. 공급 ÷ 수요: 건설 카드의 지금·예상 값, 시장 창 열, AI 문턱 눈금 (오버홀 03 5-1·5-2·6장, sim 대기: wt-0bp 병합 뒤)
 - sim (브랜치 wt-0bp, `cd97f1b`, 아직 main에 없음. 함수 이름은 그 브랜치 `economy.ts` 기준):
