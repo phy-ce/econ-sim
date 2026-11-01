@@ -195,3 +195,6 @@ DetailWindow 독립 NavigationProvider/버튼, BuildingPops 및 ResourceInspecto
 
 - 2-35 추이 구현: 기존 월간 KingdomMetrics로 레벨 누적 면적(국가/저택/금융가/미배정), 국고와 민간 현금+소유 기관 금고 2개 선, 연 GDP를 탭 전환. 2-54의 levelsManor/levelsFinance가 이미 있어 별도 sim 변경 불필요. 현재 합계와 달리 기록 레벨은 sim 정의대로 소작지·소유 기관 제외. 투자 풀의 남은 화면 라벨을 저택·금융가 금고, 장부는 자본 유입으로 정정.
 - root typecheck/client50시험 통과. 헤드리스 별도 프로필에서 createWorld(42)→step 360일로 만든 실제 기록12개 사용. 헤드리스 스크린샷 확인(1920×1080): C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/kingdom-trends-levels.png, kingdom-trends-money.png, kingdom-trends-gdp-fixed.png. 4면/2선/1선, 본문391px·가로 넘침없음. 금액축 왼쪽 잘림을 발견해 이 차트의 축 폭을52px로 보정. 화면 미검증: 다른 왕국 차트 전환, 영문 차트와 라이트 테마.
+
+- 2-35 자금 상자 구현: 공통 KingdomMoney에서 국고/신용 한도·지난주 정부 수지, 민간 순자금·그 안의 유보 자산·저택 금고·금융가 금고를 구분. 유보 자산을 현금에 더하지 않는 근거는 툴팁. 삭제된 regionFunds/옛 투자 대기는 만들지 않고 2-54의 소유 기관 금고로 대체. 플레이어 국고만 클릭→국가 예산, 타 왕국은 조작 없음.
+- root typecheck/client50시험 통과. 헤드리스 스크린샷 확인(1920×1080): C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/kingdom-money-ko.png, kingdom-money-budget.png, kingdom-money-foreign.png. 벨로니아 전환·금고 버튼0·해당 왕국 차트4면 확인. 기존 차트 커밋67e9d8d. 2-35 남음: 회사 라우팅/미사용 코드·문자열 정리와 타왕국·영문·라이트의 추가 화면 검증.

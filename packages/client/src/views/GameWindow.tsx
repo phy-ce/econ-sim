@@ -38,7 +38,7 @@ function GameWindowView({id,game,mapRegionId,request,onOpenWindow}:{onOpenWindow
  const popRequest=useMemo(()=>route.prof?{regionId:region.id,prof:route.prof,sequence}:null,[route.prof,region.id,sequence]);
  if(route.kind==='region')return <RegionWindow key={`region-${sequence}`} game={game} world={world} region={region} history={game.history} selectedGood={route.good??'food'} onSelectGood={onGood} onViewCompany={onCompany} onViewPops={onPops} onOpenBuilding={onBuilding} tabRequest={tabRequest} buildingRequest={buildingRequest} popRequest={popRequest}/>;
  if(route.kind==='market')return <MarketWindow game={game} world={world} scope={scope} onScope={setScope} mapRegionId={region.id} history={game.history} good={route.good??'food'} onGood={onGood} onCompany={onCompany} onBuildings={onBuildings}/>;
- if(route.kind==='trends')return <BottomPanel onGood={onGood} game={game} world={world} history={game.history} lastReadTick={game.lastReadTick} onRead={game.markRead} onJump={onRegion} viewedId={route.companyId??null} onViewCompany={onCompany} onBuilding={onBuilding} onEvent={onEvent} popRequest={null}/>;
+ if(route.kind==='trends')return <BottomPanel onFinance={()=>go({kind:'state',tab:'budget'})} onGood={onGood} game={game} world={world} history={game.history} lastReadTick={game.lastReadTick} onRead={game.markRead} onJump={onRegion} viewedId={route.companyId??null} onViewCompany={onCompany} onBuilding={onBuilding} onEvent={onEvent} popRequest={null}/>;
  if(!me)return null;
  if(route.kind==='state')return <StatePanel game={game} world={world} me={me} onBuilding={onBuilding} onResearch={()=>go({kind:'research'})} requestedTab={route.tab} sequence={sequence}/>;
  if(route.kind==='research')return <ResearchPanel game={game} world={world} me={me}/>;

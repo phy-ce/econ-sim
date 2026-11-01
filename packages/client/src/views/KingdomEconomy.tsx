@@ -9,11 +9,11 @@ import {KingdomBuildings} from './KingdomBuildings';
 import {KingdomTrends} from './KingdomTrends';
 import {SortHeader} from './SortHeader';
 const colors={royal:'var(--royal-owner)',manor:'var(--manor-owner)',finance:'var(--finance-owner)',unassigned:'var(--unassigned-owner)'};
-export function KingdomEconomy({world,id,onSelect,onBuilding}:{world:World;id:number;onSelect:(id:number)=>void;onBuilding:(id:number)=>void}){
+export function KingdomEconomy({world,id,onSelect,onBuilding,onFinance}:{world:World;id:number;onSelect:(id:number)=>void;onBuilding:(id:number)=>void;onFinance?:()=>void}){
  const T=useT(),ko=useLang()==='ko',data=kingdomStats(world,id);
  if(!data.government)return <span>—</span>;
  return <><nav className="system-tabs">{world.kingdoms.map(k=><button key={k.id} aria-pressed={id===k.id} onClick={()=>onSelect(k.id)}><i className="swatch" style={{background:k.color}}/>{ko?k.name:k.nameEn}</button>)}</nav>
- <KingdomSummary world={world} government={data.government}/><div className="system-facts"><span>{T.privateOwner}<b><NumericValue value={data.privateFunds} format="money"/></b></span><span>{T.investmentPool}<b><NumericValue value={data.pool} format="money"/></b></span></div>
+ <KingdomSummary world={world} government={data.government} onFinance={onFinance} includePrivate/>
  <KingdomTrends key={`trends-${id}`} world={world} id={id}/><KingdomBuildings key={id} world={world} id={id} onBuilding={onBuilding}/></>;
 }
 export function KingdomComparison({world,onSelect}:{world:World;onSelect:(id:number)=>void}){

@@ -1,5 +1,6 @@
 import {officeLoadFor} from '../officeLoad';
 import {KingdomTotals} from './KingdomTotals';
+import {KingdomMoney} from './KingdomMoney';
 import {t as uiCopy} from '../i18n';
 import {OwnerSummary} from './OwnerSummary';
 import {FlowRow} from './FlowRow';
@@ -576,9 +577,9 @@ export function CompanySummary({world,company}:{world:World;company:Company}) {
   return <><div className="stats"><div className="stat"><span>{T.cash}</span><b><NumericValue value={company.cash} format="compactMoney"/></b></div><div className="stat"><span>{T.loanLimit}</span><b><NumericValue value={company.debt} format="compactMoney"/></b></div><div className="stat"><span>{T.lastWeekPL}</span><b className={company.lastWeekProfit<0?'neg':'pos'}><NumericValue value={company.lastWeekProfit} format="signedCompactMoney"/></b></div></div><Summary rows={world.buildings.filter(b=>b.companyId===company.id).map(b=>rowOf(world,b))}/></>;
 }
 
-export function KingdomSummary({world,government}:{world:World;government:Company}){
+export function KingdomSummary({world,government,onFinance,includePrivate=false}:{world:World;government:Company;onFinance?:()=>void;includePrivate?:boolean}){
  const T=useT(),regions=new Set(world.regions.filter(r=>r.kingdomId===government.kingdomId).map(r=>r.id));
  const buildings=world.buildings.filter(b=>regions.has(b.regionId));
  const rows=buildings.map(b=>{const row=rowOf(world,b);return isOwnerBuilding(b.typeId)?{...row,rev:0,raw:0,wage:0,profit:0}:row;});
- return <><KingdomTotals world={world} id={government.kingdomId}/><div className="system-facts"><span>{T.treasury}<b><NumericValue value={government.cash-government.debt} format="money"/> / <NumericValue value={creditLimit(world,government)} format="money"/></b></span><span>{T.lastWeekPL}<b><NumericValue value={government.lastWeekProfit} format="signedMoney"/></b></span></div><Summary rows={rows}/></>;
+ return <><KingdomTotals world={world} id={government.kingdomId}/><KingdomMoney world={world} id={government.kingdomId} onFinance={onFinance} includePrivate={includePrivate}/><Summary rows={rows}/></>;
 }

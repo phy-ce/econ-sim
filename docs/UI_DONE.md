@@ -808,3 +808,8 @@ ownershipAssets API로 소유 기관 소재지 기준 왕국/지역 막대, 내 
 ### 2026-11-01 · 2-35 부분: 왕국 추이
 - 월간 기록으로 레벨 누적 면적, 국고/민간 자금 두 선, 연 GDP 탭을 구현했다. 레벨은 2-54의 국가·저택·금융가 기록을 사용하고 미배정 몫은 회색이다. 소작지·소유 기관 제외라는 기록 정의를 유지한다. 없어진 투자 풀은 소유 기관 금고 라벨로 고쳤다.
 - root typecheck/client50시험 통과. 헤드리스 스크린샷 확인(1920×1080): C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/kingdom-trends-levels.png, kingdom-trends-money.png, kingdom-trends-gdp-fixed.png. 실제 seed42·360일의 월간12기록으로 면적/두 선/GDP를 확인했다. 다른 왕국·영문·라이트 차트는 화면 미검증이다.
+
+### 2026-11-01 · 2-35 부분: 국고·민간 자금 상자
+- 국고/한도와 정부 지난주 수지, 민간 순자금 및 포함된 유보 자산, 별도 저택·금융가 금고를 구분한다. 옛 투자 대기(regionFunds)는 2-54에서 삭제되어 만들지 않는다.
+- 플레이어 국고를 누르면 국가 예산으로 이동한다. 다른 왕국은 조회만 가능하다.
+- root typecheck/client50시험 통과. 헤드리스 스크린샷 확인(1920×1080): C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/kingdom-money-ko.png, kingdom-money-budget.png, kingdom-money-foreign.png. 실제 예산 진입과 벨로니아 수치·조작 없음 확인. 전체2-35는 라우팅/미사용 코드 정리가 남아 있다.

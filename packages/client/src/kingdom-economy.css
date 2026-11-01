@@ -14,3 +14,7 @@
 .kingdom-building-facts { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
 .kingdom-building-facts>span { display:flex; flex-direction:column; gap:3px; font-size:11px; }
 .kingdom-building-facts b { font-size:12px; }
+.kingdom-money { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px; margin:6px 0; }
+.strategy-panel .kingdom-money-card { display:flex; flex-direction:column; align-items:flex-start; justify-content:flex-start; gap:4px; border:1px solid var(--rule); padding:7px; background:var(--sheet); text-align:left; color:var(--ink); }
+.kingdom-money-card>span { font-size:11px; color:var(--ink2); }
+.kingdom-money-card>b { font-size:12px; margin-bottom:3px; }

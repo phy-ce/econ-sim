@@ -17,7 +17,7 @@ import { ClassSprite } from '../sprites';
 import { CLASS_COLOR } from '../ui';
 import {className,useT} from '../i18n';
 
-function BottomPanelView({ world, history, lastReadTick, onRead, onJump, viewedId, onViewCompany, game, onEvent, popRequest, onBuilding,onGood }: {onGood?:(g:GoodId)=>void;
+function BottomPanelView({ world, history, lastReadTick, onRead, onJump, viewedId, onViewCompany, game, onEvent, popRequest, onBuilding,onGood,onFinance }: {onGood?:(g:GoodId)=>void;onFinance?:()=>void;
   popRequest:PopRequest|null; onBuilding:(id:number)=>void;
   onEvent:(event:GameEvent)=>void; game:Game; world: World; history: HistoryPoint[];
   lastReadTick: number; onRead: () => void; onJump: (regionId: number) => void;
@@ -32,9 +32,9 @@ function BottomPanelView({ world, history, lastReadTick, onRead, onJump, viewedI
   return (
     <SectionStack explorer revealId={popRequest?'pops':'company'} revealKey={popRequest?.sequence??viewedId} storageKey="trends-v2" items={[
       {id:'economy',shortTitle:uiCopy().screenText['trends'],title:uiCopy().screenText['economicPopulationAndFiscalTrends'],height:520,content:<EconomyCharts world={world}/>},
-      ...(me?[{id:'summary',shortTitle:uiCopy().screenText['summary'],title:T.kingdomSummary,height:220,content:<KingdomSummary world={world} government={me}/>}]:[]),
+      ...(me?[{id:'summary',shortTitle:uiCopy().screenText['summary'],title:T.kingdomSummary,height:220,content:<KingdomSummary world={world} government={me} onFinance={onFinance}/>}]:[]),
       {id:'pops',shortTitle:uiCopy().screenText['pops'],title:T.popList,height:360,content:<PopTable world={world} request={popRequest} onRegion={onJump} onBuilding={onBuilding}/>},
-      ...(viewed?[{id:'company',shortTitle:T.kingdomEconomy,title:T.kingdomEconomy,height:520,content:<KingdomEconomy world={world} id={viewed.kingdomId} onSelect={id=>{const k=world.kingdoms.find(k=>k.id===id);if(k)onViewCompany(k.governmentId);}} onBuilding={onBuilding}/>}]:[]),
+      ...(viewed?[{id:'company',shortTitle:T.kingdomEconomy,title:T.kingdomEconomy,height:520,content:<KingdomEconomy world={world} id={viewed.kingdomId} onSelect={id=>{const k=world.kingdoms.find(k=>k.id===id);if(k)onViewCompany(k.governmentId);}} onBuilding={onBuilding} onFinance={onFinance}/>}]:[]),
       {id:'kingdoms',shortTitle:T.kingdomCompare,title:T.kingdomCompare,height:300,content:<KingdomComparison world={world} onSelect={id=>{const k=world.kingdoms.find(k=>k.id===id);if(k)onViewCompany(k.governmentId);}}/>}, {id:'assets',title:T.assetsTitle,shortTitle:T.assetsTitle,height:360,content:<OwnershipAssets world={world}/>}, { id: 'wealth' , title: T.wealthByClassTitle, shortTitle:uiCopy().screenText['living'], height: 236, content: <>
       
         <div className="card-head">
