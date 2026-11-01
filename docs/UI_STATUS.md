@@ -173,3 +173,6 @@ DetailWindow 독립 NavigationProvider/버튼, BuildingPops 및 ResourceInspecto
 
 - 2-44 API 대기 해제 후 구현 완료. 왕국/지역 자산 막대·월별 왕국 추이, 조건선 없음. typecheck/client48시험 통과. 헤드리스 1920×1080 assets-kingdoms.png/assets-regions.png 확인. 위치 C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/.
 
+
+- 2-35 표시 후속: OwnerBadge 민간 본문을 회사명 대신 민간/Private로 통일, 왕국은 색띠·툴팁 유지. root typecheck/client48시험 통과. 화면 미검증. 회사 선택/순위의 왕국 단위 전면전환은 미완료이며 별도 추적.
+
