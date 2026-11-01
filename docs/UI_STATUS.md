@@ -81,3 +81,6 @@ DetailWindow 독립 NavigationProvider/버튼, BuildingPops 및 ResourceInspecto
 
 - 2-51: FlowRow를 개별 상세·상회 펼침·건설 방식에 연결, 실제/1레벨 기준 구분. 상회 방식 비교 추가. 사전 패키지 라벨 수정은 허용 범위 밖(막힘: packages/encyclopedia). 화면 미검증. 상회 상품 링크·일부 요약 공통화는 잔여로 추적.
 
+
+- 2-42·2-59: 그룹 서비스 합계·일간 Waterfall·ownerless 배당 링크 추가. 주간 내역은 sim week API 대기(3장 기존 요청). 화면 미검증.
+
