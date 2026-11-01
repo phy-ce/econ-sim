@@ -1571,7 +1571,7 @@ sim 변경 (wt-research):
   - 언어는 `lang.ts:6~8` `loadLang()`이 `localStorage['estera-lang']`을 읽어 `'en'`이면 영어, 그 밖(키 없음·읽기 실패 포함)은 모두 한국어. 묻지 않는다.
   - `setLang` (`lang.ts:15~20`)은 `lang === current`이면 바로 돌아가므로 저장하지 않는다. 그래서 한국어로만 해 온 사람은 키가 한 번도 저장되지 않았다.
   - 바꾸는 길은 메뉴 팝오버의 KO / EN (`App.tsx:193~198`) 하나뿐.
-  - 시작 화면은 없다. `App.tsx:115`는 세계가 오기 전 문장 표시(`.boot`, `styles.css:75`)만 보이고, `useGame.ts:99~101`이 저장을 질문 없이 불러온다. 시작 속도는 0 (`useGame.ts:31`, 정지 상태로 시작).
+  - 시작 화면은 없다. `App.tsx:116`은 세계가 오기 전 문장 표시(`.boot`, `styles.css:75`)만 보이고, `useGame.ts:99~101`이 저장을 질문 없이 불러온다. 시작 속도는 0 (`useGame.ts:31`, 정지 상태로 시작).
 - 바꿀 동작:
   1. 저장된 언어가 없으면 (`localStorage['estera-lang']`이 `'ko'`도 `'en'`도 아니거나 읽기 실패) 게임 화면 대신 언어 선택 화면을 먼저 보인다. 새 게임이든 저장 불러오기든 같다.
   2. 고르면 `localStorage['estera-lang']`에 쓰고 바로 게임 화면으로 간다. 다음 실행부터는 묻지 않는다.
@@ -1581,7 +1581,7 @@ sim 변경 (wt-research):
 - 고칠 곳:
   - `lang.ts`: `hasStoredLang(): boolean` (저장값이 `'ko'`·`'en'`이면 true, 읽기 실패면 false)와 `chooseLang(lang: Lang)`을 더한다. `chooseLang`은 `lang === current`여도 저장을 시도하고 (위 `setLang` 조기 반환 때문에 "한국어"를 고르면 저장되지 않는 문제를 피한다), 바뀌었으면 구독자에게 알린다. 기존 `setLang`·`getLang`·`subscribeLang`은 그대로.
   - 처음 `current`: 저장값이 없으면 브라우저 언어로 정해도 된다 (선택 화면이 바로 덮으므로 보이는 차이 없음). 바꾸지 않아도 된다.
-  - 선택 화면: 새 파일 `views/LanguagePick.tsx`. `App.tsx`에 `const [langChosen, setLangChosen] = useState(hasStoredLang)`를 다른 훅들과 같이 두고, `App.tsx:115`의 `if (!world)` 바로 앞에 `if (!langChosen) return <LanguagePick onPick={(l) => { chooseLang(l); setLangChosen(true); }} />`. 워커(`useGame`)는 그 사이 뒤에서 세계를 불러와도 된다 (속도 0이라 시간이 흐르지 않는다). 저장에 실패해도 `langChosen`은 이번 실행 동안 true로 남는다.
+  - 선택 화면: 새 파일 `views/LanguagePick.tsx`. `App.tsx`에 `const [langChosen, setLangChosen] = useState(hasStoredLang)`를 다른 훅들과 같이 두고, `App.tsx:116`의 `if (!world)` 바로 앞에 `if (!langChosen) return <LanguagePick onPick={(l) => { chooseLang(l); setLangChosen(true); }} />`. 워커(`useGame`)는 그 사이 뒤에서 세계를 불러와도 된다 (속도 0이라 시간이 흐르지 않는다). 저장에 실패해도 `langChosen`은 이번 실행 동안 true로 남는다.
   - 모양: `.boot`와 같은 가운데 정렬, 문장(`crest`) 48px 위에 버튼 둘을 가로로. 기존 `.segmented`·`aria-pressed` 양식이나 큰 버튼 둘 (최소 높이 44px). 강조는 `aria-pressed="true"`처럼 `--ink` 바탕 / `--sheet` 글자로, 다크 모드(`:root[data-theme="dark"]`)에서도 강조와 보통 버튼이 구분돼야 한다. 테마는 이미 저장된 값(`App.tsx:39` `loadTheme`)을 따른다. 1920×1080 한 화면, 스크롤 없음.
   - 각 버튼에 `lang="ko"` / `lang="en"`. 그룹 `role="group"`, `aria-label="언어 / Language"` (아직 언어를 모르므로 둘 다).
 - 문자열: 버튼 라벨은 각자 제 언어로 고정: "한국어", "English". `strings.ts` KO·EN 둘 다에 같은 값 `languageNames: { ko: '한국어', en: 'English' }`로 두거나 컴포넌트 상수로 둔다. 그룹 라벨 "언어 / Language". 제목·안내 문구는 넣지 않는다.
