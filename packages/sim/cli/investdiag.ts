@@ -9,14 +9,14 @@
 //   관문은 회사마다 따로 본다: 돈이 쌓인 회사와 돈이 모자란 회사를 평균하면 둘 다 가려진다
 // 시뮬레이션 상태를 바꾸지 않고 무작위 수열(rand)을 쓰지 않는다 (같은 시드면 결과가 sweep 과 같다)
 import { laborAvailability } from '../src/ai';
-import { BUILDING_TYPES, TICKS_PER_YEAR, TUNE } from '../src/data';
+import { BUILDING_TYPES, TICKS_PER_YEAR, TUNE, overrideTune } from '../src/data';
 import { availableMethods, builderOf, canBuildType, companyById, constructionEstimate, depositFree, harvestFactor, roomFor, withEstimateCache } from '../src/economy';
 import { committedCost, reserveOf } from '../src/finance';
 import { createWorld, step } from '../src/index';
 import { marketOutlook, valueMethod } from '../src/outlook';
 import type { Company, World } from '../src/types';
 
-Object.assign(TUNE, JSON.parse(process.argv[2] ?? '{}'));
+overrideTune(JSON.parse(process.argv[2] ?? '{}'), 'cli/investdiag');
 const seed = Number(process.argv[3] ?? 1), years = Number(process.argv[4] ?? 20);
 const w = createWorld(seed, { withPlayer: false });
 const MIN_ROI = 0.2, MIN_STAFFING = 0.5;

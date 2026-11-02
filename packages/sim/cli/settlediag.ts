@@ -5,14 +5,14 @@
 //   gdpY 연 총생산(백만, 대륙 합), lv.priv 민간 건물 레벨, lv.state 왕실 건물 레벨, manor·finance 연말 금고 합(백만), drift 화폐 보존 어긋남
 // 정산 흐름은 kingdoms.ts FLOW (settle.*, settleShort.*, settleN, settleCap.*) 에서 읽는다
 import './lowprio';
-import { BUILDING_BY_ID, TUNE } from '../src/data';
+import { BUILDING_BY_ID, overrideTune } from '../src/data';
 import { isOwnerBuilding, kingdomGdp, moneyIdentity } from '../src/economy';
 import { FLOW } from '../src/kingdoms';
 import { createWorld, step } from '../src/index';
 
 const seed = Number(process.argv[2] ?? 1), years = Number(process.argv[3] ?? 20);
 const over = JSON.parse(process.argv[4] ?? '{}');
-Object.assign(TUNE, over);
+overrideTune(over, 'settlediag');
 const run = process.env.RUN ?? (Object.keys(over).length ? JSON.stringify(over) : 'base');
 const w = createWorld(seed, { withPlayer: false });
 const m0 = moneyIdentity(w);

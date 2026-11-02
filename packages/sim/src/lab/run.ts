@@ -2,7 +2,7 @@
 // lab 은 sim 의 무엇이든 import 해도 되지만 sim 코어는 lab 을 import 하지 않는다 (test/core/layers.test.ts).
 // 세계에 손대는 길은 셋뿐이다: applyCommandMsg (화면과 같은 명령 길), forceLaw (개발용 법 강제, 10 3.8), shock (고갈 처방, 05 8.3).
 // 관측(Collector)은 읽기만 한다 (test/gate/lab.test.ts).
-import { BUILDING_BY_ID, TECH_BY_ID, TICKS_PER_YEAR, TUNE } from '../data';
+import { BUILDING_BY_ID, TECH_BY_ID, TICKS_PER_YEAR, TUNE, overrideTune } from '../data';
 import { builderOf, companyById, creditLimit, landFree, researchableTechs } from '../economy';
 import { applyCommandMsg, createWorld, step } from '../index';
 import { aiTrace } from '../ai';
@@ -44,7 +44,7 @@ export interface LabSpec {
   laws?: { tax?: TaxLaw; invest?: InvestLaw; welfare?: WelfareLaw };
   /** 명령열 (매일 step 직전, 매크로는 될 때까지 날마다 다시 시도) */
   script?: LabScriptLine[];
-  /** TUNE 덮어쓰기 (sweep.ts 와 같은 Object.assign, 실행이 끝나면 되돌린다) */
+  /** TUNE 덮어쓰기 (sweep.ts 와 같은 data.ts overrideTune: TUNE 에 없는 키면 멈춘다. 실행이 끝나면 되돌린다) */
   tune?: Record<string, unknown>;
   /** 정책 사다리 끄기 (05 8.3 S0): 이 왕국 예산 단계를 날마다 이 값으로 되돌린다 (명령 길) */
   pin?: { kingdom: number; tax: number; wages: number; welfare: number };
@@ -217,7 +217,7 @@ export function runSpec(spec: LabSpec, opts: RunOptions = {}): LabResult {
   const t0 = performance.now();
   const prevTrace = aiTrace.on;
   try {
-    if (spec.tune) Object.assign(TUNE, spec.tune);
+    if (spec.tune) overrideTune(spec.tune, `lab 명세 ${spec.name} (시드 ${spec.seed})`);
     const salt = spec.salt ?? 0, withPlayer = spec.withPlayer ?? true;
     const w = createWorld(spec.seed, { withPlayer, aiSalt: salt });
     const log: LabLog[] = [];
@@ -263,7 +263,6 @@ export function runSpec(spec: LabSpec, opts: RunOptions = {}): LabResult {
     return { rows, log, world: w, ms: performance.now() - t0 };
   } finally {
     aiTrace.on = prevTrace;
-    for (const k of Object.keys(TUNE)) if (!(k in saved)) delete (TUNE as Record<string, unknown>)[k];
     Object.assign(TUNE, saved);
   }
 }

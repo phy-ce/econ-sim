@@ -362,16 +362,16 @@ COMPARE = ['gdp', 'gdpPre', 'pop', 'peas', 'jobless', 'solPeas', 'solUnsk', 'pea
            'sdSwing.grain', 'sdSwing.fiber', 'sdSwing.timber', 'sdSwingR.grain', 'sdSwingR.fiber', 'sdSwingR.timber',
            'capLv.grain', 'capLv.fiber', 'capLv.timber',
            'sdCut', 'sdDemo', 'utilUp', 'lossCut', 'utilG.grain', 'utilG.fiber', 'utilG.timber', 'lo.grain', 'price.grain',
-           'capLvD.grain', 'sellDemo', 'marginDemo', 'marginBlock', 'marginOk']
+           'capLvD.grain', 'sellDemo', 'marginDemo', 'marginBlock', 'marginOk', 'trimDemo', 'trimStop']
 # 레벨이 줄어든 해 수를 세는 지표 (0b′ 곡물 균형: 상품별 레벨 합의 한 해 변화, 대륙 줄)
 DROPS = ['capLvD.grain', 'capLvD.fiber', 'capLvD.timber']
 CNAME = NAME | {'gdpPre': '세전 총생산', 'peasantIncome': '소작 1인 소득', 'wage.unskilled': '노동자 임금', 'wpos.unskilled.floor': '바닥에 붙은 노동자 비율',
                 'wpos.farmer.floor': '바닥에 붙은 농부 비율', 'sellV': '팔린 비율 (가치)', 'lvProd': '생산 건물 레벨 합', 'savNoble': '귀족 직종 저축',
                 'vault': '저택·금융가 금고', 'vaultG': '금고 해마다 증가율', 'pledge': '남은 금고 공사 약정', 'pledgeNew': '새 금고 약정', 'startLv': '착공 레벨',
                 'demoLv': '헐린 레벨', 'quickDemo': '52주 안 헐린 레벨', 'quickIdx': '짓고 부수기 지수', 'growStarts': '유보 증설 착공', 'glutBlock': '과잉 검사로 막힌 증설',
-                'adminStaff': '행정청 인원 (천)', 'sdCut': '5-2 가동률 감축 (번)', 'sdDemo': '5-2 철거 레벨',
-                'utilUp': '가동률 올리기 (번)', 'capLvD.grain': '곡물 레벨 합 한 해 변화', 'sellDemo': 'A2 설비 철거 레벨', 'marginDemo': 'A3 철거 레벨',
-                'marginBlock': 'A3 가 막은 증설 (건물·주)', 'marginOk': 'A3 가 허용한 증설 (건물·주)', 'lossCut': '적자 가동률 감축 (번)', 'skim': '저택 거둠', 'margR1': '실제 ÷ 설계 이익률 (기본 방식)'}
+                'adminStaff': '행정청 인원 (천)', 'sdCut': '5-2 가동률 감축 (번, 지움, 늘 0)', 'sdDemo': '5-2 철거 레벨 (지움, 늘 0)',
+                'utilUp': '가동률 올리기 (번)', 'capLvD.grain': '곡물 레벨 합 한 해 변화', 'sellDemo': 'A2 설비 철거 레벨 (지움, 늘 0)', 'marginDemo': 'A3 철거 레벨 (지움, 늘 0)',
+                'marginBlock': 'A3 가 막은 증설 (건물·주, 지움, 늘 0)', 'marginOk': 'A3 가 허용한 증설 (건물·주, 지움, 늘 0)', 'trimDemo': '넘침 퇴출 철거 레벨', 'trimStop': '넘침 퇴출 듣지 않아 쉼 (번)', 'lossCut': '적자 가동률 감축 (번)', 'skim': '저택 거둠', 'margR1': '실제 ÷ 설계 이익률 (기본 방식)'}
 
 
 def natural(name):

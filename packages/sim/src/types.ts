@@ -280,8 +280,6 @@ export interface Building {
   privatize?: boolean;
   /** 금융가 지분 1개 값 = (금고 + 가진 레벨의 공사비) ÷ 지분 수 (매주, finance.ts updateFunds) */
   nav?: number;
-  /** 금융가: 마지막으로 민간 공사비를 맡은 날 (TUNE.financeIdle 이 켜졌을 때만 쓴다, finance.ts financeIdle) */
-  fundedTick?: number;
   /** 소작지: 일하는 소작농 (노동 인구) */
   tenants?: number;
   /** 저택: 상급 귀족 자리 (노동 인구). 저택이 가진 건물 레벨과 소작지 칸으로 정한다 (production.ts updateOwnership) */
@@ -329,9 +327,9 @@ export interface Building {
   negWeeks?: number;
   /** 생산 건물의 투입 충족이 0.5 미만이었던 연속 주 수 (AI, TUNE.starveWeeks). 없으면 0 (16판에서 생겼다) */
   starvedWeeks?: number;
-  /** TUNE.aiReserveRule (AI): 유보 자산이 상한의 90% 이상이었던 연속 주 수 (증설 판단). 없으면 0 (18판에서 생겼다) */
+  /** 유보 기준 AI: 증설 확률이 뽑힌 연속 주 수. 지운 reserveGrowMax 0 갈래(찬 주 4주면 증설)만 읽었다. 읽는 곳은 없고 써지기만 한다 (SIMPLIFY_AUDIT 1-D′ 에서 지울 칸). 없으면 0 (18판에서 생겼다) */
   richWeeks?: number;
-  /** TUNE.aiReserveRule (AI): 유보 자산이 0이고 주간 손익이 음수였던 연속 주 수 (철거 판단). 없으면 0 (18판에서 생겼다) */
+  /** 유보 기준 AI: 유보 자산이 0이고 주간 손익이 음수였던 연속 주 수 (철거 판단). 없으면 0 (18판에서 생겼다) */
   brokeWeeks?: number;
   /** 공사로 새로 생긴 날 (AI: 사람을 뽑는 동안의 적자를 철거 판단에서 빼는 데 쓴다). 시작 건물에는 없다 (0으로 본다, 18판에서 생겼다) */
   builtTick?: number;
@@ -409,18 +407,18 @@ export interface Company {
   /** 국영(왕국 정부) 회사인가. 국영 회사의 현금이 그 왕국의 국고다 */
   state: boolean;
   cash: number;
-  /** 회사 임금표: 민간 상회와 왕실 생산 건물. 매주 AI(adjustWages)가 시장을 보고 정하거나, 플레이어가 정한다 (setWage·setWageOffset) */
+  /** 회사 대표 임금표: 그 회사 생산 건물 지역 시장 임금(웃돈 포함)의 고용 가중 평균 (labor.ts syncCompanyWages, 화면·지역을 정하지 않은 추정용). 실제 지급은 wagesAt (지역 임금) */
   wages: Record<Skill, number>;
-  /** 국영 임금표 (왕실만): 정부 건물(행정청·건축사무소·학교)의 임금 = 직종별 시장 임금(왕실 건물 제외) × 국영 임금 수준 배율 (finance.ts applyStateWages) */
+  /** 국영 임금표 (왕실만, 화면·추정용 대표값): 왕국 지역들의 국영 임금(Region.stateWages = 지역 시장 임금 × 국영 임금 단계 배율 × (1 + AI 왕실 웃돈)) 평균 (finance.ts applyStateWages). 실제 지급은 Region.stateWages */
   stateWages?: Record<Skill, number>;
-  /** 지난주 직종별 고용 인원 (AI가 실제로 사람이 찼는지 보고 임금을 정한다) */
+  /** 지난주 직종별 고용 인원. 지운 AI 임금 판단(adjustWages, wt-simplify 1-E)만 썼다. 이제 써지지 않고 옛 저장에만 남는다 (SIMPLIFY_AUDIT 1-D′ 에서 지울 칸) */
   lastEmployed?: Partial<Record<Skill, number>>;
   weekProfit: number;
   lastWeekProfit: number;
   weekStartCash: number;
   wageOffset: Record<Skill, number> | null;
   /**
-   * AI 민간 상회의 지역별 웃돈 (TUNE.aiWagePremium, ai.ts adjustPremium): 지역 id → 직종별 웃돈 비율(off, 그 지역 임금 = 시장 임금 × (1 + off))과
+   * AI 민간 상회의 지역별 웃돈 (ai.ts adjustPremium): 지역 id → 직종별 웃돈 비율(off, 그 지역 임금 = 시장 임금 × (1 + off))과
    * 지난 점검의 그 지역 고용·빈자리 (사람이 빠지는지 본다). 끄면 생기지 않는다
    */
   aiPremium?: Record<number, { off: Record<Skill, number>; emp: Record<Skill, number>; vac: Record<Skill, number> }>;
@@ -437,7 +435,7 @@ export interface Company {
   buildCost: number;
   /** 건축사무소 포인트 중 공사에 실제로 쓰인 하루 양의 이동평균 (왕실, AI가 사무소 크기를 정한다) */
   buildUsed?: number;
-  /** AI 착공 공사비의 52주 이동 합 (보통 + 발전 투자)과 그중 발전 투자 몫 (TUNE.devShare) */
+  /** AI 착공 공사비의 52주 이동 합과 그중 발전 투자 몫 (지운 TUNE.devShare 만 읽었다. 써지기만 한다, SIMPLIFY_AUDIT 1-D′ 에서 지울 칸) */
   startCost?: number;
   devCost?: number;
   research: Research;
@@ -512,18 +510,15 @@ export interface Region {
   /** pop 합산 (화면용). 매 틱 다시 채운다 */
   households: Record<PopClass, Household>;
   market: Record<GoodId, MarketGood>;
-  /** TUNE.aiReserveRule (AI 새 투자): 상품 값이 기본가의 1.25배 이상이었던 연속 주 수 (0인 상품은 없다). 없으면 모두 0 (18판에서 생겼다) */
+  /** 유보 기준 AI 새 투자 (planTrials): 상품 값이 기본가의 1.25배 이상이었던 연속 주 수 (0인 상품은 없다). 없으면 모두 0 (18판에서 생겼다) */
   hotWeeks?: Partial<Record<GoodId, number>>;
+  /** 다시 짓기 기다림 (TUNE.aiRebuildWait > 0, 이슈 #7): 건물 종류 → AI 가 이 지역에서 그 종류의 철거를 마지막으로 명령한 날. 끔이면 생기지 않는다 (18판 안에서 더한 칸) */
+  demoAt?: Record<string, number>;
   /**
-   * AI 가동률 감축·철거 (TUNE.aiCutSD·aiDemoSD, 오버홀 03 5-2): 지금 공급 ÷ 수요가 aiCutSD 이상 / aiDemoSD 이상이었던 연속 주 수 (0인 상품은 없다).
-   * 문턱이 0(끔)이면 생기지 않는다. 없으면 모두 0 (18판 안에서 더한 칸이라 판을 올리지 않았다)
+   * 넘침 퇴출 (TUNE.aiTrimSD, ai.ts trimExit): 상품 → 이 지역에서 그 상품을 다시 볼 수 있는 날 until, 헐었을 때의 예상 공급 ÷ 수요 sd
+   * (sd 가 있으면 철거 뒤 기다림, 없으면 TUNE.aiTrimPause 쉼). 지난 것은 지운다. 끔이면 생기지 않는다
    */
-  cutWeeks?: Partial<Record<GoodId, number>>;
-  demoWeeks?: Partial<Record<GoodId, number>>;
-  /** 0b′ A2 설비 철거 (TUNE.aiSellDemoSD): 지금 공급 ÷ 수요가 aiSellDemoSD 이상이었던 연속 주 수 (0인 상품은 없다). 문턱이 0(끔)이면 생기지 않는다 */
-  sellWeeks?: Partial<Record<GoodId, number>>;
-  /** 0b′ A3 자기 값 효과 철거 (TUNE.aiMarginal ≥ 2): 키 "회사 id|상품" → 1레벨 헐면 회사 손익이 느는 연속 주 수 (0인 키는 없다). 끔이면 생기지 않는다 */
-  marginWeeks?: Record<string, number>;
+  trim?: Partial<Record<GoodId, { until: number; sd?: number }>>;
   /** 소작지 여유 (시제품 TUNE.tenantSlack > 0): 그 지역 소작지 채움(일하는 소작농 노동 인구 ÷ 칸 × 1칸 인원)의 기준값. 켜진 뒤 첫 수확 날의 채움 (0이면 다음 날 다시). 끔이면 생기지 않는다 */
   tenantFill0?: number;
   /** 임금 바닥용 소작 1인 소득의 지수 이동평균 (TUNE.wageFloorWeeks > 0, labor.ts updateMarketWages). 끔이면 생기지 않는다 */
@@ -535,13 +530,13 @@ export interface Region {
    */
   trade?: { buy: number; cut: number; margin: number };
   /**
-   * 지역 시장 임금 (TUNE.wageMarket = 1, labor.ts updateMarketWages): 직종마다 하나. 이 지역의 모든 임금 건물(왕실 생산 건물 포함)이 이것을 준다 (AI 민간 상회는 × (1 + Company.aiPremium[지역].off), economy.ts wagesAt).
-   * 없으면 시작 임금 규칙(labor.ts startWage)으로 채운다 (18판 안에서 더한 칸이라 판을 올리지 않았다). wageMarket = 0 이면 생기지 않는다
+   * 지역 시장 임금 (labor.ts updateMarketWages): 직종마다 하나. 이 지역의 모든 임금 건물(왕실 생산 건물 포함)이 이것을 준다 (AI 민간 상회는 × (1 + Company.aiPremium[지역].off), economy.ts wagesAt).
+   * 없으면 시작 임금 규칙(labor.ts startWage)으로 채운다 (18판 안에서 더한 칸이라 판을 올리지 않았다)
    */
   wages?: Record<Skill, number>;
   /** wages 의 52주 이동평균 (날마다 1/364 씩 다가간다). AI 투자 판단 임금 (outlook.ts longRunWages) */
   wageAvg?: Record<Skill, number>;
-  /** 이 지역 왕실 정부 건물의 국영 임금 = wages × 국영 임금 단계 배율 × (1 + AI 왕실 국영 웃돈 Company.statePremium, 없으면 0) (매주, finance.ts applyStateWages). wageMarket = 1 일 때만 */
+  /** 이 지역 왕실 정부 건물의 국영 임금 = wages × 국영 임금 단계 배율 × (1 + AI 왕실 국영 웃돈 Company.statePremium, 없으면 0) (매주, finance.ts applyStateWages) */
   stateWages?: Record<Skill, number>;
 }
 
@@ -620,7 +615,7 @@ export interface Kingdom {
   welfareNeedBy?: Record<string, { need: number[]; short: number[] }>;
   /** AI: 지난 정책 점검 때 국고 순자산 (현금 − 빚) */
   netLast?: number;
-  /** 이번 달 착공 레벨 (지표용): '건물|s'(왕실) '건물|p'(민간) '건물|loss'(AI 손해 짓기) '건물|d'(철거) '건물|v'(민영화로 판 레벨) */
+  /** 이번 달 착공 레벨 (지표용): '건물|s'(왕실) '건물|p'(민간) '건물|d'(철거) '건물|v'(민영화로 판 레벨) */
   startsMonth?: Record<string, number>;
 }
 

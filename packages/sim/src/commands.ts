@@ -90,8 +90,6 @@ function runCommand(w: World, actor: number, cmd: Command): CommandError | null 
           funders![id] -= pay;
         });
       }
-      // TUNE.financeIdle: 금융가가 마지막으로 공사비를 맡은 날 (쉬는 금융가 판단)
-      if (TUNE.financeIdle > 0) for (const id in funders) { const o = w.buildings.find((b) => b.id === Number(id)); if (o?.typeId === 'finance') o.fundedTick = w.tick; }
     } else if (escrow > 0) {
       // 왕실·플레이어 민간 상회는 회사 현금에서 낸다
       if (company.cash < escrow) return fail('무역소 금고에 넣을 돈이 모자랍니다.', 'Not enough cash to fund the trading post.');

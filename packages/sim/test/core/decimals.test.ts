@@ -35,13 +35,12 @@ function violations(root: unknown, label: string, limit = 8): string[] {
 
 /**
  * 화면에 그대로 나가는 값: 기록(history·metrics), 지난주 국정 수지, 투자 풀 칸, 회사 임금.
- * 지역 시장 임금(TUNE.wageMarket = 1)에서는 회사 임금표가 지역 임금의 고용 가중 평균인 계산값이라 (labor.ts syncCompanyWages) 반올림하지 않고 화면이 반올림한다. 그때는 세지 않는다
+ * 회사 임금표는 지역 시장 임금의 고용 가중 평균인 계산값이라 (labor.ts syncCompanyWages) 반올림하지 않고 화면이 반올림한다. 그래서 세지 않는다
  */
 function shown(w: World) {
   return {
     history: w.history, metrics: w.metrics,
     kingdoms: w.kingdoms.map((k) => ({ lastBudget: k.lastBudget, investmentPool: k.investmentPool })),
-    wages: TUNE.wageMarket ? [] : w.companies.map((c) => c.wages),
   };
 }
 

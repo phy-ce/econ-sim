@@ -66,7 +66,7 @@ const READERS: Record<string, (w: World) => void> = {
       for (const p of POP_CLASSES) regionUnemployment(w, r.id, p);
       subsistenceWage(w, r); marketWageTargets(w, r.id);
       for (const g of GOOD_IDS) { priceIn(w, r.id, g); outputCapacity(w, r.id, g); }
-      // 예상·지금 공급 ÷ 수요 (0b′ AI 증설 검사 aiGlutSD·감축 aiCutSD·aiDemoSD, 건설 화면의 레벨 +N 뒤 예상)
+      // 예상·지금 공급 ÷ 수요 (AI 증설 검사 aiGlutSD, 건설 화면의 레벨 +N 뒤 예상)
       for (const g of GOOD_IDS) { projectedSD(w, r.id, g); projectedSD(w, r.id, g, 1000); currentSD(w, r.id, g); }
       for (const o of w.regions) for (const g of ['grain', 'tools'] as const) { freightRate(w, r.id, o.id, g); borderCost(w, r.id, o.id, g); }
     }

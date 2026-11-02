@@ -1,6 +1,6 @@
 // 원자재 수급 진단: npx tsx cli/grainbal.ts [seed] [days,...]  (기본 시드 1, 1·30·180·360·1800·7200일)
 // 날마다: 계층 비율(소작농 = 소작지 + 땅 없음), 노동자 일자리, 곡물·목재·섬유의 대륙 공급/수요(출처별)와 지역별 값(기본가 대비)
-import { GOODS, TUNE, SUBSISTENCE } from '../src/data';
+import { GOODS, TUNE, SUBSISTENCE, overrideTune } from '../src/data';
 import { createWorld, step } from '../src/index';
 import type { GoodId, World } from '../src/types';
 
@@ -8,7 +8,7 @@ const seed = Number(process.argv[2] ?? 1);
 const days = (process.argv[3] ?? '1,30,180,360,1800,7200').split(',').map(Number);
 const over = process.argv[4] ? JSON.parse(process.argv[4]) : {};
 const { subsistence, ...tune } = over;
-Object.assign(TUNE, tune);
+overrideTune(tune, 'cli/grainbal');
 if (subsistence) Object.assign(SUBSISTENCE, subsistence);
 const w = createWorld(seed, { withPlayer: false });
 const k = (x: number) => `${Math.round(x / 1e3)}k`;

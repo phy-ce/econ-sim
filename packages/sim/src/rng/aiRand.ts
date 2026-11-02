@@ -15,7 +15,7 @@ declare const aiKeyBrand: unique symbol;
 export type AiKey = number & { readonly [aiKeyBrand]: true };
 
 /** 쓰는 곳마다 태그 하나 (3.2 키 규칙 표) */
-export type AiTag = 'research' | 'least' | 'pick' | 'pickDev' | 'grow';
+export type AiTag = 'research' | 'pick' | 'grow';
 
 /** 문자열 → 32비트 정수 (FNV-1a) */
 export function strKey(s: string): number {

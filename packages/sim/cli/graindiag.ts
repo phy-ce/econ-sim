@@ -10,10 +10,10 @@ import './lowprio';
 //   그 상품을 내는 AI 생산 건물(유보 기준): 레벨(방식별), 레벨 가중 가동률, 매출·원료비·인건비·이익 (b.last 합), 유보 ÷ 상한, 적자 연속 주 최대
 //   농부 시장 임금 ÷ 소작 1인 소득, 1레벨 손익분기 팔린 비율 (지금 값·임금에서 이익 = 0 이 되는 sold ÷ supply)
 //   지역별 예상 S/D(projectedSD, 과잉 검사가 보는 값)의 생산 레벨 가중 평균과 구간(< 1.2, 1.2~1.5, > 1.5)에 있는 생산 레벨 비율
-//   AI 판단 횟수 (aiTrace): 증설(reserve)·새 투자(trial)·과잉 막힘(glutBlock)·철거(reserveShrink·sdDemo·sellDemo·marginExit)·가동률(setUtilization·lossCut·utilUp·sdCut)
+//   AI 판단 횟수 (aiTrace): 증설(reserve)·새 투자(trial)·과잉 막힘(glutBlock)·철거(reserveShrink·trimDemo)·가동률(lossCut·utilUp)
 import { writeFileSync, appendFileSync, mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
-import { BUILDING_BY_ID, GOODS, TICKS_PER_WEEK, TICKS_PER_YEAR, TUNE, getMethod } from '../src/data';
+import { BUILDING_BY_ID, GOODS, TICKS_PER_WEEK, TICKS_PER_YEAR, TUNE, checkTuneKeys, getMethod } from '../src/data';
 import { projectedSD, mainOutput, isGovernment } from '../src/economy';
 import { createWorld, step } from '../src/index';
 import { subsistenceWage } from '../src/labor';
@@ -36,7 +36,7 @@ const OUT = arg('out', '');
 const YOUT = arg('yout', ''); // 해마다 한 줄 JSON (wt-grainrule)
 const TUNE_SET: Record<string, unknown> = JSON.parse(arg('tune', '{}'));
 const PRESET = arg('preset', '');
-if (PRESET === 'labor') TUNE_SET.reserveShrinkWeeks ??= 1e9;
+if (PRESET === 'labor') TUNE_SET.shrinkWeeks ??= 1e9; // microcheck --preset labor 와 같다 (wt-simplify 1-F 뒤로 reserveShrinkWeeks 는 shrinkWeeks: 정부 건물·무역소 적자 철거도 멈춘다)
 const TYPESCALE_ARG = arg('typescale', PRESET === 'labor' ? 'workshop=0.15,textile=0.25,fiber_farm=0.25' : '');
 const typeScale = TYPESCALE_ARG ? Object.fromEntries(TYPESCALE_ARG.split(',').map((x) => { const [k, v] = x.split('='); return [k, Number(v)]; })) : undefined;
 const BUILD = arg('build', '');
@@ -46,6 +46,7 @@ const buildings: MicroBuilding[] | undefined = BUILD ? BUILD.split(',').map((x) 
 }) : undefined;
 const SLACK = arg('arableslack', '');
 
+checkTuneKeys(TUNE_SET, 'graindiag --tune');
 const tuneBefore: Record<string, unknown> = {};
 for (const k of Object.keys(TUNE_SET)) { tuneBefore[k] = (TUNE as Record<string, unknown>)[k]; (TUNE as Record<string, unknown>)[k] = TUNE_SET[k]; }
 
@@ -54,7 +55,7 @@ const w: World = FULL
   : createMicroWorld({ seed: SEED, aiSalt: SALT, people: [Number(arg('people', '400'))], ...(buildings ? { buildings } : {}), ...(typeScale ? { typeScale } : {}), ...(SLACK ? { arableSlack: Number(SLACK) } : {}) });
 
 // ---------------------------------------------------------------- AI 판단 세기
-const EV_KEYS = ['reserve', 'trial', 'glutBlock', 'reserveShrink', 'sdDemo', 'sellDemo', 'trimDemo', 'trimHold', 'trimStop', 'marginExit', 'setUtilization', 'lossCut', 'utilUp', 'sdCut', 'keepLast'];
+const EV_KEYS = ['reserve', 'trial', 'glutBlock', 'reserveShrink', 'trimDemo', 'trimHold', 'trimStop', 'lossCut', 'utilUp', 'keepLast'];
 let ev: Record<string, number> = {};
 const makesG = (typeId: string, methodId: string) => (getMethod(typeId, methodId).outputs[G] ?? 0) > 0;
 aiTrace.on = (_w, _c, path, typeId, methodId, levels) => {
@@ -187,8 +188,8 @@ const HEAD = 'S/D  S/Dema  값   팔림 | 소작지대 소작판매 농장 상�
 function line(label: string, s: Sum, e: Record<string, number>) {
   const farm = s.sBld[(Object.entries(s.sBld).sort((x, y) => y[1] - x[1])[0] ?? ['', 0])[0]] ?? 0;
   const dPop = Object.values(s.dPop).reduce((x, y) => x + y, 0), dBld = Object.values(s.dBld).reduce((x, y) => x + y, 0);
-  const demo = (e.reserveShrink ?? 0) + (e.sdDemo ?? 0) + (e.sellDemo ?? 0) + (e.marginExit ?? 0) + (e.trimDemo ?? 0);
-  const cut = (e.lossCut ?? 0) + (e.sdCut ?? 0);
+  const demo = (e.reserveShrink ?? 0) + (e.trimDemo ?? 0);
+  const cut = e.lossCut ?? 0;
   return `${label} ${f(s.sd)} ${f(s.sdEma)} ${f(s.price)} ${f(s.soldR)} | ${k(s.sRent)} ${k(s.sSale)} ${k(farm)} ${k(s.sTrader)} | ${k(s.ownKind)} | ${k(dPop)} ${k(dBld)} | ${f(s.levels, 1)} ${f(s.lvMin, 0)} ${f(s.util)} ${f(s.margin)} ${f(s.resvFill)} ${f(s.beSigma)} ${f(s.wageRatio)} | ${f(s.psd)} ${s.band.map((x) => f(x)).join(' ')} ${f(s.pending, 1)} | ${e.reserve ?? 0} ${e.trial ?? 0} ${e.glutBlock ?? 0} ${demo} ${cut}`;
 }
 

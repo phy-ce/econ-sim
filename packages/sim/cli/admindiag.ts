@@ -3,12 +3,12 @@
 // 매주 표본을 해마다 평균해 왕국마다 한 줄: 행정청 충원(레벨 가중), 징수율, 국영 임금 단계, 행정청이 있는 지역의 하급 귀족 소득 비교
 // (저택 1인 몫 ÷ 국영 하급 귀족 임금, 시장 하급 귀족 임금 ÷ 소작 1인 소득), 하급 귀족 일터, 행정청 레벨·전문 관료제 비율.
 // --every N 이면 N 일마다 지역별 줄도 찍는다. TUNE 은 환경변수 TUNE='{"key":value}' 로 덮는다.
-import { createWorld, step, TUNE, getMethod, shareWage, PLAYER_ID } from '../src/index';
+import { createWorld, step, TUNE, getMethod, shareWage, PLAYER_ID, overrideTune } from '../src/index';
 import { subsistenceWage } from '../src/labor';
 import { workforce } from '../src/pops';
 import { appendFileSync } from 'node:fs';
 import { createMicroWorld } from '../src/lab/micro';
-if (process.env.TUNE) Object.assign(TUNE, JSON.parse(process.env.TUNE));
+if (process.env.TUNE) overrideTune(JSON.parse(process.env.TUNE), 'cli/admindiag');
 const args = process.argv.slice(2);
 const opt = (k: string) => { const i = args.indexOf(k); return i >= 0 ? args[i + 1] : undefined; };
 const pos = args.filter((a, i) => !a.startsWith('--') && !(i > 0 && args[i - 1].startsWith('--')));
@@ -16,7 +16,7 @@ const seed = Number(pos[0] ?? 1), years = Number(pos[1] ?? 2), salt = Number(pos
 const every = Number(opt('--every') ?? 0), json = opt('--json'), run = opt('--run') ?? 'run';
 // --micro N: 마이크로 세계 (인구 N, cli/microcheck.ts --preset labor 와 같은 축소·TUNE)
 const micro = Number(opt('--micro') ?? 0);
-if (micro) TUNE.reserveShrinkWeeks = 1e9;
+if (micro) TUNE.shrinkWeeks = 1e9; // 2026-11-02 1-F 뒤로는 정부 건물·무역소의 적자 철거도 멈춘다 (그 전 reserveShrinkWeeks 는 유보 철거만)
 const w = micro ? createMicroWorld({ seed, aiSalt: salt, people: [micro], typeScale: { workshop: 0.15, textile: 0.25, fiber_farm: 0.25 } }) : createWorld(seed, { withPlayer: true, aiSalt: salt });
 const ai = micro ? w.kingdoms : w.kingdoms.filter((k) => k.governmentId !== PLAYER_ID);
 const f2 = (x: number) => (Number.isFinite(x) ? x.toFixed(2) : '-'), k1 = (x: number) => (micro ? x.toFixed(1) : (x / 1e3).toFixed(1) + 'k');

@@ -1,13 +1,13 @@
 // 직종별 고용·생활수준과 상층이 일하는 곳: npx tsx cli/classdiag.ts '<TUNE JSON>' [seed] [years]
 // 직종마다 노동 인구(천)·실업률·평균 생활수준, 하급 귀족·귀족·자본가가 일하는 건물 종류, 하급 귀족 자격자의 지금 직종
-import { TUNE } from '../src/data';
+import { TUNE, overrideTune } from '../src/data';
 import { createWorld, step } from '../src/index';
 import { workforce } from '../src/pops';
 import { POP_CLASSES } from '../src/types';
 
 const over = JSON.parse(process.argv[2] ?? '{}');
 const seed = Number(process.argv[3] ?? 1), years = Number(process.argv[4] ?? 20);
-Object.assign(TUNE, over);
+overrideTune(over, 'cli/classdiag');
 const w = createWorld(seed, { withPlayer: false });
 const k0 = (x: number) => (x / 1000).toFixed(0);
 for (let d = 1; d <= years * 360; d++) {

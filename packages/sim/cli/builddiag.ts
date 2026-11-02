@@ -10,17 +10,17 @@
 // PROBE=1: 그 상품 건물의 pick 마다 한 줄 (지역, 레벨, 전망 가격 전·후 ÷ 기본가, 현지 가격 ÷ 기본가, 대륙 수요·공급·잠재, 1레벨 장기 손익 항목, 가동률, 회사 임금)
 // 시뮬레이션 상태를 바꾸지 않고 무작위 수열을 쓰지 않는다 (같은 시드면 결과가 sweep 과 같다)
 import { aiTrace } from '../src/ai';
-import { BUILDING_BY_ID, GOOD_IDS, GOODS, TICKS_PER_YEAR, TUNE, getMethod } from '../src/data';
+import { BUILDING_BY_ID, GOOD_IDS, GOODS, TICKS_PER_YEAR, TUNE, getMethod, overrideTune } from '../src/data';
 import { createWorld, step } from '../src/index';
 import { regionById } from '../src/economy';
 import { marketOutlook, valueMethod } from '../src/outlook';
 import type { GoodId } from '../src/types';
 
-Object.assign(TUNE, JSON.parse(process.argv[2] ?? '{}'));
+overrideTune(JSON.parse(process.argv[2] ?? '{}'), 'cli/builddiag');
 const seed = Number(process.argv[3] ?? 1), years = Number(process.argv[4] ?? 30);
 const focus = (process.argv[5] ?? 'fiber') as GoodId;
 const w = createWorld(seed, { withPlayer: false });
-const PATHS = ['pick', 'dev', 'loss', 'govInputs', 'switchIn', 'switchOut', 'shrink', 'swap'] as const;
+const PATHS = ['pick', 'govInputs', 'switchIn', 'switchOut', 'shrink', 'swap'] as const;
 const makes = (typeId: string, g: GoodId) => BUILDING_BY_ID[typeId].methods.some((m) => (m.outputs[g] ?? 0) > 0);
 
 type Acc = Record<string, number>;

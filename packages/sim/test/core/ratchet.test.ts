@@ -16,13 +16,14 @@ const ASSIGN = new RegExp(String.raw`\.(${FIELDS})\s*=(?![=>])`);
 
 /** 파일 → [±= 줄 수, 대입 줄 수]. 2026-10-30 wt-a0 (main 9b46c2d) 에서 센 값: ±= 48줄, 대입 30줄 */
 const EXPECTED: Record<string, [number, number]> = {
-  // 유보로 증설비 (TUNE.aiReserveFund, 시제품 기본 끔): ai.ts fundFromReserve 가 민간 회사 현금을 빼서 toTreasury(kingdoms.ts, 흐름 'reserveFund')로 금고에 넣는다
+  // 유보로 증설비 (2026-11-02 기본, 스위치 aiReserveFund 는 wt-simplify 1-C 에서 지움): ai.ts fundFromReserve 가 민간 회사 현금을 빼서 toTreasury(kingdoms.ts, 흐름 'reserveFund')로 금고에 넣는다
   'ai.ts': [1, 0],
   'commands.ts': [3, 2],
   'compat.ts': [1, 2],
   'economy.ts': [4, 5],
   // 저택 지분 (TUNE.manorShares, wt-manor): 팔기(sellManorUnits)·되사기(updateManorShares)가 저택 금고 → pop 저축 (±= 2, 대입 2)
-  'finance.ts': [12, 6],
+  // 쉬는 금융가 배당(financeIdle)의 금고 대입 1줄은 2026-11-02 wt-simplify 1-A 에서 스위치와 함께 지웠다
+  'finance.ts': [12, 5],
   'kingdoms.ts': [3, 1],
   'labor.ts': [2, 0],
   // 0b 측정 도구의 고갈 처방 drain (국고 0·부채 한도, 소멸은 w.mint.retired 에 적는다). 게임 번들 밖, 개발용 충격

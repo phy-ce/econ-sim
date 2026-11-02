@@ -342,7 +342,7 @@ export function payWages(w: World) {
   }
 }
 
-// ---------------------------------------------------------------- 지역 시장 임금 (TUNE.wageMarket = 1)
+// ---------------------------------------------------------------- 지역 시장 임금
 
 /** 시작 임금·고용 0 대체값에서 한 칸 아래 직종 (노동자·농부는 그 지역 소작 1인 소득) */
 export const WAGE_LADDER: Record<Skill, Skill | null> = { unskilled: null, farmer: null, skilled: 'unskilled', expert: 'skilled', gentry: 'skilled', capitalist: 'expert', aristocrat: 'expert' };
@@ -433,7 +433,7 @@ export function labourTable(w: World, r: Region, local: Building[], pops: Pop[],
 }
 
 /**
- * 오려는 사람을 임금의 함수로 (TUNE.wageTarget = 2): 임금과 무관한 몫(재직자·자격 있는 실업자)과,
+ * 오려는 사람을 임금의 함수로 (맞는 임금 clearingWage 의 바탕): 임금과 무관한 몫(재직자·자격 있는 실업자)과,
  * 다른 자리에서 일하는 자격자마다 몫(base)과 지금 소득(cur). 임금 v 에서 오려는 사람 = fixed + Σ base × switchShare(cur, v) ÷ switchMax (labourTable 과 같은 셈)
  */
 export interface WillingCurve { fixed: number; base: number[]; cur: number[] }
@@ -455,7 +455,7 @@ export function willingAt(cv: WillingCurve, v: number): number {
 const CLEAR_STEPS = 40;
 
 /**
- * 맞는 임금 (TUNE.wageTarget = 2): lo~hi 안에서 오려는 사람 ≥ min(자리, hi 에서 오려는 사람) 이 되는 가장 낮은 임금.
+ * 맞는 임금: lo~hi 안에서 오려는 사람 ≥ min(자리, hi 에서 오려는 사람) 이 되는 가장 낮은 임금.
  * lo 에서 이미 사람이 남으면 lo, 임금을 올려도 더 올 사람이 없으면 그 사람이 다 오는 가장 낮은 임금에서 멈춘다 (오려는 사람은 임금에 대해 줄지 않는다)
  */
 export function clearingWage(cv: WillingCurve, jobs: number, lo: number, hi: number): number {
@@ -471,19 +471,14 @@ export function clearingWage(cv: WillingCurve, jobs: number, lo: number, hi: num
   return b;
 }
 
-/** 가격처럼 움직이는 임금(TUNE.wageTarget = 1)의 쏠림 계수: 목표 = 바깥 소득 × (1 + 이 값 × clamp(쏠림, ±1)) (가격 공식 priceFormula 의 0.75 와 같다) */
-export const WAGE_TILT = 0.75;
-
 /**
- * 지역 시장 임금 (TUNE.wageMarket = 1, 날마다 노동시장 앞에서): 지역·직종마다
- * TUNE.wageTarget = 2 (기본): 임금 += wageTargetSpeed × (맞는 임금 − 임금) (clearingWage, 아래 끝 startWage, 위 끝 outsideWage × TUNE.wageTargetSpan).
- * = 1: 목표 = outsideWage × (1 + WAGE_TILT × clamp(쏠림, ±1)). = 0: 임금 × (1 + wageMarketRate × clamp((자리 − 오려는 사람) ÷ min(자리, 오려는 사람), −1, 1)),
- * TUNE.wageMarketRateUp > 0 이면 오를 때(clamp > 0)만 그 속도.
+ * 지역 시장 임금 (날마다 노동시장 앞에서, DECISIONS 7-43): 지역·직종마다
+ * 임금 += wageTargetSpeed × (맞는 임금 − 임금) (clearingWage, 아래 끝 startWage, 위 끝 outsideWage × TUNE.wageTargetSpan).
+ * (옛 하루 고정 속도 규칙 wageTarget 0 (wageMarketRate·wageMarketRateUp)과 비교용 쏠림 규칙 1 은 2026-11-02 wt-simplify 1-E 에서 지웠다)
  * 자리가 없으면 시작 임금 규칙(한 칸 아래 × switchPremium), 자격자가 아무도 없으면 움직이지 않는다. 안전 범위는 기본 임금의 MARKET_WAGE_RANGE 배.
  * 그다음 회사 임금표(Company.wages)를 대표값으로 맞춘다 (syncCompanyWages)
  */
 export function updateMarketWages(w: World) {
-  if (!TUNE.wageMarket) return;
   const comp = companyMap(w);
   const localOf = groupBuildings(w, (b) => b.regionId);
   const regionPops = new RegionPops(w);
@@ -499,17 +494,16 @@ export function updateMarketWages(w: World) {
   syncCompanyWages(w);
 }
 
-/** 목표 임금 셈(TUNE.wageTarget = 2)의 한 직종: 목표(맞는 임금), 아래 끝·위 끝 (1인 하루 ƒ), 자리·지금 시장 임금에서 오려는 사람 (명, 지역 합계, labourTable) */
+/** 맞는 임금 셈의 한 직종: 목표(맞는 임금), 아래 끝·위 끝 (1인 하루 ƒ), 자리·지금 시장 임금에서 오려는 사람 (명, 지역 합계, labourTable) */
 export interface WageTarget { target: number; lo: number; hi: number; jobs: number; willing: number }
 
 /**
  * 한 지역의 하루 시장 임금 움직임 (updateMarketWages 의 지역 하나, marketWageTargets 도 같은 길을 쓴다). wages 를 SKILLS 순서로 새 값으로 바꾼다:
- * 아래 직종의 새 값이 위 직종의 아래 끝(startWage)에 들어간다. targets 를 주면 wageTarget 2 셈의 직종별 목표를 적는다 (그 밖에는 바꾸지 않는다)
+ * 아래 직종의 새 값이 위 직종의 아래 끝(startWage)에 들어간다. targets 를 주면 직종별 목표(맞는 임금)를 적는다 (그 밖에는 바꾸지 않는다)
  */
 function moveRegionWages(w: World, r: Region, wages: Record<Skill, number>, local: Building[], pops: Pop[], comp: Map<number, Company>, tenant: number, targets?: Record<Skill, WageTarget>) {
-  const rate = TUNE.wageMarketRate, rateUp = TUNE.wageMarketRateUp;
-  const mode = TUNE.wageTarget, speed = TUNE.wageTargetSpeed;
-  const curves = mode === 2 ? emptyCurves() : undefined;
+  const speed = TUNE.wageTargetSpeed;
+  const curves = emptyCurves();
   const tab = labourTable(w, r, local, pops, comp, tenant, (s) => wages[s], curves);
   // 아래 끝(시작 임금·바깥 소득)에 쓰는 소작 소득: ① TUNE.wageFloorWeeks > 0 이면 이동평균 (오려는 사람은 위 표에서 지금 소득으로 센다)
   if (TUNE.wageFloorWeeks > 0 && r.tenantAvg !== undefined) tenant = r.tenantAvg;
@@ -525,16 +519,10 @@ function moveRegionWages(w: World, r: Region, wages: Record<Skill, number>, loca
       v = startWage(wages, s, tenant);
       if (targets) { const [lo, hi] = ends(s); targets[s] = { target: v, lo, hi, jobs: cell.jobs, willing: cell.willing }; }
     } else if (cell.qualified > 1e-9) {
-      const m = Math.min(cell.jobs, cell.willing);
-      const x = m > 1e-9 ? clamp((cell.jobs - cell.willing) / m, -1, 1) : 1;
-      if (mode === 1) v += speed * (outsideWage(wages, s, tenant, local) * (1 + WAGE_TILT * x) - v);
-      else if (curves) {
-        const [lo, hi] = ends(s);
-        const target = clearingWage(curves[s], cell.jobs, lo, hi);
-        if (targets) targets[s] = { target, lo, hi, jobs: cell.jobs, willing: cell.willing };
-        v += speed * (target - v);
-      }
-      else v *= 1 + (x > 0 && rateUp > 0 ? rateUp : rate) * x;
+      const [lo, hi] = ends(s);
+      const target = clearingWage(curves[s], cell.jobs, lo, hi);
+      if (targets) targets[s] = { target, lo, hi, jobs: cell.jobs, willing: cell.willing };
+      v += speed * (target - v);
     } else if (targets) {
       const [lo, hi] = ends(s);
       targets[s] = { target: v, lo, hi, jobs: cell.jobs, willing: cell.willing };
@@ -544,14 +532,13 @@ function moveRegionWages(w: World, r: Region, wages: Record<Skill, number>, loca
 }
 
 /**
- * 지역 시장 임금이 가는 쪽 (읽기 전용, 화면용 UI_CHANGES 2-86): 직종마다 updateMarketWages(TUNE.wageTarget = 2)가 지금 세계에서 다음에 움직일 목표.
+ * 지역 시장 임금이 가는 쪽 (읽기 전용, 화면용 UI_CHANGES 2-86): 직종마다 updateMarketWages 가 지금 세계에서 다음에 움직일 목표.
  * target = 맞는 임금 clearingWage (자리가 없으면 시작 임금 startWage 로 바로 간다, 자격자가 없으면 지금 임금), lo·hi = 아래 끝·위 끝,
  * jobs = 채울 수 있는 자리, willing = 지금 시장 임금에서 오려는 사람. 같은 셈(moveRegionWages)을 지역 임금표의 사본에 돌린다:
  * 위 직종의 아래 끝은 아래 직종이 그날 움직인 뒤 값이다 (updateMarketWages 와 같다).
- * TUNE.wageMarket 0, wageTarget ≠ 2, 그 지역이 없거나 지역 시장 임금(Region.wages)이 없으면 null
+ * 그 지역이 없거나 지역 시장 임금(Region.wages)이 없으면 null
  */
 export function marketWageTargets(w: World, regionId: number): Record<Skill, WageTarget> | null {
-  if (!TUNE.wageMarket || TUNE.wageTarget !== 2) return null;
   const r = w.regions.find((x) => x.id === regionId);
   if (!r?.wages) return null;
   const local = w.buildings.filter((b) => b.regionId === r.id);
@@ -562,7 +549,7 @@ export function marketWageTargets(w: World, regionId: number): Record<Skill, Wag
 }
 
 /**
- * 바깥 소득 (TUNE.wageTarget = 1 의 기준): 시작 임금 규칙(한 칸 아래 직종 × switchPremium, 노동자·농부는 소작 1인 소득 × switchPremium)과
+ * 바깥 소득 (맞는 임금의 위 끝 = 이 값 × TUNE.wageTargetSpan): 시작 임금 규칙(한 칸 아래 직종 × switchPremium, 노동자·농부는 소작 1인 소득 × switchPremium)과
  * 그 지역 배당 자리(저택·금융가, 그 직종 자리가 있는 곳)의 그 직종 1인 몫 × switchPremium 중 큰 값 (TUNE.manorShares 0 이면 하급 귀족은 저택 몫이 바깥 소득이다. 켜면 저택 자리 소득이 0 이다)
  */
 export function outsideWage(wages: Record<Skill, number>, s: Skill, tenant: number, local: Building[]): number {
@@ -576,14 +563,14 @@ export function outsideWage(wages: Record<Skill, number>, s: Skill, tenant: numb
   return v;
 }
 
-/** 새 세계 (TUNE.wageMarket = 1): 모든 지역의 시작 시장 임금과 회사 대표 임금표 */
+/** 새 세계: 모든 지역의 시작 시장 임금과 회사 대표 임금표 */
 export function initMarketWages(w: World) {
   for (const r of w.regions) ensureWages(w, r);
   syncCompanyWages(w);
 }
 
 /**
- * 회사 임금표(Company.wages)를 대표값으로 맞춘다 (TUNE.wageMarket = 1): 그 회사 생산 건물이 있는 지역 시장 임금(웃돈 포함)의 고용 가중 평균.
+ * 회사 임금표(Company.wages)를 대표값으로 맞춘다: 그 회사 생산 건물이 있는 지역 시장 임금(웃돈 포함)의 고용 가중 평균.
  * 고용이 없는 직종은 그 왕국 지역들의 평균. 실제 지급은 지역 임금(wagesAt)이고, 이 표는 화면과 지역을 정하지 않은 추정에 쓴다
  */
 export function syncCompanyWages(w: World) {

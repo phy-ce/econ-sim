@@ -5,10 +5,9 @@ import { aiTrace } from '../../src/ai';
 import { canonicalJson } from '../fixtures/a0';
 import { firstDiff } from '../helpers';
 
-// 0b′ 곡물 균형 후보 (A1 TUNE.aiGlutIdle, A2 aiSellDemoSD·aiSellDemoWeeks, A3 aiMarginal)의 불변식.
-// 기본값은 모두 0 (끔)이라 core 시험은 이 길을 지나지 않는다. 여기서 셋을 함께 켜고 화폐 보존, 결정성(저장/불러오기 포함, Region.sellWeeks·marginWeeks 가 저장에 실린다),
-// 0 으로 명시한 덮어쓰기 = 기본값을 본다. 켜는 값은 docs/overhaul/0BP_GRAIN_SPECS.json 의 A1+A2(짓기 1.1 / 헐기 1.25)와 A3 = 2 이고,
-// 1년 안에 철거 길을 여러 번 지나도록 연속 주 수만 4 로 줄였다.
+// 넘침 퇴출 (이슈 #11 F3, TUNE.aiTrimSD·aiTrimFrom·aiTrimPause, ai.ts trimExit)의 불변식: 화폐 보존, 결정성(저장/불러오기 포함, Region.trim 이 저장에 실린다),
+// 끔 = 같음 (aiTrimSD 0 이면 aiTrimFrom 을 바꿔도 기본값 세계와 같다). 판정은 코드 문제만 본다 (경제 결과로는 실패하지 않는다).
+// 켜는 값은 짓기 1.2 / 헐기 1.25, 듣지 않으면 52주 쉼(기본은 끔이라 그 길도 지나게 켰다)이고, 250일 안에 철거 길을 지나도록 시작 주만 0 으로 당겼다.
 
 /** money.test.ts 와 같은 허용 오차: 화폐 총량 × 1e-12 (근거는 그 파일의 주석) */
 const MONEY_TOLERANCE = 1e-12;
@@ -23,14 +22,14 @@ function expectSame(got: World, want: string, label: string) {
 }
 
 type Over = Partial<Record<keyof typeof TUNE, number>>;
-const KEYS = ['aiGlutIdle', 'aiGlutSD', 'aiSellDemoSD', 'aiSellDemoWeeks', 'aiMarginal'] as const;
+const KEYS = ['aiGlutSD', 'aiTrimSD', 'aiTrimFrom', 'aiTrimPause'] as const;
 const saved = Object.fromEntries(KEYS.map((k) => [k, TUNE[k]]));
 afterEach(() => { Object.assign(TUNE, saved); aiTrace.on = undefined; });
 const setTune = (o: Over) => { Object.assign(TUNE, saved); Object.assign(TUNE, o); };
 
-const ON: Over = { aiGlutIdle: 1, aiGlutSD: 1.1, aiSellDemoSD: 1.25, aiSellDemoWeeks: 4, aiMarginal: 2 };
+const ON: Over = { aiGlutSD: 1.2, aiTrimSD: 1.25, aiTrimFrom: 0, aiTrimPause: 52 };
 
-describe('0b′ 곡물 균형 후보 A1·A2·A3 을 켠 세계', () => {
+describe('넘침 퇴출을 켠 세계', () => {
   const SAVE1 = 100, CMP1 = 147, SAVE2 = 154, CMP2 = 250;
   let snaps: Record<number, string> | null = null;
   const events: Record<string, number> = {};
@@ -38,7 +37,7 @@ describe('0b′ 곡물 균형 후보 A1·A2·A3 을 켠 세계', () => {
   function runA() {
     if (snaps) return snaps;
     setTune(ON);
-    aiTrace.on = (_w, _c, path) => { if (['sellDemo', 'marginDemo', 'marginBlock', 'marginOk', 'glutBlock'].includes(path)) events[path] = (events[path] ?? 0) + 1; };
+    aiTrace.on = (_w, _c, path) => { if (path === 'trimDemo' || path === 'trimHold' || path === 'trimStop') events[path] = (events[path] ?? 0) + 1; };
     const a = createWorld(1);
     const m0 = moneyIdentity(a);
     const s: Record<number, string> = {};
@@ -53,23 +52,20 @@ describe('0b′ 곡물 균형 후보 A1·A2·A3 을 켠 세계', () => {
     return s;
   }
 
-  it('화폐 보존: 셋을 켜고 250일 동안 매일 장부가 맞는다 (시드 1), 철거·증설 판단 길을 지난다', () => {
+  it('화폐 보존: 250일 동안 매일 장부가 맞는다 (시드 1), 철거 길을 지난다', () => {
     runA();
     expect(money.worst, `가장 큰 어긋남 (화폐 총량 대비): ${money.worstTick}일`).toBeLessThan(MONEY_TOLERANCE);
-    expect(events.sellDemo ?? 0, 'A2 철거').toBeGreaterThan(0);
-    expect(events.marginDemo ?? 0, 'A3 철거').toBeGreaterThan(0);
-    expect((events.marginBlock ?? 0) + (events.marginOk ?? 0), 'A3 증설 판단').toBeGreaterThan(0);
+    expect(events.trimDemo ?? 0, '넘침 퇴출 철거').toBeGreaterThan(0);
   });
 
-  it('결정성: 셋을 켠 세계를 저장/불러오기 하며 이어 달려도 같다 (시드 1, sellWeeks·marginWeeks 가 저장에 실린다)', () => {
+  it('결정성: 저장/불러오기 하며 이어 달려도 같다 (시드 1, trim 이 저장에 실린다)', () => {
     expect(SAVE2 % TICKS_PER_WEEK).toBe(0);
     const s = runA();
     setTune(ON);
     let b = createWorld(1);
     runTo(b, SAVE1);
     b = reload(b);
-    expect(b.regions.some((r) => r.sellWeeks && Object.keys(r.sellWeeks).length > 0), `${SAVE1}일 저장에 sellWeeks`).toBe(true);
-    expect(b.regions.some((r) => r.marginWeeks && Object.keys(r.marginWeeks).length > 0), `${SAVE1}일 저장에 marginWeeks`).toBe(true);
+    expect(b.regions.some((r) => r.trim && Object.keys(r.trim).length > 0), `${SAVE1}일 저장에 trim`).toBe(true);
     runTo(b, CMP1);
     expectSame(b, s[CMP1], `${CMP1}일 (${SAVE1}일 저장 후)`);
     runTo(b, SAVE2);
@@ -78,18 +74,18 @@ describe('0b′ 곡물 균형 후보 A1·A2·A3 을 켠 세계', () => {
     expectSame(b, s[CMP2], `${CMP2}일 (${SAVE2}일 주 경계 저장 후)`);
   });
 
-  it('끔 = 같음: 키를 0 으로 명시하고 끈 상태에서 안 쓰는 aiSellDemoWeeks 를 바꿔도 기본값 세계와 같다 (시드 3, 200일)', () => {
+  it('끔 = 같음: aiTrimSD 0 이면 aiTrimFrom·aiTrimPause 를 바꿔도 기본값 세계와 같다 (시드 3, 200일)', () => {
     const DAYS = 200;
     setTune({});
-    expect([TUNE.aiGlutIdle, TUNE.aiSellDemoSD, TUNE.aiMarginal]).toEqual([0, 0, 0]);
+    expect(TUNE.aiTrimSD).toBe(0);
     const a = createWorld(3);
     runTo(a, DAYS);
     const want = canonicalJson(a);
-    setTune({ aiGlutIdle: 0, aiSellDemoSD: 0, aiMarginal: 0, aiSellDemoWeeks: 1 });
+    setTune({ aiTrimSD: 0, aiTrimFrom: 0, aiTrimPause: 1 });
     const b = createWorld(3);
     runTo(b, DAYS);
     const got = canonicalJson(b);
     if (got !== want) expect.fail(`${DAYS}일: ${firstDiff(JSON.parse(got), JSON.parse(want))}`);
-    expect(b.regions.some((r) => r.sellWeeks || r.marginWeeks)).toBe(false);
+    expect(b.regions.some((r) => r.trim)).toBe(false);
   });
 });

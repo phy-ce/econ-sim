@@ -2,7 +2,7 @@
 //   packages/sim 에서:  npx tsx cli/manordiag.ts [--seed 1] [--years 2] [--every 360] [--tune '{"manorShares":1}'] [--player 1]
 // 줄: 날, 화폐 어긋남(총량 대비), 왕국별 행정청 충원(레벨 가중), 하급 귀족 실업률, 상급·하급 귀족 1인 하루 소득(incomeEma ÷ 인원)·생활수준,
 //     소작농·노동자 생활수준, 저택 금고 합·지분 값 평균, 그 기간 지분 흐름 (자기 지역·다른 지역·다른 왕국 저택 사기, 팔기, 되사기, 부재 지주 몫).
-import { TUNE, createWorld, moneyIdentity, step, totalMoney } from '../src/index';
+import { TUNE, createWorld, moneyIdentity, overrideTune, step, totalMoney } from '../src/index';
 import { FLOW } from '../src/kingdoms';
 import { kingdomOf } from '../src/kingdoms';
 import type { World } from '../src/index';
@@ -11,7 +11,7 @@ const args = process.argv.slice(2);
 const arg = (k: string, d: string) => { const i = args.indexOf('--' + k); return i >= 0 && args[i + 1] !== undefined ? args[i + 1] : d; };
 const SEED = Number(arg('seed', '1')), YEARS = Number(arg('years', '2')), EVERY = Number(arg('every', '360'));
 const tune = JSON.parse(arg('tune', '{}')) as Record<string, unknown>;
-Object.assign(TUNE, tune);
+overrideTune(tune, 'manordiag --tune');
 const w: World = createWorld(SEED, { withPlayer: arg('player', '1') !== '0' });
 const m0 = moneyIdentity(w);
 const f2 = (v: number) => (Number.isFinite(v) ? v.toFixed(2) : 'NaN');

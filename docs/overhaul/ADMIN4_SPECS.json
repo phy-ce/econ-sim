@@ -1,0 +1,182 @@
+{
+ "about": "행정청 철거 판단 (이슈 #4, wt-admin4, main 9ba5acc + aiAdminValue TUNE 키, 기본 0 이면 골든 같음). v1 = aiAdminValue 1 (평균 손익 + 마지막 레벨 남김), v2 = 2 (v1 + 걷을 세금을 보통 세금 수준으로 환산). 대조 ctl 은 보고서 2026-11-02-wagespan 의 ctl (main 93bc0b0, 이 브랜치와 sim 코드가 같음: 시드 1 salt 0 행정청 레벨·징수율이 해마다 같다). 돌리기 (packages/sim 에서): PAR=2 bash cli/lab.sh <out.jsonl> ../../docs/overhaul/ADMIN4_SPECS.json '^v2$'. 요약: python cli/labsum.py <out.jsonl> --compare ctl.",
+ "code": "wt-admin4 (main 9ba5acc + aiAdminValue)",
+ "specs": [
+  {
+   "item": "ADMIN4",
+   "name": "v1",
+   "seed": 1,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "aiAdminValue": 1
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "ADMIN4",
+   "name": "v1",
+   "seed": 1,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "aiAdminValue": 1
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "ADMIN4",
+   "name": "v1",
+   "seed": 1,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "aiAdminValue": 1
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "ADMIN4",
+   "name": "v1",
+   "seed": 1,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "aiAdminValue": 1
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "ADMIN4",
+   "name": "v1",
+   "seed": 2,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "aiAdminValue": 1
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "ADMIN4",
+   "name": "v1",
+   "seed": 2,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "aiAdminValue": 1
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "ADMIN4",
+   "name": "v1",
+   "seed": 2,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "aiAdminValue": 1
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "ADMIN4",
+   "name": "v1",
+   "seed": 2,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "aiAdminValue": 1
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "ADMIN4",
+   "name": "v2",
+   "seed": 1,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "aiAdminValue": 2
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "ADMIN4",
+   "name": "v2",
+   "seed": 1,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "aiAdminValue": 2
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "ADMIN4",
+   "name": "v2",
+   "seed": 1,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "aiAdminValue": 2
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "ADMIN4",
+   "name": "v2",
+   "seed": 1,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "aiAdminValue": 2
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "ADMIN4",
+   "name": "v2",
+   "seed": 2,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "aiAdminValue": 2
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "ADMIN4",
+   "name": "v2",
+   "seed": 2,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "aiAdminValue": 2
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "ADMIN4",
+   "name": "v2",
+   "seed": 2,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "aiAdminValue": 2
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "ADMIN4",
+   "name": "v2",
+   "seed": 2,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "aiAdminValue": 2
+   },
+   "control": "ctl"
+  }
+ ]
+}

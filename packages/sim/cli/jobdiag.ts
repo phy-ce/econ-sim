@@ -1,13 +1,13 @@
 // 일자리 진단: npx tsx cli/jobdiag.ts '<TUNE JSON>' [seed] [years]
 // 지역별: 직종별 실업 노동 인구, 빈 일자리, 남은 땅(경작지·산림·부지), 공사 대기, 그 왕국 민간 현금
-import { BUILDING_BY_ID, TUNE } from '../src/data';
+import { BUILDING_BY_ID, TUNE, overrideTune } from '../src/data';
 import { createWorld, step } from '../src/index';
 import { landFree, slots, companyById } from '../src/economy';
 import { workforce } from '../src/pops';
 
 const over = JSON.parse(process.argv[2] ?? '{}');
 const seed = Number(process.argv[3] ?? 1), years = Number(process.argv[4] ?? 20);
-Object.assign(TUNE, over);
+overrideTune(over, 'cli/jobdiag');
 const w = createWorld(seed, { withPlayer: false });
 const at = new Set([1800, 3600, 5040, 7200].filter((d) => d <= years * 360));
 const k0 = (x: number) => (x / 1000).toFixed(0);

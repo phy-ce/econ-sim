@@ -2,14 +2,14 @@
 // 해마다 한 줄 JSON: sw 그해 방식 바꾸기 수, back 26주 안에 이전 방식으로 되돌아간 수, low 바꾼 뒤 26주에 충원율 0.5 미만이던 수,
 // tier 레벨 합 (건물 종류 안의 방식 순서 1·2·3, 사무소·학교·행정청·소유 건물 빼고), tw 공구 공방 레벨, iron 철광 레벨,
 // 상품(tools·metal·fuel)마다 [대륙 수요 EMA, 공급 EMA, 잠재 수요(marketOutlook)]
-import { BUILDING_BY_ID, TICKS_PER_WEEK, TICKS_PER_YEAR, TUNE, getMethod } from '../src/data';
+import { BUILDING_BY_ID, TICKS_PER_WEEK, TICKS_PER_YEAR, TUNE, getMethod, overrideTune } from '../src/data';
 import { createWorld, step } from '../src/index';
 import { marketOutlook } from '../src/outlook';
 import type { GoodId } from '../src/types';
 
 const over = JSON.parse(process.argv[2] ?? '{}');
 const seed = Number(process.argv[3] ?? 1), years = Number(process.argv[4] ?? 10);
-Object.assign(TUNE, over);
+overrideTune(over, 'cli/switchdiag');
 const w = createWorld(seed, { withPlayer: false });
 
 const GOODS_SHOWN: GoodId[] = ['tools', 'metal', 'fuel'];

@@ -1,13 +1,13 @@
 // 부지 사용(건물 종류별)과 건축사무소 충원: npx tsx cli/officeland.ts [seed] [years] ['<TUNE JSON>'] [type=land,...]
 // 5년마다 대륙 합계 한 줄, 마지막에 비교용 JSON 한 줄 (시드 평균은 python 으로 모은다).
 // type=land 로 건물의 땅을 바꿔 본다: builder=none (사무소도 땅 없음), admin=plot,school=plot (정부 건물 모두 부지)
-import { createWorld, step, BUILDING_BY_ID, TUNE, getMethod, isGovernment, efficiency, companyById } from '../src/index';
+import { createWorld, step, BUILDING_BY_ID, TUNE, getMethod, isGovernment, efficiency, companyById, overrideTune } from '../src/index';
 import type { LandType } from '../src/index';
 
 const seed = Number(process.argv[2] ?? 1), years = Number(process.argv[3] ?? 20);
 const over = JSON.parse(process.argv[4] ?? '{}');
 const landOver = (process.argv[5] ?? '').split(',').filter(Boolean).map((s) => s.split('='));
-Object.assign(TUNE, over);
+overrideTune(over, 'cli/officeland');
 for (const [t, l] of landOver) BUILDING_BY_ID[t].land = l === 'none' ? undefined : (l as LandType);
 const w = createWorld(seed, { withPlayer: false });
 const Y = 360;

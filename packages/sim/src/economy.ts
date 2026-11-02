@@ -361,16 +361,16 @@ const GOV_TYPES = new Map<string, boolean>();
 /**
  * 회사가 그 건물(유형)에 주는 임금표: 왕실의 정부 건물(행정청·건축사무소·학교)은 국영 임금(stateWages),
  * 나머지(왕실 생산 건물 포함)는 회사 임금(wages, 민간처럼 시장에서 정한다).
- * TUNE.wageMarket = 1 이고 지역(w, regionId)을 주면 그 지역 시장 임금(Region.wages)이다: 정부 건물은 그 지역 국영 임금(Region.stateWages),
+ * 지역(w, regionId)을 주면 그 지역 시장 임금(Region.wages)이다: 정부 건물은 그 지역 국영 임금(Region.stateWages),
  * 시장임금 정책을 쓰는 회사(플레이어)는 지역 시장 임금 × (1 + 웃돈), AI 민간 상회는 지역 시장 임금 × (1 + 그 지역 웃돈 aiPremium). 지역 임금이 아직 없으면 회사 임금표
  */
 export function wagesAt(c: Company, typeId: string, w?: World, regionId?: number): Record<Skill, number> {
-  if (TUNE.wageMarket && w && regionId !== undefined) {
+  if (w && regionId !== undefined) {
     const r = regionById(w, regionId);
     if (r.wages) {
       if (c.state && isGovernment(typeId)) return r.stateWages ?? c.stateWages ?? r.wages;
       const base = c.wageOffset ? offsetWages(r.wages, c.wageOffset) : r.wages;
-      // AI 민간 상회의 지역 웃돈 (TUNE.aiWagePremium, ai.ts adjustPremium)
+      // AI 민간 상회의 지역 웃돈 (ai.ts adjustPremium)
       const ai = c.aiPremium?.[regionId];
       return ai ? offsetWages(base, ai.off) : base;
     }
@@ -545,13 +545,13 @@ export function wageCostOf(method: MethodDef, wages: Record<Skill, number>, stat
 }
 
 /**
- * 징수율: 행정청이 감당하는 인구 / 왕국 인구 = x 일 때 x / (1 + x) (TUNE.taxCurve = 'hyp'). 한도가 인구와 같으면 50%, 2배면 67%, 3배면 75%.
- * 'exp' 곡선이면 1 − e^(−x) (63%, 86%, 95%). 100%에는 닿지 않고, 행정청을 늘릴수록 더 걷히는 몫이 줄어든다
+ * 징수율: 행정청이 감당하는 인구 / 왕국 인구 = x 일 때 x / (1 + x). 한도가 인구와 같으면 50%, 2배면 67%, 3배면 75%.
+ * 100%에는 닿지 않고, 행정청을 늘릴수록 더 걷히는 몫이 줄어든다
  */
 export function collectionRatio(capacity: number, people: number): number {
   if (people <= 0) return 1;
   const x = Math.max(0, capacity) / people;
-  return TUNE.taxCurve === 'hyp' ? x / (1 + x) : 1 - Math.exp(-x);
+  return x / (1 + x);
 }
 
 /** 지역 시장의 현재 가격과 주어진 임금으로 본 레벨 1 만원 가동 하루 손익 */
@@ -618,7 +618,7 @@ export function projectedSD(w: World, regionId: number, g: GoodId, addOutput = 0
 
 /**
  * 지금 공급 ÷ 수요 (읽기 전용): 지역 공급 이동평균 ÷ 수요 이동평균 (공사 중 레벨은 넣지 않는다). 수요 이동평균이 FLOW_ZERO 이하이면 null.
- * AI 가동률 감축·철거(ai.ts sdExit, TUNE.aiCutSD·aiDemoSD, 오버홀 03 5-2)가 쓴다: 감축은 아직 안 지은 공급이 아니라 지금 넘친 것을 본다
+ * (이것을 쓰던 0b′ AI 감축·철거 sdExit·sellDemo 는 2026-11-02 wt-simplify 1-G 에서 지웠다. 읽기 함수로 남긴다)
  */
 export function currentSD(w: World, regionId: number, g: GoodId): number | null {
   const mk = regionById(w, regionId).market[g];
@@ -638,21 +638,9 @@ export function mainOutput(typeId: string, methodId: string): GoodId | null {
   return best;
 }
 
-/** 가격 범위 (기본가 배수): 시장 가격과 AI 장기 가격 모두 여기서 읽는다 */
-export function priceBounds(): readonly [number, number] {
-  return TUNE.priceExp > 0 ? TUNE.priceRange : [0.25, 1.75];
-}
-
 /** 가격 공식 (빅토리아3): 기본가 × (1 + 0.75 × clamp((구매 − 판매) / min(구매, 판매), ±1)) */
 export function priceFormula(g: GoodId, demand: number, supply: number): number {
   const base = GOODS[g].basePrice;
-  // 비교용 (TUNE.priceExp > 0): 기본가 × (구매 ÷ 판매)^priceExp, 범위 TUNE.priceRange
-  if (TUNE.priceExp > 0) {
-    const [mn, mx] = TUNE.priceRange;
-    if (supply <= FLOW_ZERO) return base * (demand > FLOW_ZERO ? mx : 1);
-    if (demand <= FLOW_ZERO) return base * mn;
-    return base * clamp((demand / supply) ** TUNE.priceExp, mn, mx);
-  }
   const lo = Math.min(demand, supply);
   const x = lo > FLOW_ZERO ? clamp((demand - supply) / lo, -1, 1) : demand > supply ? 1 : supply > demand ? -1 : 0;
   return base * (1 + 0.75 * x);

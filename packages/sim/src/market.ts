@@ -1,6 +1,6 @@
 import { ABS_LIMITS, CLASS_DEFS, CONSUMPTION_PER_CAPITA, GOOD_IDS, GOODS, NEEDS, SKILL_DEFS, SUBSISTENCE, TICKS_PER_WEEK, TRADING_POST, TUNE, WORKFORCE_RATIO, getMethod, needsAt, rawMax, tenantYield, tradeReserveOf } from './data';
-import { CARTAGE_RATE, RAIL_RATE, borrow, companyById, harvestFactor, priceBounds, priceFormula, regionById, sellThrough, shareWeight, shippingRate, isSubsistence, wagesAt } from './economy';
-import { choiceYield, financeIdle, isNoble, sellManorUnits, treasuryOver, treasuryTarget, payRent, paySalvage, taxDue, taxRates } from './finance';
+import { CARTAGE_RATE, RAIL_RATE, borrow, companyById, harvestFactor, priceFormula, regionById, sellThrough, shareWeight, shippingRate, isSubsistence, wagesAt } from './economy';
+import { choiceYield, isNoble, sellManorUnits, treasuryOver, treasuryTarget, payRent, paySalvage, taxDue, taxRates } from './finance';
 import { borderCost, flow, kingdomById, kingdomOf, payTariff, toTreasury } from './kingdoms';
 import { INVEST_CLASSES } from './policy';
 import { addFund, findPop, payPops, payProf, workforce } from './pops';
@@ -936,7 +936,7 @@ function investSurplus(w: World, p: Pop, cashCost: number) {
   if (over <= 0) return;
   // 투자법이 허용한 계층은 그 지역 금융가 지분을 산다 (지분 가격 nav)
   const f = financeOf(w, p.regionId);
-  if (!f || financeIdle(w, f) || treasuryOver(w, f)) return;
+  if (!f || treasuryOver(w, f)) return;
   p.savings -= over;
   toTreasury(f, over, 'units');
   addFund(p, f.id, over / Math.max(0.01, f.nav ?? 1));
@@ -967,7 +967,7 @@ function nobleInvest(w: World, p: Pop, daily: number, financeOk: boolean) {
     if (home) { if (x.y >= by) { best = x.o; by = x.y; room = r; } break; }
   }
   const f = financeOk ? financeOf(w, p.regionId) : undefined;
-  const fin = f && !financeIdle(w, f) && !treasuryOver(w, f) ? f : undefined;
+  const fin = f && !treasuryOver(w, f) ? f : undefined;
   const yf = fin ? choiceYield(w, fin) : -1;
   // TUNE.manorInvestSplit 1: 저택과 금융가에 수익률 비율로 나눠 산다 (둘 다 0 이면 반씩). 0: 수익률이 높은 한 곳에 다 산다
   let toFin = 0;
@@ -1151,8 +1151,8 @@ function updateWealth(p: Pop, rd: RegionDay, plan: PopPlan) {
 function wealthMove(p: Pop, L: number, inKind: number, costCur: number, costNext: number) {
   // 소득 = 판 돈(현금 소득에 들어 있다) + 먹고 쓴 현물
   const income = Math.max(0, p.incomeEma);
-  // 저축을 부에 넣기 (TUNE.wealthSavWeeks > 0, 기본 52): 생활비 wealthSavBuffer 주치를 넘는 저축 ÷ wealthSavWeeks 주 (wealthSavLower 1 이면 하층만)
-  const fromSavings = TUNE.wealthSavWeeks > 0 && (!TUNE.wealthSavLower || CLASS_DEFS[p.prof].stratum === 'lower')
+  // 저축을 부에 넣기 (TUNE.wealthSavWeeks > 0, 기본 52, 하층만): 생활비 wealthSavBuffer 주치를 넘는 저축 ÷ wealthSavWeeks 주
+  const fromSavings = TUNE.wealthSavWeeks > 0 && CLASS_DEFS[p.prof].stratum === 'lower'
     ? Math.max(0, p.savings - TUNE.wealthSavBuffer * TICKS_PER_WEEK * costCur) / (TUNE.wealthSavWeeks * TICKS_PER_WEEK) : 0;
   const total = income + inKind + fromSavings;
   let drift = 0;
@@ -1180,7 +1180,7 @@ export function wealthDrivers(w: World, p: Pop): { income: number; inKind: numbe
 
 // ---------------------------------------------------------------- 가격
 
-/** 빅토리아3 가격 범위 (지금 규칙). 비교용 공식(TUNE.priceExp)은 TUNE.priceRange 를 쓴다 (economy.ts priceBounds) */
+/** 빅토리아3 가격 범위 (기본가 배수). 시장 가격(updatePrices)과 AI 장기 가격(outlook.ts longRunPrice) 모두 여기서 읽는다 */
 export const PRICE_MIN = 0.25;
 export const PRICE_MAX = 1.75;
 /** 하루에 목표 가격으로 다가가는 비율 */
@@ -1229,8 +1229,7 @@ export function updatePrices(w: World) {
       mg.inventory = stockOf[mkey(r.id, g)] ?? 0;
       // 흐름이 끊긴 시장은 이동평균이 둘 다 같은 비율로 줄어 마지막 쏠림이 남으므로, 가격이 쏠린 쪽 끝으로 간다
       const target = priceFormula(g, mg.demandEma, mg.supplyEma);
-      const [mn, mx] = priceBounds();
-      mg.price = clamp(mg.price + (target - mg.price) * PRICE_SPEED, base * mn, base * mx);
+      mg.price = clamp(mg.price + (target - mg.price) * PRICE_SPEED, base * PRICE_MIN, base * PRICE_MAX);
     }
   }
 }
