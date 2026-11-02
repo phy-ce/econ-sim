@@ -1,0 +1,262 @@
+{
+ "about": "임금 지연 고치기 (wt-wagelag, 2026-11-02). 진단 .tmp/y1/RESULT.md: 흉작으로 곡물값이 뛰어 소작 1인 소득이 시장 임금(하루 속도 wageMarketRate)보다 빨리 오르면 일꾼이 소작지로 빠지고 생산·건축사무소·행정청이 멈춘다. ctl = main 기본값(대조), a12 = A1 aiWagePremium 1 (민간 AI 상회 지역 웃돈) + A2 aiAdminWage 2 (왕실 AI: 행정청·건축사무소 충원율이 0.9 아래면 국영 임금 단계 올림), a12w1 = a12 + W1 wageMarketRateUp 0.01 (시장 임금이 오를 때만 하루 속도 0.01, 세계 규칙 시제품). 20년 × 시드 1·2 × salt 0..3. 돌리기 (packages/sim 에서): PAR=8 bash cli/lab.sh <out.jsonl> ../../docs/overhaul/WAGELAG_SPECS.json. 요약: python cli/labsum.py <out.jsonl> --compare ctl.",
+ "code": "wt-wagelag (main e0499ef + A1·A2·W1 스위치, 끄면 samecheck 5개 같음)",
+ "counts": {
+  "specs (20년)": 24
+ },
+ "choices": [
+  "후보: A1·A2 는 AI 판단이라 켬/끔만 본다 (마이크로 3년 × 시드 1~4 에서 A2 혼자는 생산 고용을 깎아 빼고 A1+A2 로 묶었다). W1 은 진단의 후보 0.01 하나 (대칭 0.01 은 진단 r01 에서 나빴다).",
+  "보는 지표: gdpPre (세전 총생산), 생산 고용·레벨, wage.unskilled ÷ 소작 소득 (wagePeas), peas (소작농 비중), 국고·부채, solPeas·solUnsk.",
+  "플레이어 왕실 방치(withPlayer 기본) + 고정 연구 순서(research 기본 fixed)."
+ ],
+ "specs": [
+  {
+   "item": "WAGELAG",
+   "name": "ctl",
+   "seed": 1,
+   "salt": 0,
+   "years": 20,
+   "tune": {}
+  },
+  {
+   "item": "WAGELAG",
+   "name": "ctl",
+   "seed": 1,
+   "salt": 1,
+   "years": 20,
+   "tune": {}
+  },
+  {
+   "item": "WAGELAG",
+   "name": "ctl",
+   "seed": 1,
+   "salt": 2,
+   "years": 20,
+   "tune": {}
+  },
+  {
+   "item": "WAGELAG",
+   "name": "ctl",
+   "seed": 1,
+   "salt": 3,
+   "years": 20,
+   "tune": {}
+  },
+  {
+   "item": "WAGELAG",
+   "name": "ctl",
+   "seed": 2,
+   "salt": 0,
+   "years": 20,
+   "tune": {}
+  },
+  {
+   "item": "WAGELAG",
+   "name": "ctl",
+   "seed": 2,
+   "salt": 1,
+   "years": 20,
+   "tune": {}
+  },
+  {
+   "item": "WAGELAG",
+   "name": "ctl",
+   "seed": 2,
+   "salt": 2,
+   "years": 20,
+   "tune": {}
+  },
+  {
+   "item": "WAGELAG",
+   "name": "ctl",
+   "seed": 2,
+   "salt": 3,
+   "years": 20,
+   "tune": {}
+  },
+  {
+   "item": "WAGELAG",
+   "name": "a12",
+   "seed": 1,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "aiWagePremium": 1,
+    "aiAdminWage": 2
+   }
+  },
+  {
+   "item": "WAGELAG",
+   "name": "a12",
+   "seed": 1,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "aiWagePremium": 1,
+    "aiAdminWage": 2
+   }
+  },
+  {
+   "item": "WAGELAG",
+   "name": "a12",
+   "seed": 1,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "aiWagePremium": 1,
+    "aiAdminWage": 2
+   }
+  },
+  {
+   "item": "WAGELAG",
+   "name": "a12",
+   "seed": 1,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "aiWagePremium": 1,
+    "aiAdminWage": 2
+   }
+  },
+  {
+   "item": "WAGELAG",
+   "name": "a12",
+   "seed": 2,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "aiWagePremium": 1,
+    "aiAdminWage": 2
+   }
+  },
+  {
+   "item": "WAGELAG",
+   "name": "a12",
+   "seed": 2,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "aiWagePremium": 1,
+    "aiAdminWage": 2
+   }
+  },
+  {
+   "item": "WAGELAG",
+   "name": "a12",
+   "seed": 2,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "aiWagePremium": 1,
+    "aiAdminWage": 2
+   }
+  },
+  {
+   "item": "WAGELAG",
+   "name": "a12",
+   "seed": 2,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "aiWagePremium": 1,
+    "aiAdminWage": 2
+   }
+  },
+  {
+   "item": "WAGELAG",
+   "name": "a12w1",
+   "seed": 1,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "aiWagePremium": 1,
+    "aiAdminWage": 2,
+    "wageMarketRateUp": 0.01
+   }
+  },
+  {
+   "item": "WAGELAG",
+   "name": "a12w1",
+   "seed": 1,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "aiWagePremium": 1,
+    "aiAdminWage": 2,
+    "wageMarketRateUp": 0.01
+   }
+  },
+  {
+   "item": "WAGELAG",
+   "name": "a12w1",
+   "seed": 1,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "aiWagePremium": 1,
+    "aiAdminWage": 2,
+    "wageMarketRateUp": 0.01
+   }
+  },
+  {
+   "item": "WAGELAG",
+   "name": "a12w1",
+   "seed": 1,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "aiWagePremium": 1,
+    "aiAdminWage": 2,
+    "wageMarketRateUp": 0.01
+   }
+  },
+  {
+   "item": "WAGELAG",
+   "name": "a12w1",
+   "seed": 2,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "aiWagePremium": 1,
+    "aiAdminWage": 2,
+    "wageMarketRateUp": 0.01
+   }
+  },
+  {
+   "item": "WAGELAG",
+   "name": "a12w1",
+   "seed": 2,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "aiWagePremium": 1,
+    "aiAdminWage": 2,
+    "wageMarketRateUp": 0.01
+   }
+  },
+  {
+   "item": "WAGELAG",
+   "name": "a12w1",
+   "seed": 2,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "aiWagePremium": 1,
+    "aiAdminWage": 2,
+    "wageMarketRateUp": 0.01
+   }
+  },
+  {
+   "item": "WAGELAG",
+   "name": "a12w1",
+   "seed": 2,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "aiWagePremium": 1,
+    "aiAdminWage": 2,
+    "wageMarketRateUp": 0.01
+   }
+  }
+ ]
+}

@@ -146,16 +146,32 @@ function seasonList(w: World, s: number): (HarvestCondition | null)[] {
   return list[s];
 }
 
+/**
+ * 정해 둔 기상 조건 (실험·시나리오가 넣는다. 본 게임은 빈 목록이고 저장하지 않는다. src/lab/micro.ts 'harvest' 충격).
+ * 그 지역·날짜에 걸린 것이 있으면 무작위 조건보다 먼저다
+ */
+export const SCRIPTED_HARVESTS: (HarvestCondition & { regionId: number })[] = [];
+
+function scriptedHarvest(regionId: number, tick: number): HarvestCondition | null {
+  for (const h of SCRIPTED_HARVESTS) if (h.regionId === regionId && h.start <= tick && tick < h.end) return h;
+  return null;
+}
+
+/** 무작위 조건도 정해 둔 조건도 없다 */
+const noHarvest = () => !(TUNE.harvestChance > 0) && SCRIPTED_HARVESTS.length === 0;
+
 /** 이 지역에 tick 날 걸린 기상 조건 (없으면 null) */
 export function harvestCondition(w: World, regionId: number, tick = w.tick): HarvestCondition | null {
-  if (!(TUNE.harvestChance > 0) || tick < 0) return null;
+  if (noHarvest() || tick < 0) return null;
+  if (SCRIPTED_HARVESTS.length) { const h = scriptedHarvest(regionId, tick); if (h) return h; }
+  if (!(TUNE.harvestChance > 0)) return null;
   const list = seasonList(w, Math.floor(tick / HARVEST_SEASON_DAYS));
   return list[harvestCache.index.get(regionId) ?? -1] ?? null;
 }
 
 /** 이 지역 이 땅의 tick 날 산출 배율 (1 = 평년). 소작 수확과 농지·산림·광맥 건물의 투입·산출에 곱한다 (효율과 따로) */
 export function harvestFactor(w: World, regionId: number, land: LandType | undefined, tick = w.tick): number {
-  if (!(TUNE.harvestChance > 0) || !land || land === 'plot') return 1;
+  if (noHarvest() || !land || land === 'plot') return 1;
   const c = harvestCondition(w, regionId, tick);
   return c && c.lands.includes(land) ? 1 - c.cut : 1;
 }
@@ -165,7 +181,7 @@ export function harvestFactor(w: World, regionId: number, land: LandType | undef
  * 조건이 시작한 직후에는 1에 가깝고, 끝난 뒤 몇 주 동안은 1보다 작다 (outlook.ts 가 줄어든 공급을 평년 양으로 되돌릴 때 쓴다)
  */
 export function harvestFactorEma(w: World, regionId: number, land: LandType | undefined, rate: number, lag: number): number {
-  if (!(TUNE.harvestChance > 0) || !land || land === 'plot') return 1;
+  if (noHarvest() || !land || land === 'plot') return 1;
   let f = 0, wt = rate;
   for (let k = 0; k < HARVEST_SEASON_DAYS; k++, wt *= 1 - rate) f += wt * harvestFactor(w, regionId, land, w.tick - lag - k);
   return f + wt / rate; // 그보다 오래된 날은 평년으로 본다 (남은 가중치 (1 − rate)^90)
@@ -344,14 +360,17 @@ const GOV_TYPES = new Map<string, boolean>();
  * 회사가 그 건물(유형)에 주는 임금표: 왕실의 정부 건물(행정청·건축사무소·학교)은 국영 임금(stateWages),
  * 나머지(왕실 생산 건물 포함)는 회사 임금(wages, 민간처럼 시장에서 정한다).
  * TUNE.wageMarket = 1 이고 지역(w, regionId)을 주면 그 지역 시장 임금(Region.wages)이다: 정부 건물은 그 지역 국영 임금(Region.stateWages),
- * 시장임금 정책을 쓰는 회사(플레이어)는 지역 시장 임금 × (1 + 웃돈). 지역 임금이 아직 없으면 회사 임금표
+ * 시장임금 정책을 쓰는 회사(플레이어)는 지역 시장 임금 × (1 + 웃돈), AI 민간 상회는 지역 시장 임금 × (1 + 그 지역 웃돈 aiPremium). 지역 임금이 아직 없으면 회사 임금표
  */
 export function wagesAt(c: Company, typeId: string, w?: World, regionId?: number): Record<Skill, number> {
   if (TUNE.wageMarket && w && regionId !== undefined) {
     const r = regionById(w, regionId);
     if (r.wages) {
       if (c.state && isGovernment(typeId)) return r.stateWages ?? c.stateWages ?? r.wages;
-      return c.wageOffset ? offsetWages(r.wages, c.wageOffset) : r.wages;
+      const base = c.wageOffset ? offsetWages(r.wages, c.wageOffset) : r.wages;
+      // AI 민간 상회의 지역 웃돈 (TUNE.aiWagePremium, ai.ts adjustPremium)
+      const ai = c.aiPremium?.[regionId];
+      return ai ? offsetWages(base, ai.off) : base;
     }
   }
   return c.state && c.stateWages && isGovernment(typeId) ? c.stateWages : c.wages;

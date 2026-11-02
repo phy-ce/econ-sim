@@ -15,7 +15,7 @@
 //   (마이크로 인구 ÷ 본 게임 같은 왕국 시작 인구). 소작지 1칸 인원(SUBSISTENCE.workersPerCell)·무역소 유보액(TUNE.tradeReserve)도 × s.
 // - 저택·금융가 크기 규칙(OWNERSHIP_SEATS·OWNER_SEATS_PER_LEVEL·financeStaff)은 레벨 단위의 비율이라 표 축소만으로 맞는다.
 import { ABS_LIMITS, BUILDING_BY_ID, BUILDING_TYPES, GOOD_IDS, MICRO_BUILD_SCALE, SUBSISTENCE, TAX_PEOPLE_PER_LEVEL, TICKS_PER_YEAR, TIERS, TRADING_POST, TUNE, WORKFORCE_RATIO, tradeReserveOf } from '../data';
-import { SCRIPTED_QUAKES, collectionRatio, newBuilding, paysDividend, slots } from '../economy';
+import { SCRIPTED_HARVESTS, SCRIPTED_QUAKES, collectionRatio, newBuilding, paysDividend, slots } from '../economy';
 import { applyStateWages, taxCapacity, updateWageIndex } from '../finance';
 import { createWorld } from '../index';
 import { initMarketWages, syncEmployment } from '../labor';
@@ -114,6 +114,7 @@ function takeSnapshot(): Snapshot {
 /** 표를 본 게임 값으로 되돌린다 (축소가 꺼져 있으면 아무것도 안 한다). 충격으로 바꾼 TUNE.needMul 도 되돌린다 */
 export function restoreMicroScale(): void {
   SCRIPTED_QUAKES.length = 0;
+  SCRIPTED_HARVESTS.length = 0;
   if (!snapshot || !active) return;
   for (const s of snapshot.methods) {
     Object.assign(s.m.workers, s.workers);
@@ -349,6 +350,8 @@ export type MicroShock =
   | { t: number; kind: 'remove'; type: string; region?: number }
   /** 소작지 재해: t 일부터 years 년 동안 소작지 칸의 loss 를 못 쓴다 (economy.ts SCRIPTED_QUAKES, restoreMicroScale 이 지운다) */
   | { t: number; kind: 'quake'; loss: number; years: number; region?: number }
+  /** 흉작: t 일부터 days 일 동안 그 지역 소작지·농지(arable) 산출 × (1 − cut) (economy.ts SCRIPTED_HARVESTS 가뭄, restoreMicroScale 이 지운다) */
+  | { t: number; kind: 'harvest'; cut: number; days: number; region?: number }
   /** 민간 상회 현금을 0 으로: 그 돈을 상회 건물의 레벨 주인(저택·금융가) 금고로 가진 레벨 수대로 옮긴다 (돈은 옮길 뿐). 유보 자산 표시는 다음 정산에서 현금에 맞춰 준다 */
   | { t: number; kind: 'drain' };
 
@@ -379,6 +382,10 @@ export function applyMicroShock(w: World, s: MicroShock): void {
     const subs = w.buildings.find((b) => b.regionId === r.id && b.typeId === 'subsistence')!;
     const p = getPop(w, r.id, 'peasant', subs.id);
     p.size += s.n;
+    return;
+  }
+  if (s.kind === 'harvest') {
+    SCRIPTED_HARVESTS.push({ kind: 'drought', lands: ['arable'], intensity: Math.round(s.cut / 0.05), cut: s.cut, origin: r.id, regionId: r.id, start: s.t, end: s.t + s.days });
     return;
   }
   if (s.kind === 'quake') {

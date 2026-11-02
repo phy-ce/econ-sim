@@ -1,6 +1,6 @@
 import { BUILDING_BY_ID, buildPointsOf, BUILDING_TYPES, EDUCATION_FLOOR, EDUCATION_RANGE, GOOD_IDS, GOODS, SKILL_DEFS, TECH_BY_ID, TICKS_PER_WEEK, TICKS_PER_YEAR, TRADING_POST, TUNE, getMethod, regionPerk, tradeEscrowPerLevel, tradeReserveOf } from './data';
 import { withEstimateCache, regionAvgWealth, regionPopulation, wageCostOf,
-  availableMethods, ownBuildingAt, builderOf, canBuildType, kingdomGdp, paysDividend, paysShare, companyById, constructionEstimate, creditLimit, depositFree, efficiency, estimateMethod, harvestFactor, hasBuilder, isGovernment, regionById, wagesAt, researchableTechs, roomFor, sellsShares, slots, mainOutput, projectedSD, currentSD,
+  availableMethods, ownBuildingAt, builderOf, canBuildType, disbanded, kingdomGdp, paysDividend, paysShare, companyById, constructionEstimate, creditLimit, depositFree, efficiency, estimateMethod, harvestFactor, hasBuilder, isGovernment, regionById, wagesAt, researchableTechs, roomFor, sellsShares, slots, mainOutput, projectedSD, currentSD,
   FLOW_ZERO, harvestFactorEma, priceBounds, priceFormula,
 } from './economy';
 import { BY_EMA } from './market';
@@ -8,7 +8,7 @@ import { MAX_CONCURRENT_CONSTRUCTIONS, MAX_LEVELS_PER_PROJECT, applyCommand } fr
 import { committedCost, favours, funderWeight, hasReserve, lawRevenue, ownerBuildings, ownerFunds, reserveCap, reserveOf, taxRates, treasuryFree } from './finance';
 import { privatizeLevel } from './production';
 import { policyStatus } from './policy';
-import { subsistenceWage } from './labor';
+import { WAGE_LADDER, subsistenceWage } from './labor';
 import { baseValue, longRunWages, marketOutlook, techValue, valueMethod } from './outlook';
 import type { Outlook } from './outlook';
 import { kingdomById, toTreasury } from './kingdoms';
@@ -51,6 +51,17 @@ function belowAdminFloor(k: Kingdom | undefined): boolean {
   return TUNE.aiAdminFloor > 0 && !!k && (k.taxRatio ?? 1) < TUNE.aiAdminFloor;
 }
 
+/** 왕실 건축사무소(켜진 건물, 해산한 사무소 제외)의 가동 레벨 가중 충원율. 사무소가 없으면 1 (TUNE.aiAdminWage 2) */
+function officeStaffing(w: World, c: Company): number {
+  let st = 0, lv = 0;
+  for (const b of w.buildings) {
+    if (b.companyId !== c.id || !b.active || disbanded(b) || !getMethod(b.typeId, b.methodId).construction) continue;
+    const n = b.level * b.utilization;
+    st += b.last.staffing * n; lv += n;
+  }
+  return lv > 0 ? st / lv : 1;
+}
+
 /** 왕실 행정청(징세 한도가 있는 방식, 켜진 건물)의 레벨 가중 충원율. 행정청이 없으면 1 */
 function adminStaffing(w: World, c: Company): number {
   let st = 0, lv = 0;
@@ -83,8 +94,10 @@ export function runAi(w: World) {
     if (c.isPlayer) continue;
     // 왕실은 세법과 정책 단계(정부 건물의 국영 임금 포함)를 정한다. 생산 건물 임금은 민간과 왕실 모두 같은 규칙으로 정한다
     if (c.state) { chooseTaxLaw(w, c); adjustBudget(w, c); }
-    // TUNE.wageMarket = 1: 임금은 지역 시장 임금이 정한다 (labor.ts updateMarketWages). AI 는 자리(가동률·증설·철거)만 정한다
+    // TUNE.wageMarket = 1: 임금은 지역 시장 임금이 정한다 (labor.ts updateMarketWages). AI 는 자리(가동률·증설·철거)만 정한다.
+    // TUNE.aiWagePremium: 민간 상회는 사람이 빠지는 지역에 웃돈을 얹는다 (adjustPremium)
     if (!TUNE.wageMarket) adjustWages(w, c);
+    else if (TUNE.aiWagePremium && !c.state) adjustPremium(w, c);
     manageBuildings(w, c, outlook, switchPools, spare);
     if (c.state) planResearch(w, c, outlook);
     if (c.state && TUNE.crownPrivatize === 'all') for (const b of w.buildings) if (b.companyId === c.id && sellsShares(b.typeId)) b.privatize = true;
@@ -205,6 +218,70 @@ function adjustWages(w: World, c: Company) {
   }
 }
 
+/** TUNE.aiWagePremium: 웃돈을 한 주에 움직이는 최대 폭 (시장 임금 대비 비율). 근거: DESIGN 11 aiWagePremium */
+export const PREMIUM_STEP = 0.1;
+/** TUNE.aiWagePremium: 웃돈 상한 (플레이어 웃돈 손잡이 setWageOffset 의 위 끝과 같다). AI 는 웃돈만 얹으므로 아래 끝은 0 */
+export const PREMIUM_MAX = 1;
+
+/**
+ * 민간 AI 상회의 지역 웃돈 (TUNE.aiWagePremium, 매주, TUNE.wageMarket = 1 일 때). 지역마다 그 상회 생산 건물(정부·소유·소작 건물 제외)을 보고, 직종마다:
+ * - 목표 = 바깥 소득 × switchPremium ÷ 시장 임금 − 1 (0~PREMIUM_MAX). 바깥 소득: 노동자·농부는 그 지역 소작 1인 소득, 위 직종은 한 칸 아래 직종(WAGE_LADDER)이
+ *   이 상회 그 지역에서 받는 임금 (사람이 옮겨 오려면 지금 소득의 switchPremium 배를 넘어야 한다: labor.ts switchShare)
+ * - 그 지역 이익(profitEma 합)이 0 이하면 PREMIUM_STEP 만큼 내린다 (0까지)
+ * - 웃돈이 목표보다 크면 (시장 임금이 따라왔거나 소작 소득이 내렸다) 목표까지 PREMIUM_STEP 씩 내린다
+ * - 빈자리가 있고 지난 점검보다 고용이 줄었거나 빈자리가 늘었으면 (사람이 빠진다) 목표까지 PREMIUM_STEP 씩 올린다. 그 밖에는 그대로
+ * 그 지역 이 상회 임금 = 시장 임금 × (1 + 웃돈) (economy.ts wagesAt). 시장 임금 규칙(labor.ts updateMarketWages)은 바뀌지 않는다
+ */
+function adjustPremium(w: World, c: Company) {
+  const byRegion = new Map<number, Building[]>();
+  for (const b of w.buildings) {
+    if (b.companyId !== c.id || b.level <= 0) continue;
+    const def = BUILDING_BY_ID[b.typeId];
+    if (def.auto || def.ownership || isGovernment(b.typeId)) continue;
+    const list = byRegion.get(b.regionId);
+    if (list) list.push(b); else byRegion.set(b.regionId, [b]);
+  }
+  const prev = c.aiPremium ?? {};
+  const next: NonNullable<Company['aiPremium']> = {};
+  for (const rid of [...byRegion.keys()].sort((a, b) => a - b)) {
+    const r = regionById(w, rid);
+    const market = r.wages;
+    if (!market) continue;
+    const old = prev[rid];
+    const off = old ? { ...old.off } : emptyRecord();
+    const emp = emptyRecord(), vac = emptyRecord();
+    let profit = 0;
+    for (const b of byRegion.get(rid)!) {
+      profit += b.profitEma;
+      for (const s of SKILLS) {
+        if (paysShare(b, s)) continue;
+        emp[s] += b.employed[s];
+        vac[s] += Math.max(0, slots(b, s) - b.employed[s]);
+      }
+    }
+    const tenant = subsistenceWage(w, r);
+    const paid = {} as Record<Skill, number>;
+    for (const s of SKILLS) {
+      const below = WAGE_LADDER[s];
+      const outside = below ? paid[below] : tenant;
+      const target = market[s] > 0 ? clamp((outside * TUNE.switchPremium) / market[s] - 1, 0, PREMIUM_MAX) : 0;
+      const leaving = vac[s] > 1e-6 && !!old && (emp[s] < old.emp[s] - 1e-6 || vac[s] > old.vac[s] + 1e-6);
+      if (profit <= 0) off[s] = Math.max(0, off[s] - PREMIUM_STEP);
+      else if (off[s] > target) off[s] = Math.max(target, off[s] - PREMIUM_STEP);
+      else if (leaving) off[s] = Math.min(target, off[s] + PREMIUM_STEP);
+      paid[s] = market[s] * (1 + off[s]);
+    }
+    next[rid] = { off, emp, vac };
+  }
+  c.aiPremium = next;
+}
+
+function emptyRecord(): Record<Skill, number> {
+  const o = {} as Record<Skill, number>;
+  for (const s of SKILLS) o[s] = 0;
+  return o;
+}
+
 /** 국고가 주간 국정 지출(expenseEma)의 몇 주치인가. 지출이 없으면 무한 */
 function treasuryWeeks(c: Company, k: Kingdom): number {
   const spend = k.expenseEma ?? 0;
@@ -239,8 +316,9 @@ export function treasuryTight(w: World, c: Company, k: Kingdom): boolean {
  * - 풂 (TUNE.treasuryHighWeeks 주치 초과, 줄지 않았다): 세금을 내린다.
  * - 기술을 다 연 왕국: 풂 조건에서 임금 지수가 1 이하면 국영 임금을 TUNE.doneWageMax 단계까지 올리고,
  *   임금 지수가 1을 넘으면 보통(3)으로 되돌린다. 그 밖에는 국영 임금을 보통 위로 올리지 않는다
- * - 행정청 일손 (TUNE.aiAdminWage, 오버홀 07 A4): 징수율이 TUNE.aiAdminFloor 아래인 동안 국영 임금을 내리지 않고, 행정청 충원율이 ADMIN_STAFFED 아래면
- *   그 점검에서는 다른 손잡이보다 먼저 국영 임금을 한 칸 올린다 (5까지). 행정청 일꾼은 국영 임금을 받으므로, 국고가 조일 때 임금을 깎으면 징수율이 더 떨어진다
+ * - 행정청 일손 (TUNE.aiAdminWage, 오버홀 07 A4): 1 이면 징수율이 TUNE.aiAdminFloor 아래인 동안 국영 임금을 내리지 않고, 행정청 충원율이 ADMIN_STAFFED 아래면
+ *   그 점검에서는 다른 손잡이보다 먼저 국영 임금을 한 칸 올린다 (5까지). 행정청 일꾼은 국영 임금을 받으므로, 국고가 조일 때 임금을 깎으면 징수율이 더 떨어진다.
+ *   2 이면 징수율과 상관없이 행정청과 건축사무소 충원율 중 낮은 쪽이 ADMIN_STAFFED 아래인 동안 같은 일을 한다 (wt-wagelag A2)
  * - 복지 (cutWelfare·raiseWelfare): 조임에서는 복지를 가장 먼저 줄인다 (단계를 1까지, 빚이 있으면 그다음 복지법을 끈다). 조이지 않는데 국고가 줄며
  *   TUNE.welfareWeeks 의 절반 주치 아래면 복지 단계를 내린다. 다른 손잡이를 움직이지 않은 점검에서는 복지를 켜거나 올린다 (raiseWelfare)
  */
@@ -254,10 +332,11 @@ function adjustBudget(w: World, c: Company) {
   let step: [BudgetItem, number] | null = null;
   // 기술을 다 연 왕국: 국영 임금을 보통 위로 TUNE.doneWageMax 단계까지 올릴 수 있다 (임금 지수 1 이하, 국고 넉넉할 때)
   const done = !c.research.current && researchableTechs(c).length === 0;
-  // TUNE.aiAdminWage: 징수율이 하한 아래면 국영 임금을 내리지 않는다 (cut = false)
-  const guard = !!TUNE.aiAdminWage && belowAdminFloor(k);
+  // TUNE.aiAdminWage 1: 징수율이 하한 아래면 국영 임금을 내리지 않는다 (cut = false). 2: 행정청·건축사무소 충원율 중 낮은 쪽이 ADMIN_STAFFED 아래면
+  const short = TUNE.aiAdminWage === 2 ? Math.min(adminStaffing(w, c), officeStaffing(w, c)) < ADMIN_STAFFED : false;
+  const guard = TUNE.aiAdminWage === 2 ? short : !!TUNE.aiAdminWage && belowAdminFloor(k);
   const cut = !guard;
-  if (guard && b.wages < BUDGET_STEPS && adminStaffing(w, c) < ADMIN_STAFFED) {
+  if (guard && b.wages < BUDGET_STEPS && (TUNE.aiAdminWage === 2 || adminStaffing(w, c) < ADMIN_STAFFED)) {
     step = ['wages', b.wages + 1];
   } else if (treasuryTight(w, c, k)) {
     if (losing && !cutWelfare(w, c, k)) {

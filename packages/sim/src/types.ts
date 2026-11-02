@@ -417,6 +417,11 @@ export interface Company {
   lastWeekProfit: number;
   weekStartCash: number;
   wageOffset: Record<Skill, number> | null;
+  /**
+   * AI 민간 상회의 지역별 웃돈 (TUNE.aiWagePremium, ai.ts adjustPremium): 지역 id → 직종별 웃돈 비율(off, 그 지역 임금 = 시장 임금 × (1 + off))과
+   * 지난 점검의 그 지역 고용·빈자리 (사람이 빠지는지 본다). 끄면 생기지 않는다
+   */
+  aiPremium?: Record<number, { off: Record<Skill, number>; emp: Record<Skill, number>; vac: Record<Skill, number> }>;
   debt: number;
   revenueEma: number;
   /** 화면 호환용 (부실 제도는 없앴다. 늘 0). UI_CHANGES 2-17 반영 뒤 지운다 */

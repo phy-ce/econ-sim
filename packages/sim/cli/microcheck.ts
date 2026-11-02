@@ -30,16 +30,21 @@
 //   drain   --at 일부터 --draindays(기본 14)일 동안 매일 민간 상회 현금을 0 으로 (그 돈을 레벨 주인 저택·금융가 금고로 옮긴다, 현금 0 함정 재현, DECISIONS 7-40).
 //           하루만 비우면 원료 재고 2일분으로 판 돈이 들어와 스스로 풀린다 (main d964485, labor 시드 1). 여러 날 비우면 원료 재고가 바닥난 채 현금 0 이 된다
 //   quaketwo 지역 2개(two 와 같은 시작)에서 지역 0 에 같은 재해 (이주를 보려고)
+//   drought --at 일부터 --droughtdays(기본 180)일 동안 지역 0 소작지·농지 산출 × (1 − --droughtcut, 기본 0.2) (economy.ts SCRIPTED_HARVESTS 가뭄,
+//           wt-wagelag: 곡물값이 뛰어 소작 소득이 시장 임금보다 빨리 오를 때 .tmp/y1/RESULT.md)
 //
 // 점검 (주 단위 표본):
 //   (a) 상품: S/D(공급·수요 이동평균의 비) > 1.05 인 주에 다음 주 가격이 내렸나(또는 바닥), < 0.95 면 올랐나(또는 천장). 12주 뒤 |ln S/D| 가 줄었나. 해마다 S/D
 //   (b) 노동: 회사·직종별 빈자리율 > 5% 인 주에 다음 주 임금이 올랐나, < 2% 면 내렸나. 실업(구직자) > 빈자리 인 주에 임금이 내렸나. 임금이 오른 뒤 4주 안에 고용이 늘었나
 //   (c) 노동자(일하는 노동자·농부) 1인 소득·부·생활수준 대 소작농. 해마다
 //   (d) 화폐: 매일 moneyIdentity 어긋남 (화폐 총량 대비)
+//   (w) 임금 지연 표 (wt-wagelag): 4주마다 노동자 시장 임금 ÷ 소작 1인 소득, 상회 노동자 임금(웃돈 포함) ÷ 소작, 생산 고용(민간·왕실 생산 건물), 건축사무소·행정청 충원율,
+//       곡물값/기본가, 국영 임금 단계, 세전 흐름(pop 소득 wages+dividends+rent+sales 주 합). --out 이 있으면 <접두>-<이름>-w.json 에 주마다 값을 쓴다
 //   (q) 재해 실행(quake·quaketwo, 재해 없는 실행은 같은 날짜 대조): 지역마다 소작지 칸·일하는 소작농·노동자·실업 소작농·인구, 노동자 시장 임금, 소작 1인 소득, 곡물 S/D·값, 생활수준. 해마다와 재해 앞뒤 주
 import { mkdirSync, writeFileSync, appendFileSync } from 'node:fs';
 import { dirname } from 'node:path';
-import { BUILDING_BY_ID, TICKS_PER_WEEK, TICKS_PER_YEAR, TUNE, getMethod } from '../src/data';
+import { BUILDING_BY_ID, GOODS, TICKS_PER_WEEK, TICKS_PER_YEAR, TUNE, getMethod } from '../src/data';
+import { subsistenceWage } from '../src/labor';
 import { companyById, isGovernment, wagesAt } from '../src/economy';
 import { FLOW } from '../src/kingdoms';
 import { manorNeed } from '../src/market';
@@ -75,6 +80,8 @@ const SECTIONS = arg('sections', 'abcd');
 /** 재해 실행(quake·quaketwo)의 손실 비율·기간(년) */
 const DRAIN_DAYS = Number(arg('draindays', '14'));
 const QLOSS = Number(arg('quakeloss', '0.25')), QYEARS = Number(arg('quakeyears', '3'));
+/** 흉작 실행(drought)의 산출 감소율·기간(일) */
+const DCUT = Number(arg('droughtcut', '0.2')), DDAYS = Number(arg('droughtdays', '180'));
 
 /** 실행 안의 TUNE 충격 (관측용 개입, 실행이 끝나면 되돌린다) */
 type LabShock = MicroShock | { t: number; kind: 'tune'; set: Record<string, number> };
@@ -97,6 +104,7 @@ const DEFS: Record<string, RunDef> = {
   people: { name: 'people', opts: baseOpts, shocks: [{ t: AT, kind: 'people', n: Math.round(PEOPLE / 4) }] },
   quake: { name: 'quake', opts: baseOpts, shocks: [{ t: AT, kind: 'quake', loss: QLOSS, years: QYEARS }] },
   drain: { name: 'drain', opts: baseOpts, shocks: Array.from({ length: DRAIN_DAYS }, (_, i) => ({ t: AT + i, kind: 'drain' as const })) },
+  drought: { name: 'drought', opts: baseOpts, shocks: [{ t: AT, kind: 'harvest', cut: DCUT, days: DDAYS }] },
   quaketwo: { name: 'quaketwo', opts: { ...baseOpts, people: [PEOPLE, PEOPLE] }, shocks: [{ t: AT, kind: 'quake', loss: QLOSS, years: QYEARS, region: 0 }] },
   control: { name: 'control', opts: { ...baseOpts, scale: 1, people: [PEOPLE * Math.round(1 / SCALE)], personUnit: Math.round(1 / SCALE) }, shocks: [] },
 };
@@ -273,7 +281,49 @@ function cashDay(w: World): CashDay {
   }
   return { t: w.tick, cash: firm.cash, fill: fw > 0 ? fl / fw : NaN, lv, emp, owner, call: (FLOW['call.manor'] ?? 0) + (FLOW['call.finance'] ?? 0) };
 }
-export interface RunResult { def: RunDef; weeks: Week[]; days?: CashDay[]; drift: number; driftAbs: number; driftTick: number; ms: number; rows: number; hash: string; same?: boolean }
+/** 임금 지연 표(w) 주 표본: wt-wagelag */
+interface LagWeek { t: number; wageMkt: number; wagePaid: number; tenant: number; prodEmp: number; prodJobs: number; office: number; admin: number; grain: number; stateStep: number; flow: number }
+const lagFlow = { v: 0 };
+function lagWeek(w: World): LagWeek {
+  const r0 = w.regions[0];
+  const k0 = w.kingdoms[0];
+  const firm = companyById(w, k0.privateIds[0]);
+  const tenant = subsistenceWage(w, r0);
+  let prodEmp = 0, prodJobs = 0, offSt = 0, offLv = 0, admSt = 0, admLv = 0;
+  for (const b of w.buildings) {
+    const def = BUILDING_BY_ID[b.typeId];
+    if (def.auto || def.ownership || b.level <= 0) continue;
+    const m = getMethod(b.typeId, b.methodId);
+    if (isGovernment(b.typeId)) {
+      if (m.construction && b.active) { offSt += b.last.staffing * b.level; offLv += b.level; }
+      if (m.taxCapacity && b.active) { admSt += b.last.staffing * b.level; admLv += b.level; }
+      continue;
+    }
+    if (!Object.keys(m.outputs).length) continue;
+    for (const s of Object.keys(m.workers) as (keyof typeof m.workers)[]) { prodJobs += (m.workers[s] ?? 0) * b.level; prodEmp += b.employed[s] ?? 0; }
+  }
+  const g = r0.market.grain;
+  const flow = lagFlow.v; lagFlow.v = 0;
+  return {
+    t: w.tick, wageMkt: r0.wages?.unskilled ?? NaN, wagePaid: firm ? wagesAt(firm, 'farm', w, r0.id).unskilled : NaN, tenant, prodEmp, prodJobs,
+    office: offLv > 0 ? offSt / offLv : NaN, admin: admLv > 0 ? admSt / admLv : NaN, grain: g ? g.price / GOODS.grain.basePrice : NaN, stateStep: k0.budget.wages, flow,
+  };
+}
+function lagDay(w: World) {
+  for (const p of w.pops) { const br = p.incomeBreakdown as Record<string, number> | undefined; if (br) lagFlow.v += (br.wages ?? 0) + (br.dividends ?? 0) + (br.rent ?? 0) + (br.sales ?? 0); }
+}
+/** (w) 임금 지연 표: 4주마다 */
+function lagTable(r: RunResult) {
+  const ws = r.lag ?? [];
+  console.log(`
+(w) 임금 지연 [${r.def.name}] 지역 0: 시장 임금·상회 임금(웃돈 포함)·소작 1인 소득, 생산 고용/자리, 사무소·행정청 충원, 곡물값/기본, 국영 임금 단계, 세전 흐름(4주 합)`);
+  console.log('주'.padEnd(5) + ['시장', '상회', '소작', '시장÷소작', '상회÷소작', '고용', '자리', '사무소', '행정청', '곡물', '국영', '세전'].map((c) => pad(c, 10)).join(''));
+  for (let i = 0; i < ws.length; i += 4) {
+    const x = ws[i], fl = ws.slice(Math.max(1, i - 3), i + 1).reduce((a, y) => a + y.flow, 0);
+    console.log(String(Math.round(x.t / TICKS_PER_WEEK)).padEnd(5) + [f2(x.wageMkt), f2(x.wagePaid), f2(x.tenant), f2(x.wageMkt / x.tenant), f2(x.wagePaid / x.tenant), f2(x.prodEmp), f2(x.prodJobs), f2(x.office), f2(x.admin), f2(x.grain), String(x.stateStep), f2(fl)].map((v) => pad(v, 10)).join(''));
+  }
+}
+export interface RunResult { lag?: LagWeek[]; def: RunDef; weeks: Week[]; days?: CashDay[]; drift: number; driftAbs: number; driftTick: number; ms: number; rows: number; hash: string; same?: boolean }
 
 const stateHash = (w: World) => createHash('sha1').update(JSON.stringify({ ...w, config: { ...w.config, rulesHash: '' } })).digest('hex').slice(0, 12);
 
@@ -316,6 +366,9 @@ function run(def: RunDef): RunResult {
   let drift = 0, driftAbs = 0, driftTick = 0, rows = 0;
   const shocks = [...def.shocks];
   const days: CashDay[] = [];
+  const lag: LagWeek[] = [];
+  lagFlow.v = 0;
+  if (SECTIONS.includes('w')) lag.push(lagWeek(w));
   const call0 = (FLOW['call.manor'] ?? 0) + (FLOW['call.finance'] ?? 0);
   let buf: string[] = [];
   const write = (row: MicroRow) => { if (!file) return; buf.push(JSON.stringify(row)); rows++; if (buf.length >= 50) { appendFileSync(file, buf.join('\n') + '\n'); buf = []; } };
@@ -325,6 +378,7 @@ function run(def: RunDef): RunResult {
     for (const s of shocks) if (s.t === w.tick) applyShock(w, s, tuneSaved);
     step(w);
     if (SECTIONS.includes('k')) { const cd = cashDay(w); cd.call -= call0; days.push(cd); }
+    if (SECTIONS.includes('w')) { lagDay(w); if (w.tick % TICKS_PER_WEEK === 0) lag.push(lagWeek(w)); }
     const dev = Math.abs(moneyIdentity(w) - m0);
     const rel = dev / Math.max(1, totalMoney(w));
     if (rel > drift) { drift = rel; driftAbs = dev; driftTick = w.tick; }
@@ -340,7 +394,7 @@ function run(def: RunDef): RunResult {
   Object.assign(TUNE, tuneSaved);
   restoreMicroScale();
   Object.assign(TUNE, saved);
-  return { def, weeks, days, drift, driftAbs, driftTick, ms: Date.now() - t0, rows, hash };
+  return { def, weeks, days, lag, drift, driftAbs, driftTick, ms: Date.now() - t0, rows, hash };
 }
 
 // ---------------------------------------------------------------- 표
@@ -590,6 +644,7 @@ for (const name of RUNS) {
   };
   if (OUT) appendFileSync(`${OUT}-${name}.jsonl`, JSON.stringify(summary) + '\n');
   if (SECTIONS.includes('q')) quakeTable(r);
+  if (SECTIONS.includes('w')) { lagTable(r); if (OUT) writeFileSync(`${OUT}-${name}-w.json`, JSON.stringify({ run: name, seed: SEED, tune: TUNE_SET, at: AT, lag: r.lag })); }
 }
 const base = results.find((r) => r.def.name === 'base');
 if (base && SECTIONS.includes('d')) shockTable(base, results.filter((r) => r.def.shocks.length > 0));

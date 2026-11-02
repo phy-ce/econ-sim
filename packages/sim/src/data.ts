@@ -456,6 +456,7 @@ export function scaleBonus(level: number): number {
  * - taxCurve: 징수율 곡선. 'exp' = 1 − e^(−x), 'hyp' = x / (1 + x) (x = 행정청 한도 / 인구)
  * - wageMarket, wageMarketRate: 1 이면 지역·직종 시장 임금 (labor.ts updateMarketWages). 날마다 임금 × wageMarketRate × clamp((자리 − 오려는 사람) ÷ min(자리, 오려는 사람), −1, 1) 만큼 움직인다.
  *   오려는 사람 = 재직자 + 자격 있는 실업자 + 다른 자리에서 일하는 자격자 × switchShare(지금 소득, 시장 임금) ÷ switchMax. 0 이면 회사 임금표와 AI 임금 판단 (ai.ts adjustWages)
+ * - wageMarketRateUp: > 0 이면 시장 임금이 오를 때(자리 > 오려는 사람)만 wageMarketRate 대신 이 하루 속도 (0 = 끔)
  * - switchRate, switchPremium, switchMax: 일하는 사람은 소득이 switchPremium 배 넘게 나은 자리로 옮긴다. 하루에 옮기는 비율은
  *   switchPremium 배일 때 switchRate 이고 소득 배율의 차이에 비례해 늘어 switchMax 에서 멈춘다 (labor.ts switchShare)
  * - cashBufferDays: 팝이 금고(저택·금융가)로 보내지 않고 들고 있는 돈 (생활비 + 세금의 며칠분)
@@ -541,6 +542,9 @@ export const TUNE = {
   wageMarket: 1,
   // 시장 임금의 하루 속도 r (주에 최대 약 1.75%). 후보 0.0025 / 0.005 / 0.01 중 조합 비교(2026-11-02-combo)가 쓴 값 (DESIGN 11)
   wageMarketRate: 0.0025,
+  // 시장 임금이 오를 때만 쓰는 하루 속도 (시제품, 세계 규칙, 사용자 결정 대기 DECISIONS 7-41): > 0 이면 자리 > 오려는 사람일 때 wageMarketRate 대신 이 값.
+  // 0 = 끔 (오르내림 같은 속도 wageMarketRate). 후보 0.01 (2026-11-02 wt-wagelag 진단 .tmp/y1/RESULT.md W1). 근거: DESIGN 11
+  wageMarketRateUp: 0,
   adminScale: 0.3,
   lossBuildsPerWeek: 0,
   lossTolerance: Infinity,
@@ -698,8 +702,13 @@ export const TUNE = {
   // (reviewLevels 가 적자 주를 세지 않고, 올려 둔 행정청 철거 대기를 거둔다). 0 = 하한 없음 (그 전과 같음). 후보 0.6 / 0.7 / 0.8 과 0 을 비교 중 (docs/overhaul/0BP_A4_SPECS.json), 근거 없음
   aiAdminFloor: 0,
   // 1 = 징수율이 aiAdminFloor 아래인 동안 AI 왕실은 국영 임금을 내리지 않고, 행정청 충원율이 ADMIN_STAFFED 아래면 4주 점검마다 국영 임금을 한 칸 올린다 (5까지, ai.ts adjustBudget).
-  // 0 = 끔 (그 전과 같음). aiAdminFloor 가 0 이면 아무것도 하지 않는다. 0b 시드 2 왕국 3 의 징수율 0 은 행정청 철거보다 먼저 세습 관료(하급 귀족)가 저택 자리로 떠나서 생겼다 (0BP_A4_SPECS.json about). 근거 없음
+  // 2 = 징수율과 상관없이, 행정청과 건축사무소 충원율 중 낮은 쪽이 ADMIN_STAFFED 아래면 같은 일을 한다 (2026-11-02 wt-wagelag A2: 흉작으로 소작 소득이 뛰면 국영 사무소가 빈다).
+  // 0 = 끔 (그 전과 같음). 1 은 aiAdminFloor 가 0 이면 아무것도 하지 않는다. 0b 시드 2 왕국 3 의 징수율 0 은 행정청 철거보다 먼저 세습 관료(하급 귀족)가 저택 자리로 떠나서 생겼다 (0BP_A4_SPECS.json about). 근거 없음
   aiAdminWage: 0,
+  // 민간 AI 상회의 지역 웃돈 (2026-11-02 wt-wagelag A1, AI 판단): 1 = 매주 지역마다, 그 지역 생산 건물 이익(profitEma 합)이 > 0 이고 직종 시장 임금이
+  // 바깥 소득(노동자·농부는 소작 1인 소득, 위 직종은 한 칸 아래 직종이 그 상회에서 받는 임금) × switchPremium 아래이면서 그 상회의 그 직종 고용이 줄거나 빈자리가 늘면
+  // 웃돈을 그 차이 쪽으로 올리고, 차이보다 크거나 이익이 없으면 내린다 (ai.ts adjustPremium, Company.aiPremium). 0 = 끔. 근거: DESIGN 11
+  aiWagePremium: 0,
   aiMixedMethods: 0, // 1 = 건물 전체를 바꿀 수 없을 때 같은 지역에 더 나은 방식 1~2레벨을 따로 짓는다 (세계 규칙이 바뀌어 사용자 결정 필요, DECISIONS 7-21)
   officeRichWeeks: 52,
   officeSelfPay: 0,

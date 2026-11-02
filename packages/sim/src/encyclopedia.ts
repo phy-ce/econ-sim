@@ -35,7 +35,7 @@ import {
   DAILY_INTEREST, KEEP_SHARE, TREASURY_RELEASE, MINT_BASE, MINT_RATE, RESERVE_SHARE, kingdomLiteracy, researchPoints, adminCapacityOf, reserveCap, taxCapacity, taxRates,
   weeklyOutputValue,
 } from './finance';
-import { AI_JITTER, CHUNKS, INPUT_SUPPLY_MIN, MIXED_LEVELS, RAISE_FILL, RESERVE_FULL, RESERVE_STREAK, STARVE_FILL, TRIAL_PRICE, UTIL_FLOOR, SWITCH_MARGIN, SWITCH_MIN_WAGE_SHARE, LAW_COOLDOWN, LAW_SWITCH, WELFARE_COOLDOWN, WELFARE_SWITCH, OFFICE_BLOCK, OFFICE_GROWTH, STAFFING_HORIZON, SWITCH_COOLDOWN, ADMIN_STAFFED } from './ai';
+import { AI_JITTER, CHUNKS, INPUT_SUPPLY_MIN, MIXED_LEVELS, RAISE_FILL, RESERVE_FULL, RESERVE_STREAK, STARVE_FILL, TRIAL_PRICE, UTIL_FLOOR, SWITCH_MARGIN, SWITCH_MIN_WAGE_SHARE, LAW_COOLDOWN, LAW_SWITCH, WELFARE_COOLDOWN, WELFARE_SWITCH, OFFICE_BLOCK, OFFICE_GROWTH, STAFFING_HORIZON, SWITCH_COOLDOWN, ADMIN_STAFFED, PREMIUM_MAX, PREMIUM_STEP } from './ai';
 import { budgetPreview } from './budget';
 import { ownershipAssets } from './policy';
 import { welfareIncome, welfareTarget, welfareWeekly } from './welfare';
@@ -728,9 +728,9 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   },
   {
     id: 'market-wage', category: 'labour', title: t('지역 시장 임금', 'Regional market wage'),
-    rule: t('{0} = 1이면 지역마다 직종마다 시장 임금이 하나 있고, 그 지역의 모든 임금 건물(왕실 생산 건물 포함)이 그것을 준다. 날마다 임금 × {1} × clamp((자리 − 오려는 사람) ÷ min(자리, 오려는 사람), −1, 1)만큼 움직인다. 오려는 사람 = 재직자 + 자격 있는 실업자 + 다른 자리에서 일하는 자격자 × 옮기는 비율(지금 소득, 시장 임금) ÷ 최대 비율. 손해 보는 생산 건물의 빈자리는 자리로 세지 않는다. 자리가 없으면 한 칸 아래 직종 임금 × 옮기는 문턱(노동자·농부는 소작 1인 소득 × 문턱)이고 시작 임금도 같다. 자격자가 없으면 움직이지 않는다. 기본 임금의 {2}~{3}배 안. 정부 건물은 그 지역 시장 임금 × 국영 임금 단계. AI 투자 판단은 지금 임금과 {4}일 이동평균 중 큰 값. 0이면 회사 임금표와 AI 임금 판단이다.', 'With {0} = 1 each region has one market wage per job, paid by every wage building there (crown producers included). Each day it moves by wage × {1} × clamp((seats − willing) ÷ min(seats, willing), −1, 1). Willing = incumbents + qualified unemployed + qualified people working elsewhere × switch share(current income, market wage) ÷ max share. Vacancies of loss-making producers do not count as seats. With no seats it is the job below × the switch threshold (labourers and farmers: tenant income × threshold), as is the starting wage. With no qualified people it does not move. Kept within {2}–{3}× base wage. Government buildings pay the regional market wage × state-wage step. AI investment uses the larger of the current wage and its {4}-day moving average. 0 keeps company wage tables and AI wage setting.'),
+    rule: t('{0} = 1이면 지역마다 직종마다 시장 임금이 하나 있고, 그 지역의 모든 임금 건물(왕실 생산 건물 포함)이 그것을 준다. 날마다 임금 × {1} × clamp((자리 − 오려는 사람) ÷ min(자리, 오려는 사람), −1, 1)만큼 움직인다. 오려는 사람 = 재직자 + 자격 있는 실업자 + 다른 자리에서 일하는 자격자 × 옮기는 비율(지금 소득, 시장 임금) ÷ 최대 비율. 손해 보는 생산 건물의 빈자리는 자리로 세지 않는다. 자리가 없으면 한 칸 아래 직종 임금 × 옮기는 문턱(노동자·농부는 소작 1인 소득 × 문턱)이고 시작 임금도 같다. 자격자가 없으면 움직이지 않는다. 기본 임금의 {2}~{3}배 안. 정부 건물은 그 지역 시장 임금 × 국영 임금 단계. AI 투자 판단은 지금 임금과 {4}일 이동평균 중 큰 값. 0이면 회사 임금표와 AI 임금 판단이다. {5} > 0이면 오를 때(자리 > 오려는 사람)만 하루 속도가 {5}다 (시제품, 0 = 끔).', 'With {0} = 1 each region has one market wage per job, paid by every wage building there (crown producers included). Each day it moves by wage × {1} × clamp((seats − willing) ÷ min(seats, willing), −1, 1). Willing = incumbents + qualified unemployed + qualified people working elsewhere × switch share(current income, market wage) ÷ max share. Vacancies of loss-making producers do not count as seats. With no seats it is the job below × the switch threshold (labourers and farmers: tenant income × threshold), as is the starting wage. With no qualified people it does not move. Kept within {2}–{3}× base wage. Government buildings pay the regional market wage × state-wage step. AI investment uses the larger of the current wage and its {4}-day moving average. 0 keeps company wage tables and AI wage setting. With {5} > 0 the daily rate is {5} only while rising (seats > willing; prototype, 0 = off).'),
     formula: 'w ← w × (1 + r × clamp((D − S) / min(D, S), −1, 1))',
-    params: [tune('wageMarket', '지역 시장 임금', 'Regional market wage'), tune('wageMarketRate', '하루 속도', 'Daily rate', 'pct'), p('안전 범위 최소', 'Safety floor', () => MARKET_WAGE_RANGE[0], 'x'), p('안전 범위 최대', 'Safety cap', () => MARKET_WAGE_RANGE[1], 'x'), p('투자 판단 이동평균', 'Investment moving average', () => WAGE_AVG_DAYS, 'day')],
+    params: [tune('wageMarket', '지역 시장 임금', 'Regional market wage'), tune('wageMarketRate', '하루 속도', 'Daily rate', 'pct'), p('안전 범위 최소', 'Safety floor', () => MARKET_WAGE_RANGE[0], 'x'), p('안전 범위 최대', 'Safety cap', () => MARKET_WAGE_RANGE[1], 'x'), p('투자 판단 이동평균', 'Investment moving average', () => WAGE_AVG_DAYS, 'day'), tune('wageMarketRateUp', '오를 때 하루 속도', 'Daily rate when rising', 'pct')],
     live: {
       pick: ['kingdom'], run: (w, ctx) => {
         const k = kingdomOfCtx(w, ctx);
@@ -740,6 +740,20 @@ export const ENCYCLOPEDIA: EncEntry[] = [
       },
     },
     related: ['ai-wages', 'state-wages', 'best-seat', 'tenant-income'], seenIn: ['workforce'], source: ['labor.ts updateMarketWages', 'labor.ts labourTable', 'economy.ts wagesAt'], design: ['7.3'],
+  },
+  {
+    id: 'ai-wage-premium', category: 'ai', title: t('상회 웃돈', 'Firm wage premium'),
+    rule: t('{0} = 1이면 AI 민간 상회는 매주 지역마다 직종마다 웃돈을 정한다. 목표 = 바깥 소득 × 옮기는 문턱 ÷ 시장 임금 − 1 (0~{1}). 바깥 소득은 노동자·농부가 그 지역 소작 1인 소득, 위 직종은 한 칸 아래 직종이 그 상회에서 받는 임금이다. 그 지역 상회 건물 이익이 0 이하면 {2}씩 내리고, 웃돈이 목표보다 크면 목표까지 {2}씩 내리고, 빈자리가 있는데 고용이 줄거나 빈자리가 늘면 목표까지 {2}씩 올린다. 그 지역 상회 임금 = 시장 임금 × (1 + 웃돈).', 'With {0} = 1 each AI private firm sets a premium per region and job every week. Target = outside income × switch threshold ÷ market wage − 1 (0–{1}). Outside income is the regional tenant income for labourers and farmers, and for higher jobs the wage the firm pays the job below. If its buildings there make no profit the premium falls by {2}; above target it falls by {2} toward the target; with vacancies and falling employment or rising vacancies it rises by {2} toward the target. Its wage there = market wage × (1 + premium).'),
+    formula: 'target = clamp(outside × premium_switch / w_market − 1, 0, max)',
+    params: [tune('aiWagePremium', '상회 웃돈', 'Firm wage premium'), p('웃돈 상한', 'Premium cap', () => PREMIUM_MAX, 'pct'), p('한 주 폭', 'Weekly step', () => PREMIUM_STEP, 'pct')],
+    live: {
+      pick: ['kingdom'], run: (w, ctx) => {
+        const k = kingdomOfCtx(w, ctx), c = companyById(w, k.privateIds[0]);
+        if (!c?.aiPremium) return {};
+        return { bars: Object.entries(c.aiPremium).map(([rid, x]) => bar(regionLabel(w.regions.find((r) => r.id === Number(rid))!), r2(x.off.unskilled), 'pct', PREMIUM_MAX)) };
+      },
+    },
+    related: ['market-wage', 'tenant-income', 'best-seat'], seenIn: [], source: ['ai.ts adjustPremium', 'economy.ts wagesAt'], design: ['7.3', '10'],
   },
   {
     id: 'state-wages', category: 'labour', title: t('국영 임금과 임금 지수', 'State wages and the wage index'),
@@ -1288,7 +1302,7 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   },
   {
     id: 'ai-budget', category: 'ai', title: t('정책 사다리', 'Policy ladder'),
-    rule: t('4주마다 한 칸 움직인다. 빚이 있거나 국고가 지출 {0}주치 미만이고 줄었으면 긴축 쪽으로, {1}주치를 넘고 줄지 않았으면 세금을 내린다. 사다리: 국영 임금 4 → 세금 1~5 → 국영 임금 2·1. 기술을 다 열면 풀 때 임금 지수 1 이하에서 국영 임금을 {2}단계까지 올리고, 지수가 1을 넘으면 되돌린다. {3} = 1이면 징수율이 {4} 아래인 동안 국영 임금을 내리지 않고, 행정청 충원율이 {5} 아래면 다른 손잡이보다 먼저 국영 임금을 한 칸 올린다.', 'Every 4 weeks one step: toward austerity if in debt or below {0} weeks of spending and falling; tax cuts above {1} weeks and not falling. Ladder: state wages 4 → tax 1–5 → state wages 2·1. With every tech researched, loosening raises state wages up to step {2} while the wage index is at most 1, and steps back when it exceeds 1. With {3} = 1, while the collection rate is below {4} state wages are never cut, and if administration staffing is below {5} state wages go up one step before any other dial.'),
+    rule: t('4주마다 한 칸 움직인다. 빚이 있거나 국고가 지출 {0}주치 미만이고 줄었으면 긴축 쪽으로, {1}주치를 넘고 줄지 않았으면 세금을 내린다. 사다리: 국영 임금 4 → 세금 1~5 → 국영 임금 2·1. 기술을 다 열면 풀 때 임금 지수 1 이하에서 국영 임금을 {2}단계까지 올리고, 지수가 1을 넘으면 되돌린다. {3} = 1이면 징수율이 {4} 아래인 동안 국영 임금을 내리지 않고, 행정청 충원율이 {5} 아래면 다른 손잡이보다 먼저 국영 임금을 한 칸 올린다. {3} = 2이면 징수율과 상관없이 행정청과 건축사무소 충원율 중 낮은 쪽이 {5} 아래인 동안 같은 일을 한다.', 'Every 4 weeks one step: toward austerity if in debt or below {0} weeks of spending and falling; tax cuts above {1} weeks and not falling. Ladder: state wages 4 → tax 1–5 → state wages 2·1. With every tech researched, loosening raises state wages up to step {2} while the wage index is at most 1, and steps back when it exceeds 1. With {3} = 1, while the collection rate is below {4} state wages are never cut, and if administration staffing is below {5} state wages go up one step before any other dial. With {3} = 2 the same happens, whatever the collection rate, while the lower of administration and construction office staffing is below {5}.'),
     params: [tune('treasuryLowWeeks', '조이는 선', 'Tighten below', 'week'), tune('treasuryHighWeeks', '푸는 선', 'Loosen above', 'week'), tune('doneWageMax', '기술 완료 후 임금 상한', 'Wage cap after research'),
       tune('aiAdminWage', '행정청 일손 임금', 'Administration staffing wages'), tune('aiAdminFloor', '행정청 징수율 하한', 'Administration collection floor', 'pct'), p('행정청 충원 기준', 'Administration staffed at', () => ADMIN_STAFFED, 'pct')],
     related: ['budget-steps', 'treasury', 'ai-schools', 'ai-welfare'], seenIn: ['finance'], source: ['ai.ts adjustBudget'], design: ['10'],

@@ -429,7 +429,7 @@ export function labourTable(w: World, r: Region, local: Building[], pops: Pop[],
 
 /**
  * 지역 시장 임금 (TUNE.wageMarket = 1, 날마다 노동시장 앞에서): 지역·직종마다
- * 임금 × (1 + wageMarketRate × clamp((자리 − 오려는 사람) ÷ min(자리, 오려는 사람), −1, 1)).
+ * 임금 × (1 + wageMarketRate × clamp((자리 − 오려는 사람) ÷ min(자리, 오려는 사람), −1, 1)). TUNE.wageMarketRateUp > 0 이면 오를 때(clamp > 0)만 그 속도.
  * 자리가 없으면 시작 임금 규칙(한 칸 아래 × switchPremium), 자격자가 아무도 없으면 움직이지 않는다. 안전 범위는 기본 임금의 MARKET_WAGE_RANGE 배.
  * 그다음 회사 임금표(Company.wages)를 대표값으로 맞춘다 (syncCompanyWages)
  */
@@ -438,7 +438,7 @@ export function updateMarketWages(w: World) {
   const comp = companyMap(w);
   const localOf = groupBuildings(w, (b) => b.regionId);
   const regionPops = new RegionPops(w);
-  const rate = TUNE.wageMarketRate;
+  const rate = TUNE.wageMarketRate, rateUp = TUNE.wageMarketRateUp;
   for (const r of w.regions) {
     const tenant = subsistenceWage(w, r);
     const wages = ensureWages(w, r, tenant);
@@ -450,7 +450,8 @@ export function updateMarketWages(w: World) {
       if (!(cell.jobs > 1e-9)) v = startWage(wages, s, tenant);
       else if (cell.qualified > 1e-9) {
         const m = Math.min(cell.jobs, cell.willing);
-        v *= 1 + rate * (m > 1e-9 ? clamp((cell.jobs - cell.willing) / m, -1, 1) : 1);
+        const x = m > 1e-9 ? clamp((cell.jobs - cell.willing) / m, -1, 1) : 1;
+        v *= 1 + (x > 0 && rateUp > 0 ? rateUp : rate) * x;
       }
       wages[s] = clampWage(s, v);
       avg[s] += (wages[s] - avg[s]) / WAGE_AVG_DAYS;
