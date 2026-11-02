@@ -905,16 +905,22 @@ function nobleInvest(w: World, p: Pop, daily: number, financeOk: boolean) {
     if (!best) { best = x.o; by = x.y; room = r; if (home) break; continue; }
     if (home) { if (x.y >= by) { best = x.o; by = x.y; room = r; } break; }
   }
-  if (financeOk) {
-    const f = financeOf(w, p.regionId);
-    if (f && !financeIdle(w, f) && !treasuryOver(w, f)) { const y = unitYield(w, f); if (!best || y > by) { best = f; by = y; room = Infinity; } }
-  }
-  if (!best) return;
-  const amt = Math.min(over, room);
-  p.savings -= amt;
-  toTreasury(best, amt, 'units');
-  addFund(p, best.id, amt / Math.max(0.01, best.nav ?? 1));
-  if (best.typeId === 'manor') flow(best.regionId === p.regionId ? 'mbuy.home' : kingdomOf(w, best.regionId) === kingdomOf(w, p.regionId) ? 'mbuy.away' : 'mbuy.foreign', amt);
+  const f = financeOk ? financeOf(w, p.regionId) : undefined;
+  const fin = f && !financeIdle(w, f) && !treasuryOver(w, f) ? f : undefined;
+  const yf = fin ? unitYield(w, fin) : -1;
+  // TUNE.manorInvestSplit 1: 저택과 금융가에 수익률 비율로 나눠 산다 (둘 다 0 이면 반씩). 0: 수익률이 높은 한 곳에 다 산다
+  let toFin = 0;
+  if (fin && best) toFin = TUNE.manorInvestSplit ? (by + yf > 0 ? yf / (by + yf) : 0.5) : yf > by ? 1 : 0;
+  else if (fin) toFin = 1;
+  const buy = (o: Building, amt: number) => {
+    if (!(amt > 0)) return;
+    p.savings -= amt;
+    toTreasury(o, amt, 'units');
+    addFund(p, o.id, amt / Math.max(0.01, o.nav ?? 1));
+    if (o.typeId === 'manor') flow(o.regionId === p.regionId ? 'mbuy.home' : kingdomOf(w, o.regionId) === kingdomOf(w, p.regionId) ? 'mbuy.away' : 'mbuy.foreign', amt);
+  };
+  if (best) buy(best, Math.min(over * (1 - toFin), room));
+  if (fin) buy(fin, over * toFin);
 }
 
 /** 저택과 그 수익률, 수익률 높은 순 (같으면 id 순). 금고 목표(treasuryTarget, TUNE.treasuryKeepWeeks 0 이면 없음)도 함께. 틱마다 처음 물을 때 정한다 */

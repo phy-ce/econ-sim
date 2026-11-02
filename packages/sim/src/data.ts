@@ -466,6 +466,7 @@ export function scaleBonus(level: number): number {
  * - manorGentrySeats: 저택의 하급 귀족 자리 = 상급 귀족 자리 × manorGentrySeats ÷ 100. 0 이면 끔 (일자리 없는 하급 귀족이 다 앉는다, 저택 레벨이 그만큼 커진다)
  * - manorShares: 1 = 저택 지분 (귀족만 가지는 지분 회사, 사고·팔고·되사고·사람을 따라간다). 0 = 앉은 귀족 몫 (finance.ts manorSharesOn)
  * - manorBuyScope: 귀족이 지분을 사는 저택의 범위 ('world' 어느 저택이든, 'kingdom' 같은 왕국, 'region' 자기 지역). 수익률이 가장 높은 곳을 산다 (AI 판단)
+ * - manorInvestSplit: 1 = 귀족이 저택 지분과 금융가 지분을 수익률 비율로 나눠 산다, 0 = 수익률이 높은 쪽에 다 산다 (AI 판단)
  * - absenteeShare: 저택·금융가가 자기 지역 밖 건물에서 받는 배당 중 그 건물 지역 저택으로 가는 비율 (0 = 끔)
  * - landTax, pollTax, incomeTax: 세금 수준 3단계(보통)의 토지세(소작농 1인당 하루), 인두세(소작농을 뺀 1인당 하루), 소득세율(소작농을 뺀 소득).
  *   세 세율을 같은 배율로 비교했다 (빅토리아3 보통 단계 기준 ×1·×1.5·×2·×2.5, 20년 × 시드 1~4). ×2는 ×1보다 건물 레벨이
@@ -578,6 +579,8 @@ export const TUNE = {
   manorShares: 0,
   // 귀족이 지분을 살 수 있는 저택 (AI 판단, 2026-11-02 사용자 "수익률 계산. 단 디버프가 적용된 최종 가격으로 AI 가 판단함"): 'world' 어느 지역·왕국이든, 'kingdom' 같은 왕국, 'region' 자기 지역만
   manorBuyScope: 'world' as 'world' | 'kingdom' | 'region',
+  // 귀족이 저택과 금융가를 함께 살 수 있을 때 (AI 판단): 1 = 수익률 비율로 나눠 산다, 0 = 수익률이 높은 한 곳에 다 산다
+  manorInvestSplit: 0,
   // 부재 지주 몫 (2026-11-02 사용자 결정 "다른 지역 배당 디버프", DECISIONS 7-43): 저택·금융가가 자기 지역 밖 건물에서 받는 배당의 이 비율은 그 건물 지역의 저택으로 간다 (finance.ts payDividends). 0 = 끔
   absenteeShare: 0,
   pollTax: 0.6, // 인두세: 소작농을 뺀 1인당 하루 (세금 수준 3단계 기준)

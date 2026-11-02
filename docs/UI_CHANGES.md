@@ -50,6 +50,7 @@ sim 변경 반영 (main c952e65, wt-labor 병합: 지역 시장 임금·저축�
 10. **2-75 공급 ÷ 수요**: sim 대기 풀림 (`projectedSD`·`currentSD`·`mainOutput`이 main에 들어왔다). 절 본문대로 진행.
 11. **2-83 재해 칩 (낮음)**: `quakeChance` 기본 0이라 지금은 안 보인다. 사건 열은 이미 나온다. 소작지 행·지역 머리 칩만.
 12. **2-84 국영 웃돈 (낮음, wt-admin)**: AI 왕실 지역만 국영 임금 = 시장 임금 × (1 + 웃돈) × 단계. 플레이어 왕실에는 없다. 2-80 툴팁·2-79 지역 표에 웃돈이 있으면 한 칸.
+12b. **2-85 저택 지분 (wt-manor, `TUNE.manorShares` 켜졌을 때만)**: 저택 창 주인 목록을 금융가처럼 지분 수로 (`ownershipPortfolio.ts ownershipPeople` 저택 갈래), 지분 값·수익률 한 줄, pop 창 보유 지분에 저택 지분. 끈 동안은 화면이 그대로다.
 
 정리
 13. **2-50 코드 완료**: 6c8119a (UI_DONE 참조).
@@ -1196,6 +1197,21 @@ sim 변경 (wt-research):
 - 예산 상세: `WageDrillJob.premium?: number` (새 칸, 웃돈이 0 이면 없음). `perHead` = `marketWage` × (1 + `premium`) × `stepMult`, `wageIndex` = `marketWage` × (1 + `premium`) ÷ `baseWage`. 플레이어 왕국의 상세에는 나오지 않는다.
 - 화면 (선택): 2-80 식 툴팁에서 `j.premium`이 있으면 `× (1 + {웃돈})` 한 칸을 더한다. 2-79 지역 시장 임금 표에서 다른 왕국 지역의 국영 임금이 시장 임금 × 단계보다 크면 그 웃돈 때문이다 (웃돈 열은 넣지 않아도 된다).
 - 문자열: "웃돈"/"Premium" (이미 있으면 그것). 완료 기준: typecheck.
+
+### 2-85. 저택 지분 (wt-manor, DESIGN 9.3 `manorShares`·`absenteeShare`·`manorBuyScope`, 사전 `manor-shares`, DECISIONS 7-43)
+- 상태: sim 은 스위치 뒤에 있다 (`TUNE.manorShares` 기본값은 HANDOFF 0-1102g 참조). 켜지 않으면 화면이 바꿀 것은 없다. 클라이언트 코드는 sim 작업자가 고치지 않았다.
+- sim:
+  - 저택 지분은 금융가 지분과 같은 `Pop.fund` (`{ id: number[]; u: number[] }`, 건물 id 오름차순) 에 든다. 저택 id 와 금융가 id 는 겹치지 않는다. 한 pop 이 여러 저택(다른 지역·다른 왕국 포함)과 금융가 지분을 함께 가질 수 있다.
+  - 저택 지분 값: `Building.nav` (저택에도 생긴다, 매주). 지분 주인 = 저택 id 지분이 0 보다 큰 pop (상급·하급 귀족, 되사기 전의 다른 직종이 잠깐 있을 수 있다). 저택에 앉은 pop 은 상급 귀족뿐이고, 앉은 자리는 몫과 상관없다.
+  - 하급 귀족은 저택에 앉지 않는다. 일자리가 없는 하급 귀족은 실업(`work === 0`)이고 배당으로 산다 (실업률에 들어간다).
+  - `TUNE.absenteeShare` > 0 이면 다른 지역 건물의 배당 일부가 그 건물 지역 저택으로 간다. `Building.payout.paid` 에 그 저택 id 줄이 생긴다 (배당 기록과 같은 모양).
+- 화면:
+  1. 저택 창 주인 목록 (`packages/client/src/ownershipPortfolio.ts:4 ownershipPeople`): 지금은 `b.typeId === 'finance'` 일 때만 지분 수를 쓰고 저택은 `p.work === b.id ? p.size * shareWeight(p.prof) : 0` 이다. `TUNE.manorShares` 가 켜져 있으면 저택도 금융가처럼 `p.fund` 의 지분 수를 무게로 쓴다 (`TUNE` 은 sim export). 끄면 지금 식 그대로.
+  2. 저택 창 머리 한 줄: 지분 합, 지분 값(`b.nav`), 지분 1개당 주간 배당 (사전 `manor-shares` live 와 같은 값). 라벨만, 설명 문구 없음.
+  3. pop 창(또는 계층 표)의 보유 지분: 저택 지분도 금융가 지분처럼 건물 이름·지역과 지분 수·값(지분 × nav)으로. 다른 왕국 저택이면 왕국 이름.
+  4. 실업 표에서 하급 귀족을 따로 볼 수 있게 (선택): 지분을 켜면 하급 귀족 실업률이 70~90% 로 보인다 (배당으로 산다). 화면에서 "실업"에 귀족을 넣을지는 DECISIONS 7-43 결정 대기 2.
+  5. `OwnerSummary` 'nobleSeats' 라벨: 상급 귀족 자리만 남는다 (하급 귀족 자리 없음).
+- 문자열: "지분"/"Units", "지분 값"/"Unit value", "수익률"/"Yield" (이미 있으면 그것). 완료 기준: typecheck. 낮은 우선순위 (기본 끔이면).
 
 ## 3. sim 쪽 필요 사항 (Claude가 처리할 것, UI 작업자는 요청만)
 - **2-59 주 단위 수지 (요청됨, 2026-10-22):** `BuildingEcon`에 `week: { sales, tax, inputs, wages, profit }` (건물 `revenue`·`tax`·`inputCost`·`wageCost`의 이동평균 × 7, `profitEma`와 같은 기간). 들어오면 2-59-3 폭포 라벨을 `/주`로.
