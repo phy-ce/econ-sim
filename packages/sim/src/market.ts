@@ -1,6 +1,6 @@
 import { ABS_LIMITS, CLASS_DEFS, CONSUMPTION_PER_CAPITA, GOOD_IDS, GOODS, NEEDS, SKILL_DEFS, SUBSISTENCE, TICKS_PER_WEEK, TRADING_POST, TUNE, WORKFORCE_RATIO, getMethod, needsAt, rawMax, tenantYield, tradeReserveOf } from './data';
 import { CARTAGE_RATE, RAIL_RATE, borrow, companyById, harvestFactor, priceBounds, priceFormula, regionById, sellThrough, shareWeight, shippingRate, isSubsistence, wagesAt } from './economy';
-import { financeIdle, treasuryOver, payRent, paySalvage, taxDue, taxRates } from './finance';
+import { treasuryOver, payRent, paySalvage, taxDue, taxRates } from './finance';
 import { borderCost, kingdomById, kingdomOf, payTariff, toTreasury } from './kingdoms';
 import { INVEST_CLASSES } from './policy';
 import { addFund, findPop, payPops, payProf, workforce } from './pops';
@@ -876,7 +876,7 @@ function investSurplus(w: World, p: Pop, cashCost: number) {
   if (over <= 0) return;
   // 투자법이 허용한 계층은 그 지역 금융가 지분을 산다 (지분 가격 nav)
   const f = financeOf(w, p.regionId);
-  if (!f || financeIdle(w, f) || treasuryOver(w, f)) return;
+  if (!f || treasuryOver(w, f)) return;
   p.savings -= over;
   toTreasury(f, over, 'units');
   addFund(p, f.id, over / Math.max(0.01, f.nav ?? 1));

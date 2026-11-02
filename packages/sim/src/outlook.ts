@@ -1,11 +1,11 @@
-import { ABS_LIMITS, BUILDING_BY_ID, GOOD_IDS, GOODS, NEEDS, SKILL_DEFS, TUNE, getMethod, needsAt, regionPerk, tenantYield } from './data';
+import { ABS_LIMITS, BUILDING_BY_ID, GOOD_IDS, GOODS, NEEDS, SKILL_DEFS, TUNE, getMethod, regionPerk, tenantYield } from './data';
 import { STAFFING_HORIZON, extraNeed, poolKey, poolOf } from './staffing';
 import { workforce } from './pops';
-import { FLOW_ZERO, availableMethods, collectionRatio, priceBounds, priceFormula, harvestFactorEma, regionAvgWealth, isGovernment, regionById, shippingRate, wageCostOf, wagesAt } from './economy';
-import { BY_EMA, needSharesAt } from './market';
+import { FLOW_ZERO, availableMethods, collectionRatio, priceBounds, priceFormula, harvestFactorEma, isGovernment, regionById, shippingRate, wageCostOf, wagesAt } from './economy';
+import { BY_EMA } from './market';
 import { clamp } from './rng';
 import { SKILLS } from './types';
-import type { Building, Company, GoodId, Kingdom, MethodDef, NeedDef, Region, Skill, World } from './types';
+import type { Building, Company, GoodId, Kingdom, MethodDef, Region, Skill, World } from './types';
 
 /**
  * 시장 전망: AI 투자 판단의 공통 바탕. 상품마다 대륙 전체의 앞으로의 수요와 공급을 세고 그 비율로 장기 가격을 본다.
@@ -193,8 +193,7 @@ export function marketOutlook(w: World): Outlook {
   }
   // 대체 수요: 가공품이 비싸서 원자재로 버티는 가계 수요의 절반은 값이 내려가면 돌아온다 (공장의 원료 수요는 대체하지 않는다)
   const household = (g: GoodId) => w.regions.reduce((a, r) => a + Object.entries(r.market[g].demandByEma ?? {}).reduce((x, [k, v]) => x + (k.startsWith('pop:') ? v : 0), 0), 0);
-  const sub = TUNE.subReturn ? returnableDemand(w) : null;
-  if (!sub) for (const n of NEEDS) for (const opt of n.options) {
+  for (const n of NEEDS) for (const opt of n.options) {
     if (!opt.appeal || opt.appeal <= 1) continue;
     for (const other of n.options) if (other !== opt) demand[opt.good] += (household(other.good) / other.units) * opt.units * 0.5;
   }
@@ -223,35 +222,13 @@ export function marketOutlook(w: World): Outlook {
       const v = view(g, regionId);
       const S = v.S + dS, D = v.D + dD + (withLatent ? v.L : 0);
       if (S < ABS_LIMITS.unsuppliedQty && dD > 0) return GOODS[g].basePrice * UNSUPPLIED_INPUT;
-      const back = sub?.get(g);
-      if (!back) return longRunPrice(g, D, S);
-      // 돌아오는 수요는 값이 낮을수록 크다: 장기 가격 = 그 값에서 돌아오는 수요까지 센 가격이 되는 값 (격자에서 찾아 선형 보간)
-      const base = GOODS[g].basePrice;
-      let prev = 0;
-      for (let i = 0; i < SUB_GRID.length; i++) {
-        const p = base * SUB_GRID[i], gap = longRunPrice(g, D + back[i], S) - p;
-        if (gap <= 0) {
-          if (i === 0) return p;
-          const p0 = base * SUB_GRID[i - 1];
-          return p0 + ((p - p0) * prev) / (prev - gap);
-        }
-        prev = gap;
-      }
-      return base * SUB_GRID[SUB_GRID.length - 1];
+      return longRunPrice(g, D, S);
     },
     sellRate(g, dS = 0, regionId) {
       const v = view(g, regionId);
       const S = v.S + dS;
       if (S < 1e-6) return 1;
-      let D = v.D + v.L;
-      const back = sub?.get(g);
-      if (back) {
-        const x = this.price(g, dS, 0, true, regionId) / GOODS[g].basePrice;
-        const i = Math.min(SUB_GRID.length - 2, Math.max(0, Math.floor((x - SUB_GRID[0]) / GRID_STEP)));
-        const t = clamp((x - SUB_GRID[i]) / GRID_STEP, 0, 1);
-        D += back[i] * (1 - t) + back[i + 1] * t;
-      }
-      return Math.min(1, D / S);
+      return Math.min(1, (v.D + v.L) / S);
     },
     sold(g, dS = 0, dD = 0, withLatent = false, regionId) {
       const v = view(g, regionId);
@@ -271,60 +248,6 @@ export function marketOutlook(w: World): Outlook {
       }
     },
   };
-}
-
-/** 돌아오는 수요를 셀 가공품 값 격자 (기본가 배율, 가격 범위 priceBounds 를 30칸으로 고르게 나눈다. 지금 범위 0.25~1.75면 0.05씩) */
-const GRID_STEPS = 30;
-let gridKey = '', SUB_GRID: number[] = [], GRID_STEP = 0.05;
-function subGrid(): number[] {
-  const [mn, mx] = priceBounds(), key = mn + ':' + mx;
-  if (key !== gridKey) { gridKey = key; GRID_STEP = (mx - mn) / GRID_STEPS; SUB_GRID = Array.from({ length: GRID_STEPS + 1 }, (_, i) => mn + GRID_STEP * i); }
-  return SUB_GRID;
-}
-
-/**
- * 돌아오는 수요 (TUNE.subReturn): 가공품 값이 격자의 값일 때, 지금 원자재로 그 필요를 채우는 가계 수요 중 가공품으로 옮겨 올 양.
- * 가계가 실제로 고르는 규칙(needSharesAt: 지역 값과 부의 상한)으로 센다. 원자재 가계 수요는 필요별로 나눈다
- * (목재는 난방과 생활용품: 지역 평균 부의 필요량 × 지금 비중으로). 이미 가공품을 사는 수요는 지금 수요에 들어 있으므로 더하지 않는다
- */
-function returnableDemand(w: World): Map<GoodId, number[]> {
-  subGrid();
-  const out = new Map<GoodId, number[]>();
-  for (const r of w.regions) {
-    const L = regionAvgWealth(r), amount = needsAt(L);
-    const local = (n: NeedDef) => n.options.map((o) => r.market[o.good].price);
-    const hh = (g: GoodId) => { let x = 0; for (const [k, v] of Object.entries(r.market[g].demandByEma ?? {})) if (k.startsWith('pop:')) x += v; return x; };
-    // 원자재 g 의 가계 수요 중 필요 n 의 몫
-    const rawShare = (g: GoodId, n: NeedDef) => {
-      let mine = 0, all = 0;
-      for (const m of NEEDS) {
-        const i = m.options.findIndex((o) => o.good === g);
-        if (i < 0) continue;
-        const x = amount[m.id] * needSharesAt(m.id, local(m), L)[i] * m.options[i].units;
-        all += x;
-        if (m === n) mine = x;
-      }
-      return all > 0 ? mine / all : 0;
-    };
-    for (const n of NEEDS) n.options.forEach((opt, pi) => {
-      if (!opt.appeal || opt.appeal <= 1) return;
-      const prices = local(n), now = needSharesAt(n.id, prices, L);
-      const arr = out.get(opt.good) ?? new Array(SUB_GRID.length).fill(0);
-      n.options.forEach((raw, ri) => {
-        if (ri === pi || now[ri] < 1e-6) return;
-        const units = (hh(raw.good) * rawShare(raw.good, n)) / raw.units;
-        if (!(units > 0)) return;
-        for (let i = 0; i < SUB_GRID.length; i++) {
-          const p = prices.slice();
-          p[pi] = GOODS[opt.good].basePrice * SUB_GRID[i];
-          const moved = units * Math.max(0, 1 - needSharesAt(n.id, p, L)[ri] / now[ri]);
-          arr[i] += moved * opt.units;
-        }
-      });
-      out.set(opt.good, arr);
-    });
-  }
-  return out;
 }
 
 /** 기본가 기준 하루 이윤 (방식끼리 비교용) */

@@ -21,7 +21,8 @@ const EXPECTED: Record<string, [number, number]> = {
   'commands.ts': [3, 2],
   'compat.ts': [1, 2],
   'economy.ts': [4, 5],
-  'finance.ts': [10, 4],
+  // 쉬는 금융가 배당(financeIdle)의 금고 대입 1줄은 2026-11-02 wt-simplify 1-A 에서 스위치와 함께 지웠다
+  'finance.ts': [10, 3],
   'kingdoms.ts': [3, 1],
   'labor.ts': [2, 0],
   // 0b 측정 도구의 고갈 처방 drain (국고 0·부채 한도, 소멸은 w.mint.retired 에 적는다). 게임 번들 밖, 개발용 충격

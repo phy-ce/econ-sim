@@ -20,7 +20,7 @@ Object.assign(TUNE, JSON.parse(process.argv[2] ?? '{}'));
 const seed = Number(process.argv[3] ?? 1), years = Number(process.argv[4] ?? 30);
 const focus = (process.argv[5] ?? 'fiber') as GoodId;
 const w = createWorld(seed, { withPlayer: false });
-const PATHS = ['pick', 'dev', 'loss', 'govInputs', 'switchIn', 'switchOut', 'shrink', 'swap'] as const;
+const PATHS = ['pick', 'dev', 'govInputs', 'switchIn', 'switchOut', 'shrink', 'swap'] as const;
 const makes = (typeId: string, g: GoodId) => BUILDING_BY_ID[typeId].methods.some((m) => (m.outputs[g] ?? 0) > 0);
 
 type Acc = Record<string, number>;

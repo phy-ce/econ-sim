@@ -441,8 +441,6 @@ export function scaleBonus(level: number): number {
  * - growthEq: 신분별로 출생과 사망이 같아지는 생활수준 (이보다 높으면 인구가 는다)
  * - wageOutside: AI 임금 바닥 = 그 자리로 옮겨 올 사람들의 지금 소득 × 이 배율
  * - wageCeil: AI 임금 천장 = 회사 부가가치 중 임금으로 줄 수 있는 비율
- * - lossBuildsPerWeek: 이익이 나는 후보가 없을 때 AI가 가장 덜 손해 보는 후보를 짓는 주간 횟수
- * - lossTolerance: 그 후보의 예상 손실이 인건비의 이 비율 이하일 때만 짓는다 (Infinity = 제한 없음)
  * - adminScale: 행정청 1레벨이 감당하는 인구 배율 (기본 50만 명 × 이 값)
  * - adminStart: 시작 행정청이 감당하는 인구 / 왕국 인구
  * - investWage: AI가 새로 지을지 판단할 때 쓰는 임금의 바닥 = 기본 임금 × 이 값 (0이면 지금 임금만 본다)
@@ -452,7 +450,6 @@ export function scaleBonus(level: number): number {
  * - firmBufferWeeks: 민간 상회가 배당 전에 남기는 운영 자금 = 주간 (임금 + 원료) × 이 주 수 (임금·원료가 판매 대금보다 먼저 나간다)
  * - firmCallPlan: 1 = 운영 자금의 하루 운영비를, 원료를 다 채우면 흑자인 생산 건물은 계획 운영비(지금 값·임금·일손)와 실제로 쓴 돈 중 큰 쪽으로 센다 (finance.ts opsDay, AI 판단).
  *   0 = 실제로 쓴 돈만 (현금 0 이면 운영 자금도 0 으로 보여 주인이 채우지 않는다, d964485 까지의 동작)
- * - crownPrivatize: 비교용. 'all' 이면 AI 왕실이 생산 건물 모두에 민영화를 켠다 (기본 'off': 민영화는 플레이어가 켠다)
  * - taxCurve: 징수율 곡선. 'exp' = 1 − e^(−x), 'hyp' = x / (1 + x) (x = 행정청 한도 / 인구)
  * - wageMarket, wageMarketRate: 1 이면 지역·직종 시장 임금 (labor.ts updateMarketWages). wageTarget 0 이면 날마다 임금 × wageMarketRate × clamp((자리 − 오려는 사람) ÷ min(자리, 오려는 사람), −1, 1) 만큼 움직인다.
  *   오려는 사람 = 재직자 + 자격 있는 실업자 + 다른 자리에서 일하는 자격자 × switchShare(지금 소득, 시장 임금) ÷ switchMax. 0 이면 회사 임금표와 AI 임금 판단 (ai.ts adjustWages)
@@ -557,8 +554,6 @@ export const TUNE = {
   // (1 + switchMax ÷ switchRate × (switchPremium − 1) = 2, labor.ts switchShare)에서 왔다. 후보 1.5 / 2 / 3, 보고서 2026-11-02-wagespan. 근거: DESIGN 11
   wageTargetSpan: 2,
   adminScale: 0.3,
-  lossBuildsPerWeek: 0,
-  lossTolerance: Infinity,
   adminStart: 1,
   investWage: 0.75,
   localBias: 0.5,
@@ -567,7 +562,6 @@ export const TUNE = {
   firmCallPlan: 1,
   privatizeMargin: 2,
   privatizePayback: 10,
-  crownPrivatize: 'off' as 'off' | 'all',
   taxCurve: 'hyp' as 'exp' | 'hyp',
   cashBufferDays: 10,
   peasantKeepWeeks: 8,
@@ -654,20 +648,16 @@ export const TUNE = {
   prospectStart: 0.3,
   prospectChance: 0.1, // 0.05·0.1·0.2 비교 (20년 × 시드 1~4, DECISIONS 7-8): 0.1과 0.2는 결과가 거의 같고 0.2는 10년차에 광맥이 거의 다 찾아진다
   prospectFind: 0.1,
-  subReturn: 0,
-  laborNet: 0,
   ratioGate: 0.9, // 지금 규칙 (30년 × 시드 1~4 비교, DESIGN 11): 노동자·농부 충원 상한 = 기술자·전문가 충원율 ÷ 이 값 (labor.ts ratioGate). 0 이면 끈다
   minRoi: 0.2,
   minStaffing: 0.5,
-  // AI 방식 바꾸기와 잠재 수요 (2026-10-22, 새 방식 사다리): 1 = 새 규칙, 0 = 옛 규칙. aiSwitchV2 는 40년 × 시드 1~4 비교(c3d8efb)로 0,
-  // latentFeasible 은 산업 유형 뒤 다시 비교(ca466d8)해 1 (DESIGN 11)
+  // 잠재 수요 (2026-10-22, 새 방식 사다리): 1 = 새 규칙, 0 = 옛 규칙. 산업 유형 뒤 다시 비교(ca466d8)해 1 (DESIGN 11)
   latentFeasible: 1, // 40년 × 시드 1~4 비교로 켬 (DESIGN 11).  잠재 수요에 실제로 바꿀 수 있는 몫만 센다 (지역 일손 × 다른 투입재)
   // AI 건설 전망 (2026-10-23, DESIGN 10·11): 보통 투자는 지금 수요가 사 가는 만큼만, 일부(devShare)만 잠재 수요를 보고 짓는다
   aiBuildNow: 1, // 사용자 결정으로 1 유지 (2026-10-23, DECISIONS 7-24): 비교에서는 40년 × 시드 1~4 평균 총생산 1 = 757, 옛 셈 0 = 1,177 (main 9276561 병합 뒤, 보고서 2026-10-23-aibuild2, DESIGN 11). 1 = 보통 투자 매출 = 산출 × 팔리는 비율(수요 ÷ (공급 + 내 산출), 수요 = 지금 + 공사 중 투입 + 대체 수요 + 데려올 소작농 수확) × 값 (잠재 수요 제외). 0 = 옛 셈 (다 팔린다, 장기 가격에 잠재 수요)
   devShare: 0.2, // 0·0.1·0.2 비교 (DESIGN 11). 발전 투자 몫: 회사의 착공 공사비(52주 이동 합) 중 잠재 수요를 보고 짓는 공사비의 상한. 0 = 끔 (aiBuildNow = 1 일 때만)
   devLoss: 0.25, // 0·0.25 비교 (DESIGN 11). 발전 투자가 감수하는 손실: 잠재 수요까지 센 장기 손익 ≥ −인건비 × 이 값
   expandUtilMin: 0.5, // 0.5·0.7·끔 비교로 0.5 (DESIGN 11). 0 = 끔. 왕국 안 같은 종류·같은 산출 건물의 레벨 가중 가동률(꺼진 건물 0)이 이 값 미만이거나 장기 손익(profitEma) 합이 음수이면 그 방식은 새로 짓지도 늘리지도 않는다 (ai.ts glutOf)
-  aiSwitchV2: 0, // 방식 비교 = 건물 전체 하루 손익 × 기대 충원율 × 투입 충족 (옛: 산출 1단위당 이윤, 일손 50% 기준, 공급 50% 기준)
   // 유보 기준 AI (2026-10-25 사용자 요청 "유보액을 기준으로 건물을 늘리고 줄였으면 좋겠는데. + 신규투자", DECISIONS 7-27, DESIGN 10·11): 1 = 생산 건물은 유보 자산이 4주 차면 1레벨 증설, 바닥난 채 4주 적자면 1레벨 철거,
   // 새 투자는 값이 기본가 1.25배 이상 4주(가)이거나 굶는 건물의 투입재(나)인 상품을 내는 건물이 없는 곳에 1레벨 (ai.ts reserveLevels·planTrials). 0 = 옛 전망 AI (pickProject·reviewLevels·발전 투자)
   aiReserveRule: 1,
@@ -727,9 +717,6 @@ export const TUNE = {
   aiStatePremium: 1,
   aiMixedMethods: 0, // 1 = 건물 전체를 바꿀 수 없을 때 같은 지역에 더 나은 방식 1~2레벨을 따로 짓는다 (세계 규칙이 바뀌어 사용자 결정 필요, DECISIONS 7-21)
   officeRichWeeks: 52,
-  officeSelfPay: 0,
-  laborPoach: 0,
-  officeSchoolFirst: 0,
   needMul: {} as Partial<Record<NeedId, number>>,
   // 비교용 가격 공식: 0 = 빅토리아3 공식(기본가 0.25~1.75배), > 0 = 기본가 × (구매 ÷ 판매)^priceExp 를 priceRange 로 자른다
   priceExp: 0,
@@ -743,16 +730,10 @@ export const TUNE = {
   startPopLand: 0,
   // AI 수정 비교 (2026-10-22, 기본값 = 지금 동작). crownGdpReserve: 왕실이 남길 국고 = 연간 총생산 × 이 비율 (0 = 지출 treasuryHighWeeks 주치)
   crownGdpReserve: 0,
-  // 금융가가 이 주 동안 공사비를 맡지 않으면 새 지분을 팔지 않고 남는 금고를 배당한다 (0 = 끔)
-  financeIdle: 0,
   // 넘는 금고 돌려주기 (2026-10-25, finance.ts releaseTreasuries): 저택·금융가 금고 목표 = 공사 약정액 + 주간 배당 수입 × 이 주 수. 넘으면 매주 넘는 돈의 25%를 주인에게. 0 = 끔
   treasuryKeepWeeks: 26,
   // AI 세법 (2026-10-25, ai.ts chooseTaxLaw): 인두세(1인당 하루)가 소작농을 뺀 1인당 하루 소득의 이 비율을 넘는 세법은 고르지 않는다 (지금 그 세법이면 세입을 0으로 본다). 0 = 끔
   pollTaxIncomeCap: 0.3,
-  // AI 일손 판단을 엄격하게 (1): 다른 임금 자리에서 일하는 사람을 세지 않고, 그 지역 빈자리·공사 중 자리를 빼고, 일손이 다 차야 짓는다 (0 = 끔)
-  laborStrict: 0,
-  // 국고가 조이면 복지를 끝까지 줄이고 복지법을 끈다 (빚이 없어도, 세금보다 먼저). 끈 뒤 2년은 다시 켜지 않는다 (1 = 켬, 0 = 지금 동작: 빚이 있을 때만 끈다)
-  welfareCutOff: 0,
   // 공사 포인트 배율 (회수 기간 손잡이, 2026-10-22). 모든 건물의 공사 포인트 = buildPoints × 이 값 (10 단위로 둥글게). 비용과 공사 일수가 같이 준다. 1·0.75·0.5 비교 (40년 × 시드 1~4): 0.75·0.5는 네 시드 중 둘이 무너져 1
   buildCostMult: 1,
   // AI 투입 판단 (2026-10-22, wt-aiinput, 비교 전). 진단: 40년 × 시드 1~4에서 광석 없이 지은 제련소(30년차 1,803레벨, 광석 공급/수요 25년 101/320)가 적자로 민간 이익과 국고를 말렸다.

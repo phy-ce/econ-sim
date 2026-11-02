@@ -50,6 +50,8 @@
 - 화면 수정이 함께 필요한 것 (md에 적어서 넘긴다):
   - `setResearchBudget`, `MAX_RESEARCH_BUDGET`: 연구비 슬라이더 → 읽기 전용 표시
   - `landlordJobs`: 늘 0이다. 화면의 지주 행을 없앤다.
+- 2026-11-02 wt-simplify 1단계 (`docs/overhaul/SIMPLIFY_AUDIT.md` 3-1, 골든·samecheck 같음)로 지운 TUNE 키와 꺼진 갈래:
+  - 1-A 실험 스위치 12: `lossBuildsPerWeek`·`lossTolerance`·`crownPrivatize`·`subReturn`·`laborNet`·`laborPoach`·`laborStrict`·`officeSelfPay`·`officeSchoolFirst`·`aiSwitchV2`·`financeIdle`·`welfareCutOff` (상태 칸 `Building.fundedTick`도). 그 전 코드 c4676de
 
 ### 4-2. 지우면 동작이 바뀌는 것 (하나씩 결정)
 | 항목 | 지금 | 지우면 |
@@ -59,7 +61,7 @@
 | 손익 추정 3종 | 화면 미리보기와 AI 판단이 서로 다른 계산을 써서 결과가 다를 수 있다 | 하나로 합친다 |
 | 이주 알림 | 이주는 이제 상층 실업자만 하는데, 알림 문구는 노동자·기술자 기준이다 | 알림과 관련 계수 삭제 (또는 고치기) |
 | `grantRatio` | 학교 보조금 충족률이 왕국 구분 없이 하나다 | 왕국별로 바꾸거나 학교 포화 판단과 함께 삭제 |
-| AI 소규칙 | 민간 최소 공사 2건, 손해 후보 주 1건, 대기 120일 기준 | 모두 특례라 정리 대상 |
+| AI 소규칙 | 민간 최소 공사 2건, 대기 120일 기준 (손해 후보 짓기는 기본 0으로 꺼져 있다가 2026-11-02 wt-simplify 1-A에서 코드를 지웠다) | 모두 특례라 정리 대상 |
 
 ## 5. 그 밖의 결정
 

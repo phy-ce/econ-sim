@@ -35,7 +35,7 @@ import {
   DAILY_INTEREST, KEEP_SHARE, TREASURY_RELEASE, MINT_BASE, MINT_RATE, RESERVE_SHARE, kingdomLiteracy, researchPoints, adminCapacityOf, reserveCap, taxCapacity, taxRates,
   weeklyOutputValue,
 } from './finance';
-import { AI_JITTER, CHUNKS, INPUT_SUPPLY_MIN, MIXED_LEVELS, RAISE_FILL, RESERVE_FULL, RESERVE_STREAK, STARVE_FILL, TRIAL_PRICE, UTIL_FLOOR, SWITCH_MARGIN, SWITCH_MIN_WAGE_SHARE, LAW_COOLDOWN, LAW_SWITCH, WELFARE_COOLDOWN, WELFARE_SWITCH, OFFICE_BLOCK, OFFICE_GROWTH, STAFFING_HORIZON, SWITCH_COOLDOWN, ADMIN_STAFFED, PREMIUM_MAX, PREMIUM_STEP, STATE_HIRE_PULL } from './ai';
+import { AI_JITTER, CHUNKS, INPUT_SUPPLY_MIN, MIXED_LEVELS, RAISE_FILL, RESERVE_FULL, RESERVE_STREAK, STARVE_FILL, TRIAL_PRICE, UTIL_FLOOR, LAW_COOLDOWN, LAW_SWITCH, WELFARE_COOLDOWN, WELFARE_SWITCH, OFFICE_BLOCK, OFFICE_GROWTH, STAFFING_HORIZON, SWITCH_COOLDOWN, ADMIN_STAFFED, PREMIUM_MAX, PREMIUM_STEP, STATE_HIRE_PULL } from './ai';
 import { budgetPreview } from './budget';
 import { ownershipAssets } from './policy';
 import { welfareIncome, welfareTarget, welfareWeekly } from './welfare';
@@ -98,13 +98,11 @@ type TuneKey = keyof typeof TUNE;
 /** 항목에 실린 TUNE 키 (시험이 모든 키가 실렸는지 본다) */
 export const TUNE_DOCUMENTED = new Set<TuneKey>();
 /** 비교 실행용 손잡이: 기본값이 기능을 끄고 있어 규칙이 아니다 */
-export const TUNE_EXPERIMENTAL: TuneKey[] = ['subReturn', 'laborNet', 'officeRichWeeks', 'officeSelfPay', 'laborPoach', 'officeSchoolFirst', 'needMul',
+export const TUNE_EXPERIMENTAL: TuneKey[] = ['officeRichWeeks', 'needMul',
   // 저택 상급 귀족 자리 규칙의 다른 후보 (DECISIONS 7-17, 기본 'econ' = 지금 규칙, 그 값들은 owner-buildings 항목에 있다)
   'nobleSeats', 'nobleSeatsPerLevel', 'nobleSeatsPerCell', 'nobleIncome', 'nobleSeatsLand', 'noblePerMille',
-  // AI 왕실 민영화 (비교용, 기본 'off': 민영화는 플레이어가 켠다)
-  'crownPrivatize',
   // AI 수정 비교 (2026-10-22, 기본 0 = 지금 동작)
-  'crownGdpReserve', 'financeIdle', 'laborStrict', 'welfareCutOff'];
+  'crownGdpReserve'];
 
 function showTune(v: unknown): number | string {
   if (typeof v === 'number') return Number.isFinite(v) ? v : '∞';
@@ -1329,10 +1327,9 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   },
   {
     id: 'ai-methods', category: 'ai', title: t('방식 바꾸기', 'Switching methods'),
-    rule: t('생산 건물은 산출 1단위당 이윤이 5% + 0.01 넘게 나은 방식으로 바꾼다 ({0}일 쿨다운, 원료가 끊겨 멈췄으면 쿨다운 없이). 지금 재직자를 더해도 일손을 {3} 이상 모을 수 없는 방식, 대륙 공급이 필요의 {4} 미만인 투입재를 쓰는 방식은 고르지 않고 ({7} = 1이면 공급 대신 남는 양 = 대륙 공급 − 대륙 수요 + 이 건물이 지금 쓰는 양), 지금 방식이 {3} 미만으로 채워지고 일손도 없으면 이윤이 낮아도 일손을 구할 수 있는 방식으로 바꾼다. ({2} = 1이면: 건물 전체 하루 손익 = 레벨 × 기대 충원율 × (매출 × 투입 충족 × 숙련 − 원료비 × 투입 충족 − 인건비)이 {5} (최소 인건비의 {6}) 넘게 큰 방식으로, 대륙 장기 가격으로 재고 손해인 방식으로는 바꾸지 않는다.) 사무소는 자재를 구할 수 있는 방식 중 포인트 최대. 행정청은 한도 × 원료 충족이 10% 넘게 큰 방식으로, 원료 없는 방식이면 충족 기억을 매주 {1}씩 1로 되돌린다.', 'Producers switch when profit per unit beats the current method by 5% + 0.01 ({0}-day cooldown; none when starved of inputs). Methods that cannot be staffed to {3} (counting current workers), or that use an input whose continental supply is under {4} of need, are skipped (with {7} = 1: spare = continental supply − continental demand + what this building uses now); a building under {3} staffed with no labour for its method moves to a staffable one even at lower profit. (With {2} = 1: the method whose whole-building daily profit = levels × expected staffing × (revenue × input fill × skill − input cost × input fill − wages) beats the current one by {5} (at least {6} of wages), at long-run continental prices, never switching into a loss.) Offices take the highest-point method with available materials. Administrations take the method with 10% more capacity × fill; on a no-input method the fill memory drifts back to 1 by {1} a week.'),
-    params: [p('쿨다운', 'Cooldown', () => SWITCH_COOLDOWN, 'day'), tune('adminFillRetry', '행정청 재시도', 'Administration retry', 'pct'), tune('aiSwitchV2', '손익 비교 (새 규칙)', 'Profit comparison (new rule)'), tune('minStaffing', '일손 기준', 'Staffing threshold', 'pct'),
-      p('공급 기준', 'Supply threshold', () => INPUT_SUPPLY_MIN, 'pct'), p('바꾸기 문턱', 'Switch margin', () => SWITCH_MARGIN, 'pct'), p('최소 문턱 (인건비 대비)', 'Minimum margin (of wages)', () => SWITCH_MIN_WAGE_SHARE, 'pct'),
-      tune('aiInputFill', '투입 충족 판단', 'Input-fill judgement')],
+    rule: t('생산 건물은 산출 1단위당 이윤이 5% + 0.01 넘게 나은 방식으로 바꾼다 ({0}일 쿨다운, 원료가 끊겨 멈췄으면 쿨다운 없이). 지금 재직자를 더해도 일손을 {2} 이상 모을 수 없는 방식, 대륙 공급이 필요의 {3} 미만인 투입재를 쓰는 방식은 고르지 않고 ({4} = 1이면 공급 대신 남는 양 = 대륙 공급 − 대륙 수요 + 이 건물이 지금 쓰는 양), 지금 방식이 {2} 미만으로 채워지고 일손도 없으면 이윤이 낮아도 일손을 구할 수 있는 방식으로 바꾼다. 사무소는 자재를 구할 수 있는 방식 중 포인트 최대. 행정청은 한도 × 원료 충족이 10% 넘게 큰 방식으로, 원료 없는 방식이면 충족 기억을 매주 {1}씩 1로 되돌린다.', 'Producers switch when profit per unit beats the current method by 5% + 0.01 ({0}-day cooldown; none when starved of inputs). Methods that cannot be staffed to {2} (counting current workers), or that use an input whose continental supply is under {3} of need, are skipped (with {4} = 1: spare = continental supply − continental demand + what this building uses now); a building under {2} staffed with no labour for its method moves to a staffable one even at lower profit. Offices take the highest-point method with available materials. Administrations take the method with 10% more capacity × fill; on a no-input method the fill memory drifts back to 1 by {1} a week.'),
+    params: [p('쿨다운', 'Cooldown', () => SWITCH_COOLDOWN, 'day'), tune('adminFillRetry', '행정청 재시도', 'Administration retry', 'pct'), tune('minStaffing', '일손 기준', 'Staffing threshold', 'pct'),
+      p('공급 기준', 'Supply threshold', () => INPUT_SUPPLY_MIN, 'pct'), tune('aiInputFill', '투입 충족 판단', 'Input-fill judgement')],
     related: ['input-fill', 'admin-capacity', 'methods-rule'], seenIn: ['company'], source: ['ai.ts manageBuildings'], design: ['10'],
   },
   {
@@ -1357,9 +1354,9 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   },
   {
     id: 'ai-construction', category: 'ai', title: t('착공', 'Starting construction'),
-    rule: t('주에 최대 {0}건. 연 손익 ÷ 공사비 > {1}이고 일손을 {2} 이상 ({3}일 안에) 모을 수 있는 후보 중, 덩어리({4}레벨)를 골라 점수 = 수익률 × 무작위 × (1 + {5} × 지역 자금 비율)이 가장 큰 것을 짓는다. 기상 조건이 걸린 땅은 뺀다. 이미 건물이 있으면 그 방식으로만 늘린다 ({9} = 1이면 그 건물이 바꾸지 못한 더 나은 방식을 옆에 새 건물로 공사 하나에 {10}레벨까지 짓는다). {11} = 1이면 빚이 현금보다 많은 왕실은 생산 건물을 새로 짓지 않는다 (행정청·학교·사무소는 그대로). {12} > 0이면 왕국 안 같은 종류·같은 산출 건물의 레벨 가중 가동률(꺼진 건물 0)이 {12} 미만이거나 장기 손익 합이 음수인 방식은 짓지도 늘리지도 않는다 (그런 건물이 없으면 짓는다).', 'Up to {0} starts a week. Candidates need yearly profit ÷ cost > {1} and {2} of jobs fillable within {3} days; chunks of {4} levels; score = return × random × (1 + {5} × local fund share). Land under a harvest condition is skipped. An existing building only grows in its own method ({9} = 1: a better method the building could not switch to is built next to it as a new building, up to {10} levels per project). With {11} = 1 a crown whose debt exceeds its cash starts no new producers (administrations, schools and offices as before). With {12} > 0 a method is neither built nor expanded while buildings of that type with the same output in the kingdom run below {12} level-weighted utilisation (paused ones count 0) or lose money in total (none yet: it may be built).'),
+    rule: t('주에 최대 {0}건. 연 손익 ÷ 공사비 > {1}이고 일손을 {2} 이상 ({3}일 안에) 모을 수 있는 후보 중, 덩어리({4}레벨)를 골라 점수 = 수익률 × 무작위 × (1 + {5} × 지역 자금 비율)이 가장 큰 것을 짓는다. 기상 조건이 걸린 땅은 뺀다. 이미 건물이 있으면 그 방식으로만 늘린다 ({7} = 1이면 그 건물이 바꾸지 못한 더 나은 방식을 옆에 새 건물로 공사 하나에 {8}레벨까지 짓는다). {9} = 1이면 빚이 현금보다 많은 왕실은 생산 건물을 새로 짓지 않는다 (행정청·학교·사무소는 그대로). {10} > 0이면 왕국 안 같은 종류·같은 산출 건물의 레벨 가중 가동률(꺼진 건물 0)이 {10} 미만이거나 장기 손익 합이 음수인 방식은 짓지도 늘리지도 않는다 (그런 건물이 없으면 짓는다).', 'Up to {0} starts a week. Candidates need yearly profit ÷ cost > {1} and {2} of jobs fillable within {3} days; chunks of {4} levels; score = return × random × (1 + {5} × local fund share). Land under a harvest condition is skipped. An existing building only grows in its own method ({7} = 1: a better method the building could not switch to is built next to it as a new building, up to {8} levels per project). With {9} = 1 a crown whose debt exceeds its cash starts no new producers (administrations, schools and offices as before). With {10} > 0 a method is neither built nor expanded while buildings of that type with the same output in the kingdom run below {10} level-weighted utilisation (paused ones count 0) or lose money in total (none yet: it may be built).'),
     params: [tune('startsPerWeek', '주간 착공', 'Starts per week'), tune('minRoi', '최소 수익률', 'Minimum return', 'pct'), tune('minStaffing', '일손 기준', 'Staffing threshold', 'pct'), p('일손 기간', 'Staffing horizon', () => STAFFING_HORIZON, 'day'), p('덩어리', 'Chunks', () => CHUNKS.join(' / ')), tune('localBias', '지역 가산', 'Local bias', 'pct'),
-      tune('lossBuildsPerWeek', '손해 후보 짓기 (주간)', 'Loss builds per week'), tune('lossTolerance', '손해 허용', 'Loss tolerance'), tune('schoolTaxMax', '학교 짓는 세금 상한', 'Max tax step for schools'),
+      tune('schoolTaxMax', '학교 짓는 세금 상한', 'Max tax step for schools'),
       tune('aiMixedMethods', '옆에 새 방식 짓기', 'Build a better method alongside'), p('새 방식 레벨 상한', 'Alongside level cap', () => MIXED_LEVELS, 'level'),
       tune('crownDebtNoBuild', '빚진 왕실 생산 건물 멈춤', 'Indebted crown builds no producers'), tune('expandUtilMin', '증설 가동률 문턱', 'Expansion utilisation floor', 'pct')],
     related: ['ai-outlook', 'owner-treasury', 'land'], seenIn: ['company'], source: ['ai.ts planConstruction', 'ai.ts pickProject'], design: ['10'],
