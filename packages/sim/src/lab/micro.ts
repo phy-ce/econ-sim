@@ -348,10 +348,30 @@ export type MicroShock =
   /** 건물 하나를 없앤다 (종류·지역의 첫 건물). 일꾼은 다음 날 실업자가 된다 */
   | { t: number; kind: 'remove'; type: string; region?: number }
   /** 소작지 재해: t 일부터 years 년 동안 소작지 칸의 loss 를 못 쓴다 (economy.ts SCRIPTED_QUAKES, restoreMicroScale 이 지운다) */
-  | { t: number; kind: 'quake'; loss: number; years: number; region?: number };
+  | { t: number; kind: 'quake'; loss: number; years: number; region?: number }
+  /** 민간 상회 현금을 0 으로: 그 돈을 상회 건물의 레벨 주인(저택·금융가) 금고로 가진 레벨 수대로 옮긴다 (돈은 옮길 뿐). 유보 자산 표시는 다음 정산에서 현금에 맞춰 준다 */
+  | { t: number; kind: 'drain' };
 
 export function applyMicroShock(w: World, s: MicroShock): void {
   if (s.kind === 'need') { Object.assign(TUNE.needMul, s.mul); return; }
+  if (s.kind === 'drain') {
+    const firm = w.companies.find((c) => c.id === w.kingdoms[0].privateIds[0])!;
+    const levels = new Map<number, number>();
+    let total = 0;
+    for (const b of w.buildings) if (b.companyId === firm.id) for (const [id, n] of Object.entries(b.owners ?? {})) { levels.set(Number(id), (levels.get(Number(id)) ?? 0) + n); total += n; }
+    const ids = [...levels.keys()].sort((a, b) => a - b);
+    const cash = Math.max(0, firm.cash);
+    if (total <= 0 || cash <= 0) return;
+    let left = cash;
+    ids.forEach((id, i) => {
+      const o = w.buildings.find((x) => x.id === id)!;
+      const amt = i === ids.length - 1 ? left : (cash * levels.get(id)!) / total;
+      left -= amt;
+      o.cash = (o.cash ?? 0) + amt;
+    });
+    firm.cash -= cash;
+    return;
+  }
   const r = w.regions[s.region ?? 0];
   if (!r) throw new Error('micro: 충격 지역 없음');
   const k = w.kingdoms[0];

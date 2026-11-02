@@ -8,6 +8,7 @@
 //                       [--arableslack 1] [--moneypeople 400]  (소작지 칸 배율, 돈 문턱을 셀 인구: 시작 인구만 줄이는 비교용, micro.ts MicroOptions)
 //                       [--quakeloss 0.25 --quakeyears 3]  (quake·quaketwo 실행의 소작지 손실 비율·기간)
 //                       [--sections abcdj]  (j = 노동시장 판정 J1~J4·M 시나리오·해마다 직종 소득 표)
+//                       (k = 상회 현금 표: 해마다 민간 상회 현금 평균·최저, 현금 0 인 날 수, 원료 충족(레벨 가중), 민간 생산 레벨·고용, 주인(저택·금융가) 금고 합, 운전자금 넣은 돈)
 //                       (m = 저택 거둠 표: 소작농 저축·부·생활수준, 상급·하급 귀족 1인 소득·부·생활수준·자리, 저택 금고·필요·거둠, 공산품 지출·소비재 공장 레벨,
 //                        민간 공사 약정, 직종 소득 순서. 조합은 --tune 으로 실행마다 바꾼다: manorTargetMult, manorGentrySeats)
 //   (빠르게: bash cli/fast.sh microcheck.ts ...)
@@ -26,6 +27,8 @@
 //   skill   --at 일에 장인 가구(furniture_luxury) 2레벨: 기술자 자리 약 +5, 자격자보다 많다 (숙련 부족, M5)
 //   two     지역 2개 (인구 --people 씩), 시작 건물은 지역 0 에만 (지역 0 일손 부족·지역 1 과잉, M6)
 //   quake   --at 일에 소작지 재해: 지역 0 소작지 칸의 --quakeloss(기본 25%)를 --quakeyears(기본 3)년 동안 못 쓴다 (economy.ts SCRIPTED_QUAKES, 2026-11-01 사용자 "소작지가 지진 같은 것에 의해 변동")
+//   drain   --at 일부터 --draindays(기본 14)일 동안 매일 민간 상회 현금을 0 으로 (그 돈을 레벨 주인 저택·금융가 금고로 옮긴다, 현금 0 함정 재현, DECISIONS 7-40).
+//           하루만 비우면 원료 재고 2일분으로 판 돈이 들어와 스스로 풀린다 (main d964485, labor 시드 1). 여러 날 비우면 원료 재고가 바닥난 채 현금 0 이 된다
 //   quaketwo 지역 2개(two 와 같은 시작)에서 지역 0 에 같은 재해 (이주를 보려고)
 //
 // 점검 (주 단위 표본):
@@ -70,6 +73,7 @@ const TYPESCALE_ARG = arg('typescale', PRESET === 'labor' ? 'workshop=0.15,texti
 const typeScale: Record<string, number> | undefined = TYPESCALE_ARG ? Object.fromEntries(TYPESCALE_ARG.split(',').map((x) => { const [k, v] = x.split('='); return [k, Number(v)]; })) : undefined;
 const SECTIONS = arg('sections', 'abcd');
 /** 재해 실행(quake·quaketwo)의 손실 비율·기간(년) */
+const DRAIN_DAYS = Number(arg('draindays', '14'));
 const QLOSS = Number(arg('quakeloss', '0.25')), QYEARS = Number(arg('quakeyears', '3'));
 
 /** 실행 안의 TUNE 충격 (관측용 개입, 실행이 끝나면 되돌린다) */
@@ -92,6 +96,7 @@ const DEFS: Record<string, RunDef> = {
   cloth: { name: 'cloth', opts: baseOpts, shocks: [{ t: AT, kind: 'need', mul: { clothing: 1.5, standard_clothing: 1.5 } }] },
   people: { name: 'people', opts: baseOpts, shocks: [{ t: AT, kind: 'people', n: Math.round(PEOPLE / 4) }] },
   quake: { name: 'quake', opts: baseOpts, shocks: [{ t: AT, kind: 'quake', loss: QLOSS, years: QYEARS }] },
+  drain: { name: 'drain', opts: baseOpts, shocks: Array.from({ length: DRAIN_DAYS }, (_, i) => ({ t: AT + i, kind: 'drain' as const })) },
   quaketwo: { name: 'quaketwo', opts: { ...baseOpts, people: [PEOPLE, PEOPLE] }, shocks: [{ t: AT, kind: 'quake', loss: QLOSS, years: QYEARS, region: 0 }] },
   control: { name: 'control', opts: { ...baseOpts, scale: 1, people: [PEOPLE * Math.round(1 / SCALE)], personUnit: Math.round(1 / SCALE) }, shocks: [] },
 };
@@ -254,7 +259,21 @@ function classIncome(row: MicroRow): Record<string, number> {
   return Object.fromEntries(Object.entries(acc).filter(([, a]) => a.n > 0).map(([k, a]) => [k, a.inc / a.n]));
 }
 
-export interface RunResult { def: RunDef; weeks: Week[]; drift: number; driftAbs: number; driftTick: number; ms: number; rows: number; hash: string; same?: boolean }
+/** 상회 현금 표(k)용 하루 표본: 민간 상회 현금, 원료 충족(원료 쓰는 민간 건물의 레벨 가중), 민간 생산 레벨·고용, 주인 금고 합, 운전자금(call.*) 누계 */
+interface CashDay { t: number; cash: number; fill: number; lv: number; emp: number; owner: number; call: number }
+function cashDay(w: World): CashDay {
+  const firm = companyById(w, w.kingdoms[0].privateIds[0])!;
+  let fl = 0, fw = 0, lv = 0, emp = 0, owner = 0;
+  for (const b of w.buildings) {
+    if (b.typeId === 'manor' || b.typeId === 'finance') owner += b.cash ?? 0;
+    if (b.companyId !== firm.id || BUILDING_BY_ID[b.typeId].auto) continue;
+    lv += b.level;
+    for (const k of Object.keys(b.employed) as (keyof typeof b.employed)[]) emp += b.employed[k] ?? 0;
+    if (Object.keys(getMethod(b.typeId, b.methodId).inputs).length) { fl += b.level * b.last.inputFill; fw += b.level; }
+  }
+  return { t: w.tick, cash: firm.cash, fill: fw > 0 ? fl / fw : NaN, lv, emp, owner, call: (FLOW['call.manor'] ?? 0) + (FLOW['call.finance'] ?? 0) };
+}
+export interface RunResult { def: RunDef; weeks: Week[]; days?: CashDay[]; drift: number; driftAbs: number; driftTick: number; ms: number; rows: number; hash: string; same?: boolean }
 
 const stateHash = (w: World) => createHash('sha1').update(JSON.stringify({ ...w, config: { ...w.config, rulesHash: '' } })).digest('hex').slice(0, 12);
 
@@ -296,6 +315,8 @@ function run(def: RunDef): RunResult {
   const m0 = moneyIdentity(w);
   let drift = 0, driftAbs = 0, driftTick = 0, rows = 0;
   const shocks = [...def.shocks];
+  const days: CashDay[] = [];
+  const call0 = (FLOW['call.manor'] ?? 0) + (FLOW['call.finance'] ?? 0);
   let buf: string[] = [];
   const write = (row: MicroRow) => { if (!file) return; buf.push(JSON.stringify(row)); rows++; if (buf.length >= 50) { appendFileSync(file, buf.join('\n') + '\n'); buf = []; } };
   write(microTrace(w));
@@ -303,6 +324,7 @@ function run(def: RunDef): RunResult {
   for (let d = 0; d < YEARS * TICKS_PER_YEAR; d++) {
     for (const s of shocks) if (s.t === w.tick) applyShock(w, s, tuneSaved);
     step(w);
+    if (SECTIONS.includes('k')) { const cd = cashDay(w); cd.call -= call0; days.push(cd); }
     const dev = Math.abs(moneyIdentity(w) - m0);
     const rel = dev / Math.max(1, totalMoney(w));
     if (rel > drift) { drift = rel; driftAbs = dev; driftTick = w.tick; }
@@ -318,7 +340,7 @@ function run(def: RunDef): RunResult {
   Object.assign(TUNE, tuneSaved);
   restoreMicroScale();
   Object.assign(TUNE, saved);
-  return { def, weeks, drift, driftAbs, driftTick, ms: Date.now() - t0, rows, hash };
+  return { def, weeks, days, drift, driftAbs, driftTick, ms: Date.now() - t0, rows, hash };
 }
 
 // ---------------------------------------------------------------- 표
@@ -527,6 +549,26 @@ function manorTable(r: RunResult) {
   }));
 }
 
+/** (k) 상회 현금 표: 해마다. 현금 0 인 날 = 상회 현금 < 1 플로린 */
+function cashTable(r: RunResult) {
+  const ds = r.days ?? [];
+  console.log(`
+(k) 상회 현금 [${r.def.name}]: 현금 평균·최저, 현금 0 인 날(< 1), 원료 충족(레벨 가중 평균), 민간 생산 레벨·고용(평균), 주인 금고 합(평균), 운전자금 넣은 돈(1년 합)`);
+  console.log('년'.padEnd(4) + ['현금', '최저', '0인날', '원료충족', '생산Lv', '고용', '주인금고', '운전자금'].map((c) => pad(c, 10)).join(''));
+  const out = [];
+  let callPrev = 0;
+  for (let y = 0; y < YEARS; y++) {
+    const xs = ds.filter((d) => d.t > y * TICKS_PER_YEAR && d.t <= (y + 1) * TICKS_PER_YEAR);
+    if (!xs.length) continue;
+    const call = xs[xs.length - 1].call - callPrev; callPrev = xs[xs.length - 1].call;
+    const row = { year: y + 1, cash: mean(xs.map((d) => d.cash)), min: Math.min(...xs.map((d) => d.cash)), zero: xs.filter((d) => d.cash < 1).length,
+      fill: mean(xs.map((d) => d.fill).filter(Number.isFinite)), lv: mean(xs.map((d) => d.lv)), emp: mean(xs.map((d) => d.emp)), owner: mean(xs.map((d) => d.owner)), call };
+    out.push(row);
+    console.log(String(y + 1).padEnd(4) + [f2(row.cash), f2(row.min), String(row.zero), pct(row.fill), f2(row.lv), f2(row.emp), f2(row.owner), f2(row.call)].map((v) => pad(v, 10)).join(''));
+  }
+  return out;
+}
+
 // ---------------------------------------------------------------- 실행
 
 const results: RunResult[] = [];
@@ -544,6 +586,7 @@ for (const name of RUNS) {
     money: { drift: r.drift, abs: r.driftAbs, tick: r.driftTick },
     judge: SECTIONS.includes('j') ? laborJudge(r, AT, YEARS) : undefined, yearly: SECTIONS.includes('j') ? laborYearly(r, YEARS) : undefined,
     manor: SECTIONS.includes('m') ? manorTable(r) : undefined,
+    cash: SECTIONS.includes('k') ? cashTable(r) : undefined,
   };
   if (OUT) appendFileSync(`${OUT}-${name}.jsonl`, JSON.stringify(summary) + '\n');
   if (SECTIONS.includes('q')) quakeTable(r);

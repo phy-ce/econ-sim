@@ -1,6 +1,6 @@
 import {recordPopIncome} from './popIncome';
 import { ABS_LIMITS, BUILDING_BY_ID, GOODS, SKILL_DEFS, TECH_BY_ID, TICKS_PER_WEEK, TUNE, WORKFORCE_RATIO, getMethod } from './data';
-import { collectionRatio, companyById, marketWages, levelOwnersOf, slots, regionById, constructionEstimate, efficiency, isBudgetFunded, isOwnerBuilding, kingdomGdp, logEvent, officeFeeMult, paysDividend, repay, wagesAt, sellThrough, shareWeight } from './economy';
+import { collectionRatio, companyById, estimateMethod, marketWages, levelOwnersOf, slots, regionById, constructionEstimate, efficiency, isBudgetFunded, isOwnerBuilding, kingdomGdp, logEvent, officeFeeMult, paysDividend, repay, wagesAt, sellThrough, shareWeight } from './economy';
 import { techNameEn } from './i18n';
 import { flow, kingdomById, kingdomOf, toFinance, toTreasury } from './kingdoms';
 import { fundOf, payPops } from './pops';
@@ -564,9 +564,9 @@ export function payDividends(w: World, c: Company) {
   const due = new Map<Building, number>();
   for (const b of mine) due.set(b, hasReserve(b) ? settleReserve(b, b.profitEma * TICKS_PER_WEEK) : Math.max(0, b.profitEma) * TICKS_PER_WEEK * (1 - RESERVE_SHARE));
   // 민간 상회는 운영 자금(주간 임금 + 원료 × TUNE.firmBufferWeeks)을 남기고 배당한다 (임금과 원료는 판매 대금보다 먼저 나간다).
-  // 운영 자금이 모자라면 레벨 주인(저택·금융가)이 가진 레벨 수대로 금고에서 채운다 (callCapital)
+  // 운영 자금이 모자라면 레벨 주인(저택·금융가)이 가진 레벨 수대로 금고에서 채운다 (callCapital). 하루 운영비는 opsDay
   let ops = 0;
-  for (const b of mine) ops += b.last.wageCost + b.last.inputCost;
+  for (const b of mine) ops += opsDay(w, c, b);
   const buffer = ops * TICKS_PER_WEEK * TUNE.firmBufferWeeks;
   const spare = fitReserves(w, c);
   if (spare < buffer) { callCapital(w, c, mine, byId, buffer - spare); record(); return; }
@@ -592,6 +592,22 @@ export function payDividends(w: World, c: Company) {
   }
   for (const [o, amt] of toOwner) payOwners(w, o, amt);
   record();
+}
+
+/**
+ * 민간 건물 b 의 하루 운영비 (운영 자금을 셀 때): 오늘 실제로 쓴 임금 + 원료.
+ * TUNE.firmCallPlan = 1 (AI 판단, DECISIONS 7-40): 지금 값·임금으로 원료를 다 채워 돌리면 흑자인 생산 건물은 그 계획 운영비
+ * (레벨 × 가동률 × 지금 일손 비율, market.ts collectOrders 가 원료를 사는 양과 같다)와 큰 쪽.
+ * 실제로 쓴 돈만 세면 현금이 0 이 된 상회는 임금·원료를 못 내 그 값이 0 이 되고, 운영 자금도 0 으로 보여 주인이 채우지 않았다 (현금 0 함정)
+ */
+function opsDay(w: World, c: Company, b: Building): number {
+  const paid = b.last.wageCost + b.last.inputCost;
+  if (!TUNE.firmCallPlan || !b.active) return paid;
+  const m = getMethod(b.typeId, b.methodId);
+  if (m.construction || m.seats) return paid;
+  const e = estimateMethod(w, b.regionId, b.typeId, b.methodId, wagesAt(c, b.typeId, w, b.regionId), b.stateOwned);
+  if (!(e.profit > 0)) return paid;
+  return Math.max(paid, (e.wageCost + e.inputCost) * b.level * b.utilization * Math.max(b.last.staffing, b.crew ?? 0));
 }
 
 /** 민간 상회의 운영 자금이 need 만큼 모자라면 그 상회 건물의 레벨 주인이 가진 레벨 수대로 금고(약정 뺀 돈)에서 낸다 (낼 수 있는 만큼) */

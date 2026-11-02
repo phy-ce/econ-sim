@@ -26,8 +26,9 @@ const EXPECTED: Record<string, [number, number]> = {
   'labor.ts': [2, 0],
   // 0b 측정 도구의 고갈 처방 drain (국고 0·부채 한도, 소멸은 w.mint.retired 에 적는다). 게임 번들 밖, 개발용 충격
   'lab/run.ts': [0, 2],
-  // 마이크로 세계 시작 상태 (createMicroWorld: 시작 돈·저축·국고를 world.ts createWorld 와 같은 자리에 넣는다). 게임 번들 밖, 개발용
-  'lab/micro.ts': [0, 7],
+  // 마이크로 세계 시작 상태 (createMicroWorld: 시작 돈·저축·국고를 world.ts createWorld 와 같은 자리에 넣는다). 게임 번들 밖, 개발용.
+  // drain 충격 (applyMicroShock, 현금 0 함정 재현 DECISIONS 7-40): 상회 현금을 레벨 주인 금고로 옮긴다 (±= 1, 대입 1)
+  'lab/micro.ts': [1, 8],
   'market.ts': [9, 3],
   'pops.ts': [8, 0],
   'production.ts': [6, 8],

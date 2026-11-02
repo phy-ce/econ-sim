@@ -450,6 +450,8 @@ export function scaleBonus(level: number): number {
  * - ownerTilt: 저택은 땅 건물(농지·산림·광맥), 금융가는 그 밖의 건물을 좋아한다 (AI 성향). 좋아하지 않는 종류에 낼 마음의 배율
  * - privatizeMargin, privatizePayback: 민영화 레벨을 사는 조건 (AI): 금고 ≥ 레벨 값 × privatizeMargin, 레벨 값 ÷ 그 레벨의 1년 이익 ≤ privatizePayback 년
  * - firmBufferWeeks: 민간 상회가 배당 전에 남기는 운영 자금 = 주간 (임금 + 원료) × 이 주 수 (임금·원료가 판매 대금보다 먼저 나간다)
+ * - firmCallPlan: 1 = 운영 자금의 하루 운영비를, 원료를 다 채우면 흑자인 생산 건물은 계획 운영비(지금 값·임금·일손)와 실제로 쓴 돈 중 큰 쪽으로 센다 (finance.ts opsDay, AI 판단).
+ *   0 = 실제로 쓴 돈만 (현금 0 이면 운영 자금도 0 으로 보여 주인이 채우지 않는다, d964485 까지의 동작)
  * - crownPrivatize: 비교용. 'all' 이면 AI 왕실이 생산 건물 모두에 민영화를 켠다 (기본 'off': 민영화는 플레이어가 켠다)
  * - taxCurve: 징수율 곡선. 'exp' = 1 − e^(−x), 'hyp' = x / (1 + x) (x = 행정청 한도 / 인구)
  * - wageMarket, wageMarketRate: 1 이면 지역·직종 시장 임금 (labor.ts updateMarketWages). 날마다 임금 × wageMarketRate × clamp((자리 − 오려는 사람) ÷ min(자리, 오려는 사람), −1, 1) 만큼 움직인다.
@@ -547,6 +549,7 @@ export const TUNE = {
   localBias: 0.5,
   ownerTilt: 0.5,
   firmBufferWeeks: 2,
+  firmCallPlan: 1,
   privatizeMargin: 2,
   privatizePayback: 10,
   crownPrivatize: 'off' as 'off' | 'all',
