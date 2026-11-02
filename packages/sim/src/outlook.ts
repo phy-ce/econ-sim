@@ -74,6 +74,8 @@ function peasantShare(w: World, regionId: number): number {
   let all = 0, mine = 0;
   for (const p of w.pops) {
     if (p.regionId !== regionId || p.prof === 'capitalist' || p.prof === 'aristocrat') continue;
+    // 저택 지분(TUNE.manorShares): 하급 귀족은 노동자·농부 자리에 가지 않는다
+    if (TUNE.manorShares && p.prof === 'gentry') continue;
     if (p.prof === 'unskilled' && p.work !== 0) continue;
     const q = workforce(p) * (p.work === 0 ? 1 : reach);
     all += q;

@@ -587,8 +587,9 @@ export const TUNE = {
   manorShares: 0,
   // 귀족이 지분을 살 수 있는 저택 (AI 판단, 2026-11-02 사용자 "수익률 계산. 단 디버프가 적용된 최종 가격으로 AI 가 판단함"): 'world' 어느 지역·왕국이든, 'kingdom' 같은 왕국, 'region' 자기 지역만
   manorBuyScope: 'world' as 'world' | 'kingdom' | 'region',
-  // 귀족이 저택과 금융가를 함께 살 수 있을 때 (AI 판단): 1 = 수익률 비율로 나눠 산다, 0 = 수익률이 높은 한 곳에 다 산다
-  manorInvestSplit: 0,
+  // 귀족이 저택과 금융가를 함께 살 수 있을 때 (AI 판단, manorShares 1 일 때만 돈다): 1 = 수익률 비율로 나눠 산다, 0 = 수익률이 높은 한 곳에 다 산다.
+  // 2026-11-02 기본 1 (20년 × 시드 1·2 × salt 0..3, wt-manor 743c8c6: 5·10·15·20년차 세전 총생산 평균 512/520/571/671 대 0 의 498/497/536/622, salt 띠는 겹침. 근거 DESIGN 11)
+  manorInvestSplit: 1,
   // 부재 지주 몫 (2026-11-02 사용자 결정 "다른 지역 배당 디버프", DECISIONS 7-44): 저택·금융가가 자기 지역 밖 건물에서 받는 배당의 이 비율은 그 건물 지역의 저택으로 간다 (finance.ts payDividends). 0 = 끔
   absenteeShare: 0,
   pollTax: 0.6, // 인두세: 소작농을 뺀 1인당 하루 (세금 수준 3단계 기준)
