@@ -13,7 +13,6 @@ const SAFE_MATH = new Set(['abs', 'min', 'max', 'floor', 'ceil', 'round', 'trunc
 const ALLOWED: { file: string; has: string; why: string }[] = [
   // 꺼진 비교 경로 (8.5 정리 때 지운다)
   { file: 'economy.ts', has: '1 - Math.exp(-x)', why: "collectionRatio 의 TUNE.taxCurve = 'exp' 경로 (기본 'hyp')" },
-  { file: 'economy.ts', has: '(demand / supply) ** TUNE.priceExp', why: 'priceFormula 의 TUNE.priceExp > 0 경로 (기본 0)' },
   // data.ts tradeReserveOf·market.ts 대체재 비중·pops.ts Pop.growth 의 Math.pow·** 3곳은 0a 에서 rng/ipow.ts 로 바꿨다
 ];
 

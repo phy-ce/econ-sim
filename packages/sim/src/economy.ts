@@ -634,21 +634,9 @@ export function mainOutput(typeId: string, methodId: string): GoodId | null {
   return best;
 }
 
-/** 가격 범위 (기본가 배수): 시장 가격과 AI 장기 가격 모두 여기서 읽는다 */
-export function priceBounds(): readonly [number, number] {
-  return TUNE.priceExp > 0 ? TUNE.priceRange : [0.25, 1.75];
-}
-
 /** 가격 공식 (빅토리아3): 기본가 × (1 + 0.75 × clamp((구매 − 판매) / min(구매, 판매), ±1)) */
 export function priceFormula(g: GoodId, demand: number, supply: number): number {
   const base = GOODS[g].basePrice;
-  // 비교용 (TUNE.priceExp > 0): 기본가 × (구매 ÷ 판매)^priceExp, 범위 TUNE.priceRange
-  if (TUNE.priceExp > 0) {
-    const [mn, mx] = TUNE.priceRange;
-    if (supply <= FLOW_ZERO) return base * (demand > FLOW_ZERO ? mx : 1);
-    if (demand <= FLOW_ZERO) return base * mn;
-    return base * clamp((demand / supply) ** TUNE.priceExp, mn, mx);
-  }
   const lo = Math.min(demand, supply);
   const x = lo > FLOW_ZERO ? clamp((demand - supply) / lo, -1, 1) : demand > supply ? 1 : supply > demand ? -1 : 0;
   return base * (1 + 0.75 * x);

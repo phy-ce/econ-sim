@@ -412,7 +412,7 @@ const pad = (s: string, n: number) => s.padStart(n);
 const mean = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : NaN);
 const gmean = (xs: number[]) => { const v = xs.filter((x) => x > 0 && Number.isFinite(x)); return v.length ? Math.exp(mean(v.map(Math.log))) : NaN; };
 const byYear = (r: RunResult) => Array.from({ length: YEARS }, (_, y) => r.weeks.filter((wk) => wk.t > y * TICKS_PER_YEAR && wk.t <= (y + 1) * TICKS_PER_YEAR));
-const FLOOR = 0.25, CEIL = 1.75; // economy.ts priceBounds 기본
+const FLOOR = 0.25, CEIL = 1.75; // market.ts PRICE_MIN·PRICE_MAX
 
 /** (a) 상품 점검 */
 function goodsCheck(r: RunResult) {

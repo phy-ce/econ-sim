@@ -1,9 +1,9 @@
 import { BUILDING_BY_ID, buildPointsOf, BUILDING_TYPES, EDUCATION_FLOOR, EDUCATION_RANGE, GOOD_IDS, GOODS, SKILL_DEFS, TECH_BY_ID, TICKS_PER_WEEK, TICKS_PER_YEAR, TRADING_POST, TUNE, getMethod, regionPerk, tradeEscrowPerLevel, tradeReserveOf } from './data';
 import { withEstimateCache, regionAvgWealth, regionPopulation, wageCostOf,
   availableMethods, ownBuildingAt, builderOf, canBuildType, disbanded, kingdomGdp, paysDividend, paysShare, companyById, constructionEstimate, creditLimit, depositFree, efficiency, estimateMethod, harvestFactor, hasBuilder, isGovernment, regionById, wagesAt, researchableTechs, roomFor, sellsShares, slots, mainOutput, projectedSD, currentSD,
-  FLOW_ZERO, harvestFactorEma, priceBounds, priceFormula, shareWage,
+  FLOW_ZERO, harvestFactorEma, priceFormula, shareWage,
 } from './economy';
-import { BY_EMA } from './market';
+import { BY_EMA, PRICE_MAX, PRICE_MIN } from './market';
 import { MAX_CONCURRENT_CONSTRUCTIONS, MAX_LEVELS_PER_PROJECT, applyCommand } from './commands';
 import { applyStateWages, budgetMult, committedCost, favours, funderWeight, hasReserve, lawRevenue, ownerBuildings, ownerFunds, reserveCap, reserveOf, taxRates, treasuryFree } from './finance';
 import { privatizeLevel } from './production';
@@ -1482,8 +1482,8 @@ function sellDemo(w: World) {
 
 /** 가격 범위 안의 가격 공식 값 (시장 값이 따라가는 목표, market.ts updatePrices) */
 function boundedPrice(g: GoodId, demand: number, supply: number): number {
-  const base = GOODS[g].basePrice, [mn, mx] = priceBounds();
-  return clamp(priceFormula(g, demand, supply), base * mn, base * mx);
+  const base = GOODS[g].basePrice;
+  return clamp(priceFormula(g, demand, supply), base * PRICE_MIN, base * PRICE_MAX);
 }
 
 /**

@@ -1,5 +1,5 @@
 import { ABS_LIMITS, CLASS_DEFS, CONSUMPTION_PER_CAPITA, GOOD_IDS, GOODS, NEEDS, SKILL_DEFS, SUBSISTENCE, TICKS_PER_WEEK, TRADING_POST, TUNE, WORKFORCE_RATIO, getMethod, needsAt, rawMax, tenantYield, tradeReserveOf } from './data';
-import { CARTAGE_RATE, RAIL_RATE, borrow, companyById, harvestFactor, priceBounds, priceFormula, regionById, sellThrough, shareWeight, shippingRate, isSubsistence, wagesAt } from './economy';
+import { CARTAGE_RATE, RAIL_RATE, borrow, companyById, harvestFactor, priceFormula, regionById, sellThrough, shareWeight, shippingRate, isSubsistence, wagesAt } from './economy';
 import { treasuryOver, payRent, paySalvage, taxDue, taxRates } from './finance';
 import { borderCost, kingdomById, kingdomOf, payTariff, toTreasury } from './kingdoms';
 import { INVEST_CLASSES } from './policy';
@@ -1044,7 +1044,7 @@ export function wealthDrivers(w: World, p: Pop): { income: number; inKind: numbe
 
 // ---------------------------------------------------------------- 가격
 
-/** 빅토리아3 가격 범위 (지금 규칙). 비교용 공식(TUNE.priceExp)은 TUNE.priceRange 를 쓴다 (economy.ts priceBounds) */
+/** 빅토리아3 가격 범위 (기본가 배수). 시장 가격(updatePrices)과 AI 장기 가격(outlook.ts longRunPrice, ai.ts boundedPrice) 모두 여기서 읽는다 */
 export const PRICE_MIN = 0.25;
 export const PRICE_MAX = 1.75;
 /** 하루에 목표 가격으로 다가가는 비율 */
@@ -1093,8 +1093,7 @@ export function updatePrices(w: World) {
       mg.inventory = stockOf[mkey(r.id, g)] ?? 0;
       // 흐름이 끊긴 시장은 이동평균이 둘 다 같은 비율로 줄어 마지막 쏠림이 남으므로, 가격이 쏠린 쪽 끝으로 간다
       const target = priceFormula(g, mg.demandEma, mg.supplyEma);
-      const [mn, mx] = priceBounds();
-      mg.price = clamp(mg.price + (target - mg.price) * PRICE_SPEED, base * mn, base * mx);
+      mg.price = clamp(mg.price + (target - mg.price) * PRICE_SPEED, base * PRICE_MIN, base * PRICE_MAX);
     }
   }
 }

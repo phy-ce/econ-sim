@@ -879,7 +879,7 @@ AI 의 무작위(연구 점수, 착공 점수, 증설 확률)는 공유 난수�
 | `UNPAID_QUIT` (labor) | 0.03 | 임금을 못 받은 일꾼의 하루 이탈 | 근거 없음 (5283b96) |
 | `MIGRATE_START`, `MIGRATE_FULL`, `MIGRATE_MAX` (labor) | 1.3, 2, 0.001 | 이웃이 1.3배면 옮기기 시작, 2배에서 하루 0.1% | 근거 없음 (5283b96) |
 | `WAGE_TILT` (labor) | 0.75 | `wageTarget` 1 (비교용)의 쏠림 계수 | 가격 공식 `priceFormula` 의 0.75 를 그대로 씀. 다른 값은 비교하지 않았다, 근거 없음 (wt-wagespeed 0f23b14) |
-| `PRICE_MIN`, `PRICE_MAX` (market) | 0.25, 1.75 | 가격 범위 (기본가 배수) | 빅토리아3 시장 가격 25~175% (VIC3_REFERENCE 시장). 9c76862 |
+| `PRICE_MIN`, `PRICE_MAX` (market) | 0.25, 1.75 | 가격 범위 (기본가 배수). 시장 가격과 AI 장기 가격이 모두 여기서 읽는다 | 빅토리아3 시장 가격 25~175% (VIC3_REFERENCE 시장). 9c76862. 비교용 가격 공식 `priceExp`·`priceRange`(기본 0 = 끔, 이 장에 행 없었음)와 `economy.ts priceBounds`는 2026-11-02 wt-simplify 1-B에서 지웠다 (동작 같음, 그 전 코드 7df16c4) |
 | `PRICE_SPEED` (market) | 0.03 | 하루 가격 이동 | 근거 없음 (9c76862). 하루 최소 0.01 이동은 반올림을 없애며 뺐다 (2장) |
 | `CARGO_MIN` (market) | 1 | 묵은 무역소 화물이 이 단위 아래면 없어진다 | 근거 없음 (2026-10-22, 센트 버림 대체용 둥근 값; 0.01·1 비교 안 함) |
 | `TRADE_STEP_MULT`, `TRADE_ESCROW_SHARE` (data) | 2, 0.5 | 무역소 방식 단계마다 레벨당 유보액 배율, 공사에 묶는 돈 (유보액 대비) | 사용자 승인 설계 (2026-10-23). 비교 안 함 |

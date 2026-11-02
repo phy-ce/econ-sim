@@ -1,8 +1,8 @@
 import { ABS_LIMITS, BUILDING_BY_ID, GOOD_IDS, GOODS, NEEDS, SKILL_DEFS, TUNE, getMethod, regionPerk, tenantYield } from './data';
 import { STAFFING_HORIZON, extraNeed, poolKey, poolOf } from './staffing';
 import { workforce } from './pops';
-import { FLOW_ZERO, availableMethods, collectionRatio, priceBounds, priceFormula, harvestFactorEma, isGovernment, regionById, shippingRate, wageCostOf, wagesAt } from './economy';
-import { BY_EMA } from './market';
+import { FLOW_ZERO, availableMethods, collectionRatio, priceFormula, harvestFactorEma, isGovernment, regionById, shippingRate, wageCostOf, wagesAt } from './economy';
+import { BY_EMA, PRICE_MIN } from './market';
 import { clamp } from './rng';
 import { SKILLS } from './types';
 import type { Building, Company, GoodId, Kingdom, MethodDef, Region, Skill, World } from './types';
@@ -61,7 +61,7 @@ const PRODUCIBLE = new Set<GoodId>(Object.values(BUILDING_BY_ID).flatMap((t) => 
 /** 장기 가격: 가격 공식과 같은 모양 (수요/공급 비율) */
 function longRunPrice(g: GoodId, D: number, S: number): number {
   // 시장과 같은 공식 (economy.ts priceFormula). 사고파는 양이 둘 다 없으면 범위 아래 끝으로 본다
-  if (Math.min(D, S) <= FLOW_ZERO && D <= S) return GOODS[g].basePrice * priceBounds()[0];
+  if (Math.min(D, S) <= FLOW_ZERO && D <= S) return GOODS[g].basePrice * PRICE_MIN;
   return priceFormula(g, D, S);
 }
 

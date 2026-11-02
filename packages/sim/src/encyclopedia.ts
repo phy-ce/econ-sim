@@ -324,7 +324,6 @@ export const ENCYCLOPEDIA: EncEntry[] = [
       p('쏠림 계수', 'Tilt factor', () => r2(priceFormula('grain', 2, 1) / GOODS.grain.basePrice - 1)),
       p('하루 접근', 'Daily approach', () => PRICE_SPEED, 'pct'), p('하한', 'Floor', () => PRICE_MIN, 'x'), p('상한', 'Ceiling', () => PRICE_MAX, 'x'),
       p('수요·공급 이동평균 (하루)', 'Demand/supply EMA (daily)', () => FLOW_EMA, 'pct'),
-      tune('priceExp', '비교용 지수 (0 = 이 공식)', 'Comparison exponent (0 = this formula)'), tune('priceRange', '비교용 범위', 'Comparison range'),
     ],
     example: () => {
       const D = 120, S = 100, base = GOODS.grain.basePrice, target = priceFormula('grain', D, S);
