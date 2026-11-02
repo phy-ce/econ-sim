@@ -541,12 +541,20 @@ export function unitYield(w: World, o: Building): number {
   return (Math.max(0, o.profitEma) * TICKS_PER_WEEK * (1 - (KEEP_SHARE[o.typeId] ?? 0)) * (1 - bonus)) / (u * Math.max(0.01, o.nav ?? 1));
 }
 
+/**
+ * step() 마다 하나씩 느는 번호 (하루 안 캐시용). 틱 번호는 하루 중간(주간 처리 직전, tick.ts)에 바뀌어, 틱 번호로 묶은 캐시는 주간 처리에서 만든 값이
+ * 다음 날 앞부분까지 남는다. 저장/불러오기를 해도 같은 결과가 되게 step 마다 새로 잰다 (tick.ts step 이 맨 앞에서 부른다)
+ */
+const stepNo = new WeakMap<World, number>();
+export function beginStep(w: World) { stepNo.set(w, (stepNo.get(w) ?? 0) + 1); }
+export const stepOf = (w: World): number => stepNo.get(w) ?? 0;
+
 /** 소유 건물 하나를 AI 가 보는 값 (TUNE.nobleChoice): 새 돈의 기대 주간 수익률 y, 좋아하는 종류 1레벨 공사비 평균 level */
 export interface OwnerView { y: number; level: number }
-const viewCache = new WeakMap<World, { tick: number; m: Map<number, OwnerView> }>();
+const viewCache = new WeakMap<World, { step: number; m: Map<number, OwnerView> }>();
 
 /**
- * 새 돈의 기대 수익률 (AI 판단, TUNE.nobleChoice 1, 틱마다 처음 물을 때 정한다). 지분 값(세계 규칙)은 그대로 두고 귀족·소유 건물이 판단에만 쓴다.
+ * 새 돈의 기대 수익률 (AI 판단, TUNE.nobleChoice 1, 하루(step)마다 처음 물을 때 정한다). 지분 값(세계 규칙)은 그대로 두고 귀족·소유 건물이 판단에만 쓴다.
  * - 새 레벨 수익률 r: 그 왕국 민간 건물(주인이 있는 레벨) 중 그 소유 건물이 좋아하는 종류(favours: 저택은 땅 건물, 금융가는 그 밖)의
  *   주간 배당 추정(profitEma × 7 × (1 − 준비금 몫) × 주인 레벨 ÷ 레벨) 합 ÷ (주인 레벨 × 1레벨 공사비) 합. 1레벨 공사비 평균이 level.
  * - 기대 수익률 = (받는 배당·지대 이동평균 × 7 + r × (금고 + 낸 공사비 + level)) × 주인 몫 ÷ (가진 레벨 값 + 금고 + 낸 공사비 + 저택은 지대 × 52 + level).
@@ -555,7 +563,7 @@ const viewCache = new WeakMap<World, { tick: number; m: Map<number, OwnerView> }
  */
 export function ownerViews(w: World): Map<number, OwnerView> {
   const c = viewCache.get(w);
-  if (c && c.tick === w.tick) return c.m;
+  if (c && c.step === stepOf(w)) return c.m;
   const costs = new Map<string, number>();
   const costOf = (kid: number, typeId: string): number => {
     const key = `${kid}|${typeId}`;
@@ -620,7 +628,7 @@ export function ownerViews(w: World): Map<number, OwnerView> {
     const y = value > 0 ? ((Math.max(0, o.profitEma) * TICKS_PER_WEEK + r * (idle + level)) * net) / value : 0;
     m.set(o.id, { y, level });
   }
-  viewCache.set(w, { tick: w.tick, m });
+  viewCache.set(w, { step: stepOf(w), m });
   return m;
 }
 

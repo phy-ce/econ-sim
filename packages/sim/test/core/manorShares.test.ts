@@ -3,7 +3,8 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { TICKS_PER_WEEK, TUNE, createWorld, moneyIdentity, step, totalMoney } from '../../src/index';
 import type { World } from '../../src/index';
-import { sellManorUnits, updateFunds } from '../../src/finance';
+import { ownerViews, sellManorUnits, treasuryTarget, updateFunds } from '../../src/finance';
+import { lawSteer } from '../../src/policy';
 import { FLOW } from '../../src/kingdoms';
 import { addFund, fundOf } from '../../src/pops';
 import { firstDiff } from '../helpers';
@@ -97,6 +98,56 @@ describe('저택 지분', () => {
 
   it('같은 시드는 같은 결과를 낸다 (저장/불러오기 포함)', () => {
     expect(147 % TICKS_PER_WEEK).toBe(0);
+    const a = createWorld(42);
+    while (a.tick < 200) step(a);
+    const want = JSON.stringify(a);
+    let b = createWorld(42);
+    while (b.tick < 100) step(b);
+    b = JSON.parse(JSON.stringify(b));
+    while (b.tick < 147) step(b);
+    b = JSON.parse(JSON.stringify(b));
+    while (b.tick < 200) step(b);
+    const got = JSON.stringify(b);
+    if (got !== want) expect.fail(firstDiff(JSON.parse(got), JSON.parse(want)) ?? "다름");
+  });
+});
+
+// 저택 지분 고침 (AI 판단, TUNE.nobleChoice·manorSellCap·lawSteer, DESIGN 9.3): 돈을 만들거나 없애지 않고 저장/불러오기에도 결정적인가, 차가운 시작 금융가의 값
+describe('저택 지분 고침', () => {
+  const keys = ['nobleChoice', 'manorSellCap', 'lawSteer'] as const;
+  const old: Record<string, unknown> = {};
+  beforeAll(() => { for (const k of keys) old[k] = TUNE[k]; Object.assign(TUNE, { nobleChoice: 1, manorSellCap: 1, lawSteer: 1 }); });
+  afterAll(() => { Object.assign(TUNE, old); });
+
+  it('켜도 화폐 장부가 맞다 (2년, 매일)', () => {
+    const w = createWorld(7);
+    const m0 = moneyIdentity(w);
+    let worst = 0, at = 0, steered = false;
+    for (let d = 0; d < 720; d++) {
+      step(w);
+      steered ||= w.kingdoms.some((k) => lawSteer(w, k.id));
+      const x = drift(w, m0);
+      if (x > worst) { worst = x; at = w.tick; }
+    }
+    expect(worst, `가장 큰 어긋남 ${at}일`).toBeLessThan(TOL);
+    expect(steered).toBe(true);
+  });
+
+  it('가진 것이 없는 금융가는 새 레벨 수익률로 보고, 금고 목표는 1레벨 공사비 이상이다', () => {
+    const w = createWorld(7);
+    for (let d = 0; d < 60; d++) step(w);
+    const f = w.buildings.find((b) => b.typeId === 'finance')!;
+    for (const b of w.buildings) if (b.owners?.[f.id]) delete b.owners[f.id];
+    f.cash = 0; f.profitEma = 0;
+    w.constructions = w.constructions.filter((k) => !k.funders?.[f.id]);
+    w.tick++;
+    const v = ownerViews(w).get(f.id)!;
+    expect(v.level).toBeGreaterThan(0);
+    expect(v.y).toBeGreaterThanOrEqual(0);
+    expect(treasuryTarget(w, f)).toBeCloseTo(v.level, 6);
+  });
+
+  it('같은 시드는 같은 결과를 낸다 (저장/불러오기 포함)', () => {
     const a = createWorld(42);
     while (a.tick < 200) step(a);
     const want = JSON.stringify(a);

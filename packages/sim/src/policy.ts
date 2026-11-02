@@ -1,6 +1,6 @@
 import { GOODS, LAW_TECH, TICKS_PER_WEEK, TUNE } from './data';
 import { logEvent } from './economy';
-import { weeklyOutputValue } from './finance';
+import { stepOf, weeklyOutputValue } from './finance';
 import { INVEST_LAWS, TAX_LAWS, WELFARE_LAWS } from './types';
 import type { GoodId, InvestLaw, Kingdom, LawChange, PopClass, TaxLaw, WelfareLaw, World } from './types';
 import { welfareWeekly } from './welfare';
@@ -62,13 +62,13 @@ export function financeRatio(w: World, kingdomId: number): number {
 
 /**
  * 민간 공사 돈줄을 금융가 먼저로 (TUNE.lawSteer 1, AI 판단, finance.ts chooseFunders financeFirst): AI 왕국(플레이어가 아닌 왕실)의 금융가 자산 비율이
- * 투자법 다음 단계 기준(investThreshold)에 못 미치면 true. 투자법을 넓히려는 AI 의 목표(ai.ts chooseTaxLaw)와 맞춘다. 틱마다 처음 물을 때 정한다
+ * 투자법 다음 단계 기준(investThreshold)에 못 미치면 true. 투자법을 넓히려는 AI 의 목표(ai.ts chooseTaxLaw)와 맞춘다. 하루(step)마다 처음 물을 때 정한다
  */
-const steerCache = new WeakMap<World, { tick: number; m: Map<number, boolean> }>();
+const steerCache = new WeakMap<World, { step: number; m: Map<number, boolean> }>();
 export function lawSteer(w: World, kingdomId: number): boolean {
   if (!TUNE.lawSteer) return false;
   let c = steerCache.get(w);
-  if (!c || c.tick !== w.tick) { c = { tick: w.tick, m: new Map() }; steerCache.set(w, c); }
+  if (!c || c.step !== stepOf(w)) { c = { step: stepOf(w), m: new Map() }; steerCache.set(w, c); }
   let v = c.m.get(kingdomId);
   if (v === undefined) {
     const k = w.kingdoms.find((x) => x.id === kingdomId);
