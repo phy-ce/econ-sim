@@ -3,6 +3,7 @@ import { TICKS_PER_WEEK, TUNE } from './data';
 import { companyById } from './economy';
 import { basketCostAt } from './market';
 import type { Kingdom, Pop, Region, WelfareLaw, World } from './types';
+import { BUDGET_STEPS } from './types';
 
 // ---------------------------------------------------------------- 복지 (최저 생활수준 보장)
 //
@@ -44,7 +45,7 @@ function dayIncome(p: Pop, r: Region): number {
   return v;
 }
 
-const STEPS = 5;
+const STEPS = BUDGET_STEPS;
 
 /**
  * 매일: 복지를 주고, 무리·단계별 필요액(Kingdom.welfareNeed)을 갱신한다. 하루 소득 이동평균을 갱신하기 전에 부른다 (tick.ts)

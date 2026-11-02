@@ -469,8 +469,8 @@ export function scaleBonus(level: number): number {
  * - peasantKeepWeeks: 소작농이 들고 있는 저축 상한 (생활비 + 세금의 주 수). 넘는 돈은 그 지역 저택 금고로 간다
  * - manorTargetMult: 저택이 거두는 양을 앉은 귀족의 필요로 묶는다 (market.ts manorNeed). 0 이면 끔 (peasantKeepWeeks 를 넘는 몫을 다 거둔다).
  *   0 보다 크면 저택은 앉은 귀족 1몫의 하루 몫(shareWage)이 목표(그 지역 민간 전문가 임금 × manorTargetMult)에 모자란 만큼 × 앉은 몫 합까지만 하루에 거둔다
- * - manorGentrySeats: 저택의 하급 귀족 자리 = 상급 귀족 자리 × manorGentrySeats ÷ 100. 0 이면 끔 (일자리 없는 하급 귀족이 다 앉는다, 저택 레벨이 그만큼 커진다)
- * - manorShares: 1 = 저택 지분 (귀족만 가지는 지분 회사, 사고·팔고·되사고·사람을 따라간다). 0 = 앉은 귀족 몫 (finance.ts manorSharesOn)
+ * - manorGentrySeats: 저택의 하급 귀족 자리 = 상급 귀족 자리 × manorGentrySeats ÷ 100. 0 이면 끔 (일자리 없는 하급 귀족이 다 앉는다, 저택 레벨이 그만큼 커진다). manorShares 1 이면 효과 없음 (하급 귀족은 저택에 앉지 않는다)
+ * - manorShares: 1 = 저택 지분 (귀족만 가지는 지분 회사, 사고·팔고·되사고·사람을 따라간다). 0 = 앉은 귀족 몫 (finance.ts payHolders·updateManorShares·sellManorUnits, market.ts nobleInvest)
  * - manorBuyScope: 귀족이 지분을 사는 저택의 범위 ('world' 어느 저택이든, 'kingdom' 같은 왕국, 'region' 자기 지역). 수익률이 가장 높은 곳을 산다 (AI 판단)
  * - manorInvestSplit: 1 = 귀족이 저택 지분과 금융가 지분을 수익률 비율로 나눠 산다, 0 = 수익률이 높은 쪽에 다 산다 (AI 판단)
  * - absenteeShare: 저택·금융가가 자기 지역 밖 건물에서 받는 배당 중 그 건물 지역 저택으로 가는 비율 (0 = 끔)
@@ -602,7 +602,7 @@ export const TUNE = {
   // 2026-11-02 기본 1 (20년 × 시드 1·2 × salt 0..3, wt-manor 743c8c6: 5·10·15·20년차 세전 총생산 평균 512/520/571/671 대 0 의 498/497/536/622, salt 띠는 겹침. 근거 DESIGN 11)
   manorInvestSplit: 1,
   // 부재 지주 몫 (2026-11-02 사용자 결정 "다른 지역 배당 디버프", DECISIONS 7-44): 저택·금융가가 자기 지역 밖 건물에서 받는 배당의 이 비율은 그 건물 지역의 저택으로 간다 (finance.ts payDividends). 0 = 끔
-  absenteeShare: 0,
+  absenteeShare: 0, // 끔: manorShares 켬(97c1bc5) 뒤 10%·20% 다시 비교 안 함, DECISIONS 7-44 결정 대기 4
   // 저택 지분 고침 (AI 판단, wt-manor 2026-11-02, 진단 .tmp/manor-diag/RESULT.md: 지분을 켜면 금융가가 차가운 시작에 갇혀 투자법이 넓어지지 않는다). 0 = 끔 (4509ec3 전 동작, samecheck 같음).
   // manorSellCap 0 / 0.5 / 1 비교에서 0.5 (20년 8회 모두 왕국 2 투자법이 5년차 기술자·10년차 노동자, 20년차 대륙 세전 총생산 최솟값이 가장 높음. 근거 DESIGN 11)
   nobleChoice: 1,
@@ -754,7 +754,7 @@ export const TUNE = {
   aiWagePremium: 1,
   // 왕실 국영 건물의 지역 웃돈 (2026-11-02 wt-admin, AI 판단): > 0 이면 AI 왕실이 매주 지역마다 그 지역 정부 건물(행정청·건축사무소·학교)의 직종 충원율이
   // ADMIN_STAFFED 아래면 웃돈을 바로 바깥 소득 × STATE_HIRE_PULL 에 맞추고, 차 있으면 바깥 소득과 같은 국영 임금까지 PREMIUM_STEP 씩 내린다 (웃돈 0 ~ 이 값, 이 값 = 웃돈 상한).
-  // 바깥 소득 = 그 지역 시장 임금과 다음 중 큰 쪽: 노동자·농부는 소작 1인 소득, 하급 귀족은 그 지역 저택의 하급 귀족 1인 몫 (ai.ts adjustStatePremium, Company.statePremium,
+  // 바깥 소득 = 그 지역 시장 임금과 다음 중 큰 쪽: 노동자·농부는 소작 1인 소득, 하급 귀족은 그 지역 저택의 하급 귀족 1인 몫 (manorShares 1 이면 0) (ai.ts adjustStatePremium, Company.statePremium,
   // 그 지역 국영 임금 = 시장 임금 × 단계 배율 × (1 + 웃돈), finance.ts applyStateWages). 0 = 끔. 2026-11-02 기본 1 (후보 1·2·3 비교, 총생산이 가장 높은 1, 근거: DESIGN 11, 보고서 2026-11-02-admin)
   aiStatePremium: 1,
   aiMixedMethods: 0, // 1 = 건물 전체를 바꿀 수 없을 때 같은 지역에 더 나은 방식 1~2레벨을 따로 짓는다 (세계 규칙이 바뀌어 사용자 결정 필요, DECISIONS 7-21)

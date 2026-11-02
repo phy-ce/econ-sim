@@ -21,7 +21,7 @@ export const OWNERS: Owner[] = ['capitalist', 'aristocrat'];
 /** 일자리 직종 (빅토리아3: 소유주도 건물의 일자리다) */
 export type Skill = 'unskilled' | 'farmer' | 'skilled' | 'expert' | 'gentry' | Owner;
 export const SKILLS: Skill[] = ['unskilled', 'farmer', 'skilled', 'expert', 'gentry', 'capitalist', 'aristocrat'];
-/** 하층 일자리 (노동자·농부): 자격 없이 귀족·자본가 말고 누구나 들어갈 수 있다 */
+/** 하층 일자리 (노동자·농부): 자격 없이 상급 귀족·자본가 말고 누구나 들어갈 수 있다 (TUNE.manorShares 이면 하급 귀족도 못 들어간다, labor.ts isOwnerClass) */
 export const LOWER_JOBS: Skill[] = ['unskilled', 'farmer'];
 export const isLowerJob = (s: PopClass): boolean => s === 'unskilled' || s === 'farmer';
 

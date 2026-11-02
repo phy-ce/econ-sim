@@ -300,7 +300,7 @@ export function createWorld(seed = 1, opts: CreateWorldOptions = {}): World {
     }
     b.exp = 1;
   }
-  // 시작 건물에 앉지 못한 하급 귀족은 저택에서 일하며 시작한다
+  // 시작 건물에 앉지 못한 하급 귀족은 저택에서 일하며 시작한다 (저택 지분 TUNE.manorShares 이면 저택 하급 귀족 자리가 0 이라 실업으로 시작한다)
   for (const o of w.buildings.filter((x) => x.typeId === 'manor')) {
     const free = findPop(w, o.regionId, 'gentry', 0);
     const room = slots(o, 'gentry');

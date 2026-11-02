@@ -98,7 +98,7 @@ export function subsistenceWage(w: World, r: Region): number {
 
 /**
  * 소유 건물(저택·금융가)에서 직종 s 한 사람이 받는 하루 배당·지대 추정: 받은 배당의 이동평균 × 1명 몫 ÷ 앉은 사람의 몫 합
- * (붐비는 자리일수록 낮다. 저택은 귀족 1몫·하급 귀족 TUNE.gentryShare 몫, economy.ts shareWage)
+ * (붐비는 자리일수록 낮다. 저택은 귀족 1몫·하급 귀족 TUNE.gentryShare 몫, economy.ts shareWage. TUNE.manorShares 이면 저택은 0 (지분 주인에게 간다))
  */
 export function dividendWage(b: Building, s: Skill): number {
   return shareWage(b, s);
@@ -380,7 +380,7 @@ export interface LabourCell { jobs: number; willing: number; qualified: number; 
  * - 자리: 그 지역 임금 자리(배당 자리·소작지 제외)의 채울 수 있는 자리 (fillable, 채용과 같은 규칙). 이익 이동평균(profitEma)이 음수인 생산 건물은
  *   빈자리를 세지 않는다 (재직자만): 손해 보는 건물은 사람을 더 찾지 않는다 (빅토리아3 BUILDING_PROFIT_TARGET_TO_HIRE_EMPLOYEES 와 같은 생각)
  * - 오려는 사람: 그 직종 재직자 + 자격 있는 실업자 + 다른 자리에서 일하는 자격자 × switchShare(지금 소득, wageOf(s)) ÷ switchMax.
- *   자격은 채용(laborMarket)과 같다: 노동자·농부 자리는 귀족·자본가 말고 누구나, 그 밖은 그 직종 pop 과 그 자격(quals)을 가진 사람
+ *   자격은 채용(laborMarket)과 같다: 노동자·농부 자리는 isOwnerClass(상급 귀족·자본가, TUNE.manorShares 이면 하급 귀족도) 말고 누구나, 그 밖은 그 직종 pop 과 그 자격(quals)을 가진 사람
  */
 export function labourTable(w: World, r: Region, local: Building[], pops: Pop[], comp: Map<number, Company>, tenant: number, wageOf: (s: Skill) => number, curves?: Record<Skill, WillingCurve>): Record<Skill, LabourCell> {
   const out = {} as Record<Skill, LabourCell>;
@@ -559,7 +559,7 @@ export function marketWageTargets(w: World, regionId: number): Record<Skill, Wag
 
 /**
  * 바깥 소득 (TUNE.wageTarget = 1 의 기준): 시작 임금 규칙(한 칸 아래 직종 × switchPremium, 노동자·농부는 소작 1인 소득 × switchPremium)과
- * 그 지역 배당 자리(저택·금융가, 그 직종 자리가 있는 곳)의 그 직종 1인 몫 × switchPremium 중 큰 값 (하급 귀족은 저택 몫이 바깥 소득이다)
+ * 그 지역 배당 자리(저택·금융가, 그 직종 자리가 있는 곳)의 그 직종 1인 몫 × switchPremium 중 큰 값 (TUNE.manorShares 0 이면 하급 귀족은 저택 몫이 바깥 소득이다. 켜면 저택 자리 소득이 0 이다)
  */
 export function outsideWage(wages: Record<Skill, number>, s: Skill, tenant: number, local: Building[]): number {
   let v = startWage(wages, s, tenant);

@@ -5,7 +5,7 @@
 - 폴더: `C:\Users\phyju\Desktop\Coding_Desk\2026\estera economy sim`
 - 저장소: https://github.com/phy-ce/econ-sim (main). 검증된 병합마다 푸시한다(2026-10-19 사용자 지시).
 - 작업 규칙: `CLAUDE.md`. 경제 규칙 요약: `docs/DESIGN.md`. 빅토리아3 근거: `docs/VIC3_REFERENCE.md`.
-- 사용자 결정 대기: `docs/overhaul/12_DECISIONS_NEEDED.md`(Q1~Q20)와 `docs/DECISIONS.md`. 지금 답을 기다리는 것은 아래 0-1030 절 0b′ 의 "사용자 답 대기" 줄, 0-1102 의 `tenantSlack` 메모, 0-1102e 의 플레이어 왕실 국영 웃돈·하급 귀족 시작 임금 (DECISIONS 7-42), 0-1102i 의 이익집단 확률 규칙·선거 보정치·지분 끌림 크기 (DECISIONS 7-45, 단계 0 만 구현), 0-1102f 의 목표 임금 규칙 확인 (DECISIONS 7-43, 기본 켬; 7-41 W1 은 이것이 대신함), 0-1102-welfare9 의 복지 상한 (DECISIONS 7-47, 기본 끔), 0-1102-fix10 의 정산 소수 레벨 (DECISIONS 7-48, 급하지 않음), 0-1102h 의 저택 지분 (DECISIONS 7-44: AI 고침과 함께 기본 켬, 정책 안 F3 는 만들지 않음). 화면 작업자에게 넘길 것: `docs/UI_CHANGES.md` 맨 위 "0. 지금 할 일".
+- 사용자 결정 대기: `docs/overhaul/12_DECISIONS_NEEDED.md`(Q1~Q20)와 `docs/DECISIONS.md`. 지금 답을 기다리는 것은 아래 0-1030 절 0b′ 의 "사용자 답 대기" 줄, 0-1102 의 `tenantSlack` 메모, 0-1102e 의 플레이어 왕실 국영 웃돈·하급 귀족 시작 임금 (DECISIONS 7-42), 0-1102f 의 목표 임금 규칙 확인 (DECISIONS 7-43, 기본 켬; 7-41 W1 은 이것이 대신함), 0-1102-welfare9 의 복지 상한 (DECISIONS 7-47, 기본 끔), 0-1102-fix10 의 정산 소수 레벨 (DECISIONS 7-48, 급하지 않음), 0-1102h 의 저택 지분 (DECISIONS 7-44: AI 고침과 함께 기본 켬, 정책 안 F3 는 만들지 않음, 부재 지주 몫은 결정 대기 4). 화면 작업자에게 넘길 것: `docs/UI_CHANGES.md` 맨 위 "0. 지금 할 일".
 - 클라우드 세션(claude.ai/code)으로 이어서 할 수 있다. 규칙은 CLAUDE.md "클라우드 세션"을 본다.
 - 옛 세션 기록: `docs/log/` (2026-10-25 이전 HANDOFF 절은 `docs/log/HANDOFF_2026-10-18_to_10-25.md`, 날짜별 UI 기록도 여기). 다른 문서의 "HANDOFF 0-ind3"·"HANDOFF 0-aifix" 같은 옛 절 참조는 그 파일에 있다.
 
@@ -16,7 +16,7 @@
 - 골든: 규칙 판 7, `d0e2c18828d042b7` (전 판 6 `c7fb7c00ef46d24c`, 커밋 2eafd94). 바뀐 까닭: 기본값 `settleCap` 1 (wt-fix10), `manorShares` 1 + `nobleChoice` 1·`manorSellCap` 0.5·`lawSteer` 1 (wt-manor). `welfareCap` 0 과 이익집단 층은 결과를 바꾸지 않는다.
 - 확인 한 번 (wt-batch2 e44d68c 기본값, `cli/settlediag.ts` 5년 × 시드 1): 저택·금융가 금고가 음수인 날 0, settleCap 으로 못 낸 돈 해마다 0, 정산에서 낼 돈 2년차 156만 (모두 금고 안에서 냄), 모아 낸 착공 0·5·0·0·5 (착공 183·203·224·251·374), 연 총생산 297·464·528·577·707 백만, 화폐 어긋남 1.7e-15 이하. wt-fix10 보고서 (main 9ba5acc + settleCap 1, 저택 지분 끔) 의 같은 시드 1~5년차 못 낸 돈 0·166·1,914·706·847 천과 달리 이 조건에서는 0 이었다 (조건이 달라 까닭은 확인 못 함, 모아 내기가 드물었다). 20년·다른 시드는 돌리지 않았다.
 - 검증: typecheck (sim + client + encyclopedia), test:core 27파일 100개 (e44d68c). 클라이언트 코드는 건드리지 않았다.
-- 남은 것: premerge, main 병합·푸시. 사용자 결정 대기는 위 머리 줄 목록.
+- 남은 것: premerge, main 병합·푸시. 새 기본값 묶음 (settleCap 1 + manorShares 1 + 고침 셋) 의 20년 × 시드 1·2 비교는 안 했다 (settleCap 은 저택 지분 끔, manorShares·고침 행은 settleCap 0 에서 고름). DESIGN 11장 `settleCap`·`manorShares` 행에 "재검증 필요 (조건 바뀜: wt-batch2 에서 둘이 같이 기본 켬)". 사용자 결정 대기는 위 머리 줄 목록.
 
 ## 0-1102-uiapi. 2026-11-02: wt-uiapi (UI_CHANGES 3장의 읽기 전용 sim 요청 + 보고서 소작농 라벨)
 - 바뀐 것 (sim, 읽기 전용): `marketWageTargets(w, regionId): Record<Skill, WageTarget> | null` (`labor.ts:549`, index `index.ts:15`, 타입 `WageTarget = { target, lo, hi, jobs, willing }` `labor.ts:501`·`index.ts:16`). `updateMarketWages` 의 지역 하나 셈을 `moveRegionWages` (`labor.ts:507`) 로 빼고, `updateMarketWages` 와 `marketWageTargets` 가 같이 쓴다 (`marketWageTargets` 는 지역 임금표 사본에 돌린다. 위 직종의 아래 끝은 아래 직종이 그날 움직인 뒤 값으로, `updateMarketWages` 와 같다). `TUNE.wageMarket` 0, `wageTarget` ≠ 2, 지역이 없거나 `Region.wages` 가 없으면 null. 규칙은 그대로다.
@@ -28,7 +28,7 @@
 - 검증: typecheck (sim + client + encyclopedia), test:core 24파일 81개. 골든 해시 c7fb7c00ef46d24c (`cli/golden.ts`) 가 이력 마지막(규칙 판 6) 과 같음. 클라이언트 코드는 고치지 않았다.
 
 ## 0-1102-welfare9
-2026-11-02, 브랜치 `wt-welfare9` (main 9ba5acc 에서), 이슈 #9 (복지법 하나가 왕실 국고를 비운다). 합치지 않았다.
+2026-11-02, 브랜치 `wt-welfare9` (main 9ba5acc 에서), 이슈 #9 (복지법 하나가 왕실 국고를 비운다). wt-batch2 로 합침 (9effe91).
 - 측정 (지금 규칙, 새 CLI `cli/welfmon.ts`: 0b levers `m.welfareLaw.*` 조건 = 플레이어 왕국에 0일 복지법 강제·단계 3, 30일마다 국고·빚·한도·복지·세입·생활수준 한 줄, 결과 `.tmp/wt/welfare9/.tmp/welfare9/*.jsonl`, 해마다 표 `.tmp/welfare9/yearly.py`): 5년 × 시드 1 × salt 0 에서 구빈법·보편 보장은 첫 달에 국고 1,200만을 다 쓰고 (그달 복지 1,240만, 필요액 달 4,600만 = 세금·관세의 약 90배), 임금 보조는 9달째 국고 0. 5년차 빚 ÷ 한도 구빈 1.09 / 임금 1.13 / 보편 1.14, 복지 없음은 국고 1,200만 → 6,690만·빚 0. 시드 2 도 같은 모양 (구빈·보편 첫 달, 임금 9달째 국고 0, 5년차 빚 ÷ 한도 1.25 / 1.16 / 1.28, 복지 없음 5,820만). 구빈·보편에서도 소작농 생활수준은 1.00~1.05 (국고가 빈 뒤 지급이 필요의 2~5%).
 - 바뀐 것: `TUNE.welfareCap` (기본 0 = 끔, 골든 해시 c7fb7c00ef46d24c 가 main 규칙 판 6 과 같음). 켜면 하루 복지 합 ≤ 지난주 세입 ÷ 7 × welfareCap × 단계 ÷ 5 (`welfare.ts welfareCapDaily`, `payWelfare`·`welfareWeekly` 가 쓴다). 사전 `welfare` 항목에 손잡이 줄과 식, 같은 항목의 바꾸는 날 수 자리표시가 `{0}` (목표 생활수준 표를 가리켰다) → `{1}` (lawDays). `cli/report.py` LAB 에 welfareY·taxY·welTax 이름. VIC3_REFERENCE '복지 지급과 국고' 절 (지급 식은 확인 못 함).
 - 비교 (켬): DECISIONS 7-47, DESIGN 11장 `welfareCap` 행, 보고서 2026-11-02-welfare9 (`tools/reports/public/data/`, 해마다 값은 `.tmp/welfare9/y/`). 0.5 (단계 × 10%), 단계 3: 구빈·임금·보편 × 시드 1·2 여섯 실행 모두 빚 0, 5년차 국고 4,780만~5,550만 (복지 없음 5,820만·6,690만), 복지 ÷ 세금·관세 0.34 → 0.53. 단계 5 (시드 1): 0.5 국고 4,680만, 1 은 1,950만. 0.25 / 1 (단계 3): 6,060만 / 4,040만. 소작농 생활수준은 그대로 1.00~1.04, 임금 보조 노동자 생활수준은 복지 없음보다 조금 높다 (5년차 1.40·1.46 대 1.23·1.25). 켜면 AI 왕국이 보편 보장을 켜기 시작한다 (10실행 중 6, 빚 0). 끄면 `welfmon` 결과가 지금 main 과 같다 (구빈 시드 1 60달 줄이 같음).
@@ -41,7 +41,7 @@
 - 바뀐 것: `TUNE.settleCap` (915ab53 에서 기본 0 으로 넣고 골든 c7fb7c00ef46d24c 같음 확인, 다음 커밋에서 기본 1). 규칙 한 줄: "레벨을 더 받은 쪽은 금고에 있는 돈까지만 돌려준다." 진단 흐름 `settle.*`·`settleShort.*`·`settleN`·`settleCap.*` (kingdoms.ts FLOW), 진단 `cli/settlediag.ts` (lowprio, 해마다 한 줄, report.py 가 읽는다). 시험 `test/core/settle.test.ts` (60:40 모아 낸 레벨, 금고 0 아래로 안 감·돈의 합 그대로). `test/helpers.ts stateFlags` 가 저택·금융가 금고 ≥ 0 을 다시 판정한다 (무역소 금고는 유한한지만). DESIGN 8장·9.3·11장 `settleCap` 행, 사전 `owner-treasury`, DECISIONS 7-29.
 - 숫자 (main 9ba5acc + 915ab53, 20년 × 시드 1·2, 한 번에 한 프로세스, 보고서 2026-11-02-fix10): 저택·금융가 금고가 음수인 날 345·204 → 0·0 (최저 −401,825·−438,438 → 0). 연 총생산 20년 평균 비 1.05·1.08, 민간 레벨 1.03·1.04 (해마다 −11%~+38%, 1·5·10·15·20년차 값은 DESIGN 11장).
 - 남은 것: 덜 가진 쪽이 받지 못한 돈 20년 1,735만·1,223만, 차액을 낸 정산 100·114 → 294·277번. 잃는 사람 없는 다른 길(레벨을 소수까지 나눔)은 DECISIONS 7-48 사용자 결정. 무역소 금고 음수(시드 1 settleCap 0 에서 9일, 최저 −4,762)는 따로다 (원인 확인 못 함, 장기 시험 meta.ownerCashNeg 가 계속 센다). 장기 시험(`npm run test:long`)은 두 시드를 병렬로 돌려 이번에는 돌리지 않았다 (CPU 제한).
-- 합칠 때: 기본 1 이라 골든 해시가 바뀐다 (premerge 마지막에 main 을 합친 상태로 `npm run golden:update`). 화면: 넘길 것 없음.
+- 골든: wt-batch2 에서 규칙 판 7 d0e2c18828d042b7 로 갱신함 (2eafd94). 화면: 넘길 것 없음.
 - 검증: typecheck, test:core 25파일 82개 (아래 커밋에서).
 
 ## 0-1102k. 2026-11-02: wt-batch1 (wt-par 비교 실행 자원 + wt-uidocs UI_CHANGES 감사)
@@ -58,15 +58,15 @@
 - 숫자 (main 93bc0b0 코드, 20년 × 시드 1·2, 전제, 보고서 2026-11-02-ig0, 해마다 표는 INTEREST_GROUPS.md 12장): 1~3년차 농민이 가장 크다 (47·41%), 지주 25~30% (10년차까지), 자본가 9·11% → 20년차 35·44% (귀족·전문가의 금융가 지분), 지주 14·18%. AI 가 바꾼 법 21·22번의 바뀔 확률 평균 64·58%, 실패했을 기대 수 7.6·9.2번. 생활수준 항 배율 50 → 25 (자본가가 한도 ±15 에 자주 닿음), 지분 끌림 분모 1년 소득 → 1년 생활비 (소득 이동평균이 주간 배당에 출렁여 해마다 14 ↔ 27% 로 오감). 둘 다 비교 실행 아님.
 - 검증: typecheck, test:core 25파일 85개 (`VITEST_MAX_THREADS=2`), samecheck 5개 모두 main 93bc0b0 기준 해시와 같음.
 - 화면: UI_CHANGES 2-88 (정치 탭, 낮은 우선순위, 바뀔 확률은 단계 2 전에는 안 보임). 클라이언트는 안 건드림.
-- 남은 것: 사용자 확인 (DECISIONS 7-45: 8장 확률 규칙, 선거 보정치의 계층 지위 0.05 / 0.2 / 1, 지분 끌림 50 / 250, 지식인·생활수준 항·근거 없는 입장·특성 대응). 확인 뒤 단계 1 (특성 스위치, 법 바꾸기 기록 상태) → 단계 2 (법이 바뀔 확률, AI) → 단계 3 (투표법 명령, 가문 지도자). main 에 합치지 않음 (premerge 대기).
+- 남은 것: 사용자 답 받음 (DECISIONS 7-45 세 번째 답, 3dfe2c0: 확률 규칙 "이대로, 모든 법에", 계층 지위 0.05 / 0.2 / 1·지분 끌림 50 / 250 그대로; 지식인·생활수준 항 25·근거 없는 입장·특성 대응은 단계 1 설계 때 기본값으로 진행하고 근거 칸에 "근거 없음"). 다음: 단계 1 (특성 스위치, 법 바꾸기 기록 상태) → 단계 2 (법이 바뀔 확률, AI) → 단계 3 (투표법 명령, 가문 지도자). wt-batch2 로 합침 (d6a4ec4), main 은 premerge 대기.
 
 ## 0-1102h. 2026-11-02: wt-manor (저택 지분 1단계 + AI 고침, 기본 켬)
 - **2026-11-02 고침 (4509ec3·97c1bc5 + 기본 켬 커밋)**: 진단 (`.tmp/manor-diag/RESULT.md`, e3f0b2e) 대로 지분을 켜면 금융가가 3년차에 차가운 시작에 갇혀 투자법이 넓어지지 않았다. AI 판단만 셋 더했다 (DESIGN 9.3 "지분 고침"): `nobleChoice` 1 (`finance.ts ownerViews`·`choiceYield`, 금고 목표 바닥 1레벨 공사비 `treasuryTarget`), `manorSellCap` 0.5 (`market.ts manorRanks`), `lawSteer` 1 (`policy.ts lawSteer` → `chooseFunders` financeFirst). 하루 안 캐시는 `finance.ts beginStep`(tick.ts step 맨 앞)으로 묶는다: 틱 번호로 묶었더니 주간 처리에서 잰 값이 다음 날 앞부분에 남아 저장/불러오기 뒤 결과가 달라졌다 (시험 `test/core/manorShares.test.ts` 셋 더함). 끈 상태(셋 0)는 samecheck 5개 같음 (97c1bc5).
   - 거르기 12년 × 시드 1 × salt 0 (4509ec3, 캐시 고치기 전, 명세 `docs/overhaul/MANORFIX_SPECS.json` probe12·probe12b, 결과 `.tmp/manor-fix/p12a.jsonl`·`p12b.jsonl`, 요약 `psum.py`): 12년차 왕국 2 / 3 민간 레벨 대조 697 / 814, 켬 354 / 476, 안 1 (nobleChoice + cap 1) 603 / 515, 안 2 (lawSteer) 460 / 659, 안 1 + 2 797 / 554, cap 0.5 466 / 652, cap 0 328 / 705, cap 2 343 / 587. 하나만으로는 한 왕국만 투자법 문을 넘는다.
   - 20년 × 시드 1·2 × salt 0..3 (97c1bc5, PAR 4, 명세 specs, 결과 `.tmp/manor-fix/y20.jsonl`, salt 평균 `y20avg.jsonl`, 요약 `ysum.py`, 보고서 2026-11-02-manorfix·-k2·-k3): 대륙 세전 총생산 10·15·20년차 대조 615/868/1,200, 고침 없이 켬 (743c8c6 n20 on_s) 520/571/671, 켬 + 고침 (cap 0.5) 603/816/1,095. cap 0 / 1 은 평균이 띠 안에서 같고 최솟값이 낮다 (20년차 587 / 753 대 801). 숫자 DESIGN 11 `manorShares`·`nobleChoice`·`manorSellCap`·`lawSteer` 행.
-  - **기본 켬**: `manorShares` 1, `nobleChoice` 1, `manorSellCap` 0.5, `lawSteer` 1 (data.ts). 사전 `manor-shares`·`shares`·`owner-treasury`·`ai-tax-law` 고침 (실험 목록에서 셋을 뺐다, `manor-shares` 의 부재 지주 몫 자리 {2} → {3} 고침). DESIGN 3.2·4·9.3·11, DECISIONS 7-44, UI_CHANGES 0장 12b·2-87 상태. 골든 해시가 바뀐다 (합친 뒤 `npm run golden:update`). `manorBuyScope`·`manorInvestSplit`·`absenteeShare` 행은 "재검증 필요".
+  - **기본 켬**: `manorShares` 1, `nobleChoice` 1, `manorSellCap` 0.5, `lawSteer` 1 (data.ts). 사전 `manor-shares`·`shares`·`owner-treasury`·`ai-tax-law` 고침 (실험 목록에서 셋을 뺐다, `manor-shares` 의 부재 지주 몫 자리 {2} → {3} 고침). DESIGN 3.2·4·9.3·11, DECISIONS 7-44, UI_CHANGES 0장 17·2-87 상태 (wt-batch2 에서 12b → 17). 골든 해시: wt-batch2 에서 규칙 판 7 로 갱신함 (2eafd94). `manorBuyScope`·`manorInvestSplit`·`absenteeShare` 행은 "재검증 필요".
   - 약점: 상급 귀족 생활수준이 대조보다 해마다 2~4 낮다, 왕국 2 20년차 372 (대조 520), 12년차 대륙 604 (대조 694), 하급 귀족 실업 80% 대. 정책 안 F3 (투자법 비율에서 소작지 수확 빼기)와 지분 값에 지대 넣기(2단계)는 만들지 않고 DECISIONS 7-44 에 적었다.
-  - 검증: typecheck, test:core 25파일 88개 (기본 켬 뒤 다시). main 에 합치지 않음 (premerge 대기), 푸시 안 함.
+  - 검증: typecheck, test:core 25파일 88개 (기본 켬 뒤 다시). wt-batch2 로 합침 (e44d68c), 골든 규칙 판 7 (2eafd94).
 - 사용자 결정 (DECISIONS 7-44): 저택 = 귀족만 가지는 지분 회사, 하급 귀족은 노동자 자리에 "아예 못 감", 가문은 나중, "다른 지역 배당 디버프", 다른 지역·왕국 저택도 수익률로 산다.
 - 코드 (모두 `TUNE` 스위치 뒤, 끄면 samecheck 5개 같음: a6fd0cb 대비, main 81494a1 병합 뒤 대비): `manorShares` (finance.ts 저택 지분 절: payHolders·issueManorUnits·initManorShares·unitYield·sellManorUnits·updateManorShares, market.ts nobleInvest, economy.ts manorGentrySeats·shareWage, labor.ts isOwnerClass, production.ts updateOwnership, staffing.ts·outlook.ts 일손 셈), `absenteeShare` (finance.ts payDividends), `manorBuyScope`, `manorInvestSplit` (기본 1, AI). 시험 `test/core/manorShares.test.ts`, 래칫 표. 진단 `cli/manordiag.ts`, `cli/manorsum.py`, microcheck 절 n (귀족 하루 추적), lab 지표 gJobless·solGent·solArist·incGent·incArist·manorCash·manorNav·mflow.*.
 - 처음 결과 (고침 전, DESIGN 11 행, 보고서 2026-11-02-manor·-k1): 행정청 충원은 고친다 (플레이어 왕국 모든 해 1.00), 1~5년차 세전 총생산은 높지만 10년차 뒤 AI 왕국 둘의 성장이 대조의 절반이라 그때는 기본 끔 (원인은 위 진단·고침). 마이크로 (3년 × 시드 1, preset labor, base·two): 화폐 어긋남 1.5e-15~2.6e-15, 하급 귀족 1인 소득은 배당 몫으로, 귀족 소득의 55~92% 가 금고 돌려주기('기타').
@@ -152,7 +152,7 @@
 - `test/long/longRun.ts`: 판정은 20년 완주, 화폐 보존(해마다 최대·끝 < 1e-9), 매일 상태 값 범위(`test/helpers.ts stateFlags`, `test/core/ranges.test.ts`와 함께 씀)만 한다. 뺀 단언: 4단계 기술 연도 ≥ 7, 소작농→노동자 이동 > 0, 노동자 식량 최저 > 35%·평균 > 80%. 이 값들은 이제 데이터로 남는다 (era4Y, mob["peasant>unskilled"], foodUnskMin·foodUnskAvg·foodUnsk).
 - 데이터: `src/lab/metrics.ts` Collector가 해마다 쓰는 왕국별·대륙 줄을 `.tmp/test-data/long-<시드>.jsonl`에 남긴다 (첫 줄 meta: 커밋·dirty·음수 금고 날 수). `LONG_DATA=0`으로 끄고 `LONG_DATA_DIR`로 위치를 바꾼다. 보고서는 `python cli/report.py <id> ../../.tmp/test-data/long-1.jsonl ../../.tmp/test-data/long-2.jsonl`. `report.py` LAB에 라벨 4개를 더했다.
 - 비용 (bb28119, 이 PC): tsx 시드 1 20년에서 수집기 3.9초 ÷ step 48.8초 = 약 8%. vitest test/long 두 시드 병렬은 끔 54초, 켬 64~72초 (두 번 잼).
-- 알려진 문제 (판정 안 함, 콘솔·meta에서 셈): 민간 공사 완공 정산(`production.ts giveLevels`)이 약정 몫보다 레벨을 더 받은 저택·금융가의 금고를 확인하지 않고 차액을 빼서 금고가 음수가 된다 (시드 2, 226일, 저택 1046: 32만 → −25만). GitHub 이슈로 올리고 고칠지 정한다. 고치면 `stateFlags`의 건물 금고 검사를 `>= -1e-6`로 되돌린다.
+- 알려진 문제 (판정 안 함, 콘솔·meta에서 셈): 민간 공사 완공 정산(`production.ts giveLevels`)이 약정 몫보다 레벨을 더 받은 저택·금융가의 금고를 확인하지 않고 차액을 빼서 금고가 음수가 된다 (시드 2, 226일, 저택 1046: 32만 → −25만). GitHub 이슈로 올리고 고칠지 정한다. 고치면 `stateFlags`의 건물 금고 검사를 `>= -1e-6`로 되돌린다. → 2026-11-02 wt-fix10 (이슈 #10)에서 `settleCap` 1 로 고쳤고 `stateFlags` 가 저택·금융가 금고 ≥ 0 을 다시 판정한다 (0-1102-fix10).
 - 문서: `docs/overhaul/10_ARCHITECTURE.md`·`06_INDUSTRY_TECH.md`·`11_ROADMAP.md`·`12_DECISIONS_NEEDED.md`·`01_VISION.md`·`00_INDEX.md`·`docs/NUMBERS_SPEC.md` 8장·`.claude/agents/tester.md`의 `tier4 ≥ 7`·식량 하한 기준 문장에 시험에서 빠졌다고 적었다 (D10-S11은 이 지시로 답이 났다).
 
 ## 0-1101. 2026-11-01: 문서 정리 (`wt-docs`, 문서만, sim·client 코드 안 바꿈)

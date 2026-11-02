@@ -415,7 +415,7 @@ function fitReserves(w: World, c: Company): number {
 
 /**
  * 소유 건물 o 가 받은 배당·지대: KEEP_SHARE 는 o 의 금고에 남기고, 나머지를 나눈다.
- * 저택: 앉은 귀족·하급 귀족에게 몫(shareWeight × 인원)대로. 금융가: 먼저 성과급(TUNE.financeBonus)을 일하는 전문가에게, 나머지를 지분 수대로.
+ * 저택: 앉은 귀족·하급 귀족에게 몫(shareWeight × 인원)대로 (TUNE.manorShares 이면 저택도 지분 주인에게 지분 수대로, payHolders). 금융가: 먼저 성과급(TUNE.financeBonus)을 일하는 전문가에게, 나머지를 지분 수대로.
  * 받을 사람이 없으면 금고로
  */
 function payOwners(w: World, o: Building, amount: number, source:'dividends'|'rent' = 'dividends') {
@@ -549,6 +549,9 @@ const stepNo = new WeakMap<World, number>();
 export function beginStep(w: World) { stepNo.set(w, (stepNo.get(w) ?? 0) + 1); }
 export const stepOf = (w: World): number => stepNo.get(w) ?? 0;
 
+/** 저택 지대를 자산으로 세는 주 수 (AI 판단 TUNE.nobleChoice, ownerViews: 지대 × 7 × 이 값을 저택 자산에 넣는다) */
+export const RENT_ASSET_WEEKS = 52;
+
 /** 소유 건물 하나를 AI 가 보는 값 (TUNE.nobleChoice): 새 돈의 기대 주간 수익률 y, 좋아하는 종류 1레벨 공사비 평균 level */
 export interface OwnerView { y: number; level: number }
 const viewCache = new WeakMap<World, { step: number; m: Map<number, OwnerView> }>();
@@ -557,9 +560,9 @@ const viewCache = new WeakMap<World, { step: number; m: Map<number, OwnerView> }
  * 새 돈의 기대 수익률 (AI 판단, TUNE.nobleChoice 1, 하루(step)마다 처음 물을 때 정한다). 지분 값(세계 규칙)은 그대로 두고 귀족·소유 건물이 판단에만 쓴다.
  * - 새 레벨 수익률 r: 그 왕국 민간 건물(주인이 있는 레벨) 중 그 소유 건물이 좋아하는 종류(favours: 저택은 땅 건물, 금융가는 그 밖)의
  *   주간 배당 추정(profitEma × 7 × (1 − 준비금 몫) × 주인 레벨 ÷ 레벨) 합 ÷ (주인 레벨 × 1레벨 공사비) 합. 1레벨 공사비 평균이 level.
- * - 기대 수익률 = (받는 배당·지대 이동평균 × 7 + r × (금고 + 낸 공사비 + level)) × 주인 몫 ÷ (가진 레벨 값 + 금고 + 낸 공사비 + 저택은 지대 × 52 + level).
+ * - 기대 수익률 = (받는 배당·지대 이동평균 × 7 + r × (금고 + 낸 공사비 + level)) × 주인 몫 ÷ (가진 레벨 값 + 금고 + 낸 공사비 + 저택은 지대 × RENT_ASSET_WEEKS + level).
  *   주인 몫 = 1 − 금고 몫 [금융가는 × (1 − 성과급)]. 금고와 짓고 있는 공사는 새 레벨 수익률로 벌 돈으로 센다. level 한 개를 미리 넣어 두어
- *   가진 것이 없는 금융가(차가운 시작)는 r 로 본다. 저택의 지대(소작지 수확 × rentShare × 7)는 52주치를 자산에 넣어, 지분 값에 지대가 빠져 수익률이 부풀어 보이는 것을 판단에서 뺀다
+ *   가진 것이 없는 금융가(차가운 시작)는 r 로 본다. 저택의 지대(소작지 수확 × rentShare × 7)는 RENT_ASSET_WEEKS 주치를 자산에 넣어, 지분 값에 지대가 빠져 수익률이 부풀어 보이는 것을 판단에서 뺀다
  */
 export function ownerViews(w: World): Map<number, OwnerView> {
   const c = viewCache.get(w);
@@ -624,7 +627,7 @@ export function ownerViews(w: World): Map<number, OwnerView> {
     }
     const net = (1 - (KEEP_SHARE[o.typeId] ?? 0)) * (1 - (manor ? 0 : TUNE.financeBonus));
     const idle = Math.max(0, o.cash ?? 0) + (spent.get(o.id) ?? 0);
-    const value = lv + idle + rent * 52 + level;
+    const value = lv + idle + rent * RENT_ASSET_WEEKS + level;
     const y = value > 0 ? ((Math.max(0, o.profitEma) * TICKS_PER_WEEK + r * (idle + level)) * net) / value : 0;
     m.set(o.id, { y, level });
   }
@@ -755,7 +758,7 @@ export function treasuryTarget(w: World, o: Building): number {
 
 /**
  * 넘는 금고 돌려주기 (매주, TUNE.treasuryKeepWeeks 주, 0 이면 끔): 저택·금융가 금고가 목표(treasuryTarget)를 넘으면 넘는 돈의 TREASURY_RELEASE 를
- * 저택은 앉은 귀족·하급 귀족에게 몫(shareWeight × 인원)대로, 금융가는 지분 주인에게 지분 수대로 준다 (배당과 같은 나눔). 받을 사람이 없으면 그대로 둔다.
+ * 금융가와 지분을 켠 저택(TUNE.manorShares)은 지분 주인에게 지분 수대로, 지분을 끈 저택은 앉은 귀족·하급 귀족에게 몫(shareWeight × 인원)대로 준다 (배당과 같은 나눔). 받을 사람이 없으면 그대로 둔다.
  * 진단: main ca544ed 5년 × 시드 1·2에서 두 금고 합이 7,500만 → 1억 9,400만~2억 2,700만(전체 돈의 약 65%)으로 쌓였다
  */
 /**
@@ -802,7 +805,7 @@ export function financeIdle(w: World, o: Building): boolean {
 
 /**
  * 배당 (빅토리아3 방식): 건물마다 지난주 이익에서 준비금을 뺀 몫을 레벨 주인에게 레벨 수대로 나눈다.
- * 민간 건물의 레벨 주인은 저택·금융가(공사비를 낸 곳)이고, 그 몫은 거기 앉은 귀족·자본가의 소득이 된다 (일부는 그 금고로).
+ * 민간 건물의 레벨 주인은 저택·금융가(공사비를 낸 곳)이고, 그 몫은 지분 주인(지분을 끈 저택은 앉은 귀족)의 소득이 된다 (일부는 그 금고로).
  * 왕실 건물은 레벨이 모두 국가 것이라 이익이 국고에 남는다 (유보 자산만 정산한다).
  */
 export function payDividends(w: World, c: Company) {
@@ -908,7 +911,7 @@ export function paySalvage(w: World, lot: SalvageLot, amt: number) {
   if (c) { c.cash += amt; c.weekProfit += amt; c.ledger.sales += amt; } else w.fund += amt;
 }
 
-/** 소작지 현금 지대: 그 지역 저택에 앉은 귀족에게 준다 (배당처럼 일부는 저택 금고로). 받을 사람이 없으면 false */
+/** 소작지 현금 지대: 그 지역 저택에 준다 (TUNE.manorShares 이면 지분 주인에게, 아니면 앉은 귀족에게, 일부는 저택 금고로). 저택이 없거나 (지분을 끈 때) 앉은 사람이 없으면 false */
 export function payRent(w: World, regionId: number, amount: number): boolean {
   const manor = w.buildings.find((x) => x.regionId === regionId && x.typeId === 'manor');
   if (!manor) return false;
