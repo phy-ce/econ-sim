@@ -59,7 +59,8 @@ describe('예산 미리보기', () => {
       const real = k.lastBudget!.revenue - gov.lastLedger.mint - (k.lastBudget!.tariffs ?? 0);
       const err = (pre[s - 1] - real) / real;
       out.push(`단계 ${s}: 예상 ${pre[s - 1]} 실제 ${Math.round(real)} (${(err * 100).toFixed(1)}%)`);
-      expect(Math.abs(err), `세금 단계 ${s}`).toBeLessThan(0.08);
+      // 0.08 → 0.1 (2026-11-02 wt-wagespeed): 시장 임금이 맞는 임금 쪽으로 하루 차이의 10%씩 움직여(wageTarget 2) 한 주 뒤 소득세 바탕이 미리보기 때보다 더 바뀐다 (시드 42 단계 5 오차 8.4%)
+      expect(Math.abs(err), `세금 단계 ${s}`).toBeLessThan(0.1);
     }
     console.log(`budgetPreview 세금 단계: ${out.join(' / ')}`);
   });

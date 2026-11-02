@@ -482,7 +482,9 @@ export const WAGE_TILT = 0.75;
 
 /**
  * 지역 시장 임금 (TUNE.wageMarket = 1, 날마다 노동시장 앞에서): 지역·직종마다
- * 임금 × (1 + wageMarketRate × clamp((자리 − 오려는 사람) ÷ min(자리, 오려는 사람), −1, 1)). TUNE.wageMarketRateUp > 0 이면 오를 때(clamp > 0)만 그 속도.
+ * TUNE.wageTarget = 2 (기본): 임금 += wageTargetSpeed × (맞는 임금 − 임금) (clearingWage, 아래 끝 startWage, 위 끝 outsideWage × WAGE_TARGET_SPAN).
+ * = 1: 목표 = outsideWage × (1 + WAGE_TILT × clamp(쏠림, ±1)). = 0: 임금 × (1 + wageMarketRate × clamp((자리 − 오려는 사람) ÷ min(자리, 오려는 사람), −1, 1)),
+ * TUNE.wageMarketRateUp > 0 이면 오를 때(clamp > 0)만 그 속도.
  * 자리가 없으면 시작 임금 규칙(한 칸 아래 × switchPremium), 자격자가 아무도 없으면 움직이지 않는다. 안전 범위는 기본 임금의 MARKET_WAGE_RANGE 배.
  * 그다음 회사 임금표(Company.wages)를 대표값으로 맞춘다 (syncCompanyWages)
  */

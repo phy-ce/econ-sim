@@ -1,6 +1,14 @@
 {
  "reports": [
   {
+   "id": "2026-11-02-wagespeed",
+   "title": "목표 임금 (맞는 임금)",
+   "desc": "시장 임금이 일할 사람과 자리가 맞는 임금 쪽으로 날마다 차이의 일정 비율씩 움직인다 (wageTarget 2). ctl = 대조 (main 04bbc6d, 하루 0.25%), t2s05 = 위 끝 기본 임금 ×10·속도 0.05 (1차), t2cXX = 위 끝 바깥 소득 ×2·속도 0.XX (2차, 채택 t2c10). 20년 × 시드 1·2, .sN = salt N. wt-wagespeed 0f23b14",
+   "date": "2026-11-02",
+   "created": "2026-11-02T17:11:33",
+   "code": "ba4a3fea"
+  },
+  {
    "id": "2026-11-02-admin-k2",
    "title": "행정청 충원: AI 왕실 국영 웃돈 (왕국 2)",
    "desc": "같은 실행의 AI 왕국 2 줄, 채택 aiStatePremium 1 (p1)",

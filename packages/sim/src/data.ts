@@ -454,7 +454,7 @@ export function scaleBonus(level: number): number {
  *   0 = 실제로 쓴 돈만 (현금 0 이면 운영 자금도 0 으로 보여 주인이 채우지 않는다, d964485 까지의 동작)
  * - crownPrivatize: 비교용. 'all' 이면 AI 왕실이 생산 건물 모두에 민영화를 켠다 (기본 'off': 민영화는 플레이어가 켠다)
  * - taxCurve: 징수율 곡선. 'exp' = 1 − e^(−x), 'hyp' = x / (1 + x) (x = 행정청 한도 / 인구)
- * - wageMarket, wageMarketRate: 1 이면 지역·직종 시장 임금 (labor.ts updateMarketWages). 날마다 임금 × wageMarketRate × clamp((자리 − 오려는 사람) ÷ min(자리, 오려는 사람), −1, 1) 만큼 움직인다.
+ * - wageMarket, wageMarketRate: 1 이면 지역·직종 시장 임금 (labor.ts updateMarketWages). wageTarget 0 이면 날마다 임금 × wageMarketRate × clamp((자리 − 오려는 사람) ÷ min(자리, 오려는 사람), −1, 1) 만큼 움직인다.
  *   오려는 사람 = 재직자 + 자격 있는 실업자 + 다른 자리에서 일하는 자격자 × switchShare(지금 소득, 시장 임금) ÷ switchMax. 0 이면 회사 임금표와 AI 임금 판단 (ai.ts adjustWages)
  * - wageMarketRateUp: > 0 이면 시장 임금이 오를 때(자리 > 오려는 사람)만 wageMarketRate 대신 이 하루 속도 (0 = 끔)
  * - wageTarget, wageTargetSpeed: 시장 임금이 목표 임금 쪽으로 날마다 거리 × wageTargetSpeed 만큼 움직인다 (가격과 같은 꼴, labor.ts updateMarketWages).
@@ -544,15 +544,15 @@ export const TUNE = {
   // (labor.ts updateMarketWages, 날마다 임금 × wageMarketRate × clamp((자리 − 오려는 사람) ÷ min(자리, 오려는 사람), −1, 1)). AI 임금 판단(adjustWages)은 돌지 않는다 (상회 웃돈 ai.ts adjustPremium 만).
   // 0 = 그 전 규칙 (회사 임금표, AI 바닥·천장). 2026-11-02 사용자 "all 의 나머지를 넣어서" 로 기본 1 (근거: DESIGN 11, 보고서 2026-11-02-combo)
   wageMarket: 1,
-  // 시장 임금의 하루 속도 r (주에 최대 약 1.75%). 후보 0.0025 / 0.005 / 0.01 중 조합 비교(2026-11-02-combo)가 쓴 값 (DESIGN 11)
+  // 시장 임금의 하루 속도 r (주에 최대 약 1.75%, wageTarget 0 일 때만 쓴다). 후보 0.0025 / 0.005 / 0.01 중 조합 비교(2026-11-02-combo)가 쓴 값 (DESIGN 11)
   wageMarketRate: 0.0025,
   // 시장 임금이 오를 때만 쓰는 하루 속도 (시제품, 세계 규칙, 사용자 결정 대기 DECISIONS 7-41): > 0 이면 자리 > 오려는 사람일 때 wageMarketRate 대신 이 값.
-  // 0 = 끔 (오르내림 같은 속도 wageMarketRate). 후보 0.01 (2026-11-02 wt-wagelag 진단 .tmp/y1/RESULT.md W1). 근거: DESIGN 11
+  // 0 = 끔 (오르내림 같은 속도 wageMarketRate). wageTarget 0 일 때만 쓴다 (기본 wageTarget 2 가 대신한다). 후보 0.01 (2026-11-02 wt-wagelag 진단 .tmp/y1/RESULT.md W1). 근거: DESIGN 11
   wageMarketRateUp: 0,
-  // 시장 임금을 목표 임금 쪽으로 (2026-11-02 사용자 "수요-공급 차에 따라서 숫자가(하한/상한 수렴값은 존재함) 변하게"): 0 = 끔, 1 = 바깥 소득 기준 쏠림, 2 = 맞는 임금. 근거: DESIGN 11
-  wageTarget: 0,
-  // 목표 임금까지 거리 중 하루에 움직이는 비율 (가격 PRICE_SPEED 0.03 과 같은 꼴). 근거: DESIGN 11
-  wageTargetSpeed: 0.05,
+  // 시장 임금을 목표 임금 쪽으로 (2026-11-02 사용자 "수요-공급 차에 따라서 숫자가(하한/상한 수렴값은 존재함) 변하게", DECISIONS 7-43): 0 = 끔 (wageMarketRate 규칙), 1 = 바깥 소득 기준 쏠림 (비교용), 2 = 맞는 임금 (기본). 근거: DESIGN 11
+  wageTarget: 2,
+  // 목표 임금까지 거리 중 하루에 움직이는 비율 (가격 PRICE_SPEED 0.03 과 같은 꼴). 후보 0.03 / 0.05 / 0.1, 보고서 2026-11-02-wagespeed. 근거: DESIGN 11
+  wageTargetSpeed: 0.1,
   adminScale: 0.3,
   lossBuildsPerWeek: 0,
   lossTolerance: Infinity,
