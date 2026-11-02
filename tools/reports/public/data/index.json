@@ -1,9 +1,17 @@
 {
  "reports": [
   {
+   "id": "2026-11-02-churn7-ens",
+   "title": "다시 짓기 기다림 확인 묶음 (이슈 #7)",
+   "desc": "cli/lab.sh 20년 × 시드 1·2 × salt 0..3 (명세 docs/overhaul/REBUILD_SPECS.json, wt-churn7 71d064a). ctl = aiRebuildWait 0, rw52 = 52주 (기본). 대륙 줄",
+   "date": "2026-11-02",
+   "created": "2026-11-02T21:42:01",
+   "code": "ab261a0c"
+  },
+  {
    "id": "2026-11-02-churn7",
    "title": "짓고 허는 반복 (이슈 #7)",
-   "desc": "churndiag 20년 × 시드 1·2 (wt-churn7). 대조 = main 9ba5acc 규칙, 다시 짓기 기다림 aiRebuildWait: 생산 건물만 52·104주, 모든 종류 26·52·104주. quick2 = 지은 지 2년 안에 헐린 레벨, cycle = 짓기→헐기→짓기",
+   "desc": "churndiag 20년 × 시드 1·2 (wt-churn7). 대조 = main 9ba5acc 규칙, 다시 짓기 기다림 aiRebuildWait: 생산 건물만 52·104주, 모든 종류 26·52·104주. quick2 = 지은 지 2년 안에 헐린 레벨, cycle = 짓기→헐기→짓기 확인 묶음 (lab 20년 × 시드 1·2 × salt 0..3) 은 보고서 2026-11-02-churn7-ens",
    "date": "2026-11-02",
    "created": "2026-11-02T21:21:30",
    "code": "c7c8fa1a"
