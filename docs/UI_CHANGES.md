@@ -783,6 +783,7 @@ sim 변경 (wt-research):
 - 사용자 결정: 규칙 자체가 확인 대기다 (DECISIONS 7-43: 그대로 둘지, 위 끝 배율 `TUNE.wageTargetSpan`·속도 `wageTargetSpeed` 를 바꿀지. 2026-11-02 wt-span 비교에서 배율 1.5·3, 속도 0.2 모두 기본값보다 고르게 낫지 않아 2·0.1 그대로, DESIGN 11장 두 행, 보고서 2026-11-02-wagespan). 화면 설계는 규칙이 바뀌어도 같다 (목표·끝 값만 sim 이 준다). 7-42 결정 대기 1 이 (b) "플레이어 왕실에 정부 건물 지역 웃돈 손잡이"로 정해지면 그때 새 절을 쓴다.
 
 ### 2-87. 저택 지분 (wt-manor, DESIGN 9.3 `manorShares`·`absenteeShare`·`manorBuyScope`, 사전 `manor-shares`, DECISIONS 7-44)
+- sim 쪽 최소 수정 (2026-11-02, CLAUDE.md 예외: sim 기본값이 바뀌어 클라이언트 시험이 깨짐): `packages/client/test/ownerSummary.test.tsx:10~18` "marks the manor gentry position as receiving a share" 가 `TUNE.manorShares` 0 으로 돌게 했다 (기본 1 이면 하급 귀족이 저택에 앉지 않아 그 줄이 없다). 화면 작업자는 지분 표시(아래 1~4)를 넣을 때 이 시험을 지분 기준으로 바꾼다.
 - 상태: 2026-11-02 wt-manor 에서 `TUNE.manorShares` 기본 켬 (HANDOFF 0-1102h, DECISIONS 7-44, main 병합 뒤 적용). 0 으로 끄면 화면이 바꿀 것은 없다. 클라이언트 코드는 sim 작업자가 고치지 않았다.
 - sim:
   - 저택 지분은 금융가 지분과 같은 `Pop.fund` (`{ id: number[]; u: number[] }`, 건물 id 오름차순) 에 든다. 저택 id 와 금융가 id 는 겹치지 않는다. 한 pop 이 여러 저택(다른 지역·다른 왕국 포함)과 금융가 지분을 함께 가질 수 있다.
