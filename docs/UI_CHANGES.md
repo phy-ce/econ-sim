@@ -30,7 +30,7 @@
 - 2-78 코드 완료: officeLoad를 실제 투입량에 반영하고 사무소/그룹 가동 비율 표시. UI_DONE 참조.
 - 2-69(왕실 임금 읽기 전용)는 코드 완료 (`e1d700f`, 화면 미검증, UI_DONE).
 - 2-81 코드 완료: 방식 비교 wagesAt·왕국 지역 임금 범위·왕국 실업률, 왕실 읽기 전용. UI_DONE 참조.
-- **2-80 국영 임금 상세 식**: sim 준비됨(WageDrillJob.marketWage·premium). 다음 BudgetJobs의 지역 시장 임금 × 단계 식을 반영한다.
+- 2-80 코드 완료: 지역 시장 임금 × 단계, AI 웃돈은 있을 때만 식에 반영(2-84). UI_DONE 참조.
 
 사용자 요청
 0. **2-77 코드 완료**: 6bf2b2d 및 후속 최소크기 보강. UI_DONE·UI_STATUS의 헤드리스 확인 근거 참조.
@@ -49,7 +49,7 @@ sim 변경 반영 (main c952e65, wt-labor 병합: 지역 시장 임금·저축�
 9. **2-79 지역 시장 임금 표**: 지역 개요에 직종별 `Region.wages`·`wageAvg`·`stateWages`·실업 + 소작 1인 소득 (소작 줄만 sim 대기: `subsistenceWage` export).
 10. **2-75 공급 ÷ 수요**: sim 대기 풀림 (`projectedSD`·`currentSD`·`mainOutput`이 main에 들어왔다). 절 본문대로 진행.
 11. **2-83 재해 칩 (낮음)**: `quakeChance` 기본 0이라 지금은 안 보인다. 사건 열은 이미 나온다. 소작지 행·지역 머리 칩만.
-12. **2-84 국영 웃돈 (낮음, wt-admin)**: AI 왕실 지역만 국영 임금 = 시장 임금 × (1 + 웃돈) × 단계. 플레이어 왕실에는 없다. 2-80 툴팁·2-79 지역 표에 웃돈이 있으면 한 칸.
+12. **2-84 코드 완료**: 국영 임금 식에 웃돈이 있으면 표시. 별도 지역 표 열은 만들지 않음(선택 사항). UI_DONE 참조.
 
 정리
 13. **2-50 코드 완료**: 6c8119a (UI_DONE 참조).
@@ -1135,18 +1135,6 @@ sim 변경 (wt-research):
 - 완료 기준: 같은 날 표의 값이 `r.wages`·`r.wageAvg`·`r.stateWages`를 소수 둘째 자리로 반올림한 값과 같다. `TUNE.wageMarket = 0` 세계에서 창이 없다. 420×560 창에서 다섯 열이 넘치지 않는다 (ko/en). 다크 모드에서 실업 막대가 보인다. typecheck.
 - 사용자 결정: 필요 없음. 자리는 추천안이다: 지역 개요가 지역 사실을 모으는 곳이고 시장 임금은 지역 값이다. 노동 상세(`Workforce.tsx`)는 건물 하나의 일꾼 표라 지역 표를 넣을 자리가 아니다.
 
-### 2-80. 국영 임금 상세는 지역 시장 임금 × 단계 (main c952e65, DESIGN 7.3·9.2, sim 준비됨 (`WageDrillJob.marketWage`, wt-sim2))
-- 지금 화면: 재정 창 국영 임금 줄의 자세히 보기 (`FinancePanel.tsx:68` → `BudgetJobs.tsx:12`)가 1인/일 값과 식 툴팁 `기준 임금 × 임금 지수 × 단계`를 보인다. 값은 sim `drillWages` (`budget.ts:370~389`)의 `WageDrillJob.perHead`이고, 거기서 임금 지수 = `marketWages(w, 왕실 id)[s] ÷ baseWage` (`budget.ts:117`, `:380`) = 세계 전체 회사 고용 가중 평균 기준이다.
-- 실제 지급: 정부 건물은 그 건물 지역의 `Region.stateWages[s]` = round2(`Region.wages[s]` × 단계 배율) (`finance.ts:147~151`, `economy.ts:353`). 지역마다 다르다. 그래서 지금 상세의 1인/일·주간 값은 실제 지급과 다르다 (행 합과 줄 합의 차이는 `smoothing`으로 흡수되어 겉으로 드러나지 않는다).
-- sim 쪽 필요 (3장): `drillWages`가 `wageMarket` 1이면 행 건물 지역의 시장 임금으로 센다. `WageDrillJob`에 새 칸 `marketWage?: number` (= 그 행 지역 `Region.wages[s]`, 1인 하루 ƒ), `perHead` = `marketWage × stepMult` (단계 미리보기 `steps`도 같은 식), `wageIndex` = `marketWage ÷ baseWage` (호환용으로 남김). `budgetModel`의 `wageBase`·`firmBase`(`budget.ts:261~266`)도 같은 지역 임금으로.
-- 화면 (sim이 들어온 뒤):
-  1. `BudgetJobs.tsx:12` 식 툴팁: `j.marketWage !== undefined`이면 `{시장 임금} {marketWage} × {단계} {stepMult}` 한 줄. 없으면 지금 식 그대로 (`wageMarket` 0 세계).
-  2. 같은 툴팁의 "임금 지수" 줄은 `marketWage`가 있으면 뺀다.
-  3. 행 머리의 지역 이름은 이미 있다 (`FinancePanel.tsx:67` `region(row.regionId)`). 바꾸지 않는다.
-- 문자열: "시장 임금"/"Market wage" (`T.marketWage`), "단계"/"Stage" (`T.stage`). 새 문자열 없음.
-- 빼는 것: `marketWage`가 있을 때 식의 `baseWage × wageIndex` 부분.
-- 완료 기준: 정부 건물 한 곳의 1인/일이 그 지역 `Region.stateWages[s]`와 소수 둘째 자리까지 같다 (지금 단계). typecheck.
-
 ### 2-82. 저축과 부 이동 (main c952e65, DESIGN 5장 부 이동, DECISIONS 7-37·7-38, sim 준비됨 (`wealthDrivers`, wt-sim2))
 - sim에서 바뀐 것: 부 이동(`market.ts:1007 updateWealth`)의 소득 = 현금 소득 이동평균(`Pop.incomeEma`) + 그날 쓴 현물의 시장가. c952e65부터 하층(소작농·노동자·농부, `CLASS_DEFS[prof].stratum === 'lower'`)은 여기에 max(0, `savings` − 지금 단계 하루 생활비 × 7 × `wealthSavBuffer` 8) ÷ (`wealthSavWeeks` 52 × 7)을 더한다 (`:1012~1015`). 이 소득이 다음 단계 생활비의 102%를 넘으면 하루 최대 +0.03, 지금 단계의 98%에 못 미치면 하루 최대 −0.03.
 - 지금 화면: pop 상세(`BuildingPops.tsx:30~38`)에 부 단계(`:30`, `toFixed(1)`)와 저축(`:37`)은 있지만 생활비와 저축 몫이 없어 부가 왜 오르고 내리는지 숫자로 읽을 수 없다. 생활비 함수(`market.ts:953 basketCostAt`)는 `index.ts`가 내보내지 않는다.
@@ -1170,12 +1158,6 @@ sim 변경 (wt-research):
   2. 색은 `harvest-badge`의 나쁜 조건 색과 같은 계열 (다크 모드 구분).
 - 문자열: "일"/"d" (기존 날 단위 재사용). 종류 이름과 문장은 `quakeLabel`이 준다.
 - 완료 기준: `TUNE.quakeChance = 1` 개발 세계 2년차에 칩이 나오고 사건 열 문장과 같은 % · 남은 날. 0이면 칩 없음. typecheck.
-
-### 2-84. 국영 웃돈 (wt-admin, DESIGN 7.3·10장 `adjustStatePremium`, 사전 `ai-state-premium`, 낮은 우선순위)
-- sim: AI 왕실은 지역마다 정부 건물(행정청·건축사무소·학교) 직종마다 웃돈 `Company.statePremium[지역 id][직종]` (0~`TUNE.aiStatePremium`)을 둔다. 그 지역 `Region.stateWages[s]` = round2(`Region.wages[s]` × 단계 배율 × (1 + 웃돈)). 플레이어 왕실은 이 칸이 생기지 않는다 (AI 판단만, DECISIONS 7-42 결정 대기).
-- 예산 상세: `WageDrillJob.premium?: number` (새 칸, 웃돈이 0 이면 없음). `perHead` = `marketWage` × (1 + `premium`) × `stepMult`, `wageIndex` = `marketWage` × (1 + `premium`) ÷ `baseWage`. 플레이어 왕국의 상세에는 나오지 않는다.
-- 화면 (선택): 2-80 식 툴팁에서 `j.premium`이 있으면 `× (1 + {웃돈})` 한 칸을 더한다. 2-79 지역 시장 임금 표에서 다른 왕국 지역의 국영 임금이 시장 임금 × 단계보다 크면 그 웃돈 때문이다 (웃돈 열은 넣지 않아도 된다).
-- 문자열: "웃돈"/"Premium" (이미 있으면 그것). 완료 기준: typecheck.
 
 ## 3. sim 쪽 필요 사항 (Claude가 처리할 것, UI 작업자는 요청만)
 - **2-59 주 단위 수지 (요청됨, 2026-10-22):** `BuildingEcon`에 `week: { sales, tax, inputs, wages, profit }` (건물 `revenue`·`tax`·`inputCost`·`wageCost`의 이동평균 × 7, `profitEma`와 같은 기간). 들어오면 2-59-3 폭포 라벨을 `/주`로.

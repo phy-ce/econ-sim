@@ -1313,3 +1313,32 @@ ownershipAssets API로 소유 기관 소재지 기준 왕국/지역 막대, 내 
 - 코드 완료: 방식 비교 estimateMethod에 wagesAt(owner,typeId,world,regionId) 사용. 임금 요약은 Company.wages의 소수2자리 평균, 왕국 지역의 시장 임금 최소/최대(표시값이 같으면 하나), 왕국 pop만의 실업률. 국가 임금은 평균 라벨, 결측은 —. 왕실 슬라이더 없음. 머리 영역은 두 열 전체 폭.
 - 헤드리스 스크린샷 확인(1920×1080): C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/wages-region-summary-ko.png, wages-region-summary-en-dark.png. 최신 sim createWorld(42)→step14일 실제 값: 노동자 평균ƒ3.31/지역ƒ3.30~ƒ3.31, 본문418/scroll418·슬라이더0. 방식 비교 선택지의 실제 클릭·옛 저장 첫날 결측의 모든 경로는 화면 미검증. 검증용 세계는 별도 Edge 프로필에만 저장, 원래 저장은 estera-ui-before-regional-wage-check로 백업(2-79 검증 후 복원 예정).
 - 외국 임금999.12와 대규모 외국 실업 인구가 왕국 표에 섞이지 않고, 평균4.56789→4.57·실업25%·읽기 전용을 확인하는 KO/EN 회귀 추가.
+
+
+### 2-80. 국영 임금 상세는 지역 시장 임금 × 단계 (main c952e65, DESIGN 7.3·9.2, sim 준비됨 (`WageDrillJob.marketWage`, wt-sim2))
+- 지금 화면: 재정 창 국영 임금 줄의 자세히 보기 (`FinancePanel.tsx:68` → `BudgetJobs.tsx:12`)가 1인/일 값과 식 툴팁 `기준 임금 × 임금 지수 × 단계`를 보인다. 값은 sim `drillWages` (`budget.ts:370~389`)의 `WageDrillJob.perHead`이고, 거기서 임금 지수 = `marketWages(w, 왕실 id)[s] ÷ baseWage` (`budget.ts:117`, `:380`) = 세계 전체 회사 고용 가중 평균 기준이다.
+- 실제 지급: 정부 건물은 그 건물 지역의 `Region.stateWages[s]` = round2(`Region.wages[s]` × 단계 배율) (`finance.ts:147~151`, `economy.ts:353`). 지역마다 다르다. 그래서 지금 상세의 1인/일·주간 값은 실제 지급과 다르다 (행 합과 줄 합의 차이는 `smoothing`으로 흡수되어 겉으로 드러나지 않는다).
+- sim 쪽 필요 (3장): `drillWages`가 `wageMarket` 1이면 행 건물 지역의 시장 임금으로 센다. `WageDrillJob`에 새 칸 `marketWage?: number` (= 그 행 지역 `Region.wages[s]`, 1인 하루 ƒ), `perHead` = `marketWage × stepMult` (단계 미리보기 `steps`도 같은 식), `wageIndex` = `marketWage ÷ baseWage` (호환용으로 남김). `budgetModel`의 `wageBase`·`firmBase`(`budget.ts:261~266`)도 같은 지역 임금으로.
+- 화면 (sim이 들어온 뒤):
+  1. `BudgetJobs.tsx:12` 식 툴팁: `j.marketWage !== undefined`이면 `{시장 임금} {marketWage} × {단계} {stepMult}` 한 줄. 없으면 지금 식 그대로 (`wageMarket` 0 세계).
+  2. 같은 툴팁의 "임금 지수" 줄은 `marketWage`가 있으면 뺀다.
+  3. 행 머리의 지역 이름은 이미 있다 (`FinancePanel.tsx:67` `region(row.regionId)`). 바꾸지 않는다.
+- 문자열: "시장 임금"/"Market wage" (`T.marketWage`), "단계"/"Stage" (`T.stage`). 새 문자열 없음.
+- 빼는 것: `marketWage`가 있을 때 식의 `baseWage × wageIndex` 부분.
+- 완료 기준: 정부 건물 한 곳의 1인/일이 그 지역 `Region.stateWages[s]`와 소수 둘째 자리까지 같다 (지금 단계). typecheck.
+
+
+
+
+### 2-84. 국영 웃돈 (wt-admin, DESIGN 7.3·10장 `adjustStatePremium`, 사전 `ai-state-premium`, 낮은 우선순위)
+- sim: AI 왕실은 지역마다 정부 건물(행정청·건축사무소·학교) 직종마다 웃돈 `Company.statePremium[지역 id][직종]` (0~`TUNE.aiStatePremium`)을 둔다. 그 지역 `Region.stateWages[s]` = round2(`Region.wages[s]` × 단계 배율 × (1 + 웃돈)). 플레이어 왕실은 이 칸이 생기지 않는다 (AI 판단만, DECISIONS 7-42 결정 대기).
+- 예산 상세: `WageDrillJob.premium?: number` (새 칸, 웃돈이 0 이면 없음). `perHead` = `marketWage` × (1 + `premium`) × `stepMult`, `wageIndex` = `marketWage` × (1 + `premium`) ÷ `baseWage`. 플레이어 왕국의 상세에는 나오지 않는다.
+- 화면 (선택): 2-80 식 툴팁에서 `j.premium`이 있으면 `× (1 + {웃돈})` 한 칸을 더한다. 2-79 지역 시장 임금 표에서 다른 왕국 지역의 국영 임금이 시장 임금 × 단계보다 크면 그 웃돈 때문이다 (웃돈 열은 넣지 않아도 된다).
+- 문자열: "웃돈"/"Premium" (이미 있으면 그것). 완료 기준: typecheck.
+
+
+
+## 2026-11-02 2-80·2-84 국영 임금 계산 표시
+- 코드 완료: BudgetJobs는 marketWage가 있으면 시장 임금 × 단계만 표시하고, AI 국영 premium이 있으면 ×(1+웃돈) 추가. 지역 값이 없는 wageMarket0/옛 자료는 기본 임금 × 임금 지수 × 단계 식 유지. 화면 숫자는 소수2자리, 원래 계산값 불변.
+- 헤드리스 스크린샷 확인(1920×1080): C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/state-wage-regional-en-dark.png. 동부 삼림 행정청 하급 귀족700명, 1인ƒ4.00·Market wage4×Stage1. 직접 API 대조 perHead3.997182848716258/Region.stateWages4 → 표시값4.00 동일. AI 웃돈 및 지역 임금0 세계는 SSR 회귀만, 화면 미검증.
+- 클라이언트25파일66시험 통과(지역/웃돈식·옛 계산식 호환 포함). 루트 typecheck 통과. 이전 2-81 커밋9d61d99.
