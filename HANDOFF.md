@@ -18,14 +18,14 @@
   - 마이크로 흉작 충격 `microcheck --runs drought` (`economy.ts SCRIPTED_HARVESTS`, `--droughtcut`·`--droughtdays`), 표 `--sections w`. 시험 `test/core/wageLag.test.ts`.
 - 숫자: DESIGN 11장 `aiWagePremium`·`aiAdminWage`·`wageMarketRateUp` 행, 보고서 2026-11-02-wagelag (20년 × 시드 1·2 × salt 0..3, 명세 `docs/overhaul/WAGELAG_SPECS.json`). 대조 → A1+A2 세전 총생산 8회 평균 1·5·10·20년차 148/454/571/824 → 170/466/696/1,064. 결과 파일: `.tmp/wagelag/` (lab20.jsonl, y1_*.jsonl, micro/).
 - 남은 것: 가뭄 지역 국영 건축사무소는 A2 로 못 고친다 (국영 임금 단계가 왕국 하나). 행정청 충원 0 (세습 관료 이탈, 0b′ A4)은 그대로. 3~5년차 생산 레벨이 대조보다 적다. 국고·징수율이 15~20년차에 낮다. A1·A2 기본을 바꿔 골든 해시가 바뀐다 (합친 뒤 `npm run golden:update`). 화면: 따로 넘길 것 없음. 클라이언트는 `wagesAt` 을 부르지 않고 AI 상회 임금표를 보여 주지 않는다 (`Wages` 는 플레이어 회사 `me.wages`, CompanyPanel.tsx:325). 건물 임금 비용 `econ.day.wages` 는 웃돈이 든 실제 지급액이고, 회사 임금표 `Company.wages` (`syncCompanyWages`, `wagesAt` 의 고용 가중 평균)에도 웃돈이 들어간다. 사전 항목 `ai-wage-premium`.
-- 다음: premerge → main.
+- main 에 합침 (171fc43 fast-forward, 골든 규칙 판 4 52f9db6). typecheck·test:core 24파일·클라이언트 vitest 23파일 통과.
 
 ## 0-1102c. 2026-11-02: wt-cash (민간 회사 현금 0 함정, DECISIONS 7-40)
 - 원인: 운영 자금(`payDividends`)의 하루 운영비를 그날 실제로 쓴 돈으로 세서, 현금 0 인 상회는 임금·원료를 못 내 운영비도 0 으로 보이고 주인이 채우지 않았다 (`finance.ts:569`·`:572`, d964485).
 - 바뀐 것: `TUNE.firmCallPlan` 1 (기본, 0 = d964485 동작), `finance.ts opsDay` (흑자인 가동 중 생산 건물은 계획 운영비와 큰 쪽, DESIGN 9.3), 시험 `test/gate/firmcall.test.ts`, 마이크로 `cli/microcheck.ts --runs drain` (상회 현금을 720일부터 14일 동안 0 으로).
 - 숫자 (0991755, 해마다 값은 DESIGN 11장 `firmCallPlan` 행): 마이크로 drain 6년 × 시드 1~4, 끄면 4/4 가 3년차부터 끝까지 현금 0 (원료 충족 0%), 켜면 4/4 가 다음 주 정산에 운전자금을 받아 4년차 원료 충족 99~100%. 본 게임 5년 × 시드 1, 현금 < 1 인 (회사·날) 111 → 0.
 - 남은 것: 주인 금고(약정 뺀 돈)가 비면 그대로 굳는다. 적자 건물이 끌어내린 현금 0 은 막지 않는다. microA 발견 2 의 경로는 확인 못 함. 20년 비교는 하지 않았다 (값이 아니라 스위치, 다음 비교에 묶는다).
-- 다음: premerge → main.
+- main 에 합침 (e0499ef).
 
 ## 0-1102b. 2026-11-02 세션 끝 (사용자가 컴퓨터를 끔)
 - main c952e65 (+284cb52 UI 명세)까지 푸시됨: wt-labor 병합(0b′, 기준 임금 재계산, 지역 시장 임금, 마이크로 도구, S7·S5·S8·D2 기본 켬). 시험은 사용자 지시로 typecheck·test:core 만 돌렸다. 새 기본값 대 옛 main 확인 비교(20년 × 시드 1·2 × salt 0..3)는 뒤에 했다: 보고서 2026-11-02-newdefaults (5d355c5).
