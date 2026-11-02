@@ -1,6 +1,22 @@
 {
  "reports": [
   {
+   "id": "2026-11-02-admin4-k2",
+   "title": "행정청 평균 손익 (이슈 #4, AI 왕국 2)",
+   "desc": "같은 실행의 AI 왕국 2 줄: aiAdminValue 0 (ctl) / 1 (v1, 기본) / 2 (v2). 20년 × 시드 1·2 × salt 0..3",
+   "date": "2026-11-02",
+   "created": "2026-11-02T21:30:01",
+   "code": "b23df751"
+  },
+  {
+   "id": "2026-11-02-admin4",
+   "title": "행정청 평균 손익 (이슈 #4)",
+   "desc": "aiAdminValue 0 (ctl, main 93bc0b0 wagespan ctl) / 1 (v1, 평균 손익 + 마지막 레벨 남김, 기본) / 2 (v2, + 보통 세금 수준 환산). 20년 × 시드 1·2 × salt 0..3, 대륙 줄",
+   "date": "2026-11-02",
+   "created": "2026-11-02T21:30:00",
+   "code": "6eafa53f"
+  },
+  {
    "id": "2026-11-02-wagespan",
    "title": "맞는 임금의 위 끝 배율·하루 속도 비교",
    "desc": "wt-span (main 81494a1 + wageTargetSpan TUNE 키). ctl = span 2·속도 0.1 (기본), sp15 = span 1.5, sp3 = span 3, v20 = 속도 0.2. 20년 × 시드 1·2 × salt 0..3 (.sN = salt N), 대륙 줄. 덧붙인 지표 skRatio·lnsd6·lo6·adminSt1~3 은 lab 줄에서 계산",
