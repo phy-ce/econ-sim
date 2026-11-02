@@ -231,6 +231,8 @@ export interface Pop {
   /** 직전 틱 소비 묶음 충족률, 식량 충족률 */
   fulfillment: number;
   food: number;
+  /** ⑦ 남는 식량 (TUNE.grainSurplusCap > 0): 직전 틱 필요 밖으로 더 사 먹은 곡물 ÷ 식량 필요를 곡물로 채울 양 (0~grainSurplusCap). 끔이면 생기지 않는다 */
+  foodSurplus?: number;
   /** 직전 틱 생활수준 */
   sol: number;
   /** 직전 틱 인구 증감률 (연 %) */

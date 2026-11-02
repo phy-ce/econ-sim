@@ -364,7 +364,9 @@ function growthWith(p: Pop, sol0: number): number {
   const mild = clamp((STARVATION_LINE - p.food) / (STARVATION_LINE - SEVERE_STARVATION), 0, 1);
   const severe = clamp((SEVERE_STARVATION - p.food) / SEVERE_STARVATION, 0, 1);
   const birth = 1 - 0.35 * mild - 0.55 * severe, mortality = 1 + 0.3 * mild + 0.7 * severe;
-  return (birthRateAt(sol, p.literacy) * birth - mortalityAt(sol) * mortality) / DAYS_PER_MONTH;
+  // ⑦ 남는 식량 (TUNE.surplusGrowth): 더 먹은 비율 × surplusGrowth 를 해마다 증가율에 더한다 (끔이면 foodSurplus 가 없어 0)
+  const extra = p.foodSurplus ? (TUNE.surplusGrowth * p.foodSurplus) / DAYS_PER_YEAR : 0;
+  return (birthRateAt(sol, p.literacy) * birth - mortalityAt(sol) * mortality) / DAYS_PER_MONTH + extra;
 }
 
 /**

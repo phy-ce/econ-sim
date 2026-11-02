@@ -47,6 +47,9 @@ interface PopPlan {
   foodNeed: number;
   foodInKind: number;
   foodBuy: { good: GoodId; gi: number; qty: number; units: number }[];
+  /** ⑦ 필요 밖으로 더 사는 곡물 수량과 그 기준(식량 필요를 곡물로 채울 양, TUNE.grainSurplusCap). 끔이면 0 */
+  extraGrain: number;
+  grainBase: number;
 }
 
 /** 하루 장부: 주문, 판매 제안, 가계 구매 계획 */
@@ -57,9 +60,14 @@ export interface Book {
   plans: PopPlan[];
   /** 오늘 산 무역소 화물: 도착 시장(mkey)·산 무역소마다 하나로 합친다 (열쇠 = mkey × 1e9 + 무역소 id) */
   fresh: Map<number, Shipment>;
+  /** ⑦ 시장(mkey)별 필요 밖으로 더 사는 곡물 (TUNE.grainSurplusCap). 필요 주문이 다 찬 뒤 남는 물건만 받는다 (clearMarkets). 끔이면 비어 있다 */
+  extra?: Map<number, number>;
 }
 
 const GOOD_INDEX = Object.fromEntries(GOOD_IDS.map((g, i) => [g, i])) as Record<GoodId, number>;
+/** ⑦ 곡물 칸과 식량 필요 1단위를 곡물로 채우는 수량 (NEEDS 식량의 곡물 선택지 units) */
+const GRAIN_I = GOOD_INDEX.grain;
+const GRAIN_UNITS = NEEDS.find((n) => n.id === 'nourishment')!.options.find((o) => o.good === 'grain')!.units;
 /** 시장 (지역, 상품) 의 숫자 키 */
 const mkey = (regionId: number, g: GoodId) => regionId * GOOD_IDS.length + GOOD_INDEX[g];
 
@@ -432,7 +440,20 @@ export function collectOrders(w: World, book: Book) {
       goods[i] = fq * foodFrac + (all - fq) * restFrac;
     }
     for (const f of foodBuy) FOOD_Q[f.gi] = 0;
-    book.plans.push({ pop: p, basketCost, inKindValue, budget, goods, foodNeed, foodInKind, foodBuy });
+    // ⑦ 남는 식량 (TUNE.grainSurplusCap > 0): 곡물이 기본가보다 싸면 묶음을 다 사고 남는 돈으로 곡물을 더 산다 (필요량은 그대로)
+    let extraGrain = 0, grainBase = 0;
+    if (TUNE.grainSurplusCap > 0 && restFrac >= 1 && foodFrac >= 1) {
+      const pg = d.price[GRAIN_I];
+      const s = pg > 0 ? Math.min(TUNE.grainSurplusCap, GOODS.grain.basePrice / pg - 1) : 0;
+      if (s > 0) {
+        grainBase = foodNeed * GRAIN_UNITS;
+        const left = budget - cashCost;
+        extraGrain = Math.max(0, Math.min(grainBase * s, left / pg));
+        goods[GRAIN_I] += extraGrain;
+        if (extraGrain > 0) { const ek = p.regionId * NG + GRAIN_I; (book.extra ??= new Map()).set(ek, (book.extra.get(ek) ?? 0) + extraGrain); }
+      }
+    }
+    book.plans.push({ pop: p, basketCost, inKindValue, budget, goods, foodNeed, foodInKind, foodBuy, extraGrain, grainBase });
     const src = POP_SRC[p.prof] ?? `pop:${p.prof}`;
     for (let i = 0; i < NG; i++) {
       const q = goods[i];
@@ -771,6 +792,8 @@ export function clearMarkets(w: World, book: Book) {
   const postOf = new Map<number, Building>();
   for (const b of w.buildings) if (b.typeId === TRADING_POST) postOf.set(b.id, b);
   const buyFill: number[] = [];
+  /** ⑦ 더 사는 곡물의 체결률 (필요 주문이 다 찬 뒤 남는 물건 ÷ 더 사려는 양). 없는 시장은 buyFill 과 같다 */
+  const extraFill: number[] = [];
   for (const r of w.regions) {
     for (let gi = 0; gi < NG; gi++) {
       const g = GOOD_IDS[gi];
@@ -784,6 +807,13 @@ export function clearMarkets(w: World, book: Book) {
       }
       const sold = Math.min(mg.demand, offered);
       buyFill[mk] = mg.demand > 0 ? sold / mg.demand : 1;
+      // ⑦ 더 사는 곡물은 뒤 순서: 필요 주문(d0)을 먼저 채우고 남는 물건만 받는다 (전체 체결량 sold 는 같다)
+      const ex = book.extra?.get(mk) ?? 0;
+      if (ex > 0) {
+        const d0 = Math.max(0, mg.demand - ex);
+        buyFill[mk] = d0 > 0 ? Math.min(1, offered / d0) : 1;
+        extraFill[mk] = clamp((offered - d0) / ex, 0, 1);
+      }
       if (!lots) { mg.sold = sold; continue; }
       const sellFrac = offered > 0 ? sold / offered : 0;
       const p = mg.price;
@@ -855,7 +885,8 @@ export function clearMarkets(w: World, book: Book) {
     for (let i = 0; i < NG; i++) {
       const want = plan.goods[i];
       if (want <= 0) continue;
-      const q = want * (buyFill[base + i] ?? 1);
+      const ex = i === GRAIN_I ? plan.extraGrain : 0;
+      const q = ex > 0 ? (want - ex) * (buyFill[base + i] ?? 1) + ex * (extraFill[base + i] ?? 1) : want * (buyFill[base + i] ?? 1);
       const cost = q * d.price[i];
       spent += cost;
       got += cost;
@@ -869,6 +900,8 @@ export function clearMarkets(w: World, book: Book) {
     let fed = plan.foodInKind;
     for (const f of plan.foodBuy) fed += (f.qty * (buyFill[base + f.gi] ?? 1)) / f.units;
     p.food = plan.foodNeed > 0 ? Math.min(1, fed / plan.foodNeed) : 1;
+    // ⑦ 더 먹은 곡물 (체결된 만큼) ÷ 기준. 끔이면 칸을 만들지 않는다
+    if (TUNE.grainSurplusCap > 0) p.foodSurplus = plan.grainBase > 0 ? (plan.extraGrain * (extraFill[base + GRAIN_I] ?? 1)) / plan.grainBase : 0;
     updateWealth(p, d, plan);
   }
 }

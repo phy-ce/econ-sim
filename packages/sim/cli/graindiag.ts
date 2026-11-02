@@ -72,7 +72,7 @@ interface Acc {
   wageFarm: number; tenantInc: number; nw: number; beSigma: number; nbe: number;
   psdLv: number; lvAll: number; band: [number, number, number]; pending: number; lvMin: number;
   // 2026-11-02 wt-grainrule: 계층·총생산·다른 상품 (날마다 합)
-  popAll: number; popPeas: number; solPeas: number; popUnsk: number; solUnsk: number; gdp: number; lvProd: number;
+  popAll: number; surp: number; foodLow: number; popLow: number; popPeas: number; solPeas: number; popUnsk: number; solUnsk: number; gdp: number; lvProd: number;
   oS: Record<string, number>; oD: Record<string, number>; oP: Record<string, number>; wageUnsk: number;
 }
 const newAcc = (): Acc => ({
@@ -80,7 +80,7 @@ const newAcc = (): Acc => ({
   dPop: {}, dBld: {}, dOther: 0, S: 0, D: 0, sold: 0, pV: 0, Sema: 0, Dema: 0,
   lv: {}, utilLv: 0, rev: 0, inCost: 0, wageCost: 0, resv: 0, cap: 0, brokeMax: 0,
   wageFarm: 0, tenantInc: 0, nw: 0, beSigma: 0, nbe: 0, psdLv: 0, lvAll: 0, band: [0, 0, 0], pending: 0, lvMin: Infinity,
-  popAll: 0, popPeas: 0, solPeas: 0, popUnsk: 0, solUnsk: 0, gdp: 0, lvProd: 0, oS: {}, oD: {}, oP: {}, wageUnsk: 0,
+  popAll: 0, surp: 0, foodLow: 0, popLow: 0, popPeas: 0, solPeas: 0, popUnsk: 0, solUnsk: 0, gdp: 0, lvProd: 0, oS: {}, oD: {}, oP: {}, wageUnsk: 0,
 });
 const OTHER = ['food', 'tools', 'cloth', 'timber', 'fiber', 'liquor', 'meat', 'furniture'] as GoodId[];
 const add = (o: Record<string, number>, k: string, v: number) => { o[k] = (o[k] ?? 0) + v; };
@@ -138,7 +138,8 @@ function sample(a: Acc) {
   }
   a.lvMin = Math.min(a.lvMin, lvDay);
   for (const p of w.pops) {
-    a.popAll += p.size;
+    a.popAll += p.size; a.surp += (p.foodSurplus ?? 0) * p.size;
+    if (p.prof === 'peasant' || p.prof === 'unskilled' || p.prof === 'farmer') { a.popLow += p.size; a.foodLow += p.food * p.size; }
     if (p.prof === 'peasant') { a.popPeas += p.size; a.solPeas += p.sol * p.size; }
     else if (p.prof === 'unskilled') { a.popUnsk += p.size; a.solUnsk += p.sol * p.size; }
     const ib = p.incomeBreakdown;
@@ -175,7 +176,7 @@ function summarize(a: Acc) {
     psd: a.band[0] + a.band[1] + a.band[2] > 0 ? a.psdLv / (a.band[0] + a.band[1] + a.band[2]) : NaN,
     band: a.band.map((x) => (a.lvAll > 0 ? x / a.lvAll : 0)), pending: per(a.pending), lvMin: a.lvMin,
     peas: a.popAll > 0 ? a.popPeas / a.popAll : NaN, solPeas: a.popPeas > 0 ? a.solPeas / a.popPeas : NaN, solUnsk: a.popUnsk > 0 ? a.solUnsk / a.popUnsk : NaN,
-    pop: per(a.popAll), gdpY: per(a.gdp) * 360, lvProd: per(a.lvProd), wageUnsk: per(a.wageUnsk),
+    pop: per(a.popAll), surplus: a.popAll > 0 ? a.surp / a.popAll : 0, foodLow: a.popLow > 0 ? a.foodLow / a.popLow : NaN, gdpY: per(a.gdp) * 360, lvProd: per(a.lvProd), wageUnsk: per(a.wageUnsk),
     oSD: Object.fromEntries(OTHER.map((g) => [g, (a.oD[g] ?? 0) > 0 ? (a.oS[g] ?? 0) / a.oD[g] : NaN])),
     oP: Object.fromEntries(OTHER.map((g) => [g, per(a.oP[g] ?? 0)])),
   };
@@ -223,7 +224,7 @@ for (let i = 0; i < yearRows.length; i++) {
   const s = yearRows[i];
   const top = (o: Record<string, number>) => Object.entries(o).sort((x, y) => y[1] - x[1]).slice(0, 6).map(([t, v]) => `${t} ${k(v)}`).join(', ');
   console.log(`y${i + 1}  수요 pop: ${top(s.dPop)} | bld: ${top(s.dBld)} | 공급 bld: ${top(s.sBld)} | 방식 레벨: ${Object.entries(s.lvBy).map(([t, v]) => `${t} ${f(v, 1)}`).join(', ')} | 농부 임금 ${f(s.wageFarm)} 소작 1인 ${f(s.tenantInc)} | 소작 산출 ${k(s.tenantOut)}`);
-  console.log(`y${i + 1}  계층: 인구 ${k(s.pop)} 소작 비율 ${f(s.peas)} SoL 소작 ${f(s.solPeas)} 노동자 ${f(s.solUnsk)} 노동자 임금 ${f(s.wageUnsk)} | 세전 총생산(년) ${k(s.gdpY)} 생산 레벨 ${f(s.lvProd, 1)} | S/D·값 ${OTHER.map((g) => `${g} ${f(s.oSD[g])}/${f(s.oP[g])}`).join(' ')}`);
+  console.log(`y${i + 1}  계층: 인구 ${k(s.pop)} 소작 비율 ${f(s.peas)} 식량 하층 ${f(s.foodLow)} 남는 식량 ${f(s.surplus)} SoL 소작 ${f(s.solPeas)} 노동자 ${f(s.solUnsk)} 노동자 임금 ${f(s.wageUnsk)} | 세전 총생산(년) ${k(s.gdpY)} 생산 레벨 ${f(s.lvProd, 1)} | S/D·값 ${OTHER.map((g) => `${g} ${f(s.oSD[g])}/${f(s.oP[g])}`).join(' ')}`);
 }
 aiTrace.on = undefined;
 if (!FULL) restoreMicroScale();

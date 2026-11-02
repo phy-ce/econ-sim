@@ -110,7 +110,7 @@ export const TUNE_EXPERIMENTAL: TuneKey[] = ['subReturn', 'laborNet', 'officeRic
   // AI 수정 비교 (2026-10-22, 기본 0 = 지금 동작)
   'crownGdpReserve', 'financeIdle', 'laborStrict', 'welfareCutOff',
   // 곡물 S/D 세계 규칙 후보 (이슈 #11, DECISIONS 7-51, 기본 0 = 끔)
-  'wageFloorWeeks', 'tenantSellRef', 'grainEatElast', 'tenantKindSigma'];
+  'wageFloorWeeks', 'tenantSellRef', 'grainEatElast', 'tenantKindSigma', 'grainSurplusCap', 'surplusGrowth'];
 
 function showTune(v: unknown): number | string {
   if (typeof v === 'number') return Number.isFinite(v) ? v : '∞';
