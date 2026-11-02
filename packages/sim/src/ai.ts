@@ -1,11 +1,11 @@
 import { BUILDING_BY_ID, buildPointsOf, BUILDING_TYPES, EDUCATION_FLOOR, EDUCATION_RANGE, GOOD_IDS, GOODS, SKILL_DEFS, TECH_BY_ID, TICKS_PER_WEEK, TICKS_PER_YEAR, TRADING_POST, TUNE, getMethod, regionPerk, tradeEscrowPerLevel, tradeReserveOf } from './data';
 import { withEstimateCache, regionAvgWealth, regionPopulation, wageCostOf,
   availableMethods, ownBuildingAt, builderOf, canBuildType, disbanded, kingdomGdp, paysDividend, paysShare, companyById, constructionEstimate, creditLimit, depositFree, efficiency, estimateMethod, harvestFactor, hasBuilder, isGovernment, regionById, wagesAt, researchableTechs, roomFor, sellsShares, slots, mainOutput, projectedSD, currentSD,
-  FLOW_ZERO, harvestFactorEma, priceBounds, priceFormula,
+  FLOW_ZERO, harvestFactorEma, priceBounds, priceFormula, shareWage,
 } from './economy';
 import { BY_EMA } from './market';
 import { MAX_CONCURRENT_CONSTRUCTIONS, MAX_LEVELS_PER_PROJECT, applyCommand } from './commands';
-import { committedCost, favours, funderWeight, hasReserve, lawRevenue, ownerBuildings, ownerFunds, reserveCap, reserveOf, taxRates, treasuryFree } from './finance';
+import { applyStateWages, budgetMult, committedCost, favours, funderWeight, hasReserve, lawRevenue, ownerBuildings, ownerFunds, reserveCap, reserveOf, taxRates, treasuryFree } from './finance';
 import { privatizeLevel } from './production';
 import { policyStatus } from './policy';
 import { WAGE_LADDER, subsistenceWage } from './labor';
@@ -94,6 +94,8 @@ export function runAi(w: World) {
     if (c.isPlayer) continue;
     // 왕실은 세법과 정책 단계(정부 건물의 국영 임금 포함)를 정한다. 생산 건물 임금은 민간과 왕실 모두 같은 규칙으로 정한다
     if (c.state) { chooseTaxLaw(w, c); adjustBudget(w, c); }
+    // TUNE.aiStatePremium: 왕실은 정부 건물 일손이 모자라는 지역에 국영 임금 웃돈을 얹는다 (adjustStatePremium)
+    if (c.state && TUNE.aiStatePremium && TUNE.wageMarket) adjustStatePremium(w, c);
     // TUNE.wageMarket = 1: 임금은 지역 시장 임금이 정한다 (labor.ts updateMarketWages). AI 는 자리(가동률·증설·철거)만 정한다.
     // TUNE.aiWagePremium: 민간 상회는 사람이 빠지는 지역에 웃돈을 얹는다 (adjustPremium)
     if (!TUNE.wageMarket) adjustWages(w, c);
@@ -274,6 +276,60 @@ function adjustPremium(w: World, c: Company) {
     next[rid] = { off, emp, vac };
   }
   c.aiPremium = next;
+}
+
+/** TUNE.aiStatePremium: 일손이 모자란 정부 건물이 데려올 때 맞추는 국영 임금 ÷ 바깥 소득. switchPremium(1.1)보다 커야 사람이 옮겨 온다 (1.25 면 하루 1.25%, labor.ts switchShare). 근거 없음 */
+export const STATE_HIRE_PULL = 1.25;
+
+/**
+ * AI 왕실의 국영 건물 지역 웃돈 (TUNE.aiStatePremium, 매주, TUNE.wageMarket = 1). 지역마다 그 왕실의 정부 건물(행정청·건축사무소·학교: 켜져 있고 해산하지 않은 것)을 보고, 직종마다:
+ * - 바깥 소득 = 그 지역 시장 임금과 다음 중 큰 쪽: 노동자·농부는 소작 1인 소득, 하급 귀족은 그 지역 저택의 하급 귀족 1인 몫 (economy.ts shareWage).
+ *   (세습 관료제 행정청의 하급 귀족은 저택 몫과 비교해 떠난다: 저택 이익이 오르면 국영 임금의 2~3배가 된다, HANDOFF 0-1102e)
+ * - 그 직종 충원율(고용 ÷ 자리)이 ADMIN_STAFFED 아래면 웃돈을 데려올 목표(바깥 소득 × STATE_HIRE_PULL ÷ 웃돈 전 국영 임금 − 1)까지 바로 올린다
+ * - 차 있으면 지킬 목표(바깥 소득 ÷ 웃돈 전 국영 임금 − 1: 사람은 바깥 소득이 지금 소득의 switchPremium 배를 넘어야 떠난다)까지 PREMIUM_STEP 씩 내린다
+ * - 두 목표 모두 0 ~ TUNE.aiStatePremium (이 값이 웃돈 상한이다). 웃돈 전 국영 임금 = 시장 임금 × 단계 배율
+ * 정부 건물이 없는 지역의 웃돈은 지운다. 바꾼 웃돈은 바로 그 왕국 국영 임금에 넣는다 (finance.ts applyStateWages)
+ */
+function adjustStatePremium(w: World, c: Company) {
+  const k = w.kingdoms.find((x) => x.governmentId === c.id);
+  if (!k) return;
+  const emp = new Map<number, Record<Skill, number>>(), cap = new Map<number, Record<Skill, number>>();
+  for (const b of w.buildings) {
+    if (b.companyId !== c.id || b.level <= 0 || !b.active || disbanded(b) || !isGovernment(b.typeId)) continue;
+    let e = emp.get(b.regionId), n = cap.get(b.regionId);
+    if (!e || !n) { emp.set(b.regionId, (e = emptyRecord())); cap.set(b.regionId, (n = emptyRecord())); }
+    for (const s of SKILLS) { const sl = slots(b, s); if (sl > 0) { n[s] += sl; e[s] += b.employed[s]; } }
+  }
+  const mult = budgetMult(k, 'wages');
+  const prev = c.statePremium ?? {};
+  const next: Record<number, Record<Skill, number>> = {};
+  for (const rid of [...cap.keys()].sort((a, b) => a - b)) {
+    const r = regionById(w, rid);
+    const market = r.wages;
+    if (!market) continue;
+    const off = prev[rid] ? { ...prev[rid] } : emptyRecord();
+    const e = emp.get(rid)!, n = cap.get(rid)!;
+    let tenant = -1, manor: Building | undefined | null = null;
+    for (const s of SKILLS) {
+      if (!(n[s] > 0)) { off[s] = 0; continue; }
+      let outside = market[s];
+      if (isLowerJob(s)) { if (tenant < 0) tenant = subsistenceWage(w, r); outside = Math.max(outside, tenant); }
+      else if (s === 'gentry') {
+        if (manor === null) manor = w.buildings.find((x) => x.regionId === rid && x.typeId === 'manor');
+        if (manor) outside = Math.max(outside, shareWage(manor, 'gentry'));
+      }
+      const base = market[s] * mult;
+      if (!(base > 0)) { off[s] = 0; continue; }
+      // 모자라면 바로 데려올 목표로 (바깥 소득 × STATE_HIRE_PULL), 차 있으면 지킬 목표(바깥 소득과 같은 국영 임금)까지 PREMIUM_STEP 씩 내린다
+      const hire = clamp((outside * STATE_HIRE_PULL) / base - 1, 0, TUNE.aiStatePremium);
+      const keep = clamp(outside / base - 1, 0, TUNE.aiStatePremium);
+      if (e[s] / n[s] < ADMIN_STAFFED) off[s] = Math.max(off[s], hire);
+      else if (off[s] > keep) off[s] = Math.max(keep, off[s] - PREMIUM_STEP);
+    }
+    if (SKILLS.some((s) => off[s] > 0)) next[rid] = off;
+  }
+  c.statePremium = next;
+  applyStateWages(w, k);
 }
 
 function emptyRecord(): Record<Skill, number> {

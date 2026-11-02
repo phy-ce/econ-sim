@@ -148,7 +148,9 @@ export function applyStateWages(w: World, k: Kingdom) {
       if (r.kingdomId !== k.id) continue;
       const wages = ensureWages(w, r);
       const st = (r.stateWages ??= { ...wages });
-      for (const s of SKILLS) st[s] = round2(wages[s] * mult);
+      // AI 왕실의 지역 웃돈 (TUNE.aiStatePremium, ai.ts adjustStatePremium). 없으면 시장 임금 × 단계 배율
+      const prem = gov.statePremium?.[r.id];
+      for (const s of SKILLS) st[s] = round2(wages[s] * mult * (prem ? 1 + prem[s] : 1));
     }
     const mean = kingdomWageMean(w, k.id, (r) => r.stateWages ?? r.wages!);
     if (mean) for (const s of SKILLS) t[s] = round2(mean[s]);

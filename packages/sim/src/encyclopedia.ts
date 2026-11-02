@@ -35,7 +35,7 @@ import {
   DAILY_INTEREST, KEEP_SHARE, TREASURY_RELEASE, MINT_BASE, MINT_RATE, RESERVE_SHARE, kingdomLiteracy, researchPoints, adminCapacityOf, reserveCap, taxCapacity, taxRates,
   weeklyOutputValue,
 } from './finance';
-import { AI_JITTER, CHUNKS, INPUT_SUPPLY_MIN, MIXED_LEVELS, RAISE_FILL, RESERVE_FULL, RESERVE_STREAK, STARVE_FILL, TRIAL_PRICE, UTIL_FLOOR, SWITCH_MARGIN, SWITCH_MIN_WAGE_SHARE, LAW_COOLDOWN, LAW_SWITCH, WELFARE_COOLDOWN, WELFARE_SWITCH, OFFICE_BLOCK, OFFICE_GROWTH, STAFFING_HORIZON, SWITCH_COOLDOWN, ADMIN_STAFFED, PREMIUM_MAX, PREMIUM_STEP } from './ai';
+import { AI_JITTER, CHUNKS, INPUT_SUPPLY_MIN, MIXED_LEVELS, RAISE_FILL, RESERVE_FULL, RESERVE_STREAK, STARVE_FILL, TRIAL_PRICE, UTIL_FLOOR, SWITCH_MARGIN, SWITCH_MIN_WAGE_SHARE, LAW_COOLDOWN, LAW_SWITCH, WELFARE_COOLDOWN, WELFARE_SWITCH, OFFICE_BLOCK, OFFICE_GROWTH, STAFFING_HORIZON, SWITCH_COOLDOWN, ADMIN_STAFFED, PREMIUM_MAX, PREMIUM_STEP, STATE_HIRE_PULL } from './ai';
 import { budgetPreview } from './budget';
 import { ownershipAssets } from './policy';
 import { welfareIncome, welfareTarget, welfareWeekly } from './welfare';
@@ -754,6 +754,20 @@ export const ENCYCLOPEDIA: EncEntry[] = [
       },
     },
     related: ['market-wage', 'tenant-income', 'best-seat'], seenIn: [], source: ['ai.ts adjustPremium', 'economy.ts wagesAt'], design: ['7.3', '10'],
+  },
+  {
+    id: 'ai-state-premium', category: 'ai', title: t('국영 웃돈', 'State wage premium'),
+    rule: t('{0}가 0보다 크면 AI 왕실은 매주 지역마다 그 지역 정부 건물(행정청·건축사무소·학교)의 직종마다 웃돈을 정한다. 바깥 소득 = 그 지역 시장 임금과 다음 중 큰 쪽: 노동자·농부는 소작 1인 소득, 하급 귀족은 그 지역 저택의 하급 귀족 1인 몫. 충원율이 {1} 아래면 웃돈을 바로 바깥 소득 × {2} ÷ 웃돈 전 국영 임금 − 1로 올리고, 차 있으면 바깥 소득 ÷ 웃돈 전 국영 임금 − 1까지 {3}씩 내린다. 웃돈은 0~{0}. 그 지역 국영 임금 = 시장 임금 × 단계 배율 × (1 + 웃돈). 플레이어 왕실은 이 웃돈이 없다.', 'With {0} above 0 the AI crown sets a premium every week for each job of its government buildings (administration, construction office, school) in each region. Outside income = the larger of the regional market wage and: the regional tenant income for labourers and farmers, one gentry share of the regional manor for gentry. If staffing is below {1} the premium jumps to outside income × {2} ÷ pre-premium state wage − 1; when staffed it falls by {3} toward outside income ÷ pre-premium state wage − 1. The premium stays within 0–{0}. State wage there = market wage × step multiplier × (1 + premium). The player crown has no such premium.'),
+    formula: 'hire = clamp(outside × pull / (w_market × step) − 1, 0, max)',
+    params: [tune('aiStatePremium', '국영 웃돈 상한', 'State premium cap', 'pct'), p('충원 기준', 'Staffed at', () => ADMIN_STAFFED, 'pct'), p('데려오는 배율', 'Hiring pull', () => STATE_HIRE_PULL, 'x'), p('한 주 내림 폭', 'Weekly cut', () => PREMIUM_STEP, 'pct')],
+    live: {
+      pick: ['kingdom'], run: (w, ctx) => {
+        const k = kingdomOfCtx(w, ctx), c = companyById(w, k.governmentId);
+        if (!c?.statePremium) return {};
+        return { bars: Object.entries(c.statePremium).map(([rid, x]) => bar(regionLabel(w.regions.find((r) => r.id === Number(rid))!), r2(x.gentry), 'pct', Math.max(1, TUNE.aiStatePremium))) };
+      },
+    },
+    related: ['state-wages', 'ai-budget', 'ai-wage-premium', 'shares'], seenIn: [], source: ['ai.ts adjustStatePremium', 'finance.ts applyStateWages'], design: ['7.3', '10'],
   },
   {
     id: 'state-wages', category: 'labour', title: t('국영 임금과 임금 지수', 'State wages and the wage index'),
