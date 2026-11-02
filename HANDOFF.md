@@ -9,9 +9,16 @@
 - 클라우드 세션(claude.ai/code)으로 이어서 할 수 있다. 규칙은 CLAUDE.md "클라우드 세션"을 본다.
 - 옛 세션 기록: `docs/log/` (2026-10-25 이전 HANDOFF 절은 `docs/log/HANDOFF_2026-10-18_to_10-25.md`, 날짜별 UI 기록도 여기). 다른 문서의 "HANDOFF 0-ind3"·"HANDOFF 0-aifix" 같은 옛 절 참조는 그 파일에 있다.
 
+## 0-1102c. 2026-11-02: wt-cash (민간 회사 현금 0 함정, DECISIONS 7-40)
+- 원인: 운영 자금(`payDividends`)의 하루 운영비를 그날 실제로 쓴 돈으로 세서, 현금 0 인 상회는 임금·원료를 못 내 운영비도 0 으로 보이고 주인이 채우지 않았다 (`finance.ts:569`·`:572`, d964485).
+- 바뀐 것: `TUNE.firmCallPlan` 1 (기본, 0 = d964485 동작), `finance.ts opsDay` (흑자인 가동 중 생산 건물은 계획 운영비와 큰 쪽, DESIGN 9.3), 시험 `test/gate/firmcall.test.ts`, 마이크로 `cli/microcheck.ts --runs drain` (상회 현금을 720일부터 14일 동안 0 으로).
+- 숫자 (0991755, 해마다 값은 DESIGN 11장 `firmCallPlan` 행): 마이크로 drain 6년 × 시드 1~4, 끄면 4/4 가 3년차부터 끝까지 현금 0 (원료 충족 0%), 켜면 4/4 가 다음 주 정산에 운전자금을 받아 4년차 원료 충족 99~100%. 본 게임 5년 × 시드 1, 현금 < 1 인 (회사·날) 111 → 0.
+- 남은 것: 주인 금고(약정 뺀 돈)가 비면 그대로 굳는다. 적자 건물이 끌어내린 현금 0 은 막지 않는다. microA 발견 2 의 경로는 확인 못 함. 20년 비교는 하지 않았다 (값이 아니라 스위치, 다음 비교에 묶는다).
+- 다음: premerge → main.
+
 ## 0-1102b. 2026-11-02 세션 끝 (사용자가 컴퓨터를 끔)
-- main c952e65 (+284cb52 UI 명세)까지 푸시됨: wt-labor 병합(0b′, 기준 임금 재계산, 지역 시장 임금, 마이크로 도구, S7·S5·S8·D2 기본 켬). 시험은 사용자 지시로 typecheck·test:core 만 돌렸다. premerge 와 새 기본값 대 옛 main 확인 비교(20년 × 시드 1·2 × salt 0..3)는 아직 안 했다 → 다음 세션 첫 일.
-- 진행 중 브랜치 `wt-sim2` (origin 에 올림): UI_CHANGES 3장 sim 요청 셋(`subsistenceWage` export, 예산 국영 임금 상세를 지역 `Region.stateWages` 로, `wealthDrivers` export)과 민간 회사 현금 0 함정 (뒤에 wt-cash 로 옮김, 아래 wt-cash 줄). 끝난 부분만 커밋됐을 수 있다: `git log main..wt-sim2` 와 브랜치의 HANDOFF·커밋 메시지를 보고 이어서 한다.
+- main c952e65 (+284cb52 UI 명세)까지 푸시됨: wt-labor 병합(0b′, 기준 임금 재계산, 지역 시장 임금, 마이크로 도구, S7·S5·S8·D2 기본 켬). 시험은 사용자 지시로 typecheck·test:core 만 돌렸다. 새 기본값 대 옛 main 확인 비교(20년 × 시드 1·2 × salt 0..3)는 뒤에 했다: 보고서 2026-11-02-newdefaults (5d355c5).
+- `wt-sim2` 는 main 에 합쳐짐 (d964485): UI_CHANGES 3장 sim 요청 셋(`subsistenceWage` export, 예산 국영 임금 상세를 지역 `Region.stateWages` 로, `wealthDrivers` export). 민간 회사 현금 0 함정은 wt-cash 로 옮김 (0-1102c).
 - 사용자 결정 (2026-11-02): 왕실 생산 건물 임금 웃돈을 플레이어에게 열지 않는다 (UI_CHANGES 2-81, DECISIONS). 소작지 수확 체감(`tenantSlack`)은 메모만 (DECISIONS 7-38).
 - Codex(herdr front, w1:p2)는 사용량 한도로 멈춤 (한도 해제 2026-11-02 03:22). 커밋 안 한 클라이언트 변경이 main 체크아웃에 남아 있다 (PolicyPanel.tsx, system-ui.css, 지도 파일 등): 건드리지 않는다. 한도가 풀리면 UI_CHANGES 0장(2-81·2-79·2-75·2-83 등)을 이어서 하게 한다. Codex 에 일을 보내기 전에 `herdr agent read front` 로 한도 문구를 먼저 본다.
 - 정리 거리: git 워크트리 86개·브랜치 81개 (대부분 합쳐진 옛 것). 지우는 일은 사용자 확인 뒤.
@@ -27,10 +34,9 @@
 - main 병합 (959015b): 충돌 6곳. DECISIONS 는 main 7-29·7-30 다음에 wt-labor 7-31~7-37 (번호 안 겹침), DESIGN 11장 사무소 행은 양쪽 "재검증 필요" 를 다 남김, report.py 라벨·사전 import·lab/metrics 반환·보고서 목록은 양쪽 합침. 사무소 필요 포인트(`officeLoad`)는 포인트·`MAX_POINTS_PER_LEVEL_DAY`·자재가 함께 0.35배라 비율이 그대로 성립 (test/core/officeload 통과).
 - 시험을 하나 고쳤다: `test/core/decimals.test.ts` 는 지역 시장 임금에서 회사 임금표(`Company.wages`, 지역 임금의 고용 가중 평균인 계산값)를 "보이는 값" 에서 뺀다 (DESIGN 2장 반올림 줄). 화면이 소수 둘째 자리로 보인다.
 - 검증: `npm run typecheck`, `npm run test:core` (22 파일 70개), `methods_audit` 종료 0. 전체 vitest·장기·클라이언트 시험은 사용자 지시로 생략. 골든은 손대지 않음 (합친 뒤 `npm run golden:update`).
-- 알려진 문제: 소작농이 0 에 가까워지면 노동자 소득이 무너지는 판 (사용자: 나중 확장 몫), 노동자가 소작보다 못 버는 기간 (7-33 수용), 민간 회사 현금 0 함정 (microA 발견 2), 완공 정산의 금고 음수 (0-1101b), README 의 AI 절은 옛 판단을 설명한다 (임금·국영 임금·부 줄만 고쳤다).
-- 다음 할 일: (1) premerge → main, golden:update. (2) 새 기본값 대 main 확인 비교 (20년 × 시드 1·2 × salt 0..3, `cli/lab.sh`) 를 돌려 DESIGN 11장 `wageMarket` 행에 더한다. (3) 민간 회사 현금 0 함정: wt-cash 에서 고침 (DECISIONS 7-40, `firmCallPlan`). (4) `tenantSlack` 다시 물을 때 근거는 2026-11-02-combo kgsd·all.
-- wt-sim2 (2026-11-02, 284cb52 위): UI 요청 셋 처리 (`subsistenceWage`·`wealthDrivers` export, 예산 국영 임금 상세가 지역 시장 임금 × 단계, `WageDrillJob.marketWage`), DECISIONS 7-39 (왕실 웃돈 열지 않음). 민간 회사 현금 0 함정 (DECISIONS 7-40)은 wt-cash 로 넘김. typecheck·test:core 통과, premerge 전.
-- wt-cash (2026-11-02, d964485 위): 현금 0 함정 원인 = 운영 자금을 그날 실제로 쓴 돈으로 세서 현금 0 이면 0 으로 보임 (`finance.ts:569`·`:572`, d964485). 고침 = `firmCallPlan` 1 (`finance.ts opsDay`: 흑자 생산 건물은 계획 운영비와 큰 쪽). 마이크로 `microcheck --runs drain --sections k` 시드 1~4 모두 풀림 (끄면 모두 끝까지 굳음), 본 게임 5년 × 시드 1 현금 0 (회사·날) 111 → 0. 시험 `test/gate/firmcall.test.ts`. 다음: premerge → main, 20년 확인 비교는 다른 비교에 묶어서 (값이 아니라 스위치).
+- 알려진 문제: 소작농이 0 에 가까워지면 노동자 소득이 무너지는 판 (사용자: 나중 확장 몫), 노동자가 소작보다 못 버는 기간 (7-33 수용), 민간 회사 현금 0 함정 (microA 발견 2, → 0-1102c wt-cash `firmCallPlan`), 완공 정산의 금고 음수 (0-1101b), README 의 AI 절은 옛 판단을 설명한다 (임금·국영 임금·부 줄만 고쳤다).
+- 다음 할 일: (1)·(2) 끝남: wt-labor 병합 (golden c952e65), 확인 비교는 보고서 2026-11-02-newdefaults (5d355c5). DESIGN 11장 `wageMarket` 행에는 아직 안 더했다. (3) 민간 회사 현금 0 함정: wt-cash 에서 고침 (0-1102c, DECISIONS 7-40, `firmCallPlan`). (4) `tenantSlack` 다시 물을 때 근거는 2026-11-02-combo kgsd·all.
+- wt-sim2 (2026-11-02, 284cb52 위): UI 요청 셋 처리 (`subsistenceWage`·`wealthDrivers` export, 예산 국영 임금 상세가 지역 시장 임금 × 단계, `WageDrillJob.marketWage`), DECISIONS 7-39 (왕실 웃돈 열지 않음). 민간 회사 현금 0 함정 (DECISIONS 7-40)은 wt-cash 로 넘김. main 에 합쳐짐 (d964485).
 - **화면에 넘길 것 (ui-ux 가 UI_CHANGES 로 옮긴다)**:
   - 지역 시장 임금 표: 지역마다 직종별 `Region.wages` (노동자·농부·기술자·전문가·하급 귀족…) 와 소작 1인 소득 (`subsistenceWage`), 52주 평균 `Region.wageAvg`. 사전 `market-wage` 제목에서 "(비교 중)" 을 뺐다.
   - 국영 임금 상세: 정부 건물 임금 = 그 지역 시장 임금 × 국영 임금 단계 배율 (`Region.stateWages`, 매주). 왕실 `stateWages` 는 왕국 지역 평균 (대표값).
