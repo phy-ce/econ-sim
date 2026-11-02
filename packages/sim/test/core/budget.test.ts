@@ -59,7 +59,8 @@ describe('예산 미리보기', () => {
       const real = k.lastBudget!.revenue - gov.lastLedger.mint - (k.lastBudget!.tariffs ?? 0);
       const err = (pre[s - 1] - real) / real;
       out.push(`단계 ${s}: 예상 ${pre[s - 1]} 실제 ${Math.round(real)} (${(err * 100).toFixed(1)}%)`);
-      expect(Math.abs(err), `세금 단계 ${s}`).toBeLessThan(0.08);
+      // 0.08 → 0.1 (2026-11-02 wt-wagespeed): 시장 임금이 맞는 임금 쪽으로 하루 차이의 10%씩 움직여(wageTarget 2) 한 주 뒤 소득세 바탕이 미리보기 때보다 더 바뀐다 (시드 42 단계 5 오차 8.4%)
+      expect(Math.abs(err), `세금 단계 ${s}`).toBeLessThan(0.1);
     }
     console.log(`budgetPreview 세금 단계: ${out.join(' / ')}`);
   });
@@ -123,7 +124,7 @@ describe('예산 미리보기', () => {
       if (wd.key !== 'wages') throw new Error('wages');
       for (const r of wd.rows) for (const j of r.jobsBy) expect(j.perHead).toBeCloseTo(j.baseWage * j.wageIndex * j.stepMult, 9);
       // 지역 시장 임금 (TUNE.wageMarket): 행 지역 Region.wages × 단계. 지금 단계면 실제 지급 Region.stateWages 와 같다
-      // (stateWages 는 주초에 다시 정해지고 시장 임금은 날마다 최대 ±0.25% 움직여 주중 차이는 2% 안)
+      // (stateWages 는 주초에 다시 정해진다. 시장 임금은 날마다 맞는 임금 쪽으로 차이의 wageTargetSpeed 만큼 움직인다 (wageTarget 2): 주중 차이가 2% 안인 것은 이 시드·시점에서 본 값)
       if (!TUNE.wageMarket) continue;
       for (const r of wd.rows) {
         const reg = w.regions.find((x) => x.id === r.regionId)!;

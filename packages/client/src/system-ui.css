@@ -138,3 +138,5 @@
 .budget-job-figures b {color:var(--ink);font-size:11px}
 
 .economy-charts {min-width:0}.chart-period,.chart-kingdoms {display:flex;flex-wrap:wrap;align-items:center;gap:4px;margin:5px 0}.chart-period button,.chart-kingdoms button {font-size:10px;padding:3px 6px;min-height:24px}.chart-period small {margin-left:auto;font-size:10px;color:var(--ink2)}.chart-kingdoms i {display:inline-block;width:8px;height:8px;margin-right:4px}.chart-kingdoms button[aria-pressed=false] {opacity:.5}.chart-period button[aria-pressed=true] {background:var(--chip);border-color:var(--gold)}.economic-chart {border-top:1px solid var(--rule);padding-top:5px;margin-top:8px;min-width:0}.economic-chart h4 {margin:0;font-size:11px}.chart-pending {font-size:11px;padding:12px 0}
+.policy-classes {display:flex;flex-wrap:wrap;gap:6px;padding:6px 0}.policy-classes>span {display:inline-flex}.policy-detail .entity-link {display:inline-flex;align-items:center;gap:4px}
+.strategy-panel .wages>h3,.strategy-panel .wages>.system-facts {grid-column:1/-1}

@@ -454,9 +454,13 @@ export function scaleBonus(level: number): number {
  *   0 = 실제로 쓴 돈만 (현금 0 이면 운영 자금도 0 으로 보여 주인이 채우지 않는다, d964485 까지의 동작)
  * - crownPrivatize: 비교용. 'all' 이면 AI 왕실이 생산 건물 모두에 민영화를 켠다 (기본 'off': 민영화는 플레이어가 켠다)
  * - taxCurve: 징수율 곡선. 'exp' = 1 − e^(−x), 'hyp' = x / (1 + x) (x = 행정청 한도 / 인구)
- * - wageMarket, wageMarketRate: 1 이면 지역·직종 시장 임금 (labor.ts updateMarketWages). 날마다 임금 × wageMarketRate × clamp((자리 − 오려는 사람) ÷ min(자리, 오려는 사람), −1, 1) 만큼 움직인다.
+ * - wageMarket, wageMarketRate: 1 이면 지역·직종 시장 임금 (labor.ts updateMarketWages). wageTarget 0 이면 날마다 임금 × wageMarketRate × clamp((자리 − 오려는 사람) ÷ min(자리, 오려는 사람), −1, 1) 만큼 움직인다.
  *   오려는 사람 = 재직자 + 자격 있는 실업자 + 다른 자리에서 일하는 자격자 × switchShare(지금 소득, 시장 임금) ÷ switchMax. 0 이면 회사 임금표와 AI 임금 판단 (ai.ts adjustWages)
  * - wageMarketRateUp: > 0 이면 시장 임금이 오를 때(자리 > 오려는 사람)만 wageMarketRate 대신 이 하루 속도 (0 = 끔)
+ * - wageTarget, wageTargetSpeed: 시장 임금이 목표 임금 쪽으로 날마다 거리 × wageTargetSpeed 만큼 움직인다 (가격과 같은 꼴, labor.ts updateMarketWages).
+ *   0 = 끔 (wageMarketRate 규칙). 1 = 목표 = 바깥 소득 × (1 + 0.75 × clamp((자리 − 오려는 사람) ÷ min(자리, 오려는 사람), ±1)) (labor.ts outsideWage).
+ *   2 = 목표 = 맞는 임금: 오려는 사람이 자리 수가 되는 가장 낮은 임금 (시작 임금 규칙 ~ 바깥 소득 × 2 안, 더 올려도 올 사람이 없으면 거기서 멈춤, labor.ts clearingWage).
+ *   켜면 wageMarketRate·wageMarketRateUp 은 쓰지 않는다
  * - switchRate, switchPremium, switchMax: 일하는 사람은 소득이 switchPremium 배 넘게 나은 자리로 옮긴다. 하루에 옮기는 비율은
  *   switchPremium 배일 때 switchRate 이고 소득 배율의 차이에 비례해 늘어 switchMax 에서 멈춘다 (labor.ts switchShare)
  * - cashBufferDays: 팝이 금고(저택·금융가)로 보내지 않고 들고 있는 돈 (생활비 + 세금의 며칠분)
@@ -541,14 +545,18 @@ export const TUNE = {
   switchPremium: 1.1,
   switchMax: 0.05,
   // 지역 시장 임금 (2026-11-01 사용자 승인 "지역 임금 규칙 검증", docs/overhaul/LABOR_MARKET.md 1단계 (가)): 1 = 지역·직종마다 시장 임금 하나를 모든 임금 건물이 준다 (AI 민간 상회는 aiWagePremium 웃돈을 얹을 수 있다)
-  // (labor.ts updateMarketWages, 날마다 임금 × wageMarketRate × clamp((자리 − 오려는 사람) ÷ min(자리, 오려는 사람), −1, 1)). AI 임금 판단(adjustWages)은 돌지 않는다 (상회 웃돈 ai.ts adjustPremium 만).
+  // (labor.ts updateMarketWages: 기본 wageTarget 2 면 날마다 맞는 임금 쪽으로 차이 × wageTargetSpeed, wageTarget 0 이면 옛 규칙 임금 × wageMarketRate × clamp((자리 − 오려는 사람) ÷ min(자리, 오려는 사람), −1, 1)). AI 임금 판단(adjustWages)은 돌지 않는다 (상회 웃돈 ai.ts adjustPremium 만).
   // 0 = 그 전 규칙 (회사 임금표, AI 바닥·천장). 2026-11-02 사용자 "all 의 나머지를 넣어서" 로 기본 1 (근거: DESIGN 11, 보고서 2026-11-02-combo)
   wageMarket: 1,
-  // 시장 임금의 하루 속도 r (주에 최대 약 1.75%). 후보 0.0025 / 0.005 / 0.01 중 조합 비교(2026-11-02-combo)가 쓴 값 (DESIGN 11)
+  // 시장 임금의 하루 속도 r (주에 최대 약 1.75%, wageTarget 0 일 때만 쓴다). 후보 0.0025 / 0.005 / 0.01 중 조합 비교(2026-11-02-combo)가 쓴 값 (DESIGN 11)
   wageMarketRate: 0.0025,
-  // 시장 임금이 오를 때만 쓰는 하루 속도 (시제품, 세계 규칙, 사용자 결정 대기 DECISIONS 7-41): > 0 이면 자리 > 오려는 사람일 때 wageMarketRate 대신 이 값.
-  // 0 = 끔 (오르내림 같은 속도 wageMarketRate). 후보 0.01 (2026-11-02 wt-wagelag 진단 .tmp/y1/RESULT.md W1). 근거: DESIGN 11
+  // 시장 임금이 오를 때만 쓰는 하루 속도 (시제품, 세계 규칙, DECISIONS 7-41 → 7-43 목표 임금이 대신함): > 0 이면 자리 > 오려는 사람일 때 wageMarketRate 대신 이 값.
+  // 0 = 끔 (오르내림 같은 속도 wageMarketRate). wageTarget 0 일 때만 쓴다 (기본 wageTarget 2 가 대신한다). 후보 0.01 (2026-11-02 wt-wagelag 진단 .tmp/y1/RESULT.md W1). 근거: DESIGN 11
   wageMarketRateUp: 0,
+  // 시장 임금을 목표 임금 쪽으로 (2026-11-02 사용자 "수요-공급 차에 따라서 숫자가(하한/상한 수렴값은 존재함) 변하게", DECISIONS 7-43): 0 = 끔 (wageMarketRate 규칙), 1 = 바깥 소득 기준 쏠림 (비교용), 2 = 맞는 임금 (기본). 근거: DESIGN 11
+  wageTarget: 2,
+  // 목표 임금까지 거리 중 하루에 움직이는 비율 (가격 PRICE_SPEED 0.03 과 같은 꼴). 후보 0.03 / 0.05 / 0.1, 보고서 2026-11-02-wagespeed. 근거: DESIGN 11
+  wageTargetSpeed: 0.1,
   adminScale: 0.3,
   lossBuildsPerWeek: 0,
   lossTolerance: Infinity,
@@ -572,7 +580,7 @@ export const TUNE = {
   wealthSavLower: 1,
   manorTargetMult: 0, // 비교 전 (0 = 끔, 후보 2·3)
   manorGentrySeats: 0, // 비교 전 (0 = 끔, 후보 100·50·25)
-  // 저택 지분 (2026-11-02 사용자 결정, docs/overhaul/MANOR_SHARES.md 1단계, DECISIONS 7-43): 1 = 저택은 금융가처럼 지분 회사다. 지분(Pop.fund, 같은 건물 id 공간)은 상급·하급 귀족만 가지고,
+  // 저택 지분 (2026-11-02 사용자 결정, docs/overhaul/MANOR_SHARES.md 1단계, DECISIONS 7-44): 1 = 저택은 금융가처럼 지분 회사다. 지분(Pop.fund, 같은 건물 id 공간)은 상급·하급 귀족만 가지고,
   // 저택 수입(배당·지대)은 지분 수대로 나눈다 (어디서 일하든). 귀족은 남는 현금으로 수익률(받은 배당 이동평균 ÷ 지분 값, 디버프 반영)이 가장 높은 저택(어느 지역·왕국이든)이나 자기 지역 금융가 지분을 사고,
   // 현금이 생활비 cashBufferDays 일치 아래면 저택 지분을 지분 값에 저택에 판다. 귀족이 아니게 된 pop 의 저택 지분은 저택이 매주 되산다. 하급 귀족은 저택에 앉지 않고,
   // 노동자·농부·소작 자리에 가지 못한다 (일자리가 없으면 실업으로 배당에 산다). 0 = 끔 (지금 동작, samecheck 같음)
@@ -581,7 +589,7 @@ export const TUNE = {
   manorBuyScope: 'world' as 'world' | 'kingdom' | 'region',
   // 귀족이 저택과 금융가를 함께 살 수 있을 때 (AI 판단): 1 = 수익률 비율로 나눠 산다, 0 = 수익률이 높은 한 곳에 다 산다
   manorInvestSplit: 0,
-  // 부재 지주 몫 (2026-11-02 사용자 결정 "다른 지역 배당 디버프", DECISIONS 7-43): 저택·금융가가 자기 지역 밖 건물에서 받는 배당의 이 비율은 그 건물 지역의 저택으로 간다 (finance.ts payDividends). 0 = 끔
+  // 부재 지주 몫 (2026-11-02 사용자 결정 "다른 지역 배당 디버프", DECISIONS 7-44): 저택·금융가가 자기 지역 밖 건물에서 받는 배당의 이 비율은 그 건물 지역의 저택으로 간다 (finance.ts payDividends). 0 = 끔
   absenteeShare: 0,
   pollTax: 0.6, // 인두세: 소작농을 뺀 1인당 하루 (세금 수준 3단계 기준)
   incomeTax: 0.3,

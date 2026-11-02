@@ -1,0 +1,799 @@
+{
+ "about": "임금을 목표 임금 쪽으로 (wt-wagespeed, 2026-11-02 사용자 \"임금이나 상품 가격이나 속도가 무조건 일정 속도로 변화하는건 말이 안됨\"). ctl = main 04bbc6d 기본값 (wageTarget 0), t1sXX = wageTarget 1 (바깥 소득 기준 쏠림), t2sXX = wageTarget 2 (맞는 임금), XX = wageTargetSpeed. 돌리기 (packages/sim 에서): PAR=12 bash cli/lab.sh <out.jsonl> ../../docs/overhaul/WAGESPEED_SPECS.json (KEY=specs1 은 1년 거르기). 요약: python cli/labsum.py <out.jsonl> --compare ctl. 2차 (specs2, t2cXX): 맞는 임금의 위 끝을 바깥 소득 × WAGE_TARGET_SPAN 2 로 묶은 코드 (1차 specs 의 t2sXX 는 위 끝 = 기본 임금 × 10 이라 기술자 임금이 노동자의 6~11배로 올라 10년차부터 생산 레벨이 대조의 약 60%였다). ctl 은 1차 결과를 그대로 쓴다 (끄면 비트 같음).",
+ "code": "wt-wagespeed (main 04bbc6d + wageTarget 스위치, 끄면 samecheck 5개 같음)",
+ "specs1": [
+  {
+   "item": "WAGESPEED",
+   "name": "ctl",
+   "seed": 1,
+   "salt": 0,
+   "years": 1,
+   "tune": {}
+  },
+  {
+   "item": "WAGESPEED",
+   "name": "ctl",
+   "seed": 2,
+   "salt": 0,
+   "years": 1,
+   "tune": {}
+  },
+  {
+   "item": "WAGESPEED",
+   "name": "t1s05",
+   "seed": 1,
+   "salt": 0,
+   "years": 1,
+   "tune": {
+    "wageTarget": 1,
+    "wageTargetSpeed": 0.05
+   }
+  },
+  {
+   "item": "WAGESPEED",
+   "name": "t1s05",
+   "seed": 2,
+   "salt": 0,
+   "years": 1,
+   "tune": {
+    "wageTarget": 1,
+    "wageTargetSpeed": 0.05
+   }
+  },
+  {
+   "item": "WAGESPEED",
+   "name": "t2s03",
+   "seed": 1,
+   "salt": 0,
+   "years": 1,
+   "tune": {
+    "wageTarget": 2,
+    "wageTargetSpeed": 0.03
+   }
+  },
+  {
+   "item": "WAGESPEED",
+   "name": "t2s03",
+   "seed": 2,
+   "salt": 0,
+   "years": 1,
+   "tune": {
+    "wageTarget": 2,
+    "wageTargetSpeed": 0.03
+   }
+  },
+  {
+   "item": "WAGESPEED",
+   "name": "t2s05",
+   "seed": 1,
+   "salt": 0,
+   "years": 1,
+   "tune": {
+    "wageTarget": 2,
+    "wageTargetSpeed": 0.05
+   }
+  },
+  {
+   "item": "WAGESPEED",
+   "name": "t2s05",
+   "seed": 2,
+   "salt": 0,
+   "years": 1,
+   "tune": {
+    "wageTarget": 2,
+    "wageTargetSpeed": 0.05
+   }
+  },
+  {
+   "item": "WAGESPEED",
+   "name": "t2s10",
+   "seed": 1,
+   "salt": 0,
+   "years": 1,
+   "tune": {
+    "wageTarget": 2,
+    "wageTargetSpeed": 0.1
+   }
+  },
+  {
+   "item": "WAGESPEED",
+   "name": "t2s10",
+   "seed": 2,
+   "salt": 0,
+   "years": 1,
+   "tune": {
+    "wageTarget": 2,
+    "wageTargetSpeed": 0.1
+   }
+  }
+ ],
+ "specs": [
+  {
+   "item": "WAGESPEED",
+   "name": "ctl",
+   "seed": 1,
+   "salt": 0,
+   "years": 20,
+   "tune": {}
+  },
+  {
+   "item": "WAGESPEED",
+   "name": "ctl",
+   "seed": 1,
+   "salt": 1,
+   "years": 20,
+   "tune": {}
+  },
+  {
+   "item": "WAGESPEED",
+   "name": "ctl",
+   "seed": 1,
+   "salt": 2,
+   "years": 20,
+   "tune": {}
+  },
+  {
+   "item": "WAGESPEED",
+   "name": "ctl",
+   "seed": 1,
+   "salt": 3,
+   "years": 20,
+   "tune": {}
+  },
+  {
+   "item": "WAGESPEED",
+   "name": "ctl",
+   "seed": 2,
+   "salt": 0,
+   "years": 20,
+   "tune": {}
+  },
+  {
+   "item": "WAGESPEED",
+   "name": "ctl",
+   "seed": 2,
+   "salt": 1,
+   "years": 20,
+   "tune": {}
+  },
+  {
+   "item": "WAGESPEED",
+   "name": "ctl",
+   "seed": 2,
+   "salt": 2,
+   "years": 20,
+   "tune": {}
+  },
+  {
+   "item": "WAGESPEED",
+   "name": "ctl",
+   "seed": 2,
+   "salt": 3,
+   "years": 20,
+   "tune": {}
+  },
+  {
+   "item": "WAGESPEED",
+   "name": "t1s05",
+   "seed": 1,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "wageTarget": 1,
+    "wageTargetSpeed": 0.05
+   }
+  },
+  {
+   "item": "WAGESPEED",
+   "name": "t1s05",
+   "seed": 1,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "wageTarget": 1,
+    "wageTargetSpeed": 0.05
+   }
+  },
+  {
+   "item": "WAGESPEED",
+   "name": "t1s05",
+   "seed": 1,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "wageTarget": 1,
+    "wageTargetSpeed": 0.05
+   }
+  },
+  {
+   "item": "WAGESPEED",
+   "name": "t1s05",
+   "seed": 1,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "wageTarget": 1,
+    "wageTargetSpeed": 0.05
+   }
+  },
+  {
+   "item": "WAGESPEED",
+   "name": "t1s05",
+   "seed": 2,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "wageTarget": 1,
+    "wageTargetSpeed": 0.05
+   }
+  },
+  {
+   "item": "WAGESPEED",
+   "name": "t1s05",
+   "seed": 2,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "wageTarget": 1,
+    "wageTargetSpeed": 0.05
+   }
+  },
+  {
+   "item": "WAGESPEED",
+   "name": "t1s05",
+   "seed": 2,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "wageTarget": 1,
+    "wageTargetSpeed": 0.05
+   }
+  },
+  {
+   "item": "WAGESPEED",
+   "name": "t1s05",
+   "seed": 2,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "wageTarget": 1,
+    "wageTargetSpeed": 0.05
+   }
+  },
+  {
+   "item": "WAGESPEED",
+   "name": "t2s03",
+   "seed": 1,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "wageTarget": 2,
+    "wageTargetSpeed": 0.03
+   }
+  },
+  {
+   "item": "WAGESPEED",
+   "name": "t2s03",
+   "seed": 1,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "wageTarget": 2,
+    "wageTargetSpeed": 0.03
+   }
+  },
+  {
+   "item": "WAGESPEED",
+   "name": "t2s03",
+   "seed": 1,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "wageTarget": 2,
+    "wageTargetSpeed": 0.03
+   }
+  },
+  {
+   "item": "WAGESPEED",
+   "name": "t2s03",
+   "seed": 1,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "wageTarget": 2,
+    "wageTargetSpeed": 0.03
+   }
+  },
+  {
+   "item": "WAGESPEED",
+   "name": "t2s03",
+   "seed": 2,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "wageTarget": 2,
+    "wageTargetSpeed": 0.03
+   }
+  },
+  {
+   "item": "WAGESPEED",
+   "name": "t2s03",
+   "seed": 2,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "wageTarget": 2,
+    "wageTargetSpeed": 0.03
+   }
+  },
+  {
+   "item": "WAGESPEED",
+   "name": "t2s03",
+   "seed": 2,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "wageTarget": 2,
+    "wageTargetSpeed": 0.03
+   }
+  },
+  {
+   "item": "WAGESPEED",
+   "name": "t2s03",
+   "seed": 2,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "wageTarget": 2,
+    "wageTargetSpeed": 0.03
+   }
+  },
+  {
+   "item": "WAGESPEED",
+   "name": "t2s05",
+   "seed": 1,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "wageTarget": 2,
+    "wageTargetSpeed": 0.05
+   }
+  },
+  {
+   "item": "WAGESPEED",
+   "name": "t2s05",
+   "seed": 1,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "wageTarget": 2,
+    "wageTargetSpeed": 0.05
+   }
+  },
+  {
+   "item": "WAGESPEED",
+   "name": "t2s05",
+   "seed": 1,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "wageTarget": 2,
+    "wageTargetSpeed": 0.05
+   }
+  },
+  {
+   "item": "WAGESPEED",
+   "name": "t2s05",
+   "seed": 1,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "wageTarget": 2,
+    "wageTargetSpeed": 0.05
+   }
+  },
+  {
+   "item": "WAGESPEED",
+   "name": "t2s05",
+   "seed": 2,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "wageTarget": 2,
+    "wageTargetSpeed": 0.05
+   }
+  },
+  {
+   "item": "WAGESPEED",
+   "name": "t2s05",
+   "seed": 2,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "wageTarget": 2,
+    "wageTargetSpeed": 0.05
+   }
+  },
+  {
+   "item": "WAGESPEED",
+   "name": "t2s05",
+   "seed": 2,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "wageTarget": 2,
+    "wageTargetSpeed": 0.05
+   }
+  },
+  {
+   "item": "WAGESPEED",
+   "name": "t2s05",
+   "seed": 2,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "wageTarget": 2,
+    "wageTargetSpeed": 0.05
+   }
+  },
+  {
+   "item": "WAGESPEED",
+   "name": "t2s10",
+   "seed": 1,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "wageTarget": 2,
+    "wageTargetSpeed": 0.1
+   }
+  },
+  {
+   "item": "WAGESPEED",
+   "name": "t2s10",
+   "seed": 1,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "wageTarget": 2,
+    "wageTargetSpeed": 0.1
+   }
+  },
+  {
+   "item": "WAGESPEED",
+   "name": "t2s10",
+   "seed": 1,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "wageTarget": 2,
+    "wageTargetSpeed": 0.1
+   }
+  },
+  {
+   "item": "WAGESPEED",
+   "name": "t2s10",
+   "seed": 1,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "wageTarget": 2,
+    "wageTargetSpeed": 0.1
+   }
+  },
+  {
+   "item": "WAGESPEED",
+   "name": "t2s10",
+   "seed": 2,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "wageTarget": 2,
+    "wageTargetSpeed": 0.1
+   }
+  },
+  {
+   "item": "WAGESPEED",
+   "name": "t2s10",
+   "seed": 2,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "wageTarget": 2,
+    "wageTargetSpeed": 0.1
+   }
+  },
+  {
+   "item": "WAGESPEED",
+   "name": "t2s10",
+   "seed": 2,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "wageTarget": 2,
+    "wageTargetSpeed": 0.1
+   }
+  },
+  {
+   "item": "WAGESPEED",
+   "name": "t2s10",
+   "seed": 2,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "wageTarget": 2,
+    "wageTargetSpeed": 0.1
+   }
+  }
+ ],
+ "counts": {
+  "specs1 (1년)": 10,
+  "specs (20년)": 40,
+  "specs2 (20년)": 24
+ },
+ "specs2": [
+  {
+   "item": "WAGESPEED",
+   "name": "t2c03",
+   "seed": 1,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "wageTarget": 2,
+    "wageTargetSpeed": 0.03
+   }
+  },
+  {
+   "item": "WAGESPEED",
+   "name": "t2c03",
+   "seed": 1,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "wageTarget": 2,
+    "wageTargetSpeed": 0.03
+   }
+  },
+  {
+   "item": "WAGESPEED",
+   "name": "t2c03",
+   "seed": 1,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "wageTarget": 2,
+    "wageTargetSpeed": 0.03
+   }
+  },
+  {
+   "item": "WAGESPEED",
+   "name": "t2c03",
+   "seed": 1,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "wageTarget": 2,
+    "wageTargetSpeed": 0.03
+   }
+  },
+  {
+   "item": "WAGESPEED",
+   "name": "t2c03",
+   "seed": 2,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "wageTarget": 2,
+    "wageTargetSpeed": 0.03
+   }
+  },
+  {
+   "item": "WAGESPEED",
+   "name": "t2c03",
+   "seed": 2,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "wageTarget": 2,
+    "wageTargetSpeed": 0.03
+   }
+  },
+  {
+   "item": "WAGESPEED",
+   "name": "t2c03",
+   "seed": 2,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "wageTarget": 2,
+    "wageTargetSpeed": 0.03
+   }
+  },
+  {
+   "item": "WAGESPEED",
+   "name": "t2c03",
+   "seed": 2,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "wageTarget": 2,
+    "wageTargetSpeed": 0.03
+   }
+  },
+  {
+   "item": "WAGESPEED",
+   "name": "t2c05",
+   "seed": 1,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "wageTarget": 2,
+    "wageTargetSpeed": 0.05
+   }
+  },
+  {
+   "item": "WAGESPEED",
+   "name": "t2c05",
+   "seed": 1,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "wageTarget": 2,
+    "wageTargetSpeed": 0.05
+   }
+  },
+  {
+   "item": "WAGESPEED",
+   "name": "t2c05",
+   "seed": 1,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "wageTarget": 2,
+    "wageTargetSpeed": 0.05
+   }
+  },
+  {
+   "item": "WAGESPEED",
+   "name": "t2c05",
+   "seed": 1,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "wageTarget": 2,
+    "wageTargetSpeed": 0.05
+   }
+  },
+  {
+   "item": "WAGESPEED",
+   "name": "t2c05",
+   "seed": 2,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "wageTarget": 2,
+    "wageTargetSpeed": 0.05
+   }
+  },
+  {
+   "item": "WAGESPEED",
+   "name": "t2c05",
+   "seed": 2,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "wageTarget": 2,
+    "wageTargetSpeed": 0.05
+   }
+  },
+  {
+   "item": "WAGESPEED",
+   "name": "t2c05",
+   "seed": 2,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "wageTarget": 2,
+    "wageTargetSpeed": 0.05
+   }
+  },
+  {
+   "item": "WAGESPEED",
+   "name": "t2c05",
+   "seed": 2,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "wageTarget": 2,
+    "wageTargetSpeed": 0.05
+   }
+  },
+  {
+   "item": "WAGESPEED",
+   "name": "t2c10",
+   "seed": 1,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "wageTarget": 2,
+    "wageTargetSpeed": 0.1
+   }
+  },
+  {
+   "item": "WAGESPEED",
+   "name": "t2c10",
+   "seed": 1,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "wageTarget": 2,
+    "wageTargetSpeed": 0.1
+   }
+  },
+  {
+   "item": "WAGESPEED",
+   "name": "t2c10",
+   "seed": 1,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "wageTarget": 2,
+    "wageTargetSpeed": 0.1
+   }
+  },
+  {
+   "item": "WAGESPEED",
+   "name": "t2c10",
+   "seed": 1,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "wageTarget": 2,
+    "wageTargetSpeed": 0.1
+   }
+  },
+  {
+   "item": "WAGESPEED",
+   "name": "t2c10",
+   "seed": 2,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "wageTarget": 2,
+    "wageTargetSpeed": 0.1
+   }
+  },
+  {
+   "item": "WAGESPEED",
+   "name": "t2c10",
+   "seed": 2,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "wageTarget": 2,
+    "wageTargetSpeed": 0.1
+   }
+  },
+  {
+   "item": "WAGESPEED",
+   "name": "t2c10",
+   "seed": 2,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "wageTarget": 2,
+    "wageTargetSpeed": 0.1
+   }
+  },
+  {
+   "item": "WAGESPEED",
+   "name": "t2c10",
+   "seed": 2,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "wageTarget": 2,
+    "wageTargetSpeed": 0.1
+   }
+  }
+ ]
+}
