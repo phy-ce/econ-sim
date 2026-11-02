@@ -106,11 +106,12 @@ describe('0b′ 5-2 감축·철거와 A4 징수율 하한을 켠 세계', () => 
     expectSame(b, a200, '200일 (147일 주 경계 저장 후)');
   });
 
-  // 기본값은 aiCutSD·aiDemoSD·aiAdminFloor·aiAdminWage 0. 0 으로 명시하고, 끈 상태에서는 쓰이지 않는 aiExitWeeks·aiAdminWage 를 바꿔도
-  // 기본값 세계와 같다 (규칙 해시 config.rulesHash·rulesRev 는 TUNE 표의 라벨이라 뺀다, a0.ts HASH_EXCLUDE)
+  // 기본값은 aiCutSD·aiDemoSD·aiAdminFloor 0. aiAdminWage 는 2026-11-02 부터 기본 2 (wt-wagelag A2)라 기준 세계는 0 으로 둔다.
+  // 0 으로 명시하고, 끈 상태에서는 쓰이지 않는 aiExitWeeks·aiAdminWage 1 (하한 0 이면 아무것도 안 함)을 바꿔도
+  // 기준 세계와 같다 (규칙 해시 config.rulesHash·rulesRev 는 TUNE 표의 라벨이라 뺀다, a0.ts HASH_EXCLUDE)
   it('끔 = 같음: 키를 0 으로 명시한 덮어쓰기와 기본값 세계가 같다 (시드 3, 200일)', () => {
     const DAYS = 200;
-    setTune({});
+    setTune({ aiAdminWage: 0 });
     expect([TUNE.aiCutSD, TUNE.aiDemoSD, TUNE.aiAdminFloor, TUNE.aiAdminWage]).toEqual([0, 0, 0, 0]);
     const a = createWorld(3);
     runTo(a, DAYS);

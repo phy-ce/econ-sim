@@ -9,6 +9,17 @@
 - 클라우드 세션(claude.ai/code)으로 이어서 할 수 있다. 규칙은 CLAUDE.md "클라우드 세션"을 본다.
 - 옛 세션 기록: `docs/log/` (2026-10-25 이전 HANDOFF 절은 `docs/log/HANDOFF_2026-10-18_to_10-25.md`, 날짜별 UI 기록도 여기). 다른 문서의 "HANDOFF 0-ind3"·"HANDOFF 0-aifix" 같은 옛 절 참조는 그 파일에 있다.
 
+## 0-1102d. 2026-11-02: wt-wagelag (흉작 때 시장 임금이 소작 소득을 못 따라감)
+- 진단: `.tmp/y1/RESULT.md` (시드 1 의 182일 가뭄으로 소작 1인 소득이 약 3배, 시장 임금은 하루 `wageMarketRate` 에 묶여 임금 ÷ 소작 0.59, 생산 고용 50 → 22천, 지역 1 건축사무소·행정청이 빔).
+- 바뀐 것 (2fbc1de 스위치, 끄면 samecheck 5개 같음 → 그다음 커밋에서 A1·A2 기본 켬):
+  - A1 `aiWagePremium` 1 (기본): 민간 AI 상회가 사람이 빠지는 이익 지역에 웃돈 (`ai.ts adjustPremium`, `Company.aiPremium`, `economy.ts wagesAt`, DESIGN 7.3·10장). DECISIONS 7-39 (플레이어 왕실 웃돈)과 별개.
+  - A2 `aiAdminWage` 2 (기본): 왕실이 행정청·건축사무소 충원 중 낮은 쪽이 0.9 아래면 국영 임금 단계를 올리고 내리지 않는다 (옛 `aiAdminWage` 1 에 모드를 더함, 새 키 없음).
+  - W1 `wageMarketRateUp` (기본 0 = 끔, DECISIONS 7-41 결정 대기): 오를 때만 하루 속도.
+  - 마이크로 흉작 충격 `microcheck --runs drought` (`economy.ts SCRIPTED_HARVESTS`, `--droughtcut`·`--droughtdays`), 표 `--sections w`. 시험 `test/core/wageLag.test.ts`.
+- 숫자: DESIGN 11장 `aiWagePremium`·`aiAdminWage`·`wageMarketRateUp` 행, 보고서 2026-11-02-wagelag (20년 × 시드 1·2 × salt 0..3, 명세 `docs/overhaul/WAGELAG_SPECS.json`). 대조 → A1+A2 세전 총생산 8회 평균 1·5·10·20년차 148/454/571/824 → 170/466/696/1,064. 결과 파일: `.tmp/wagelag/` (lab20.jsonl, y1_*.jsonl, micro/).
+- 남은 것: 가뭄 지역 국영 건축사무소는 A2 로 못 고친다 (국영 임금 단계가 왕국 하나). 행정청 충원 0 (세습 관료 이탈, 0b′ A4)은 그대로. 3~5년차 생산 레벨이 대조보다 적다. 국고·징수율이 15~20년차에 낮다. A1·A2 기본을 바꿔 골든 해시가 바뀐다 (합친 뒤 `npm run golden:update`). 화면: 상회 임금 화면은 `wagesAt` 을 읽으면 웃돈이 들어간 값이 보인다 (따로 넘길 것 없음, 사전 항목 `ai-wage-premium`).
+- 다음: premerge → main.
+
 ## 0-1102c. 2026-11-02: wt-cash (민간 회사 현금 0 함정, DECISIONS 7-40)
 - 원인: 운영 자금(`payDividends`)의 하루 운영비를 그날 실제로 쓴 돈으로 세서, 현금 0 인 상회는 임금·원료를 못 내 운영비도 0 으로 보이고 주인이 채우지 않았다 (`finance.ts:569`·`:572`, d964485).
 - 바뀐 것: `TUNE.firmCallPlan` 1 (기본, 0 = d964485 동작), `finance.ts opsDay` (흑자인 가동 중 생산 건물은 계획 운영비와 큰 쪽, DESIGN 9.3), 시험 `test/gate/firmcall.test.ts`, 마이크로 `cli/microcheck.ts --runs drain` (상회 현금을 720일부터 14일 동안 0 으로).

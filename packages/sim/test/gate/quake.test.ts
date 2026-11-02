@@ -21,18 +21,21 @@ describe('소작지 재해 (quakeChance > 0)', () => {
     const m0 = moneyIdentity(w);
     let worst = 0, hit = 0, cut = 0, logged = false;
     while (w.tick < END) {
+      // 그날 시작할 때의 빈 농지 (같은 날 AI 가 착공하며 농지를 잡으면 step 뒤 빈 농지가 줄어든다: 2026-11-02 wt-wagelag 새 기본값, 시드 42 455일 지역 3 에서 441 → 439)
+      const before = new Map(w.regions.map((r) => [r.id, Math.max(0, Math.floor(landFree(w, r.id, 'arable')))]));
       step(w);
       // 사건 열은 상한(최근 N개)이 있어 끝에서 한 번만 보면 재해 사건이 밀려 나갈 수 있다: 날마다 본다
       logged ||= w.events.some((e) => e.textEn?.includes('tenant land'));
       worst = Math.max(worst, Math.abs(moneyIdentity(w) - m0) / Math.max(1, totalMoney(w)));
       for (const r of w.regions) {
-        // step 안의 updateSubsistence 는 w.tick − 1 날 재해로 칸을 정했다. 그 뒤 공사가 땅을 쓸 수 있어 같은 날 빈 농지와 다시 비교하지 않고 줄어든 칸만 본다
+        // step 안의 updateSubsistence 는 w.tick − 1 날 재해로 칸을 정했다. 그 뒤 공사가 땅을 쓸 수 있어 그날 시작과 끝의 빈 농지 중 큰 쪽과 비교하고 줄어든 칸만 본다
         const q = quakeAt(w, r.id, w.tick - 1);
         if (!q) continue;
         hit++;
         const b = w.buildings.find((x) => x.regionId === r.id && x.typeId === 'subsistence')!;
         const free = Math.max(0, Math.floor(landFree(w, r.id, 'arable')));
-        expect(b.level).toBeLessThanOrEqual(free - quakeLostCells(free, q) + 1);
+        const start = Math.max(free, before.get(r.id) ?? 0);
+        expect(b.level).toBeLessThanOrEqual(start - quakeLostCells(start, q) + 1);
         if (quakeLostCells(free, q) > 0 && b.level < free) cut++;
       }
     }

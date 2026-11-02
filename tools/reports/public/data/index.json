@@ -1,6 +1,14 @@
 {
  "reports": [
   {
+   "id": "2026-11-02-wagelag",
+   "title": "임금 지연 고치기 (A1 상회 웃돈 + A2 국영 임금 지키기, W1 오를 때 속도)",
+   "desc": "wt-wagelag 2fbc1de, 20년 × 시드 1·2 × salt 0..3, 플레이어 방치 + 고정 연구. ctl = main e0499ef 기본값, a12 = aiWagePremium 1 + aiAdminWage 2, a12w1 = a12 + wageMarketRateUp 0.01. 진단: 흉작으로 소작 소득이 시장 임금보다 빨리 오르면 일꾼이 소작지로 빠진다 (.tmp/y1/RESULT.md).",
+   "date": "2026-11-02",
+   "created": "2026-11-02T15:12:14",
+   "code": "08d4c9c8"
+  },
+  {
    "id": "2026-11-02-newdefaults",
    "title": "새 기본값 확인 비교 (병합 전 main 대 새 main)",
    "desc": "old = main 39906cd (wt-labor 병합 전), new = main d964485 (지역 시장 임금, 기준 임금 재계산, 증설 확률 1, S7·S5·S8·D2). 플레이어 방치 + 고정 연구, 20년 × 시드 1·2 × salt 0..3 (.s1~.s3)",
