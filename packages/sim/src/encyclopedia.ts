@@ -39,6 +39,10 @@ import { AI_JITTER, CHUNKS, INPUT_SUPPLY_MIN, MIXED_LEVELS, RAISE_FILL, RESERVE_
 import { budgetPreview } from './budget';
 import { ownershipAssets } from './policy';
 import { welfareIncome, welfareTarget, welfareWeekly } from './welfare';
+import {
+  DEFAULT_VOTING_LAW, IG_APPROVAL_CAP, IG_CHANGE_CAP, IG_CHANGE_DAYS, IG_CHANGE_STEPS, IG_LITERACY_MIN, IG_LITERACY_WEIGHT, IG_MARGINAL, IG_MOOD_AT, IG_POWERFUL,
+  IG_SOL_CAP, IG_SOL_PER, IG_STANCE_CAP, interestGroups,
+} from './interestGroups';
 import type { BudgetLineKey } from './budget';
 import { MAX_CONCURRENT_CONSTRUCTIONS, MAX_LEVELS_PER_PROJECT } from './commands';
 import { START_CASH, START_FIRM_CASH, START_OFFICE_LEVELS, START_SCHOOL_LEVELS, START_TECHS, START_TRADE_LEVELS, createWorld } from './world';
@@ -213,6 +217,7 @@ export const DESIGN_SECTIONS: Record<string, string> = {
   '9.3': '배당·소유 건물 금고',
   '9.4': '국채·주조',
   '9.5': '복지',
+  '9.6': '이익집단',
   '10': 'AI 판단 요약',
   '11': '주요 조정값',
 };
@@ -1283,6 +1288,26 @@ export const ENCYCLOPEDIA: EncEntry[] = [
       },
     },
     related: ['budget-steps', 'wealth', 'ai-welfare', 'treasury'], seenIn: ['finance'], source: ['welfare.ts payWelfare', 'policy.ts startLawChange'], design: ['9.5'],
+  },
+  {
+    id: 'interest-groups', category: 'state', title: t('이익집단 (읽기 전용)', 'Interest groups (read-only)'),
+    rule: t('아직 효과가 없는 읽기 전용 층이다. pop 은 직종별 끌림 가중치 비율대로 이익집단 여섯(지주·자본가·소시민·농민·노동조합·지식인)을 나눠 지지한다. 지식인 끌림은 문해력 × {0} (문해력 {1} 미만이면 0). 정치 힘 = 투표법 가중치(투표권 있으면 1, 없으면 0) × 인구 × 부 단계, 영향력 = 집단의 정치 힘 ÷ 모든 집단의 합. 투표법은 지금 모든 왕국이 {2}(상급·하급 귀족과 자본가만 투표). 승인 = 지금 법 입장의 합(±{3}까지) + 최근 법 바꾸기(1·2·3칸 이상 {4}, {5}일 동안 줄어듦, ±{6}까지) + 1년 생활수준 변화율 × {7}(±{8}까지), 합 ±{9}까지. 영향력 {10} 이상은 힘셈, {11} 미만은 소외. 승인 {12} 이하 성남, {13} 이하 불만, {14} 이상 만족, {15} 이상 충성.', 'A read-only layer with no effect yet. Pops split their support over six interest groups (landowners, industrialists, petite bourgeoisie, rural folk, trade unions, intelligentsia) by per-profession attraction weights. Intelligentsia attraction is literacy × {0} (0 below {1} literacy). Political strength = voting-law weight (1 with a vote, 0 without) × size × wealth level; clout = a group\'s strength ÷ the sum over all groups. Every kingdom now has the {2} voting law (only high nobility, gentry and capitalists vote). Approval = sum of stances on current laws (cap ±{3}) + recent law changes (1 / 2 / 3+ steps {4}, fading over {5} days, cap ±{6}) + one-year living-standard change × {7} (cap ±{8}), total cap ±{9}. Clout {10} or more is powerful, below {11} marginalised. Approval {12} or less angry, {13} or less unhappy, {14} or more happy, {15} or more loyal.'),
+    formula: '영향력(집단) = Σ pop 투표법 가중치 × 인구 × 부 단계 × 그 집단 몫 ÷ 모든 집단의 합',
+    params: [p('지식인 끌림 (문해력 1당)', 'Intelligentsia per literacy', () => IG_LITERACY_WEIGHT), p('지식인 문해력 하한', 'Intelligentsia literacy floor', () => IG_LITERACY_MIN, 'pct'), p('투표법', 'Voting law', () => DEFAULT_VOTING_LAW),
+      p('법 입장 한도', 'Stance cap', () => IG_STANCE_CAP), p('법 바꾸기 충격', 'Law change shock', () => IG_CHANGE_STEPS.join(' / ')), p('충격이 줄어드는 날', 'Shock fades over', () => IG_CHANGE_DAYS, 'day'), p('충격 한도', 'Shock cap', () => IG_CHANGE_CAP),
+      p('생활수준 항 배율', 'Living standard factor', () => IG_SOL_PER, 'x'), p('생활수준 항 한도', 'Living standard cap', () => IG_SOL_CAP), p('승인 한도', 'Approval cap', () => IG_APPROVAL_CAP),
+      p('힘셈', 'Powerful', () => IG_POWERFUL, 'pct'), p('소외', 'Marginalised', () => IG_MARGINAL, 'pct'),
+      p('성남', 'Angry', () => IG_MOOD_AT.angry), p('불만', 'Unhappy', () => IG_MOOD_AT.unhappy), p('만족', 'Happy', () => IG_MOOD_AT.happy), p('충성', 'Loyal', () => IG_MOOD_AT.loyal)],
+    live: {
+      pick: ['kingdom'], run: (w, ctx) => {
+        const st = interestGroups(w, kingdomOfCtx(w, ctx).id);
+        return {
+          bars: st.groups.map((g) => bar(t(g.name, g.nameEn), r2(g.clout), 'pct', 1)),
+          rows: st.groups.map((g) => row(g.name, g.nameEn, `${r2(g.approval)} (${g.mood})`)),
+        };
+      },
+    },
+    related: ['tax-laws', 'invest-law', 'welfare'], seenIn: [], source: ['interestGroups.ts interestGroups', 'interestGroups.ts igLawCheck'], design: ['9.6'],
   },
   {
     id: 'schools', category: 'state', title: t('학교', 'Schools'),
