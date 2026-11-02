@@ -309,6 +309,12 @@ function lagWeek(w: World): LagWeek {
     office: offLv > 0 ? offSt / offLv : NaN, admin: admLv > 0 ? admSt / admLv : NaN, grain: g ? g.price / GOODS.grain.basePrice : NaN, stateStep: k0.budget.wages, flow,
   };
 }
+/** (w) 날마다 지역 0 시장 임금 (직종 순서 SKILLS)·소작 1인 소득: 임금 경로 추적 (wt-wagespeed) */
+let wageDays: number[][] = [];
+function wageDay(w: World): number[] {
+  const r0 = w.regions[0];
+  return [w.tick, ...Object.values(r0.wages ?? {}).map((v) => Math.round(v * 1e4) / 1e4), Math.round(subsistenceWage(w, r0) * 1e4) / 1e4];
+}
 function lagDay(w: World) {
   for (const p of w.pops) { const br = p.incomeBreakdown as Record<string, number> | undefined; if (br) lagFlow.v += (br.wages ?? 0) + (br.dividends ?? 0) + (br.rent ?? 0) + (br.sales ?? 0); }
 }
@@ -323,7 +329,7 @@ function lagTable(r: RunResult) {
     console.log(String(Math.round(x.t / TICKS_PER_WEEK)).padEnd(5) + [f2(x.wageMkt), f2(x.wagePaid), f2(x.tenant), f2(x.wageMkt / x.tenant), f2(x.wagePaid / x.tenant), f2(x.prodEmp), f2(x.prodJobs), f2(x.office), f2(x.admin), f2(x.grain), String(x.stateStep), f2(fl)].map((v) => pad(v, 10)).join(''));
   }
 }
-export interface RunResult { lag?: LagWeek[]; def: RunDef; weeks: Week[]; days?: CashDay[]; drift: number; driftAbs: number; driftTick: number; ms: number; rows: number; hash: string; same?: boolean }
+export interface RunResult { lag?: LagWeek[]; wageDays?: number[][]; def: RunDef; weeks: Week[]; days?: CashDay[]; drift: number; driftAbs: number; driftTick: number; ms: number; rows: number; hash: string; same?: boolean }
 
 const stateHash = (w: World) => createHash('sha1').update(JSON.stringify({ ...w, config: { ...w.config, rulesHash: '' } })).digest('hex').slice(0, 12);
 
@@ -367,6 +373,7 @@ function run(def: RunDef): RunResult {
   const shocks = [...def.shocks];
   const days: CashDay[] = [];
   const lag: LagWeek[] = [];
+  wageDays = [];
   lagFlow.v = 0;
   if (SECTIONS.includes('w')) lag.push(lagWeek(w));
   const call0 = (FLOW['call.manor'] ?? 0) + (FLOW['call.finance'] ?? 0);
@@ -378,7 +385,7 @@ function run(def: RunDef): RunResult {
     for (const s of shocks) if (s.t === w.tick) applyShock(w, s, tuneSaved);
     step(w);
     if (SECTIONS.includes('k')) { const cd = cashDay(w); cd.call -= call0; days.push(cd); }
-    if (SECTIONS.includes('w')) { lagDay(w); if (w.tick % TICKS_PER_WEEK === 0) lag.push(lagWeek(w)); }
+    if (SECTIONS.includes('w')) { lagDay(w); if (w.tick % TICKS_PER_WEEK === 0) lag.push(lagWeek(w)); wageDays.push(wageDay(w)); }
     const dev = Math.abs(moneyIdentity(w) - m0);
     const rel = dev / Math.max(1, totalMoney(w));
     if (rel > drift) { drift = rel; driftAbs = dev; driftTick = w.tick; }
@@ -394,7 +401,7 @@ function run(def: RunDef): RunResult {
   Object.assign(TUNE, tuneSaved);
   restoreMicroScale();
   Object.assign(TUNE, saved);
-  return { def, weeks, days, lag, drift, driftAbs, driftTick, ms: Date.now() - t0, rows, hash };
+  return { def, weeks, days, lag, wageDays, drift, driftAbs, driftTick, ms: Date.now() - t0, rows, hash };
 }
 
 // ---------------------------------------------------------------- 표
@@ -644,7 +651,7 @@ for (const name of RUNS) {
   };
   if (OUT) appendFileSync(`${OUT}-${name}.jsonl`, JSON.stringify(summary) + '\n');
   if (SECTIONS.includes('q')) quakeTable(r);
-  if (SECTIONS.includes('w')) { lagTable(r); if (OUT) writeFileSync(`${OUT}-${name}-w.json`, JSON.stringify({ run: name, seed: SEED, tune: TUNE_SET, at: AT, lag: r.lag })); }
+  if (SECTIONS.includes('w')) { lagTable(r); if (OUT) writeFileSync(`${OUT}-${name}-w.json`, JSON.stringify({ run: name, seed: SEED, tune: TUNE_SET, at: AT, lag: r.lag, days: r.wageDays })); }
 }
 const base = results.find((r) => r.def.name === 'base');
 if (base && SECTIONS.includes('d')) shockTable(base, results.filter((r) => r.def.shocks.length > 0));

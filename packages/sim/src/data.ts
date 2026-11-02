@@ -457,6 +457,10 @@ export function scaleBonus(level: number): number {
  * - wageMarket, wageMarketRate: 1 이면 지역·직종 시장 임금 (labor.ts updateMarketWages). 날마다 임금 × wageMarketRate × clamp((자리 − 오려는 사람) ÷ min(자리, 오려는 사람), −1, 1) 만큼 움직인다.
  *   오려는 사람 = 재직자 + 자격 있는 실업자 + 다른 자리에서 일하는 자격자 × switchShare(지금 소득, 시장 임금) ÷ switchMax. 0 이면 회사 임금표와 AI 임금 판단 (ai.ts adjustWages)
  * - wageMarketRateUp: > 0 이면 시장 임금이 오를 때(자리 > 오려는 사람)만 wageMarketRate 대신 이 하루 속도 (0 = 끔)
+ * - wageTarget, wageTargetSpeed: 시장 임금이 목표 임금 쪽으로 날마다 거리 × wageTargetSpeed 만큼 움직인다 (가격과 같은 꼴, labor.ts updateMarketWages).
+ *   0 = 끔 (wageMarketRate 규칙). 1 = 목표 = 바깥 소득 × (1 + 0.75 × clamp((자리 − 오려는 사람) ÷ min(자리, 오려는 사람), ±1)) (labor.ts outsideWage).
+ *   2 = 목표 = 맞는 임금: 오려는 사람이 자리 수가 되는 가장 낮은 임금 (시작 임금 규칙 ~ 바깥 소득 × 2 안, 더 올려도 올 사람이 없으면 거기서 멈춤, labor.ts clearingWage).
+ *   켜면 wageMarketRate·wageMarketRateUp 은 쓰지 않는다
  * - switchRate, switchPremium, switchMax: 일하는 사람은 소득이 switchPremium 배 넘게 나은 자리로 옮긴다. 하루에 옮기는 비율은
  *   switchPremium 배일 때 switchRate 이고 소득 배율의 차이에 비례해 늘어 switchMax 에서 멈춘다 (labor.ts switchShare)
  * - cashBufferDays: 팝이 금고(저택·금융가)로 보내지 않고 들고 있는 돈 (생활비 + 세금의 며칠분)
@@ -545,6 +549,10 @@ export const TUNE = {
   // 시장 임금이 오를 때만 쓰는 하루 속도 (시제품, 세계 규칙, 사용자 결정 대기 DECISIONS 7-41): > 0 이면 자리 > 오려는 사람일 때 wageMarketRate 대신 이 값.
   // 0 = 끔 (오르내림 같은 속도 wageMarketRate). 후보 0.01 (2026-11-02 wt-wagelag 진단 .tmp/y1/RESULT.md W1). 근거: DESIGN 11
   wageMarketRateUp: 0,
+  // 시장 임금을 목표 임금 쪽으로 (2026-11-02 사용자 "수요-공급 차에 따라서 숫자가(하한/상한 수렴값은 존재함) 변하게"): 0 = 끔, 1 = 바깥 소득 기준 쏠림, 2 = 맞는 임금. 근거: DESIGN 11
+  wageTarget: 0,
+  // 목표 임금까지 거리 중 하루에 움직이는 비율 (가격 PRICE_SPEED 0.03 과 같은 꼴). 근거: DESIGN 11
+  wageTargetSpeed: 0.05,
   adminScale: 0.3,
   lossBuildsPerWeek: 0,
   lossTolerance: Infinity,

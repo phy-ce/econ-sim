@@ -382,7 +382,7 @@ export interface LabourCell { jobs: number; willing: number; qualified: number; 
  * - 오려는 사람: 그 직종 재직자 + 자격 있는 실업자 + 다른 자리에서 일하는 자격자 × switchShare(지금 소득, wageOf(s)) ÷ switchMax.
  *   자격은 채용(laborMarket)과 같다: 노동자·농부 자리는 귀족·자본가 말고 누구나, 그 밖은 그 직종 pop 과 그 자격(quals)을 가진 사람
  */
-export function labourTable(w: World, r: Region, local: Building[], pops: Pop[], comp: Map<number, Company>, tenant: number, wageOf: (s: Skill) => number): Record<Skill, LabourCell> {
+export function labourTable(w: World, r: Region, local: Building[], pops: Pop[], comp: Map<number, Company>, tenant: number, wageOf: (s: Skill) => number, curves?: Record<Skill, WillingCurve>): Record<Skill, LabourCell> {
   const out = {} as Record<Skill, LabourCell>;
   for (const s of SKILLS) out[s] = { jobs: 0, willing: 0, qualified: 0, employed: 0 };
   const here = new Map<number, Building>();
@@ -422,10 +422,63 @@ export function labourTable(w: World, r: Region, local: Building[], pops: Pop[],
       if (!b) cell.willing += base;
       else if (p.prof === s && paidSeat) cell.willing += base;
       else cell.willing += (base * switchShare(cur, wage[i])) / TUNE.switchMax;
+      if (curves) {
+        const cv = curves[s];
+        if (!b || (p.prof === s && paidSeat)) cv.fixed += base;
+        else { cv.base.push(base); cv.cur.push(cur); }
+      }
     }
   }
   return out;
 }
+
+/**
+ * 오려는 사람을 임금의 함수로 (TUNE.wageTarget = 2): 임금과 무관한 몫(재직자·자격 있는 실업자)과,
+ * 다른 자리에서 일하는 자격자마다 몫(base)과 지금 소득(cur). 임금 v 에서 오려는 사람 = fixed + Σ base × switchShare(cur, v) ÷ switchMax (labourTable 과 같은 셈)
+ */
+export interface WillingCurve { fixed: number; base: number[]; cur: number[] }
+
+export function emptyCurves(): Record<Skill, WillingCurve> {
+  const out = {} as Record<Skill, WillingCurve>;
+  for (const s of SKILLS) out[s] = { fixed: 0, base: [], cur: [] };
+  return out;
+}
+
+/** 임금 v 에서 오려는 사람 (WillingCurve) */
+export function willingAt(cv: WillingCurve, v: number): number {
+  let n = cv.fixed;
+  for (let i = 0; i < cv.base.length; i++) n += (cv.base[i] * switchShare(cv.cur[i], v)) / TUNE.switchMax;
+  return n;
+}
+
+/** 맞는 임금을 찾는 이분법 횟수 (범위 lo~hi 를 2^-40 까지 좁힌다) */
+const CLEAR_STEPS = 40;
+
+/**
+ * 맞는 임금 (TUNE.wageTarget = 2): lo~hi 안에서 오려는 사람 ≥ min(자리, hi 에서 오려는 사람) 이 되는 가장 낮은 임금.
+ * lo 에서 이미 사람이 남으면 lo, 임금을 올려도 더 올 사람이 없으면 그 사람이 다 오는 가장 낮은 임금에서 멈춘다 (오려는 사람은 임금에 대해 줄지 않는다)
+ */
+export function clearingWage(cv: WillingCurve, jobs: number, lo: number, hi: number): number {
+  if (!(hi > lo)) return lo;
+  const need = Math.min(jobs, willingAt(cv, hi));
+  const ok = (v: number) => willingAt(cv, v) >= need - 1e-9 * Math.max(1, need);
+  if (ok(lo)) return lo;
+  let a = lo, b = hi;
+  for (let i = 0; i < CLEAR_STEPS; i++) {
+    const m = (a + b) / 2;
+    if (ok(m)) b = m; else a = m;
+  }
+  return b;
+}
+
+/**
+ * 맞는 임금(TUNE.wageTarget = 2)의 위 끝 = 바깥 소득(outsideWage, × switchPremium 포함) × 이 값. 2 는 옮기는 비율이 최대(switchMax)가 되는 소득 배율
+ * (1 + switchMax ÷ switchRate × (switchPremium − 1) = 2, labor.ts switchShare)과 같다: 바깥 소득 자리 사람이 다 오는 임금보다 더 올리지 않는다
+ */
+export const WAGE_TARGET_SPAN = 2;
+
+/** 가격처럼 움직이는 임금(TUNE.wageTarget = 1)의 쏠림 계수: 목표 = 바깥 소득 × (1 + 이 값 × clamp(쏠림, ±1)) (가격 공식 priceFormula 의 0.75 와 같다) */
+export const WAGE_TILT = 0.75;
 
 /**
  * 지역 시장 임금 (TUNE.wageMarket = 1, 날마다 노동시장 앞에서): 지역·직종마다
@@ -439,10 +492,13 @@ export function updateMarketWages(w: World) {
   const localOf = groupBuildings(w, (b) => b.regionId);
   const regionPops = new RegionPops(w);
   const rate = TUNE.wageMarketRate, rateUp = TUNE.wageMarketRateUp;
+  const mode = TUNE.wageTarget, speed = TUNE.wageTargetSpeed;
   for (const r of w.regions) {
     const tenant = subsistenceWage(w, r);
     const wages = ensureWages(w, r, tenant);
-    const tab = labourTable(w, r, localOf.get(r.id) ?? NO_BUILDINGS, regionPops.of(r.id), comp, tenant, (s) => wages[s]);
+    const local = localOf.get(r.id) ?? NO_BUILDINGS;
+    const curves = mode === 2 ? emptyCurves() : undefined;
+    const tab = labourTable(w, r, local, regionPops.of(r.id), comp, tenant, (s) => wages[s], curves);
     const avg = (r.wageAvg ??= { ...wages });
     for (const s of SKILLS) {
       const cell = tab[s];
@@ -451,13 +507,34 @@ export function updateMarketWages(w: World) {
       else if (cell.qualified > 1e-9) {
         const m = Math.min(cell.jobs, cell.willing);
         const x = m > 1e-9 ? clamp((cell.jobs - cell.willing) / m, -1, 1) : 1;
-        v *= 1 + (x > 0 && rateUp > 0 ? rateUp : rate) * x;
+        if (mode === 1) v += speed * (outsideWage(wages, s, tenant, local) * (1 + WAGE_TILT * x) - v);
+        else if (curves) {
+          const lo = startWage(wages, s, tenant);
+          const hi = Math.min(SKILL_DEFS[s].baseWage * MARKET_WAGE_RANGE[1], Math.max(lo, outsideWage(wages, s, tenant, local)) * WAGE_TARGET_SPAN);
+          v += speed * (clearingWage(curves[s], cell.jobs, lo, hi) - v);
+        }
+        else v *= 1 + (x > 0 && rateUp > 0 ? rateUp : rate) * x;
       }
       wages[s] = clampWage(s, v);
       avg[s] += (wages[s] - avg[s]) / WAGE_AVG_DAYS;
     }
   }
   syncCompanyWages(w);
+}
+
+/**
+ * 바깥 소득 (TUNE.wageTarget = 1 의 기준): 시작 임금 규칙(한 칸 아래 직종 × switchPremium, 노동자·농부는 소작 1인 소득 × switchPremium)과
+ * 그 지역 배당 자리(저택·금융가, 그 직종 자리가 있는 곳)의 그 직종 1인 몫 × switchPremium 중 큰 값 (하급 귀족은 저택 몫이 바깥 소득이다)
+ */
+export function outsideWage(wages: Record<Skill, number>, s: Skill, tenant: number, local: Building[]): number {
+  let v = startWage(wages, s, tenant);
+  for (const b of local) {
+    if (!BUILDING_BY_ID[b.typeId].ownership) continue;
+    const m = methodOf(b);
+    if (!m || slotsWith(b, m, s) <= 0) continue;
+    v = Math.max(v, dividendWage(b, s) * TUNE.switchPremium);
+  }
+  return v;
 }
 
 /** 새 세계 (TUNE.wageMarket = 1): 모든 지역의 시작 시장 임금과 회사 대표 임금표 */
