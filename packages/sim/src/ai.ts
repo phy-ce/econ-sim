@@ -1,7 +1,7 @@
 import { BUILDING_BY_ID, buildPointsOf, BUILDING_TYPES, EDUCATION_FLOOR, EDUCATION_RANGE, GOOD_IDS, GOODS, SKILL_DEFS, TECH_BY_ID, TICKS_PER_WEEK, TICKS_PER_YEAR, TRADING_POST, TUNE, getMethod, regionPerk, tradeEscrowPerLevel, tradeReserveOf } from './data';
 import { withEstimateCache, regionAvgWealth, regionPopulation, wageCostOf,
   availableMethods, ownBuildingAt, builderOf, canBuildType, disbanded, kingdomGdp, paysDividend, paysShare, companyById, constructionEstimate, creditLimit, depositFree, efficiency, estimateMethod, harvestFactor, hasBuilder, isGovernment, regionById, wagesAt, researchableTechs, roomFor, sellsShares, slots, mainOutput, projectedSD,
-  shareWage,
+  shareWage, collectionRatio,
 } from './economy';
 import { MAX_CONCURRENT_CONSTRUCTIONS, MAX_LEVELS_PER_PROJECT, applyCommand } from './commands';
 import { applyStateWages, budgetMult, committedCost, favours, funderWeight, hasReserve, lawRevenue, ownerBuildings, ownerFunds, reserveCap, reserveOf, taxRates, treasuryFree } from './finance';
@@ -943,11 +943,38 @@ function levelValue(w: World, c: Company, o: Outlook, b: Building, pointsPerDay:
   if (m.seats) return schoolValuation(w, c, r, m, 1, schoolSeats(w, r.id) - m.seats).profit;
   // 무역소: 이 건물 전체 손익 − 한 레벨 적을 때의 손익
   if (b.typeId === TRADING_POST) return tradeValuation(w, c, r, m, b.level, b).profit - tradeValuation(w, c, r, m, b.level - 1, b).profit;
+  // TUNE.aiAdminValue: 왕실 행정청은 마지막 한 칸이 아니라 평균으로 본다
+  if (TUNE.aiAdminValue && c.state && m.taxCapacity) return adminAverage(w, c, o, b, r, m, fill);
   return valueMethod(w, o, r, c, b.typeId, m, 1, true, fill).profit;
 }
 
 /**
+ * TUNE.aiAdminValue ≥ 1 (이슈 #4, wt-admin4): 왕실 행정청 1레벨의 평균 하루 손익 = 행정청 전체가 걷는 세금 ÷ 왕국 징세 한도 × 이 방식 1레벨 한도 − 1레벨 비용.
+ * 걷는 세금 = 걷을 세금(taxOwed, 징수율 전) × 징수율. 한도가 0 이면 곡선의 첫 기울기(1 ÷ 인구)로 본다. 비용 = 짓기 판단과 같은 인건비 + 원료비 (valueMethod, 1레벨).
+ * 마지막 한 칸(징수율 곡선의 끝 기울기)으로 보면 세금 수준을 내리거나 세금 기반이 줄 때 한 칸씩 계속 마이너스가 되어 행정청이 0 까지 줄었다.
+ * 2 = 걷을 세금을 보통 세금 수준(3단계, 배율 1)으로 환산한다 (taxOwed ÷ 지금 세금 수준 배율)
+ */
+function adminAverage(w: World, c: Company, o: Outlook, b: Building, r: Region, m: MethodDef, fill?: number): number {
+  const k = kingdomById(w, r.kingdomId);
+  const v = valueMethod(w, o, r, c, b.typeId, m, 1, true, fill);
+  const cost = (v.wageCost + v.inputCost) / v.utilization;
+  const n = k.taxDue ?? 0, cap = k.taxCapacity ?? 0;
+  if (!(n > 0)) return -cost;
+  const perCap = cap > 1e-9 ? collectionRatio(cap, n) / cap : 1 / n;
+  const owed = (k.taxOwed ?? 0) / (TUNE.aiAdminValue >= 2 ? Math.max(1e-9, budgetMult(k, 'tax')) : 1);
+  return owed * perCap * m.taxCapacity! * TUNE.adminScale * (1 + regionPerk(b.regionId, b.typeId)) * (fill ?? 1) - cost;
+}
+
+/** 왕실 행정청 레벨 (철거 대기 뺀 것, TUNE.aiAdminValue: 마지막 레벨은 남긴다) */
+function adminLevels(w: World, c: Company): number {
+  let n = 0;
+  for (const x of w.buildings) if (x.companyId === c.id && getMethod(x.typeId, x.methodId).taxCapacity) n += x.level - (x.shrinking ?? 0);
+  return n;
+}
+
+/**
  * 철거 판단 (짓기와 같은 주, 같은 전망): 마지막 레벨 손익이 TUNE.shrinkWeeks 주 연속 마이너스면 레벨의 1/4(최소 1)을 철거 대기에 올린다.
+ * TUNE.aiAdminValue: 왕실 행정청은 마지막 한 칸 대신 평균 손익(adminAverage)으로 보고, 왕국의 마지막 행정청 레벨은 남긴다.
  * 건물이 적자를 유보 자산으로 메우는 동안은 세지 않는다 (유보 자산이 바닥나야 센다).
  * 건축사무소는 TUNE.officeShrinkWeeks 주를 보고, 그동안 한 번도 사람이 차지 않은 레벨(일하던 주의 최고 충원율 staffPeak 로 센다)과
  * 남는 포인트 몫(많아야 1/4) 중 큰 쪽을 헌다. 쉬다가 다시 뽑는 중이라 비어 있는 레벨은 헐지 않는다. 왕국의 마지막 사무소 레벨은 남긴다.
@@ -974,8 +1001,10 @@ function reviewLevels(w: World, c: Company, o: Outlook, pointsPerDay: number) {
     const m = getMethod(b.typeId, b.methodId);
     if (!m.construction) {
       if (b.negWeeks >= TUNE.shrinkWeeks) {
-        const n = Math.max(1, Math.round(b.level * 0.25));
-        if (!applyCommand(w, c.id, { type: 'demolish', buildingId: b.id, levels: n })) aiTrace.on?.(w, c, 'shrink', b.typeId, b.methodId, -n);
+        let n = Math.max(1, Math.round(b.level * 0.25));
+        // TUNE.aiAdminValue: 왕국의 마지막 행정청 레벨은 남긴다 (세법이 바뀌어 세금 기반이 돌아올 때 0 에서 다시 짓지 않게)
+        if (TUNE.aiAdminValue && c.state && m.taxCapacity) n = Math.min(n, adminLevels(w, c) - 1);
+        if (n >= 1 && !applyCommand(w, c.id, { type: 'demolish', buildingId: b.id, levels: n })) aiTrace.on?.(w, c, 'shrink', b.typeId, b.methodId, -n);
         b.negWeeks = 0;
       }
       continue;

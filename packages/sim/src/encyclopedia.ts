@@ -1405,9 +1405,9 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   },
   {
     id: 'ai-demolition', category: 'ai', title: t('철거 판단', 'Demolition review'),
-    rule: t('유보 자산으로 메우는 건물은 세지 않는다. 다만 투입 충족 < {2}가 {1}주 이어진 건물은 세고, 마지막 1레벨 손익을 지금 투입 충족으로 잰다. 마지막 1레벨의 장기 손익이 {0}주 연속 마이너스면 레벨의 1/4(최소 1)을 철거 대기에 올린다. 다시 이익이면 취소한다. 720일이 지나도 50% 미만인 공사는 취소한다.', 'Buildings covering losses from reserves are skipped, except those whose input fill stayed under {2} for {1} weeks; for them the last level is valued at the current input fill. If the last level\'s long-run profit is negative for {0} weeks, a quarter of the levels (min 1) are queued for demolition; cancelled if profitable again. Projects under 50% after 720 days are cancelled.'),
-    params: [tune('shrinkWeeks', '연속 주 수', 'Weeks', 'week'), tune('starveWeeks', '굶은 주 수', 'Starved weeks', 'week'), p('굶는 투입 충족', 'Starving fill', () => STARVE_FILL, 'pct')],
-    related: ['demolition', 'ai-swap', 'reserves'], seenIn: ['company'], source: ['ai.ts reviewLevels'], design: ['10'],
+    rule: t('유보 자산으로 메우는 건물은 세지 않는다. 다만 투입 충족 < {2}가 {1}주 이어진 건물은 세고, 마지막 1레벨 손익을 지금 투입 충족으로 잰다. 마지막 1레벨의 장기 손익이 {0}주 연속 마이너스면 레벨의 1/4(최소 1)을 철거 대기에 올린다. 다시 이익이면 취소한다. {3} ≥ 1이면 왕실 행정청은 마지막 1레벨 대신 평균 손익(행정청 전체가 걷는 세금 ÷ 징세 한도 × 1레벨 한도 − 1레벨 비용)으로 보고, 왕국의 마지막 행정청 레벨은 남긴다. {3} = 2면 걷을 세금을 보통 세금 수준(3단계)으로 환산한다. 720일이 지나도 50% 미만인 공사는 취소한다.', 'Buildings covering losses from reserves are skipped, except those whose input fill stayed under {2} for {1} weeks; for them the last level is valued at the current input fill. If the last level\'s long-run profit is negative for {0} weeks, a quarter of the levels (min 1) are queued for demolition; cancelled if profitable again. With {3} >= 1, crown administration is valued by its average instead of its last level (tax the whole administration collects / tax capacity x one level of capacity - one level of cost) and the last administration level of the kingdom is kept. With {3} = 2 the tax owed is scaled to the normal tax step (3). Projects under 50% after 720 days are cancelled.'),
+    params: [tune('shrinkWeeks', '연속 주 수', 'Weeks', 'week'), tune('starveWeeks', '굶은 주 수', 'Starved weeks', 'week'), p('굶는 투입 충족', 'Starving fill', () => STARVE_FILL, 'pct'), tune('aiAdminValue', '행정청 평균 손익', 'Administration valued by average')],
+    related: ['demolition', 'ai-swap', 'reserves'], seenIn: ['company'], source: ['ai.ts reviewLevels', 'ai.ts adminAverage'], design: ['10'],
   },
   {
     id: 'ai-reserve', category: 'ai', title: t('유보 자산으로 늘리고 줄이기', 'Growing and shrinking by reserves'),
