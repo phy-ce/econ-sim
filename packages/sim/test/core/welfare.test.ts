@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { TUNE, applyCommandMsg, budgetPreview, createWorld, moneyIdentity, step, welfareCovers, welfareGroup } from '../../src/index';
 import type { World } from '../../src/index';
-import { payWelfare } from '../../src/welfare';
+import { payWelfare, welfareCapDaily, welfareWeekly } from '../../src/welfare';
 import { firstDiff } from '../helpers';
 
 const runTo = (w: World, tick: number) => { while (w.tick < tick) step(w); };
@@ -92,5 +92,36 @@ describe('복지', () => {
     expect(line.byLevel).toHaveLength(5);
     expect(line.byLevel![4]).toBeLessThanOrEqual(line.byLevel![0]);
     expect(line.byLevel![4]).toBeLessThan(0);
+  });
+
+  it('welfareCap: 하루 지급이 지난주 세입 ÷ 7 × 값 × 단계 ÷ 5 를 넘지 않고, 돈이 보존된다', () => {
+    const saved = TUNE.welfareCap;
+    try {
+      TUNE.welfareCap = 0.5;
+      const w = withWelfare(3, 'universal', 5);
+      const m0 = moneyIdentity(w);
+      let worst = 0, paidDays = 0;
+      for (let i = 0; i < 60; i++) {
+        // payWelfare 는 그날 weekly(lastBudget·단계 갱신)보다 먼저 돈다: step 전에 잰 상한이 그날 쓰는 상한이다
+        const cap = new Map(w.kingdoms.map((k) => [k.id, welfareCapDaily(k)] as const));
+        step(w);
+        worst = Math.max(worst, Math.abs(moneyIdentity(w) - m0));
+        const paid = new Map<number, number>();
+        for (const p of w.pops) {
+          const kid = w.regions.find((r) => r.id === p.regionId)!.kingdomId;
+          paid.set(kid, (paid.get(kid) ?? 0) + (p.incomeBreakdown?.welfare ?? 0));
+        }
+        for (const k of w.kingdoms) {
+          const x = paid.get(k.id) ?? 0;
+          expect(x).toBeLessThanOrEqual(cap.get(k.id)! * (1 + 1e-9) + 1e-6);
+          if (x > 0) paidDays++;
+          expect(welfareWeekly(k, k.welfareLaw, k.budget.welfare)).toBeLessThanOrEqual(welfareCapDaily(k) * 7 * (1 + 1e-9) + 1e-6);
+        }
+      }
+      expect(paidDays).toBeGreaterThan(0);
+      expect(worst).toBeLessThan(1e-3);
+    } finally {
+      TUNE.welfareCap = saved;
+    }
   });
 });

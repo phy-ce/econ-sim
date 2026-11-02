@@ -11,6 +11,7 @@ import type { Kingdom, Pop, Region, WelfareLaw, World } from './types';
 //   (market.ts updateWealth) 목표 부 단계에 닿으려면 한 단계 위 묶음 비용만큼 벌어야 한다
 // - 그날 소득 = 그날 들어온 현금(임금·판매·배당, 세금을 뺀 것) + 먹고 쓴 현물의 시장가
 // - 왕실 현금이 모자라면 가진 현금만큼 같은 비율로 나눠 준다 (복지로 빚을 지지 않는다). 돈은 국고에서 pop 저축으로 옮겨 간다 (화폐 보존)
+// - TUNE.welfareCap > 0 (비교용, 기본 끔, DECISIONS 7-47) 이면 하루 지급 합도 지난주 세입 ÷ 7 × welfareCap × 단계 ÷ 5 를 넘지 않는다 (같은 비율로 줄인다)
 // - 덮는 무리: 'poor' 소작농과 일자리 없는 사람, 'wage' 임금 일자리에서 일하는 사람, 'universal' 둘 다. 상급·하급 귀족과 자본가는 받지 않는다
 
 /** 복지를 받을 수 있는 무리: 'poor' 소작농·실업자, 'wage' 임금 일자리. 귀족·자본가는 null */
@@ -110,7 +111,8 @@ export function payWelfare(w: World) {
     if (total[ki] <= 0) return;
     const gov = companyById(w, k.governmentId);
     if (!gov) return;
-    const f = Math.min(1, Math.max(0, gov.cash) / total[ki]);
+    // TUNE.welfareCap: 그날 상한(welfareCapDaily)을 넘으면 같은 비율로 줄인다. 끔이면 상한이 무한이라 지금 동작과 같다
+    const f = Math.min(1, Math.max(0, gov.cash) / total[ki], welfareCapDaily(k) / total[ki]);
     if (f <= 0) return;
     let paid = 0;
     for (const { p, amt } of due[ki]) {
@@ -125,6 +127,15 @@ export function payWelfare(w: World) {
     const sw = (k.spentWeek ??= { wages: 0, goods: 0 });
     sw.welfare = (sw.welfare ?? 0) + paid;
   });
+}
+
+/**
+ * 하루 복지 상한 (TUNE.welfareCap, 이슈 #9): 지난주 세입(세금·관세·주조, lastBudget.revenue) ÷ 7 × welfareCap × 단계 ÷ 5.
+ * welfareCap 0 (기본) 이면 무한 (상한 없음 = 지금 동작). 첫 주는 지난주 세입이 없어 0
+ */
+export function welfareCapDaily(k: Kingdom, step: number = k.budget.welfare): number {
+  if (!(TUNE.welfareCap > 0)) return Infinity;
+  return ((k.lastBudget?.revenue ?? 0) / TICKS_PER_WEEK) * TUNE.welfareCap * (step / STEPS);
 }
 
 /** 그 법·단계의 하루 복지 필요액 (이동평균) */
@@ -143,8 +154,9 @@ export function welfareShortOf(k: Kingdom, law: WelfareLaw, step: number): numbe
 
 /**
  * 그 법·단계의 주간 복지 예상액 = 하루 필요액(이동평균) × 7. 필요액은 지급 규칙(생활수준이 목표 아래인 pop, 그날 소득과 목표 소득의 차)대로 센다.
- * 지금 법·단계면 실제 지급(현금이 모자라 줄인 몫 전)과 같고, 덮지 않는 무리는 복지를 받기 전 생활수준으로 센다
+ * 지금 법·단계면 실제 지급(현금이 모자라 줄인 몫 전)과 같고, 덮지 않는 무리는 복지를 받기 전 생활수준으로 센다.
+ * TUNE.welfareCap 이 켜져 있으면 그 단계의 상한(welfareCapDaily × 7)을 넘지 않는다
  */
 export function welfareWeekly(k: Kingdom, law: WelfareLaw, step: number): number {
-  return welfareNeedOf(k, law, step) * TICKS_PER_WEEK;
+  return Math.min(welfareNeedOf(k, law, step), welfareCapDaily(k, step)) * TICKS_PER_WEEK;
 }

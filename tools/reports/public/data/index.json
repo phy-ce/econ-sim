@@ -9,6 +9,14 @@
    "code": "ebda0b32"
   },
   {
+   "id": "2026-11-02-welfare9",
+   "title": "복지법 국고 고갈과 복지 상한 (이슈 #9)",
+   "desc": "main 9ba5acc, 플레이어 왕국 복지법 강제(단계 3, 5년 × 시드 1·2 × salt 0): 끔은 1~9달에 국고 0. welfareCap 0.5(세입의 단계 × 10%)는 국고를 지킨다. 단계 5·값 0.25/1 은 시드 1만",
+   "date": "2026-11-02",
+   "created": "2026-11-02T21:07:08",
+   "code": "8557806c"
+  },
+  {
    "id": "2026-11-02-wagespan",
    "title": "맞는 임금의 위 끝 배율·하루 속도 비교",
    "desc": "wt-span (main 81494a1 + wageTargetSpan TUNE 키). ctl = span 2·속도 0.1 (기본), sp15 = span 1.5, sp3 = span 3, v20 = 속도 0.2. 20년 × 시드 1·2 × salt 0..3 (.sN = salt N), 대륙 줄. 덧붙인 지표 skRatio·lnsd6·lo6·adminSt1~3 은 lab 줄에서 계산",
