@@ -1,6 +1,7 @@
 // 조정값 비교: npx tsx cli/sweep.ts '<TUNE JSON>' [seed] [years]  (JSON 의 "subsistence" 는 SUBSISTENCE 를 바꾼다)
 // 주요 지표(w.metrics)에서 5년마다(와 마지막 해) 대륙 합계를 뽑아 한 줄 JSON으로 출력한다.
 // TIMING=1 이면 time: { ms 시뮬레이션 시간, msPerDay 하루 평균 } 을 덧붙인다 (sweepsum.py 가 따로 요약한다)
+import './lowprio';
 import { BUILDING_BY_ID, GOOD_IDS, GOODS, LAW_TECH, SKILL_DEFS, SUBSISTENCE, TECH_BY_ID, TECH_COST, TECHS, TUNE } from '../src/data';
 import { isGovernment, paysDividend, slots } from '../src/economy';
 import { committedCost } from '../src/finance';
