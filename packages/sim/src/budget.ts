@@ -79,12 +79,27 @@ function govBuildings(w: World, k: Kingdom): Building[] {
   return gov ? w.buildings.filter((b) => b.companyId === gov.id && !BUILDING_BY_ID[b.typeId].auto) : [];
 }
 
-/** 정부 건물 한 곳의 시장 임금표 (국영 임금 단계 배율 1): TUNE.wageMarket 이고 그 지역 시장 임금(Region.wages)이 있으면 그 값
- *  (실제 지급 Region.stateWages = 그 값 × 단계, finance.ts applyStateWages), 아니면 세계 평균 marketWages(왕실) */
+/** 정부 건물 한 곳의 시장 임금표 (국영 임금 단계 배율 1): TUNE.wageMarket 이고 그 지역 시장 임금(Region.wages)이 있으면 그 값 × (1 + 그 지역 AI 왕실 국영 웃돈
+ *  Company.statePremium, TUNE.aiStatePremium, 없으면 1) (실제 지급 Region.stateWages = 그 값 × 단계, finance.ts applyStateWages), 아니면 세계 평균 marketWages(왕실) */
 type WageTable = (b: Building) => Record<Skill, number>;
 function govMarketWages(w: World, govId: number): WageTable {
   const world = marketWages(w, govId);
-  return (b) => (TUNE.wageMarket ? regionById(w, b.regionId).wages : undefined) ?? world;
+  const prem = companyById(w, govId)?.statePremium;
+  const cache = new Map<number, Record<Skill, number>>();
+  return (b) => {
+    const r = TUNE.wageMarket ? regionById(w, b.regionId).wages : undefined;
+    if (!r) return world;
+    const p = prem?.[b.regionId];
+    if (!p) return r;
+    let t = cache.get(b.regionId);
+    if (!t) { t = {} as Record<Skill, number>; for (const s of SKILLS) t[s] = r[s] * (1 + p[s]); cache.set(b.regionId, t); }
+    return t;
+  };
+}
+
+/** 그 정부 건물 지역의 AI 왕실 국영 웃돈 (TUNE.aiStatePremium, 없으면 0) */
+function statePremiumAt(w: World, govId: number, b: Building, s: Skill): number {
+  return companyById(w, govId)?.statePremium?.[b.regionId]?.[s] ?? 0;
 }
 
 /** 건물의 하루 임금 (지금 고용 × 그 건물 지역 시장 임금(mw), 국영 임금 수준 배율 1) */
@@ -328,8 +343,9 @@ export interface BudgetDrillBase {
 }
 
 /** 정부 건물 한 곳의 직종별 임금. marketWage = 그 건물 지역 시장 임금 (Region.wages, 1인 하루, TUNE.wageMarket 0 이거나 지역 임금이 아직 없으면 undefined),
- *  wageIndex = 시장 임금 ÷ baseWage (호환용), perHead = 시장 임금 × stepMult = baseWage × wageIndex × stepMult (1인 하루) */
-export interface WageDrillJob { skill: Skill; employed: number; jobs: number; baseWage: number; wageIndex: number; stepMult: number; perHead: number; weekly: number; marketWage?: number }
+ *  premium = 그 지역 AI 왕실 국영 웃돈 (TUNE.aiStatePremium, 0 이면 없음), wageIndex = 시장 임금 × (1 + premium) ÷ baseWage (호환용),
+ *  perHead = 시장 임금 × (1 + premium) × stepMult = baseWage × wageIndex × stepMult (1인 하루) */
+export interface WageDrillJob { skill: Skill; employed: number; jobs: number; baseWage: number; wageIndex: number; stepMult: number; perHead: number; weekly: number; marketWage?: number; premium?: number }
 export interface WageDrillRow { buildingId: number; typeId: string; regionId: number; level: number; employed: number; jobs: number; weekly: number; jobsBy: WageDrillJob[] }
 export interface WageDrill extends BudgetDrillBase { key: 'wages'; wageIndex: number; stepMult: number; rows: WageDrillRow[] }
 
@@ -391,7 +407,11 @@ export function drillWages(w: World, kid: number, steps: Steps = {}): WageDrill 
       const market = mw(b)[s], idx = market / SKILL_DEFS[s].baseWage, perHead = market * mult;
       const wk = -n * perHead * TICKS_PER_WEEK;
       const job: WageDrillJob = { skill: s, employed: n, jobs: j, baseWage: SKILL_DEFS[s].baseWage, wageIndex: idx, stepMult: mult, perHead, weekly: wk };
-      if (regional) job.marketWage = market;
+      if (regional) {
+        const prem = statePremiumAt(w, k.governmentId, b, s);
+        job.marketWage = regionById(w, b.regionId).wages![s];
+        if (prem > 0) job.premium = prem;
+      }
       jobsBy.push(job);
       employed += n; jobs += j; weekly += wk;
     }

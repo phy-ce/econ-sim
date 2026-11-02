@@ -5,9 +5,16 @@
 - 폴더: `C:\Users\phyju\Desktop\Coding_Desk\2026\estera economy sim`
 - 저장소: https://github.com/phy-ce/econ-sim (main). 검증된 병합마다 푸시한다(2026-10-19 사용자 지시).
 - 작업 규칙: `CLAUDE.md`. 경제 규칙 요약: `docs/DESIGN.md`. 빅토리아3 근거: `docs/VIC3_REFERENCE.md`.
-- 사용자 결정 대기: `docs/overhaul/12_DECISIONS_NEEDED.md`(Q1~Q20)와 `docs/DECISIONS.md`. 지금 답을 기다리는 것은 아래 0-1030 절 0b′ 의 "사용자 답 대기" 줄, 0-1102 의 `tenantSlack` 메모, 0-1102d 의 W1 `wageMarketRateUp` (DECISIONS 7-41). 화면 작업자에게 넘길 것: `docs/UI_CHANGES.md` 맨 위 "0. 지금 할 일".
+- 사용자 결정 대기: `docs/overhaul/12_DECISIONS_NEEDED.md`(Q1~Q20)와 `docs/DECISIONS.md`. 지금 답을 기다리는 것은 아래 0-1030 절 0b′ 의 "사용자 답 대기" 줄, 0-1102 의 `tenantSlack` 메모, 0-1102d 의 W1 `wageMarketRateUp` (DECISIONS 7-41), 0-1102e 의 플레이어 왕실 국영 웃돈·하급 귀족 시작 임금 (DECISIONS 7-42). 화면 작업자에게 넘길 것: `docs/UI_CHANGES.md` 맨 위 "0. 지금 할 일".
 - 클라우드 세션(claude.ai/code)으로 이어서 할 수 있다. 규칙은 CLAUDE.md "클라우드 세션"을 본다.
 - 옛 세션 기록: `docs/log/` (2026-10-25 이전 HANDOFF 절은 `docs/log/HANDOFF_2026-10-18_to_10-25.md`, 날짜별 UI 기록도 여기). 다른 문서의 "HANDOFF 0-ind3"·"HANDOFF 0-aifix" 같은 옛 절 참조는 그 파일에 있다.
+
+## 0-1102e. 2026-11-02: wt-admin (행정청 충원 0, 세습 관료가 저택으로 떠남)
+- 진단: `.tmp/admin/RESULT.md` (main b1bd1fa, 새 도구 `cli/admindiag.ts`: 매주 표본의 해 평균, `--every N` 지역별, `--micro N` 마이크로). 세습 관료제 행정청(왕국마다 수도 한 지역)의 하급 귀족은 저택의 하급 귀족 1인 몫과 비교해 떠난다. 저택 이익 이동평균이 0 에서 시작해 첫 120일 동안 시장 하급 귀족 임금이 4.14 → 3.07 로 내리고, 그 뒤 저택 몫이 국영 임금의 1.5~3배가 되어 150~210일에 행정청이 빈다. 시장 임금(하루 0.25%)과 A2 국영 임금 단계(5단계 × 1.3)로는 1년 안에 못 따라간다. 1년차 충원 평균 0.39~0.44 (10년 × 시드 1·2, AI 왕국). 인쇄술은 1년차에 알지만 종이가 없어 전문 관료제로 못 바꾼다. 마이크로(인구 2,000)는 저택 자리 정수 효과로 재현되지 않았다.
+- 바뀐 것: `TUNE.aiStatePremium` (a1aa901 스위치, 끄면 samecheck 5개 같음 → 기본 2): AI 왕실이 지역마다 정부 건물 직종 충원이 0.9 아래면 국영 임금에 웃돈 (바깥 소득 × `STATE_HIRE_PULL` 1.25, 하급 귀족의 바깥 소득 = 저택 1인 몫), 차 있으면 바깥 소득까지 한 주 0.1 씩 내림 (`ai.ts adjustStatePremium`, `Company.statePremium`, `finance.ts applyStateWages`). 예산 상세 `budget.ts govMarketWages` 가 웃돈을 넣고 `WageDrillJob.premium` 새 칸 (시험 `test/core/budget.test.ts` 식 한 줄 고침). 사전 `ai-state-premium`. DESIGN 7.3·9.2·10장·11장.
+- 숫자: DESIGN 11장 `aiStatePremium` 행, 보고서 2026-11-02-admin (대륙)·2026-11-02-admin-k2 (왕국 2), 명세 `docs/overhaul/ADMIN_SPECS.json` (20년 × 시드 1·2 × salt 0..3, 40회, 결과 `.tmp/admin/lab20.jsonl`, 요약 `.tmp/admin/sum.py`). 대조 → 상한 2: AI 왕국 연말 충원 1·5·20년차 0.01/0.83/0.88 → 0.89/0.93/0.97, 징수율 해 평균 0.25/0.55/0.08 → 0.51/0.52/0.17, 20년차 왕실 빚 21 → 6.
+- 남은 것: 세전 총생산이 3년차부터 대조보다 낮다 (20년차 1,064 → 989, 15년차 963 → 827). 10년차 뒤 징수율이 낮은 것은 행정청 레벨이 주는 탓 (K2·K3 평균 10.2 → 20년차 1.2): 철거·전문 관료제 전환 판단을 따로 봐야 한다. 플레이어 왕실은 웃돈이 없어 1년차에 행정청이 빈다 (DECISIONS 7-42 결정 대기 1). 세계 규칙 뿌리(하급 귀족 시작 임금 = 기술자 × 1.1, 저택 이익 이동평균 시작 0)는 묻기만 했다 (7-42 결정 대기 2). `STATE_HIRE_PULL` 1.25 는 근거 없음. 가뭄 지역 건축사무소(0-1102d)는 같은 웃돈이 노동자에도 걸리지만 따로 재지 않았다. 골든 해시가 바뀐다 (합친 뒤 `npm run golden:update`). 화면: UI_CHANGES 2-84 (낮음).
+- 검증: typecheck, test:core 23파일 73개. main 에 합치지 않음 (premerge 대기).
 
 ## 0-1102d. 2026-11-02: wt-wagelag (흉작 때 시장 임금이 소작 소득을 못 따라감)
 - 진단: `.tmp/y1/RESULT.md` (시드 1 의 182일 가뭄으로 소작 1인 소득이 약 3배, 시장 임금은 하루 `wageMarketRate` 에 묶여 임금 ÷ 소작 0.59, 생산 고용 50 → 22천, 지역 1 건축사무소·행정청이 빔).

@@ -31,6 +31,7 @@
 - 2-69(왕실 임금 읽기 전용)는 코드 완료 (`e1d700f`, 화면 미검증, UI_DONE).
 - **2-81 왕실 임금 탭·건물 방식 비교 임금 (main c952e65)**: 지역 시장 임금이 기본이 되어 `marketWage` 비교값·`owner.wages` 추정이 실제 지급과 다르다. 방식 비교는 `wagesAt(owner, b.typeId, world, b.regionId)`, 임금 탭은 왕국 지역 임금 범위. 웃돈 손잡이는 열지 않는다 (2026-11-02 사용자 결정: 플레이어 왕실 임금은 읽기 전용).
 - **2-80 국영 임금 상세 식**: 지금 1인/일이 실제 지급(`Region.stateWages`)과 다르다. sim `drillWages` 수정(3장)이 들어온 뒤 `BudgetJobs.tsx:12` 식을 "시장 임금 × 단계"로. 그 전에는 화면 할 일 없음.
+- **2-84 국영 웃돈 (낮음, wt-admin)**: AI 왕실 지역만 국영 임금 = 시장 임금 × (1 + 웃돈) × 단계. 플레이어 왕실에는 없다. 2-80 툴팁·2-79 지역 표에 웃돈이 있으면 한 칸.
 
 사용자 요청
 0. **2-77 코드 완료**: 6bf2b2d 및 후속 최소크기 보강. UI_DONE·UI_STATUS의 헤드리스 확인 근거 참조.
@@ -1189,6 +1190,12 @@ sim 변경 (wt-research):
   2. 색은 `harvest-badge`의 나쁜 조건 색과 같은 계열 (다크 모드 구분).
 - 문자열: "일"/"d" (기존 날 단위 재사용). 종류 이름과 문장은 `quakeLabel`이 준다.
 - 완료 기준: `TUNE.quakeChance = 1` 개발 세계 2년차에 칩이 나오고 사건 열 문장과 같은 % · 남은 날. 0이면 칩 없음. typecheck.
+
+### 2-84. 국영 웃돈 (wt-admin, DESIGN 7.3·10장 `adjustStatePremium`, 사전 `ai-state-premium`, 낮은 우선순위)
+- sim: AI 왕실은 지역마다 정부 건물(행정청·건축사무소·학교) 직종마다 웃돈 `Company.statePremium[지역 id][직종]` (0~`TUNE.aiStatePremium`)을 둔다. 그 지역 `Region.stateWages[s]` = round2(`Region.wages[s]` × 단계 배율 × (1 + 웃돈)). 플레이어 왕실은 이 칸이 생기지 않는다 (AI 판단만, DECISIONS 7-42 결정 대기).
+- 예산 상세: `WageDrillJob.premium?: number` (새 칸, 웃돈이 0 이면 없음). `perHead` = `marketWage` × (1 + `premium`) × `stepMult`, `wageIndex` = `marketWage` × (1 + `premium`) ÷ `baseWage`. 플레이어 왕국의 상세에는 나오지 않는다.
+- 화면 (선택): 2-80 식 툴팁에서 `j.premium`이 있으면 `× (1 + {웃돈})` 한 칸을 더한다. 2-79 지역 시장 임금 표에서 다른 왕국 지역의 국영 임금이 시장 임금 × 단계보다 크면 그 웃돈 때문이다 (웃돈 열은 넣지 않아도 된다).
+- 문자열: "웃돈"/"Premium" (이미 있으면 그것). 완료 기준: typecheck.
 
 ## 3. sim 쪽 필요 사항 (Claude가 처리할 것, UI 작업자는 요청만)
 - **2-59 주 단위 수지 (요청됨, 2026-10-22):** `BuildingEcon`에 `week: { sales, tax, inputs, wages, profit }` (건물 `revenue`·`tax`·`inputCost`·`wageCost`의 이동평균 × 7, `profitEma`와 같은 기간). 들어오면 2-59-3 폭포 라벨을 `/주`로.

@@ -712,8 +712,8 @@ export const TUNE = {
   // 왕실 국영 건물의 지역 웃돈 (2026-11-02 wt-admin, AI 판단): > 0 이면 AI 왕실이 매주 지역마다 그 지역 정부 건물(행정청·건축사무소·학교)의 직종 충원율이
   // ADMIN_STAFFED 아래면 웃돈을 바로 바깥 소득 × STATE_HIRE_PULL 에 맞추고, 차 있으면 바깥 소득과 같은 국영 임금까지 PREMIUM_STEP 씩 내린다 (웃돈 0 ~ 이 값, 이 값 = 웃돈 상한).
   // 바깥 소득 = 그 지역 시장 임금과 다음 중 큰 쪽: 노동자·농부는 소작 1인 소득, 하급 귀족은 그 지역 저택의 하급 귀족 1인 몫 (ai.ts adjustStatePremium, Company.statePremium,
-  // 그 지역 국영 임금 = 시장 임금 × 단계 배율 × (1 + 웃돈), finance.ts applyStateWages). 0 = 끔. 근거: DESIGN 11
-  aiStatePremium: 0,
+  // 그 지역 국영 임금 = 시장 임금 × 단계 배율 × (1 + 웃돈), finance.ts applyStateWages). 0 = 끔. 2026-11-02 기본 2 (후보 1·2·3 비교, 근거: DESIGN 11, 보고서 2026-11-02-admin)
+  aiStatePremium: 2,
   aiMixedMethods: 0, // 1 = 건물 전체를 바꿀 수 없을 때 같은 지역에 더 나은 방식 1~2레벨을 따로 짓는다 (세계 규칙이 바뀌어 사용자 결정 필요, DECISIONS 7-21)
   officeRichWeeks: 52,
   officeSelfPay: 0,

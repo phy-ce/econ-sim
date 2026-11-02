@@ -129,7 +129,8 @@ describe('예산 미리보기', () => {
         const reg = w.regions.find((x) => x.id === r.regionId)!;
         for (const j of r.jobsBy) {
           expect(j.marketWage).toBe(reg.wages![j.skill]);
-          expect(j.perHead).toBeCloseTo(j.marketWage! * j.stepMult, 9);
+          // AI 왕실 국영 웃돈 (TUNE.aiStatePremium): 시장 임금 × (1 + 웃돈) × 단계
+          expect(j.perHead).toBeCloseTo(j.marketWage! * (1 + (j.premium ?? 0)) * j.stepMult, 9);
           if (Object.keys(steps).length === 0) expect(Math.abs(j.perHead / reg.stateWages![j.skill] - 1)).toBeLessThan(0.02);
         }
       }

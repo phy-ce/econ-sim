@@ -1,6 +1,22 @@
 {
  "reports": [
   {
+   "id": "2026-11-02-admin-k2",
+   "title": "행정청 충원: AI 왕실 국영 웃돈 (왕국 2)",
+   "desc": "같은 실행의 AI 왕국 2 줄",
+   "date": "2026-11-02",
+   "created": "2026-11-02T16:05:38",
+   "code": "2167161d"
+  },
+  {
+   "id": "2026-11-02-admin",
+   "title": "행정청 충원: AI 왕실 국영 웃돈",
+   "desc": "wt-admin a1aa901. 대조(main b1bd1fa 기본) / aiStatePremium 1·2·3 / 2 + A2 끔, 20년 × 시드 1·2 × salt 0..3, 대륙 줄 (플레이어 왕국 포함, 웃돈 없음)",
+   "date": "2026-11-02",
+   "created": "2026-11-02T16:05:38",
+   "code": "0e496120"
+  },
+  {
    "id": "2026-11-02-wagelag",
    "title": "임금 지연 고치기 (A1 상회 웃돈 + A2 국영 임금 지키기, W1 오를 때 속도)",
    "desc": "wt-wagelag 2fbc1de, 20년 × 시드 1·2 × salt 0..3, 플레이어 방치 + 고정 연구. ctl = main e0499ef 기본값, a12 = aiWagePremium 1 + aiAdminWage 2, a12w1 = a12 + wageMarketRateUp 0.01. 진단: 흉작으로 소작 소득이 시장 임금보다 빨리 오르면 일꾼이 소작지로 빠진다 (.tmp/y1/RESULT.md).",
