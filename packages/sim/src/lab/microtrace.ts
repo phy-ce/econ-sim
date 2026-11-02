@@ -42,7 +42,7 @@ export interface LaborRow {
   /** 고용 가중 평균 임금, 소작 1인 하루 소득 (노동자·농부 임금 바닥의 기준) */
   wage: number; tenantInc: number;
   /**
-   * 지역 시장 임금 (TUNE.wageMarket = 1 이면 Region.wages, 아니면 고용 가중 평균 임금, 고용이 없으면 민간 상회 임금표)과
+   * 지역 시장 임금 (Region.wages, 없으면 고용 가중 평균 임금, 고용이 없으면 민간 상회 임금표)과
    * 그 임금에서의 노동시장 표 (labor.ts labourTable): 자리 D (손해 보는 건물의 빈자리 제외), 오려는 사람 S
    */
   market: number; D: number; S: number;

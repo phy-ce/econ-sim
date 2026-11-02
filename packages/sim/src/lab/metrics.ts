@@ -20,6 +20,9 @@ import { INVEST_LAWS, POP_CLASSES, SKILLS, TAX_LAWS, WEALTH_MIN, WELFARE_LAWS, i
 import type { Building, Company, GoodId, Kingdom, PopClass, PopIncomeSource, Skill, World } from '../types';
 
 /** 해마다 한 줄 (jsonl). 숫자 칸과 안쪽 사전(report.py 가 "a.b" 로 펼친다) */
+/** 임금 위치 지표의 천장 비율: 2026-11-02 wt-simplify 1-E 에서 지운 TUNE.wageCeil (AI 임금 천장 = 부가가치 × 이 비율)의 마지막 값. 지표 정의를 그대로 두려고 남긴다 */
+const WAGE_CEIL_DIAG = 0.85;
+
 export type LabRow = Record<string, unknown>;
 
 /** 허브 상품 6개 (06 문서 6.6: 공구·석탄·목재·철·기계·종이) */
@@ -632,7 +635,7 @@ export class Collector {
       }
       for (const si of s >= 0 ? [s, nk] : [nk]) { const a = this.acc[si]; a.tDiv[t] += dv; a.tWf[t] += wf; a.tFl[t] += fl; }
     }
-    // 임금 위치 (ai.ts adjustWages 와 같은 바닥·천장 식, 주간 표본)
+    // 임금 위치 (지운 AI 임금 판단 adjustWages 의 바닥·천장 식, 주간 표본. 천장 비율은 옛 TUNE.wageCeil 값 WAGE_CEIL_DIAG)
     for (const c of w.companies) {
       const i = this.kingdoms.findIndex((k) => k.id === c.kingdomId);
       const mine = w.buildings.filter((b) => b.companyId === c.id && !BUILDING_BY_ID[b.typeId].auto && !(c.state && isGovernment(b.typeId)));
@@ -645,7 +648,7 @@ export class Collector {
         va += (e.revenue - e.inputCost) * b.level * b.utilization;
         for (const s of SKILLS) if (!paysDividend(c.state, s)) baseBill += slots(b, s) * SKILL_DEFS[s].baseWage;
       }
-      const ceilMult = baseBill > 0 ? (Math.max(0, va) * TUNE.wageCeil) / baseBill : Infinity;
+      const ceilMult = baseBill > 0 ? (Math.max(0, va) * WAGE_CEIL_DIAG) / baseBill : Infinity;
       WAGE_JOBS.forEach((s, j) => {
         if (paysDividend(c.state, s)) return;
         let cap = 0, emp = 0, outside = 0;

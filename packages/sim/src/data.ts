@@ -71,7 +71,7 @@ export const GOODS: Record<GoodId, GoodDef> = {
 /**
  * 일자리 직종. 소유 직종의 임금은 국영 건물과 행정청에서만 쓴다 (민간 건물에서는 배당을 받는다).
  * 기본 임금 = 건물·방식 숫자 규칙의 기준 임금 (2026-11-01 사용자 결정 "실제 임금을 기반으로 결정했어야지", DECISIONS 7-31).
- * 노동자·농부: 모든 상품이 기본가일 때 소작농 1인 하루 소득(tenantIncomeAtBase, 2.95) × AI 임금 바닥 배율(TUNE.wageOutside 1.2) = 3.54 → 0.5 단위로 3.5.
+ * 노동자·농부: 모든 상품이 기본가일 때 소작농 1인 하루 소득(tenantIncomeAtBase) × 바깥 소득 배율(TUNE.wageOutside, 옛 AI 임금 바닥 배율)을 0.5 단위로 (2026-11-01 값 3.5).
  * 다른 직종은 노동자 × BASE_WAGE_RATIO (기술자 1.5, 하급 귀족 3, 전문가·자본가·상급 귀족 4, 그 전 10·15·30·40의 비율) 를 0.5 단위로. cli/methods_audit.ts 가 확인한다.
  * 그 전 값(노동자 10, 기술자 15, 전문가 40, 하급 귀족 30)은 실제 노동자 임금(1~4)의 약 3배였다.
  */
@@ -439,8 +439,8 @@ export function scaleBonus(level: number): number {
  * - nobleEconPer: 저택 상급 귀족 자리 1 (노동 인구)당 저택이 가진 주간 경제 규모 (기본가: 가진 레벨 산출 가치 + 소작지 수확, nobleSeats 'econ')
  * - patronWealth, patronShare: 소작농 부가 patronWealth 아래면 귀족이 지대의 patronShare 를 돌려준다
  * - growthEq: 신분별로 출생과 사망이 같아지는 생활수준 (이보다 높으면 인구가 는다)
- * - wageOutside: AI 임금 바닥 = 그 자리로 옮겨 올 사람들의 지금 소득 × 이 배율
- * - wageCeil: AI 임금 천장 = 회사 부가가치 중 임금으로 줄 수 있는 비율
+ * - wageOutside: 기본 임금 규칙의 배율 (ruleBaseWage: 기본가일 때 소작 1인 소득 × 이 값). 옛 AI 임금 판단(adjustWages, 2026-11-02 wt-simplify 1-E 에서 지움)의 바닥 배율이었다.
+ *   lab 지표의 "임금 ÷ 바닥"도 이 값으로 잰다
  * - adminScale: 행정청 1레벨이 감당하는 인구 배율 (기본 50만 명 × 이 값)
  * - adminStart: 시작 행정청이 감당하는 인구 / 왕국 인구
  * - investWage: AI가 새로 지을지 판단할 때 쓰는 임금의 바닥 = 기본 임금 × 이 값 (0이면 지금 임금만 본다)
@@ -448,13 +448,10 @@ export function scaleBonus(level: number): number {
  * - ownerTilt: 저택은 땅 건물(농지·산림·광맥), 금융가는 그 밖의 건물을 좋아한다 (AI 성향). 좋아하지 않는 종류에 낼 마음의 배율
  * - privatizeMargin, privatizePayback: 민영화 레벨을 사는 조건 (AI): 금고 ≥ 레벨 값 × privatizeMargin, 레벨 값 ÷ 그 레벨의 1년 이익 ≤ privatizePayback 년
  * - firmBufferWeeks: 민간 상회가 배당 전에 남기는 운영 자금 = 주간 (임금 + 원료) × 이 주 수 (임금·원료가 판매 대금보다 먼저 나간다)
- * - wageMarket, wageMarketRate: 1 이면 지역·직종 시장 임금 (labor.ts updateMarketWages). wageTarget 0 이면 날마다 임금 × wageMarketRate × clamp((자리 − 오려는 사람) ÷ min(자리, 오려는 사람), −1, 1) 만큼 움직인다.
- *   오려는 사람 = 재직자 + 자격 있는 실업자 + 다른 자리에서 일하는 자격자 × switchShare(지금 소득, 시장 임금) ÷ switchMax. 0 이면 회사 임금표와 AI 임금 판단 (ai.ts adjustWages)
- * - wageMarketRateUp: > 0 이면 시장 임금이 오를 때(자리 > 오려는 사람)만 wageMarketRate 대신 이 하루 속도 (0 = 끔)
- * - wageTarget, wageTargetSpeed: 시장 임금이 목표 임금 쪽으로 날마다 거리 × wageTargetSpeed 만큼 움직인다 (가격과 같은 꼴, labor.ts updateMarketWages).
- *   0 = 끔 (wageMarketRate 규칙). 1 = 목표 = 바깥 소득 × (1 + 0.75 × clamp((자리 − 오려는 사람) ÷ min(자리, 오려는 사람), ±1)) (labor.ts outsideWage).
- *   2 = 목표 = 맞는 임금: 오려는 사람이 자리 수가 되는 가장 낮은 임금 (시작 임금 규칙 ~ 바깥 소득 × wageTargetSpan 안, 더 올려도 올 사람이 없으면 거기서 멈춤, labor.ts clearingWage).
- *   켜면 wageMarketRate·wageMarketRateUp 은 쓰지 않는다
+ * - wageTargetSpeed, wageTargetSpan: 지역·직종 시장 임금(labor.ts updateMarketWages)이 맞는 임금 쪽으로 날마다 거리 × wageTargetSpeed 만큼 움직인다 (가격과 같은 꼴).
+ *   맞는 임금 = 오려는 사람이 자리 수가 되는 가장 낮은 임금 (시작 임금 규칙 ~ 바깥 소득 × wageTargetSpan 안, 더 올려도 올 사람이 없으면 거기서 멈춤, labor.ts clearingWage).
+ *   오려는 사람 = 재직자 + 자격 있는 실업자 + 다른 자리에서 일하는 자격자 × switchShare(지금 소득, 시장 임금) ÷ switchMax.
+ *   (회사 임금표와 AI 임금 판단 wageMarket 0·wageCeil·wageLossCut, 하루 고정 속도 wageTarget 0·wageMarketRate·wageMarketRateUp, 비교용 쏠림 wageTarget 1 은 2026-11-02 wt-simplify 1-E 에서 지웠다)
  * - switchRate, switchPremium, switchMax: 일하는 사람은 소득이 switchPremium 배 넘게 나은 자리로 옮긴다. 하루에 옮기는 비율은
  *   switchPremium 배일 때 switchRate 이고 소득 배율의 차이에 비례해 늘어 switchMax 에서 멈춘다 (labor.ts switchShare)
  * - cashBufferDays: 팝이 금고(저택·금융가)로 보내지 않고 들고 있는 돈 (생활비 + 세금의 며칠분)
@@ -485,7 +482,6 @@ export function scaleBonus(level: number): number {
  * - salvageShare, salvageDays: 철거한 레벨 자재 중 회수하는 비율, 회수 자재를 나눠 파는 날 수
  * - swapMult: 땅이 꽉 찼을 때 새 후보 수익률이 자기 건물 마지막 레벨 수익률의 이 배수를 넘으면 그 레벨을 헌다
  * - employedMigrate: 일하는 pop 의 이주 속도 (실업 pop 대비 비율)
- * - wageLossCut: 회사가 지난주 적자면 임금을 2% 깎는다
  * - qualSkilledL, qualExpertL: 기술자·전문가 자격이 쌓이기 시작하는 문해력
  * - qualRate: 자격이 쌓이는 속도 배율
  * - schoolValue: AI 왕실이 보는 학교 자리 1개의 기본 하루 가치 (학교 1레벨 인건비 15,000 ÷ 10만 명 = 0.15).
@@ -530,24 +526,15 @@ export const TUNE = {
   patronShare: 0.5,
   growthEq: { lower: 1, middle: 5, upper: 5 },
   wageOutside: 1.2,
-  wageCeil: 0.85,
   switchRate: 0.005,
   switchPremium: 1.1,
   switchMax: 0.05,
-  // 지역 시장 임금 (2026-11-01 사용자 승인 "지역 임금 규칙 검증", docs/overhaul/LABOR_MARKET.md 1단계 (가)): 1 = 지역·직종마다 시장 임금 하나를 모든 임금 건물이 준다 (AI 민간 상회는 웃돈 ai.ts adjustPremium 을 얹을 수 있다)
-  // (labor.ts updateMarketWages: 기본 wageTarget 2 면 날마다 맞는 임금 쪽으로 차이 × wageTargetSpeed, wageTarget 0 이면 옛 규칙 임금 × wageMarketRate × clamp((자리 − 오려는 사람) ÷ min(자리, 오려는 사람), −1, 1)). AI 임금 판단(adjustWages)은 돌지 않는다 (상회 웃돈 ai.ts adjustPremium 만).
-  // 0 = 그 전 규칙 (회사 임금표, AI 바닥·천장). 2026-11-02 사용자 "all 의 나머지를 넣어서" 로 기본 1 (근거: DESIGN 11, 보고서 2026-11-02-combo)
-  wageMarket: 1,
-  // 시장 임금의 하루 속도 r (주에 최대 약 1.75%, wageTarget 0 일 때만 쓴다). 후보 0.0025 / 0.005 / 0.01 중 조합 비교(2026-11-02-combo)가 쓴 값 (DESIGN 11)
-  wageMarketRate: 0.0025,
-  // 시장 임금이 오를 때만 쓰는 하루 속도 (시제품, 세계 규칙, DECISIONS 7-41 → 7-43 목표 임금이 대신함): > 0 이면 자리 > 오려는 사람일 때 wageMarketRate 대신 이 값.
-  // 0 = 끔 (오르내림 같은 속도 wageMarketRate). wageTarget 0 일 때만 쓴다 (기본 wageTarget 2 가 대신한다). 후보 0.01 (2026-11-02 wt-wagelag 진단 .tmp/y1/RESULT.md W1). 근거: DESIGN 11
-  wageMarketRateUp: 0,
-  // 시장 임금을 목표 임금 쪽으로 (2026-11-02 사용자 "수요-공급 차에 따라서 숫자가(하한/상한 수렴값은 존재함) 변하게", DECISIONS 7-43): 0 = 끔 (wageMarketRate 규칙), 1 = 바깥 소득 기준 쏠림 (비교용), 2 = 맞는 임금 (기본). 근거: DESIGN 11
-  wageTarget: 2,
+  // 지역 시장 임금 (2026-11-01 사용자 승인 "지역 임금 규칙 검증", docs/overhaul/LABOR_MARKET.md 1단계 (가), 2026-11-02 기본): 지역·직종마다 시장 임금 하나를 모든 임금 건물이 준다
+  // (AI 민간 상회는 웃돈 ai.ts adjustPremium 을 얹을 수 있다). 시장 임금은 맞는 임금 쪽으로 움직인다 (2026-11-02 사용자 "수요-공급 차에 따라서 숫자가(하한/상한 수렴값은 존재함) 변하게",
+  // DECISIONS 7-43 확인 2026-11-02, labor.ts updateMarketWages). 스위치 wageMarket·wageTarget 과 옛 갈래의 키(wageMarketRate·wageMarketRateUp)는 2026-11-02 wt-simplify 1-E 에서 지웠다.
   // 목표 임금까지 거리 중 하루에 움직이는 비율 (가격 PRICE_SPEED 0.03 과 같은 꼴). 후보 0.03 / 0.05 / 0.1 (보고서 2026-11-02-wagespeed), 0.2 (2026-11-02-wagespan). 근거: DESIGN 11
   wageTargetSpeed: 0.1,
-  // 맞는 임금(wageTarget 2)의 위 끝 = 바깥 소득(outsideWage, switchPremium 포함) × 이 값. 2 는 옮기는 비율이 최대(switchMax)가 되는 소득 배율
+  // 맞는 임금의 위 끝 = 바깥 소득(outsideWage, switchPremium 포함) × 이 값. 2 는 옮기는 비율이 최대(switchMax)가 되는 소득 배율
   // (1 + switchMax ÷ switchRate × (switchPremium − 1) = 2, labor.ts switchShare)에서 왔다. 후보 1.5 / 2 / 3, 보고서 2026-11-02-wagespan. 근거: DESIGN 11
   wageTargetSpan: 2,
   adminScale: 0.3,
@@ -627,7 +614,6 @@ export const TUNE = {
   salvageDays: 28,
   swapMult: 3,
   employedMigrate: 0.25,
-  wageLossCut: true,
   harvestChance: 0.05, // 계절마다 지역마다 5% (측정에서 가장 나았던 0.03에 가장 가까운 둥근 값, DECISIONS 7-6)
   harvestIntensity: [2, 6] as [number, number], // 빅토리아3 가뭄과 같은 범위 (−10~−30%)
   // 소작지 재해 (2026-11-01 사용자 "소작지가 지진 같은 것에 의해 변동이 있게 해서 노동자로 보내볼까", 시제품, DESIGN 4): 0 = 끔.
@@ -678,10 +664,6 @@ export const TUNE = {
   // 행정청 징수율 하한 (오버홀 07 A4, 0b′, AI 판단, 이슈 #4): > 0 이면 AI 왕실은 왕국 징수율(taxRatio)이 이 값 아래인 동안 행정청 레벨을 헐지 않는다
   // (reviewLevels 가 적자 주를 세지 않고, 올려 둔 행정청 철거 대기를 거둔다). 0 = 하한 없음 (그 전과 같음). 후보 0.6 / 0.7 / 0.8 과 0 을 비교 중 (docs/overhaul/0BP_A4_SPECS.json), 근거 없음
   aiAdminFloor: 0,
-  // 1 = 징수율이 aiAdminFloor 아래인 동안 AI 왕실은 국영 임금을 내리지 않고, 행정청 충원율이 ADMIN_STAFFED 아래면 4주 점검마다 국영 임금을 한 칸 올린다 (5까지, ai.ts adjustBudget).
-  // 2 = 징수율과 상관없이, 행정청과 건축사무소 충원율 중 낮은 쪽이 ADMIN_STAFFED 아래면 같은 일을 한다 (2026-11-02 wt-wagelag A2: 흉작으로 소작 소득이 뛰면 국영 사무소가 빈다).
-  // 0 = 끔. 1 은 aiAdminFloor 가 0 이면 아무것도 하지 않는다. 2026-11-02 기본 2 (상회 웃돈 adjustPremium 과 함께, 근거: DESIGN 11, 보고서 2026-11-02-wagelag). 0b 시드 2 왕국 3 의 징수율 0 은 행정청 철거보다 먼저 세습 관료(하급 귀족)가 저택 자리로 떠나서 생겼다 (0BP_A4_SPECS.json about)
-  aiAdminWage: 2,
   // 왕실 국영 건물의 지역 웃돈 (2026-11-02 wt-admin, AI 판단): > 0 이면 AI 왕실이 매주 지역마다 그 지역 정부 건물(행정청·건축사무소·학교)의 직종 충원율이
   // ADMIN_STAFFED 아래면 웃돈을 바로 바깥 소득 × STATE_HIRE_PULL 에 맞추고, 차 있으면 바깥 소득과 같은 국영 임금까지 PREMIUM_STEP 씩 내린다 (웃돈 0 ~ 이 값, 이 값 = 웃돈 상한).
   // 바깥 소득 = 그 지역 시장 임금과 다음 중 큰 쪽: 노동자·농부는 소작 1인 소득, 하급 귀족은 그 지역 저택의 하급 귀족 1인 몫 (ai.ts adjustStatePremium, Company.statePremium,

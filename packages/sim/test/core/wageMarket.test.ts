@@ -1,18 +1,15 @@
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { SKILLS, TUNE, createWorld, moneyIdentity, step, totalMoney } from '../../src/index';
+import { describe, expect, it } from 'vitest';
+import { SKILLS, createWorld, moneyIdentity, step, totalMoney } from '../../src/index';
 import type { World } from '../../src/index';
 import { firstDiff } from '../helpers';
 
-// 지역 시장 임금 (TUNE.wageMarket = 1, 비교 중): 켠 채로도 화폐 보존·결정성(저장/불러오기)이 지켜지고,
-// 지역 임금이 없는 저장(옛 저장, 또는 0 으로 저장한 판)을 불러와도 시작 임금 규칙으로 채워 돈다.
-const saved = TUNE.wageMarket;
-beforeAll(() => { TUNE.wageMarket = 1; });
-afterAll(() => { TUNE.wageMarket = saved; });
+// 지역 시장 임금 (2026-11-02 기본 규칙, 스위치 wageMarket 은 wt-simplify 1-E 에서 지웠다): 화폐 보존·결정성(저장/불러오기)이 지켜지고,
+// 지역 임금이 없는 저장(옛 저장, 또는 회사 임금표 규칙으로 저장한 판)을 불러와도 시작 임금 규칙으로 채워 돈다.
 
 const reload = (w: World): World => JSON.parse(JSON.stringify(w));
 const runTo = (w: World, tick: number) => { while (w.tick < tick) step(w); };
 
-describe('지역 시장 임금 (wageMarket = 1)', () => {
+describe('지역 시장 임금', () => {
   it('화폐 총량이 장부와 맞는다', () => {
     const w = createWorld(7);
     const m0 = moneyIdentity(w);

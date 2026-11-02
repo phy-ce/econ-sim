@@ -40,7 +40,7 @@ export const OFFICE_GROWTH = 0.25;
 export const MIXED_LEVELS = 2;
 /** 짓기 기준: 공사 기간 안에 일자리의 이 비율 이상을 채울 사람이 있어야 한다 (건축사무소는 대신 채울 수 있는 레벨 수 officeStaffable 을 본다) */
 const MIN_STAFFING = () => TUNE.minStaffing;
-/** TUNE.aiAdminWage: 왕실 행정청의 레벨 가중 충원율이 이 값 아래면 일손이 모자란 것으로 본다 (근거 없음) */
+/** 왕실 행정청·건축사무소의 레벨 가중 충원율이 이 값 아래면 일손이 모자란 것으로 본다 (adjustBudget·adjustStatePremium, 근거 없음) */
 export const ADMIN_STAFFED = 0.9;
 /** 새 건물이 사람을 뽑는 주 수: 유보 철거·A3 철거가 이 동안의 적자를 세지 않는다 */
 const RAMP_WEEKS = 8;
@@ -50,7 +50,7 @@ function belowAdminFloor(k: Kingdom | undefined): boolean {
   return TUNE.aiAdminFloor > 0 && !!k && (k.taxRatio ?? 1) < TUNE.aiAdminFloor;
 }
 
-/** 왕실 건축사무소(켜진 건물, 해산한 사무소 제외)의 가동 레벨 가중 충원율. 사무소가 없으면 1 (TUNE.aiAdminWage 2) */
+/** 왕실 건축사무소(켜진 건물, 해산한 사무소 제외)의 가동 레벨 가중 충원율. 사무소가 없으면 1 (adjustBudget) */
 function officeStaffing(w: World, c: Company): number {
   let st = 0, lv = 0;
   for (const b of w.buildings) {
@@ -93,11 +93,10 @@ export function runAi(w: World) {
     // 왕실은 세법과 정책 단계(정부 건물의 국영 임금 포함)를 정한다. 생산 건물 임금은 민간과 왕실 모두 같은 규칙으로 정한다
     if (c.state) { chooseTaxLaw(w, c); adjustBudget(w, c); }
     // TUNE.aiStatePremium: 왕실은 정부 건물 일손이 모자라는 지역에 국영 임금 웃돈을 얹는다 (adjustStatePremium)
-    if (c.state && TUNE.aiStatePremium && TUNE.wageMarket) adjustStatePremium(w, c);
-    // TUNE.wageMarket = 1: 임금은 지역 시장 임금이 정한다 (labor.ts updateMarketWages). AI 는 자리(가동률·증설·철거)만 정한다.
+    if (c.state && TUNE.aiStatePremium) adjustStatePremium(w, c);
+    // 임금은 지역 시장 임금이 정한다 (labor.ts updateMarketWages). AI 는 자리(가동률·증설·철거)만 정한다.
     // 민간 상회는 사람이 빠지는 지역에 웃돈을 얹는다 (adjustPremium)
-    if (!TUNE.wageMarket) adjustWages(w, c);
-    else if (!c.state) adjustPremium(w, c);
+    if (!c.state) adjustPremium(w, c);
     manageBuildings(w, c, outlook, switchPools);
     if (c.state) planResearch(w, c, outlook);
     withEstimateCache(() => planConstruction(w, c, outlook));
@@ -147,8 +146,8 @@ const ownRegions = (w: World, c: Company) => w.regions.filter((r) => r.kingdomId
  */
 function officeStaffable(w: World, c: Company, r: Region, m: MethodDef, byId: Map<number, Building>): number {
   const reach = Math.min(1, TUNE.switchRate * STAFFING_HORIZON);
-  // 사무소가 주는 임금: 국영 임금 (TUNE.wageMarket = 1 이면 그 지역 국영 임금)
-  const mine = TUNE.wageMarket ? (r.stateWages ?? c.stateWages ?? c.wages) : (c.stateWages ?? c.wages);
+  // 사무소가 주는 임금: 그 지역 국영 임금
+  const mine = r.stateWages ?? c.stateWages ?? c.wages;
   let best = Infinity;
   for (const s of SKILLS) {
     const per = m.workers[s] ?? 0;
@@ -169,61 +168,13 @@ function officeStaffable(w: World, c: Company, r: Region, m: MethodDef, byId: Ma
   return best;
 }
 
-/**
- * 생산 건물 임금 (민간 상회와 왕실, 데이터 기준): 바닥과 천장 사이에서, 지난주 실제로 사람이 찼는지를 보고 움직인다.
- * 왕실의 정부 건물(행정청·건축사무소·학교)은 국영 임금(stateWages)이라 여기서 세지 않는다. 플레이어 회사는 AI가 돌지 않는다
- * - 바닥: 그 자리로 옮겨 올 사람들의 지금 소득 × TUNE.wageOutside (노동자·농부 ← 소작 수확 가치, 기술자 ← 노동자 임금, 전문가 ← 기술자 임금)
- * - 천장: 회사 생산 건물이 사람을 다 채웠을 때의 부가가치(지금 가격의 매출 − 원료) × TUNE.wageCeil 를 기본 임금 비율대로 나눈 값.
- *   실제 부가가치로 재면 사람이 없을 때 천장이 0이 되어 임금을 못 올리고 사람도 못 뽑는다. 산출이 없는 정부 건물은 천장 계산에서 뺀다
- * - 빈자리가 5% 넘는데 지난주 고용이 빈자리의 10%도 못 늘었으면 +3%, 빈자리가 2% 미만이면 −1%, 적자면 −2%
- */
-function adjustWages(w: World, c: Company) {
-  const mine = w.buildings.filter((b) => b.companyId === c.id && !BUILDING_BY_ID[b.typeId].auto && !(c.state && isGovernment(b.typeId)));
-  let va = 0, baseBill = 0;
-  for (const b of mine) {
-    const m = getMethod(b.typeId, b.methodId);
-    if (!b.active || !Object.keys(m.outputs).length) continue;
-    const e = estimateMethod(w, b.regionId, b.typeId, b.methodId, c.wages, c.state);
-    va += (e.revenue - e.inputCost) * b.level * b.utilization;
-    for (const s of SKILLS) if (!paysDividend(c.state, s)) baseBill += slots(b, s) * SKILL_DEFS[s].baseWage;
-  }
-  const ceilMult = baseBill > 0 ? Math.max(0, va) * TUNE.wageCeil / baseBill : Infinity;
-  const last = c.lastEmployed ?? {};
-  c.lastEmployed = {};
-  for (const s of SKILLS) {
-    if (paysDividend(c.state, s)) continue;
-    let cap = 0, emp = 0, outside = 0, people = 0;
-    for (const b of mine) {
-      const n = slots(b, s);
-      if (n <= 0) continue;
-      cap += n; emp += b.employed[s];
-      const r = regionById(w, b.regionId);
-      outside += (isLowerJob(s) ? subsistenceWage(w, r) : s === 'skilled' ? c.wages.unskilled : c.wages.skilled) * n;
-      people += n;
-    }
-    c.lastEmployed[s] = emp;
-    if (cap <= 0) continue;
-    const floor = (people > 0 ? outside / people : 0) * TUNE.wageOutside;
-    const ceiling = SKILL_DEFS[s].baseWage * ceilMult;
-    const vacancy = cap - emp, grew = emp - (last[s] ?? emp);
-    let wage = c.wages[s];
-    // runAi 는 주간 장부를 넘기기 전에 돈다: weekProfit 이 막 끝난 주다 (lastWeekProfit 은 그 전 주)
-    if (TUNE.wageLossCut && c.weekProfit < 0) wage *= 0.98;
-    else if (vacancy > cap * 0.05 && grew < vacancy * 0.1) wage *= 1.03;
-    else if (vacancy < cap * 0.02) wage *= 0.99;
-    wage = Math.max(floor, Math.min(ceiling, wage));
-    wage = Math.min(SKILL_DEFS[s].baseWage * 3, Math.max(SKILL_DEFS[s].baseWage * 0.1, wage));
-    if (Math.abs(wage - c.wages[s]) > 1e-9) applyCommand(w, c.id, { type: 'setWage', skill: s, wage });
-  }
-}
-
 /** 상회 웃돈(adjustPremium)을 한 주에 움직이는 최대 폭 (시장 임금 대비 비율). 근거: DESIGN 11 aiWagePremium 행 */
 export const PREMIUM_STEP = 0.1;
 /** 상회 웃돈 상한 (플레이어 웃돈 손잡이 setWageOffset 의 위 끝과 같다). AI 는 웃돈만 얹으므로 아래 끝은 0 */
 export const PREMIUM_MAX = 1;
 
 /**
- * 민간 AI 상회의 지역 웃돈 (AI 판단, 2026-11-02 wt-wagelag A1, 매주, TUNE.wageMarket = 1 일 때). 지역마다 그 상회 생산 건물(정부·소유·소작 건물 제외)을 보고, 직종마다:
+ * 민간 AI 상회의 지역 웃돈 (AI 판단, 2026-11-02 wt-wagelag A1, 매주). 지역마다 그 상회 생산 건물(정부·소유·소작 건물 제외)을 보고, 직종마다:
  * - 목표 = 바깥 소득 × switchPremium ÷ 시장 임금 − 1 (0~PREMIUM_MAX). 바깥 소득: 노동자·농부는 그 지역 소작 1인 소득, 위 직종은 한 칸 아래 직종(WAGE_LADDER)이
  *   이 상회 그 지역에서 받는 임금 (사람이 옮겨 오려면 지금 소득의 switchPremium 배를 넘어야 한다: labor.ts switchShare)
  * - 그 지역 이익(profitEma 합)이 0 이하면 PREMIUM_STEP 만큼 내린다 (0까지)
@@ -279,7 +230,7 @@ function adjustPremium(w: World, c: Company) {
 export const STATE_HIRE_PULL = 1.25;
 
 /**
- * AI 왕실의 국영 건물 지역 웃돈 (TUNE.aiStatePremium, 매주, TUNE.wageMarket = 1). 지역마다 그 왕실의 정부 건물(행정청·건축사무소·학교: 켜져 있고 해산하지 않은 것)을 보고, 직종마다:
+ * AI 왕실의 국영 건물 지역 웃돈 (TUNE.aiStatePremium, 매주). 지역마다 그 왕실의 정부 건물(행정청·건축사무소·학교: 켜져 있고 해산하지 않은 것)을 보고, 직종마다:
  * - 바깥 소득 = 그 지역 시장 임금과 다음 중 큰 쪽: 노동자·농부는 소작 1인 소득, 하급 귀족은 그 지역 저택의 하급 귀족 1인 몫 (economy.ts shareWage).
  *   (세습 관료제 행정청의 하급 귀족은 저택 몫과 비교해 떠난다: 저택 이익이 오르면 1년차에 국영 임금의 1.5~3배가 된다 (10년 × 시드 1·2, main b1bd1fa, HANDOFF 0-1102e))
  * - 그 직종 충원율(고용 ÷ 자리)이 ADMIN_STAFFED 아래면 웃돈을 데려올 목표(바깥 소득 × STATE_HIRE_PULL ÷ 웃돈 전 국영 임금 − 1)까지 바로 올린다
@@ -369,9 +320,9 @@ export function treasuryTight(w: World, c: Company, k: Kingdom): boolean {
  * - 풂 (TUNE.treasuryHighWeeks 주치 초과, 줄지 않았다): 세금을 내린다.
  * - 기술을 다 연 왕국: 풂 조건에서 임금 지수가 1 이하면 국영 임금을 TUNE.doneWageMax 단계까지 올리고,
  *   임금 지수가 1을 넘으면 보통(3)으로 되돌린다. 그 밖에는 국영 임금을 보통 위로 올리지 않는다
- * - 행정청 일손 (TUNE.aiAdminWage, 오버홀 07 A4): 1 이면 징수율이 TUNE.aiAdminFloor 아래인 동안 국영 임금을 내리지 않고, 행정청 충원율이 ADMIN_STAFFED 아래면
+ * - 행정청 일손 (wt-wagelag A2, 오버홀 07 A4): 행정청과 건축사무소 충원율 중 낮은 쪽이 ADMIN_STAFFED 아래인 동안 국영 임금을 내리지 않고,
  *   그 점검에서는 다른 손잡이보다 먼저 국영 임금을 한 칸 올린다 (5까지). 행정청 일꾼은 국영 임금을 받으므로, 국고가 조일 때 임금을 깎으면 징수율이 더 떨어진다.
- *   2 이면 징수율과 상관없이 행정청과 건축사무소 충원율 중 낮은 쪽이 ADMIN_STAFFED 아래인 동안 같은 일을 한다 (wt-wagelag A2)
+ *   (징수율 하한 aiAdminFloor 를 보던 갈래 aiAdminWage 1 과 끄는 갈래 0 은 2026-11-02 wt-simplify 1-E 에서 지웠다)
  * - 복지 (cutWelfare·raiseWelfare): 조임에서는 복지를 가장 먼저 줄인다 (단계를 1까지, 빚이 있으면 그다음 복지법을 끈다). 조이지 않는데 국고가 줄며
  *   TUNE.welfareWeeks 의 절반 주치 아래면 복지 단계를 내린다. 다른 손잡이를 움직이지 않은 점검에서는 복지를 켜거나 올린다 (raiseWelfare)
  */
@@ -385,11 +336,10 @@ function adjustBudget(w: World, c: Company) {
   let step: [BudgetItem, number] | null = null;
   // 기술을 다 연 왕국: 국영 임금을 보통 위로 TUNE.doneWageMax 단계까지 올릴 수 있다 (임금 지수 1 이하, 국고 넉넉할 때)
   const done = !c.research.current && researchableTechs(c).length === 0;
-  // TUNE.aiAdminWage 1: 징수율이 하한 아래면 국영 임금을 내리지 않는다 (cut = false). 2: 행정청·건축사무소 충원율 중 낮은 쪽이 ADMIN_STAFFED 아래면
-  const short = TUNE.aiAdminWage === 2 ? Math.min(adminStaffing(w, c), officeStaffing(w, c)) < ADMIN_STAFFED : false;
-  const guard = TUNE.aiAdminWage === 2 ? short : !!TUNE.aiAdminWage && belowAdminFloor(k);
+  // 행정청·건축사무소 충원율 중 낮은 쪽이 ADMIN_STAFFED 아래면 국영 임금을 내리지 않고(cut = false) 먼저 한 칸 올린다
+  const guard = Math.min(adminStaffing(w, c), officeStaffing(w, c)) < ADMIN_STAFFED;
   const cut = !guard;
-  if (guard && b.wages < BUDGET_STEPS && (TUNE.aiAdminWage === 2 || adminStaffing(w, c) < ADMIN_STAFFED)) {
+  if (guard && b.wages < BUDGET_STEPS) {
     step = ['wages', b.wages + 1];
   } else if (treasuryTight(w, c, k)) {
     if (losing && !cutWelfare(w, c, k)) {

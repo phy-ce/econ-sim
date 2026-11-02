@@ -79,7 +79,7 @@ function govBuildings(w: World, k: Kingdom): Building[] {
   return gov ? w.buildings.filter((b) => b.companyId === gov.id && !BUILDING_BY_ID[b.typeId].auto) : [];
 }
 
-/** 정부 건물 한 곳의 시장 임금표 (국영 임금 단계 배율 1): TUNE.wageMarket 이고 그 지역 시장 임금(Region.wages)이 있으면 그 값 × (1 + 그 지역 AI 왕실 국영 웃돈
+/** 정부 건물 한 곳의 시장 임금표 (국영 임금 단계 배율 1): 그 지역 시장 임금(Region.wages)이 있으면 그 값 × (1 + 그 지역 AI 왕실 국영 웃돈
  *  Company.statePremium, TUNE.aiStatePremium, 없으면 1) (실제 지급 Region.stateWages = 그 값 × 단계, finance.ts applyStateWages), 아니면 세계 평균 marketWages(왕실) */
 type WageTable = (b: Building) => Record<Skill, number>;
 function govMarketWages(w: World, govId: number): WageTable {
@@ -87,7 +87,7 @@ function govMarketWages(w: World, govId: number): WageTable {
   const prem = companyById(w, govId)?.statePremium;
   const cache = new Map<number, Record<Skill, number>>();
   return (b) => {
-    const r = TUNE.wageMarket ? regionById(w, b.regionId).wages : undefined;
+    const r = regionById(w, b.regionId).wages;
     if (!r) return world;
     const p = prem?.[b.regionId];
     if (!p) return r;
@@ -342,7 +342,7 @@ export interface BudgetDrillBase {
   smoothing: number;
 }
 
-/** 정부 건물 한 곳의 직종별 임금. marketWage = 그 건물 지역 시장 임금 (Region.wages, 1인 하루, TUNE.wageMarket 0 이거나 지역 임금이 아직 없으면 undefined),
+/** 정부 건물 한 곳의 직종별 임금. marketWage = 그 건물 지역 시장 임금 (Region.wages, 1인 하루, 지역 임금이 아직 없으면 undefined),
  *  premium = 그 지역 AI 왕실 국영 웃돈 (TUNE.aiStatePremium, 0 이면 없음), wageIndex = 시장 임금 × (1 + premium) ÷ baseWage (호환용),
  *  perHead = 시장 임금 × (1 + premium) × stepMult = baseWage × wageIndex × stepMult (1인 하루) */
 export interface WageDrillJob { skill: Skill; employed: number; jobs: number; baseWage: number; wageIndex: number; stepMult: number; perHead: number; weekly: number; marketWage?: number; premium?: number }
@@ -398,7 +398,7 @@ export function drillWages(w: World, kid: number, steps: Steps = {}): WageDrill 
   const rows: WageDrillRow[] = [];
   for (const b of govBuildings(w, k)) {
     if (!isBudgetFunded(b.typeId)) continue;
-    const regional = !!TUNE.wageMarket && !!regionById(w, b.regionId).wages;
+    const regional = !!regionById(w, b.regionId).wages;
     const jobsBy: WageDrillJob[] = [];
     let employed = 0, jobs = 0, weekly = 0;
     for (const s of SKILLS) {

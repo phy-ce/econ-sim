@@ -319,10 +319,9 @@ export function createMicroWorld(opts: MicroOptions = {}): World {
     const tenants = subs ? findPop(w, r.id, 'peasant', subs.id) : undefined;
     for (const p of w.pops.filter((x) => x.regionId === r.id)) p.wealth = p === tenants ? affordableTenantWealth(w, r, p.size, workforce(p)) : affordableWealth(r, p.size, p.incomeEma);
   }
-  if (TUNE.wageMarket) initMarketWages(w);
+  initMarketWages(w);
   updateWageIndex(w, kingdom);
   applyStateWages(w, kingdom);
-  if (!TUNE.wageMarket) gov.wages = { ...gov.stateWages! };
   gov.cash = gov.weekStartCash = startTreasury(w, gov);
   gov.debt = 0;
   for (const f of w.buildings.filter((x) => x.typeId === 'finance')) {

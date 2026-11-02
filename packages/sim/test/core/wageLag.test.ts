@@ -1,21 +1,18 @@
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { SCRIPTED_HARVESTS, SKILLS, TUNE, createWorld, harvestFactor, moneyIdentity, step, totalMoney } from '../../src/index';
+import { afterAll, describe, expect, it } from 'vitest';
+import { SCRIPTED_HARVESTS, SKILLS, createWorld, harvestFactor, moneyIdentity, step, totalMoney } from '../../src/index';
 import type { World } from '../../src/index';
 import { PREMIUM_MAX } from '../../src/ai';
 import { firstDiff } from '../helpers';
 
-// 임금 지연 고치기 (wt-wagelag): A1 상회 웃돈(ai.ts adjustPremium, 2026-11-02 기본, 스위치는 wt-simplify 1-C 에서 지움), A2 국영 임금 지키기(aiAdminWage 2), W1 오를 때 속도(wageMarketRateUp)를 켜도
-// 화폐 보존·결정성(저장/불러오기)이 지켜지고 웃돈이 범위 안에 있다. 정해 둔 흉작(SCRIPTED_HARVESTS)은 그 지역·기간에만 산출을 깎는다
-// (W1 은 wageTarget 0 일 때만 쓰이므로 이 시험은 wageTarget 0 으로 돈다)
-const KEYS = ['aiAdminWage', 'wageMarketRateUp', 'wageTarget'] as const;
-const saved = Object.fromEntries(KEYS.map((k) => [k, TUNE[k]]));
-beforeAll(() => { Object.assign(TUNE, { aiAdminWage: 2, wageMarketRateUp: 0.01, wageTarget: 0 }); });
-afterAll(() => { Object.assign(TUNE, saved); SCRIPTED_HARVESTS.length = 0; });
+// 임금 지연 고치기 (wt-wagelag): A1 상회 웃돈(ai.ts adjustPremium)과 A2 국영 임금 지키기(ai.ts adjustBudget)는 2026-11-02 기본이 되어 스위치를 지웠다
+// (aiWagePremium 은 wt-simplify 1-C, aiAdminWage 는 1-E). 기본 세계에서 화폐 보존·결정성(저장/불러오기)이 지켜지고 웃돈이 범위 안에 있다.
+// 정해 둔 흉작(SCRIPTED_HARVESTS)은 그 지역·기간에만 산출을 깎는다. (W1 오를 때 속도 wageMarketRateUp 은 옛 고정 속도 규칙과 함께 1-E 에서 지웠다)
+afterAll(() => { SCRIPTED_HARVESTS.length = 0; });
 
 const reload = (w: World): World => JSON.parse(JSON.stringify(w));
 const runTo = (w: World, tick: number) => { while (w.tick < tick) step(w); };
 
-describe('임금 지연 스위치 (A1·A2·W1)', () => {
+describe('임금 지연 고치기 (A1·A2)', () => {
   it('화폐 총량이 장부와 맞고 웃돈이 0~상한 안이다', () => {
     const w = createWorld(1);
     const m0 = moneyIdentity(w);

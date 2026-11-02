@@ -260,10 +260,10 @@ export interface Valuation { revenue: number; inputCost: number; wageCost: numbe
 /**
  * 새로 지을지 판단할 때 쓰는 장기 임금: 생산 건물은 민간·왕실 모두 지금 임금과 기본 임금 × TUNE.investWage 중 큰 값.
  * 왕실의 정부 건물(행정청 등)은 정책(국영 임금 수준)이 정하므로 지금 국영 임금 그대로 본다.
- * TUNE.wageMarket = 1 이고 지역(w, r)을 주면: 그 지역 회사 임금(wagesAt)과 지역 시장 임금 52주 이동평균(Region.wageAvg) 중 큰 값 (정부 건물은 그 지역 국영 임금)
+ * 지역(w, r)을 주고 그 지역 시장 임금이 있으면: 그 지역 회사 임금(wagesAt)과 지역 시장 임금 52주 이동평균(Region.wageAvg) 중 큰 값 (정부 건물은 그 지역 국영 임금)
  */
 export function longRunWages(c: Company, typeId: string, w?: World, r?: Region): Record<Skill, number> {
-  if (TUNE.wageMarket && w && r?.wages) {
+  if (w && r?.wages) {
     const now = wagesAt(c, typeId, w, r.id);
     if (c.state && isGovernment(typeId)) return now;
     const lr = {} as Record<Skill, number>;

@@ -29,7 +29,7 @@ import {
   LITERACY_DOWN, LITERACY_PER_WEALTH, LITERACY_UP, QUAL_DECAY, QUAL_FACTOR, QUAL_FROM, QUAL_RATE, SEVERE_STARVATION, STARVATION_LINE,
   birthRateAt, mortalityAt, workforce,
 } from './pops';
-import { HIRE_RATE, MARKET_WAGE_RANGE, MIGRATE_FULL, MIGRATE_MAX, MIGRATE_START, UNPAID_QUIT, WAGE_AVG_DAYS, WAGE_TILT, subsistenceWage, switchShare } from './labor';
+import { HIRE_RATE, MARKET_WAGE_RANGE, MIGRATE_FULL, MIGRATE_MAX, MIGRATE_START, UNPAID_QUIT, WAGE_AVG_DAYS, subsistenceWage, switchShare } from './labor';
 import { CREW_RATE, EXP_GAIN, officeLoad } from './production';
 import {
   DAILY_INTEREST, KEEP_SHARE, TREASURY_RELEASE, MINT_BASE, MINT_RATE, RESERVE_SHARE, kingdomLiteracy, researchPoints, adminCapacityOf, reserveCap, taxCapacity, taxRates,
@@ -513,7 +513,7 @@ export const ENCYCLOPEDIA: EncEntry[] = [
         };
       },
     },
-    related: ['buildings', 'production', 'tech', 'ai-wages', 'classes'], seenIn: ['company'], source: ['data.ts BUILDING_TYPES', 'data.ts INDUSTRIES', 'data.ts ruleBaseWage', 'cli/methods_audit.ts', 'cli/rebasewage.ts'], design: ['7.1'],
+    related: ['buildings', 'production', 'tech', 'market-wage', 'classes'], seenIn: ['company'], source: ['data.ts BUILDING_TYPES', 'data.ts INDUSTRIES', 'data.ts ruleBaseWage', 'cli/methods_audit.ts', 'cli/rebasewage.ts'], design: ['7.1'],
   },
   {
     id: 'buildings', category: 'production', title: t('건물과 방식', 'Buildings and methods'),
@@ -710,24 +710,10 @@ export const ENCYCLOPEDIA: EncEntry[] = [
     related: ['best-seat', 'production'], seenIn: ['workforce'], source: ['labor.ts laborMarket'], design: ['7.2'],
   },
   {
-    id: 'ai-wages', category: 'labour', title: t('시장 임금', 'Market wages'),
-    rule: t('지역 시장 임금이 꺼져 있을 때(기본은 켜져 있다) 회사마다 생산 건물 임금표가 하나다 (왕실의 생산 건물 포함). AI 회사(민간 상회와 왕실)는 매주 직종별 임금을 움직인다. 바닥 = 옮겨 올 사람의 지금 소득 × {0}. 천장 = 부가가치 × {1}를 기본 임금 비율로 나눈 몫. 바닥이 천장보다 우선한다. 최저임금은 없다.', 'With the regional market wage off (it is on by default) each company has one wage table for its producing buildings (crown producers included). AI companies (private houses and crowns) adjust wages weekly per job. Floor = current income of people who would move in × {0}. Ceiling = value added × {1}, split by base-wage weight. The floor wins. There is no minimum wage.'),
-    formula: 'loss → ×0.98; vacancies > 5% & slow hiring → ×1.03; vacancies < 2% → ×0.99',
-    params: [tune('wageOutside', '바닥 배율', 'Floor multiple', 'x'), tune('wageCeil', '천장 (부가가치 중)', 'Ceiling (share of value added)', 'pct'), tune('wageLossCut', '적자면 깎기', 'Cut on loss')],
-    live: {
-      pick: ['kingdom'], run: (w, ctx) => {
-        const k = kingdomOfCtx(w, ctx), c = companyById(w, k.privateIds[0]);
-        if (!c) return {};
-        return { bars: SKILLS.filter((s) => !['capitalist', 'aristocrat'].includes(s)).map((s) => bar(t(SKILL_DEFS[s].name, SKILL_DEFS[s].nameEn ?? s), r2(c.wages[s]), 'florin', SKILL_DEFS[s].baseWage * 2)) };
-      },
-    },
-    related: ['market-wage', 'state-wages', 'tenant-income', 'best-seat'], seenIn: ['company', 'workforce'], source: ['ai.ts adjustWages'], design: ['7.3'],
-  },
-  {
     id: 'market-wage', category: 'labour', title: t('지역 시장 임금', 'Regional market wage'),
-    rule: t('{0} = 1이면 지역마다 직종마다 시장 임금이 하나 있고, 그 지역의 모든 임금 건물(왕실 생산 건물 포함)이 그것을 준다. AI 민간 상회는 그 지역 웃돈을 얹어 줄 수 있다 (상회 웃돈). {6} = 2(기본)이면 임금은 맞는 임금 쪽으로 날마다 그 차이의 {7}만큼 움직인다: 맞는 임금은 오려는 사람이 자리 수와 같아지는 가장 낮은 임금이다 (아래 끝은 시작 임금 규칙, 위 끝은 바깥 소득 × {9}. 사람이 남으면 아래 끝, 임금을 더 올려도 더 올 사람이 없으면 다 오는 가장 낮은 임금). 오려는 사람 = 재직자 + 자격 있는 실업자 + 다른 자리에서 일하는 자격자 × 옮기는 비율(지금 소득, 시장 임금) ÷ 최대 비율. 손해 보는 생산 건물의 빈자리는 자리로 세지 않는다. 자리가 없으면 한 칸 아래 직종 임금 × 옮기는 문턱(노동자·농부는 소작 1인 소득 × 문턱)이고 시작 임금도 같다. 자격자가 없으면 움직이지 않는다. 기본 임금의 {2}~{3}배 안. 정부 건물은 그 지역 시장 임금 × 국영 임금 단계. AI 투자 판단은 지금 임금과 {4}일 이동평균 중 큰 값. 0이면 회사 임금표와 AI 임금 판단이다. {6} = 0이면 옛 규칙: 날마다 임금 × {1} × clamp((자리 − 오려는 사람) ÷ min(자리, 오려는 사람), −1, 1)만큼 움직이고, {5} > 0이면 오를 때(자리 > 오려는 사람)만 하루 속도가 {5}다. {6} = 1(비교용)이면 목표 = 바깥 소득 × (1 + {8} × clamp((자리 − 오려는 사람) ÷ min(자리, 오려는 사람), −1, 1))이다. 바깥 소득 = 시작 임금 규칙과 그 지역 배당 자리 1인 몫 × 옮기는 문턱 중 큰 값.', 'With {0} = 1 each region has one market wage per job, paid by every wage building there (crown producers included). AI private firms may add a regional premium on top (firm wage premium). With {6} = 2 (default) the wage moves {7} of the gap to the clearing wage each day: the lowest wage at which willing equals seats (floor = the starting-wage rule, cap = outside income × {9}; with surplus people it is the floor, and if raising it brings no one more it is the lowest wage at which all who would come do). Willing = incumbents + qualified unemployed + qualified people working elsewhere × switch share(current income, market wage) ÷ max share. Vacancies of loss-making producers do not count as seats. With no seats it is the job below × the switch threshold (labourers and farmers: tenant income × threshold), as is the starting wage. With no qualified people it does not move. Kept within {2}–{3}× base wage. Government buildings pay the regional market wage × state-wage step. AI investment uses the larger of the current wage and its {4}-day moving average. 0 keeps company wage tables and AI wage setting. With {6} = 0 the old rule applies: each day it moves by wage × {1} × clamp((seats − willing) ÷ min(seats, willing), −1, 1), and with {5} > 0 the daily rate is {5} only while rising. With {6} = 1 (comparison) the target = outside income × (1 + {8} × clamp((seats − willing) ÷ min(seats, willing), −1, 1)). Outside income = the larger of the starting-wage rule and one share of a regional dividend seat × switch threshold.'),
+    rule: t('지역마다 직종마다 시장 임금이 하나 있고, 그 지역의 모든 임금 건물(왕실 생산 건물 포함)이 그것을 준다. AI 민간 상회는 그 지역 웃돈을 얹어 줄 수 있다 (상회 웃돈). 임금은 맞는 임금 쪽으로 날마다 그 차이의 {3}만큼 움직인다: 맞는 임금은 오려는 사람이 자리 수와 같아지는 가장 낮은 임금이다 (아래 끝은 시작 임금 규칙, 위 끝은 바깥 소득 × {4}. 사람이 남으면 아래 끝, 임금을 더 올려도 더 올 사람이 없으면 다 오는 가장 낮은 임금). 오려는 사람 = 재직자 + 자격 있는 실업자 + 다른 자리에서 일하는 자격자 × 옮기는 비율(지금 소득, 시장 임금) ÷ 최대 비율. 손해 보는 생산 건물의 빈자리는 자리로 세지 않는다. 자리가 없으면 한 칸 아래 직종 임금 × 옮기는 문턱(노동자·농부는 소작 1인 소득 × 문턱)이고 시작 임금도 같다. 자격자가 없으면 움직이지 않는다. 기본 임금의 {0}~{1}배 안. 정부 건물은 그 지역 시장 임금 × 국영 임금 단계. AI 투자 판단은 지금 임금과 {2}일 이동평균 중 큰 값. 바깥 소득 = 시작 임금 규칙과 그 지역 배당 자리 1인 몫 × 옮기는 문턱 중 큰 값.', 'Each region has one market wage per job, paid by every wage building there (crown producers included). AI private firms may add a regional premium on top (firm wage premium). The wage moves {3} of the gap to the clearing wage each day: the lowest wage at which willing equals seats (floor = the starting-wage rule, cap = outside income × {4}; with surplus people it is the floor, and if raising it brings no one more it is the lowest wage at which all who would come do). Willing = incumbents + qualified unemployed + qualified people working elsewhere × switch share(current income, market wage) ÷ max share. Vacancies of loss-making producers do not count as seats. With no seats it is the job below × the switch threshold (labourers and farmers: tenant income × threshold), as is the starting wage. With no qualified people it does not move. Kept within {0}–{1}× base wage. Government buildings pay the regional market wage × state-wage step. AI investment uses the larger of the current wage and its {2}-day moving average. Outside income = the larger of the starting-wage rule and one share of a regional dividend seat × switch threshold.'),
     formula: 'w ← w + f × (w* − w),  S(w*) = D,  w* ∈ [startWage, outside × span]',
-    params: [tune('wageMarket', '지역 시장 임금', 'Regional market wage'), tune('wageMarketRate', '하루 속도', 'Daily rate', 'pct'), p('안전 범위 최소', 'Safety floor', () => MARKET_WAGE_RANGE[0], 'x'), p('안전 범위 최대', 'Safety cap', () => MARKET_WAGE_RANGE[1], 'x'), p('투자 판단 이동평균', 'Investment moving average', () => WAGE_AVG_DAYS, 'day'), tune('wageMarketRateUp', '오를 때 하루 속도', 'Daily rate when rising', 'pct'), tune('wageTarget', '목표 임금', 'Wage target'), tune('wageTargetSpeed', '목표까지 하루 비율', 'Daily share of the gap', 'pct'), p('쏠림 계수', 'Tilt factor', () => WAGE_TILT), tune('wageTargetSpan', '목표 위 끝 배율', 'Target cap multiple', 'x')],
+    params: [p('안전 범위 최소', 'Safety floor', () => MARKET_WAGE_RANGE[0], 'x'), p('안전 범위 최대', 'Safety cap', () => MARKET_WAGE_RANGE[1], 'x'), p('투자 판단 이동평균', 'Investment moving average', () => WAGE_AVG_DAYS, 'day'), tune('wageTargetSpeed', '목표까지 하루 비율', 'Daily share of the gap', 'pct'), tune('wageTargetSpan', '목표 위 끝 배율', 'Target cap multiple', 'x')],
     live: {
       pick: ['kingdom'], run: (w, ctx) => {
         const k = kingdomOfCtx(w, ctx);
@@ -736,13 +722,13 @@ export const ENCYCLOPEDIA: EncEntry[] = [
         return { rows: [row('지역', 'Region', r.id), row('노동자 시장 임금', 'Labourer market wage', r.wages!.unskilled, 'florin'), row('기술자 시장 임금', 'Skilled market wage', r.wages!.skilled, 'florin'), row('전문가 시장 임금', 'Expert market wage', r.wages!.expert, 'florin'), row('소작 1인 소득', 'Tenant income', subsistenceWage(w, r), 'florin')] };
       },
     },
-    related: ['ai-wages', 'state-wages', 'best-seat', 'tenant-income', 'ai-wage-premium'], seenIn: ['workforce'], source: ['labor.ts updateMarketWages', 'labor.ts labourTable', 'economy.ts wagesAt'], design: ['7.3'],
+    related: ['state-wages', 'best-seat', 'tenant-income', 'ai-wage-premium'], seenIn: ['workforce'], source: ['labor.ts updateMarketWages', 'labor.ts labourTable', 'economy.ts wagesAt'], design: ['7.3'],
   },
   {
     id: 'ai-wage-premium', category: 'ai', title: t('상회 웃돈', 'Firm wage premium'),
-    rule: t('{2} = 1이면 AI 민간 상회는 매주 지역마다 직종마다 웃돈을 정한다. 목표 = 바깥 소득 × 옮기는 문턱 ÷ 시장 임금 − 1 (0~{0}). 바깥 소득은 노동자·농부가 그 지역 소작 1인 소득, 위 직종은 한 칸 아래 직종이 그 상회에서 받는 임금이다. 그 지역 상회 건물 이익이 0 이하면 {1}씩 내리고, 웃돈이 목표보다 크면 목표까지 {1}씩 내리고, 빈자리가 있는데 고용이 줄거나 빈자리가 늘면 목표까지 {1}씩 올린다. 그 지역 상회 임금 = 시장 임금 × (1 + 웃돈).', 'With {2} = 1 each AI private firm sets a premium per region and job every week. Target = outside income × switch threshold ÷ market wage − 1 (0–{0}). Outside income is the regional tenant income for labourers and farmers, and for higher jobs the wage the firm pays the job below. If its buildings there make no profit the premium falls by {1}; above target it falls by {1} toward the target; with vacancies and falling employment or rising vacancies it rises by {1} toward the target. Its wage there = market wage × (1 + premium).'),
+    rule: t('AI 민간 상회는 매주 지역마다 직종마다 웃돈을 정한다. 목표 = 바깥 소득 × 옮기는 문턱 ÷ 시장 임금 − 1 (0~{0}). 바깥 소득은 노동자·농부가 그 지역 소작 1인 소득, 위 직종은 한 칸 아래 직종이 그 상회에서 받는 임금이다. 그 지역 상회 건물 이익이 0 이하면 {1}씩 내리고, 웃돈이 목표보다 크면 목표까지 {1}씩 내리고, 빈자리가 있는데 고용이 줄거나 빈자리가 늘면 목표까지 {1}씩 올린다. 그 지역 상회 임금 = 시장 임금 × (1 + 웃돈).', 'Each AI private firm sets a premium per region and job every week. Target = outside income × switch threshold ÷ market wage − 1 (0–{0}). Outside income is the regional tenant income for labourers and farmers, and for higher jobs the wage the firm pays the job below. If its buildings there make no profit the premium falls by {1}; above target it falls by {1} toward the target; with vacancies and falling employment or rising vacancies it rises by {1} toward the target. Its wage there = market wage × (1 + premium).'),
     formula: 'target = clamp(outside × premium_switch / w_market − 1, 0, max)',
-    params: [p('웃돈 상한', 'Premium cap', () => PREMIUM_MAX, 'pct'), p('한 주 폭', 'Weekly step', () => PREMIUM_STEP, 'pct'), tune('wageMarket', '지역 시장 임금', 'Regional market wage')],
+    params: [p('웃돈 상한', 'Premium cap', () => PREMIUM_MAX, 'pct'), p('한 주 폭', 'Weekly step', () => PREMIUM_STEP, 'pct')],
     live: {
       pick: ['kingdom'], run: (w, ctx) => {
         const k = kingdomOfCtx(w, ctx), c = companyById(w, k.privateIds[0]);
@@ -768,7 +754,7 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   },
   {
     id: 'state-wages', category: 'labour', title: t('국영 임금과 임금 지수', 'State wages and the wage index'),
-    rule: t('왕실의 정부 건물(행정청·건축사무소·학교)은 국영 임금을 준다: 그 직종의 시장 임금 × 국영 임금 단계 배율({0}). 지역 시장 임금이 켜져 있으면(기본) 시장 임금은 그 지역 시장 임금이고, 꺼져 있으면 이 왕실 밖 모든 건물의 고용 가중 평균 임금이다 (고용이 없는 직종은 기본 임금). 왕실 생산 건물도 시장 임금이다. AI 왕실은 그 지역 국영 웃돈만큼 더 준다: × (1 + 웃돈) (국영 웃돈 항목). 임금 지수(민간 노동자·농부 평균 임금 ÷ 기본 임금)는 AI 왕실이 국영 임금 단계를 고르는 데만 쓴다.', 'Crown government buildings (administration, construction office, school) pay the state wage: the market wage of the job × state-wage step ({0}). With the regional market wage on (default) the market wage is that region’s market wage; with it off it is the employment-weighted average wage of all buildings outside this crown (base wage if nobody is employed in that job). Crown producers pay market wages too. An AI crown also multiplies by (1 + its regional state premium) (see State wage premium). The wage index (private labourer and farmer wages ÷ base wage) is only used by the AI crown to pick the state-wage step.'),
+    rule: t('왕실의 정부 건물(행정청·건축사무소·학교)은 국영 임금을 준다: 그 직종의 시장 임금 × 국영 임금 단계 배율({0}). 시장 임금은 그 지역 시장 임금이다. 왕실 생산 건물도 시장 임금이다. AI 왕실은 그 지역 국영 웃돈만큼 더 준다: × (1 + 웃돈) (국영 웃돈 항목). 임금 지수(민간 노동자·농부 평균 임금 ÷ (그 지역 소작 1인 소득 × 옮기는 문턱))는 AI 왕실이 국영 임금 단계를 고르는 데만 쓴다.', 'Crown government buildings (administration, construction office, school) pay the state wage: the market wage of the job × state-wage step ({0}). The market wage is that region’s market wage. Crown producers pay market wages too. An AI crown also multiplies by (1 + its regional state premium) (see State wage premium). The wage index (private labourer and farmer wages ÷ (regional tenant income × switch threshold)) is only used by the AI crown to pick the state-wage step.'),
     formula: 'wage_s = marketWage_s × level × (1 + premium_s, AI crown only)',
     params: [tune('govWageLevels', '국영 임금 단계', 'State wage steps', 'x')],
     live: {
@@ -777,7 +763,7 @@ export const ENCYCLOPEDIA: EncEntry[] = [
         return { rows: [row('임금 지수', 'Wage index', k.wageIndex ?? 1, 'x'), row('국영 임금 단계', 'State wage step', k.budget.wages), row('국영 노동자 임금', 'State labourer wage', gov?.stateWages?.unskilled ?? 0, 'florin'), row('국영 기술자 임금', 'State skilled wage', gov?.stateWages?.skilled ?? 0, 'florin'), row('왕실 생산 노동자 임금', 'Crown producer labourer wage', gov?.wages.unskilled ?? 0, 'florin')] };
       },
     },
-    related: ['budget-steps', 'ai-wages', 'ai-state-premium'], seenIn: ['finance'], source: ['finance.ts updateWageIndex', 'finance.ts applyStateWages', 'economy.ts wagesAt'], design: ['9.2', '7.3'],
+    related: ['budget-steps', 'market-wage', 'ai-state-premium'], seenIn: ['finance'], source: ['finance.ts updateWageIndex', 'finance.ts applyStateWages', 'economy.ts wagesAt'], design: ['9.2', '7.3'],
   },
   {
     id: 'migration', category: 'labour', title: t('이주', 'Migration'),
@@ -1056,7 +1042,7 @@ export const ENCYCLOPEDIA: EncEntry[] = [
       };
     },
     live: { pick: [], run: (w) => ({ bars: w.regions.map((r) => bar(regionLabel(r), r2(subsistenceWage(w, r)), 'florin')) }) },
-    related: ['best-seat', 'ai-wages', 'migration', 'start-wealth'], seenIn: ['workforce', 'region'], source: ['market.ts tenantIncomePerWorker', 'labor.ts subsistenceWage'], design: ['4'],
+    related: ['best-seat', 'market-wage', 'migration', 'start-wealth'], seenIn: ['workforce', 'region'], source: ['market.ts tenantIncomePerWorker', 'labor.ts subsistenceWage'], design: ['4'],
   },
   {
     id: 'start-wealth', category: 'tenants', title: t('소작농 시작 부', 'Tenants\' starting wealth'),
@@ -1313,9 +1299,9 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   },
   {
     id: 'ai-budget', category: 'ai', title: t('정책 사다리', 'Policy ladder'),
-    rule: t('4주마다 한 칸 움직인다. 빚이 있거나 국고가 지출 {0}주치 미만이고 줄었으면 긴축 쪽으로, {1}주치를 넘고 줄지 않았으면 세금을 내린다. 사다리: 국영 임금 4 → 세금 1~5 → 국영 임금 2·1. 기술을 다 열면 풀 때 임금 지수 1 이하에서 국영 임금을 {2}단계까지 올리고, 지수가 1을 넘으면 되돌린다. {3} = 1이면 징수율이 {4} 아래인 동안 국영 임금을 내리지 않고, 행정청 충원율이 {5} 아래면 다른 손잡이보다 먼저 국영 임금을 한 칸 올린다. {3} = 2이면 징수율과 상관없이 행정청과 건축사무소 충원율 중 낮은 쪽이 {5} 아래인 동안 같은 일을 한다.', 'Every 4 weeks one step: toward austerity if in debt or below {0} weeks of spending and falling; tax cuts above {1} weeks and not falling. Ladder: state wages 4 → tax 1–5 → state wages 2·1. With every tech researched, loosening raises state wages up to step {2} while the wage index is at most 1, and steps back when it exceeds 1. With {3} = 1, while the collection rate is below {4} state wages are never cut, and if administration staffing is below {5} state wages go up one step before any other dial. With {3} = 2 the same happens, whatever the collection rate, while the lower of administration and construction office staffing is below {5}.'),
+    rule: t('4주마다 한 칸 움직인다. 빚이 있거나 국고가 지출 {0}주치 미만이고 줄었으면 긴축 쪽으로, {1}주치를 넘고 줄지 않았으면 세금을 내린다. 사다리: 국영 임금 4 → 세금 1~5 → 국영 임금 2·1. 기술을 다 열면 풀 때 임금 지수 1 이하에서 국영 임금을 {2}단계까지 올리고, 지수가 1을 넘으면 되돌린다. 행정청과 건축사무소 충원율 중 낮은 쪽이 {3} 아래인 동안은 국영 임금을 내리지 않고, 다른 손잡이보다 먼저 국영 임금을 한 칸 올린다.', 'Every 4 weeks one step: toward austerity if in debt or below {0} weeks of spending and falling; tax cuts above {1} weeks and not falling. Ladder: state wages 4 → tax 1–5 → state wages 2·1. With every tech researched, loosening raises state wages up to step {2} while the wage index is at most 1, and steps back when it exceeds 1. While the lower of administration and construction office staffing is below {3}, state wages are never cut and go up one step before any other dial.'),
     params: [tune('treasuryLowWeeks', '조이는 선', 'Tighten below', 'week'), tune('treasuryHighWeeks', '푸는 선', 'Loosen above', 'week'), tune('doneWageMax', '기술 완료 후 임금 상한', 'Wage cap after research'),
-      tune('aiAdminWage', '행정청 일손 임금', 'Administration staffing wages'), tune('aiAdminFloor', '행정청 징수율 하한', 'Administration collection floor', 'pct'), p('행정청 충원 기준', 'Administration staffed at', () => ADMIN_STAFFED, 'pct')],
+      p('행정청 충원 기준', 'Administration staffed at', () => ADMIN_STAFFED, 'pct')],
     related: ['budget-steps', 'treasury', 'ai-schools', 'ai-welfare'], seenIn: ['finance'], source: ['ai.ts adjustBudget'], design: ['10'],
   },
   {

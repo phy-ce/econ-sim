@@ -108,7 +108,7 @@ export function taxRates(k: Kingdom, law: TaxLaw = k.taxLaw): { land: number; po
 
 /**
  * 임금 지수 (매주, 빅토리아3의 '보통 임금'): 왕국 민간 건물 노동자·농부의 평균 임금 ÷ 기본 임금 (고용 가중)의 이동평균.
- * TUNE.wageMarket = 1 이면 기본 임금 대신 그 지역 소작 1인 소득 × switchPremium 으로 나눈다 (1 = 일손이 남는 지역의 균형, LABOR_MARKET.md 7장).
+ * 기본 임금 대신 그 지역 소작 1인 소득 × switchPremium 으로 나눈다 (1 = 일손이 남는 지역의 균형, LABOR_MARKET.md 7장).
  * 국영 임금 계산에는 쓰지 않고, AI 가 국영 임금 단계를 고를 때 본다 (ai.ts). 민간 노동자 고용이 없으면 그대로 둔다
  */
 export function updateWageIndex(w: World, k: Kingdom) {
@@ -118,23 +118,19 @@ export function updateWageIndex(w: World, k: Kingdom) {
     if (b.stateOwned || BUILDING_BY_ID[b.typeId].auto || kingdomOf(w, b.regionId) !== k.id) continue;
     const c = companyById(w, b.companyId);
     if (!c) continue;
-    if (TUNE.wageMarket) {
-      if (!(b.employed.unskilled > 0 || b.employed.farmer > 0)) continue;
-      const r = regionById(w, b.regionId);
-      let t = tenant.get(r.id);
-      if (t === undefined) { t = subsistenceWage(w, r); tenant.set(r.id, t); }
-      const wages = wagesAt(c, b.typeId, w, b.regionId);
-      for (const s of LOWER_JOBS) { paid += b.employed[s] * wages[s]; base += b.employed[s] * t * TUNE.switchPremium; }
-      continue;
-    }
-    for (const s of LOWER_JOBS) { paid += b.employed[s] * c.wages[s]; base += b.employed[s] * SKILL_DEFS[s].baseWage; }
+    if (!(b.employed.unskilled > 0 || b.employed.farmer > 0)) continue;
+    const r = regionById(w, b.regionId);
+    let t = tenant.get(r.id);
+    if (t === undefined) { t = subsistenceWage(w, r); tenant.set(r.id, t); }
+    const wages = wagesAt(c, b.typeId, w, b.regionId);
+    for (const s of LOWER_JOBS) { paid += b.employed[s] * wages[s]; base += b.employed[s] * t * TUNE.switchPremium; }
   }
   if (base <= 0) return;
   k.wageIndex = k.wageIndex == null ? paid / base : k.wageIndex * 0.75 + (paid / base) * 0.25;
 }
 
 /**
- * 국영 임금 (빅토리아3 정부 임금): 직종별 시장임금(왕실 건물 제외, marketWages) × 국영 임금 수준 배율. 왕실의 정부 건물(행정청·건축사무소·학교)만 이 임금을 준다.
+ * 국영 임금 (빅토리아3 정부 임금): 그 지역 시장 임금 × 국영 임금 수준 배율 × (1 + AI 왕실 웃돈). 왕실의 정부 건물(행정청·건축사무소·학교)만 이 임금을 준다.
  * 왕실 생산 건물은 민간 상회처럼 회사 임금표(wages)를 쓴다 (2026-10-23 사용자 결정, DECISIONS 6-2)
  */
 export function applyStateWages(w: World, k: Kingdom) {
@@ -142,22 +138,17 @@ export function applyStateWages(w: World, k: Kingdom) {
   if (!gov) return;
   const t = (gov.stateWages ??= { ...gov.wages });
   const mult = budgetMult(k, 'wages');
-  if (TUNE.wageMarket) {
-    // 지역 시장 임금: 정부 건물은 그 지역 시장 임금 × 단계 배율 × (1 + AI 왕실 웃돈) (Region.stateWages). 왕실 국영 임금표는 왕국 지역들의 평균 (화면·추정용 대표값)
-    for (const r of w.regions) {
-      if (r.kingdomId !== k.id) continue;
-      const wages = ensureWages(w, r);
-      const st = (r.stateWages ??= { ...wages });
-      // AI 왕실의 지역 웃돈 (TUNE.aiStatePremium, ai.ts adjustStatePremium). 없으면 시장 임금 × 단계 배율
-      const prem = gov.statePremium?.[r.id];
-      for (const s of SKILLS) st[s] = round2(wages[s] * mult * (prem ? 1 + prem[s] : 1));
-    }
-    const mean = kingdomWageMean(w, k.id, (r) => r.stateWages ?? r.wages!);
-    if (mean) for (const s of SKILLS) t[s] = round2(mean[s]);
-    return;
+  // 지역 시장 임금: 정부 건물은 그 지역 시장 임금 × 단계 배율 × (1 + AI 왕실 웃돈) (Region.stateWages). 왕실 국영 임금표는 왕국 지역들의 평균 (화면·추정용 대표값)
+  for (const r of w.regions) {
+    if (r.kingdomId !== k.id) continue;
+    const wages = ensureWages(w, r);
+    const st = (r.stateWages ??= { ...wages });
+    // AI 왕실의 지역 웃돈 (TUNE.aiStatePremium, ai.ts adjustStatePremium). 없으면 시장 임금 × 단계 배율
+    const prem = gov.statePremium?.[r.id];
+    for (const s of SKILLS) st[s] = round2(wages[s] * mult * (prem ? 1 + prem[s] : 1));
   }
-  const market = marketWages(w, gov.id);
-  for (const s of SKILLS) t[s] = round2(market[s] * mult);
+  const mean = kingdomWageMean(w, k.id, (r) => r.stateWages ?? r.wages!);
+  if (mean) for (const s of SKILLS) t[s] = round2(mean[s]);
 }
 
 /**

@@ -55,6 +55,7 @@
   - 1-B 비교용 가격 공식 `priceExp`·`priceRange` (가격 범위는 `market.ts PRICE_MIN`·`PRICE_MAX` 한 곳). 그 전 코드 7df16c4. `nobleSeats` 옛 방식과 키 다섯은 wt-manor 가 같은 함수를 고치므로 남겼다
   - 1-C 기본으로 켠 스위치 12의 키와 꺼진 갈래: `latentFeasible`·`aiInputFill`·`needFixedTotal`·`firmCallPlan`·`crownDebtNoBuild`·`taxCurve`·`aiKeepLastSupplier`·`aiGrowWhere`·`aiReserveFund`·`aiWagePremium`·`wealthSavLower`·`aiBuildNow` (켠 갈래만 남김). 그 전 코드 b4cb7c5. `aiAdminWage` 0·1 갈래는 키와 함께 1-E 에서 지웠다
   - 1-D 옛 전망 AI 의 생산 건물 짓기·철거: `aiReserveRule` 0 갈래, 발전 투자 `devShare`·`devLoss`, 증설 가동률 문턱 `expandUtilMin`, `reserveGrowMax` 0 갈래 (상수 `RESERVE_FULL`, AI 난수 태그 `pickDev`). 그 전 코드 b2486fa. 써지기만 하는 상태 칸 `Company.startCost`·`devCost`·`Building.richWeeks`는 지우면 세계 해시가 바뀌어 남겼다 (1-D′, 다음 일)
+  - 1-E 옛 임금 규칙 (7-43 확인 뒤): 회사 임금표와 AI 임금 판단(`wageMarket` 0, `adjustWages`, `wageCeil`·`wageLossCut`, `applyWagePolicy`), 하루 고정 속도(`wageTarget` 0, `wageMarketRate`·`wageMarketRateUp`), 비교용 쏠림(`wageTarget` 1, `WAGE_TILT`), `aiAdminWage` 0·1 갈래와 키. 그 전 코드 e99d349. `commands.ts setWage` 는 그대로다 (화면은 쓰지 않는다)
 
 ### 4-2. 지우면 동작이 바뀌는 것 (하나씩 결정)
 | 항목 | 지금 | 지우면 |
@@ -1011,7 +1012,7 @@ AI 노동자 임금 바닥 (기본값 0.03 · 2~6):
 - 받아들인 것: 주인 금고(약정 뺀 돈)도 비어 있으면 그대로 굳는다 (민간은 빌리지 않는다, 2026-10-21 사용자 결정 그대로). 원료를 채워도 적자인 건물이 끌어내린 현금 0 도 막지 않는다.
 
 ### 7-41. 시장 임금이 오를 때만 빠르게 (W1 `wageMarketRateUp`, 2026-11-02 wt-wagelag, 7-43 이 대신함 (wt-wagespeed))
-- 2026-11-02 wt-wagespeed: 7-43(목표 임금, 기본 켬)이 이 질문을 대신한다. `wageMarketRateUp` 은 `wageTarget` 0 일 때만 쓰인다 (키는 지우지 않았다).
+- 2026-11-02 wt-wagespeed: 7-43(목표 임금, 기본 켬)이 이 질문을 대신한다. `wageMarketRateUp` 은 `wageTarget` 0 일 때만 쓰였고, 7-43 확인 뒤 2026-11-02 wt-simplify 1-E 에서 키를 지웠다.
 - (예전) 결정 대기 한 줄: 세계 규칙 "일손이 모자라면 임금이 빨리 오르고(하루 `wageMarketRateUp`), 남으면 천천히 내린다(`wageMarketRate`)" 를 켤지. 기본 끔 (0). 숫자는 DESIGN 11장 `wageMarketRateUp` 행, 보고서 2026-11-02-wagelag (a12w1).
 - 같은 브랜치에서 AI 판단 둘은 결정 없이 켰다: A1 `aiWagePremium` 1 (민간 AI 상회 지역 웃돈), A2 `aiAdminWage` 2 (왕실: 행정청·건축사무소 충원이 모자라면 국영 임금 단계를 올림). A1 은 7-39 와 별개로 본다: 7-39 는 플레이어 왕실의 웃돈 명령(`setWageOffset`)을 닫은 결정이고, A1 은 AI 민간 상회의 판단이며 플레이어 웃돈(`Company.wageOffset`)과 다른 칸(`Company.aiPremium`)에 둔다. 왕실(국영)은 웃돈을 쓰지 않고 A2 로 간다.
 - 판단 재료: A1+A2 위에 W1 을 더하면 1~2년차(흉작 충격 구간)는 더 좋고 (본 게임 1년 세전 196.6 → 202.5, 시드 2), 시드 1 가뭄 지역 건축사무소 충원도 조금 돌아오지만 (52주 0.00 → 0.06), 20년 8회 평균 15·20년차 세전 총생산은 A1+A2 보다 낮다 (963 → 829, 1,064 → 904; 대조 695·824 보다는 높다).
@@ -1022,10 +1023,11 @@ AI 노동자 임금 바닥 (기본값 0.03 · 2~6):
 - **결정 대기 1**: 플레이어 왕실에도 같은 손잡이(지역별 국영 웃돈)를 줄지. 지금 플레이어 왕실은 국영 임금 단계(왕국 하나)만 있고, 웃돈 명령은 7-39 로 닫혀 있다. 그대로 두면 플레이어의 행정청도 1년차에 같은 이유로 빈다 (lab 의 방치 플레이어 왕국). 선택지: (a) 그대로 (AI 만), (b) 정부 건물에 한해 지역 웃돈을 플레이어에게 연다 (화면에 손잡이 하나, UI_CHANGES 필요), (c) 세계 규칙으로 바꾼다 (아래 2).
 - **결정 대기 2 (세계 규칙, 바꾸지 않았다)**: 원인의 뿌리 둘 — 하급 귀족 시작 시장 임금이 기술자 × 1.1 (`labor.ts startWage`, 하급 귀족 기본 임금의 약 40%)이고, 저택 이익 이동평균이 0 에서 시작한다 (첫 120일 동안 저택 몫이 낮아 시장 하급 귀족 임금이 4.14 → 3.07 로 내린다). 바꿀 후보: 하급 귀족 시작 임금을 저택 몫 또는 기본 임금으로, 저택 이익 이동평균을 시작 지대로 채움, `manorGentrySeats` (7-36). 비교는 하지 않았다.
 
-### 7-43. 시장 임금을 맞는 임금 쪽으로 (`wageTarget` 2, 2026-11-02 wt-wagespeed, 사용자 지시로 켬, 확인 대기)
+### 7-43. 시장 임금을 맞는 임금 쪽으로 (`wageTarget` 2, 2026-11-02 wt-wagespeed, 사용자 지시로 켬, 7-43 확인 (사용자 2026-11-02))
 - 사용자 (2026-11-02): "임금이나 상품 가격이나 속도가 무조건 일정 속도로 변화하는건 말이 안됨. 수요-공급 차에 따라서 숫자가(하한/상한 수렴값은 존재함) 변하게 해야지".
 - 상품 가격은 이미 그렇게 돈다 (`market.ts updatePrices`: 목표 = 기본가 × (1 + 0.75 × clamp((D − S) ÷ min(D, S), ±1)), 기본가의 25~175%, 날마다 거리의 `PRICE_SPEED` 0.03). 그래서 가격은 바꾸지 않았다. 고정 속도였던 것은 임금 하나 (하루 ±0.25% `wageMarketRate`, 쏠림이 ±1 에서 막혀 큰 부족·과잉에서도 0.25%).
 - 바꾼 세계 규칙 한 줄: **"임금은 일하러 올 사람이 자리 수와 맞는 임금 쪽으로 날마다 그 차이의 10%씩 움직인다."** 맞는 임금의 아래 끝은 바깥 소득 × 1.1 (시작 임금 규칙), 위 끝은 그 2배. 최저임금은 아니다 (아래 끝은 수렴값이고 그 아래 임금도 둔다).
 - 숫자: DESIGN 11장 `wageTarget`·`wageTargetSpeed` 행, 보고서 2026-11-02-wagespeed. 20년 8회 평균 대조 → 맞는 임금 0.1: 1년차 행정청 충원 (왕국 1·2·3) 0.00/0.54/0.70 → 0.90/0.97/0.98, 생산 하층 고용 1·5·20년차 60.8/261/848 → 74.6/280/887천, 세전 총생산 20년차 1,140 → 1,200, 국고 20년차 192 → 251. 약점: 10·15년차 세전 총생산 −12% (범위 겹침), 10~20년차 S/D 가 조금 더 벌어짐, 20년차 소작 생활수준 1.13 → 1.03.
 - 확인 대기 (게임 방향): 이 규칙 그대로 둘지, 또는 위 끝 배율(`wageTargetSpan` 2)·속도(0.1)를 바꿀지 (2026-11-02 wt-span 비교: 배율 1.5·3, 속도 0.2 모두 대조보다 고르게 낫지 않아 기본값 그대로, DESIGN 11장 두 행, 보고서 2026-11-02-wagespan). 같이 묻는 것: 7-42 결정 대기 1 (플레이어 왕실 국영 웃돈)은 이 규칙에서 방치 플레이어 왕국 1년차 행정청 충원이 0.00 → 0.90 이 되어 급함이 줄었다.
+- 7-43 확인 (사용자 2026-11-02): 맞는 임금 규칙을 받아들였다. 그래서 2026-11-02 wt-simplify 1-E 에서 스위치 `wageMarket`·`wageTarget` 과 옛 규칙의 키(`wageMarketRate`·`wageMarketRateUp`·`wageCeil`·`wageLossCut`, `aiAdminWage` 0·1 갈래)를 지웠다 (동작 같음, 그 전 코드 e99d349). 위 끝 배율·속도는 `wageTargetSpan`·`wageTargetSpeed` 로 남는다.
 

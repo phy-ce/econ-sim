@@ -359,11 +359,11 @@ const GOV_TYPES = new Map<string, boolean>();
 /**
  * 회사가 그 건물(유형)에 주는 임금표: 왕실의 정부 건물(행정청·건축사무소·학교)은 국영 임금(stateWages),
  * 나머지(왕실 생산 건물 포함)는 회사 임금(wages, 민간처럼 시장에서 정한다).
- * TUNE.wageMarket = 1 이고 지역(w, regionId)을 주면 그 지역 시장 임금(Region.wages)이다: 정부 건물은 그 지역 국영 임금(Region.stateWages),
+ * 지역(w, regionId)을 주면 그 지역 시장 임금(Region.wages)이다: 정부 건물은 그 지역 국영 임금(Region.stateWages),
  * 시장임금 정책을 쓰는 회사(플레이어)는 지역 시장 임금 × (1 + 웃돈), AI 민간 상회는 지역 시장 임금 × (1 + 그 지역 웃돈 aiPremium). 지역 임금이 아직 없으면 회사 임금표
  */
 export function wagesAt(c: Company, typeId: string, w?: World, regionId?: number): Record<Skill, number> {
-  if (TUNE.wageMarket && w && regionId !== undefined) {
+  if (w && regionId !== undefined) {
     const r = regionById(w, regionId);
     if (r.wages) {
       if (c.state && isGovernment(typeId)) return r.stateWages ?? c.stateWages ?? r.wages;

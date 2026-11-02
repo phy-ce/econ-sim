@@ -5,7 +5,7 @@ import { aiTrace } from '../../src/ai';
 import { canonicalJson, fixtureFiles, loadFixture, readFixtureRaw } from '../fixtures/a0';
 import { firstDiff } from '../helpers';
 
-// 0b′ AI 수정의 불변식 (오버홀 03 5-2 팔리지 않음 기준 감축·철거 TUNE.aiCutSD·aiDemoSD·aiExitWeeks, 07 A4 징수율 하한 TUNE.aiAdminFloor·aiAdminWage).
+// 0b′ AI 수정의 불변식 (오버홀 03 5-2 팔리지 않음 기준 감축·철거 TUNE.aiCutSD·aiDemoSD·aiExitWeeks, 07 A4 징수율 하한 TUNE.aiAdminFloor. A4 의 임금 갈래 aiAdminWage 1 은 wt-simplify 1-E 에서 지웠다).
 // 기본값은 모두 0 (끔)이라 core 시험은 이 길을 지나지 않는다. 여기서 켜고 화폐 보존, 결정성(저장/불러오기 포함, Region.cutWeeks·demoWeeks 가 저장에 실린다),
 // 0 으로 명시한 덮어쓰기 = 기본값, 옛 저장(18판, cutWeeks 없음)에 켜도 도는지를 본다.
 // 켜는 값은 0BP_5-2_SPECS.json 후보(감축 1.75, 철거 2)와 0BP_A4_SPECS.json 후보(하한 0.7, 임금 1)에서 골랐다.
@@ -27,14 +27,14 @@ function expectSame(got: World, want: string, label: string) {
 }
 
 type Over = Partial<Record<keyof typeof TUNE, number>>;
-const KEYS = ['aiCutSD', 'aiDemoSD', 'aiExitWeeks', 'aiAdminFloor', 'aiAdminWage', 'aiGlutSD'] as const;
+const KEYS = ['aiCutSD', 'aiDemoSD', 'aiExitWeeks', 'aiAdminFloor', 'aiGlutSD'] as const;
 const saved = Object.fromEntries(KEYS.map((k) => [k, TUNE[k]]));
 afterEach(() => { Object.assign(TUNE, saved); aiTrace.on = undefined; });
 /** lab 명세의 tune 과 같은 길 (lab/run.ts: Object.assign(TUNE, spec.tune)) */
 const setTune = (o: Over) => { Object.assign(TUNE, saved); Object.assign(TUNE, o); };
 
 const SD_ON: Over = { aiCutSD: 1.75, aiDemoSD: 2 };
-const A4_ON: Over = { aiAdminFloor: 0.7, aiAdminWage: 1 };
+const A4_ON: Over = { aiAdminFloor: 0.7 };
 
 describe('0b′ 5-2 감축·철거와 A4 징수율 하한을 켠 세계', () => {
   // 5-2 + A4 (시드 1): 끊김 없는 a 를 1년 돌리며 매일 화폐 장부를 보고, 비교 날의 세계를 남긴다.
@@ -106,17 +106,16 @@ describe('0b′ 5-2 감축·철거와 A4 징수율 하한을 켠 세계', () => 
     expectSame(b, a200, '200일 (147일 주 경계 저장 후)');
   });
 
-  // 기본값은 aiCutSD·aiDemoSD·aiAdminFloor 0. aiAdminWage 는 2026-11-02 부터 기본 2 (wt-wagelag A2)라 기준 세계는 0 으로 둔다.
-  // 0 으로 명시하고, 끈 상태에서는 쓰이지 않는 aiExitWeeks·aiAdminWage 1 (하한 0 이면 아무것도 안 함)을 바꿔도
+  // 기본값은 aiCutSD·aiDemoSD·aiAdminFloor 0. 0 으로 명시하고, 끈 상태에서는 쓰이지 않는 aiExitWeeks 를 바꿔도
   // 기준 세계와 같다 (규칙 해시 config.rulesHash·rulesRev 는 TUNE 표의 라벨이라 뺀다, a0.ts HASH_EXCLUDE)
   it('끔 = 같음: 키를 0 으로 명시한 덮어쓰기와 기본값 세계가 같다 (시드 3, 200일)', () => {
     const DAYS = 200;
-    setTune({ aiAdminWage: 0 });
-    expect([TUNE.aiCutSD, TUNE.aiDemoSD, TUNE.aiAdminFloor, TUNE.aiAdminWage]).toEqual([0, 0, 0, 0]);
+    setTune({});
+    expect([TUNE.aiCutSD, TUNE.aiDemoSD, TUNE.aiAdminFloor]).toEqual([0, 0, 0]);
     const a = createWorld(3);
     runTo(a, DAYS);
     const want = canonicalJson(a);
-    setTune({ aiCutSD: 0, aiDemoSD: 0, aiAdminFloor: 0, aiAdminWage: 1, aiExitWeeks: 1 });
+    setTune({ aiCutSD: 0, aiDemoSD: 0, aiAdminFloor: 0, aiExitWeeks: 1 });
     const b = createWorld(3);
     runTo(b, DAYS);
     const got = canonicalJson(b);

@@ -1,7 +1,7 @@
 // 마이크로 세계 균형 점검 (src/lab/micro.ts, 2026-11-01 사용자 지시: 작은 모델에서 모든 사람을 추적하며 먼저 확인한다).
 // packages/sim 에서:  npx tsx cli/microcheck.ts [--years 10] [--seed 1] [--at 360] [--runs base,jobs,cloth,people,control] [--every 7] [--out 파일접두] [--scale 0.02] [--people 400] [--floors 0]
 //                       [--build "farm=2,lumber=1,workshop=1,builder=1@crown,admin=1@crown"]  (시작 건물: 종류[:방식]=레벨[@crown])
-//                       [--tune '{"wageMarket":1,"wageMarketRate":0.005}']  (실행마다 TUNE 을 바꾸고 끝나면 되돌린다)
+//                       [--tune '{"wageTargetSpeed":0.05}']  (실행마다 TUNE 을 바꾸고 끝나면 되돌린다. TUNE 에 없는 키면 멈춘다)
 //                       [--typescale "workshop=0.15,textile=0.25"]  (건물 종류별 추가 축소, micro.ts MicroOptions.typeScale)
 //                       [--preset labor]  (노동시장 검증용 살아 있는 세계: typescale workshop=0.15,textile=0.25,fiber_farm=0.25 + TUNE reserveShrinkWeeks 1e9.
 //                                         기본 세계는 공방·방직 1레벨이 지역 수요의 몇 배라 값이 바닥에 붙어 적자 → 유보 규칙으로 헐리고 → 공구가 끊겨 3년차에 생산 건물이 0 이 된다)

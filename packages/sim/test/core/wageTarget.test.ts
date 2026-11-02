@@ -4,9 +4,10 @@ import type { World } from '../../src/index';
 import { MARKET_WAGE_RANGE, clearingWage, willingAt } from '../../src/labor';
 import { firstDiff } from '../helpers';
 
-// 목표 임금 (wt-wagespeed, TUNE.wageTarget 1·2): 켜도 화폐 보존·결정성(저장/불러오기)이 지켜지고 시장 임금이 안전 범위 안에 있다.
+// 목표 임금 (wt-wagespeed, 맞는 임금 쪽으로 움직이는 시장 임금): 하루 비율을 바꿔도 화폐 보존·결정성(저장/불러오기)이 지켜지고 시장 임금이 안전 범위 안에 있다.
+// (비교용 쏠림 규칙 wageTarget 1 과 옛 고정 속도 0 은 wt-simplify 1-E 에서 지웠다)
 // 맞는 임금(clearingWage)은 오려는 사람 ≥ min(자리, 상한에서 오려는 사람)이 되는 가장 낮은 임금이다
-const saved = { wageTarget: TUNE.wageTarget, wageTargetSpeed: TUNE.wageTargetSpeed };
+const saved = { wageTargetSpeed: TUNE.wageTargetSpeed };
 afterAll(() => { Object.assign(TUNE, saved); });
 
 const reload = (w: World): World => JSON.parse(JSON.stringify(w));
@@ -31,10 +32,10 @@ describe('맞는 임금 (clearingWage)', () => {
   });
 });
 
-for (const mode of [1, 2]) {
-  describe(`목표 임금 wageTarget ${mode}`, () => {
+{
+  describe('목표 임금 (하루 비율 0.05)', () => {
     it('화폐 총량이 장부와 맞고 시장 임금이 안전 범위 안이다', () => {
-      Object.assign(TUNE, { wageTarget: mode, wageTargetSpeed: 0.05 });
+      Object.assign(TUNE, { wageTargetSpeed: 0.05 });
       const w = createWorld(1);
       const m0 = moneyIdentity(w);
       let worst = 0;
@@ -52,7 +53,7 @@ for (const mode of [1, 2]) {
     });
 
     it('저장/불러오기 해도 결과가 같다', () => {
-      Object.assign(TUNE, { wageTarget: mode, wageTargetSpeed: 0.05 });
+      Object.assign(TUNE, { wageTargetSpeed: 0.05 });
       const a = createWorld(2);
       runTo(a, 200);
       const want = JSON.stringify(a);
