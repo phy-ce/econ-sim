@@ -44,7 +44,8 @@ export function updateSubsistence(w: World) {
 }
 
 /**
- * 저택의 상급 귀족 자리 (노동 인구, TUNE.nobleSeats 규칙. 비교 중이며 기본 'fit' 은 정해진 자리 없이 지역 귀족이 다 앉는다 → undefined).
+ * 저택의 상급 귀족 자리 (노동 인구, TUNE.nobleSeats 규칙). 기본은 'econ' (저택 주간 경제 규모 ÷ nobleEconPer, 하루 nobleAdjust 씩 다가간다, 6e4b001 부터).
+ * 'fit' 은 정해진 자리 없이 지역 귀족이 다 앉는다 → undefined. 나머지는 비교용:
  * - owned: 저택이 가진 건물 레벨 × nobleSeatsPerLevel + 소작지 칸 × nobleSeatsPerCell
  * - income: 저택 수입(profitEma) ÷ 귀족 1명 목표 수입 nobleIncome (하루 1% 씩 다가간다. 처음에는 지금 귀족 수에서 시작한다)
  * - land: (소작지 칸 + 저택이 가진 건물 레벨) × nobleSeatsLand

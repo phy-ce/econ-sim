@@ -405,11 +405,11 @@ export interface Company {
   /** 국영(왕국 정부) 회사인가. 국영 회사의 현금이 그 왕국의 국고다 */
   state: boolean;
   cash: number;
-  /** 회사 임금표: 민간 상회와 왕실 생산 건물. 매주 AI(adjustWages)가 시장을 보고 정하거나, 플레이어가 정한다 (setWage·setWageOffset) */
+  /** 회사 대표 임금표: 그 회사 생산 건물 지역 시장 임금(웃돈 포함)의 고용 가중 평균 (labor.ts syncCompanyWages, 화면·지역을 정하지 않은 추정용). 실제 지급은 wagesAt (지역 임금) */
   wages: Record<Skill, number>;
   /** 국영 임금표 (왕실만): 정부 건물(행정청·건축사무소·학교)의 임금 = 직종별 시장 임금(왕실 건물 제외) × 국영 임금 수준 배율 (finance.ts applyStateWages) */
   stateWages?: Record<Skill, number>;
-  /** 지난주 직종별 고용 인원 (AI가 실제로 사람이 찼는지 보고 임금을 정한다) */
+  /** 지난주 직종별 고용 인원. 지운 AI 임금 판단(adjustWages, wt-simplify 1-E)만 썼다. 이제 써지지 않고 옛 저장에만 남는다 (SIMPLIFY_AUDIT 1-D′ 에서 지울 칸) */
   lastEmployed?: Partial<Record<Skill, number>>;
   weekProfit: number;
   lastWeekProfit: number;
@@ -525,7 +525,7 @@ export interface Region {
   wages?: Record<Skill, number>;
   /** wages 의 52주 이동평균 (날마다 1/364 씩 다가간다). AI 투자 판단 임금 (outlook.ts longRunWages) */
   wageAvg?: Record<Skill, number>;
-  /** 이 지역 왕실 정부 건물의 국영 임금 = wages × 국영 임금 단계 배율 × (1 + AI 왕실 국영 웃돈 Company.statePremium, 없으면 0) (매주, finance.ts applyStateWages). wageMarket = 1 일 때만 */
+  /** 이 지역 왕실 정부 건물의 국영 임금 = wages × 국영 임금 단계 배율 × (1 + AI 왕실 국영 웃돈 Company.statePremium, 없으면 0) (매주, finance.ts applyStateWages) */
   stateWages?: Record<Skill, number>;
 }
 

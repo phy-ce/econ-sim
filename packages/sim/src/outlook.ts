@@ -128,7 +128,7 @@ export function marketOutlook(w: World): Outlook {
   for (const k of w.constructions) {
     const m = getMethod(k.typeId, k.methodId);
     const perk = 1 + regionPerk(k.regionId, k.typeId);
-    // 남는 투입재에는 절반 넘게 지은 공사의 산출만 센다 (막 시작한 공사의 산출을 믿고 지으면 원료가 끊긴다, ai.ts switchSpare 와 같다)
+    // 남는 투입재에는 절반 넘게 지은 공사의 산출만 센다 (막 시작한 공사의 산출을 믿고 지으면 원료가 끊긴다)
     const half = k.points >= k.required / 2;
     for (const g of GOOD_IDS) {
       const out = (m.outputs[g] ?? 0) * perk * (k.levels ?? 1), inp = (m.inputs[g] ?? 0) * (k.levels ?? 1);
