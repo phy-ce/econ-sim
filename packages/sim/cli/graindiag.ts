@@ -53,7 +53,7 @@ const w: World = FULL
   : createMicroWorld({ seed: SEED, aiSalt: SALT, people: [Number(arg('people', '400'))], ...(buildings ? { buildings } : {}), ...(typeScale ? { typeScale } : {}), ...(SLACK ? { arableSlack: Number(SLACK) } : {}) });
 
 // ---------------------------------------------------------------- AI 판단 세기
-const EV_KEYS = ['reserve', 'trial', 'glutBlock', 'reserveShrink', 'sdDemo', 'sellDemo', 'marginExit', 'setUtilization', 'lossCut', 'utilUp', 'sdCut', 'keepLast'];
+const EV_KEYS = ['reserve', 'trial', 'glutBlock', 'reserveShrink', 'sdDemo', 'sellDemo', 'trimDemo', 'trimHold', 'trimStop', 'marginExit', 'setUtilization', 'lossCut', 'utilUp', 'sdCut', 'keepLast'];
 let ev: Record<string, number> = {};
 const makesG = (typeId: string, methodId: string) => (getMethod(typeId, methodId).outputs[G] ?? 0) > 0;
 aiTrace.on = (_w, _c, path, typeId, methodId, levels) => {
@@ -69,18 +69,19 @@ interface Acc {
   S: number; D: number; sold: number; pV: number; Sema: number; Dema: number;
   lv: Record<string, number>; utilLv: number; rev: number; inCost: number; wageCost: number; resv: number; cap: number; brokeMax: number;
   wageFarm: number; tenantInc: number; nw: number; beSigma: number; nbe: number;
-  psdLv: number; lvAll: number; band: [number, number, number]; pending: number;
+  psdLv: number; lvAll: number; band: [number, number, number]; pending: number; lvMin: number;
 }
 const newAcc = (): Acc => ({
   days: 0, sRent: 0, sSale: 0, sBld: {}, sTrader: 0, sSalvage: 0, sOther: 0, ownKind: 0, tenantOut: 0,
   dPop: {}, dBld: {}, dOther: 0, S: 0, D: 0, sold: 0, pV: 0, Sema: 0, Dema: 0,
   lv: {}, utilLv: 0, rev: 0, inCost: 0, wageCost: 0, resv: 0, cap: 0, brokeMax: 0,
-  wageFarm: 0, tenantInc: 0, nw: 0, beSigma: 0, nbe: 0, psdLv: 0, lvAll: 0, band: [0, 0, 0], pending: 0,
+  wageFarm: 0, tenantInc: 0, nw: 0, beSigma: 0, nbe: 0, psdLv: 0, lvAll: 0, band: [0, 0, 0], pending: 0, lvMin: Infinity,
 });
 const add = (o: Record<string, number>, k: string, v: number) => { o[k] = (o[k] ?? 0) + v; };
 
 function sample(a: Acc) {
   a.days++;
+  let lvDay = 0;
   for (const r of w.regions) {
     const m = r.market[G];
     a.S += m.supply; a.D += m.demand; a.sold += m.sold; a.pV += m.price / GOODS[G].basePrice * m.supply; a.Sema += m.supplyEma; a.Dema += m.demandEma;
@@ -119,7 +120,7 @@ function sample(a: Acc) {
       const outQ = b.last.output?.[G] ?? 0;
       if (outQ > 0 && m.price > 0) { a.beSigma += (b.last.inputCost + b.last.wageCost) / (outQ * m.price) * b.level; a.nbe += b.level; }
     }
-    a.lvAll += lvR;
+    a.lvAll += lvR; lvDay += lvR;
     if (psd !== null && lvR > 0) {
       a.psdLv += psd * lvR;
       a.band[psd < 1.2 ? 0 : psd <= 1.5 ? 1 : 2] += lvR;
@@ -129,6 +130,7 @@ function sample(a: Acc) {
     const ti = subsistenceWage(w, r);
     if (r.wages && ti > 0) { a.wageFarm += r.wages.farmer; a.tenantInc += ti; a.nw++; }
   }
+  a.lvMin = Math.min(a.lvMin, lvDay);
 }
 
 const f = (x: number, d = 2) => (Number.isFinite(x) ? x.toFixed(d) : '-');
@@ -153,18 +155,18 @@ function summarize(a: Acc) {
     wageRatio: a.tenantInc > 0 ? a.wageFarm / a.tenantInc : NaN, wageFarm: a.nw ? a.wageFarm / a.nw : NaN, tenantInc: a.nw ? a.tenantInc / a.nw : NaN,
     beSigma: a.nbe > 0 ? a.beSigma / a.nbe : NaN,
     psd: a.band[0] + a.band[1] + a.band[2] > 0 ? a.psdLv / (a.band[0] + a.band[1] + a.band[2]) : NaN,
-    band: a.band.map((x) => (a.lvAll > 0 ? x / a.lvAll : 0)), pending: per(a.pending),
+    band: a.band.map((x) => (a.lvAll > 0 ? x / a.lvAll : 0)), pending: per(a.pending), lvMin: a.lvMin,
   };
 }
 
 type Sum = ReturnType<typeof summarize>;
-const HEAD = 'S/D  S/Dema  값   팔림 | 소작지대 소작판매 농장 상인 | 현물  | 수요pop 수요bld | 레벨  가동 마진  유보 손익분기σ 임금/소작 | 예상S/D <1.2 ~1.5 >1.5 공사중 | AI 증설 새투자 막힘 철거 가동↓';
+const HEAD = 'S/D  S/Dema  값   팔림 | 소작지대 소작판매 농장 상인 | 현물  | 수요pop 수요bld | 레벨 최소 가동 마진  유보 손익분기σ 임금/소작 | 예상S/D <1.2 ~1.5 >1.5 공사중 | AI 증설 새투자 막힘 철거 가동↓';
 function line(label: string, s: Sum, e: Record<string, number>) {
   const farm = s.sBld[(Object.entries(s.sBld).sort((x, y) => y[1] - x[1])[0] ?? ['', 0])[0]] ?? 0;
   const dPop = Object.values(s.dPop).reduce((x, y) => x + y, 0), dBld = Object.values(s.dBld).reduce((x, y) => x + y, 0);
-  const demo = (e.reserveShrink ?? 0) + (e.sdDemo ?? 0) + (e.sellDemo ?? 0) + (e.marginExit ?? 0);
+  const demo = (e.reserveShrink ?? 0) + (e.sdDemo ?? 0) + (e.sellDemo ?? 0) + (e.marginExit ?? 0) + (e.trimDemo ?? 0);
   const cut = (e.lossCut ?? 0) + (e.sdCut ?? 0);
-  return `${label} ${f(s.sd)} ${f(s.sdEma)} ${f(s.price)} ${f(s.soldR)} | ${k(s.sRent)} ${k(s.sSale)} ${k(farm)} ${k(s.sTrader)} | ${k(s.ownKind)} | ${k(dPop)} ${k(dBld)} | ${f(s.levels, 1)} ${f(s.util)} ${f(s.margin)} ${f(s.resvFill)} ${f(s.beSigma)} ${f(s.wageRatio)} | ${f(s.psd)} ${s.band.map((x) => f(x)).join(' ')} ${f(s.pending, 1)} | ${e.reserve ?? 0} ${e.trial ?? 0} ${e.glutBlock ?? 0} ${demo} ${cut}`;
+  return `${label} ${f(s.sd)} ${f(s.sdEma)} ${f(s.price)} ${f(s.soldR)} | ${k(s.sRent)} ${k(s.sSale)} ${k(farm)} ${k(s.sTrader)} | ${k(s.ownKind)} | ${k(dPop)} ${k(dBld)} | ${f(s.levels, 1)} ${f(s.lvMin, 0)} ${f(s.util)} ${f(s.margin)} ${f(s.resvFill)} ${f(s.beSigma)} ${f(s.wageRatio)} | ${f(s.psd)} ${s.band.map((x) => f(x)).join(' ')} ${f(s.pending, 1)} | ${e.reserve ?? 0} ${e.trial ?? 0} ${e.glutBlock ?? 0} ${demo} ${cut}`;
 }
 
 if (OUT) { mkdirSync(dirname(OUT), { recursive: true }); writeFileSync(OUT, ''); }

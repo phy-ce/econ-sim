@@ -1,0 +1,530 @@
+{
+ "about": "넘침 퇴출 (이슈 #11 F3, wt-grain11, main 9ba5acc + ai.ts trimExit, TUNE aiTrimSD·aiTrimFrom·aiTrimPause, 기본 끔이면 golden 같음). ctl = 기본값 (aiGlutSD 1.5, 퇴출 끔). e12 = 진입 aiGlutSD 1.2 만 (F1). e12x13p0 = 진입 1.2·퇴출 1.3, 쉼 끔. e12x13 = 진입 1.2·퇴출 1.3·쉼 52주. e12x125 = 진입 1.2·퇴출 1.25·쉼 52주. 돌리기 (packages/sim 에서): KEY=specs10 PAR=1 bash cli/lab.sh <out.jsonl> ../../docs/overhaul/GRAIN11_SPECS.json (10년 × 시드 1 × salt 0 거르기), PAR=2 bash cli/lab.sh <out.jsonl> ../../docs/overhaul/GRAIN11_SPECS.json (20년 × 시드 1·2 × salt 0..3). 요약: python cli/labsum.py <out.jsonl> --compare ctl. specs (20년 × 시드 1·2 × salt 0..3): ctl, e12, x13p0 = 진입 1.2·퇴출 1.3·쉼 끔, x125p0 = 진입 1.2·퇴출 1.25·쉼 끔, x13p52 = 진입 1.2·퇴출 1.3·쉼 52주. specs10 거르기 (10년 × 시드 1 × salt 0) 결과로 쉼 52주(e12x13·e12x125)가 쉼 끔보다 곡물 S/D 가 높아(8~10년차 1.23~1.39 대 1.04~1.31) 20년에는 쉼 끔 둘과 쉼 52주 하나를 본다. 시작 주 0(1년차부터 퇴출)은 10년 × 시드 1 에서 1년차 S/D 2.00 (52주 1.87), 총생산이 해마다 낮아 뺐다.",
+ "code": "wt-grain11 (main 9ba5acc + trimExit)",
+ "specs10": [
+  {
+   "item": "GRAIN11",
+   "name": "ctl",
+   "seed": 1,
+   "salt": 0,
+   "years": 10,
+   "tune": {}
+  },
+  {
+   "item": "GRAIN11",
+   "name": "e12",
+   "seed": 1,
+   "salt": 0,
+   "years": 10,
+   "tune": {
+    "aiGlutSD": 1.2
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "GRAIN11",
+   "name": "e12x13p0",
+   "seed": 1,
+   "salt": 0,
+   "years": 10,
+   "tune": {
+    "aiGlutSD": 1.2,
+    "aiTrimSD": 1.3,
+    "aiTrimPause": 0
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "GRAIN11",
+   "name": "e12x13",
+   "seed": 1,
+   "salt": 0,
+   "years": 10,
+   "tune": {
+    "aiGlutSD": 1.2,
+    "aiTrimSD": 1.3,
+    "aiTrimPause": 52
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "GRAIN11",
+   "name": "e12x125",
+   "seed": 1,
+   "salt": 0,
+   "years": 10,
+   "tune": {
+    "aiGlutSD": 1.2,
+    "aiTrimSD": 1.25,
+    "aiTrimPause": 52
+   },
+   "control": "ctl"
+  }
+ ],
+ "specs": [
+  {
+   "item": "GRAIN11",
+   "name": "ctl",
+   "seed": 1,
+   "salt": 0,
+   "years": 20,
+   "tune": {}
+  },
+  {
+   "item": "GRAIN11",
+   "name": "ctl",
+   "seed": 1,
+   "salt": 1,
+   "years": 20,
+   "tune": {}
+  },
+  {
+   "item": "GRAIN11",
+   "name": "ctl",
+   "seed": 1,
+   "salt": 2,
+   "years": 20,
+   "tune": {}
+  },
+  {
+   "item": "GRAIN11",
+   "name": "ctl",
+   "seed": 1,
+   "salt": 3,
+   "years": 20,
+   "tune": {}
+  },
+  {
+   "item": "GRAIN11",
+   "name": "ctl",
+   "seed": 2,
+   "salt": 0,
+   "years": 20,
+   "tune": {}
+  },
+  {
+   "item": "GRAIN11",
+   "name": "ctl",
+   "seed": 2,
+   "salt": 1,
+   "years": 20,
+   "tune": {}
+  },
+  {
+   "item": "GRAIN11",
+   "name": "ctl",
+   "seed": 2,
+   "salt": 2,
+   "years": 20,
+   "tune": {}
+  },
+  {
+   "item": "GRAIN11",
+   "name": "ctl",
+   "seed": 2,
+   "salt": 3,
+   "years": 20,
+   "tune": {}
+  },
+  {
+   "item": "GRAIN11",
+   "name": "e12",
+   "seed": 1,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "aiGlutSD": 1.2
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "GRAIN11",
+   "name": "e12",
+   "seed": 1,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "aiGlutSD": 1.2
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "GRAIN11",
+   "name": "e12",
+   "seed": 1,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "aiGlutSD": 1.2
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "GRAIN11",
+   "name": "e12",
+   "seed": 1,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "aiGlutSD": 1.2
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "GRAIN11",
+   "name": "e12",
+   "seed": 2,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "aiGlutSD": 1.2
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "GRAIN11",
+   "name": "e12",
+   "seed": 2,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "aiGlutSD": 1.2
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "GRAIN11",
+   "name": "e12",
+   "seed": 2,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "aiGlutSD": 1.2
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "GRAIN11",
+   "name": "e12",
+   "seed": 2,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "aiGlutSD": 1.2
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "GRAIN11",
+   "name": "x13p0",
+   "seed": 1,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "aiGlutSD": 1.2,
+    "aiTrimSD": 1.3,
+    "aiTrimPause": 0
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "GRAIN11",
+   "name": "x13p0",
+   "seed": 1,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "aiGlutSD": 1.2,
+    "aiTrimSD": 1.3,
+    "aiTrimPause": 0
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "GRAIN11",
+   "name": "x13p0",
+   "seed": 1,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "aiGlutSD": 1.2,
+    "aiTrimSD": 1.3,
+    "aiTrimPause": 0
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "GRAIN11",
+   "name": "x13p0",
+   "seed": 1,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "aiGlutSD": 1.2,
+    "aiTrimSD": 1.3,
+    "aiTrimPause": 0
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "GRAIN11",
+   "name": "x13p0",
+   "seed": 2,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "aiGlutSD": 1.2,
+    "aiTrimSD": 1.3,
+    "aiTrimPause": 0
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "GRAIN11",
+   "name": "x13p0",
+   "seed": 2,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "aiGlutSD": 1.2,
+    "aiTrimSD": 1.3,
+    "aiTrimPause": 0
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "GRAIN11",
+   "name": "x13p0",
+   "seed": 2,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "aiGlutSD": 1.2,
+    "aiTrimSD": 1.3,
+    "aiTrimPause": 0
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "GRAIN11",
+   "name": "x13p0",
+   "seed": 2,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "aiGlutSD": 1.2,
+    "aiTrimSD": 1.3,
+    "aiTrimPause": 0
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "GRAIN11",
+   "name": "x125p0",
+   "seed": 1,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "aiGlutSD": 1.2,
+    "aiTrimSD": 1.25,
+    "aiTrimPause": 0
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "GRAIN11",
+   "name": "x125p0",
+   "seed": 1,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "aiGlutSD": 1.2,
+    "aiTrimSD": 1.25,
+    "aiTrimPause": 0
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "GRAIN11",
+   "name": "x125p0",
+   "seed": 1,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "aiGlutSD": 1.2,
+    "aiTrimSD": 1.25,
+    "aiTrimPause": 0
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "GRAIN11",
+   "name": "x125p0",
+   "seed": 1,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "aiGlutSD": 1.2,
+    "aiTrimSD": 1.25,
+    "aiTrimPause": 0
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "GRAIN11",
+   "name": "x125p0",
+   "seed": 2,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "aiGlutSD": 1.2,
+    "aiTrimSD": 1.25,
+    "aiTrimPause": 0
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "GRAIN11",
+   "name": "x125p0",
+   "seed": 2,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "aiGlutSD": 1.2,
+    "aiTrimSD": 1.25,
+    "aiTrimPause": 0
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "GRAIN11",
+   "name": "x125p0",
+   "seed": 2,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "aiGlutSD": 1.2,
+    "aiTrimSD": 1.25,
+    "aiTrimPause": 0
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "GRAIN11",
+   "name": "x125p0",
+   "seed": 2,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "aiGlutSD": 1.2,
+    "aiTrimSD": 1.25,
+    "aiTrimPause": 0
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "GRAIN11",
+   "name": "x13p52",
+   "seed": 1,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "aiGlutSD": 1.2,
+    "aiTrimSD": 1.3,
+    "aiTrimPause": 52
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "GRAIN11",
+   "name": "x13p52",
+   "seed": 1,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "aiGlutSD": 1.2,
+    "aiTrimSD": 1.3,
+    "aiTrimPause": 52
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "GRAIN11",
+   "name": "x13p52",
+   "seed": 1,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "aiGlutSD": 1.2,
+    "aiTrimSD": 1.3,
+    "aiTrimPause": 52
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "GRAIN11",
+   "name": "x13p52",
+   "seed": 1,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "aiGlutSD": 1.2,
+    "aiTrimSD": 1.3,
+    "aiTrimPause": 52
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "GRAIN11",
+   "name": "x13p52",
+   "seed": 2,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "aiGlutSD": 1.2,
+    "aiTrimSD": 1.3,
+    "aiTrimPause": 52
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "GRAIN11",
+   "name": "x13p52",
+   "seed": 2,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "aiGlutSD": 1.2,
+    "aiTrimSD": 1.3,
+    "aiTrimPause": 52
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "GRAIN11",
+   "name": "x13p52",
+   "seed": 2,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "aiGlutSD": 1.2,
+    "aiTrimSD": 1.3,
+    "aiTrimPause": 52
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "GRAIN11",
+   "name": "x13p52",
+   "seed": 2,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "aiGlutSD": 1.2,
+    "aiTrimSD": 1.3,
+    "aiTrimPause": 52
+   },
+   "control": "ctl"
+  }
+ ]
+}

@@ -35,7 +35,7 @@ import {
   DAILY_INTEREST, KEEP_SHARE, TREASURY_RELEASE, MINT_BASE, MINT_RATE, RESERVE_SHARE, kingdomLiteracy, researchPoints, adminCapacityOf, reserveCap, taxCapacity, taxRates,
   weeklyOutputValue,
 } from './finance';
-import { AI_JITTER, CHUNKS, INPUT_SUPPLY_MIN, MIXED_LEVELS, RAISE_FILL, RESERVE_FULL, RESERVE_STREAK, STARVE_FILL, TRIAL_PRICE, UTIL_FLOOR, SWITCH_MARGIN, SWITCH_MIN_WAGE_SHARE, LAW_COOLDOWN, LAW_SWITCH, WELFARE_COOLDOWN, WELFARE_SWITCH, OFFICE_BLOCK, OFFICE_GROWTH, STAFFING_HORIZON, SWITCH_COOLDOWN, ADMIN_STAFFED, PREMIUM_MAX, PREMIUM_STEP, STATE_HIRE_PULL } from './ai';
+import { AI_JITTER, CHUNKS, INPUT_SUPPLY_MIN, MIXED_LEVELS, RAISE_FILL, RESERVE_FULL, RESERVE_STREAK, STARVE_FILL, TRIAL_PRICE, UTIL_FLOOR, SWITCH_MARGIN, SWITCH_MIN_WAGE_SHARE, LAW_COOLDOWN, LAW_SWITCH, WELFARE_COOLDOWN, WELFARE_SWITCH, OFFICE_BLOCK, OFFICE_GROWTH, STAFFING_HORIZON, SWITCH_COOLDOWN, ADMIN_STAFFED, PREMIUM_MAX, PREMIUM_STEP, STATE_HIRE_PULL, TRIM_WAIT_WEEKS } from './ai';
 import { budgetPreview } from './budget';
 import { ownershipAssets } from './policy';
 import { welfareIncome, welfareTarget, welfareWeekly } from './welfare';
@@ -1385,6 +1385,12 @@ export const ENCYCLOPEDIA: EncEntry[] = [
       tune('aiSellDemoSD', '설비 철거 공급 ÷ 수요', 'Supply ÷ demand demolishing capacity', 'x'), tune('aiSellDemoWeeks', '철거까지 주 수', 'Weeks before demolition', 'week'),
       tune('aiKeepLastSupplier', '마지막 공급자 지킴', 'Keep the last supplier'), tune('aiGrowWhere', '증설 위치 고르기', 'Choose where to grow'), tune('aiReserveFund', '유보로 증설비', 'Reserve pays for growth')],
     related: ['reserves', 'ai-construction', 'ai-demolition'], seenIn: ['company'], source: ['ai.ts reserveLevels', 'ai.ts planTrials', 'economy.ts projectedSD', 'ai.ts glutSD', 'ai.ts growGain', 'ai.ts marginExit', 'ai.ts sellDemo', 'ai.ts keepLast', 'ai.ts growRegion', 'ai.ts fundFromReserve'], design: ['10'],
+  },
+  {
+    id: 'ai-trim', category: 'ai', title: t('넘친 상품 설비 줄이기', 'Trimming oversupplied capacity'),
+    rule: t('{0} > 0이면 0일부터 {1}주가 지난 뒤 매주 지역·상품마다 본다: 예상 공급 ÷ 수요(공급 이동평균 + 공사 중 레벨 산출, ÷ 수요 이동평균)가 {0} 이상이면 그 상품을 내는 AI 생산 건물 중 레벨당 손익이 가장 나쁜 것(새 건물·증설 공사 중·마지막 공급자 제외)을 1레벨 헌다. 다만 그 레벨 산출을 공급에서, 그 레벨 일꾼 식구가 사던 양을 수요에서 뺀 예상 공급 ÷ 수요가 증설 문턱 {2} 아래가 되면 헐지 않는다. 헌 뒤 {3}주는 그 지역 그 상품을 다시 헐지 않고, {4} > 0이면 그때 예상 공급 ÷ 수요가 헐 때보다 내려가지 않았으면 {4}주 더 쉰다. AI 판단이며 플레이어 건물은 헐지 않는다 ({0} = 0이면 끔).', 'With {0} > 0, from week {1} on, each region and good is checked weekly: if projected supply ÷ demand (supply average plus output of levels under construction, over the demand average) is {0} or more, the AI producer of that good with the worst profit per level (not new, not expanding, not the last supplier) loses one level, unless removing that level’s output from supply and its workers’ families’ purchases from demand would put projected supply ÷ demand below the growth threshold {2}. After a removal that region and good are left alone for {3} weeks; with {4} > 0, if projected supply ÷ demand has not fallen below its level at the removal by then, they are left alone for {4} more weeks. AI decision only; player buildings are never removed ({0} = 0 turns it off).'),
+    params: [tune('aiTrimSD', '줄이기 시작 공급 ÷ 수요', 'Supply ÷ demand starting trims', 'x'), tune('aiTrimFrom', '시작 주', 'Starting week', 'week'), tune('aiGlutSD', '증설 막는 예상 공급 ÷ 수요', 'Projected supply ÷ demand blocking growth', 'x'), p('쉬는 주', 'Wait weeks', () => TRIM_WAIT_WEEKS, 'week'), tune('aiTrimPause', '듣지 않을 때 쉬는 주', 'Pause when trims do not help', 'week')],
+    related: ['ai-reserve', 'ai-demolition'], seenIn: ['company'], source: ['ai.ts trimExit', 'ai.ts workerDemandPerLevel', 'ai.ts glutSD'], design: ['10'],
   },
   {
     id: 'ai-swap', category: 'ai', title: t('땅 바꾸기', 'Swapping land'),

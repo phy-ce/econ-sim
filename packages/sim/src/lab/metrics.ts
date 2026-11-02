@@ -202,6 +202,8 @@ class Acc {
   sdCut = 0; sdDemo = 0; utilUp = 0; lossCut = 0;
   // 0b′ 곡물 균형 후보: A2 설비 철거('sellDemo', 레벨), A3 자기 값 효과 철거('marginDemo', 레벨), A3 가 막은('marginBlock')·허용한('marginOk') 증설 (건물·주)
   sellDemo = 0; marginDemo = 0; marginBlock = 0; marginOk = 0;
+  // 넘침 퇴출 (이슈 #11 F3, TUNE.aiTrimSD): 헌 레벨('trimDemo'), 진입 문턱 아래로 내려갈까 봐 쉰 번('trimHold', 지역·상품·주), 헐어도 S/D 가 줄지 않아 길게 쉰 번('trimStop')
+  trimDemo = 0; trimHold = 0; trimStop = 0;
   // 노동시장 개편 (LABOR_MARKET.md 9.2): 주마다 노동자·농부 임금 (고용 가중) 표본. 연말에 주간 변화율 표준편차를 낸다
   wkWage: number[] = [];
   constructor() { for (let c = 0; c < NC; c++) this.burdenRing.push(new Float64Array(0)); }
@@ -304,10 +306,11 @@ export class Collector {
   /**
    * ai.ts aiTrace 로 받는 AI 판단 기록 (run.ts 가 이어 준다): 유보 증설 착공('reserve', 레벨), 과잉 검사로 막힌 증설('glutBlock', 건물·주),
    * 5-2 감축('sdCut', 10%씩 한 번)·철거('sdDemo', 1레벨), 가동률 올리기('utilUp', 10%씩 한 번), 적자 감축('lossCut', 10%씩 한 번),
-   * 곡물 균형 후보 A2 철거('sellDemo', 1레벨)·A3 철거('marginDemo', 1레벨)·A3 증설 판단('marginBlock' 막음, 'marginOk' 허용, 건물·주)
+   * 곡물 균형 후보 A2 철거('sellDemo', 1레벨)·A3 철거('marginDemo', 1레벨)·A3 증설 판단('marginBlock' 막음, 'marginOk' 허용, 건물·주),
+   * 넘침 퇴출 철거('trimDemo', 1레벨)·쉼('trimHold', 지역·상품·주)
    */
   trace(path: string, regionId: number | undefined, levels: number) {
-    if (!['reserve', 'glutBlock', 'sdCut', 'sdDemo', 'utilUp', 'lossCut', 'sellDemo', 'marginDemo', 'marginBlock', 'marginOk'].includes(path)) return;
+    if (!['reserve', 'glutBlock', 'sdCut', 'sdDemo', 'utilUp', 'lossCut', 'sellDemo', 'marginDemo', 'marginBlock', 'marginOk', 'trimDemo', 'trimHold', 'trimStop'].includes(path)) return;
     const s = regionId == null ? -1 : this.scopeOf(regionId);
     for (const a of s >= 0 ? [this.acc[s], this.acc[this.nk]] : [this.acc[this.nk]]) {
       if (path === 'reserve') a.growStarts += levels;
@@ -316,6 +319,9 @@ export class Collector {
       else if (path === 'sdDemo') a.sdDemo -= levels;
       else if (path === 'utilUp') a.utilUp++;
       else if (path === 'sellDemo') a.sellDemo -= levels;
+      else if (path === 'trimDemo') a.trimDemo -= levels;
+      else if (path === 'trimHold') a.trimHold++;
+      else if (path === 'trimStop') a.trimStop++;
       else if (path === 'marginDemo') a.marginDemo -= levels;
       else if (path === 'marginBlock') a.marginBlock++;
       else if (path === 'marginOk') a.marginOk++;
@@ -948,7 +954,7 @@ export class Collector {
       vault: sig(vault / M), vaultG: sig(this.vault0[i] > 0 ? (vault - this.vault0[i]) / this.vault0[i] : NaN), pledge: sig(pledge / M), pledgeNew: sig(a.pledgeNew / M),
       startLv: a.startLv, builtLv: a.builtLv, demoLv: a.demoLv, quickDemo: a.quickDemo, quickIdx: sig(div(a.quickDemo, a.startLv) ?? NaN),
       growStarts: a.growStarts, glutBlock: a.glutBlock, sdCut: a.sdCut, sdDemo: a.sdDemo, utilUp: a.utilUp, lossCut: a.lossCut,
-      sellDemo: a.sellDemo, marginDemo: a.marginDemo, marginBlock: a.marginBlock, marginOk: a.marginOk, lvProd: lvTot, adminStaff: sig(adminStaff / K), adminLv,
+      sellDemo: a.sellDemo, trimDemo: a.trimDemo, trimHold: a.trimHold, trimStop: a.trimStop, marginDemo: a.marginDemo, marginBlock: a.marginBlock, marginOk: a.marginOk, lvProd: lvTot, adminStaff: sig(adminStaff / K), adminLv,
       // 0b′ A4: 행정청 레벨 가중 충원율 (연말), 징수율 해 안 최저·평균 (날마다)
       adminSt: sig(div(adminSt, adminLv) ?? NaN), taxRatioMin: sig(a.trMin), taxRatioAvg: sig(a.trSum / d),
       // X08-H (왕국 단위 요약), 08 3.5 한계
