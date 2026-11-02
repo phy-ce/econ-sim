@@ -239,3 +239,27 @@
 - 기술 전파(tech spread): 트리마다 한 기술씩, 다른 나라가 아는 기술이 퍼져 온다. 속도 = (25 + 0.2 × 쓰지 못한 혁신 + 0.75 × 문해력%) × 법 배율(언론 보호 +25%, 검열 −10% 등) × 무작위 0.5~1.5.
 - 기술 값: 시대별 7,500 / 10,000 / 12,500 / 15,000 / 17,500. 같은 트리의 앞 시대 미연구 기술 수만큼 비싸진다.
 - 다른 나라가 아는 기술이 싸진다는 내용은 위키에서 확인 못 함 (전파는 값을 깎지 않고 포인트를 쌓는다).
+
+## 소유 건물·소유 이동·임금 조정 (2026-11-02 확인, 위키 1.13, 저택 지분 설계 `docs/overhaul/MANOR_SHARES.md`)
+출처: https://vic3.paradoxwikis.com/Patch_1.7, https://vic3.paradoxwikis.com/Building, https://vic3.paradoxwikis.com/Investment_pool, https://vic3.paradoxwikis.com/Companies, https://vic3.paradoxwikis.com/Characters, https://vic3.paradoxwikis.com/Profession, https://vic3.paradoxwikis.com/Building_modding, https://www.thegamer.com/victoria-3-sphere-of-influence-guide-to-nationalization/ (공식이 아닌 안내서).
+- 소유 개편은 1.5 가 아니라 **1.7** (Sphere of Influence) 이다. 1.7 패치 노트: "Ownership is represented by two new buildings, Manor Houses (housing the Aristocracy) and Financial Sectors (housing Capitalists)", 이들은 "can own buildings outside their own states or even their country" (Patch_1.7, 직접 확인).
+  - 그래서 **저택이 자기 주(state) 건물만 갖는다는 제한은 없다.** 같은 주·다른 주 소유에 대한 산출·배당 보정은 찾지 못했다 (확인 못 함).
+  - 외국 투자: 투자권 협정·세력권 원칙으로 다른 나라에 민간 산업을 지을 수 있다. 종주국은 늘 속국에 지을 수 있다. 외국 소유 산업은 외교 요구로 국유화할 수 있다 (Patch_1.7, 직접 확인). 외국 소유 건물의 생산 방식은 주인 나라만 바꾼다: "Only the owner of a state can change the PMs, regardless of percentage of foreign ownership." (Building, 직접 확인).
+  - 회사의 지역 본부: 투자권 특허가 있으면 외국에 건물 5개를 가진 뒤 지역 본부를 세우고, 지역 본부는 수입 일부를 본사 투자 풀로 보낸다 (Companies, 조사 에이전트 확인).
+  - TheGamer 안내서: 관세 동맹이 아니면 외국 건물의 이익은 해외로 간다 (공식 아님).
+- 주인: "Each building level has a certain owner" — 정부, 그 건물 직원, 소유 건물 (회사·상층 pop 도 나온다) (Building, 직접 확인). 레벨 하나에 주인 하나.
+- 몫: pop 소유 레벨은 "ownership shares which entitle that pop to a proportion of a building's cash reserve and dividends". 배당은 몫마다, "Shares are per employee" (금융가 사유: 자본가 10, 상점주 1) (Building, 직접 확인). 소유 건물이 가진 레벨의 배당은 그 소유 건물로 가고, 거기 고용된 pop 에게만 나눈다 (Building_modding `other` = "pays dividends only to own pops", 조사 에이전트 확인). 즉 **빅토리아3의 귀족은 저택에 고용되어야 배당을 받는다** (개인 지분이 없다).
+- 국영: "Buildings owned by a government split dividends between the treasury and investment pool" (경제 체제 법), 일부는 정부 배당 효율로 사라진다 (Building, 직접 확인). 1.7: "State-owned enterprises ... yield dividends directly to state coffers (or drain them, if unprofitable)" (Patch_1.7, 직접 확인).
+- 협동 소유: 자영농지법은 농업 건물을 시간이 지나며 50% 자기 소유로 바꾼다 (Patch_1.7, 직접 확인). 협동 소유 회사 레벨은 배당의 75% 를 일꾼에게 (Building, 조사 에이전트 확인).
+- 소유가 바뀌는 길:
+  - 투자 풀은 공사와, 국유·일꾼 소유 건물의 민영화에 쓴다. 민영화 값은 국고로 간다 (Investment_pool, 조사 에이전트 확인).
+  - 국가가 지은 건물은 대부분의 경제 체제에서 완공 뒤 매물로 나온다. 다른 체제는 보상하거나 하지 않고 국유화할 수 있다 (Patch_1.7, 직접 확인).
+  - 1.7: 일꾼이 없는 레벨이 여럿이고 50% 이상 민간 소유인 건물은 오래 못 뽑으면 민간 소유 레벨을 스스로 줄인다 (Patch_1.7, 직접 확인).
+  - pop 사이에 몫을 사고파는 시장: 찾지 못했다 (확인 못 함). 새 레벨이 어느 주의 저택·금융가 것이 되는지: 확인 못 함.
+- 가문·인물: 건물을 가진 가문·왕조는 찾지 못했다. 거물(Magnate)은 "tied to a holding in their home state, either Manor Houses or Financial Districts", 그 소유 건물의 수입이 거물의 명성(10~50)을 올린다. 경영자(Executive)는 회사를 이끌고 특성이 회사 소유 건물에 영향을 준다 (Characters, 직접 확인). 거물이 소득을 받거나 건물을 갖는지는 문서에 없다 (확인 못 함).
+- 임금 (Profession, 직접 확인):
+  - "Buildings raise their base wage primarily to attract employees when it cannot otherwise fill empty positions." 이익이 아주 크면 직원 생활수준이 기대보다 낮을 때도 올린다. "unprofitable and moderately profitable buildings decrease wages to restore profitability".
+  - 직종 배율: 소작농 0.2, 노동자 1, 사무원·기계공·서비스직 1.5, 농부 2, 성직자·상점주·기술자 3, 관료·학자 4, 귀족·자본가·장교 5. 귀족·자본가는 "Not paid wages outside government-funded buildings."
+  - 자격이 없는 pop 은 뽑지 않는다.
+  - 채용 속도: 건물 정의 키 `min/max_hiring_rate` = 한 주에 뽑을 수 있는 인원 비율, 소유 건물은 `hiring_rate = 1.0`, `min_raise_to_hire` = 옮기는 데 필요한 최소 임금 인상 (Building_modding, 조사 에이전트 확인). 기본값 숫자와 주마다 임금 변동 폭: 확인 못 함 (유보 자산 절의 "주마다 최대 10%" 는 Treasury·Defines 문서 기준).
+- 이 게임과 다른 점: 저택 지분 설계는 몫을 "고용"이 아니라 pop 의 재산(`Pop.fund`)으로 둔다. 빅토리아3 와 다르다 (사용자 결정 2026-11-02).
