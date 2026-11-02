@@ -9,7 +9,7 @@ import {
   harvestLabel, hasBuilder, holdingsOf, isOwnerBuilding, kingdomById, kingdomGdp, kingdomOf, landFree, landUsed, lawUnlocked, levelOwnersOf,
   marketWage, marketWages, moneyIdentity, netMinted, outputCapacity, ownershipAssets, playerCompany, policyStatus, priceIn, privatizePrice,
   regionById, regionUnemployment, researchableTechs, roomFor, shippingRate, step, taxCapacity, totalMoney, treasuryFree, unemploymentRate, veinsLeft,
-  createWorld, currentSD, projectedSD, subsistenceWage, marketWageTargets, wealthDrivers,
+  createWorld, currentSD, projectedSD, subsistenceWage, marketWageTargets, wealthDrivers, interestGroups, lawChance, VOTING_LAWS, WELFARE_LAWS,
 } from '../../src/index';
 import type { BudgetLineKey, EncCtx, World } from '../../src/index';
 
@@ -38,6 +38,16 @@ const READERS: Record<string, (w: World) => void> = {
     for (const k of w.kingdoms) {
       policyStatus(w, k.id); financeRatio(w, k.id); taxCapacity(w, k.id); kingdomGdp(w, k.id); kingdomById(w, k.id);
       for (const law of [...TAX_LAWS, ...INVEST_LAWS]) lawUnlocked(w, k, law);
+    }
+  },
+  // 이익집단 (단계 0 읽기 전용 층, interestGroups.ts): 투표법 여섯과 법이 바뀔 확률
+  interestGroups: (w) => {
+    for (const k of w.kingdoms) {
+      for (const v of VOTING_LAWS) interestGroups(w, k.id, { votingLaw: v, lawHist: [{ kind: 'tax', from: 'land', to: 'poll', tick: w.tick }] });
+      for (const law of TAX_LAWS) lawChance(w, k.id, 'tax', law);
+      for (const law of INVEST_LAWS) lawChance(w, k.id, 'invest', law);
+      for (const law of WELFARE_LAWS) lawChance(w, k.id, 'welfare', law);
+      for (const law of VOTING_LAWS) lawChance(w, k.id, 'voting', law);
     }
   },
   totalMoney: (w) => { totalMoney(w); moneyIdentity(w); },

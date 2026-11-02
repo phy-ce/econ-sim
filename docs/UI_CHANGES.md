@@ -51,6 +51,9 @@ sim 변경 반영 (오늘 병합: wt-wagelag·wt-admin·wt-wagespeed)
 정리
 16. 죽은 코드·문자열: 옛 `Research` 컴포넌트 (2-61), `Bag`·`bag` (2-51), `BuildingEconomics.tsx:28` (2-32), `expandTen`·`myHouse` (2-42-7).
 
+sim 변경 반영 (wt-ig: 이익집단 읽기 전용 층, 아직 main 에 안 합침)
+15. **2-88 정치 창 (낮음)**: 왕국 이익집단 6줄 (영향력·승인·기분), 투표법 라벨. 읽기 전용, 효과 없음. wt-ig 가 main 에 들어온 뒤.
+
 sim 대기 · 결정 대기
 - **2-86 목표 임금**: sim 준비됨 (2026-11-02 wt-uiapi, `marketWageTargets` `labor.ts:549`, index `index.ts:15`). 규칙 자체는 사용자 확인 대기 (DECISIONS 7-43)지만 화면 설계는 규칙이 바뀌어도 같아 지금 해도 된다.
 - **플레이어 왕실 국영 웃돈**: 사용자 결정 대기 (DECISIONS 7-42 결정 대기 1). (b)로 정해지면 새 절. 지금 할 일 없음.
@@ -779,6 +782,22 @@ sim 변경 (wt-research):
 - 빼는 것: 없음.
 - 완료 기준: 툴팁 목표가 같은 날 `marketWageTargets` 값과 소수 둘째 자리까지 같다. 화살표 방향이 다음 날 `r.wages[s]` 변화 부호와 같다 (차이 0.5% 넘을 때). `wageTarget` 0 세계에서 화살표·툴팁 줄이 없다. typecheck.
 - 사용자 결정: 규칙 자체가 확인 대기다 (DECISIONS 7-43: 그대로 둘지, 위 끝 배율 `TUNE.wageTargetSpan`·속도 `wageTargetSpeed` 를 바꿀지. 2026-11-02 wt-span 비교에서 배율 1.5·3, 속도 0.2 모두 기본값보다 고르게 낫지 않아 2·0.1 그대로, DESIGN 11장 두 행, 보고서 2026-11-02-wagespan). 화면 설계는 규칙이 바뀌어도 같다 (목표·끝 값만 sim 이 준다). 7-42 결정 대기 1 이 (b) "플레이어 왕실에 정부 건물 지역 웃돈 손잡이"로 정해지면 그때 새 절을 쓴다.
+
+### 2-88. 정치 창: 이익집단 (wt-ig, DESIGN 9.6, DECISIONS 7-45, 사전 `interest-groups`, sim 준비됨 (`interestGroups`), 낮은 우선순위: 읽기 전용 층)
+- sim: `interestGroups(w, kingdomId): IgStatus` = `{ kingdomId, votingLaw, groups: IgRow[] }` (`interestGroups.ts`). 세계를 바꾸지 않는다. 값은 반올림하지 않았다 (화면이 소수 둘째 자리로 반올림, % 는 정수).
+  - `IgRow`: `id` (`IG_IDS`: landowners·industrialists·petite·rural·unions·intelligentsia, 이 순서), `name`·`nameEn`, `members` (회원 수, 명), `clout` (0~1, 왕국 합 1), `status` ('powerful' | 'influential' | 'marginal'), `approval` (−20~20), `parts` `{ stances, change, sol }` (승인을 이루는 셋, 합은 한도 ±20 전 값), `pending` (`change` 중 지금 바뀌는 중인 법의 몫), `mood` ('angry' | 'unhappy' | 'neutral' | 'happy' | 'loyal'), `stance` `{ tax, invest, welfare, voting }` (−2~+2).
+  - `votingLaw`: `VOTING_LAWS` 여섯 중 하나 (지금 모든 왕국 'autocracy' 전제. 플레이어 명령 없음, 단계 3 전까지 읽기 전용 라벨). 이름은 `VOTING_NAMES`.
+  - 화면은 `lawHist` 를 넘기지 않는다 → `parts.change` 에는 바뀌는 중인 법의 충격만 들어 있다 (이미 바뀐 법의 충격은 단계 1 에서 세계가 기록한 뒤).
+  - 상수: `IG_NAMES`, `VOTING_NAMES`, `IG_POWERFUL`, `IG_MARGINAL`, `IG_MOOD_AT`, `IG_APPROVAL_CAP`, `VOTING_LAWS`. 값은 코드에서 읽는다.
+  - `lawChance(w, kingdomId, kind, to)` → `{ chance, support, oppose, crown, groups }` (법이 바뀔 확률, 단계 2 규칙의 읽기용 값) 도 있지만 단계 2 전에는 화면에 넣지 않는다 (아직 확률로 바뀌지 않으므로 보이면 헷갈린다).
+- 화면: 정책 창 (진행 C 의 국가 예산/법 탭 묶음) 에 탭 하나 "정치". 고른 왕국 (기본 플레이어 왕국).
+  1. 머리 줄: "투표법" 라벨 + 이름 (`VOTING_NAMES[votingLaw]`).
+  2. 집단 6줄 (`groups` 순서). 칸: 이름 | 영향력 막대 (0~100%) + `pct(clout)` + 칩 (`status` 힘셈/소외, 보통은 칩 없음) | 승인 막대 (−20~+20, 0 가운데, 음수 `neg`·양수 `pos` 색) + 숫자 (`toFixed(1)`) | 기분 칩 (`mood`) | 회원 수.
+  3. 줄을 누르면 펼침: 승인 셋 `parts` (법 입장 / 법 바꾸기 / 생활수준, 각 `toFixed(1)`), 법 입장 넷 `stance` (세법·투자법·복지법·투표법, −2~+2 를 아이콘이나 부호 숫자로), `pending` 이 0 이 아니면 "바뀌면" + 부호 숫자.
+  4. 설명 문구는 넣지 않는다 (라벨·숫자·막대만, 툴팁 가능).
+- 넣지 않는 것 (단계 2 전): 법 버튼 옆 "바뀔 확률" 과 찬반 집단. `lawChance` 는 있지만 지금은 법이 확률로 바뀌지 않는다.
+- 문자열 (ko/en): "정치"/"Politics", "투표법"/"Voting law" (투표법 이름은 `VOTING_NAMES`), 집단 이름은 `IG_NAMES`, "영향력"/"Clout", "승인"/"Approval", "회원"/"Members", "힘셈"/"Powerful", "소외"/"Marginalised", "성남"/"Angry", "불만"/"Unhappy", "중립"/"Neutral", "만족"/"Happy", "충성"/"Loyal", "법 입장"/"Stances", "법 바꾸기"/"Law changes", "생활수준"/"Living standard", "바뀌면"/"If enacted".
+- 완료 기준: 왕국마다 영향력 % 합 100 (반올림 ±1). 승인 숫자 = `parts` 셋의 합을 ±20 으로 자른 값. 같은 날 사전 `interest-groups` live 값과 같다. typecheck.
 
 ## 3. sim 쪽 필요 사항 (Claude가 처리할 것, UI 작업자는 요청만)
 - **2-59 주 단위 수지 (요청됨, 2026-10-22):** `BuildingEcon`에 `week: { sales, tax, inputs, wages, profit }` (건물 `revenue`·`tax`·`inputCost`·`wageCost`의 이동평균 × 7, `profitEma`와 같은 기간). 들어오면 2-59-3 폭포 라벨을 `/주`로. (2026-11-02 wt-uiapi 보류: 지금 건물에 있는 이동평균은 `profitEma`·`firmEma`(왕실 생산 건물·건축사무소만) 뿐이라 매출·세금·원료비·임금 이동평균을 건물 상태에 새로 저장해야 한다. 읽기 전용이 아니고 골든이 바뀐다.)

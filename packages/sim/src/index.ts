@@ -35,4 +35,5 @@ export { budgetPreview, roundBudget, budgetLineRaw, budgetDrill, BUDGET_GROUPS, 
 export type { BudgetPreview, BudgetLine, BudgetLineKey, BudgetGroup, BudgetGroupKey, BudgetDrill, BudgetDrillBase, WageDrill, WageDrillRow, WageDrillJob, FirmDrill, FirmDrillRow, GoodsDrill, GoodsDrillRow, GoodsDrillGood, TaxDrill, TaxDrillRow, WelfareDrill, WelfareDrillRow, InterestDrill, TariffDrill, MintDrill, BuildDrill } from './budget';
 export { recordMetrics, METRICS_EVERY } from './metrics';
 export type { MetricPoint, KingdomMetrics, GoodMetrics } from './metrics';
+export * from './interestGroups';
 export * from './encyclopedia';

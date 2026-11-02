@@ -5,7 +5,7 @@
 - 폴더: `C:\Users\phyju\Desktop\Coding_Desk\2026\estera economy sim`
 - 저장소: https://github.com/phy-ce/econ-sim (main). 검증된 병합마다 푸시한다(2026-10-19 사용자 지시).
 - 작업 규칙: `CLAUDE.md`. 경제 규칙 요약: `docs/DESIGN.md`. 빅토리아3 근거: `docs/VIC3_REFERENCE.md`.
-- 사용자 결정 대기: `docs/overhaul/12_DECISIONS_NEEDED.md`(Q1~Q20)와 `docs/DECISIONS.md`. 지금 답을 기다리는 것은 아래 0-1030 절 0b′ 의 "사용자 답 대기" 줄, 0-1102 의 `tenantSlack` 메모, 0-1102e 의 플레이어 왕실 국영 웃돈·하급 귀족 시작 임금 (DECISIONS 7-42), 0-1102f 의 목표 임금 규칙 확인 (DECISIONS 7-43, 기본 켬; 7-41 W1 은 이것이 대신함). 화면 작업자에게 넘길 것: `docs/UI_CHANGES.md` 맨 위 "0. 지금 할 일".
+- 사용자 결정 대기: `docs/overhaul/12_DECISIONS_NEEDED.md`(Q1~Q20)와 `docs/DECISIONS.md`. 지금 답을 기다리는 것은 아래 0-1030 절 0b′ 의 "사용자 답 대기" 줄, 0-1102 의 `tenantSlack` 메모, 0-1102e 의 플레이어 왕실 국영 웃돈·하급 귀족 시작 임금 (DECISIONS 7-42), 0-1102i 의 이익집단 확률 규칙·선거 보정치·지분 끌림 크기 (DECISIONS 7-45, 단계 0 만 구현), 0-1102f 의 목표 임금 규칙 확인 (DECISIONS 7-43, 기본 켬; 7-41 W1 은 이것이 대신함). 화면 작업자에게 넘길 것: `docs/UI_CHANGES.md` 맨 위 "0. 지금 할 일".
 - 클라우드 세션(claude.ai/code)으로 이어서 할 수 있다. 규칙은 CLAUDE.md "클라우드 세션"을 본다.
 - 옛 세션 기록: `docs/log/` (2026-10-25 이전 HANDOFF 절은 `docs/log/HANDOFF_2026-10-18_to_10-25.md`, 날짜별 UI 기록도 여기). 다른 문서의 "HANDOFF 0-ind3"·"HANDOFF 0-aifix" 같은 옛 절 참조는 그 파일에 있다.
 
@@ -24,6 +24,15 @@
 - 남은 것: UI_CHANGES 3장의 sim 요청 `marketWageTargets(w, regionId)` 는 아직 만들지 않았다 (Claude 쪽 일, 2-86 이 기다린다. → 0-1102-uiapi 에서 만듦). 2-86 규칙 자체는 DECISIONS 7-43 사용자 답 대기.
 - 화면: UI_CHANGES 0장 2 (2-85), 'sim 대기 · 결정 대기' (2-86).
 - 검증: typecheck, test:core 24파일 79개 (premerge 고침 뒤 브랜치에서). 문서와 cli 만 바뀌었고 sim·client 코드는 그대로다.
+
+## 0-1102i. 2026-11-02: wt-ig (이익집단, 단계 0 읽기 전용 층)
+- 사용자 결정 (DECISIONS 7-45): 회원은 빅토리아3 식 끌림 가중치, 효과는 경제 특성 + 법 저항, 영향력은 "총 부에 선거 보정치를 곱한다" (식은 정해짐, 다시 묻지 않는다). 두 번째 답: 법 저항은 "빅토리아처럼 확률" (0% 문턱 버림), 투표법은 "단계를 더" (여섯 단계), 자본가 집단은 "금융가 지분 가진 사람에게 끌림".
+- 바뀐 것 (sim 결과는 그대로): `src/interestGroups.ts` (회원 몫 `igMembership`·자본가 지분 끌림 `igFundAttraction`·1년 생활비 `igYearCost`, 선거 보정치 `VOTE_MOD`·`igVoteMod`, 영향력·승인·기분 `interestGroups(w, kingdomId, opts)`, 법이 바뀔 확률 `lawChance`, 상수·입장 표), `index.ts` 내보냄, 진단 `cli/igdiag.ts` (해마다 왕국별 영향력·승인, 투표법 여섯의 영향력, AI 가 바꾼 법의 바뀔 확률·실패했을 기대 수, 법 바꾸기 기록은 스크립트가 넘김), 사전 `interest-groups` (DESIGN 9.6), 시험 `test/core/interestGroups.test.ts` + `readonly.test.ts` 에 읽기 함수 등록. TUNE·저장 모양·규칙 해시는 안 바뀜. 첫 커밋 c37cae5 (0/1 투표법·0% 문턱) 를 두 번째 커밋이 바꿨다.
+- 설계: `docs/overhaul/INTEREST_GROUPS.md` (빅토리아3 사실과 출처, 집단 6·끌림 표, 법 입장 표, 총 부 × 선거 보정치, 투표법 여섯 (전제 / 과두정 / 지주 투표 / 재산 투표 / 인구 조사 선거 / 보통 선거, 지금 모두 전제, 읽기 값), 승인 식, 특성 대응, 8장 법이 바뀔 확률 (단계 2), AI, 저택 지분 관계, 단계 0~3, 남은 결정). 빅토리아3 사실은 `docs/VIC3_REFERENCE.md` "이익집단 (2026-11-02 확인)" (법 제정 확률 식 포함).
+- 숫자 (main 93bc0b0 코드, 20년 × 시드 1·2, 전제, 보고서 2026-11-02-ig0, 해마다 표는 INTEREST_GROUPS.md 12장): 1~3년차 농민이 가장 크다 (47·41%), 지주 25~30% (10년차까지), 자본가 9·11% → 20년차 35·44% (귀족·전문가의 금융가 지분), 지주 14·18%. AI 가 바꾼 법 21·22번의 바뀔 확률 평균 64·58%, 실패했을 기대 수 7.6·9.2번. 생활수준 항 배율 50 → 25 (자본가가 한도 ±15 에 자주 닿음), 지분 끌림 분모 1년 소득 → 1년 생활비 (소득 이동평균이 주간 배당에 출렁여 해마다 14 ↔ 27% 로 오감). 둘 다 비교 실행 아님.
+- 검증: typecheck, test:core 25파일 85개 (`VITEST_MAX_THREADS=2`), samecheck 5개 모두 main 93bc0b0 기준 해시와 같음.
+- 화면: UI_CHANGES 2-88 (정치 탭, 낮은 우선순위, 바뀔 확률은 단계 2 전에는 안 보임). 클라이언트는 안 건드림.
+- 남은 것: 사용자 확인 (DECISIONS 7-45: 8장 확률 규칙, 선거 보정치의 계층 지위 0.05 / 0.2 / 1, 지분 끌림 50 / 250, 지식인·생활수준 항·근거 없는 입장·특성 대응). 확인 뒤 단계 1 (특성 스위치, 법 바꾸기 기록 상태) → 단계 2 (법이 바뀔 확률, AI) → 단계 3 (투표법 명령, 가문 지도자). main 에 합치지 않음 (premerge 대기).
 
 ## 0-1102g. 2026-11-02: wt-span (맞는 임금 위 끝 배율·하루 속도 비교)
 - 바뀐 것: `labor.ts WAGE_TARGET_SPAN` 상수를 `TUNE.wageTargetSpan` (기본 2) 으로 뺐다 (c1caf9f, main 81494a1 에서, 기본 2 면 samecheck 5개 같음). 사전 `market-wage` 의 '목표 위 끝 배율' 이 TUNE 값을 읽는다. lab 줄에 `solSkill` (기술자 생활수준), `cli/report.py` LAB 에 empLowK·wageSdW·adminSt·lvProd·solSkill·skRatio·lnsd6·lo6·adminSt1~3 이름. 기본값 그대로 (배율 2, 속도 0.1).
