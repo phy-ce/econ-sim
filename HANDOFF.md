@@ -5,7 +5,7 @@
 - 폴더: `C:\Users\phyju\Desktop\Coding_Desk\2026\estera economy sim`
 - 저장소: https://github.com/phy-ce/econ-sim (main). 검증된 병합마다 푸시한다(2026-10-19 사용자 지시).
 - 작업 규칙: `CLAUDE.md`. 경제 규칙 요약: `docs/DESIGN.md`. 빅토리아3 근거: `docs/VIC3_REFERENCE.md`.
-- 사용자 결정 대기: `docs/overhaul/12_DECISIONS_NEEDED.md`(Q1~Q20)와 `docs/DECISIONS.md`. 지금 답을 기다리는 것은 아래 0-1030 절 0b′ 의 "사용자 답 대기" 줄, 0-1102 의 `tenantSlack` 메모, 0-1102e 의 플레이어 왕실 국영 웃돈·하급 귀족 시작 임금 (DECISIONS 7-42), 0-1102i 의 이익집단 확률 규칙·선거 보정치·지분 끌림 크기 (DECISIONS 7-45, 단계 0 만 구현), 0-1102f 의 목표 임금 규칙 확인 (DECISIONS 7-43, 기본 켬; 7-41 W1 은 이것이 대신함), 0-1102-welfare9 의 복지 상한 (DECISIONS 7-47, 기본 끔). 화면 작업자에게 넘길 것: `docs/UI_CHANGES.md` 맨 위 "0. 지금 할 일".
+- 사용자 결정 대기: `docs/overhaul/12_DECISIONS_NEEDED.md`(Q1~Q20)와 `docs/DECISIONS.md`. 지금 답을 기다리는 것은 아래 0-1030 절 0b′ 의 "사용자 답 대기" 줄, 0-1102 의 `tenantSlack` 메모, 0-1102e 의 플레이어 왕실 국영 웃돈·하급 귀족 시작 임금 (DECISIONS 7-42), 0-1102i 의 이익집단 확률 규칙·선거 보정치·지분 끌림 크기 (DECISIONS 7-45, 단계 0 만 구현), 0-1102f 의 목표 임금 규칙 확인 (DECISIONS 7-43, 기본 켬; 7-41 W1 은 이것이 대신함), 0-1102-welfare9 의 복지 상한 (DECISIONS 7-47, 기본 끔), 0-1102-fix10 의 정산 소수 레벨 (DECISIONS 7-48, 급하지 않음). 화면 작업자에게 넘길 것: `docs/UI_CHANGES.md` 맨 위 "0. 지금 할 일".
 - 클라우드 세션(claude.ai/code)으로 이어서 할 수 있다. 규칙은 CLAUDE.md "클라우드 세션"을 본다.
 - 옛 세션 기록: `docs/log/` (2026-10-25 이전 HANDOFF 절은 `docs/log/HANDOFF_2026-10-18_to_10-25.md`, 날짜별 UI 기록도 여기). 다른 문서의 "HANDOFF 0-ind3"·"HANDOFF 0-aifix" 같은 옛 절 참조는 그 파일에 있다.
 
@@ -26,6 +26,14 @@
 - 남은 것: 사용자 결정 7-47 (켤지, 값). 하루 순서(임금 → 복지)·못 낸 이자가 빚에 쌓임·복지가 총생산(국채 한도)에 들어감은 그대로다. 20년 비교는 하지 않았다.
 - 화면: 넘길 것 없음 (기본 끔). 켜면 정책 창·예산 미리보기에 상한 줄이 필요하다 (복지 내역 `drillWelfare` 의 지역 줄은 상한 전 필요액이라 줄인 몫이 smoothing 에 들어간다).
 - 검증: typecheck, test:core 24파일 80개 (새 시험 'welfareCap: 하루 지급이 상한을 넘지 않고 돈이 보존된다' 포함), `cli/golden.ts` 같음. 전체 vitest 는 돌리지 않았다.
+
+## 0-1102-fix10. 2026-11-02: wt-fix10 (이슈 #10, 공사 완공 정산에서 저택·금융가 금고가 음수)
+- 원인: `production.ts giveLevels` 정산이 금고를 보지 않고 뺐다. 음수가 나는 길은 모아 내기다: `finance.ts chooseFunders` 는 어느 금고도 한 레벨을 혼자 못 낼 때만 남은 금고 돈을 모으고, 마지막 금고를 빼면 모두 쓸 수 있는 돈을 다 약정한다. 완공되면 나머지 레벨은 가장 많이 낸 쪽이 갖고 공사비 × 남의 몫을 내야 하는데, 그 돈은 공사 중 들어온 수입뿐이다.
+- 바뀐 것: `TUNE.settleCap` (915ab53 에서 기본 0 으로 넣고 골든 c7fb7c00ef46d24c 같음 확인, 다음 커밋에서 기본 1). 규칙 한 줄: "레벨을 더 받은 쪽은 금고에 있는 돈까지만 돌려준다." 진단 흐름 `settle.*`·`settleShort.*`·`settleN`·`settleCap.*` (kingdoms.ts FLOW), 진단 `cli/settlediag.ts` (lowprio, 해마다 한 줄, report.py 가 읽는다). 시험 `test/core/settle.test.ts` (60:40 모아 낸 레벨, 금고 0 아래로 안 감·돈의 합 그대로). `test/helpers.ts stateFlags` 가 저택·금융가 금고 ≥ 0 을 다시 판정한다 (무역소 금고는 유한한지만). DESIGN 8장·9.3·11장 `settleCap` 행, 사전 `owner-treasury`, DECISIONS 7-29.
+- 숫자 (main 9ba5acc + 915ab53, 20년 × 시드 1·2, 한 번에 한 프로세스, 보고서 2026-11-02-fix10): 저택·금융가 금고가 음수인 날 345·204 → 0·0 (최저 −401,825·−438,438 → 0). 연 총생산 20년 평균 비 1.05·1.08, 민간 레벨 1.03·1.04 (해마다 −11%~+38%, 1·5·10·15·20년차 값은 DESIGN 11장).
+- 남은 것: 덜 가진 쪽이 받지 못한 돈 20년 1,735만·1,223만, 차액을 낸 정산 100·114 → 294·277번. 잃는 사람 없는 다른 길(레벨을 소수까지 나눔)은 DECISIONS 7-48 사용자 결정. 무역소 금고 음수(시드 1 settleCap 0 에서 9일, 최저 −4,762)는 따로다 (원인 확인 못 함, 장기 시험 meta.ownerCashNeg 가 계속 센다). 장기 시험(`npm run test:long`)은 두 시드를 병렬로 돌려 이번에는 돌리지 않았다 (CPU 제한).
+- 합칠 때: 기본 1 이라 골든 해시가 바뀐다 (premerge 마지막에 main 을 합친 상태로 `npm run golden:update`). 화면: 넘길 것 없음.
+- 검증: typecheck, test:core 25파일 82개 (아래 커밋에서).
 
 ## 0-1102k. 2026-11-02: wt-batch1 (wt-par 비교 실행 자원 + wt-uidocs UI_CHANGES 감사)
 - 바뀐 것 (wt-par a17d0f7): `cli/lab.sh`·`cli/sweep.sh` 의 `PAR` 기본이 'CPU 코어 수 − 2' 에서 '6 과 코어 수 − 2 중 작은 쪽 (최소 1)' 으로 (이 PC 16코어: 14 → 6, 클라우드 VM 약 4 vCPU: 2 그대로). `cli/lowprio.ts` (프로세스 우선순위 '보통 이하', `LOWPRIO=0` 이면 끔)를 `cli/lab.ts`·`cli/sweep.ts` 가 맨 앞에서 import 한다. CLAUDE.md '실행과 검증'에 컴퓨팅 자원 줄 (2026-11-02 사용자: PC 를 너무 많이 쓴다). 계산 결과는 같다 (우선순위·동시 실행 수만 바뀐다). 숫자: 실행 시간은 재지 않았다.

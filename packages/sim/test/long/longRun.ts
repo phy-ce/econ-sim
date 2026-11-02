@@ -16,7 +16,7 @@ export const LONG_TIMEOUT = 600_000;
 //   - 20년(7,200일)을 예외 없이 끝낸다.
 //   - 화폐 보존: 해마다 연말 어긋남(|보존량 − 시작| ÷ 시작)의 최댓값과 끝 값 < 1e-9.
 //   - 상태 값 범위: 매일 helpers.ts stateFlags (NaN·Infinity, 음수가 될 수 없는 인구·저축·회사 현금·부채·공사 맡긴 돈·무역상 현금, 가격 0.25~1.75 × 기본가,
-//     부 1~WEALTH_MAX, 식량 0~1). 건물 금고는 유한한지만 본다: 음수 금고(민간 공사 완공 정산, helpers.ts 주석)는 알려진 문제로 세어 콘솔·meta 에 낸다.
+//     부 1~WEALTH_MAX, 식량 0~1, 저택·금융가 금고 ≥ 0). 무역소 금고는 유한한지만 본다: 음수 건물 금고(무역소 포함, helpers.ts 주석)는 세어 콘솔·meta 에 낸다.
 //
 // 데이터 (판정하지 않음): src/lab/metrics.ts Collector (관측 전용, test/gate/lab.test.ts) 의 해마다 왕국별·대륙(k: 'all') 줄을
 //   저장소 루트 .tmp/test-data/long-<시드>.jsonl 에 쓴다 (git 무시, 실행마다 덮어씀. LONG_DATA_DIR 로 바꾼다).
@@ -58,7 +58,7 @@ export function longRun(seed: number) {
   let allTechs: number | null = null, tier4: number | null = null;
   let minFood = Infinity, sumFood = 0, n = 0;
   let worstDrift = 0, worstYear = 0;
-  // 알려진 문제: 음수 건물 금고 (판정하지 않음)
+  // 음수 건물 금고 (무역소 포함, 판정하지 않고 센다. 저택·금융가는 stateFlags 가 판정한다)
   const neg = { days: 0, first: null as number | null, low: null as ReturnType<typeof ownerCashLow> };
   try {
     for (let t = 1; t <= 360 * YEARS; t++) {
