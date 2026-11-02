@@ -35,6 +35,21 @@
 - 화면: 넘길 것 없음 (AI 판단만, 사전은 자동). 사용자 결정: 없음 (AI 판단).
 - 검증: typecheck, test:core 24파일 79개, 골든 (끔 같음 / 켬 다름).
 
+## 0-1102-grain11. 2026-11-02: wt-grain11 (이슈 #11 곡물 S/D 1.3~1.4, 넘침 퇴출 F3, 합치기 전)
+- 이 절의 `.tmp/grain11/`·`.tmp/reports/` 경로는 worktree `.tmp/wt/grain11/` 안이다 (커밋하지 않은 실행 결과).
+- 진단: `.tmp/grain11/RESULT.md` (도구 `cli/graindiag.ts`, 4ea0d7a). 농부 임금 바닥이 곡물값을 따라가 농장 손익이 팔린 비율에 반응하고 손익분기 σ* 0.63~0.66 이라 S/D 약 1.5 까지 흑자, 진입은 `aiGlutSD` 1.5 하나가 막고 나가는 규칙은 켜지지 않는다.
+- 바뀐 것 (AI 판단, 기본 끔 = 골든 c7fb7c00ef46d24c 같음): `ai.ts trimExit`·`workerDemandPerLevel`·`TRIM_WAIT_WEEKS`(5주), TUNE `aiTrimSD` 0·`aiTrimFrom` 52·`aiTrimPause` 0, `Region.trim`. 한 줄 규칙: "넘친 상품은 1레벨을 헐어도 진입 문턱 아래로 내려가지 않을 때만 헐고, 헌 뒤 5주는 그 지역·상품을 쉰다". 사전 `ai-trim` (AI 판단이라 플레이어 규칙은 그대로), DESIGN 10장 `trimExit` 줄·11장 `aiTrimSD`·`aiTrimFrom`·`aiTrimPause` 행, 지표 `trimDemo`·`trimHold`·`trimStop` (`lab/metrics.ts`, `labsum.py`), 시험 `test/gate/trim.test.ts` (화폐 보존·저장/불러오기 결정성·끔 = 같음), 진단 `cli/trimprobe.ts`.
+- 마이크로 (10년 × 시드 1·2, 판정 실패): 해마다 곡물 S/D (2~10년차) main 시드 1 0.85~1.52 / 시드 2 0.03~1.65 (공구 끊김), F3 1.2/1.3 0.87~1.32 / 0.85~1.26 (시드 1 4년차 농장 평균 0.6레벨까지 헐림), F3 + 쉼 52 0.92~1.48 / 0.68~1.36. 헐린 농부가 소작으로 돌아가 팔고 시장 수요도 함께 줄어 S/D 가 잘 안 내려간다. 보고서 2026-11-02-grain11-micro, 그림 `.tmp/reports/2026-11-02-grain11-f3-micro-s1.png`·`-s2.png`.
+- 본 게임 10년 × 시드 1 (거르기, `.tmp/grain11/f3/lab10all.jsonl`): 곡물 S/D 8~10년차 ctl 1.39·1.45·1.36, 1.2/1.3 1.31·1.29·1.04. 1년차부터 퇴출(`aiTrimFrom` 0)은 1년차 S/D 2.00 (52 는 1.87) 이고 총생산이 해마다 낮아 뺐다.
+- 본 게임 20년 × 시드 1·2 × salt 0..3 (명세 `docs/overhaul/GRAIN11_SPECS.json`, 결과 `.tmp/grain11/f3/lab20.jsonl`, 보고서 2026-11-02-grain11, 그림 `.tmp/reports/2026-11-02-grain11-f3-full20.png`), 8회 평균 1·2·3·5·8·10·15·20년차:
+  - 곡물 S/D ctl 2.06·1.05·1.05·1.23·1.36·1.29·1.33·1.29 / 진입 1.2 만 2.07·1.11·1.09·1.19·1.31·1.19·1.27·1.35 / 1.2·1.3 2.07·1.14·1.09·1.15·1.26·1.12·1.20·1.27 / 1.2·1.25 2.07·1.14·1.11·1.15·1.24·1.10·1.21·1.24. 0.9~1.25 밖인 해 (2~20년차) 13 / 10 / 6 / 3.
+  - 세전 총생산 ctl 172·352·375·440·523·615·868·1,200 / 진입 1.2 만 168·328·356·412·478·517·583·622 / 1.2·1.3 168·322·355·430·471·511·583·601 / 1.2·1.25 168·321·352·429·478·509·561·589. 생산 건물 레벨 20년차 3,713 / 2,002 / 1,318 / 1,217. 소작 비율 20년차 0.21 / 0.53 / 0.64 / 0.67.
+  - 다른 상품 S/D 20년차 (ctl / 1.2·1.3): 의복 1.37 / 0.94, 공구 1.41 / 1.26, 목재 1.39 / 1.29, 섬유 1.38 / 1.23. 가격 하한 몫은 모두 0.00~0.04. 노동자 생활수준 20년차 2.06 / 1.51.
+- 결정: **기본 끔.** S/D 띠에 다 들지 않았고 20년차 총생산이 절반이다. 비용 대부분은 진입 1.2 (모든 상품에 걸린다). 이슈 #11 은 닫지 않았다. 세계 규칙 선택지 W1~W3 는 DECISIONS 7-49 (사용자 결정 대기).
+- 남은 것: 곡물만 진입·퇴출을 바꾸는 AI 판단, 진입 1.25·1.3 은 돌리지 않았다. wt-simplify 가 `aiCutSD`·`aiDemoSD`·`aiSellDemoSD` 를 지우는 중이라 이 브랜치는 그것들을 건드리지 않고 새 키·새 함수만 더했다 (사전도 `ai-reserve` 가 아니라 새 항목 `ai-trim`).
+- 화면: 넘길 것 없음 (AI 판단, 기본 끔).
+- 검증: typecheck, test:core 24파일 79개, `test/gate/trim.test.ts` 3개, `cli/golden.ts` 같음 (c7fb7c00ef46d24c).
+
 ## 0-1102-uiapi. 2026-11-02: wt-uiapi (UI_CHANGES 3장의 읽기 전용 sim 요청 + 보고서 소작농 라벨)
 - 바뀐 것 (sim, 읽기 전용): `marketWageTargets(w, regionId): Record<Skill, WageTarget> | null` (`labor.ts:549`, index `index.ts:15`, 타입 `WageTarget = { target, lo, hi, jobs, willing }` `labor.ts:501`·`index.ts:16`). `updateMarketWages` 의 지역 하나 셈을 `moveRegionWages` (`labor.ts:507`) 로 빼고, `updateMarketWages` 와 `marketWageTargets` 가 같이 쓴다 (`marketWageTargets` 는 지역 임금표 사본에 돌린다. 위 직종의 아래 끝은 아래 직종이 그날 움직인 뒤 값으로, `updateMarketWages` 와 같다). `TUNE.wageMarket` 0, `wageTarget` ≠ 2, 지역이 없거나 `Region.wages` 가 없으면 null. 규칙은 그대로다.
 - 시험: `test/core/wageTarget.test.ts` '목표 임금 읽기' 2개 (시드 1 120일: 부른 전후 직렬화·rngState·nextId 같음, 두 번 불러도 같음, 다음 `updateMarketWages` 뒤 임금 = 지금 + `wageTargetSpeed` × (목표 − 지금) (자리가 없으면 목표) 를 `toBe` 로, 자리 있는 직종은 lo ≤ 목표 ≤ hi. null 네 경우). `readonly.test.ts` 의 regions 읽기 묶음에 넣음 (얼린 세계 포함).

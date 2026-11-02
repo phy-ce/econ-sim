@@ -1,8 +1,9 @@
 import { BUILDING_BY_ID, buildPointsOf, BUILDING_TYPES, EDUCATION_FLOOR, EDUCATION_RANGE, GOOD_IDS, GOODS, SKILL_DEFS, TECH_BY_ID, TICKS_PER_WEEK, TICKS_PER_YEAR, TRADING_POST, TUNE, getMethod, regionPerk, tradeEscrowPerLevel, tradeReserveOf } from './data';
 import { withEstimateCache, regionAvgWealth, regionPopulation, wageCostOf,
   availableMethods, ownBuildingAt, builderOf, canBuildType, disbanded, kingdomGdp, paysDividend, paysShare, companyById, constructionEstimate, creditLimit, depositFree, efficiency, estimateMethod, harvestFactor, hasBuilder, isGovernment, regionById, wagesAt, researchableTechs, roomFor, sellsShares, slots, mainOutput, projectedSD,
-  shareWage, collectionRatio,
+  shareWage, collectionRatio, FLOW_ZERO,
 } from './economy';
+import { FLOW_EMA } from './market';
 import { MAX_CONCURRENT_CONSTRUCTIONS, MAX_LEVELS_PER_PROJECT, applyCommand } from './commands';
 import { applyStateWages, budgetMult, committedCost, favours, funderWeight, hasReserve, lawRevenue, ownerBuildings, ownerFunds, reserveCap, reserveOf, taxRates, treasuryFree } from './finance';
 import { privatizeLevel } from './production';
@@ -16,7 +17,7 @@ import { LITERACY_PER_WEALTH, workforce } from './pops';
 import { clamp } from './rng';
 import { aiRand, keyCompany, keyIdx, keyRegion, keyStr, keyWeek } from './rng/aiRand';
 import { BUDGET_STEPS, INVEST_LAWS, SKILLS, isLowerJob, literacyOf } from './types';
-import type { BudgetItem, Building, Company, GoodId, Kingdom, MethodDef, Region, Skill, TaxLaw, WelfareLaw, World } from './types';
+import type { BudgetItem, Building, Company, GoodId, Kingdom, MethodDef, Pop, Region, Skill, TaxLaw, WelfareLaw, World } from './types';
 import { welfareShortOf, welfareWeekly } from './welfare';
 
 export { STAFFING_HORIZON, laborAvailability } from './staffing';
@@ -78,6 +79,7 @@ export const aiTrace: { on?: (w: World, c: Company, path: string, typeId: string
 export function runAi(w: World) {
   if (!w.config.ai) return;
   countHotPrices(w);
+  if (TUNE.aiTrimSD > 0) trimExit(w);
   const outlook = marketOutlook(w);
   // 이번 주 방식 바꾸기가 함께 쓰는 일손 곳간 (지역, 직종): 한 건물이 바꾸며 더 뽑을 사람을 빼 두어, 같은 사람을 여러 건물이 세지 않는다
   const switchPools = new Map<string, number>();
@@ -1282,6 +1284,121 @@ function keepLast(w: World, b: Building): boolean {
   }
   return used;
 }
+
+// ---------------------------------------------------------------- 넘침 퇴출 (TUNE.aiTrimSD > 0, 이슈 #11 F3, 진단 .tmp/grain11/RESULT.md 4장, 기본 0 = 끔)
+//
+// 진단 (wt-grain11, main 9ba5acc): 농부 임금 바닥이 곡물값을 따라가 농장 손익이 값보다 팔린 비율에 반응하고, 손익분기 팔린 비율 약 0.65 라
+// S/D 약 1.5 까지 흑자다. 진입은 과잉 검사(aiGlutSD) 하나가 막고 나가는 규칙은 켜지지 않아 S/D 가 문턱 바로 아래에 머문다.
+// A2(sellDemo)처럼 문턱 위에서 주마다 헐면 마이크로에서 농장이 8 → 2~4레벨로 헐렸다가 다시 지어졌다 (F2). 그래서 헐기 전에
+// "1레벨을 헐어도 진입 문턱 이상인가"를 보고, 헌 뒤에는 공급 이동평균이 따라올 때까지 그 지역 그 상품을 쉰다. 세계 규칙은 그대로다.
+
+/**
+ * 넘침 퇴출 뒤 쉬는 주: 헐린 레벨이 사라지는 1주 + 공급 이동평균(하루 FLOW_EMA)이 그 감소의 90% 를 따라가는 주 (올림).
+ * 남은 몫 (1 − FLOW_EMA)^일 이 0.1 이하가 되는 날을 곱셈으로 센다 (Math.log 는 엔진마다 다를 수 있어 쓰지 않는다, test/core/mathgrep)
+ */
+export const TRIM_WAIT_WEEKS = (() => { let left = 1, d = 0; while (left > 0.1) { left *= 1 - FLOW_EMA; d++; } return 1 + Math.ceil(d / TICKS_PER_WEEK); })();
+
+/**
+ * 건물 b 의 1레벨 일꾼 식구가 지역 시장에서 사는 상품 g 의 하루 양: b 에서 일하는 pop 마다
+ * 그 지역 그 직종 g 수요 이동평균(demandByEma "pop:직종") × (그 pop 인구 ÷ 그 지역 그 직종 인구), 합 ÷ 레벨.
+ * 같은 직종 안 부의 차이는 보지 않는다 (직종 평균으로 나눈다)
+ */
+function workerDemandPerLevel(w: World, b: Building, g: GoodId, popsAt: Map<number, Pop[]>, classSize: Map<string, number>): number {
+  const by = regionById(w, b.regionId).market[g].demandByEma;
+  if (!by || b.level <= 0) return 0;
+  let d = 0;
+  for (const p of popsAt.get(b.id) ?? []) {
+    const n = classSize.get(`${p.regionId}|${p.prof}`) ?? 0;
+    if (n > 0) d += (by[`pop:${p.prof}`] ?? 0) * p.size / n;
+  }
+  return d / b.level;
+}
+
+/**
+ * 넘침 퇴출 (TUNE.aiTrimSD > 0, 매주 runAi 앞에서, 회사 판단보다 먼저, 0일부터 TUNE.aiTrimFrom 주가 지난 뒤):
+ * 지역·상품마다, 그 지역에서 그 상품(mainOutput)을 내는 AI 회사의 유보 기준 생산 건물이 있고 기다림(Region.trim)이 끝났고 그 묶음에 철거 대기가 없으면
+ * 1) 예상 공급 ÷ 수요 sd = projectedSD (증설 과잉 검사와 같은 값: 공급 이동평균 + 공사 중 산출, ÷ 수요 이동평균) 가 aiTrimSD 이상이면
+ * 2) 증설 공사 중·새 건물(RAMP_WEEKS 안)·마지막 공급자(keepLast)가 아닌 건물 중 레벨당 장기 손익이 가장 나쁜 b 를 고르고
+ * 3) 1레벨을 헐 때 예상 (sd × D − o) ÷ (D − d) 가 증설 문턱 aiGlutSD (0 이면 1) 이상일 때만 1레벨 헌다.
+ *    o = b 의 어제 g 산출 ÷ 레벨, d = 그 레벨 일꾼 식구가 사던 g (workerDemandPerLevel), D = 수요 이동평균.
+ * 헐면 TRIM_WAIT_WEEKS 주 동안 그 지역 그 상품은 다시 보지 않는다 (Region.trim). TUNE.aiTrimPause > 0 이면 기다림이 끝난 주에
+ * 예상 공급 ÷ 수요가 헐 때(sd)보다 내려가지 않았으면 헐어도 줄지 않는 곳으로 보고 aiTrimPause 주 더 쉰다 (헐린 일꾼이 소작으로 돌아가 팔고,
+ * 일자리·임금이 줄어 사는 양도 줄어 d 보다 수요가 더 준다: 마이크로 진단 .tmp/grain11/f3). 플레이어 건물은 헐지 않지만 그 공급은 S/D 에 들어간다.
+ * 같은 값이면 w.buildings 순서가 앞선 건물 (결정성)
+ */
+function trimExit(w: World) {
+  if (w.tick < TUNE.aiTrimFrom * TICKS_PER_WEEK) return;
+  const exit = TUNE.aiTrimSD, entry = TUNE.aiGlutSD > 0 ? TUNE.aiGlutSD : 1;
+  const ai = aiCompanies(w);
+  const groups = new Map<string, Building[]>();
+  for (const b of w.buildings) {
+    if (b.level <= 0 || !ai.has(b.companyId) || !reserveRuled(b)) continue;
+    const g = mainOutput(b.typeId, b.methodId);
+    if (!g) continue;
+    const key = `${b.regionId}|${g}`;
+    const list = groups.get(key);
+    if (list) list.push(b); else groups.set(key, [b]);
+  }
+  let popsAt: Map<number, Pop[]> | null = null, classSize: Map<string, number> | null = null;
+  const pops = () => {
+    if (!popsAt || !classSize) {
+      popsAt = new Map(); classSize = new Map();
+      for (const p of w.pops) {
+        if (p.size <= 0) continue;
+        const k = `${p.regionId}|${p.prof}`;
+        classSize.set(k, (classSize.get(k) ?? 0) + p.size);
+        if (!p.work) continue;
+        const l = popsAt.get(p.work);
+        if (l) l.push(p); else popsAt.set(p.work, [p]);
+      }
+    }
+    return { popsAt, classSize };
+  };
+  for (const r of w.regions) {
+    // 기다림이 끝난 상품: 헐 때 S/D 를 적어 둔 것은 지금 예상 S/D 와 견줘, 내려가지 않았으면 aiTrimPause 주 더 쉰다
+    if (r.trim) {
+      for (const g of Object.keys(r.trim) as GoodId[]) {
+        const t = r.trim[g]!;
+        if (t.until > w.tick) continue;
+        delete r.trim[g];
+        if (t.sd == null || !(TUNE.aiTrimPause > 0)) continue;
+        const now = projectedSD(w, r.id, g);
+        if (now !== null && now >= t.sd) {
+          r.trim[g] = { until: w.tick + TUNE.aiTrimPause * TICKS_PER_WEEK };
+          const b = groups.get(`${r.id}|${g}`)?.[0], c = b && ai.get(b.companyId);
+          if (b && c) aiTrace.on?.(w, c, 'trimStop', b.typeId, b.methodId, 0, undefined, r.id);
+        }
+      }
+      if (!Object.keys(r.trim).length) delete r.trim;
+    }
+    for (const g of GOOD_IDS) {
+      const list = groups.get(`${r.id}|${g}`);
+      if (!list || r.trim?.[g] || list.some((x) => x.shrinking)) continue;
+      const sd = projectedSD(w, r.id, g);
+      if (sd === null || sd < exit) continue;
+      const b = worstPerLevel(list.filter((x) => !expanding(w, x) && w.tick - (x.builtTick ?? 0) >= RAMP_WEEKS * TICKS_PER_WEEK && !keepLast(w, x)));
+      const c = b && ai.get(b.companyId);
+      if (!b || !c) continue;
+      const D = r.market[g].demandEma;
+      const o = (b.last.output[g] ?? 0) / b.level;
+      const { popsAt: pa, classSize: cs } = pops();
+      const d = workerDemandPerLevel(w, b, g, pa, cs);
+      const after = D - d > FLOW_ZERO ? (sd * D - o) / (D - d) : Infinity;
+      if (after < entry) { aiTrace.on?.(w, c, 'trimHold', b.typeId, b.methodId, 0, undefined, r.id); continue; }
+      if (!applyCommand(w, c.id, { type: 'demolish', buildingId: b.id, levels: 1 })) {
+        noteDemolish(w, b);
+        (r.trim ??= {})[g] = { until: w.tick + TRIM_WAIT_WEEKS * TICKS_PER_WEEK, sd };
+        aiTrace.on?.(w, c, 'trimDemo', b.typeId, b.methodId, -1, undefined, r.id);
+      }
+    }
+  }
+}
+
+const aiCompanies = (w: World) => new Map(w.companies.filter((c) => !c.isPlayer).map((c) => [c.id, c] as const));
+const perLevelProfit = (b: Building) => b.profitEma / Math.max(1, b.level);
+/** 레벨당 장기 손익이 가장 나쁜 건물 (같으면 목록에서 앞선 것 = w.buildings 순서) */
+const worstPerLevel = (list: Building[]) => list.reduce<Building | null>((x, b) => (!x || perLevelProfit(b) < perLevelProfit(x) ? b : x), null);
+const expanding = (w: World, b: Building) => w.constructions.some((k) => k.targetBuildingId === b.id);
 
 /**
  * 모든 후보를 같은 기준으로: 장기 손익 / 공사비. 수익률이 기준의 1.25배를 넘는 가장 큰 덩어리를 고른다.

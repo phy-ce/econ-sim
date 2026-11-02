@@ -512,6 +512,11 @@ export interface Region {
   hotWeeks?: Partial<Record<GoodId, number>>;
   /** 다시 짓기 기다림 (TUNE.aiRebuildWait > 0, 이슈 #7): 건물 종류 → AI 가 이 지역에서 그 종류의 철거를 마지막으로 명령한 날. 끔이면 생기지 않는다 (18판 안에서 더한 칸) */
   demoAt?: Record<string, number>;
+  /**
+   * 넘침 퇴출 (TUNE.aiTrimSD, ai.ts trimExit): 상품 → 이 지역에서 그 상품을 다시 볼 수 있는 날 until, 헐었을 때의 예상 공급 ÷ 수요 sd
+   * (sd 가 있으면 철거 뒤 기다림, 없으면 TUNE.aiTrimPause 쉼). 지난 것은 지운다. 끔이면 생기지 않는다
+   */
+  trim?: Partial<Record<GoodId, { until: number; sd?: number }>>;
   /** 소작지 여유 (시제품 TUNE.tenantSlack > 0): 그 지역 소작지 채움(일하는 소작농 노동 인구 ÷ 칸 × 1칸 인원)의 기준값. 켜진 뒤 첫 수확 날의 채움 (0이면 다음 날 다시). 끔이면 생기지 않는다 */
   tenantFill0?: number;
   /**
