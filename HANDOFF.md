@@ -5,11 +5,11 @@
 - 폴더: `C:\Users\phyju\Desktop\Coding_Desk\2026\estera economy sim`
 - 저장소: https://github.com/phy-ce/econ-sim (main). 검증된 병합마다 푸시한다(2026-10-19 사용자 지시).
 - 작업 규칙: `CLAUDE.md`. 경제 규칙 요약: `docs/DESIGN.md`. 빅토리아3 근거: `docs/VIC3_REFERENCE.md`.
-- 사용자 결정 대기: `docs/overhaul/12_DECISIONS_NEEDED.md`(Q1~Q20)와 `docs/DECISIONS.md`. 지금 답을 기다리는 것은 아래 0-1030 절 0b′ 의 "사용자 답 대기" 줄, 0-1102 의 `tenantSlack` 메모, 0-1102e 의 플레이어 왕실 국영 웃돈·하급 귀족 시작 임금 (DECISIONS 7-42), 0-1102f 의 목표 임금 규칙 확인 (DECISIONS 7-43, 기본 켬; 7-41 W1 은 이것이 대신함), 0-1102g 의 저택 지분 켤지 (DECISIONS 7-44, 기본 끔). 화면 작업자에게 넘길 것: `docs/UI_CHANGES.md` 맨 위 "0. 지금 할 일".
+- 사용자 결정 대기: `docs/overhaul/12_DECISIONS_NEEDED.md`(Q1~Q20)와 `docs/DECISIONS.md`. 지금 답을 기다리는 것은 아래 0-1030 절 0b′ 의 "사용자 답 대기" 줄, 0-1102 의 `tenantSlack` 메모, 0-1102e 의 플레이어 왕실 국영 웃돈·하급 귀족 시작 임금 (DECISIONS 7-42), 0-1102f 의 목표 임금 규칙 확인 (DECISIONS 7-43, 기본 켬; 7-41 W1 은 이것이 대신함), 0-1102h 의 저택 지분 켤지 (DECISIONS 7-44, 기본 끔). 화면 작업자에게 넘길 것: `docs/UI_CHANGES.md` 맨 위 "0. 지금 할 일".
 - 클라우드 세션(claude.ai/code)으로 이어서 할 수 있다. 규칙은 CLAUDE.md "클라우드 세션"을 본다.
 - 옛 세션 기록: `docs/log/` (2026-10-25 이전 HANDOFF 절은 `docs/log/HANDOFF_2026-10-18_to_10-25.md`, 날짜별 UI 기록도 여기). 다른 문서의 "HANDOFF 0-ind3"·"HANDOFF 0-aifix" 같은 옛 절 참조는 그 파일에 있다.
 
-## 0-1102g. 2026-11-02: wt-manor (저택 지분 1단계, 스위치 기본 끔)
+## 0-1102h. 2026-11-02: wt-manor (저택 지분 1단계, 스위치 기본 끔)
 - 사용자 결정 (DECISIONS 7-44): 저택 = 귀족만 가지는 지분 회사, 하급 귀족은 노동자 자리에 "아예 못 감", 가문은 나중, "다른 지역 배당 디버프", 다른 지역·왕국 저택도 수익률로 산다.
 - 코드 (모두 `TUNE` 스위치 뒤, 끄면 samecheck 5개 같음: a6fd0cb 대비, main 81494a1 병합 뒤 대비): `manorShares` (finance.ts 저택 지분 절: payHolders·issueManorUnits·initManorShares·unitYield·sellManorUnits·updateManorShares, market.ts nobleInvest, economy.ts manorGentrySeats·shareWage, labor.ts isOwnerClass, production.ts updateOwnership, staffing.ts·outlook.ts 일손 셈), `absenteeShare` (finance.ts payDividends), `manorBuyScope`, `manorInvestSplit` (기본 1, AI). 시험 `test/core/manorShares.test.ts`, 래칫 표. 진단 `cli/manordiag.ts`, `cli/manorsum.py`, microcheck 절 n (귀족 하루 추적), lab 지표 gJobless·solGent·solArist·incGent·incArist·manorCash·manorNav·mflow.*.
 - 결과 (DESIGN 11 행, 보고서 2026-11-02-manor·-k1): 행정청 충원은 고친다 (플레이어 왕국 모든 해 1.00), 1~5년차 세전 총생산은 높지만 10년차 뒤 AI 왕국 둘의 성장이 대조의 절반이라 **기본 끔**. 원인은 못 찾았다 (공사 약정 감소까지만 봄). 마이크로 (3년 × 시드 1, preset labor, base·two): 화폐 어긋남 1.5e-15~2.6e-15, 하급 귀족 1인 소득은 배당 몫으로, 귀족 소득의 55~92% 가 금고 돌려주기('기타').

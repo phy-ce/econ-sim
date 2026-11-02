@@ -1161,7 +1161,7 @@ sim 변경 (wt-research):
 - 완료 기준: `TUNE.quakeChance = 1` 개발 세계 2년차에 칩이 나오고 사건 열 문장과 같은 % · 남은 날. 0이면 칩 없음. typecheck.
 
 ### 2-85. 저택 지분 (wt-manor, DESIGN 9.3 `manorShares`·`absenteeShare`·`manorBuyScope`, 사전 `manor-shares`, DECISIONS 7-44)
-- 상태: sim 은 스위치 뒤에 있다 (`TUNE.manorShares` 기본값은 HANDOFF 0-1102g 참조). 켜지 않으면 화면이 바꿀 것은 없다. 클라이언트 코드는 sim 작업자가 고치지 않았다.
+- 상태: sim 은 스위치 뒤에 있다 (`TUNE.manorShares` 기본값은 HANDOFF 0-1102h 참조). 켜지 않으면 화면이 바꿀 것은 없다. 클라이언트 코드는 sim 작업자가 고치지 않았다.
 - sim:
   - 저택 지분은 금융가 지분과 같은 `Pop.fund` (`{ id: number[]; u: number[] }`, 건물 id 오름차순) 에 든다. 저택 id 와 금융가 id 는 겹치지 않는다. 한 pop 이 여러 저택(다른 지역·다른 왕국 포함)과 금융가 지분을 함께 가질 수 있다.
   - 저택 지분 값: `Building.nav` (저택에도 생긴다, 매주). 지분 주인 = 저택 id 지분이 0 보다 큰 pop (상급·하급 귀족, 되사기 전의 다른 직종이 잠깐 있을 수 있다). 저택에 앉은 pop 은 상급 귀족뿐이고, 앉은 자리는 몫과 상관없다.
