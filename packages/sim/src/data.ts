@@ -541,12 +541,12 @@ export const TUNE = {
   switchPremium: 1.1,
   switchMax: 0.05,
   // 지역 시장 임금 (2026-11-01 사용자 승인 "지역 임금 규칙 검증", docs/overhaul/LABOR_MARKET.md 1단계 (가)): 1 = 지역·직종마다 시장 임금 하나를 모든 임금 건물이 준다 (AI 민간 상회는 aiWagePremium 웃돈을 얹을 수 있다)
-  // (labor.ts updateMarketWages, 날마다 임금 × wageMarketRate × clamp((자리 − 오려는 사람) ÷ min(자리, 오려는 사람), −1, 1)). AI 임금 판단(adjustWages)은 돌지 않는다 (상회 웃돈 ai.ts adjustPremium 만).
+  // (labor.ts updateMarketWages: 기본 wageTarget 2 면 날마다 맞는 임금 쪽으로 차이 × wageTargetSpeed, wageTarget 0 이면 옛 규칙 임금 × wageMarketRate × clamp((자리 − 오려는 사람) ÷ min(자리, 오려는 사람), −1, 1)). AI 임금 판단(adjustWages)은 돌지 않는다 (상회 웃돈 ai.ts adjustPremium 만).
   // 0 = 그 전 규칙 (회사 임금표, AI 바닥·천장). 2026-11-02 사용자 "all 의 나머지를 넣어서" 로 기본 1 (근거: DESIGN 11, 보고서 2026-11-02-combo)
   wageMarket: 1,
   // 시장 임금의 하루 속도 r (주에 최대 약 1.75%, wageTarget 0 일 때만 쓴다). 후보 0.0025 / 0.005 / 0.01 중 조합 비교(2026-11-02-combo)가 쓴 값 (DESIGN 11)
   wageMarketRate: 0.0025,
-  // 시장 임금이 오를 때만 쓰는 하루 속도 (시제품, 세계 규칙, 사용자 결정 대기 DECISIONS 7-41): > 0 이면 자리 > 오려는 사람일 때 wageMarketRate 대신 이 값.
+  // 시장 임금이 오를 때만 쓰는 하루 속도 (시제품, 세계 규칙, DECISIONS 7-41 → 7-43 목표 임금이 대신함): > 0 이면 자리 > 오려는 사람일 때 wageMarketRate 대신 이 값.
   // 0 = 끔 (오르내림 같은 속도 wageMarketRate). wageTarget 0 일 때만 쓴다 (기본 wageTarget 2 가 대신한다). 후보 0.01 (2026-11-02 wt-wagelag 진단 .tmp/y1/RESULT.md W1). 근거: DESIGN 11
   wageMarketRateUp: 0,
   // 시장 임금을 목표 임금 쪽으로 (2026-11-02 사용자 "수요-공급 차에 따라서 숫자가(하한/상한 수렴값은 존재함) 변하게", DECISIONS 7-43): 0 = 끔 (wageMarketRate 규칙), 1 = 바깥 소득 기준 쏠림 (비교용), 2 = 맞는 임금 (기본). 근거: DESIGN 11

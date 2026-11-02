@@ -473,7 +473,7 @@ export function clearingWage(cv: WillingCurve, jobs: number, lo: number, hi: num
 
 /**
  * 맞는 임금(TUNE.wageTarget = 2)의 위 끝 = 바깥 소득(outsideWage, × switchPremium 포함) × 이 값. 2 는 옮기는 비율이 최대(switchMax)가 되는 소득 배율
- * (1 + switchMax ÷ switchRate × (switchPremium − 1) = 2, labor.ts switchShare)과 같다: 바깥 소득 자리 사람이 다 오는 임금보다 더 올리지 않는다
+ * (1 + switchMax ÷ switchRate × (switchPremium − 1) = 2, labor.ts switchShare)에서 왔다: 바깥 소득에 switchPremium 이 들어 있어 실제 위 끝은 바깥 자리 사람이 다 오는 임금 × switchPremium
  */
 export const WAGE_TARGET_SPAN = 2;
 
