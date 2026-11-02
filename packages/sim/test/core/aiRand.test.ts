@@ -38,7 +38,7 @@ describe('aiRand 식 (4.1)', () => {
   });
 
   it('데이터 id(건물 종류·방식·기술·상품)와 태그의 strKey 가 겹치지 않는다 (입력 키 유일성, 07 4.3)', () => {
-    const ids = new Set<string>(['research', 'pick', 'pickDev', 'grow']);
+    const ids = new Set<string>(['research', 'pick', 'grow']);
     for (const t of BUILDING_TYPES) { ids.add(t.id); for (const m of t.methods) ids.add(m.id); }
     for (const t of TECHS) ids.add(t.id);
     for (const g of Object.keys(GOODS)) ids.add(g);

@@ -645,17 +645,13 @@ export const TUNE = {
   ratioGate: 0.9, // 지금 규칙 (30년 × 시드 1~4 비교, DESIGN 11): 노동자·농부 충원 상한 = 기술자·전문가 충원율 ÷ 이 값 (labor.ts ratioGate). 0 이면 끈다
   minRoi: 0.2,
   minStaffing: 0.5,
-  // AI 건설 전망 (2026-10-23, DESIGN 10·11): 보통 투자는 지금 수요가 사 가는 만큼만, 일부(devShare)만 잠재 수요를 보고 짓는다
-  devShare: 0.2, // 0·0.1·0.2 비교 (DESIGN 11). 발전 투자 몫: 회사의 착공 공사비(52주 이동 합) 중 잠재 수요를 보고 짓는 공사비의 상한. 0 = 끔
-  devLoss: 0.25, // 0·0.25 비교 (DESIGN 11). 발전 투자가 감수하는 손실: 잠재 수요까지 센 장기 손익 ≥ −인건비 × 이 값
-  expandUtilMin: 0.5, // 0.5·0.7·끔 비교로 0.5 (DESIGN 11). 0 = 끔. 왕국 안 같은 종류·같은 산출 건물의 레벨 가중 가동률(꺼진 건물 0)이 이 값 미만이거나 장기 손익(profitEma) 합이 음수이면 그 방식은 새로 짓지도 늘리지도 않는다 (ai.ts glutOf)
-  // 유보 기준 AI (2026-10-25 사용자 요청 "유보액을 기준으로 건물을 늘리고 줄였으면 좋겠는데. + 신규투자", DECISIONS 7-27, DESIGN 10·11): 1 = 생산 건물은 유보 자산이 4주 차면 1레벨 증설, 바닥난 채 4주 적자면 1레벨 철거,
-  // 새 투자는 값이 기본가 1.25배 이상 4주(가)이거나 굶는 건물의 투입재(나)인 상품을 내는 건물이 없는 곳에 1레벨 (ai.ts reserveLevels·planTrials). 0 = 옛 전망 AI (pickProject·reviewLevels·발전 투자)
-  aiReserveRule: 1,
-  // 유보 기준 AI: 유보 0·적자가 이 주 수 이어지면 1레벨 철거 (2026-10-25 사용자 "26주로 늘려서", 그 전 4주)
+  // 유보 기준 AI (2026-10-25 사용자 요청 "유보액을 기준으로 건물을 늘리고 줄였으면 좋겠는데. + 신규투자", DECISIONS 7-27, DESIGN 10·11): 생산 건물은 유보 자산으로 늘리고(증설 확률, 아래) 줄이며
+  // (바닥난 채 적자가 reserveShrinkWeeks 주면 1레벨 철거), 새 투자는 값이 기본가 1.25배 이상 4주(가)이거나 굶는 건물의 투입재(나)인 상품을 내는 건물이 없는 곳에 1레벨 (ai.ts reserveLevels·planTrials).
+  // 옛 전망 AI 의 생산 건물 짓기·철거(aiReserveRule 0, 발전 투자 devShare·devLoss, 증설 가동률 문턱 expandUtilMin)는 2026-11-02 wt-simplify 1-D 에서 지웠다.
+  // 유보 0·적자가 이 주 수 이어지면 1레벨 철거 (2026-10-25 사용자 "26주로 늘려서", 그 전 4주)
   reserveShrinkWeeks: 26,
-  // 유보 기준 AI 증설 확률 (2026-10-25 사용자 "확률분포로"): 주마다 확률 = reserveGrowMax × (유보 ÷ 상한 − reserveGrowFrom) ÷ (1 − reserveGrowFrom), 0~reserveGrowMax.
-  // reserveGrowMax 0 이면 그 전 규칙. 처음 값 0.25 (가득 차면 주에 25%, 근거 없음). 2026-11-02 사용자 "all 의 나머지를 넣어서" 로 1 (가득 차면 매주, 근거: DESIGN 11)
+  // 유보 기준 AI 증설 확률 (2026-10-25 사용자 "확률분포로"): 주마다 확률 = reserveGrowMax × (유보 ÷ 상한 − reserveGrowFrom) ÷ (1 − reserveGrowFrom), 0~reserveGrowMax (0 이면 늘리지 않는다).
+  // 처음 값 0.25 (가득 차면 주에 25%, 근거 없음). 2026-11-02 사용자 "all 의 나머지를 넣어서" 로 1 (가득 차면 매주, 근거: DESIGN 11). 찬 주가 4주 이어질 때 늘리던 그 전 규칙(reserveGrowMax 0)은 wt-simplify 1-D 에서 지웠다
   reserveGrowMax: 1,
   reserveGrowFrom: 0.5,
   // 유보 기준 증설의 과잉 검사 (오버홀 03 5-1, 0b′, AI 판단): > 0 이면 증설 전에 그 지역 그 산출 상품의 예상 공급 ÷ 수요(economy.ts projectedSD:

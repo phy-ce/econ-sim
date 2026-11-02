@@ -54,6 +54,7 @@
   - 1-A 실험 스위치 12: `lossBuildsPerWeek`·`lossTolerance`·`crownPrivatize`·`subReturn`·`laborNet`·`laborPoach`·`laborStrict`·`officeSelfPay`·`officeSchoolFirst`·`aiSwitchV2`·`financeIdle`·`welfareCutOff` (상태 칸 `Building.fundedTick`도). 그 전 코드 c4676de
   - 1-B 비교용 가격 공식 `priceExp`·`priceRange` (가격 범위는 `market.ts PRICE_MIN`·`PRICE_MAX` 한 곳). 그 전 코드 7df16c4. `nobleSeats` 옛 방식과 키 다섯은 wt-manor 가 같은 함수를 고치므로 남겼다
   - 1-C 기본으로 켠 스위치 12의 키와 꺼진 갈래: `latentFeasible`·`aiInputFill`·`needFixedTotal`·`firmCallPlan`·`crownDebtNoBuild`·`taxCurve`·`aiKeepLastSupplier`·`aiGrowWhere`·`aiReserveFund`·`aiWagePremium`·`wealthSavLower`·`aiBuildNow` (켠 갈래만 남김). 그 전 코드 b4cb7c5. `aiAdminWage` 0·1 갈래는 키와 함께 1-E 에서 지웠다
+  - 1-D 옛 전망 AI 의 생산 건물 짓기·철거: `aiReserveRule` 0 갈래, 발전 투자 `devShare`·`devLoss`, 증설 가동률 문턱 `expandUtilMin`, `reserveGrowMax` 0 갈래 (상수 `RESERVE_FULL`, AI 난수 태그 `pickDev`). 그 전 코드 b2486fa. 써지기만 하는 상태 칸 `Company.startCost`·`devCost`·`Building.richWeeks`는 지우면 세계 해시가 바뀌어 남겼다 (1-D′, 다음 일)
 
 ### 4-2. 지우면 동작이 바뀌는 것 (하나씩 결정)
 | 항목 | 지금 | 지우면 |
@@ -919,6 +920,7 @@ AI 노동자 임금 바닥 (기본값 0.03 · 2~6):
 - 운송 조합: 산업 유형 '운송'(1레벨 100명, 원료 45~55%)을 새로 두고 숫자를 약 1/3로 (짐마차 90/10, 곡물 800·목재 400 → 운송 1,150, 공사 포인트 350 → 100. 증기 철도 40/20/10, 기계 30·석탄 610 → 1,650). DESIGN 5장 산업 유형 표
 - 결과 (조건: 5년 × 시드 1·2 (wt-reserveai, wt-grain f204747 위 + 운송 100명, 보고서 2026-10-25-reserveai, 1~5년차): 레벨 옛 AI 시드 1 393 / 594 / 563 / 520 / 462, 시드 2 407 / 934 / 791 / 853 / 811; 유보 기준 시드 1 162 / 132 / 117 / 98 / 89, 시드 2 148 / 125 / 110 / 97 / 83. 연 총생산(백만) 옛 320 / 168 / 257 / 131 / 156, 413 / 814 / 186 / 225 / 139; 유보 156 / 69 / 29 / 44 / 16, 117 / 39 / 33 / 31 / 26. 노동자 생활수준 옛 1.39~2.48, 유보 1.00~1.05. 5년 누적 레벨: 옛 보통 착공 690 / 1,129·철거 356 / 582, 유보 새 투자 131 / 139·유보 철거 132 / 132·유보 증설 13 / 12. 1년차 진단(`cli/resdiag.ts`, 시드 1): 시작 생산 건물(곡물·섬유 농장, 목공구 공방)은 첫 주부터 유보 자산 0에 적자라 4주마다 1레벨씩 헐렸고, 새 투자(가구 14, 목공구 10, 맞춤 재단 7, 장인 가구 6, 목장·석탄광산 4 등)는 사람을 다 뽑기 전후로 적자가 되어 대부분 헐렸다. 흑자로 증설된 것은 벌목장뿐(1년 8레벨)이고, 공사가 줄어 목재 수요가 줄자 벌목장도 18주 뒤 적자로 돌아섰다. 이 조건에서는 경제가 줄기만 했다 (옛 AI도 5년 동안 총생산이 준다))
 - **결정 필요:** 이 조건에서는 유보 기준 AI가 5년 동안 레벨·총생산을 옛 AI의 약 1/5로 줄였다. 기본값을 1로 두고 시작 세계(시작 생산 건물의 적자)를 먼저 볼지, 0으로 두고 비교만 남길지. 지금 브랜치는 1 (사용자 요청대로)
+- 2026-11-02 wt-simplify 1-D: 기본값 1 이 그 뒤로 계속 쓰여 스위치 `aiReserveRule` 과 옛 전망 AI 의 생산 건물 짓기·철거(0 갈래, 발전 투자 `devShare`·`devLoss`, `expandUtilMin`)를 지웠다 (동작 같음, 그 전 코드 b2486fa). 0 으로 되돌리려면 git 에서 되살린다.
 
 ### 7-26. 상인 1억 대신 무역소 (2026-10-23 사용자 승인 설계, 브랜치 wt-trade, 2026-10-23 사용자 지시 "테스트하지말고합치기만해"로 비교 없이 합침)
 - 승인된 설계: 지역마다 짓는 건물 `trading_post`(왕실·민간 모두), 방식 셋(상단 / 장부 상회 인쇄술 / 무역 회사 증기 철도), 레벨당 유보액 R(단계마다 ×2), 금고가 상한을 넘으면 주인에게, 공사 때 레벨당 0.5R을 묶어 금고 시작 돈으로, 그날 지역 매입은 그 지역 무역소 금고 합까지, 시작 무역소는 왕국 수도마다 1레벨, R은 시작 무역소 금고 합이 지금 하루 교역액의 약 1/10 → 5,000 (DESIGN 11 `tradeReserve`).

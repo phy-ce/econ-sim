@@ -74,17 +74,17 @@ function adminStaffing(w: World, c: Company): number {
 /**
  * 진단용 (cli/builddiag.ts): AI가 공사를 넣고(levels > 0), 헐고(< 0), 방식을 바꿀 때 그 길(path)과 함께 부른다.
  * path: pick 보통 후보, govInputs 왕실 원료 확보, office 건축사무소, shrink 철거, swap 땅 바꾸기 철거, switchIn·switchOut 방식 바꾸기,
- * reserve 유보 자산이 찬 건물 증설, reserveShrink 유보 자산이 바닥난 적자 건물 철거, trial 새 투자 1레벨 (TUNE.aiReserveRule).
+ * reserve 유보 자산이 찬 건물 증설, reserveShrink 유보 자산이 바닥난 적자 건물 철거, trial 새 투자 1레벨 (reserveLevels·planTrials).
  * 시뮬레이션 상태를 바꾸지 않는다 (비어 있으면 아무것도 하지 않는다)
  */
 export const aiTrace: { on?: (w: World, c: Company, path: string, typeId: string, methodId: string, levels: number, o?: Outlook, regionId?: number) => void } = {};
 
 export function runAi(w: World) {
   if (!w.config.ai) return;
-  if (TUNE.aiReserveRule) countHotPrices(w);
-  if (TUNE.aiReserveRule && (TUNE.aiCutSD > 0 || TUNE.aiDemoSD > 0)) sdExit(w);
-  if (TUNE.aiReserveRule && TUNE.aiSellDemoSD > 0) sellDemo(w);
-  if (TUNE.aiReserveRule && TUNE.aiMarginal >= 2) marginExit(w);
+  countHotPrices(w);
+  if (TUNE.aiCutSD > 0 || TUNE.aiDemoSD > 0) sdExit(w);
+  if (TUNE.aiSellDemoSD > 0) sellDemo(w);
+  if (TUNE.aiMarginal >= 2) marginExit(w);
   const outlook = marketOutlook(w);
   // 이번 주 방식 바꾸기가 함께 쓰는 일손 곳간 (지역, 직종): 한 건물이 바꾸며 더 뽑을 사람을 빼 두어, 같은 사람을 여러 건물이 세지 않는다
   const switchPools = new Map<string, number>();
@@ -852,7 +852,7 @@ function planConstruction(w: World, c: Company, o: Outlook) {
   }
   reviewLevels(w, c, o, est.pointsPerDay);
   if (c.state) secureGovInputs(w, c, o, est.costPerDay);
-  // 착공 공사비 52주 이동 합 (발전 투자 몫을 재는 바탕, TUNE.devShare)
+  // 착공 공사비 52주 이동 합 (지운 발전 투자 devShare 의 바탕). 이제 읽는 곳이 없지만 세계 상태 칸이라 지우면 해시가 바뀐다 (SIMPLIFY_AUDIT 1-D′ 에서 지운다)
   c.startCost = (c.startCost ?? 0) * (1 - 1 / 52);
   c.devCost = (c.devCost ?? 0) * (1 - 1 / 52);
   const free = () => (c.state || c.isPlayer ? freeCash(w, c, est.costPerDay) : ownerFunds(w, c.kingdomId));
@@ -866,19 +866,10 @@ function planConstruction(w: World, c: Company, o: Outlook) {
     aiTrace.on?.(w, c, path, pick.typeId, pick.methodId, pick.levels, o, pick.regionId);
     const cost = constructionEstimate(w, c, pick.typeId).cost * pick.levels;
     if (!isGovernment(pick.typeId)) c.startCost = (c.startCost ?? 0) + cost;
-    if (path === 'dev') c.devCost = (c.devCost ?? 0) + cost;
     if (isGovernment(pick.typeId)) toFront(w, c);
     o.add(getMethod(pick.typeId, pick.methodId), pick.levels, 1 + regionPerk(pick.regionId, pick.typeId), false, pick.regionId);
     return true;
   };
-  // 발전 투자 (TUNE.devShare): 주에 1건까지, 잠재 수요를 보고 짓는 공사비가 52주 착공 공사비의 devShare 를 넘지 않을 만큼.
-  // devCost + x <= devShare × (startCost + x) → x <= (devShare × startCost − devCost) ÷ (1 − devShare)
-  if (!TUNE.aiReserveRule && TUNE.devShare > 0 && TUNE.devShare < 1 && canStart()) {
-    const room = (TUNE.devShare * (c.startCost ?? 0) - (c.devCost ?? 0)) / (1 - TUNE.devShare);
-    const budget = Math.min(free(), room);
-    const pick = budget > 0 ? pickProject(w, c, o, budget, undefined, 0, true, 0) : null;
-    if (pick) start(pick, 'dev');
-  }
   let blocked: { best: Pick | null } | undefined;
   for (let started = 0; started < TUNE.startsPerWeek; started++) {
     if (!canStart()) break;
@@ -887,16 +878,14 @@ function planConstruction(w: World, c: Company, o: Outlook) {
     const school = schoolCash(w, c, est.costPerDay);
     if (cash <= 0 && school <= 0) break;
     const out = { best: null as Pick | null };
-    const pick = pickProject(w, c, o, cash, out, school, false, started);
+    const pick = pickProject(w, c, o, cash, out, school, started);
     blocked ??= out;
     if (!pick) break;
     if (!start(pick, 'pick')) break;
   }
   if (blocked?.best) swapLand(w, c, o, blocked.best);
-  if (TUNE.aiReserveRule) {
-    planTrials(w, c, canStart, free, start);
-    reserveLevels(w, c, canStart, free, start);
-  }
+  planTrials(w, c, canStart, free, start);
+  reserveLevels(w, c, canStart, free, start);
 }
 
 /**
@@ -1026,7 +1015,7 @@ function levelValue(w: World, c: Company, o: Outlook, b: Building, pointsPerDay:
 function reviewLevels(w: World, c: Company, o: Outlook, pointsPerDay: number) {
   for (const b of w.buildings) {
     if (b.companyId !== c.id || BUILDING_BY_ID[b.typeId].auto) continue;
-    // TUNE.aiReserveRule: 생산 건물은 유보 자산으로 늘리고 줄인다 (reserveLevels)
+    // 생산 건물은 유보 자산으로 늘리고 줄인다 (reserveLevels)
     if (reserveRuled(b)) continue;
     if (w.constructions.some((k) => k.targetBuildingId === b.id)) { b.negWeeks = 0; delete b.staffPeak; continue; }
     // 굶는 건물은 지금 투입 충족으로 잰다 (장기 전망은 투입을 다 산다고 본다)
@@ -1094,27 +1083,25 @@ function swapLand(w: World, c: Company, o: Outlook, cand: Pick) {
   if (!applyCommand(w, c.id, { type: 'demolish', buildingId: worst.b.id, levels: n })) { worst.b.swap = true; aiTrace.on?.(w, c, 'swap', worst.b.typeId, worst.b.methodId, -n); }
 }
 
-// ---------------------------------------------------------------- 유보 기준 증설·철거와 새 투자 (TUNE.aiReserveRule, 2026-10-25)
+// ---------------------------------------------------------------- 유보 기준 증설·철거와 새 투자 (2026-10-25, DECISIONS 7-27)
 //
 // 사용자 요청 (2026-10-25): "유보액을 기준으로 건물을 늘리고 줄였으면 좋겠는데. + 신규투자". AI가 시장을 전망하지 않고, 건물의 유보 자산과 지금 시장 신호만 본다.
 // - 생산 건물 (자동·정부 건물·무역소가 아니고 유보 자산을 쌓는 건물): 매주 확률 TUNE.reserveGrowMax × clamp((유보 ÷ 상한 − TUNE.reserveGrowFrom) ÷ (1 − TUNE.reserveGrowFrom))로 1레벨 증설
-//   (확률은 AI 난수 aiRand 'grow'. reserveGrowMax 0 이면 유보 자산 ≥ 상한 × RESERVE_FULL 이 RESERVE_STREAK 주 이어질 때),
+//   (확률은 AI 난수 aiRand 'grow'),
 //   유보 자산 0이고 주간 손익 < 0 이 TUNE.reserveShrinkWeeks 주 이어지면 1레벨 철거 (마지막 레벨이면 건물이 없어진다). 그 밖에는 아무것도 하지 않는다.
 // - 새 투자: 그 상품을 내는 건물이 없는 곳에 1레벨 시험 공사. (가) 지역 시장값 ≥ 기본가 × TRIAL_PRICE 가 RESERVE_STREAK 주 이어진 상품 (그 지역에 생산 건물이 없을 때),
 //   (나) 투입 충족 < STARVE_FILL 이 RESERVE_STREAK 주 이어진 건물(Building.starvedWeeks)의 가장 모자란 투입재 (그 왕국에 생산 건물이 없을 때. 광석 → 철 → 공구 사슬을 연다).
 //   다 지은 뒤에는 위 증설·철거 규칙이 맡는다. 방식 바꾸기는 그대로다 (manageBuildings)
 /** AI 점수 흔들기 폭: 연구·착공 점수에 1 ± 이 값의 고른 무작위를 곱한다 (0.85~1.15, 첫 커밋 9c76862 부터의 값, 근거 없음) */
 export const AI_JITTER = 0.15;
-/** 유보 자산이 이 비율 이상이면 찬 주로 센다 (사용자 합의 값, 근거 없음) */
-export const RESERVE_FULL = 0.9;
-/** 찬 주·바닥난 적자 주·비싼 주·굶은 주를 이 주 수 이어서 본다 (사용자 합의 값, 근거 없음) */
+/** 비싼 주·굶은 주를 이 주 수 이어서 본다 (사용자 합의 값, 근거 없음) */
 export const RESERVE_STREAK = 4;
 /** 새 투자 (가): 지역 시장값이 기본가의 이 배수 이상 (사용자 합의 값, 근거 없음) */
 export const TRIAL_PRICE = 1.25;
 
-/** TUNE.aiReserveRule 로 늘리고 줄이는 건물: 자동·정부 건물(행정청·학교·사무소)·무역소가 아니고 유보 자산을 쌓는 생산 건물 */
+/** 유보 기준으로 늘리고 줄이는 건물: 자동·정부 건물(행정청·학교·사무소)·무역소가 아니고 유보 자산을 쌓는 생산 건물 */
 export function reserveRuled(b: Building): boolean {
-  if (!TUNE.aiReserveRule || BUILDING_BY_ID[b.typeId].auto || isGovernment(b.typeId) || b.typeId === TRADING_POST) return false;
+  if (BUILDING_BY_ID[b.typeId].auto || isGovernment(b.typeId) || b.typeId === TRADING_POST) return false;
   return hasReserve(b) && reserveCap(b) > 0;
 }
 
@@ -1135,7 +1122,7 @@ function makes(w: World, regionIds: Set<number>, g: GoodId): boolean {
 }
 
 /**
- * 새 투자 (TUNE.aiReserveRule): (가) 자기 지역에서 값이 RESERVE_STREAK 주 기본가 × TRIAL_PRICE 이상이고 그 지역에 생산 건물이 없는 상품,
+ * 새 투자: (가) 자기 지역에서 값이 RESERVE_STREAK 주 기본가 × TRIAL_PRICE 이상이고 그 지역에 생산 건물이 없는 상품,
  * (나) 왕국 안에서 굶는 건물(투입 충족 < STARVE_FILL 이 RESERVE_STREAK 주)의 가장 모자란 투입재(그 지역 공급 ÷ 수요 이동평균이 가장 작은 것)이고 왕국에 생산 건물이 없는 상품.
  * 상품마다 1레벨을 짓는다: (가)는 그 지역, (나)는 굶는 건물의 지역부터 자기 지역 id 순. 그 상품을 내는 방식 중 기술·땅(매장량)·일손({@link MIN_STAFFING})이 되고
  * 회사에 그 종류 건물이 그 지역에 없는 것에서 지금 시장값 하루 손익(estimateMethod)이 가장 큰 것. 주에 TUNE.startsPerWeek 건까지
@@ -1189,9 +1176,9 @@ function planTrials(w: World, c: Company, canStart: () => boolean, free: () => n
 }
 
 /**
- * 유보 기준 증설·철거 (TUNE.aiReserveRule, 매주 배당 정산 뒤): 생산 건물마다 찬 주(유보 자산 ≥ 상한 × RESERVE_FULL)와
+ * 유보 기준 증설·철거 (매주 배당 정산 뒤): 생산 건물마다 증설 확률이 뽑힌 주(Building.richWeeks)와
  * 바닥난 적자 주(유보 자산 0, 주간 손익 = profitEma × 7 < 0. 기상 조건이 걸린 주와 공사로 생긴 지(시작 건물은 0일부터) RAMP_WEEKS 주 안은 세지 않는다)를 센다.
- * 바닥난 적자가 TUNE.reserveShrinkWeeks 주면 1레벨 철거 대기, 증설 확률(TUNE.reserveGrowMax > 0, 아래)이 뽑히면 (reserveGrowMax 0 이면 찬 주가 RESERVE_STREAK 주면) 땅(매장량)이 있고 돈이 되면 1레벨 증설 (못 하면 다음 주에 다시 본다).
+ * 바닥난 적자가 TUNE.reserveShrinkWeeks 주면 1레벨 철거 대기, 증설 확률(TUNE.reserveGrowMax, 아래)이 뽑히면 땅(매장량)이 있고 돈이 되면 1레벨 증설 (못 하면 다음 주에 다시 본다).
  * TUNE.aiGlutSD > 0 이면 증설 확률이 뽑혀도 그 지역 그 산출 상품의 예상 공급 ÷ 수요(projectedSD)가 그 값을 넘으면 그 주는 증설하지 않는다 (오버홀 03 5-1).
  * 증설 공사 중이거나 철거 중인 건물은 세지 않는다. 돈: 왕실은 새 공사에 쓸 수 있는 돈(freeCash), 민간은 저택·금융가 금고(공사 명령이 낼 곳을 고른다)
  */
@@ -1210,7 +1197,7 @@ function reserveLevels(w: World, c: Company, canStart: () => boolean, free: () =
     // 증설은 확률로 (2026-10-25 사용자 "확률분포로"): 유보 자산이 상한의 TUNE.reserveGrowFrom 을 넘은 만큼 확률이 오르고, 가득 차면 주에 TUNE.reserveGrowMax
     const fillR = cap > 0 ? res / cap : 0;
     const pGrow = TUNE.reserveGrowMax * clamp((fillR - TUNE.reserveGrowFrom) / Math.max(1e-9, 1 - TUNE.reserveGrowFrom), 0, 1);
-    let rich = TUNE.reserveGrowMax > 0 ? aiRand(w, 'grow', keyCompany(c.id), keyRegion(b.regionId), keyStr(b.typeId), keyStr(b.methodId), keyWeek(w.tick), keyIdx(idx)) < pGrow : res >= cap * RESERVE_FULL;
+    let rich = aiRand(w, 'grow', keyCompany(c.id), keyRegion(b.regionId), keyStr(b.typeId), keyStr(b.methodId), keyWeek(w.tick), keyIdx(idx)) < pGrow;
     // 과잉 검사 (TUNE.aiGlutSD > 0, 오버홀 03 5-1): 그 지역 그 산출 상품(산출이 여럿이면 기본가 값이 가장 큰 것, mainOutput)의 예상 공급 ÷ 수요
     // (공사 중 레벨 산출 포함, projectedSD)가 임계를 넘으면 이번 주 증설 확률 0 (찬 주로 세지 않는다). aiRand 는 키 해시라 막아도 다른 난수가 밀리지 않는다
     if (rich && TUNE.aiGlutSD > 0) {
@@ -1230,6 +1217,7 @@ function reserveLevels(w: World, c: Company, canStart: () => boolean, free: () =
     // 새 건물(시작 건물은 0일에 생긴 것으로 본다)은 RAMP_WEEKS 동안 사람을 뽑으며 내는 적자를 세지 않는다
     const ramping = w.tick - (b.builtTick ?? 0) < RAMP_WEEKS * TICKS_PER_WEEK;
     const broke = res <= 0 && b.profitEma * TICKS_PER_WEEK < 0 && !ramping && harvestFactor(w, b.regionId, BUILDING_BY_ID[b.typeId].land) >= 1;
+    // richWeeks 는 지운 reserveGrowMax 0 갈래만 읽던 상태 칸이다. 지우면 세계 해시가 바뀌어 남긴다 (SIMPLIFY_AUDIT 1-D′)
     const nr = rich ? (b.richWeeks ?? 0) + 1 : 0, nb = broke ? (b.brokeWeeks ?? 0) + 1 : 0;
     if (nr) b.richWeeks = nr; else delete b.richWeeks;
     if (nb) b.brokeWeeks = nb; else delete b.brokeWeeks;
@@ -1239,7 +1227,7 @@ function reserveLevels(w: World, c: Company, canStart: () => boolean, free: () =
       delete b.brokeWeeks;
       continue;
     }
-    if ((TUNE.reserveGrowMax > 0 ? !rich : nr < RESERVE_STREAK) || inDebt || !canStart()) continue;
+    if (!rich || inDebt || !canStart()) continue;
     const at = growRegion(w, c, b);
     if (roomFor(w, at, b.typeId) < 1) continue;
     const cost = constructionEstimate(w, c, b.typeId).cost;
@@ -1584,52 +1572,14 @@ function marginExit(w: World) {
 }
 
 /**
- * TUNE.expandUtilMin (0 = 끔): 왕국 안(왕실 + 민간 상회. 왕국마다 민간 상회는 하나라 회사로 나누면 왕실 건물만 빠진다) 같은 종류이고
- * 산출 상품이 겹치는 건물의 레벨 가중 가동률(꺼진 건물은 0)이 이 값 미만이거나 장기 손익(profitEma) 합이 음수이면, 그 방식은 새로 짓지도 늘리지도 않는다.
- * 그런 건물이 없으면 막지 않는다 (새 산업은 시작된다). 정부 건물(행정청·학교·사무소)은 손익으로 짓지 않으므로 보지 않는다. w.buildings 순서로 더한다 (결정성)
- */
-function glutOf(w: World, kingdomId: number): (typeId: string, m: MethodDef) => boolean {
-  const kingdomOf = new Map(w.companies.map((x) => [x.id, x.kingdomId] as const));
-  const byType = new Map<string, Building[]>();
-  for (const b of w.buildings) {
-    if (kingdomOf.get(b.companyId) !== kingdomId || BUILDING_BY_ID[b.typeId].auto || isGovernment(b.typeId)) continue;
-    const list = byType.get(b.typeId);
-    if (list) list.push(b); else byType.set(b.typeId, [b]);
-  }
-  const memo = new Map<string, boolean>();
-  return (typeId, m) => {
-    // 무역소는 산출이 없고 금고가 찰 때까지 매출이 없어 손익으로 막지 않는다 (tradeValuation 이 지역 교역 수요로 본다)
-    if (isGovernment(typeId) || typeId === TRADING_POST) return false;
-    const key = `${typeId}|${m.id}`;
-    const hit = memo.get(key);
-    if (hit !== undefined) return hit;
-    const outs = GOOD_IDS.filter((g) => (m.outputs[g] ?? 0) > 0);
-    let levels = 0, used = 0, profit = 0;
-    for (const b of byType.get(typeId) ?? []) {
-      const bm = getMethod(b.typeId, b.methodId);
-      if (outs.length && !outs.some((g) => (bm.outputs[g] ?? 0) > 0)) continue;
-      levels += b.level;
-      used += (b.active ? b.utilization : 0) * b.level;
-      profit += b.profitEma;
-    }
-    const glut = levels > 0 && (used / levels < TUNE.expandUtilMin || profit < 0);
-    memo.set(key, glut);
-    return glut;
-  };
-}
-
-/**
  * 모든 후보를 같은 기준으로: 장기 손익 / 공사비. 수익률이 기준의 1.25배를 넘는 가장 큰 덩어리를 고른다.
  * 학교는 schoolFree(schoolCash)로 짓고, 공사비 + 그 레벨 인건비 TUNE.treasuryLowWeeks 주치가 있어야 한다
  */
-export function pickProject(w: World, c: Company, o: Outlook, free: number, blocked?: { best: Pick | null }, schoolFree = 0, dev = false, call = 0): Pick | null {
+export function pickProject(w: World, c: Company, o: Outlook, free: number, blocked?: { best: Pick | null }, schoolFree = 0, call = 0): Pick | null {
   let best: Pick | null = null;
   // 후보의 AI 난수 키: (회사, 지역, 종류, 방식, 주, 이번 주 몇 번째 부름 call). 같은 주에 여러 번 불리므로(주에 startsPerWeek 번) 부름 순번을 넣어 부를 때마다 새로 흔든다
-  const jitter = (tag: 'pick' | 'pickDev', regionId: number, typeId: string, methodId: string) =>
+  const jitter = (tag: 'pick', regionId: number, typeId: string, methodId: string) =>
     aiRand(w, tag, keyCompany(c.id), keyRegion(regionId), keyStr(typeId), keyStr(methodId), keyWeek(w.tick), keyIdx(call));
-  // 발전 투자 대상: 잠재 수요(바꿀 수 있는 몫)가 있고 공급(공사 중 포함)이 지금 수요 + 잠재 수요에 못 미치는 상품
-  const devGood = (g: GoodId) => o.latent[g] > 1e-6 && o.supply[g] < o.demand[g] + o.latent[g];
-  const devOuts = (m: MethodDef) => GOOD_IDS.filter((g) => (m.outputs[g] ?? 0) > 0 && devGood(g));
   const pools = new Map<string, number>();
   // 지역 우선 투자 (민간): 그 지역 저택·금융가 금고(약정 뺀 돈). 좋아하지 않는 종류의 건물에는 TUNE.ownerTilt 배로 센다
   const local = new Map<number, Building[]>();
@@ -1642,21 +1592,18 @@ export function pickProject(w: World, c: Company, o: Outlook, free: number, bloc
   const localFunds = (regionId: number, typeId: string) => (local.get(regionId) ?? []).reduce((a, o) => a + freeOf.get(o.id)! * (favours(o, typeId) ? 1 : TUNE.ownerTilt), 0);
   // 빚이 현금보다 많은 왕실은 생산 건물을 짓지 않는다 (정부 건물·학교는 그대로)
   const inDebt = c.state && c.debt > c.cash;
-  // TUNE.expandUtilMin: 왕국 안 같은 종류·같은 산출 건물이 덜 돌거나 적자인 방식은 짓지도 늘리지도 않는다 (glutOf. 땅 바꾸기 후보도 뺀다)
-  const glut = TUNE.expandUtilMin > 0 ? glutOf(w, c.kingdomId) : null;
   const overLocal = (regionId: number, typeId: string, m: MethodDef, levels: number) => GOOD_IDS.some((g) => {
     const out = m.outputs[g] ?? 0;
     if (!(out > 0) || !GOODS[g].perishable) return false;
     const x = o.local(g, regionId);
-    return out * levels * (1 + regionPerk(regionId, typeId)) > x.demand + (dev ? x.latent : 0) - x.supply;
+    return out * levels * (1 + regionPerk(regionId, typeId)) > x.demand - x.supply;
   });
   for (const r of ownRegions(w, c)) {
     for (const t of BUILDING_TYPES) {
       if (t.id === 'builder' || !canBuildType(c, t)) continue;
       if (inDebt && !isGovernment(t.id)) continue;
-      if (dev && isGovernment(t.id)) continue;
-      // TUNE.aiReserveRule: 생산 건물은 전망으로 짓지 않는다 (새 투자 planTrials, 증설·철거 reserveLevels). 정부 건물·무역소만 여기서 고른다
-      if (TUNE.aiReserveRule && !isGovernment(t.id) && t.id !== TRADING_POST) continue;
+      // 생산 건물은 전망으로 짓지 않는다 (새 투자 planTrials, 증설·철거 reserveLevels). 정부 건물·무역소만 여기서 고른다
+      if (!isGovernment(t.id) && t.id !== TRADING_POST) continue;
       // 기상 조건이 걸린 땅에는 짓지 않는다 (줄어든 산출과 오른 값은 일시적이다)
       if (harvestFactor(w, r.id, t.land) < 1) continue;
       const room = roomFor(w, r.id, t.id);
@@ -1674,9 +1621,9 @@ export function pickProject(w: World, c: Company, o: Outlook, free: number, bloc
       const otherMethod = (m: MethodDef) => newMethod(m) && !(m === topBase && sibs.every((b) => baseValue(getMethod(b.typeId, b.methodId), c) * 1.05 < baseValue(m, c)));
       // 땅이 없으면 1레벨 기준 수익률만 재 둔다 (땅 바꾸기 후보). 매장량이 없는 것은 땅을 비워도 못 지으므로 뺀다
       if (room < 1) {
-        if (!blocked || dev || (t.deposit && depositFree(w, r.id, t.deposit) < 1)) continue;
+        if (!blocked || (t.deposit && depositFree(w, r.id, t.deposit) < 1)) continue;
         for (const m of availableMethods(c, t.id)) {
-          if (otherMethod(m) || glut?.(t.id, m)) continue;
+          if (otherMethod(m)) continue;
           if (laborAvailability(w, r, m, 1, c.state, pools) < MIN_STAFFING()) continue;
           const e = m.seats ? schoolValuation(w, c, r, m, 1, schoolSeats(w, r.id)) : t.id === TRADING_POST ? tradeValuation(w, c, r, m, 1) : valueMethod(w, o, r, c, t.id, m, 1);
           const roi = (e.profit * TICKS_PER_YEAR) / perLevel;
@@ -1685,26 +1632,17 @@ export function pickProject(w: World, c: Company, o: Outlook, free: number, bloc
         continue;
       }
       for (const m of availableMethods(c, t.id)) {
-        if (otherMethod(m) || glut?.(t.id, m)) continue;
-        const outs = dev ? devOuts(m) : [];
-        if (dev && !outs.length) continue;
+        if (otherMethod(m)) continue;
         const cap = newMethod(m) ? MIXED_LEVELS : Infinity;
         let choice: { levels: number; roi: number } | null = null, top: { levels: number; roi: number } | null = null;
         for (const levels of CHUNKS) {
           if (levels > room || levels > cap || budget < perLevel * levels) continue;
           if (m.seats && budget < (perLevel + wageCostOf(m, c.stateWages ?? c.wages, c.state) * TICKS_PER_WEEK * TUNE.treasuryLowWeeks) * levels) continue;
-          // 발전 투자: 공급(공사 중 포함) + 이 공사의 산출이 지금 수요 + 잠재 수요를 넘는 덩어리는 짓지 않는다
-          if (dev && outs.some((g) => o.supply[g] + (m.outputs[g] ?? 0) * levels * (1 + regionPerk(r.id, t.id)) > o.demand[g] + o.latent[g])) continue;
-          // 지역 밖으로 못 나가는 상품(운송): 2레벨 이상 덩어리는 산출이 그 지역의 모자란 양(수요(발전 투자는 잠재 수요까지) − 공급, 공사 중 포함)을 넘지 않을 때만
+          // 지역 밖으로 못 나가는 상품(운송): 2레벨 이상 덩어리는 산출이 그 지역의 모자란 양(수요 − 공급, 공사 중 포함)을 넘지 않을 때만
           if (levels > 1 && overLocal(r.id, t.id, m, levels)) continue;
-          const e = m.seats ? schoolValuation(w, c, r, m, levels, schoolSeats(w, r.id)) : t.id === TRADING_POST ? tradeValuation(w, c, r, m, levels) : valueMethod(w, o, r, c, t.id, m, levels, false, undefined, dev);
+          const e = m.seats ? schoolValuation(w, c, r, m, levels, schoolSeats(w, r.id)) : t.id === TRADING_POST ? tradeValuation(w, c, r, m, levels) : valueMethod(w, o, r, c, t.id, m, levels);
           if (laborAvailability(w, r, m, levels, c.state, pools) < MIN_STAFFING()) continue;
           const roi = (e.profit * TICKS_PER_YEAR) / (perLevel * levels);
-          // 발전 투자: 잠재 수요까지 센 손익이 −인건비 × TUNE.devLoss 이상인 가장 큰 덩어리
-          if (dev) {
-            if (e.profit >= -TUNE.devLoss * e.wageCost && !choice) choice = { levels, roi };
-            continue;
-          }
           if (e.profit <= 0) continue;
           if (roi <= MIN_ROI()) continue;
           if (!top || roi > top.roi) top = { levels, roi };
@@ -1714,7 +1652,7 @@ export function pickProject(w: World, c: Company, o: Outlook, free: number, bloc
         if (!pick) continue;
         // 지역 우선 투자: 그 지역 저택·금융가 돈으로 짓는 몫만큼 가산점
         const here = c.state ? 0 : Math.min(1, localFunds(r.id, t.id) / (perLevel * pick.levels));
-        const score = pick.roi * (1 - AI_JITTER + jitter(dev ? 'pickDev' : 'pick', r.id, t.id, m.id) * 2 * AI_JITTER) * (1 + TUNE.localBias * here);
+        const score = pick.roi * (1 - AI_JITTER + jitter('pick', r.id, t.id, m.id) * 2 * AI_JITTER) * (1 + TUNE.localBias * here);
         if (!best || score > best.score) best = { regionId: r.id, typeId: t.id, methodId: m.id, levels: pick.levels, score };
       }
     }

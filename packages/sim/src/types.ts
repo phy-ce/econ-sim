@@ -325,9 +325,9 @@ export interface Building {
   negWeeks?: number;
   /** 생산 건물의 투입 충족이 0.5 미만이었던 연속 주 수 (AI, TUNE.starveWeeks). 없으면 0 (16판에서 생겼다) */
   starvedWeeks?: number;
-  /** TUNE.aiReserveRule (AI): 유보 자산이 상한의 90% 이상이었던 연속 주 수 (증설 판단). 없으면 0 (18판에서 생겼다) */
+  /** 유보 기준 AI: 증설 확률이 뽑힌 연속 주 수. 지운 reserveGrowMax 0 갈래(찬 주 4주면 증설)만 읽었다. 읽는 곳은 없고 써지기만 한다 (SIMPLIFY_AUDIT 1-D′ 에서 지울 칸). 없으면 0 (18판에서 생겼다) */
   richWeeks?: number;
-  /** TUNE.aiReserveRule (AI): 유보 자산이 0이고 주간 손익이 음수였던 연속 주 수 (철거 판단). 없으면 0 (18판에서 생겼다) */
+  /** 유보 기준 AI: 유보 자산이 0이고 주간 손익이 음수였던 연속 주 수 (철거 판단). 없으면 0 (18판에서 생겼다) */
   brokeWeeks?: number;
   /** 공사로 새로 생긴 날 (AI: 사람을 뽑는 동안의 적자를 철거 판단에서 빼는 데 쓴다). 시작 건물에는 없다 (0으로 본다, 18판에서 생겼다) */
   builtTick?: number;
@@ -433,7 +433,7 @@ export interface Company {
   buildCost: number;
   /** 건축사무소 포인트 중 공사에 실제로 쓰인 하루 양의 이동평균 (왕실, AI가 사무소 크기를 정한다) */
   buildUsed?: number;
-  /** AI 착공 공사비의 52주 이동 합 (보통 + 발전 투자)과 그중 발전 투자 몫 (TUNE.devShare) */
+  /** AI 착공 공사비의 52주 이동 합과 그중 발전 투자 몫 (지운 TUNE.devShare 만 읽었다. 써지기만 한다, SIMPLIFY_AUDIT 1-D′ 에서 지울 칸) */
   startCost?: number;
   devCost?: number;
   research: Research;
@@ -508,7 +508,7 @@ export interface Region {
   /** pop 합산 (화면용). 매 틱 다시 채운다 */
   households: Record<PopClass, Household>;
   market: Record<GoodId, MarketGood>;
-  /** TUNE.aiReserveRule (AI 새 투자): 상품 값이 기본가의 1.25배 이상이었던 연속 주 수 (0인 상품은 없다). 없으면 모두 0 (18판에서 생겼다) */
+  /** 유보 기준 AI 새 투자 (planTrials): 상품 값이 기본가의 1.25배 이상이었던 연속 주 수 (0인 상품은 없다). 없으면 모두 0 (18판에서 생겼다) */
   hotWeeks?: Partial<Record<GoodId, number>>;
   /**
    * AI 가동률 감축·철거 (TUNE.aiCutSD·aiDemoSD, 오버홀 03 5-2): 지금 공급 ÷ 수요가 aiCutSD 이상 / aiDemoSD 이상이었던 연속 주 수 (0인 상품은 없다).

@@ -1,4 +1,4 @@
-// 유보 기준 AI 진단 (TUNE.aiReserveRule): 주마다 생산 건물의 유보 자산·상한·주간 손익·연속 주 수를 종류별로 찍는다.
+// 유보 기준 AI 진단 (ai.ts reserveLevels): 주마다 생산 건물의 유보 자산·상한·주간 손익·연속 주 수를 종류별로 찍는다.
 // npx tsx cli/resdiag.ts <주 수> [시드] [TUNE JSON]
 import { BUILDING_BY_ID, TICKS_PER_WEEK, TUNE } from '../src/data';
 import { reserveCap } from '../src/finance';

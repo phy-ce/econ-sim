@@ -271,7 +271,7 @@ const techY: Record<string, number>[] = [];
 // 왕국마다 법 바꾸기가 끝날 때 실패한 해 (세법·투자법)
 const failY: { tax: number[]; invest: number[] }[] = [];
 // AI 길별 레벨 (해마다 누적, ai.ts aiTrace, 시뮬레이션 상태를 바꾸지 않는다): swLv 방식을 바꾼 레벨, pickLv 보통 후보로 넣은 레벨, shrinkLv 철거 레벨,
-// resLv·resShLv·trialLv 유보 기준 증설·철거·새 투자 레벨 (TUNE.aiReserveRule)
+// resLv·resShLv·trialLv 유보 기준 증설·철거·새 투자 레벨 (ai.ts reserveLevels·planTrials)
 const pathAcc = { swLv: 0, pickLv: 0, shrinkLv: 0, resLv: 0, resShLv: 0, trialLv: 0 };
 const pathY: Record<number, typeof pathAcc> = {};
 aiTrace.on = (_w, _c, path, _t, _m, levels) => {

@@ -10,7 +10,7 @@ import type { Building, Company, GoodId, Kingdom, MethodDef, Region, Skill, Worl
 /**
  * 시장 전망: AI 투자 판단의 공통 바탕. 상품마다 대륙 전체의 앞으로의 수요와 공급을 세고 그 비율로 장기 가격을 본다.
  * - 수요 = 지금 수요(이동평균) + 공사 중인 건물의 투입 + 대체 수요 + 공사 중 건물이 데려갈 소작농의 수확 (freed)
- * - 잠재 수요: 더 나은 방식으로 바꾸면 쓸 투입. 발전 투자에만 센다
+ * - 잠재 수요: 더 나은 방식으로 바꾸면 쓸 투입. AI 투자 판단은 세지 않고, 화면 미리보기(estimateAfterEntry)의 산출 값 변화에만 들어간다
  * - 공급 = 지금 공급 + 공사 중인 건물의 산출
  * 같은 주에 착공하면 전망에 바로 반영해(add) 여럿이 같은 빈자리로 몰리지 않게 한다.
  */
@@ -280,15 +280,14 @@ export function longRunWages(c: Company, typeId: string, w?: World, r?: Region):
  * 한 지역에 이 방식으로 levels 개를 새로 돌릴 때의 장기 하루 손익 (가장 이익이 나는 가동률로).
  * existing: 이미 돌고 있는 레벨의 손익 (그 산출과 투입은 이미 전망에 들어 있으므로 더하지 않는다). 짓기와 철거를 같은 계산으로 비교한다.
  * 매출 = 산출 × 팔리는 비율 × 값. 값은 들어간 뒤의 장기 가격과 현지 가격의 평균이고, 지역 밖으로 나가는 몫은 운송비를 뺀다.
- * 보통 투자: 팔리는 비율 = 수요(지금 + 공사 중 투입 + 대체 수요 + 데려올 소작농의 수확 freed) ÷ (공급 + 내 산출), 장기 가격도 같은 수요로 (잠재 수요 제외).
- * dev (발전 투자): 팔리는 비율과 장기 가격에 잠재 수요(바꿀 수 있는 몫)를 더한다.
+ * 팔리는 비율 = 수요(지금 + 공사 중 투입 + 대체 수요 + 데려올 소작농의 수확 freed) ÷ (공급 + 내 산출), 장기 가격도 같은 수요로 (잠재 수요 제외).
  * 투입재: 사들인 뒤의 장기 가격(잠재 수요 제외)과 현지 가격의 평균, 지역에서 모자란 몫은 운송비를 더한다.
  */
-export function valueMethod(w: World, o: Outlook, r: Region, c: Company, typeId: string, m: MethodDef, levels = 1, existing = false, fill?: number, dev = false): Valuation {
+export function valueMethod(w: World, o: Outlook, r: Region, c: Company, typeId: string, m: MethodDef, levels = 1, existing = false, fill?: number): Valuation {
   const fixed = valueFixed(w, r, c, typeId, m);
   let best: Valuation | null = null;
   for (const u of [1, 0.75, 0.5, 0.25]) {
-    const v = valueAt(o, r, c, m, levels * u, existing, fixed, fill, dev);
+    const v = valueAt(o, r, c, m, levels * u, existing, fixed, fill);
     if (!best || v.profit > best.profit) best = { ...v, utilization: u };
   }
   return best!;
@@ -337,7 +336,7 @@ function valueFixed(w: World, r: Region, c: Company, typeId: string, m: MethodDe
  * 투입 충족 (fill): 주어지면 그 값, 아니면 새로 짓는 레벨(existing = false)이면 전망의 남는 투입재로 채우는 비율 (Outlook.fill,
  * 가동률마다 그 필요로 센다). 매출(행정청 세금 몫 포함)과 원료비에 곱하고 인건비는 그대로 낸다 (생산은 가장 모자란 투입을 따른다)
  */
-function valueAt(o: Outlook, r: Region, c: Company, m: MethodDef, levels: number, existing: boolean, fixed: ValueFixed, fillIn?: number, dev = false): Omit<Valuation, 'utilization'> {
+function valueAt(o: Outlook, r: Region, c: Company, m: MethodDef, levels: number, existing: boolean, fixed: ValueFixed, fillIn?: number): Omit<Valuation, 'utilization'> {
   const { perk, ship } = fixed;
   let revenue = 0, inputCost = 0;
   // 쓰지도 만들지도 않는 상품은 산출·투입이 0 이라 건너뛴다
@@ -346,10 +345,10 @@ function valueAt(o: Outlook, r: Region, c: Company, m: MethodDef, levels: number
     if (out > 0) {
       const dS = existing ? 0 : out;
       const outside = GOODS[g].perishable ? 0 : clamp(1 - r.market[g].demandEma / out, 0, 1);
-      // 보통 투자는 잠재 수요를 세지 않고 팔리는 몫만 판다고 본다. 발전 투자(dev)는 잠재 수요를 센다
+      // 잠재 수요는 세지 않고 팔리는 몫만 판다고 본다
       const dD = existing ? 0 : o.freed(g, r.id, m, levels);
-      const p = o.price(g, dS, dD, dev, r.id);
-      const sold = o.sold(g, dS, dD, dev, r.id);
+      const p = o.price(g, dS, dD, false, r.id);
+      const sold = o.sold(g, dS, dD, false, r.id);
       // 지역 밖으로 못 나가는 상품은 이 지역의 장기 가격(내 산출을 넣은 값)만 본다. 지금 현지 값은 공급이 없으면 가격 상한이라 들어간 뒤의 값과 크게 다르다
       if (GOODS[g].perishable) revenue += out * sold * p;
       else revenue += out * sold * ((1 - outside) * (p + r.market[g].price) / 2 + outside * p * (1 - ship));
