@@ -3,17 +3,17 @@
   {
    "id": "2026-11-02-admin-k2",
    "title": "행정청 충원: AI 왕실 국영 웃돈 (왕국 2)",
-   "desc": "같은 실행의 AI 왕국 2 줄",
+   "desc": "같은 실행의 AI 왕국 2 줄, 채택 aiStatePremium 1 (p1)",
    "date": "2026-11-02",
-   "created": "2026-11-02T16:05:38",
+   "created": "2026-11-02T16:10:37",
    "code": "2167161d"
   },
   {
    "id": "2026-11-02-admin",
    "title": "행정청 충원: AI 왕실 국영 웃돈",
-   "desc": "wt-admin a1aa901. 대조(main b1bd1fa 기본) / aiStatePremium 1·2·3 / 2 + A2 끔, 20년 × 시드 1·2 × salt 0..3, 대륙 줄 (플레이어 왕국 포함, 웃돈 없음)",
+   "desc": "wt-admin a1aa901. 대조(main b1bd1fa 기본) / aiStatePremium 1(채택)·2·3 / 2 + A2 끔, 20년 × 시드 1·2 × salt 0..3, 대륙 줄 (플레이어 왕국 포함, 웃돈 없음)",
    "date": "2026-11-02",
-   "created": "2026-11-02T16:05:38",
+   "created": "2026-11-02T16:10:36",
    "code": "0e496120"
   },
   {
