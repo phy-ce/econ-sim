@@ -29,8 +29,8 @@
 깨진 화면
 - 2-78 코드 완료: officeLoad를 실제 투입량에 반영하고 사무소/그룹 가동 비율 표시. UI_DONE 참조.
 - 2-69(왕실 임금 읽기 전용)는 코드 완료 (`e1d700f`, 화면 미검증, UI_DONE).
-- **2-81 왕실 임금 탭·건물 방식 비교 임금 (main c952e65)**: 지역 시장 임금이 기본이 되어 `marketWage` 비교값·`owner.wages` 추정이 실제 지급과 다르다. 방식 비교는 `wagesAt(owner, b.typeId, world, b.regionId)`, 임금 탭은 왕국 지역 임금 범위. 웃돈 손잡이는 열지 않는다 (2026-11-02 사용자 결정: 플레이어 왕실 임금은 읽기 전용).
-- **2-80 국영 임금 상세 식**: 지금 1인/일이 실제 지급(`Region.stateWages`)과 다르다. sim `drillWages` 수정(3장)이 들어온 뒤 `BudgetJobs.tsx:12` 식을 "시장 임금 × 단계"로. 그 전에는 화면 할 일 없음.
+- 2-81 코드 완료: 방식 비교 wagesAt·왕국 지역 임금 범위·왕국 실업률, 왕실 읽기 전용. UI_DONE 참조.
+- **2-80 국영 임금 상세 식**: sim 준비됨(WageDrillJob.marketWage·premium). 다음 BudgetJobs의 지역 시장 임금 × 단계 식을 반영한다.
 
 사용자 요청
 0. **2-77 코드 완료**: 6bf2b2d 및 후속 최소크기 보강. UI_DONE·UI_STATUS의 헤드리스 확인 근거 참조.
@@ -1146,26 +1146,6 @@ sim 변경 (wt-research):
 - 문자열: "시장 임금"/"Market wage" (`T.marketWage`), "단계"/"Stage" (`T.stage`). 새 문자열 없음.
 - 빼는 것: `marketWage`가 있을 때 식의 `baseWage × wageIndex` 부분.
 - 완료 기준: 정부 건물 한 곳의 1인/일이 그 지역 `Region.stateWages[s]`와 소수 둘째 자리까지 같다 (지금 단계). typecheck.
-
-### 2-81. 왕실 임금 탭과 건물 방식 비교 임금 (main c952e65, DESIGN 7.3, 웃돈 손잡이는 결정 대기)
-- sim 사실:
-  - 실제 지급은 지역마다: 회사 생산 건물 = `Region.wages` × (1 + 웃돈 `Company.wageOffset[s]`) (`economy.ts:349~359 wagesAt`, `:361 offsetWages`). 웃돈은 −50%~+100% (`commands.ts:156~161`).
-  - `Company.wages` (`types.ts:411`)는 그 회사 생산 건물 지역 임금의 고용 가중 평균 계산값이다 (`labor.ts:472 syncCompanyWages`, 날마다). 반올림하지 않은 값이라 화면은 소수 둘째 자리로 보인다 (`test/core/decimals.test.ts`는 이 칸을 "보이는 값"에서 뺐다).
-  - `Company.stateWages` (왕실)는 왕국 지역들의 `Region.stateWages` 평균이다 (`finance.ts:153~154`, 대표값).
-  - `setWage`로 넣은 절대값은 지역 임금이 있으면 지급에 쓰이지 않는다 (`wagesAt`이 `Region.wages`를 먼저 본다). 플레이어 왕실은 `setWage`·`setWageOffset` 둘 다 오류다 (`commands.ts:149`, `:157`, 2-69). 클라이언트에 `setWage` 호출은 없다 (grep 0건). 플레이어 왕국의 민간 회사는 AI다.
-- 지금 화면:
-  - `Wages` (`CompanyPanel.tsx:326~349`, 재정 창 `FinancePanel.tsx:49`): 직종마다 큰 숫자 `me.wages[s]` (`:338`, `format="two"`, 반올림은 이미 된다), 비교값 "시장임금" `marketWage(world, s, me.id)` (`:331`, `:344`) = 세계 전체 회사 평균, 실업 `unemploymentRate(world, s)` (`:333`, 세계 전체 pop). 왕실은 슬라이더가 없다 (`:339`).
-  - 건물 상세 방식 비교 (`CompanyPanel.tsx:305`): `estimateMethod(world, b.regionId, b.typeId, m.id, owner.wages)` → 회사 평균 임금으로 임금비를 센다. 그 건물이 실제로 주는 임금이 아니다.
-- 바꿀 것:
-  1. `:305`의 `owner.wages` → `wagesAt(owner, b.typeId, world, b.regionId)` (`@econ/sim`에서 export됨). 건설 카드의 `estimateAfterEntry` (`:388`, `:419`)는 sim이 지역 임금을 읽으므로 (`outlook.ts:345~350 longRunWages`) 그대로 둔다.
-  2. `Wages` 직종 행: 큰 숫자 `me.wages[s]`는 그대로 두고 라벨을 "평균"으로. "시장임금" 줄(`:344`)은 "지역" + 플레이어 왕국 지역들의 `r.wages[s]` 최소 ~ 최대 (`world.regions.filter(r => r.kingdomId === me.kingdomId && r.wages)`, 둘 다 `format="money"`). 지역이 하나면 값 하나. `marketWage` import는 다른 곳에서 안 쓰면 지운다.
-  3. 실업 막대(`:333`)는 플레이어 왕국 pop만: 그 왕국 지역의 그 직종 pop 합 중 `work === 0` 비율 (화면에서 센다. `unemploymentRate`와 같은 식에 왕국 거르기만 더한다).
-  4. 맨 위 국영 임금 칸(`:329`)은 그대로 두고 라벨 뒤에 "평균" (`me.stateWages`는 지역 평균이다).
-  5. 지역별 값은 2-79 지역 임금 창에서 본다 (이 탭에 지역 목록을 넣지 않는다).
-- 웃돈 손잡이 (**결정 대기**): 추천안은 "웃돈만 보이고 웃돈으로만 조절"이다. 절대 임금 입력은 만들지 않는다 (지급에 안 쓰인다). 다만 지금 플레이어 왕실은 sim이 웃돈도 막으므로 (2-69) 이 탭은 읽기 전용이다. 왕실 생산 건물의 웃돈(−50%~+100%)을 플레이어에게 열지는 플레이어가 보는 규칙이 바뀌는 일이라 사용자 결정이다 (sim `commands.ts:157` 조건). 열리면 화면은 `:339`의 `!me.state` 조건만 풀고, 슬라이더 값은 `me.wageOffset[s]`(플레이어는 시작부터 객체, `world.ts:98`)를 쓴다. `:332`의 `me.wages[s] / market - 1` 대체식은 지운다.
-- 문자열 (ko/en): "평균"/"Average", "지역"/"Regions". 나머지 재사용.
-- 빼는 것: `:331`·`:344`의 세계 평균 `marketWage` 비교.
-- 완료 기준: 방식 비교의 임금비가 그 건물 지역 임금으로 센 값이다 (같은 방식이면 `b.last.wageCost`와 가동률·인원 차이만큼만 다르다). 임금 탭 지역 범위가 2-79 표의 최소·최대와 같다. typecheck.
 
 ### 2-82. 저축과 부 이동 (main c952e65, DESIGN 5장 부 이동, DECISIONS 7-37·7-38, sim 준비됨 (`wealthDrivers`, wt-sim2))
 - sim에서 바뀐 것: 부 이동(`market.ts:1007 updateWealth`)의 소득 = 현금 소득 이동평균(`Pop.incomeEma`) + 그날 쓴 현물의 시장가. c952e65부터 하층(소작농·노동자·농부, `CLASS_DEFS[prof].stratum === 'lower'`)은 여기에 max(0, `savings` − 지금 단계 하루 생활비 × 7 × `wealthSavBuffer` 8) ÷ (`wealthSavWeeks` 52 × 7)을 더한다 (`:1012~1015`). 이 소득이 다음 단계 생활비의 102%를 넘으면 하루 최대 +0.03, 지금 단계의 98%에 못 미치면 하루 최대 −0.03.

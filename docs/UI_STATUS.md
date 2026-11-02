@@ -243,3 +243,7 @@ DetailWindow 독립 NavigationProvider/버튼, BuildingPops 및 ResourceInspecto
 - 투자법 상세에 INVEST_CLASSES의 대상 직종24px 아이콘 추가. KO 라이트 최대6직종, 본문418/scroll418. 잠금 표식은 lucide Lock으로 통일. 헤드리스 스크린샷 확인(1920×1080): C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/policy-invest-classes-ko.png.
 - eventDestination.ts:3에서 lawChanged/lawFailed 둘 다 국가 창 법 탭으로 이동하며 App·GameWindow·Notifications가 같은 함수를 사용함을 코드 대조. 실제 전환 완료/실패 사건 클릭, 영문/다크 새 아이콘은 화면 미검증. 2-45 원문은 잔여 검증 범위를 보존해 유지.
 - 최신 main 병합 후 루트 typecheck와 클라이언트23파일62시험 통과. 다음 사용자 최신 우선순위 2-81 진행. 민간 대출 감사 커밋39906cd.
+- 코드 완료: 방식 비교 estimateMethod에 wagesAt(owner,typeId,world,regionId) 사용. 임금 요약은 Company.wages의 소수2자리 평균, 왕국 지역의 시장 임금 최소/최대(표시값이 같으면 하나), 왕국 pop만의 실업률. 국가 임금은 평균 라벨, 결측은 —. 왕실 슬라이더 없음. 머리 영역은 두 열 전체 폭.
+- 헤드리스 스크린샷 확인(1920×1080): C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/wages-region-summary-ko.png, wages-region-summary-en-dark.png. 최신 sim createWorld(42)→step14일 실제 값: 노동자 평균ƒ3.31/지역ƒ3.30~ƒ3.31, 본문418/scroll418·슬라이더0. 방식 비교 선택지의 실제 클릭·옛 저장 첫날 결측의 모든 경로는 화면 미검증. 검증용 세계는 별도 Edge 프로필에만 저장, 원래 저장은 estera-ui-before-regional-wage-check로 백업(2-79 검증 후 복원 예정).
+- 외국 임금999.12와 대규모 외국 실업 인구가 왕국 표에 섞이지 않고, 평균4.56789→4.57·실업25%·읽기 전용을 확인하는 KO/EN 회귀 추가.
+- 2-81 최종 검증: 루트 npm.cmd run typecheck 통과, 클라이언트24파일64시험 통과. 정책 아이콘 커밋d47e766.

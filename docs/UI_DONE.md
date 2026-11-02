@@ -1285,3 +1285,31 @@ ownershipAssets API로 소유 기관 소재지 기준 왕국/지역 막대, 내 
 - 투자법 상세에 INVEST_CLASSES의 대상 직종24px 아이콘 추가. KO 라이트 최대6직종, 본문418/scroll418. 잠금 표식은 lucide Lock으로 통일. 헤드리스 스크린샷 확인(1920×1080): C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/policy-invest-classes-ko.png.
 - eventDestination.ts:3에서 lawChanged/lawFailed 둘 다 국가 창 법 탭으로 이동하며 App·GameWindow·Notifications가 같은 함수를 사용함을 코드 대조. 실제 전환 완료/실패 사건 클릭, 영문/다크 새 아이콘은 화면 미검증. 2-45 원문은 잔여 검증 범위를 보존해 유지.
 - 최신 main 병합 후 루트 typecheck와 클라이언트23파일62시험 통과. 다음 사용자 최신 우선순위 2-81 진행. 민간 대출 감사 커밋39906cd.
+
+
+## 2026-11-02 2-81 지역 임금 기준 반영
+
+### 2-81. 왕실 임금 탭과 건물 방식 비교 임금 (main c952e65, DESIGN 7.3, 웃돈 손잡이는 결정 대기)
+- sim 사실:
+  - 실제 지급은 지역마다: 회사 생산 건물 = `Region.wages` × (1 + 웃돈 `Company.wageOffset[s]`) (`economy.ts:349~359 wagesAt`, `:361 offsetWages`). 웃돈은 −50%~+100% (`commands.ts:156~161`).
+  - `Company.wages` (`types.ts:411`)는 그 회사 생산 건물 지역 임금의 고용 가중 평균 계산값이다 (`labor.ts:472 syncCompanyWages`, 날마다). 반올림하지 않은 값이라 화면은 소수 둘째 자리로 보인다 (`test/core/decimals.test.ts`는 이 칸을 "보이는 값"에서 뺐다).
+  - `Company.stateWages` (왕실)는 왕국 지역들의 `Region.stateWages` 평균이다 (`finance.ts:153~154`, 대표값).
+  - `setWage`로 넣은 절대값은 지역 임금이 있으면 지급에 쓰이지 않는다 (`wagesAt`이 `Region.wages`를 먼저 본다). 플레이어 왕실은 `setWage`·`setWageOffset` 둘 다 오류다 (`commands.ts:149`, `:157`, 2-69). 클라이언트에 `setWage` 호출은 없다 (grep 0건). 플레이어 왕국의 민간 회사는 AI다.
+- 지금 화면:
+  - `Wages` (`CompanyPanel.tsx:326~349`, 재정 창 `FinancePanel.tsx:49`): 직종마다 큰 숫자 `me.wages[s]` (`:338`, `format="two"`, 반올림은 이미 된다), 비교값 "시장임금" `marketWage(world, s, me.id)` (`:331`, `:344`) = 세계 전체 회사 평균, 실업 `unemploymentRate(world, s)` (`:333`, 세계 전체 pop). 왕실은 슬라이더가 없다 (`:339`).
+  - 건물 상세 방식 비교 (`CompanyPanel.tsx:305`): `estimateMethod(world, b.regionId, b.typeId, m.id, owner.wages)` → 회사 평균 임금으로 임금비를 센다. 그 건물이 실제로 주는 임금이 아니다.
+- 바꿀 것:
+  1. `:305`의 `owner.wages` → `wagesAt(owner, b.typeId, world, b.regionId)` (`@econ/sim`에서 export됨). 건설 카드의 `estimateAfterEntry` (`:388`, `:419`)는 sim이 지역 임금을 읽으므로 (`outlook.ts:345~350 longRunWages`) 그대로 둔다.
+  2. `Wages` 직종 행: 큰 숫자 `me.wages[s]`는 그대로 두고 라벨을 "평균"으로. "시장임금" 줄(`:344`)은 "지역" + 플레이어 왕국 지역들의 `r.wages[s]` 최소 ~ 최대 (`world.regions.filter(r => r.kingdomId === me.kingdomId && r.wages)`, 둘 다 `format="money"`). 지역이 하나면 값 하나. `marketWage` import는 다른 곳에서 안 쓰면 지운다.
+  3. 실업 막대(`:333`)는 플레이어 왕국 pop만: 그 왕국 지역의 그 직종 pop 합 중 `work === 0` 비율 (화면에서 센다. `unemploymentRate`와 같은 식에 왕국 거르기만 더한다).
+  4. 맨 위 국영 임금 칸(`:329`)은 그대로 두고 라벨 뒤에 "평균" (`me.stateWages`는 지역 평균이다).
+  5. 지역별 값은 2-79 지역 임금 창에서 본다 (이 탭에 지역 목록을 넣지 않는다).
+- 웃돈 손잡이 (**결정 대기**): 추천안은 "웃돈만 보이고 웃돈으로만 조절"이다. 절대 임금 입력은 만들지 않는다 (지급에 안 쓰인다). 다만 지금 플레이어 왕실은 sim이 웃돈도 막으므로 (2-69) 이 탭은 읽기 전용이다. 왕실 생산 건물의 웃돈(−50%~+100%)을 플레이어에게 열지는 플레이어가 보는 규칙이 바뀌는 일이라 사용자 결정이다 (sim `commands.ts:157` 조건). 열리면 화면은 `:339`의 `!me.state` 조건만 풀고, 슬라이더 값은 `me.wageOffset[s]`(플레이어는 시작부터 객체, `world.ts:98`)를 쓴다. `:332`의 `me.wages[s] / market - 1` 대체식은 지운다.
+- 문자열 (ko/en): "평균"/"Average", "지역"/"Regions". 나머지 재사용.
+- 빼는 것: `:331`·`:344`의 세계 평균 `marketWage` 비교.
+- 완료 기준: 방식 비교의 임금비가 그 건물 지역 임금으로 센 값이다 (같은 방식이면 `b.last.wageCost`와 가동률·인원 차이만큼만 다르다). 임금 탭 지역 범위가 2-79 표의 최소·최대와 같다. typecheck.
+
+
+- 코드 완료: 방식 비교 estimateMethod에 wagesAt(owner,typeId,world,regionId) 사용. 임금 요약은 Company.wages의 소수2자리 평균, 왕국 지역의 시장 임금 최소/최대(표시값이 같으면 하나), 왕국 pop만의 실업률. 국가 임금은 평균 라벨, 결측은 —. 왕실 슬라이더 없음. 머리 영역은 두 열 전체 폭.
+- 헤드리스 스크린샷 확인(1920×1080): C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/wages-region-summary-ko.png, wages-region-summary-en-dark.png. 최신 sim createWorld(42)→step14일 실제 값: 노동자 평균ƒ3.31/지역ƒ3.30~ƒ3.31, 본문418/scroll418·슬라이더0. 방식 비교 선택지의 실제 클릭·옛 저장 첫날 결측의 모든 경로는 화면 미검증. 검증용 세계는 별도 Edge 프로필에만 저장, 원래 저장은 estera-ui-before-regional-wage-check로 백업(2-79 검증 후 복원 예정).
+- 외국 임금999.12와 대규모 외국 실업 인구가 왕국 표에 섞이지 않고, 평균4.56789→4.57·실업25%·읽기 전용을 확인하는 KO/EN 회귀 추가.

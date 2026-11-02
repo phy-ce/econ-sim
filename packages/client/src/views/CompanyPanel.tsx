@@ -14,7 +14,7 @@ import { useMemo, useState,useEffect } from 'react';
 import {
   BUILDING_BY_ID, BUILDING_TYPES, GOOD_IDS, MAX_CONCURRENT_CONSTRUCTIONS, TUNE,
   SKILLS, POP_CLASSES, TECHS, companyById, paysDividend, peasantSlots, availableMethods, canBuildType, constructionEstimate, creditLimit, estimateAfterEntry,
-  estimateMethod, getMethod, hasBuilder, knowsTech, landFree, slots, marketWage, regionById, researchableTechs, unemploymentRate,
+  estimateMethod, getMethod, hasBuilder, knowsTech, landFree, slots, wagesAt, regionById, researchableTechs,
 } from '@econ/sim';
 import type { Building, Company, GoodBag, GoodId, Region, Skill, PopClass, World } from '@econ/sim';
 import { ChevronDown, X, Coins, Crown, ArrowUp, ArrowDown, Pause, Play } from 'lucide-react';
@@ -302,7 +302,7 @@ function Controls({ r, game, world, owner }: { r: Row; game: Game; world: World;
       <select value={b.methodId} aria-label={T.method} onChange={(e) => game.command({ type: 'setMethod', buildingId: b.id, methodId: e.target.value })}>
         {type.methods.map((m) => {
           const ok = knowsTech(owner, m.tech);
-          const est = estimateMethod(world, b.regionId, b.typeId, m.id, owner.wages);
+          const est = estimateMethod(world, b.regionId, b.typeId, m.id, wagesAt(owner,b.typeId,world,b.regionId));
           const label = !ok ? T.optNeedsTech(techName(m.tech!))
             : m.construction ? T.optOffice(m.construction, money(est.inputCost + est.wageCost))
             : T.optProfit(signedMoney(est.profit));
@@ -325,23 +325,27 @@ function Controls({ r, game, world, owner }: { r: Row; game: Game; world: World;
 
 export function Wages({ game, world, me }: { game: Game; world: World; me: Company }) {
   const T = useT();
+  const regions=world.regions.filter(r=>r.kingdomId===me.kingdomId),ids=new Set(regions.map(r=>r.id));
+  const pops=world.pops.filter(p=>ids.has(p.regionId));
   return (
-    <div className="wages"><h3>{T.system.marketWages}</h3>{me.state&&<div className="system-facts"><span>{T.system.wages}</span>{SKILLS.map(skill=><span key={skill}>{skillName(skill)} <NumericValue value={me.stateWages?.[skill]??0} format="money"/></span>)}</div>}
+    <div className="wages"><h3>{T.system.marketWages}</h3>{me.state&&<div className="system-facts"><span>{T.system.wages} · {T.wageAverage}</span>{SKILLS.map(skill=><span key={skill}>{skillName(skill)} {me.stateWages?.[skill]===undefined?'—':<NumericValue value={me.stateWages[skill]} format="money"/>}</span>)}</div>}
       {SKILLS.map((s) => {
-        const market = marketWage(world, s, me.id);
-        const offset = me.wageOffset ? me.wageOffset[s] : me.wages[s] / market - 1;
-        const unemp = unemploymentRate(world, s);
+        const pay=regions.flatMap(r=>r.wages&&Number.isFinite(r.wages[s])?[r.wages[s]]:[]);
+        const low=pay.length?Math.min(...pay):null,high=pay.length?Math.max(...pay):null;
+        const offset = me.wageOffset?.[s]??0;
+        const workers=pops.filter(p=>p.prof===s),all=workers.reduce((n,p)=>n+p.size,0);
+        const unemp=all?workers.reduce((n,p)=>n+(p.work===0?p.size:0),0)/all:0;
         return (
           <div key={s} className="wage">
             <div className="wage-row">
               <span className="wage-name"><i className="sw" style={{ background: SKILL_COLOR[s] }} />{skillName(s)}</span>
-              <output className="wage-out">ƒ<NumericValue value={me.wages[s]} format="two"/> {!me.state&&<small className={offset >= 0 ? 'pos' : 'neg'}>{spct(offset)}</small>}</output>
+              <output className="wage-out"><span className="lbl">{T.wageAverage}</span> ƒ<NumericValue value={me.wages[s]} format="two"/> {!me.state&&<small className={offset >= 0 ? 'pos' : 'neg'}>{spct(offset)}</small>}</output>
             </div>
             {!me.state&&<input type="range" min={-50} max={100} step={5} value={Math.round(offset * 100)}
               aria-label={T.wageAria(skillName(s))}
               onChange={(e) => game.command({ type: 'setWageOffset', skill: s, offset: Number(e.target.value) / 100 })} />}
             <div className="wage-meta">
-              <span className="lbl">{T.marketWage} <span className="pxnum">ƒ<NumericValue value={market} format="two"/></span></span>
+              <span className="lbl">{T.wageRegions} <span className="pxnum">{low===null?'—':<><NumericValue value={low} format="money"/>{Math.round(low*100)!==Math.round(high!*100)&&<> ~ <NumericValue value={high!} format="money"/></>}</>}</span></span>
               <span className="wage-unemp"><span className="lbl">{T.unemployment}</span><Bar value={unemp} tone="neg" size="sm" label={T.unemployment} /><span className="pxnum small">{pct(unemp)}</span></span>
             </div>
           </div>
