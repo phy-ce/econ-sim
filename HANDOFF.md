@@ -9,7 +9,7 @@
 - 클라우드 세션(claude.ai/code)으로 이어서 할 수 있다. 규칙은 CLAUDE.md "클라우드 세션"을 본다.
 - 옛 세션 기록: `docs/log/` (2026-10-25 이전 HANDOFF 절은 `docs/log/HANDOFF_2026-10-18_to_10-25.md`, 날짜별 UI 기록도 여기). 다른 문서의 "HANDOFF 0-ind3"·"HANDOFF 0-aifix" 같은 옛 절 참조는 그 파일에 있다.
 
-## 0-1102h. 2026-11-02: wt-batch1 (wt-par 비교 실행 자원 + wt-uidocs UI_CHANGES 감사)
+## 0-1102k. 2026-11-02: wt-batch1 (wt-par 비교 실행 자원 + wt-uidocs UI_CHANGES 감사)
 - 바뀐 것 (wt-par a17d0f7): `cli/lab.sh`·`cli/sweep.sh` 의 `PAR` 기본이 'CPU 코어 수 − 2' 에서 '6 과 코어 수 − 2 중 작은 쪽 (최소 1)' 으로 (이 PC 16코어: 14 → 6, 클라우드 VM 약 4 vCPU: 2 그대로). `cli/lowprio.ts` (프로세스 우선순위 '보통 이하', `LOWPRIO=0` 이면 끔)를 `cli/lab.ts`·`cli/sweep.ts` 가 맨 앞에서 import 한다. CLAUDE.md '실행과 검증'에 컴퓨팅 자원 줄 (2026-11-02 사용자: PC 를 너무 많이 쓴다). 계산 결과는 같다 (우선순위·동시 실행 수만 바뀐다). 숫자: 실행 시간은 재지 않았다.
 - 바뀐 것 (wt-uidocs 626a052): UI_CHANGES 를 클라이언트 main 81494a1 과 대조했다. 끝났거나 폐기된 절 2-43·2-45·2-46·2-52·2-53(폐기)·2-56·2-57·2-58·2-63·2-65(대체)·2-66 과 2-72 1항은 UI_DONE '2026-11-02 확인'으로 옮겼다. 일부만 된 절에는 '2026-11-02 반영 확인' 줄을 달았다. 0장은 순서 목록 하나로 다시 썼다. 새 절: 2-85 (일꾼 줄 1인 임금·웃돈 칩), 2-86 (목표 임금 화살표·툴팁, premerge 에서 wt-span 뒤 이름 `TUNE.wageTargetSpan`·줄 번호로 고침).
 - 남은 것: UI_CHANGES 3장의 sim 요청 `marketWageTargets(w, regionId)` 는 아직 만들지 않았다 (Claude 쪽 일, 2-86 이 기다린다). 2-86 규칙 자체는 DECISIONS 7-43 사용자 답 대기.
