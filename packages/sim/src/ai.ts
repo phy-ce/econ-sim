@@ -939,7 +939,7 @@ function planConstruction(w: World, c: Company, o: Outlook) {
       let spot: { regionId: number; fit: number; room: number; has: boolean } | null = null;
       for (const r of ownRegions(w, c)) {
         const room = roomFor(w, r.id, 'builder');
-        if (room < 1 || rebuildBlocked(w, r.id, 'builder')) continue;
+        if (room < 1) continue;
         const fit = Math.floor(Math.min(levels, room, officeStaffable(w, c, r, m, byId)));
         if (fit < 1) continue;
         const has = offices.some((b) => b.regionId === r.id);
@@ -1224,19 +1224,25 @@ export const RESERVE_STREAK = 4;
 export const TRIAL_PRICE = 1.25;
 
 /**
- * 다시 짓기 기다림 (TUNE.aiRebuildWait > 0, 이슈 #7): AI 철거 명령이 받아들여질 때마다 그 지역·종류의 날을 적는다 (Region.demoAt).
- * 모든 AI 철거 길(유보 철거·reviewLevels·사무소·학교·땅 바꾸기·5-2·A2·A3)이 부른다. 끔이면 아무것도 하지 않는다
+ * 다시 짓기 기다림 (TUNE.aiRebuildWait > 0, 이슈 #7): 생산 건물(waitsRebuild)의 AI 철거 명령이 받아들여질 때마다 그 지역·종류의 날을 적는다 (Region.demoAt).
+ * 모든 AI 철거 길(유보 철거·reviewLevels·사무소·학교·땅 바꾸기·5-2·A2·A3)이 부른다. 끔이면 아무것도 하지 않는다.
+ * 정부 건물·무역소는 따르지 않는다: 모든 종류에 건 비교(b5fc269, 20년 × 시드 1·2, 26·52·104주)에서 무역소·행정청 철거가 줄지 않았다 (DESIGN 11 aiRebuildWait)
  */
 function noteDemolish(w: World, b: Building) {
-  if (TUNE.aiRebuildWait > 0) (regionById(w, b.regionId).demoAt ??= {})[b.typeId] = w.tick;
+  if (TUNE.aiRebuildWait > 0 && waitsRebuild(b.typeId)) (regionById(w, b.regionId).demoAt ??= {})[b.typeId] = w.tick;
+}
+
+/** 다시 짓기 기다림을 따르는 종류: 생산 건물 (정부 건물·무역소·자동 건물이 아닌 것, reserveRuled 와 같은 종류 거르기) */
+function waitsRebuild(typeId: string): boolean {
+  return !BUILDING_BY_ID[typeId].auto && !isGovernment(typeId) && typeId !== TRADING_POST;
 }
 
 /**
- * 그 지역에서 그 종류의 AI 철거 명령이 TUNE.aiRebuildWait 주 안에 있었는가: 그러면 AI 는 그 지역에 그 종류를 짓지도 늘리지도 않는다
- * (pickProject·planTrials·reserveLevels·growRegion·secureGovInputs·사무소 증설). 왕실·민간 어느 쪽이 헐었든 같은 지역·종류면 막는다
+ * 그 지역에서 그 생산 건물 종류의 AI 철거 명령이 TUNE.aiRebuildWait 주 안에 있었는가: 그러면 AI 는 그 지역에 그 종류를 짓지도 늘리지도 않는다
+ * (planTrials·reserveLevels·growRegion·secureGovInputs, aiReserveRule 0 이면 pickProject). 왕실·민간 어느 쪽이 헐었든 같은 지역·종류면 막는다
  */
 function rebuildBlocked(w: World, regionId: number, typeId: string): boolean {
-  if (!(TUNE.aiRebuildWait > 0)) return false;
+  if (!(TUNE.aiRebuildWait > 0) || !waitsRebuild(typeId)) return false;
   const t = regionById(w, regionId).demoAt?.[typeId];
   return t != null && w.tick - t < TUNE.aiRebuildWait * TICKS_PER_WEEK;
 }

@@ -1,6 +1,14 @@
 {
  "reports": [
   {
+   "id": "2026-11-02-churn7",
+   "title": "짓고 허는 반복 (이슈 #7)",
+   "desc": "churndiag 20년 × 시드 1·2 (wt-churn7). 대조 = main 9ba5acc 규칙, 다시 짓기 기다림 aiRebuildWait: 생산 건물만 52·104주, 모든 종류 26·52·104주. quick2 = 지은 지 2년 안에 헐린 레벨, cycle = 짓기→헐기→짓기",
+   "date": "2026-11-02",
+   "created": "2026-11-02T21:21:30",
+   "code": "c7c8fa1a"
+  },
+  {
    "id": "2026-11-02-wagespan",
    "title": "맞는 임금의 위 끝 배율·하루 속도 비교",
    "desc": "wt-span (main 81494a1 + wageTargetSpan TUNE 키). ctl = span 2·속도 0.1 (기본), sp15 = span 1.5, sp3 = span 3, v20 = 속도 0.2. 20년 × 시드 1·2 × salt 0..3 (.sN = salt N), 대륙 줄. 덧붙인 지표 skRatio·lnsd6·lo6·adminSt1~3 은 lab 줄에서 계산",

@@ -10,7 +10,7 @@ import './lowprio';
 //   명령은 건물마다 줄(먼저 넣은 명령부터 헐린다)에 넣고, 취소(철거 대기 0)되면 줄 끝부터 지운다 (cancel).
 // 해마다 한 줄 (대륙 합): 위 수, 원인별·길별 레벨, 총생산(gdp, 백만/년), 민간·국영 레벨(lvPriv·lvState, 연말).
 // 마지막에 반복이 많은 (왕국, 지역, 종류) 상위 TOP 개 (quick2 + rebuild 순)와 해마다 (완공/헐림/2년 안 헐림), 종류별 합계.
-// out.jsonl 을 주면 해마다 한 줄 ({"y":..,"seed":..}, cli/report.py 가 읽는 진단 형식)과 out.jsonl.top.json (상위 키) 을 쓴다.
+// out.jsonl 을 주면 해마다 한 줄 ({"y":..,"seed":..}, cli/report.py 가 읽는 진단 형식, 원인별·길별은 demoBy·quick2By·startBy·rebuildBy)과 out.jsonl.top.json (상위 키) 을 쓴다.
 // 시뮬레이션 상태를 바꾸지 않고 무작위 수열을 쓰지 않는다 (aiTrace 와 세계 상태를 읽기만 한다)
 import { writeFileSync } from 'node:fs';
 import { aiTrace } from '../src/ai';
@@ -211,7 +211,7 @@ for (let y = 1; y <= years; y++) {
   console.log(`${y} | ${g('start')} ${g('built')} ${g('demo')} ${g('quick1')} ${g('quick2')} ${g('rebuild')} ${g('cycle')} | ${fmt(a, 'demo.')} | ${fmt(a, 'start.')} | ${gdp} ${lvPriv} ${lvState}`);
   const line: Record<string, unknown> = { y, seed, salt, gdp, lvPriv, lvState, start: g('start'), built: g('built'), demo: g('demo'), quick1: g('quick1'), quick2: g('quick2'), rebuild: g('rebuild'), cycle: g('cycle'), cancel: g('cancel'),
     quickIdx: g('start') > 0 ? +(g('quick1') / g('start')).toFixed(3) : null };
-  for (const p of ['demo.', 'quick2.', 'start.', 'rebuild.']) line[p.slice(0, -1)] = Object.fromEntries(Object.entries(a).filter(([k]) => k.startsWith(p) && k.indexOf('.') === p.length - 1).map(([k, v]) => [k.slice(p.length), v]));
+  for (const p of ['demo.', 'quick2.', 'start.', 'rebuild.']) line[`${p.slice(0, -1)}By`] = Object.fromEntries(Object.entries(a).filter(([k]) => k.startsWith(p) && k.indexOf('.') === p.length - 1).map(([k, v]) => [k.slice(p.length), v]));
   lines.push(line);
 }
 console.log(`(${((Date.now() - t0) / 1000).toFixed(0)}초)`);

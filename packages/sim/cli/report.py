@@ -143,6 +143,16 @@ LABELS['workshopLv'] = L('공방 레벨', '건물 레벨', '', '공방 레벨 �
 LABELS['swLv'] = L('방식 바꾼 레벨', 'AI 길', '/년', 'AI가 그해 방식을 바꾼 건물 레벨 합 (ai.ts aiTrace switchIn)')
 LABELS['pickLv'] = L('보통 후보 착공 레벨', 'AI 길', '/년', 'AI 보통 후보(pickProject)로 그해 넣은 레벨')
 LABELS['shrinkLv'] = L('철거 레벨', 'AI 길', '/년', 'AI가 그해 철거 대기에 올린 레벨 (reviewLevels)')
+# cli/churndiag.ts (짓고 허는 반복, 이슈 #7): 대륙 합, 해마다
+for k, v in {'start': ('착공 레벨', '그해 착공한 레벨'), 'built': ('완공 레벨', '그해 완공된 레벨'), 'demo': ('헐린 레벨', '그해 실제로 헐린 레벨'),
+             'quick2': ('2년 안 헐린 레벨', '같은 (왕국, 지역, 종류)에서 완공된 지 104주 안에 헐린 레벨 (가장 최근 완공 레벨과 짝)'),
+             'quick1': ('1년 안 헐린 레벨', '완공된 지 52주 안에 헐린 레벨'), 'rebuild': ('다시 착공 레벨', '같은 (왕국, 지역, 종류)에서 철거 명령 뒤 104주 안에 착공한 레벨'),
+             'cycle': ('짓기→헐기→짓기', '착공 → 104주 안 철거 명령 → 104주 안 다시 착공 횟수'), 'cancel': ('철거 취소 레벨', '철거 대기에서 거둔 레벨'), 'quickIdx': ('1년 안 헐림 ÷ 착공', '1년 안 헐린 레벨 ÷ 그해 착공 레벨 (lab quickIdx 와 비슷한 셈, 지역·종류 키 기준)'),
+             'lvPriv': ('민간 레벨', '연말 민간 건물 레벨 (자동 건물 제외)'), 'lvState': ('국영 레벨', '연말 국영 건물 레벨 (자동 건물 제외)')}.items():
+    LABELS[k] = L(v[0], '짓고 허는 반복', '/년' if k not in ('lvPriv', 'lvState', 'quickIdx') else '', v[1])
+for p, n in (('demoBy', '헐린 레벨'), ('quick2By', '2년 안 헐린 레벨'), ('startBy', '착공 레벨'), ('rebuildBy', '다시 착공 레벨')):
+    for path in ('reserveShrink', 'shrink', 'officeShrink', 'schoolShrink', 'swap', 'sdDemo', 'sellDemo', 'marginDemo', 'untraced', 'player', 'reserve', 'trial', 'pick', 'loss', 'dev', 'govInputs', 'office'):
+        LABELS[f'{p}.{path}'] = L(f'{n}: {path}', '짓고 허는 반복', '/년', f'{n} 중 AI 길 {path} 몫 (ai.ts aiTrace)')
 LABELS['toolSh'] = L('공구 쓰는 방식 비율', '경제', '', '공구를 원료로 쓰는 방식의 레벨 ÷ 생산 건물 레벨 (학교·사무소 제외)')
 LABELS['upSh'] = L('윗단 방식 비율', '경제', '', '첫 방식이 아닌 방식의 레벨 ÷ 생산 건물 레벨 (학교·사무소 제외)')
 for c in ('unskilled', 'skilled', 'expert'):
@@ -173,7 +183,7 @@ LAB = {'solPeasAvg': ('소작농 생활수준 (연평균)', ''), 'solUnskAvg': (
        'adminSt1': ('행정청 충원 (왕국 1, 방치 플레이어)', ''), 'adminSt2': ('행정청 충원 (왕국 2, AI)', ''), 'adminSt3': ('행정청 충원 (왕국 3, AI)', '')}
 for k, (nm, u) in LAB.items(): LABELS[k] = L(nm, '0b 측정', u)
 GROUPS = ['경제', '0b 측정', '생활수준', '소득', '인구', '계층 인구', '계층 노동 인구', '일자리', '임금', '돈', '돈 ÷ 총생산', '왕실', '연구', '건축사무소', '복지', '왕실 장부', '민간 장부',
-          '소유 건물 흐름', '시장', '값 (기본가 대비)', '공급', '수요', '공급÷수요', '거래량', '가계 수요', '건물 레벨', 'AI 길', '소유', '정부', '하급 귀족 일자리', '기타']
+          '소유 건물 흐름', '시장', '값 (기본가 대비)', '공급', '수요', '공급÷수요', '거래량', '가계 수요', '건물 레벨', 'AI 길', '짓고 허는 반복', '소유', '정부', '하급 귀족 일자리', '기타']
 # 해마다 한 줄 진단 파일(.tmp/col/collapse.ts)에서만 뜻이 다른 이름
 FLAT = {'peas': L('소작농 수', '인구', '백만')}
 FLAT_DEFAULTS = ['gdp', 'pop', 'peas', 'food', 'stock.savAll', 'stock.gov', 'stock.fin', 'stock.total', 'wage.pU', 'price.grain', 'sellThru', 'util']
