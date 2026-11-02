@@ -680,6 +680,9 @@ export const TUNE = {
   // 2 = 1 + 걷을 세금을 보통 세금 수준(3단계)으로 환산. 짓기 판단은 그대로 (마지막 한 칸). 0 = 끔 (그 전과 같음).
   // 2026-11-02 기본 1 (0·1·2 비교, 20년 × 시드 1·2 × salt 0..3, 근거: DESIGN 11, 보고서 2026-11-02-admin4)
   aiAdminValue: 1,
+  // 다시 짓기 기다림 (이슈 #7, AI 판단, ai.ts rebuildBlocked): > 0 이면 AI 는 어느 AI 회사가 한 지역에서 한 생산 건물 종류(정부 건물·무역소 제외)의 철거를 명령한 뒤
+  // 이 주 수 동안 그 지역에 그 종류를 짓지도 늘리지도 않는다 (Region.demoAt). 0 = 끔. 2026-11-02 기본 52 (wt-churn7, 후보 26·52·104, 근거: DESIGN 11)
+  aiRebuildWait: 52,
   // 왕실 국영 건물의 지역 웃돈 (2026-11-02 wt-admin, AI 판단): > 0 이면 AI 왕실이 매주 지역마다 그 지역 정부 건물(행정청·건축사무소·학교)의 직종 충원율이
   // ADMIN_STAFFED 아래면 웃돈을 바로 바깥 소득 × STATE_HIRE_PULL 에 맞추고, 차 있으면 바깥 소득과 같은 국영 임금까지 PREMIUM_STEP 씩 내린다 (웃돈 0 ~ 이 값, 이 값 = 웃돈 상한).
   // 바깥 소득 = 그 지역 시장 임금과 다음 중 큰 쪽: 노동자·농부는 소작 1인 소득, 하급 귀족은 그 지역 저택의 하급 귀족 1인 몫 (manorShares 1 이면 0) (ai.ts adjustStatePremium, Company.statePremium,
