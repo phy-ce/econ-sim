@@ -143,7 +143,7 @@ export function applyStateWages(w: World, k: Kingdom) {
   const t = (gov.stateWages ??= { ...gov.wages });
   const mult = budgetMult(k, 'wages');
   if (TUNE.wageMarket) {
-    // 지역 시장 임금: 정부 건물은 그 지역 시장 임금 × 단계 배율 (Region.stateWages). 왕실 국영 임금표는 왕국 지역들의 평균 (화면·추정용 대표값)
+    // 지역 시장 임금: 정부 건물은 그 지역 시장 임금 × 단계 배율 × (1 + AI 왕실 웃돈) (Region.stateWages). 왕실 국영 임금표는 왕국 지역들의 평균 (화면·추정용 대표값)
     for (const r of w.regions) {
       if (r.kingdomId !== k.id) continue;
       const wages = ensureWages(w, r);

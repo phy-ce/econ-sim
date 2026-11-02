@@ -764,15 +764,15 @@ export const ENCYCLOPEDIA: EncEntry[] = [
       pick: ['kingdom'], run: (w, ctx) => {
         const k = kingdomOfCtx(w, ctx), c = companyById(w, k.governmentId);
         if (!c?.statePremium) return {};
-        return { bars: Object.entries(c.statePremium).map(([rid, x]) => bar(regionLabel(w.regions.find((r) => r.id === Number(rid))!), r2(x.gentry), 'pct', Math.max(1, TUNE.aiStatePremium))) };
+        return { bars: Object.entries(c.statePremium).map(([rid, x]) => bar(regionLabel(w.regions.find((r) => r.id === Number(rid))!), r2(Math.max(...SKILLS.map((s) => x[s]))), 'pct', Math.max(1, TUNE.aiStatePremium))) };
       },
     },
     related: ['state-wages', 'ai-budget', 'ai-wage-premium', 'shares'], seenIn: [], source: ['ai.ts adjustStatePremium', 'finance.ts applyStateWages'], design: ['7.3', '10'],
   },
   {
     id: 'state-wages', category: 'labour', title: t('국영 임금과 임금 지수', 'State wages and the wage index'),
-    rule: t('왕실의 정부 건물(행정청·건축사무소·학교)은 국영 임금을 준다: 그 직종의 시장 임금 × 국영 임금 단계 배율({0}). 지역 시장 임금이 켜져 있으면(기본) 시장 임금은 그 지역 시장 임금이고, 꺼져 있으면 이 왕실 밖 모든 건물의 고용 가중 평균 임금이다 (고용이 없는 직종은 기본 임금). 왕실 생산 건물도 시장 임금이다. 임금 지수(민간 노동자·농부 평균 임금 ÷ 기본 임금)는 AI 왕실이 국영 임금 단계를 고르는 데만 쓴다.', 'Crown government buildings (administration, construction office, school) pay the state wage: the market wage of the job × state-wage step ({0}). With the regional market wage on (default) the market wage is that region’s market wage; with it off it is the employment-weighted average wage of all buildings outside this crown (base wage if nobody is employed in that job). Crown producers pay market wages too. The wage index (private labourer and farmer wages ÷ base wage) is only used by the AI crown to pick the state-wage step.'),
-    formula: 'wage_s = marketWage_s × level',
+    rule: t('왕실의 정부 건물(행정청·건축사무소·학교)은 국영 임금을 준다: 그 직종의 시장 임금 × 국영 임금 단계 배율({0}). 지역 시장 임금이 켜져 있으면(기본) 시장 임금은 그 지역 시장 임금이고, 꺼져 있으면 이 왕실 밖 모든 건물의 고용 가중 평균 임금이다 (고용이 없는 직종은 기본 임금). 왕실 생산 건물도 시장 임금이다. AI 왕실은 그 지역 국영 웃돈만큼 더 준다: × (1 + 웃돈) (국영 웃돈 항목). 임금 지수(민간 노동자·농부 평균 임금 ÷ 기본 임금)는 AI 왕실이 국영 임금 단계를 고르는 데만 쓴다.', 'Crown government buildings (administration, construction office, school) pay the state wage: the market wage of the job × state-wage step ({0}). With the regional market wage on (default) the market wage is that region’s market wage; with it off it is the employment-weighted average wage of all buildings outside this crown (base wage if nobody is employed in that job). Crown producers pay market wages too. An AI crown also multiplies by (1 + its regional state premium) (see State wage premium). The wage index (private labourer and farmer wages ÷ base wage) is only used by the AI crown to pick the state-wage step.'),
+    formula: 'wage_s = marketWage_s × level × (1 + premium_s, AI crown only)',
     params: [tune('govWageLevels', '국영 임금 단계', 'State wage steps', 'x')],
     live: {
       pick: ['kingdom'], run: (w, ctx) => {
@@ -780,7 +780,7 @@ export const ENCYCLOPEDIA: EncEntry[] = [
         return { rows: [row('임금 지수', 'Wage index', k.wageIndex ?? 1, 'x'), row('국영 임금 단계', 'State wage step', k.budget.wages), row('국영 노동자 임금', 'State labourer wage', gov?.stateWages?.unskilled ?? 0, 'florin'), row('국영 기술자 임금', 'State skilled wage', gov?.stateWages?.skilled ?? 0, 'florin'), row('왕실 생산 노동자 임금', 'Crown producer labourer wage', gov?.wages.unskilled ?? 0, 'florin')] };
       },
     },
-    related: ['budget-steps', 'ai-wages'], seenIn: ['finance'], source: ['finance.ts updateWageIndex', 'finance.ts applyStateWages', 'economy.ts wagesAt'], design: ['9.2', '7.3'],
+    related: ['budget-steps', 'ai-wages', 'ai-state-premium'], seenIn: ['finance'], source: ['finance.ts updateWageIndex', 'finance.ts applyStateWages', 'economy.ts wagesAt'], design: ['9.2', '7.3'],
   },
   {
     id: 'migration', category: 'labour', title: t('이주', 'Migration'),

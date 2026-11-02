@@ -537,7 +537,7 @@ export interface Region {
   wages?: Record<Skill, number>;
   /** wages 의 52주 이동평균 (날마다 1/364 씩 다가간다). AI 투자 판단 임금 (outlook.ts longRunWages) */
   wageAvg?: Record<Skill, number>;
-  /** 이 지역 왕실 정부 건물의 국영 임금 = wages × 국영 임금 단계 배율 (매주, finance.ts applyStateWages). wageMarket = 1 일 때만 */
+  /** 이 지역 왕실 정부 건물의 국영 임금 = wages × 국영 임금 단계 배율 × (1 + AI 왕실 국영 웃돈 Company.statePremium, 없으면 0) (매주, finance.ts applyStateWages). wageMarket = 1 일 때만 */
   stateWages?: Record<Skill, number>;
 }
 

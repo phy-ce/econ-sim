@@ -1,5 +1,5 @@
 {
- "about": "행정청 충원 (wt-admin, 2026-11-02). 진단 .tmp/admin/RESULT.md: 세습 관료제 행정청의 하급 귀족은 그 지역 저택의 하급 귀족 1인 몫(1년차 국영 임금의 1.5~3배)과 비교해 저택으로 떠난다. ctl = main b1bd1fa 기본값 (A2 aiAdminWage 2 포함), pN = aiStatePremium N (AI 왕실의 국영 건물 지역 웃돈, 상한 N), p2a0 = p2 + aiAdminWage 0 (A2 끔). 20년 × 시드 1·2 × salt 0..3. 돌리기 (packages/sim 에서): PAR=12 bash cli/lab.sh <out.jsonl> ../../docs/overhaul/ADMIN_SPECS.json. 요약: python cli/labsum.py <out.jsonl> --compare ctl.",
+ "about": "행정청 충원 (wt-admin, 2026-11-02). 진단 .tmp/wt/admin/.tmp/admin/RESULT.md: 세습 관료제 행정청의 하급 귀족은 그 지역 저택의 하급 귀족 1인 몫(1년차 국영 임금의 1.5~3배)과 비교해 저택으로 떠난다. ctl = main b1bd1fa 기본값 (A2 aiAdminWage 2 포함), pN = aiStatePremium N (AI 왕실의 국영 건물 지역 웃돈, 상한 N), p2a0 = p2 + aiAdminWage 0 (A2 끔). 20년 × 시드 1·2 × salt 0..3. 돌리기 (packages/sim 에서): PAR=12 bash cli/lab.sh <out.jsonl> ../../docs/overhaul/ADMIN_SPECS.json. 요약: python cli/labsum.py <out.jsonl> --compare ctl.",
  "code": "wt-admin a1aa901 (main b1bd1fa + aiStatePremium 스위치, 끄면 samecheck 5개 같음)",
  "counts": {
   "specs (20년)": 40
