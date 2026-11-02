@@ -56,7 +56,7 @@ sim 변경 반영 (main c952e65, wt-labor 병합: 지역 시장 임금·저축�
 14. **왕국 통계·정책·연구·재정·에셋 감사** (2-35 코드 완료, UI_DONE; 2-26·2-28·2-34 완료; 2-30·2-60·2-31 코드 완료; 2-37 완료; 2-36·2-39 완료; 2-45·2-56 기술 링크·전환 상태·세율·투자 직종 보완, 전환 사건 화면 검증 잔여; 2-54 완료, UI_DONE): 1·2장 옛 절과 지금 코드를 대조. 오래된 목록만 보고 미구현/완료로 단정하지 않는다.
 
 sim 변경 반영 (wt-ig: 이익집단 읽기 전용 층, 아직 main 에 안 합침)
-15. **2-88 정치 창 (낮음)**: 왕국 이익집단 6줄 (영향력·승인·기분). 읽기 전용, 효과 없음. wt-ig 가 main 에 들어온 뒤.
+15. **2-88 정치 창 (낮음)**: 왕국 이익집단 6줄 (영향력·승인·기분), 투표법 라벨. 읽기 전용, 효과 없음. wt-ig 가 main 에 들어온 뒤.
 
 sim 대기 · 결정 대기
 - **2-33 지도 정점 분포**: 연속 보간 구현. seed42·360일 부1.14~1.27/생활수준1.07~1.24가 고정 첫 정점2 아래에 몰림. 고정 정점 유지와 가운데 정점에 모이게 하라는 옛 요구의 범위 재선택은 결정 대기(UI_STATUS).
@@ -1164,17 +1164,18 @@ sim 변경 (wt-research):
 
 ### 2-88. 정치 창: 이익집단 (wt-ig, DESIGN 9.6, DECISIONS 7-45, 사전 `interest-groups`, sim 준비됨 (`interestGroups`), 낮은 우선순위: 읽기 전용 층)
 - sim: `interestGroups(w, kingdomId): IgStatus` = `{ kingdomId, votingLaw, groups: IgRow[] }` (`interestGroups.ts`). 세계를 바꾸지 않는다. 값은 반올림하지 않았다 (화면이 소수 둘째 자리로 반올림, % 는 정수).
-  - `IgRow`: `id` (`IG_IDS`: landowners·industrialists·petite·rural·unions·intelligentsia, 이 순서), `name`·`nameEn`, `members` (회원 수, 명), `clout` (0~1, 왕국 합 1), `status` ('powerful' | 'influential' | 'marginal'), `approval` (−20~20), `parts` `{ stances, change, sol }` (승인을 이루는 셋, 합은 한도 ±20 전 값), `pending` (바뀌는 중인 법이 바뀌면 생길 충격, 승인에 안 들어감), `mood` ('angry' | 'unhappy' | 'neutral' | 'happy' | 'loyal'), `stance` `{ tax, invest, welfare, voting }` (−2~+2).
-  - `votingLaw`: 'nobles' (지금 모든 왕국. 플레이어 명령 없음, 단계 3 전까지 읽기 전용 라벨).
-  - 화면은 `lawHist` 를 넘기지 않는다 → `parts.change` 는 단계 1 (세계가 법 바꾸기를 기록) 전까지 0.
-  - 상수: `IG_NAMES`, `IG_POWERFUL`, `IG_MARGINAL`, `IG_MOOD_AT`, `IG_APPROVAL_CAP`, `VOTING_LAWS`. 값은 코드에서 읽는다.
+  - `IgRow`: `id` (`IG_IDS`: landowners·industrialists·petite·rural·unions·intelligentsia, 이 순서), `name`·`nameEn`, `members` (회원 수, 명), `clout` (0~1, 왕국 합 1), `status` ('powerful' | 'influential' | 'marginal'), `approval` (−20~20), `parts` `{ stances, change, sol }` (승인을 이루는 셋, 합은 한도 ±20 전 값), `pending` (`change` 중 지금 바뀌는 중인 법의 몫), `mood` ('angry' | 'unhappy' | 'neutral' | 'happy' | 'loyal'), `stance` `{ tax, invest, welfare, voting }` (−2~+2).
+  - `votingLaw`: `VOTING_LAWS` 여섯 중 하나 (지금 모든 왕국 'autocracy' 전제. 플레이어 명령 없음, 단계 3 전까지 읽기 전용 라벨). 이름은 `VOTING_NAMES`.
+  - 화면은 `lawHist` 를 넘기지 않는다 → `parts.change` 에는 바뀌는 중인 법의 충격만 들어 있다 (이미 바뀐 법의 충격은 단계 1 에서 세계가 기록한 뒤).
+  - 상수: `IG_NAMES`, `VOTING_NAMES`, `IG_POWERFUL`, `IG_MARGINAL`, `IG_MOOD_AT`, `IG_APPROVAL_CAP`, `VOTING_LAWS`. 값은 코드에서 읽는다.
+  - `lawChance(w, kingdomId, kind, to)` → `{ chance, support, oppose, crown, groups }` (법이 바뀔 확률, 단계 2 규칙의 읽기용 값) 도 있지만 단계 2 전에는 화면에 넣지 않는다 (아직 확률로 바뀌지 않으므로 보이면 헷갈린다).
 - 화면: 정책 창 (진행 C 의 국가 예산/법 탭 묶음) 에 탭 하나 "정치". 고른 왕국 (기본 플레이어 왕국).
-  1. 머리 줄: "투표법" 라벨 + 이름 (귀족정/재산 투표/보통 선거).
+  1. 머리 줄: "투표법" 라벨 + 이름 (`VOTING_NAMES[votingLaw]`).
   2. 집단 6줄 (`groups` 순서). 칸: 이름 | 영향력 막대 (0~100%) + `pct(clout)` + 칩 (`status` 힘셈/소외, 보통은 칩 없음) | 승인 막대 (−20~+20, 0 가운데, 음수 `neg`·양수 `pos` 색) + 숫자 (`toFixed(1)`) | 기분 칩 (`mood`) | 회원 수.
   3. 줄을 누르면 펼침: 승인 셋 `parts` (법 입장 / 법 바꾸기 / 생활수준, 각 `toFixed(1)`), 법 입장 넷 `stance` (세법·투자법·복지법·투표법, −2~+2 를 아이콘이나 부호 숫자로), `pending` 이 0 이 아니면 "바뀌면" + 부호 숫자.
   4. 설명 문구는 넣지 않는다 (라벨·숫자·막대만, 툴팁 가능).
-- 넣지 않는 것 (단계 2 전): 법 버튼 옆 "막는 집단" 칩. `igLawCheck` 는 있지만 지금은 아무것도 막지 않으므로 보이면 헷갈린다.
-- 문자열 (ko/en): "정치"/"Politics", "투표법"/"Voting law", "귀족정"/"Aristocratic franchise", "재산 투표"/"Wealth voting", "보통 선거"/"Universal suffrage", 집단 이름은 `IG_NAMES`, "영향력"/"Clout", "승인"/"Approval", "회원"/"Members", "힘셈"/"Powerful", "소외"/"Marginalised", "성남"/"Angry", "불만"/"Unhappy", "중립"/"Neutral", "만족"/"Happy", "충성"/"Loyal", "법 입장"/"Stances", "법 바꾸기"/"Law changes", "생활수준"/"Living standard", "바뀌면"/"If enacted".
+- 넣지 않는 것 (단계 2 전): 법 버튼 옆 "바뀔 확률" 과 찬반 집단. `lawChance` 는 있지만 지금은 법이 확률로 바뀌지 않는다.
+- 문자열 (ko/en): "정치"/"Politics", "투표법"/"Voting law" (투표법 이름은 `VOTING_NAMES`), 집단 이름은 `IG_NAMES`, "영향력"/"Clout", "승인"/"Approval", "회원"/"Members", "힘셈"/"Powerful", "소외"/"Marginalised", "성남"/"Angry", "불만"/"Unhappy", "중립"/"Neutral", "만족"/"Happy", "충성"/"Loyal", "법 입장"/"Stances", "법 바꾸기"/"Law changes", "생활수준"/"Living standard", "바뀌면"/"If enacted".
 - 완료 기준: 왕국마다 영향력 % 합 100 (반올림 ±1). 승인 숫자 = `parts` 셋의 합을 ±20 으로 자른 값. 같은 날 사전 `interest-groups` live 값과 같다. typecheck.
 
 ## 3. sim 쪽 필요 사항 (Claude가 처리할 것, UI 작업자는 요청만)

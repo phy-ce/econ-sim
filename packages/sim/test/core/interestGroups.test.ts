@@ -1,8 +1,8 @@
-// 이익집단 단계 0 (읽기 전용 층, src/interestGroups.ts) 의 공식: 회원 몫 합 1, 영향력 합 1, 승인 한도, 기분 문턱, 법 바꾸기 충격, 법 저항 미리보기.
+// 이익집단 단계 0 (읽기 전용 층, src/interestGroups.ts) 의 공식: 회원 몫 합 1, 영향력 합 1, 승인 한도, 기분 문턱, 법 바꾸기 충격, 선거 보정치, 자본가 지분 끌림, 법이 바뀔 확률.
 // 세계를 바꾸지 않는 것은 readonly.test.ts 가 본다. 경제 결과로는 실패하지 않는다.
 import { describe, expect, it } from 'vitest';
 import {
-  IG_APPROVAL_CAP, IG_IDS, IG_MOOD_AT, POP_CLASSES, VOTING_LAWS, createWorld, igChangeShock, igLawCheck, igMembership, igMood, interestGroups, step,
+  IG_APPROVAL_CAP, IG_IDS, IG_MOOD_AT, POP_CLASSES, VOTING_LAWS, IG_FUND_MAX, IG_FUND_WEIGHT, LAW_OPPOSE_MULT, VOTE_LITERACY, VOTE_MOD, createWorld, igChangeShock, igFundAttraction, igMembership, igMood, igVoteMod, interestGroups, lawChance, step,
 } from '../../src/index';
 import type { Pop } from '../../src/index';
 
@@ -56,20 +56,40 @@ describe('이익집단 (단계 0)', () => {
     expect(at(1800)).toBe(0);
   });
 
-  it('법 저항 미리보기: 지금 법이면 늘 ok, 막는 집단은 힘세고 반대하고 만족 아래', () => {
+  it('선거 보정치: 표의 값, 인구 조사 선거는 문해력을 더한다', () => {
+    const p = pop('skilled', 0.6);
+    expect(igVoteMod('autocracy', p)).toBe(VOTE_MOD.autocracy.skilled);
+    expect(igVoteMod('census', p)).toBeCloseTo(VOTE_MOD.census.skilled + 0.6, 12);
+    expect(VOTE_LITERACY.census).not.toContain('peasant');
+    expect(igVoteMod('census', pop('peasant', 0.6))).toBe(VOTE_MOD.census.peasant);
+  });
+
+  it('자본가 지분 끌림: 1년 생활비만큼 지분이면 IG_FUND_WEIGHT, 상한 IG_FUND_MAX', () => {
+    expect(igFundAttraction(0, 100)).toBe(0);
+    expect(igFundAttraction(100, 100)).toBeCloseTo(IG_FUND_WEIGHT, 12);
+    expect(igFundAttraction(100 * 100, 100)).toBe(IG_FUND_MAX);
+    expect(igFundAttraction(1, 0)).toBe(IG_FUND_MAX);
+    const s = igMembership(pop('unskilled', 0), 100, 100);
+    expect(s.industrialists).toBeCloseTo(IG_FUND_WEIGHT / (100 + IG_FUND_WEIGHT), 12);
+  });
+
+  it('법이 바뀔 확률: 0..1, 지금 법이면 1, 찬성 ÷ (찬성 + 반대)', () => {
     const w = createWorld(2, { withPlayer: false });
     for (let d = 0; d < 400; d++) step(w);
     for (const k of w.kingdoms) {
-      expect(igLawCheck(w, k.id, 'tax', k.taxLaw).ok).toBe(true);
-      const st = interestGroups(w, k.id);
+      expect(lawChance(w, k.id, 'tax', k.taxLaw).chance).toBe(1);
       for (const to of ['none', 'poor', 'wage', 'universal']) {
-        const r = igLawCheck(w, k.id, 'welfare', to);
-        for (const b of r.blockers) {
-          const g = st.groups.find((x) => x.id === b)!;
-          expect(g.status).toBe('powerful');
-          expect(g.approval).toBeLessThan(IG_MOOD_AT.happy);
+        const c = lawChance(w, k.id, 'welfare', to);
+        expect(c.chance).toBeGreaterThanOrEqual(0);
+        expect(c.chance).toBeLessThanOrEqual(1);
+        let sup = c.crown, opp = 0;
+        for (const r of c.groups) {
+          if (r.side === 'for') sup += r.clout;
+          if (r.side === 'against') { opp += r.clout * LAW_OPPOSE_MULT[r.mood]; expect(r.weight).toBeCloseTo(r.clout * LAW_OPPOSE_MULT[r.mood], 12); }
         }
-        expect(r.ok).toBe(r.blockers.length === 0);
+        expect(c.support).toBeCloseTo(sup, 12);
+        expect(c.oppose).toBeCloseTo(opp, 12);
+        if (to !== k.welfareLaw) expect(c.chance).toBeCloseTo(opp > 0 ? sup / (sup + opp) : 1, 12);
       }
     }
   });

@@ -637,15 +637,16 @@ sim은 숫자를 반올림하지 않는다 (저장 형식 12판, 2026-10-22). �
 
 ### 9.6 이익집단 (읽기 전용 층, `interestGroups.ts`, 단계 0)
 - 상태: **효과가 없는 읽기 전용 층이다.** sim(`step`)은 이 파일을 부르지 않고, 화면·사전·진단 CLI(`cli/igdiag.ts`)만 부른다. 그래서 결과는 비트까지 같다 (samecheck 5개 해시가 main 93bc0b0 과 같음, HANDOFF 0-1102i). 설계 전체와 단계 1~3 은 `docs/overhaul/INTEREST_GROUPS.md`, 사용자 결정은 DECISIONS 7-45.
-- 한 줄 규칙: **pop 은 직종별 끌림 가중치 비율대로 이익집단 여섯을 나눠 지지하고, 집단의 영향력은 투표권 있는 회원의 (인구 × 부 단계) 합의 몫이며, 승인은 지금 법 입장 + 최근 법 바꾸기 + 1년 생활수준 변화다.**
+- 한 줄 규칙: **pop 은 끌림 가중치 비율대로 이익집단 여섯을 나눠 지지한다. 집단의 영향력은 회원의 총 부 (인구 × 부 단계) × 선거 보정치의 몫이고, 승인은 지금 법 입장 + 제안 중이거나 최근에 바뀐 법 + 1년 생활수준 변화다.**
 - 집단 (`IG_IDS`): 지주, 자본가, 소시민, 농민, 노동조합, 지식인. 빅토리아3 의 8집단 중 회원 직종이 없는 군부·종교는 뺐다.
-- 회원 (`igMembership`): pop 의 몫 = 끌림 ÷ 끌림 합. 끌림 = 직종별 고정 가중치 (`IG_ATTRACT`) + 지식인 끌림 `IG_LITERACY_WEIGHT` × 문해력 (문해력 `IG_LITERACY_MIN` 미만이면 0). 빅토리아3 의 생활수준 항은 뺐다 (우리 생활수준 척도가 빅토리아3 와 달라 그대로 못 옮긴다).
-- 정치 힘 = Σ pop 투표법 가중치(`VOTE_WEIGHT`, 0 또는 1) × 인구 × 부 단계 × 그 집단 몫 (`igWealth` = 인구 × 부 단계). 영향력 = 집단 정치 힘 ÷ 모든 집단의 합. 힘셈 ≥ `IG_POWERFUL`, 소외 < `IG_MARGINAL` (되돌아가는 문턱은 단계 1).
-- 투표법 (`VOTING_LAWS`, 아직 법이 아님): 귀족정(상급·하급 귀족·자본가) / 재산 투표(+ 기술자·전문가) / 보통 선거(모두). 모든 왕국이 `DEFAULT_VOTING_LAW`(귀족정)이고 플레이어 명령은 없다. 진단은 `opts.votingLaw` 로 다른 법을 본다.
-- 승인 (`interestGroups`) = 법 입장 합 (세법·투자법·복지법·투표법, `IG_STANCES`, ±`IG_STANCE_CAP`) + 최근 법 바꾸기 (칸 수별 `IG_CHANGE_STEPS`, 입장이 오르면 +·내리면 −, `IG_CHANGE_DAYS` 동안 직선으로 줄어듦, ±`IG_CHANGE_CAP`) + 생활수준 항 (`IG_SOL_PER` × 회원 수 가중 1년 생활수준 변화율, 매달 지표 `w.metrics` 의 직종별 생활수준, ±`IG_SOL_CAP`), 합 ±`IG_APPROVAL_CAP`. 법 바꾸기 기록은 세계에 없어 (단계 0) 부르는 쪽이 `opts.lawHist` 로 넘긴다 (화면은 0). 바뀌는 중인 법의 충격은 승인에 넣지 않고 `pending` 으로 따로 낸다.
+- 회원 (`igMembership`): pop 의 몫 = 끌림 ÷ 끌림 합. 끌림 = 직종별 고정 가중치 (`IG_ATTRACT`) + 지식인 `IG_LITERACY_WEIGHT` × 문해력 (문해력 `IG_LITERACY_MIN` 미만이면 0) + 자본가 `IG_FUND_WEIGHT` × 금융가 지분 가치 ÷ 1년 생활비 (`IG_FUND_MAX` 까지, `igFundAttraction`, 지분 가치 = 지분 수 × 금융가 지분 값, 1년 생활비 = 그 지역 값으로 부 단계 묶음을 1년 사는 비용 `igYearCost`). 빅토리아3 의 생활수준 항은 뺐다.
+- 정치 힘 = Σ pop 인구 × 부 단계 (`igWealth`) × 선거 보정치 (`igVoteMod`: 투표법·직종별 `VOTE_MOD`, 인구 조사 선거는 소작농 밖 직종에 + 문해력) × 그 집단 몫. 영향력 = 집단 정치 힘 ÷ 모든 집단의 합. 힘셈 ≥ `IG_POWERFUL`, 소외 < `IG_MARGINAL` (되돌아가는 문턱은 단계 1).
+- 투표법 (`VOTING_LAWS`, 아직 법이 아님): 전제 / 과두정 / 지주 투표 / 재산 투표 / 인구 조사 선거 / 보통 선거. 보정치 = 계층 지위 × 빅토리아3 정치 힘 배율 + 표 (표는 INTEREST_GROUPS.md 5.2). 모든 왕국이 `DEFAULT_VOTING_LAW`(전제: 왕실 하나가 법을 정하고 선거가 없는 지금과 가장 가깝다)이고 플레이어 명령은 없다. 진단은 `opts.votingLaw` 로 다른 법을 본다.
+- 승인 (`interestGroups`) = 법 입장 합 (세법·투자법·복지법·투표법, `IG_STANCES`, ±`IG_STANCE_CAP`) + 법 바꾸기 (칸 수별 `IG_CHANGE_STEPS`, 입장이 오르면 +·내리면 −, 제안 중에는 그대로·바뀐 뒤 `IG_CHANGE_DAYS` 동안 직선으로 줄어듦, ±`IG_CHANGE_CAP`) + 생활수준 항 (`IG_SOL_PER` × 회원 수 가중 1년 생활수준 변화율, 매달 지표 `w.metrics` 의 직종별 생활수준, ±`IG_SOL_CAP`), 합 ±`IG_APPROVAL_CAP`. 바뀐 법의 기록은 세계에 없어 (단계 0) 부르는 쪽이 `opts.lawHist` 로 넘긴다 (화면은 제안 중인 법만 보인다). `pending` = 그중 제안 중인 법의 몫.
 - 기분 (`igMood`, `IG_MOOD_AT`): 성남 / 불만 / 중립 / 만족 / 충성.
-- 법 저항 미리보기 (`igLawCheck`, 단계 2 규칙의 읽기용 판정, 지금은 아무것도 막지 않는다): 새 법에 대한 입장이 지금 법보다 낮은 힘센 집단이 모두 만족(승인 `IG_MOOD_AT.happy` 이상)이면 ok. 해석은 사용자 확인 대기 (DECISIONS 7-45).
-- 빅토리아3 출처 (영향력 문턱, 승인 항과 한도, 기분 문턱, 끌림 가중치, 법 입장): `docs/VIC3_REFERENCE.md` "이익집단 (2026-11-02)". 정치 힘의 식(부와의 관계)은 확인 못 함.
+- 법이 바뀔 확률 (`lawChance`, 단계 2 규칙의 읽기용 값, 지금은 아무것도 바꾸지 않는다): 찬성 ÷ (찬성 + 반대). 찬성 = 새 법을 더 좋아하는 소외되지 않은 집단의 영향력 + 왕실 칸당 `LAW_CROWN_PER_STEP`, 반대 = 지금 법을 더 좋아하는 소외되지 않은 집단의 영향력 × `LAW_OPPOSE_MULT[기분]` (만족·중립 / 불만 / 성남). 기분은 그 법을 제안한 상태의 승인으로 잰다.
+- 단계 2 (설계, 아직 없음, 사용자 확인 대기): 세법·투자법·복지법 (뒤에 투표법) 은 시작 조건(기술·금융가 비율)을 지나 180일(`lawDays`) 뒤 금융가 비율 만기 재검사를 통과하면, 그날 `lawChance` 확률로 한 번 굴려 바뀌거나 실패한다 (실패는 지금의 `lawFail`·`lawFailed`). 굴림은 고정 키 해시 (왕국·법 종류·끝나는 틱). 빅토리아3 의 단계 셋·전진·논쟁은 뺐다 (INTEREST_GROUPS.md 8장).
+- 빅토리아3 출처 (영향력 문턱, 승인 항과 한도, 기분 문턱, 끌림 가중치, 법 입장, 권력 분배법, 법 제정 확률): `docs/VIC3_REFERENCE.md` "이익집단 (2026-11-02 확인)". 정치 힘의 식(부와의 관계)은 확인 못 함.
 
 ## 10. AI 판단 요약 (`ai.ts runAi`, 매주, 플레이어 회사 제외)
 
@@ -886,7 +887,7 @@ AI 의 무작위(연구 점수, 착공 점수·손해 후보, 증설 확률)는 
 
 | 상수 | 값 | 뜻 | 근거 |
 |---|---|---|---|
-| `IG_ATTRACT`, `IG_LITERACY_WEIGHT`·`IG_LITERACY_MIN`, `VOTE_WEIGHT`, `IG_STANCES`, `IG_CHANGE_STEPS`·`IG_CHANGE_DAYS`, 한도 `IG_*_CAP`, `IG_POWERFUL`·`IG_MARGINAL`, `IG_MOOD_AT`, `IG_SOL_PER` (interestGroups) | 코드 | 이익집단 (9.6, 읽기 전용 층이라 지금은 결과에 효과 없음) | 값마다 출처 또는 "근거 없음"을 `docs/overhaul/INTEREST_GROUPS.md` 3~5장 표에 적었다 (빅토리아3 Interest_groups·Power_structure_laws·Economy_laws·Human_rights_laws, 2026-11-02 확인). `IG_SOL_PER` 는 근거 없음: 50 으로 20년 × 시드 1 을 보니 자본가(전문가 4천 명) 생활수준 항이 자주 한도 ±15 에 닿아 25 로 낮췄다 (비교 실행 아님, 효과 없는 층) |
+| `IG_ATTRACT`, `IG_LITERACY_WEIGHT`·`IG_LITERACY_MIN`, `IG_FUND_WEIGHT`·`IG_FUND_MAX`, `VOTE_MOD`·`VOTE_LITERACY`, `IG_STANCES`, `IG_CHANGE_STEPS`·`IG_CHANGE_DAYS`, 한도 `IG_*_CAP`, `IG_POWERFUL`·`IG_MARGINAL`, `IG_MOOD_AT`, `IG_SOL_PER`, `LAW_OPPOSE_MULT`·`LAW_CROWN_PER_STEP` (interestGroups) | 코드 | 이익집단 (9.6, 읽기 전용 층이라 지금은 결과에 효과 없음) | 값마다 출처 또는 "근거 없음"을 `docs/overhaul/INTEREST_GROUPS.md` 3~8장 표에 적었다 (빅토리아3 Interest_groups·Power_structure_laws·Economy_laws·Human_rights_laws·Laws, 2026-11-02 확인). `IG_SOL_PER` 는 근거 없음: 50 으로 20년 × 시드 1 을 보니 자본가 생활수준 항이 자주 한도 ±15 에 닿아 25 로 낮췄다 (비교 실행 아님). 선거 보정치의 계층 지위 0.05 / 0.2 / 1 과 지분 끌림 50 / 250 은 근거 없음 (INTEREST_GROUPS.md 3장·5.2장의 손 계산과 탐침) |
 | `WORKFORCE_RATIO` (data) | 0.25 | 노동 인구 비율 | 근거 없음 (5283b96) |
 | `HIRE_RATE` (labor) | 0.01 | 하루 채용 몫 | 근거 없음 (5283b96) |
 | `UNPAID_QUIT` (labor) | 0.03 | 임금을 못 받은 일꾼의 하루 이탈 | 근거 없음 (5283b96) |
