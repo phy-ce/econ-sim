@@ -587,8 +587,9 @@ export const TUNE = {
   // 저택 지분 (2026-11-02 사용자 결정, docs/overhaul/MANOR_SHARES.md 1단계, DECISIONS 7-44): 1 = 저택은 금융가처럼 지분 회사다. 지분(Pop.fund, 같은 건물 id 공간)은 상급·하급 귀족만 가지고,
   // 저택 수입(배당·지대)은 지분 수대로 나눈다 (어디서 일하든). 귀족은 남는 현금으로 수익률(받은 배당 이동평균 ÷ 지분 값, 디버프 반영)이 가장 높은 저택(어느 지역·왕국이든)이나 자기 지역 금융가 지분을 사고,
   // 현금이 생활비 cashBufferDays 일치 아래면 저택 지분을 지분 값에 저택에 판다. 귀족이 아니게 된 pop 의 저택 지분은 저택이 매주 되산다. 하급 귀족은 저택에 앉지 않고,
-  // 노동자·농부·소작 자리에 가지 못한다 (일자리가 없으면 실업으로 배당에 산다). 0 = 끔 (지금 동작, samecheck 같음)
-  manorShares: 0,
+  // 노동자·농부·소작 자리에 가지 못한다 (일자리가 없으면 실업으로 배당에 산다). 0 = 앉은 귀족 몫 (옛 동작).
+  // 2026-11-02 기본 1 (아래 고침 셋과 함께, 20년 × 시드 1·2 × salt 0..3, wt-manor 97c1bc5: 대륙 세전 총생산 10·15·20년차 603/816/1,095, 대조(끔) 615/868/1,200, 고침 없이 켬 520/571/671. 근거 DESIGN 11)
+  manorShares: 1,
   // 귀족이 지분을 살 수 있는 저택 (AI 판단, 2026-11-02 사용자 "수익률 계산. 단 디버프가 적용된 최종 가격으로 AI 가 판단함"): 'world' 어느 지역·왕국이든, 'kingdom' 같은 왕국, 'region' 자기 지역만
   manorBuyScope: 'world' as 'world' | 'kingdom' | 'region',
   // 귀족이 저택과 금융가를 함께 살 수 있을 때 (AI 판단, manorShares 1 일 때만 돈다): 1 = 수익률 비율로 나눠 산다, 0 = 수익률이 높은 한 곳에 다 산다.
@@ -596,10 +597,11 @@ export const TUNE = {
   manorInvestSplit: 1,
   // 부재 지주 몫 (2026-11-02 사용자 결정 "다른 지역 배당 디버프", DECISIONS 7-44): 저택·금융가가 자기 지역 밖 건물에서 받는 배당의 이 비율은 그 건물 지역의 저택으로 간다 (finance.ts payDividends). 0 = 끔
   absenteeShare: 0,
-  // 저택 지분 고침 (AI 판단, wt-manor 2026-11-02, 진단 .tmp/manor-diag/RESULT.md: 지분을 켜면 금융가가 차가운 시작에 갇혀 투자법이 넓어지지 않는다). 모두 0 = 끔 (samecheck 같음)
-  nobleChoice: 0,
-  manorSellCap: 0,
-  lawSteer: 0,
+  // 저택 지분 고침 (AI 판단, wt-manor 2026-11-02, 진단 .tmp/manor-diag/RESULT.md: 지분을 켜면 금융가가 차가운 시작에 갇혀 투자법이 넓어지지 않는다). 0 = 끔 (4509ec3 전 동작, samecheck 같음).
+  // manorSellCap 0 / 0.5 / 1 비교에서 0.5 (20년 8회 모두 왕국 2 투자법이 5년차 기술자·10년차 노동자, 20년차 대륙 세전 총생산 최솟값이 가장 높음. 근거 DESIGN 11)
+  nobleChoice: 1,
+  manorSellCap: 0.5,
+  lawSteer: 1,
   pollTax: 0.6, // 인두세: 소작농을 뺀 1인당 하루 (세금 수준 3단계 기준)
   incomeTax: 0.3,
   officeTargetDays: 30,

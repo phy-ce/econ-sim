@@ -651,7 +651,7 @@ export function buildingIndex(w: World): Map<number, Building> {
 }
 
 /**
- * 귀족 pop 의 저택 지분 팔기 (지분 켬, market.ts investSurplus): 현금이 생활비 cashBufferDays 일치보다 need 만큼 모자라면 수익률이 낮은 저택 지분부터
+ * 귀족 pop 의 저택 지분 팔기 (지분 켬, market.ts investSurplus): 현금이 생활비 cashBufferDays 일치보다 need 만큼 모자라면 수익률(choiceYield)이 낮은 저택 지분부터
  * 지분 값에 저택에 판다 (저택 금고의 약정 뺀 돈까지). 판 지분은 없어진다
  */
 export function sellManorUnits(w: World, p: Pop, need: number) {

@@ -1,6 +1,6 @@
 # 저택 지분 (설계안, 2026-11-02)
 
-상태: 1단계를 wt-manor 에 구현했다 (`manorShares`·`absenteeShare`·`manorBuyScope`·`manorInvestSplit`, 기본 끔, 규칙은 DESIGN 9.3, 결과는 DESIGN 11 행과 HANDOFF 0-1102h). 사용자 답으로 바뀐 점: 하급 귀족 노동자 자리는 (가) "아예 못 감", 자기 지역 규칙은 C (부재 지주 몫), 다른 지역·왕국 저택도 수익률로 산다 (DECISIONS 7-44). 아래는 처음 설계 그대로이고, 처음 쓸 때는 코드 기준 main `04bbc6d` (wt-manor). 시뮬레이션은 돌리지 않았고, 아래 숫자는 적힌 출처(HANDOFF·DESIGN·DECISIONS)에 적힌 조건에서 본 값이다.
+상태: 1단계를 wt-manor 에 구현했다 (`manorShares`·`absenteeShare`·`manorBuyScope`·`manorInvestSplit`, 규칙은 DESIGN 9.3, 결과는 DESIGN 11 행과 HANDOFF 0-1102h). 2026-11-02 AI 판단 고침 셋(`nobleChoice`·`manorSellCap`·`lawSteer`, DESIGN 9.3 "지분 고침")과 함께 `manorShares` 기본 켬 (DECISIONS 7-44). 사용자 답으로 바뀐 점: 하급 귀족 노동자 자리는 (가) "아예 못 감", 자기 지역 규칙은 C (부재 지주 몫), 다른 지역·왕국 저택도 수익률로 산다 (DECISIONS 7-44). 아래는 처음 설계 그대로이고, 처음 쓸 때는 코드 기준 main `04bbc6d` (wt-manor). 시뮬레이션은 돌리지 않았고, 아래 숫자는 적힌 출처(HANDOFF·DESIGN·DECISIONS)에 적힌 조건에서 본 값이다.
 
 사용자 결정 (2026-11-02):
 1. 저택을 금융가처럼 지분 회사로 바꾼다. 저택 지분은 상급·하급 귀족만 가진다 (법과 상관없다). 지분은 재산이라, 어디서 일하든 배당을 받는다 (행정청에서 일하면서 배당을 받을 수 있다).

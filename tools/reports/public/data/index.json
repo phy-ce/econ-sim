@@ -1,6 +1,30 @@
 {
  "reports": [
   {
+   "id": "2026-11-02-manorfix-k3",
+   "title": "저택 지분 고침 (왕국 3)",
+   "desc": "왕국 3 줄. 20년 × 시드 1·2 × salt 0..3 (salt 평균). wt-manor 97c1bc5. 고침 = nobleChoice 1 + lawSteer 1 + manorSellCap 0.5 (기본) / 1 / 0",
+   "date": "2026-11-02",
+   "created": "2026-11-02T21:08:41",
+   "code": "db6a37c0"
+  },
+  {
+   "id": "2026-11-02-manorfix-k2",
+   "title": "저택 지분 고침 (왕국 2)",
+   "desc": "왕국 2 줄. 20년 × 시드 1·2 × salt 0..3 (salt 평균). wt-manor 97c1bc5. 고침 = nobleChoice 1 + lawSteer 1 + manorSellCap 0.5 (기본) / 1 / 0",
+   "date": "2026-11-02",
+   "created": "2026-11-02T21:08:41",
+   "code": "adf7f45a"
+  },
+  {
+   "id": "2026-11-02-manorfix",
+   "title": "저택 지분 고침 (대륙)",
+   "desc": "20년 × 시드 1·2 × salt 0..3 (salt 평균, 시드 평균 = 8회 평균). wt-manor 97c1bc5. 고침 = nobleChoice 1 + lawSteer 1 + manorSellCap 0.5 (기본) / 1 / 0. 지분 켬 (고침 없음) 은 743c8c6 n20 on_s (같은 코드 길)",
+   "date": "2026-11-02",
+   "created": "2026-11-02T21:08:40",
+   "code": "2d3b153d"
+  },
+  {
    "id": "2026-11-02-manor-k1",
    "title": "저택 지분 1단계: 플레이어 왕국 (방치)",
    "desc": "같은 실행의 왕국 1 줄 (플레이어 왕실 방치). 행정청 충원·세전 총생산",
