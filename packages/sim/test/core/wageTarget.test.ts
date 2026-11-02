@@ -1,12 +1,13 @@
 import { afterAll, describe, expect, it } from 'vitest';
 import { SKILLS, SKILL_DEFS, TUNE, createWorld, moneyIdentity, step, totalMoney } from '../../src/index';
 import type { World } from '../../src/index';
-import { MARKET_WAGE_RANGE, clearingWage, willingAt } from '../../src/labor';
+import { MARKET_WAGE_RANGE, clearingWage, updateMarketWages, willingAt } from '../../src/labor';
+import { marketWageTargets } from '../../src/index';
 import { firstDiff } from '../helpers';
 
 // 목표 임금 (wt-wagespeed, TUNE.wageTarget 1·2): 켜도 화폐 보존·결정성(저장/불러오기)이 지켜지고 시장 임금이 안전 범위 안에 있다.
 // 맞는 임금(clearingWage)은 오려는 사람 ≥ min(자리, 상한에서 오려는 사람)이 되는 가장 낮은 임금이다
-const saved = { wageTarget: TUNE.wageTarget, wageTargetSpeed: TUNE.wageTargetSpeed };
+const saved = { wageMarket: TUNE.wageMarket, wageTarget: TUNE.wageTarget, wageTargetSpeed: TUNE.wageTargetSpeed };
 afterAll(() => { Object.assign(TUNE, saved); });
 
 const reload = (w: World): World => JSON.parse(JSON.stringify(w));
@@ -66,3 +67,53 @@ for (const mode of [1, 2]) {
     });
   });
 }
+
+// 목표 임금 읽기 (marketWageTargets, UI_CHANGES 2-86): 세계를 바꾸지 않고, 그 목표가 다음 updateMarketWages 가 움직이는 쪽과 같다
+describe('목표 임금 읽기 (marketWageTargets)', () => {
+  it('세계를 바꾸지 않고, 다음 updateMarketWages 가 그 목표 쪽으로 wageTargetSpeed 만큼 움직인다', () => {
+    Object.assign(TUNE, { wageMarket: 1, wageTarget: 2 });
+    const w = createWorld(1);
+    runTo(w, 120);
+    const before = JSON.stringify(w), rng = w.rngState, id = w.nextId;
+    const got = w.regions.map((r) => marketWageTargets(w, r.id));
+    expect(JSON.stringify(w)).toBe(before);
+    expect(w.rngState).toBe(rng);
+    expect(w.nextId).toBe(id);
+    expect(w.regions.map((r) => marketWageTargets(w, r.id))).toEqual(got);
+    const prev = w.regions.map((r) => ({ ...r.wages! }));
+    updateMarketWages(w);
+    let withJobs = 0;
+    w.regions.forEach((r, i) => {
+      const t = got[i]!;
+      expect(t).not.toBeNull();
+      for (const s of SKILLS) {
+        const c = t[s], v0 = prev[i][s];
+        // 자리가 있으면 목표 쪽으로 차이의 wageTargetSpeed (자격자가 없으면 목표 = 지금 임금), 없으면 시작 임금(목표)으로 바로 간다
+        const want = c.jobs > 1e-9 ? v0 + TUNE.wageTargetSpeed * (c.target - v0) : c.target;
+        expect(r.wages![s], `${r.id} ${s}`).toBe(want);
+        if (c.jobs > 1e-9) {
+          withJobs++;
+          expect(c.lo).toBeLessThanOrEqual(c.hi);
+          if (c.hi > c.lo) { expect(c.target).toBeGreaterThanOrEqual(c.lo); expect(c.target).toBeLessThanOrEqual(c.hi); }
+        }
+      }
+    });
+    expect(withJobs).toBeGreaterThan(0);
+    Object.assign(TUNE, saved);
+  });
+
+  it('목표 셈이 아니거나 지역 시장 임금이 없으면 null', () => {
+    const w = createWorld(1);
+    const id = w.regions[0].id;
+    Object.assign(TUNE, { wageMarket: 1, wageTarget: 1 });
+    expect(marketWageTargets(w, id)).toBeNull();
+    Object.assign(TUNE, { wageMarket: 0, wageTarget: 2 });
+    expect(marketWageTargets(w, id)).toBeNull();
+    Object.assign(TUNE, { wageMarket: 1, wageTarget: 2 });
+    expect(marketWageTargets(w, -1)).toBeNull();
+    const bare = structuredClone(w);
+    bare.regions[0].wages = undefined;
+    expect(marketWageTargets(bare, id)).toBeNull();
+    Object.assign(TUNE, saved);
+  });
+});

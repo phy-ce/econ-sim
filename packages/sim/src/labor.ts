@@ -487,35 +487,74 @@ export function updateMarketWages(w: World) {
   const comp = companyMap(w);
   const localOf = groupBuildings(w, (b) => b.regionId);
   const regionPops = new RegionPops(w);
-  const rate = TUNE.wageMarketRate, rateUp = TUNE.wageMarketRateUp;
-  const mode = TUNE.wageTarget, speed = TUNE.wageTargetSpeed;
   for (const r of w.regions) {
     const tenant = subsistenceWage(w, r);
     const wages = ensureWages(w, r, tenant);
-    const local = localOf.get(r.id) ?? NO_BUILDINGS;
-    const curves = mode === 2 ? emptyCurves() : undefined;
-    const tab = labourTable(w, r, local, regionPops.of(r.id), comp, tenant, (s) => wages[s], curves);
     const avg = (r.wageAvg ??= { ...wages });
-    for (const s of SKILLS) {
-      const cell = tab[s];
-      let v = wages[s];
-      if (!(cell.jobs > 1e-9)) v = startWage(wages, s, tenant);
-      else if (cell.qualified > 1e-9) {
-        const m = Math.min(cell.jobs, cell.willing);
-        const x = m > 1e-9 ? clamp((cell.jobs - cell.willing) / m, -1, 1) : 1;
-        if (mode === 1) v += speed * (outsideWage(wages, s, tenant, local) * (1 + WAGE_TILT * x) - v);
-        else if (curves) {
-          const lo = startWage(wages, s, tenant);
-          const hi = Math.min(SKILL_DEFS[s].baseWage * MARKET_WAGE_RANGE[1], Math.max(lo, outsideWage(wages, s, tenant, local)) * TUNE.wageTargetSpan);
-          v += speed * (clearingWage(curves[s], cell.jobs, lo, hi) - v);
-        }
-        else v *= 1 + (x > 0 && rateUp > 0 ? rateUp : rate) * x;
-      }
-      wages[s] = clampWage(s, v);
-      avg[s] += (wages[s] - avg[s]) / WAGE_AVG_DAYS;
-    }
+    moveRegionWages(w, r, wages, localOf.get(r.id) ?? NO_BUILDINGS, regionPops.of(r.id), comp, tenant);
+    for (const s of SKILLS) avg[s] += (wages[s] - avg[s]) / WAGE_AVG_DAYS;
   }
   syncCompanyWages(w);
+}
+
+/** 목표 임금 셈(TUNE.wageTarget = 2)의 한 직종: 목표(맞는 임금), 아래 끝·위 끝 (1인 하루 ƒ), 자리·지금 시장 임금에서 오려는 사람 (명, 지역 합계, labourTable) */
+export interface WageTarget { target: number; lo: number; hi: number; jobs: number; willing: number }
+
+/**
+ * 한 지역의 하루 시장 임금 움직임 (updateMarketWages 의 지역 하나, marketWageTargets 도 같은 길을 쓴다). wages 를 SKILLS 순서로 새 값으로 바꾼다:
+ * 아래 직종의 새 값이 위 직종의 아래 끝(startWage)에 들어간다. targets 를 주면 wageTarget 2 셈의 직종별 목표를 적는다 (그 밖에는 바꾸지 않는다)
+ */
+function moveRegionWages(w: World, r: Region, wages: Record<Skill, number>, local: Building[], pops: Pop[], comp: Map<number, Company>, tenant: number, targets?: Record<Skill, WageTarget>) {
+  const rate = TUNE.wageMarketRate, rateUp = TUNE.wageMarketRateUp;
+  const mode = TUNE.wageTarget, speed = TUNE.wageTargetSpeed;
+  const curves = mode === 2 ? emptyCurves() : undefined;
+  const tab = labourTable(w, r, local, pops, comp, tenant, (s) => wages[s], curves);
+  /** 목표 셈의 아래 끝·위 끝 (위 끝 = 바깥 소득 × wageTargetSpan, 기본 임금 × MARKET_WAGE_RANGE 위 끝 이하) */
+  const ends = (s: Skill): [number, number] => {
+    const lo = startWage(wages, s, tenant);
+    return [lo, Math.min(SKILL_DEFS[s].baseWage * MARKET_WAGE_RANGE[1], Math.max(lo, outsideWage(wages, s, tenant, local)) * TUNE.wageTargetSpan)];
+  };
+  for (const s of SKILLS) {
+    const cell = tab[s];
+    let v = wages[s];
+    if (!(cell.jobs > 1e-9)) {
+      v = startWage(wages, s, tenant);
+      if (targets) { const [lo, hi] = ends(s); targets[s] = { target: v, lo, hi, jobs: cell.jobs, willing: cell.willing }; }
+    } else if (cell.qualified > 1e-9) {
+      const m = Math.min(cell.jobs, cell.willing);
+      const x = m > 1e-9 ? clamp((cell.jobs - cell.willing) / m, -1, 1) : 1;
+      if (mode === 1) v += speed * (outsideWage(wages, s, tenant, local) * (1 + WAGE_TILT * x) - v);
+      else if (curves) {
+        const [lo, hi] = ends(s);
+        const target = clearingWage(curves[s], cell.jobs, lo, hi);
+        if (targets) targets[s] = { target, lo, hi, jobs: cell.jobs, willing: cell.willing };
+        v += speed * (target - v);
+      }
+      else v *= 1 + (x > 0 && rateUp > 0 ? rateUp : rate) * x;
+    } else if (targets) {
+      const [lo, hi] = ends(s);
+      targets[s] = { target: v, lo, hi, jobs: cell.jobs, willing: cell.willing };
+    }
+    wages[s] = clampWage(s, v);
+  }
+}
+
+/**
+ * 지역 시장 임금이 가는 쪽 (읽기 전용, 화면용 UI_CHANGES 2-86): 직종마다 updateMarketWages(TUNE.wageTarget = 2)가 지금 세계에서 다음에 움직일 목표.
+ * target = 맞는 임금 clearingWage (자리가 없으면 시작 임금 startWage 로 바로 간다, 자격자가 없으면 지금 임금), lo·hi = 아래 끝·위 끝,
+ * jobs = 채울 수 있는 자리, willing = 지금 시장 임금에서 오려는 사람. 같은 셈(moveRegionWages)을 지역 임금표의 사본에 돌린다:
+ * 위 직종의 아래 끝은 아래 직종이 그날 움직인 뒤 값이다 (updateMarketWages 와 같다).
+ * TUNE.wageMarket 0, wageTarget ≠ 2, 그 지역이 없거나 지역 시장 임금(Region.wages)이 없으면 null
+ */
+export function marketWageTargets(w: World, regionId: number): Record<Skill, WageTarget> | null {
+  if (!TUNE.wageMarket || TUNE.wageTarget !== 2) return null;
+  const r = w.regions.find((x) => x.id === regionId);
+  if (!r?.wages) return null;
+  const local = w.buildings.filter((b) => b.regionId === r.id);
+  const pops = w.pops.filter((p) => p.regionId === r.id);
+  const targets = {} as Record<Skill, WageTarget>;
+  moveRegionWages(w, r, { ...r.wages }, local, pops, companyMap(w), subsistenceWage(w, r), targets);
+  return targets;
 }
 
 /**

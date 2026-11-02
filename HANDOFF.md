@@ -9,10 +9,19 @@
 - 클라우드 세션(claude.ai/code)으로 이어서 할 수 있다. 규칙은 CLAUDE.md "클라우드 세션"을 본다.
 - 옛 세션 기록: `docs/log/` (2026-10-25 이전 HANDOFF 절은 `docs/log/HANDOFF_2026-10-18_to_10-25.md`, 날짜별 UI 기록도 여기). 다른 문서의 "HANDOFF 0-ind3"·"HANDOFF 0-aifix" 같은 옛 절 참조는 그 파일에 있다.
 
+## 0-1102-uiapi. 2026-11-02: wt-uiapi (UI_CHANGES 3장의 읽기 전용 sim 요청 + 보고서 소작농 라벨)
+- 바뀐 것 (sim, 읽기 전용): `marketWageTargets(w, regionId): Record<Skill, WageTarget> | null` (`labor.ts:549`, index `index.ts:15`, 타입 `WageTarget = { target, lo, hi, jobs, willing }` `labor.ts:501`·`index.ts:16`). `updateMarketWages` 의 지역 하나 셈을 `moveRegionWages` (`labor.ts:507`) 로 빼고, `updateMarketWages` 와 `marketWageTargets` 가 같이 쓴다 (`marketWageTargets` 는 지역 임금표 사본에 돌린다. 위 직종의 아래 끝은 아래 직종이 그날 움직인 뒤 값으로, `updateMarketWages` 와 같다). `TUNE.wageMarket` 0, `wageTarget` ≠ 2, 지역이 없거나 `Region.wages` 가 없으면 null. 규칙은 그대로다.
+- 시험: `test/core/wageTarget.test.ts` '목표 임금 읽기' 2개 (시드 1 120일: 부른 전후 직렬화·rngState·nextId 같음, 두 번 불러도 같음, 다음 `updateMarketWages` 뒤 임금 = 지금 + `wageTargetSpeed` × (목표 − 지금) (자리가 없으면 목표) 를 `toBe` 로, 자리 있는 직종은 lo ≤ 목표 ≤ hi. null 네 경우). `readonly.test.ts` 의 regions 읽기 묶음에 넣음 (얼린 세계 포함).
+- 바뀐 것 (cli/report.py): 해마다 한 줄 파일의 `peas` 이름이 '소작농 수 / 백만' 으로 나왔다. `cli/lab.ts` 줄(`src/lab/metrics.ts:914`)의 `peas` 는 소작농 비율이고 수는 `peasK` 다. 옛 진단 `.tmp/col/collapse.ts` 파일(보고서 2026-10-22-collapse40·2026-10-30-0a-probe, `peasK` 없음)은 정말 수였으므로 FLAT 이름은 `peasK` 가 없는 파일에만 쓴다 (`finish` 의 `old_flat`). 이미 올린 보고서 11개(`peasK` 있는 것: 0b-base·0b-levers·0bp-glut·basewage·admin·admin-k2·combo·newdefaults·wagelag·wagespan·wagespeed)의 `labels.peas` 를 '소작농 비율' (단위 없음) 으로 고쳤다 (그 칸 한 곳만, 값은 그대로).
+- UI_CHANGES: 3장에서 2-86 요청을 지우고 '이미 export되는 것'에 더함. 2-86 은 'sim 준비됨' 과 줄 번호, 2-85 에 쓰는 export 줄 번호 한 줄 (새 export 필요 없음), 2-79 옛 줄 번호(`labor.ts:436`·`economy.ts:349`) 고침, 0장 2-86 줄 'sim 준비됨, 지금 해도 된다'.
+- 남은 것 (3장, 읽기 전용이 아니라 이번에 안 함): 2-59 `BuildingEcon.week` (매출·세금·원료비·임금 이동평균을 건물에 새로 저장해야 한다, 골든 바뀜), 2-49 회수 자재 `buildingId` (`SalvageLot` 저장 칸), 2-74 `GameEvent.key` (저장되는 소식 칸), 2-72 인두세 부담 (05 C-2 결정 뒤), 오버홀 S1~S8 (큰 일), 2-17 `compat.ts` 껍데기 지우기 (export 를 없애는 일이라 범위 밖, 화면 작업자의 커밋 안 한 파일을 확인하지 못했다).
+- 화면: UI_CHANGES 0장 'sim 대기 · 결정 대기' 의 2-86 (이제 할 수 있음), 2-85.
+- 검증: typecheck (sim + client + encyclopedia), test:core 24파일 81개. 골든 해시 c7fb7c00ef46d24c (`cli/golden.ts`) 가 이력 마지막(규칙 판 6) 과 같음. 클라이언트 코드는 고치지 않았다.
+
 ## 0-1102k. 2026-11-02: wt-batch1 (wt-par 비교 실행 자원 + wt-uidocs UI_CHANGES 감사)
 - 바뀐 것 (wt-par a17d0f7): `cli/lab.sh`·`cli/sweep.sh` 의 `PAR` 기본이 'CPU 코어 수 − 2' 에서 '6 과 코어 수 − 2 중 작은 쪽 (최소 1)' 으로 (이 PC 16코어: 14 → 6, 클라우드 VM 약 4 vCPU: 2 그대로). `cli/lowprio.ts` (프로세스 우선순위 '보통 이하', `LOWPRIO=0` 이면 끔)를 `cli/lab.ts`·`cli/sweep.ts` 가 맨 앞에서 import 한다. CLAUDE.md '실행과 검증'에 컴퓨팅 자원 줄 (2026-11-02 사용자: PC 를 너무 많이 쓴다). 계산 결과는 같다 (우선순위·동시 실행 수만 바뀐다). 숫자: 실행 시간은 재지 않았다.
 - 바뀐 것 (wt-uidocs 626a052): UI_CHANGES 를 클라이언트 main 81494a1 과 대조했다. 끝났거나 폐기된 절 2-43·2-45·2-46·2-52·2-53(폐기)·2-56·2-57·2-58·2-63·2-65(대체)·2-66 과 2-72 1항은 UI_DONE '2026-11-02 확인'으로 옮겼다. 일부만 된 절에는 '2026-11-02 반영 확인' 줄을 달았다. 0장은 순서 목록 하나로 다시 썼다. 새 절: 2-85 (일꾼 줄 1인 임금·웃돈 칩), 2-86 (목표 임금 화살표·툴팁, premerge 에서 wt-span 뒤 이름 `TUNE.wageTargetSpan`·줄 번호로 고침).
-- 남은 것: UI_CHANGES 3장의 sim 요청 `marketWageTargets(w, regionId)` 는 아직 만들지 않았다 (Claude 쪽 일, 2-86 이 기다린다). 2-86 규칙 자체는 DECISIONS 7-43 사용자 답 대기.
+- 남은 것: UI_CHANGES 3장의 sim 요청 `marketWageTargets(w, regionId)` 는 아직 만들지 않았다 (Claude 쪽 일, 2-86 이 기다린다. → 0-1102-uiapi 에서 만듦). 2-86 규칙 자체는 DECISIONS 7-43 사용자 답 대기.
 - 화면: UI_CHANGES 0장 2 (2-85), 'sim 대기 · 결정 대기' (2-86).
 - 검증: typecheck, test:core 24파일 79개 (premerge 고침 뒤 브랜치에서). 문서와 cli 만 바뀌었고 sim·client 코드는 그대로다.
 
