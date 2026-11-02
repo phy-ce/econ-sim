@@ -551,7 +551,7 @@ export const TUNE = {
   wageMarketRateUp: 0,
   // 시장 임금을 목표 임금 쪽으로 (2026-11-02 사용자 "수요-공급 차에 따라서 숫자가(하한/상한 수렴값은 존재함) 변하게", DECISIONS 7-43): 0 = 끔 (wageMarketRate 규칙), 1 = 바깥 소득 기준 쏠림 (비교용), 2 = 맞는 임금 (기본). 근거: DESIGN 11
   wageTarget: 2,
-  // 목표 임금까지 거리 중 하루에 움직이는 비율 (가격 PRICE_SPEED 0.03 과 같은 꼴). 후보 0.03 / 0.05 / 0.1, 보고서 2026-11-02-wagespeed. 근거: DESIGN 11
+  // 목표 임금까지 거리 중 하루에 움직이는 비율 (가격 PRICE_SPEED 0.03 과 같은 꼴). 후보 0.03 / 0.05 / 0.1 (보고서 2026-11-02-wagespeed), 0.2 (2026-11-02-wagespan). 근거: DESIGN 11
   wageTargetSpeed: 0.1,
   // 맞는 임금(wageTarget 2)의 위 끝 = 바깥 소득(outsideWage, switchPremium 포함) × 이 값. 2 는 옮기는 비율이 최대(switchMax)가 되는 소득 배율
   // (1 + switchMax ÷ switchRate × (switchPremium − 1) = 2, labor.ts switchShare)에서 왔다. 후보 1.5 / 2 / 3, 보고서 2026-11-02-wagespan. 근거: DESIGN 11
