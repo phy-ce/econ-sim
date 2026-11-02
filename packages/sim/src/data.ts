@@ -472,6 +472,10 @@ export function scaleBonus(level: number): number {
  * - manorBuyScope: 귀족이 지분을 사는 저택의 범위 ('world' 어느 저택이든, 'kingdom' 같은 왕국, 'region' 자기 지역). 수익률이 가장 높은 곳을 산다 (AI 판단)
  * - manorInvestSplit: 1 = 귀족이 저택 지분과 금융가 지분을 수익률 비율로 나눠 산다, 0 = 수익률이 높은 쪽에 다 산다 (AI 판단)
  * - absenteeShare: 저택·금융가가 자기 지역 밖 건물에서 받는 배당 중 그 건물 지역 저택으로 가는 비율 (0 = 끔)
+ * - nobleChoice: 1 = 귀족이 지분을 고를 때 새 돈의 기대 수익률로 본다 (finance.ts ownerViews: 새 레벨 수익률, 금고·짓는 공사, 저택 지대 × 52 를 자산에, 1레벨 미리 넣기)
+ *   그리고 소유 건물 금고 목표는 적어도 좋아하는 종류 1레벨 공사비 (finance.ts treasuryTarget). 0 = 지난 배당 ÷ 지분 값 (AI 판단)
+ * - manorSellCap: > 0 이면 저택 하나가 하루에 파는 새 지분 = 받은 배당·지대 이동평균(하루) × 이 값까지 (market.ts manorRanks, AI 판단). 0 = 끔
+ * - lawSteer: 1 = AI 왕국의 금융가 자산 비율이 투자법 다음 단계 기준에 못 미치면 민간 공사 돈줄을 금융가 먼저로 (policy.ts lawSteer, AI 판단). 0 = 끔
  * - landTax, pollTax, incomeTax: 세금 수준 3단계(보통)의 토지세(소작농 1인당 하루), 인두세(소작농을 뺀 1인당 하루), 소득세율(소작농을 뺀 소득).
  *   세 세율을 같은 배율로 비교했다 (빅토리아3 보통 단계 기준 ×1·×1.5·×2·×2.5, 20년 × 시드 1~4). ×2는 ×1보다 건물 레벨이
  *   10년차 약 50%, 20년차 약 13% 많고 실업이 낮다 (×1은 세금 단계를 1~5 모두 쓰지만 건물이 가장 적다). ×2.5는 노동자 생활수준이 가장 낮다
@@ -592,6 +596,10 @@ export const TUNE = {
   manorInvestSplit: 1,
   // 부재 지주 몫 (2026-11-02 사용자 결정 "다른 지역 배당 디버프", DECISIONS 7-44): 저택·금융가가 자기 지역 밖 건물에서 받는 배당의 이 비율은 그 건물 지역의 저택으로 간다 (finance.ts payDividends). 0 = 끔
   absenteeShare: 0,
+  // 저택 지분 고침 (AI 판단, wt-manor 2026-11-02, 진단 .tmp/manor-diag/RESULT.md: 지분을 켜면 금융가가 차가운 시작에 갇혀 투자법이 넓어지지 않는다). 모두 0 = 끔 (samecheck 같음)
+  nobleChoice: 0,
+  manorSellCap: 0,
+  lawSteer: 0,
   pollTax: 0.6, // 인두세: 소작농을 뺀 1인당 하루 (세금 수준 3단계 기준)
   incomeTax: 0.3,
   officeTargetDays: 30,

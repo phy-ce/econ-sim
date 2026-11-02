@@ -13,7 +13,7 @@ import { kingdomLiteracy } from '../finance';
 import { FLOW } from '../kingdoms';
 import { labourTable, subsistenceWage } from '../labor';
 import { PRICE_MAX, PRICE_MIN, basketCostAt, needSharesAt, postUsable } from '../market';
-import { lawUnlocked } from '../policy';
+import { financeRatio, lawUnlocked } from '../policy';
 import { workforce } from '../pops';
 import { ipowBin } from '../rng/ipow';
 import { INVEST_LAWS, POP_CLASSES, SKILLS, TAX_LAWS, WEALTH_MIN, WELFARE_LAWS, isLowerJob } from '../types';
@@ -279,6 +279,8 @@ export class Collector {
   skim0 = 0;
   /** 저택 지분 흐름 누계 (kingdoms.ts FLOW, wt-manor) 의 연초 값 */
   mflow0: Record<string, number> = {};
+  /** 금융가·저택 지분 사기 흐름 누계 (kingdoms.ts FLOW 'fbuy.<noble|other>.<왕국>', 'mbuy.noble.<왕국>', wt-manor 고침) 의 연초 값 */
+  buy0: Record<string, number> = {};
   /** 건물 종류.방식별 한 해 [매출, 원료비, 임금] (대륙) */
   margin = new Map<string, [number, number, number]>();
   /** 상품별 레벨 합 (그 상품을 내는 자동 아닌 건물, capLv 와 같은 셈): 지난 연말 (처음은 시작 세계). 해마다 변화 capLvD 를 낸다 */
@@ -353,6 +355,8 @@ export class Collector {
     }
     this.skim0 = FLOW['skim.manor'] ?? 0;
     for (const t of MANOR_FLOWS) this.mflow0[t] = FLOW[t] ?? 0;
+    this.buy0 = {};
+    for (const t of Object.keys(FLOW)) if (t.startsWith('fbuy.') || t.startsWith('mbuy.noble.')) this.buy0[t] = FLOW[t];
     this.margin.clear();
     for (const a of this.acc) a.sav0.fill(0);
     for (const p of w.pops) {
@@ -823,6 +827,26 @@ export class Collector {
     const lab = this.labourRows(w, inScope, wageOf);
     // 0b′ 5-1: 저택·금융가 금고 합, 남은 금고 공사 약정액 (약정 − 낸 공사비, finance.ts pledgeLeft 의 합), 행정청 인원·레벨
     let vault = 0, pledge = 0, adminStaff = 0, adminLv = 0, adminSt = 0, manorCash = 0, manorNav = 0, manorN = 0;
+    // 저택 지분 고침 (wt-manor): 범위 안 소유 건물이 가진 레벨 (어느 지역 건물이든, 금융가·저택), 범위 안 건물의 주인 있는 레벨 (민간 레벨)
+    let lvFin = 0, lvMan = 0, lvOwn = 0;
+    {
+      const ownerType = new Map<number, string>();
+      for (const b of w.buildings) if (isOwnerBuilding(b.typeId)) ownerType.set(b.id, inScope(b.regionId) ? b.typeId : '');
+      for (const b of w.buildings) if (b.owners) for (const [id, n] of Object.entries(b.owners)) {
+        if (inScope(b.regionId)) lvOwn += n;
+        const t = ownerType.get(Number(id));
+        if (t === 'finance') lvFin += n; else if (t === 'manor') lvMan += n;
+      }
+    }
+    const buy = (pre: string) => {
+      let t = 0;
+      for (const key of Object.keys(FLOW)) {
+        if (!key.startsWith(pre)) continue;
+        const kid = Number(key.slice(pre.length));
+        if (isAll || this.kingdoms[i]?.id === kid) t += FLOW[key] - (this.buy0[key] ?? 0);
+      }
+      return t;
+    };
     for (const b of w.buildings) {
       if (!inScope(b.regionId)) continue;
       if (isOwnerBuilding(b.typeId)) vault += b.cash ?? 0;
@@ -962,6 +986,10 @@ export class Collector {
       gJobless: sig(div(jobless[CI.gentry], n[CI.gentry]) ?? NaN), solGent: sig(div(sol[CI.gentry], n[CI.gentry]) ?? NaN), solArist: sig(div(sol[CI.aristocrat], n[CI.aristocrat]) ?? NaN),
       incGent: sig(div(clsInc(CI.gentry), n[CI.gentry] * TICKS_PER_YEAR) ?? NaN), incArist: sig(div(clsInc(CI.aristocrat), n[CI.aristocrat] * TICKS_PER_YEAR) ?? NaN),
       manorCash: sig(manorCash / M), manorNav: sig(div(manorNav, manorN) ?? NaN),
+      // 저택 지분 고침 (wt-manor): 연말 금융가 자산 비율 (투자법 조건, 왕국만), 소유 건물이 가진 레벨 (금융가·저택), 민간 레벨,
+      // 한 해 금융가 지분 사기 (백만, 귀족 / 그 밖 계층), 저택 새 지분 사기 (백만, 범위 안 저택이 판 것)
+      ...(k ? { finRatio: sig(financeRatio(w, k.id)) } : {}), lvFin, lvMan, lvOwn,
+      fbuyN: sig(buy('fbuy.noble.') / M), fbuyO: sig(buy('fbuy.other.') / M), mbuyN: sig(buy('mbuy.noble.') / M),
       // X08-H (왕국 단위 요약), 08 3.5 한계
       harvDays: a.harvDays, k4Share: sig(div(k4n, k4d) ?? NaN), lim,
       // 소작지 재해 (관측 전용): 걸린 지역·날, 못 쓰는 소작지 칸 (날 평균, 지역 합), 실업 소작농 노동 인구 (날 평균, 천 명)

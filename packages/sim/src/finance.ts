@@ -1,6 +1,6 @@
 import {recordPopIncome} from './popIncome';
 import { ABS_LIMITS, BUILDING_BY_ID, GOODS, SKILL_DEFS, TECH_BY_ID, TICKS_PER_WEEK, TUNE, WORKFORCE_RATIO, getMethod } from './data';
-import { collectionRatio, companyById, estimateMethod, marketWages, levelOwnersOf, slots, regionById, constructionEstimate, efficiency, isBudgetFunded, isOwnerBuilding, kingdomGdp, logEvent, officeFeeMult, paysDividend, repay, wagesAt, sellThrough, shareWeight } from './economy';
+import { collectionRatio, companyById, estimateMethod, marketWages, levelOwnersOf, slots, regionById, constructionEstimate, efficiency, isBudgetFunded, isOwnerBuilding, isSubsistence, kingdomGdp, logEvent, officeFeeMult, paysDividend, repay, wagesAt, sellThrough, shareWeight } from './economy';
 import { techNameEn } from './i18n';
 import { flow, kingdomById, kingdomOf, toFinance, toTreasury } from './kingdoms';
 import { addFund, fundOf, payPops } from './pops';
@@ -541,6 +541,94 @@ export function unitYield(w: World, o: Building): number {
   return (Math.max(0, o.profitEma) * TICKS_PER_WEEK * (1 - (KEEP_SHARE[o.typeId] ?? 0)) * (1 - bonus)) / (u * Math.max(0.01, o.nav ?? 1));
 }
 
+/** 소유 건물 하나를 AI 가 보는 값 (TUNE.nobleChoice): 새 돈의 기대 주간 수익률 y, 좋아하는 종류 1레벨 공사비 평균 level */
+export interface OwnerView { y: number; level: number }
+const viewCache = new WeakMap<World, { tick: number; m: Map<number, OwnerView> }>();
+
+/**
+ * 새 돈의 기대 수익률 (AI 판단, TUNE.nobleChoice 1, 틱마다 처음 물을 때 정한다). 지분 값(세계 규칙)은 그대로 두고 귀족·소유 건물이 판단에만 쓴다.
+ * - 새 레벨 수익률 r: 그 왕국 민간 건물(주인이 있는 레벨) 중 그 소유 건물이 좋아하는 종류(favours: 저택은 땅 건물, 금융가는 그 밖)의
+ *   주간 배당 추정(profitEma × 7 × (1 − 준비금 몫) × 주인 레벨 ÷ 레벨) 합 ÷ (주인 레벨 × 1레벨 공사비) 합. 1레벨 공사비 평균이 level.
+ * - 기대 수익률 = (받는 배당·지대 이동평균 × 7 + r × (금고 + 낸 공사비 + level)) × 주인 몫 ÷ (가진 레벨 값 + 금고 + 낸 공사비 + 저택은 지대 × 52 + level).
+ *   주인 몫 = 1 − 금고 몫 [금융가는 × (1 − 성과급)]. 금고와 짓고 있는 공사는 새 레벨 수익률로 벌 돈으로 센다. level 한 개를 미리 넣어 두어
+ *   가진 것이 없는 금융가(차가운 시작)는 r 로 본다. 저택의 지대(소작지 수확 × rentShare × 7)는 52주치를 자산에 넣어, 지분 값에 지대가 빠져 수익률이 부풀어 보이는 것을 판단에서 뺀다
+ */
+export function ownerViews(w: World): Map<number, OwnerView> {
+  const c = viewCache.get(w);
+  if (c && c.tick === w.tick) return c.m;
+  const costs = new Map<string, number>();
+  const costOf = (kid: number, typeId: string): number => {
+    const key = `${kid}|${typeId}`;
+    let v = costs.get(key);
+    if (v === undefined) {
+      const firm = companyById(w, kingdomById(w, kid).privateIds[0]);
+      v = firm ? constructionEstimate(w, firm, typeId).cost : NaN;
+      costs.set(key, v);
+    }
+    return v;
+  };
+  // 왕국·종류(땅 1 / 그 밖 0)별 배당·공사비·레벨 합, 소유 건물 id → 가진 레벨
+  const acc = new Map<string, { div: number; cost: number; lv: number }>();
+  const levelsOf: LevelsOf = new Map();
+  for (const b of w.buildings) {
+    if (!b.owners) continue;
+    let owned = 0;
+    for (const [id, n] of Object.entries(b.owners)) {
+      owned += n;
+      const l = levelsOf.get(Number(id)) ?? [];
+      l.push({ typeId: b.typeId, n });
+      levelsOf.set(Number(id), l);
+    }
+    if (!(owned > 0) || !(b.level > 0)) continue;
+    const kid = kingdomOf(w, b.regionId);
+    const cost = costOf(kid, b.typeId);
+    if (!Number.isFinite(cost) || !(cost > 0)) continue;
+    const key = `${kid}|${landType(b.typeId) ? 1 : 0}`;
+    const a = acc.get(key) ?? { div: 0, cost: 0, lv: 0 };
+    a.div += (Math.max(0, b.profitEma) * TICKS_PER_WEEK * (1 - RESERVE_SHARE) * owned) / b.level;
+    a.cost += cost * owned;
+    a.lv += owned;
+    acc.set(key, a);
+  }
+  // 소유 건물이 짓고 있는 공사에 이미 낸 돈 (약정 비율로 나눈 spent)
+  const spent = new Map<number, number>();
+  for (const k of w.constructions) {
+    if (!k.funders) continue;
+    let tot = 0;
+    for (const v of Object.values(k.funders)) tot += v;
+    if (tot > 0) for (const [id, v] of Object.entries(k.funders)) spent.set(Number(id), (spent.get(Number(id)) ?? 0) + (k.spent * v) / tot);
+  }
+  const m = new Map<number, OwnerView>();
+  for (const o of w.buildings) {
+    if (!isOwnerBuilding(o.typeId)) continue;
+    const kid = kingdomOf(w, o.regionId);
+    const manor = o.typeId === 'manor';
+    const a = acc.get(`${kid}|${manor ? 1 : 0}`), b = acc.get(`${kid}|${manor ? 0 : 1}`);
+    const r = a && a.cost > 0 ? a.div / a.cost : 0;
+    // 좋아하는 종류의 레벨이 왕국에 없으면 다른 종류의 1레벨 공사비 평균
+    const level = a && a.lv > 0 ? a.cost / a.lv : b && b.lv > 0 ? b.cost / b.lv : 0;
+    let lv = 0;
+    for (const x of levelsOf.get(o.id) ?? []) { const cost = costOf(kid, x.typeId); if (Number.isFinite(cost)) lv += cost * x.n; }
+    let rent = 0;
+    if (manor) {
+      const sub = w.buildings.find((x) => x.regionId === o.regionId && isSubsistence(x.typeId));
+      if (sub) { const mk = regionById(w, o.regionId).market; for (const [g, q] of Object.entries(sub.last.output)) rent += (q ?? 0) * mk[g as GoodId].price * TUNE.rentShare * TICKS_PER_WEEK; }
+    }
+    const net = (1 - (KEEP_SHARE[o.typeId] ?? 0)) * (1 - (manor ? 0 : TUNE.financeBonus));
+    const idle = Math.max(0, o.cash ?? 0) + (spent.get(o.id) ?? 0);
+    const value = lv + idle + rent * 52 + level;
+    const y = value > 0 ? ((Math.max(0, o.profitEma) * TICKS_PER_WEEK + r * (idle + level)) * net) / value : 0;
+    m.set(o.id, { y, level });
+  }
+  viewCache.set(w, { tick: w.tick, m });
+  return m;
+}
+
+/** 귀족이 지분을 고르는 수익률 (AI 판단): TUNE.nobleChoice 1 이면 새 돈의 기대 수익률(ownerViews), 0 이면 지난 배당 ÷ 지분 값(unitYield) */
+export function choiceYield(w: World, o: Building): number {
+  return TUNE.nobleChoice ? (ownerViews(w).get(o.id)?.y ?? 0) : unitYield(w, o);
+}
+
 /** 틱마다 id → 건물 (같은 id 면 뒤의 것) */
 const bIndex = new WeakMap<World, { tick: number; n: number; m: Map<number, Building> }>();
 export function buildingIndex(w: World): Map<number, Building> {
@@ -565,7 +653,7 @@ export function sellManorUnits(w: World, p: Pop, need: number) {
   const held: Building[] = [];
   for (let i = 0; i < f.id.length; i++) { const o = byId.get(f.id[i]); if (o && o.typeId === 'manor' && f.u[i] > 0) held.push(o); }
   if (!held.length) return;
-  held.sort((a, b) => unitYield(w, a) - unitYield(w, b) || a.id - b.id);
+  held.sort((a, b) => choiceYield(w, a) - choiceYield(w, b) || a.id - b.id);
   for (const o of held) {
     if (!(need > 1e-9)) break;
     const nav = Math.max(0.01, o.nav ?? 1);
@@ -647,9 +735,14 @@ export function updateFunds(w: World) {
 /** 금고가 목표를 넘으면 매주 넘는 돈의 이 비율을 주인에게 돌려준다 (TUNE.treasuryKeepWeeks). 근거 없음 */
 export const TREASURY_RELEASE = 0.25;
 
-/** 소유 건물 금고 목표: 아직 낼 공사 약정액 + 주간 배당·지대 수입(profitEma × 7) × TUNE.treasuryKeepWeeks */
+/**
+ * 소유 건물 금고 목표: 아직 낼 공사 약정액 + 주간 배당·지대 수입(profitEma × 7) × TUNE.treasuryKeepWeeks.
+ * TUNE.nobleChoice 1 (AI 판단): 약정 뺀 몫은 적어도 좋아하는 종류 1레벨 공사비 평균(ownerViews level). 수입이 없는 금융가(차가운 시작)도 1레벨을 낼 돈까지 새 지분을 판다
+ */
 export function treasuryTarget(w: World, o: Building): number {
-  return (o.cash ?? 0) - treasuryFree(w, o) + Math.max(0, o.profitEma) * TICKS_PER_WEEK * TUNE.treasuryKeepWeeks;
+  const keep = Math.max(0, o.profitEma) * TICKS_PER_WEEK * TUNE.treasuryKeepWeeks;
+  const floor = TUNE.nobleChoice ? (ownerViews(w).get(o.id)?.level ?? 0) : 0;
+  return (o.cash ?? 0) - treasuryFree(w, o) + Math.max(keep, floor);
 }
 
 /**
@@ -841,11 +934,15 @@ export function ownerBuildings(w: World, kingdomId: number): Building[] {
   return w.buildings.filter((b) => mine.has(b.regionId) && isOwnerBuilding(b.typeId));
 }
 
+/** 땅 건물 (농지·산림·광맥을 쓰는 건물) */
+function landType(typeId: string): boolean {
+  const land = BUILDING_BY_ID[typeId].land;
+  return land === 'arable' || land === 'forest' || land === 'ore';
+}
+
 /** 저택은 땅 건물(농지·산림·광맥)을, 금융가는 그 밖의 건물을 더 좋아한다 (AI 성향) */
 export function favours(o: Building, typeId: string): boolean {
-  const land = BUILDING_BY_ID[typeId].land;
-  const landBuilding = land === 'arable' || land === 'forest' || land === 'ore';
-  return o.typeId === 'manor' ? landBuilding : !landBuilding;
+  return o.typeId === 'manor' ? landType(typeId) : !landType(typeId);
 }
 
 /** 소유 건물이 이 지역·이 건물에 돈을 낼 마음 (AI 성향): 같은 지역 × (1 + TUNE.localBias), 좋아하지 않는 종류 × TUNE.ownerTilt */
@@ -856,12 +953,14 @@ export function funderWeight(o: Building, regionId: number, typeId: string): num
 /**
  * 민간 공사의 돈줄 (AI 판단): 왕국 저택·금융가 중 마음(funderWeight)이 큰 곳부터, 낼 수 있는 만큼 레벨 단위로 맡긴다.
  * 레벨 단위로 다 못 맡기면 남은 레벨은 남은 금고 돈을 모아 함께 낸다. 모자라면 null.
+ * financeFirst (TUNE.lawSteer, policy.ts lawSteer): 금융가를 마음과 상관없이 먼저 세운다 (금융가가 낼 수 있는 만큼 맡고 나머지를 저택이 함께 낸다).
  * 돌려주는 값: 소유 건물 id → 약정액 (합 = 레벨당 공사비 × 레벨)
  */
-export function chooseFunders(w: World, kingdomId: number, regionId: number, typeId: string, levels: number, perLevel: number): Record<number, number> | null {
+export function chooseFunders(w: World, kingdomId: number, regionId: number, typeId: string, levels: number, perLevel: number, financeFirst = false): Record<number, number> | null {
   if (!(perLevel > 0) || !Number.isFinite(perLevel)) return null;
+  const fin = (o: Building) => (financeFirst && o.typeId === 'finance' ? 1 : 0);
   const cands = ownerBuildings(w, kingdomId).map((o) => ({ o, free: treasuryFree(w, o), wt: funderWeight(o, regionId, typeId) }))
-    .filter((x) => x.free > 0).sort((a, b) => b.wt - a.wt || b.free - a.free || a.o.id - b.o.id);
+    .filter((x) => x.free > 0).sort((a, b) => fin(b.o) - fin(a.o) || b.wt - a.wt || b.free - a.free || a.o.id - b.o.id);
   const out: Record<number, number> = {};
   let left = levels;
   for (const x of cands) {

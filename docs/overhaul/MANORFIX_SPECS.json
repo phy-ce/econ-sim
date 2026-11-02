@@ -1,0 +1,534 @@
+{
+ "about": "저택 지분 고침 (wt-manor, 2026-11-02, 진단 .tmp/manor-diag/RESULT.md). ctl = 지금 기본값 (manorShares 0), on = manorShares 1, f1 = on + nobleChoice 1 + manorSellCap 1 (안 1: 기대 수익률·1레벨 금고 목표·저택 하루 판매 상한), f1y = on + nobleChoice 1 만, f1c = on + manorSellCap 1 만, f2 = on + lawSteer 1 (안 2: 투자법 기준 아래 AI 왕국은 금융가가 먼저 공사비를 낸다), f12 = 안 1 + 안 2. 돌리기 (packages/sim 에서): PAR=3 KEY=probe12 bash cli/lab.sh <out.jsonl> ../../docs/overhaul/MANORFIX_SPECS.json probe12b: f12 의 manorSellCap 0 (끔)·0.5·2. specs (20년 × 시드 1·2 × salt 0..3): ctl, f12 (manorSellCap 1), f12c05 (0.5), f12c0 (0). on 은 .tmp/lab/n20.jsonl 의 on_s (743c8c6, 같은 코드 길: 끈 스위치는 비트까지 같음) 를 쓴다. 돌리기: PAR=4 bash cli/lab.sh <out.jsonl> ../../docs/overhaul/MANORFIX_SPECS.json",
+ "code": "wt-manor (530ab4f 위 nobleChoice·manorSellCap·lawSteer 스위치, 끄면 samecheck 5개 같음)",
+ "probe12": [
+  {
+   "item": "MANORFIX",
+   "name": "ctl",
+   "seed": 1,
+   "salt": 0,
+   "years": 12,
+   "tune": {},
+   "control": "ctl"
+  },
+  {
+   "item": "MANORFIX",
+   "name": "on",
+   "seed": 1,
+   "salt": 0,
+   "years": 12,
+   "tune": {
+    "manorShares": 1
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "MANORFIX",
+   "name": "f1",
+   "seed": 1,
+   "salt": 0,
+   "years": 12,
+   "tune": {
+    "manorShares": 1,
+    "nobleChoice": 1,
+    "manorSellCap": 1
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "MANORFIX",
+   "name": "f2",
+   "seed": 1,
+   "salt": 0,
+   "years": 12,
+   "tune": {
+    "manorShares": 1,
+    "lawSteer": 1
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "MANORFIX",
+   "name": "f12",
+   "seed": 1,
+   "salt": 0,
+   "years": 12,
+   "tune": {
+    "manorShares": 1,
+    "nobleChoice": 1,
+    "manorSellCap": 1,
+    "lawSteer": 1
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "MANORFIX",
+   "name": "f1y",
+   "seed": 1,
+   "salt": 0,
+   "years": 12,
+   "tune": {
+    "manorShares": 1,
+    "nobleChoice": 1
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "MANORFIX",
+   "name": "f1c",
+   "seed": 1,
+   "salt": 0,
+   "years": 12,
+   "tune": {
+    "manorShares": 1,
+    "manorSellCap": 1
+   },
+   "control": "ctl"
+  }
+ ],
+ "probe12b": [
+  {
+   "item": "MANORFIX",
+   "name": "f12c0",
+   "seed": 1,
+   "salt": 0,
+   "years": 12,
+   "tune": {
+    "manorShares": 1,
+    "nobleChoice": 1,
+    "lawSteer": 1
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "MANORFIX",
+   "name": "f12c05",
+   "seed": 1,
+   "salt": 0,
+   "years": 12,
+   "tune": {
+    "manorShares": 1,
+    "nobleChoice": 1,
+    "lawSteer": 1,
+    "manorSellCap": 0.5
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "MANORFIX",
+   "name": "f12c2",
+   "seed": 1,
+   "salt": 0,
+   "years": 12,
+   "tune": {
+    "manorShares": 1,
+    "nobleChoice": 1,
+    "lawSteer": 1,
+    "manorSellCap": 2
+   },
+   "control": "ctl"
+  }
+ ],
+ "specs": [
+  {
+   "item": "MANORFIX",
+   "name": "ctl",
+   "seed": 1,
+   "salt": 0,
+   "years": 20,
+   "tune": {},
+   "control": "ctl"
+  },
+  {
+   "item": "MANORFIX",
+   "name": "ctl",
+   "seed": 1,
+   "salt": 1,
+   "years": 20,
+   "tune": {},
+   "control": "ctl"
+  },
+  {
+   "item": "MANORFIX",
+   "name": "ctl",
+   "seed": 1,
+   "salt": 2,
+   "years": 20,
+   "tune": {},
+   "control": "ctl"
+  },
+  {
+   "item": "MANORFIX",
+   "name": "ctl",
+   "seed": 1,
+   "salt": 3,
+   "years": 20,
+   "tune": {},
+   "control": "ctl"
+  },
+  {
+   "item": "MANORFIX",
+   "name": "ctl",
+   "seed": 2,
+   "salt": 0,
+   "years": 20,
+   "tune": {},
+   "control": "ctl"
+  },
+  {
+   "item": "MANORFIX",
+   "name": "ctl",
+   "seed": 2,
+   "salt": 1,
+   "years": 20,
+   "tune": {},
+   "control": "ctl"
+  },
+  {
+   "item": "MANORFIX",
+   "name": "ctl",
+   "seed": 2,
+   "salt": 2,
+   "years": 20,
+   "tune": {},
+   "control": "ctl"
+  },
+  {
+   "item": "MANORFIX",
+   "name": "ctl",
+   "seed": 2,
+   "salt": 3,
+   "years": 20,
+   "tune": {},
+   "control": "ctl"
+  },
+  {
+   "item": "MANORFIX",
+   "name": "f12",
+   "seed": 1,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "manorShares": 1,
+    "nobleChoice": 1,
+    "lawSteer": 1,
+    "manorSellCap": 1
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "MANORFIX",
+   "name": "f12",
+   "seed": 1,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "manorShares": 1,
+    "nobleChoice": 1,
+    "lawSteer": 1,
+    "manorSellCap": 1
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "MANORFIX",
+   "name": "f12",
+   "seed": 1,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "manorShares": 1,
+    "nobleChoice": 1,
+    "lawSteer": 1,
+    "manorSellCap": 1
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "MANORFIX",
+   "name": "f12",
+   "seed": 1,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "manorShares": 1,
+    "nobleChoice": 1,
+    "lawSteer": 1,
+    "manorSellCap": 1
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "MANORFIX",
+   "name": "f12",
+   "seed": 2,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "manorShares": 1,
+    "nobleChoice": 1,
+    "lawSteer": 1,
+    "manorSellCap": 1
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "MANORFIX",
+   "name": "f12",
+   "seed": 2,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "manorShares": 1,
+    "nobleChoice": 1,
+    "lawSteer": 1,
+    "manorSellCap": 1
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "MANORFIX",
+   "name": "f12",
+   "seed": 2,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "manorShares": 1,
+    "nobleChoice": 1,
+    "lawSteer": 1,
+    "manorSellCap": 1
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "MANORFIX",
+   "name": "f12",
+   "seed": 2,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "manorShares": 1,
+    "nobleChoice": 1,
+    "lawSteer": 1,
+    "manorSellCap": 1
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "MANORFIX",
+   "name": "f12c05",
+   "seed": 1,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "manorShares": 1,
+    "nobleChoice": 1,
+    "lawSteer": 1,
+    "manorSellCap": 0.5
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "MANORFIX",
+   "name": "f12c05",
+   "seed": 1,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "manorShares": 1,
+    "nobleChoice": 1,
+    "lawSteer": 1,
+    "manorSellCap": 0.5
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "MANORFIX",
+   "name": "f12c05",
+   "seed": 1,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "manorShares": 1,
+    "nobleChoice": 1,
+    "lawSteer": 1,
+    "manorSellCap": 0.5
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "MANORFIX",
+   "name": "f12c05",
+   "seed": 1,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "manorShares": 1,
+    "nobleChoice": 1,
+    "lawSteer": 1,
+    "manorSellCap": 0.5
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "MANORFIX",
+   "name": "f12c05",
+   "seed": 2,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "manorShares": 1,
+    "nobleChoice": 1,
+    "lawSteer": 1,
+    "manorSellCap": 0.5
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "MANORFIX",
+   "name": "f12c05",
+   "seed": 2,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "manorShares": 1,
+    "nobleChoice": 1,
+    "lawSteer": 1,
+    "manorSellCap": 0.5
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "MANORFIX",
+   "name": "f12c05",
+   "seed": 2,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "manorShares": 1,
+    "nobleChoice": 1,
+    "lawSteer": 1,
+    "manorSellCap": 0.5
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "MANORFIX",
+   "name": "f12c05",
+   "seed": 2,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "manorShares": 1,
+    "nobleChoice": 1,
+    "lawSteer": 1,
+    "manorSellCap": 0.5
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "MANORFIX",
+   "name": "f12c0",
+   "seed": 1,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "manorShares": 1,
+    "nobleChoice": 1,
+    "lawSteer": 1
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "MANORFIX",
+   "name": "f12c0",
+   "seed": 1,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "manorShares": 1,
+    "nobleChoice": 1,
+    "lawSteer": 1
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "MANORFIX",
+   "name": "f12c0",
+   "seed": 1,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "manorShares": 1,
+    "nobleChoice": 1,
+    "lawSteer": 1
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "MANORFIX",
+   "name": "f12c0",
+   "seed": 1,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "manorShares": 1,
+    "nobleChoice": 1,
+    "lawSteer": 1
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "MANORFIX",
+   "name": "f12c0",
+   "seed": 2,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "manorShares": 1,
+    "nobleChoice": 1,
+    "lawSteer": 1
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "MANORFIX",
+   "name": "f12c0",
+   "seed": 2,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "manorShares": 1,
+    "nobleChoice": 1,
+    "lawSteer": 1
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "MANORFIX",
+   "name": "f12c0",
+   "seed": 2,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "manorShares": 1,
+    "nobleChoice": 1,
+    "lawSteer": 1
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "MANORFIX",
+   "name": "f12c0",
+   "seed": 2,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "manorShares": 1,
+    "nobleChoice": 1,
+    "lawSteer": 1
+   },
+   "control": "ctl"
+  }
+ ]
+}

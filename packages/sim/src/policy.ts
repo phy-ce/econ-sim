@@ -60,6 +60,27 @@ export function financeRatio(w: World, kingdomId: number): number {
   return ownershipAssets(w).kingdoms.find((x) => x.kingdomId === kingdomId)?.ratio ?? 0;
 }
 
+/**
+ * 민간 공사 돈줄을 금융가 먼저로 (TUNE.lawSteer 1, AI 판단, finance.ts chooseFunders financeFirst): AI 왕국(플레이어가 아닌 왕실)의 금융가 자산 비율이
+ * 투자법 다음 단계 기준(investThreshold)에 못 미치면 true. 투자법을 넓히려는 AI 의 목표(ai.ts chooseTaxLaw)와 맞춘다. 틱마다 처음 물을 때 정한다
+ */
+const steerCache = new WeakMap<World, { tick: number; m: Map<number, boolean> }>();
+export function lawSteer(w: World, kingdomId: number): boolean {
+  if (!TUNE.lawSteer) return false;
+  let c = steerCache.get(w);
+  if (!c || c.tick !== w.tick) { c = { tick: w.tick, m: new Map() }; steerCache.set(w, c); }
+  let v = c.m.get(kingdomId);
+  if (v === undefined) {
+    const k = w.kingdoms.find((x) => x.id === kingdomId);
+    const gov = k && w.companies.find((x) => x.id === k.governmentId);
+    const next = k ? INVEST_LAWS[INVEST_LAWS.indexOf(k.investLaw) + 1] : undefined;
+    const t = next ? investThreshold(next) : null;
+    v = !!gov && !gov.isPlayer && t !== null && financeRatio(w, kingdomId) < t;
+    c.m.set(kingdomId, v);
+  }
+  return v;
+}
+
 /** 법을 여는 기술을 그 왕국 왕실이 알고 있는가 */
 export function lawUnlocked(w: World, k: Kingdom, law: TaxLaw | InvestLaw): boolean {
   const tech = LAW_TECH[law];
