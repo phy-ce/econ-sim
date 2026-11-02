@@ -513,7 +513,7 @@ export function scaleBonus(level: number): number {
  *   startPopLand 0 = 소작지(경작지)도 줄어든 소작 노동 인구로 센다, 1 = 원래 인구로 센다 (같은 땅에 사람만 적다). 행정청은 줄어든 인구로 센다 (지금 규칙)
  * - startWorkshop: 왕국마다 시작 민간 목공구 공방 레벨 (건축사무소가 있는 지역). 소작지가 공구를 내지 않아(7-25) 첫날 공구 공급원이 이것뿐이다
  * - rawFullWealth, rawCapWealth: 원자재로 의복·생활용품을 다 채울 수 있는 부 상한, 원래 상한(max)이 되는 부 (rawMax)
- * - harvestChance: 기상 조건이 한 지역에서 한 계절(90일)에 새로 시작할 확률 (0이면 기상 조건이 없다)
+ * - harvestChance: 기상 조건이 한 지역에서 한 계절(90일)에 새로 시작할 확률 (0이면 무작위 기상 조건이 없다. 실험이 넣은 economy.ts SCRIPTED_HARVESTS 는 그래도 걸린다)
  * - harvestIntensity: 강도 범위 [최소, 최대]. 강도 1당 산출 −5% (HARVEST_STEP)
  *   확률 0.03·0.05·0.1 × 강도 [2,6]·[4,8] 비교 (20년 × 시드 1·2): 0.03이 장기 생활수준 손실이 가장 작았고, 둥근 값 0.05를 쓴다.
  *   강도 [4,8]은 지역 최저 식량이 기아선 0.4 근처까지 간다. 숫자는 DECISIONS 7-6
@@ -536,8 +536,8 @@ export const TUNE = {
   switchRate: 0.005,
   switchPremium: 1.1,
   switchMax: 0.05,
-  // 지역 시장 임금 (2026-11-01 사용자 승인 "지역 임금 규칙 검증", docs/overhaul/LABOR_MARKET.md 1단계 (가)): 1 = 지역·직종마다 시장 임금 하나를 모든 임금 건물이 준다
-  // (labor.ts updateMarketWages, 날마다 임금 × wageMarketRate × clamp((자리 − 오려는 사람) ÷ min(자리, 오려는 사람), −1, 1)). AI 임금 판단(adjustWages)은 돌지 않는다.
+  // 지역 시장 임금 (2026-11-01 사용자 승인 "지역 임금 규칙 검증", docs/overhaul/LABOR_MARKET.md 1단계 (가)): 1 = 지역·직종마다 시장 임금 하나를 모든 임금 건물이 준다 (AI 민간 상회는 aiWagePremium 웃돈을 얹을 수 있다)
+  // (labor.ts updateMarketWages, 날마다 임금 × wageMarketRate × clamp((자리 − 오려는 사람) ÷ min(자리, 오려는 사람), −1, 1)). AI 임금 판단(adjustWages)은 돌지 않는다 (상회 웃돈 ai.ts adjustPremium 만).
   // 0 = 그 전 규칙 (회사 임금표, AI 바닥·천장). 2026-11-02 사용자 "all 의 나머지를 넣어서" 로 기본 1 (근거: DESIGN 11, 보고서 2026-11-02-combo)
   wageMarket: 1,
   // 시장 임금의 하루 속도 r (주에 최대 약 1.75%). 후보 0.0025 / 0.005 / 0.01 중 조합 비교(2026-11-02-combo)가 쓴 값 (DESIGN 11)

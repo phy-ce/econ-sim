@@ -1114,7 +1114,7 @@ sim 변경 (wt-research):
 - 사용자 결정이 필요한 것: 없음 (3·6항은 추천안, 반대하면 바꾼다).
 
 ### 2-79. 지역 시장 임금 표 (main c952e65, wt-labor 병합, DESIGN 7.3, DECISIONS 7-32·7-38, 사전 `market-wage`)
-- sim에서 바뀐 것: `TUNE.wageMarket` 1이 기본이다. 지역마다 직종마다 시장 임금이 하나 있고, 그 지역의 모든 임금 건물(왕실 생산 건물 포함)이 그 값을 준다 (`labor.ts:436 updateMarketWages`, `economy.ts:349 wagesAt`). AI 임금 판단(`ai.ts:87 adjustWages`)은 돌지 않는다.
+- sim에서 바뀐 것: `TUNE.wageMarket` 1이 기본이다. 지역마다 직종마다 시장 임금이 하나 있고, 그 지역의 모든 임금 건물(왕실 생산 건물 포함)이 그 값을 준다 (`labor.ts:436 updateMarketWages`, `economy.ts:349 wagesAt`). AI 임금 판단(`ai.ts:87 adjustWages`)은 돌지 않는다. (wt-wagelag 부터 AI 민간 상회 건물은 시장 임금 × (1 + `Company.aiPremium[지역 id].off[직종]`) 를 준다. 건물 임금을 보일 때는 `Region.wages` 가 아니라 `wagesAt(c, b.typeId, w, b.regionId)` 를 읽는다, 사전 `ai-wage-premium`).
 - 쓸 필드 (모두 1인 하루 ƒ, 지역 값):
   - `Region.wages?: Record<Skill, number>` (`types.ts:527`): 지금 시장 임금. 하루에 최대 ±0.25% 움직인다 (`wageMarketRate` 0.0025). 저장값은 반올림하지 않는다.
   - `Region.wageAvg?: Record<Skill, number>` (`:529`): `wages`의 52주 이동평균 (`WAGE_AVG_DAYS` 364일, 날마다 1/364씩 다가감). AI 투자 판단 임금.
