@@ -861,7 +861,7 @@ export function clearMarkets(w: World, book: Book) {
     }
   }
 
-  // 구매자 결제 (같은 시장 안에서는 모두 같은 비율로 받는다)
+  // 구매자 결제 (같은 시장 안에서 필요 주문은 같은 비율 buyFill 로 받는다. 가계의 ⑦ 추가 곡물은 아래 가계 결제에서 extraFill 로 따로 받는다)
   for (const o of book.orders) {
     const gi = GOOD_INDEX[o.good];
     const fr = buyFill[o.regionId * NG + gi] ?? 1;

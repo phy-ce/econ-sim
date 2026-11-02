@@ -3,7 +3,7 @@ import { TUNE } from '../../src/data';
 import { createWorld, moneyIdentity, step, totalMoney } from '../../src/index';
 import type { World } from '../../src/index';
 
-// 곡물 S/D 세계 규칙 후보 (이슈 #11, docs/overhaul/GRAIN_RULES.md, DECISIONS 7-51): 기본은 모두 끔이다.
+// 곡물 S/D 세계 규칙 후보 (이슈 #11, docs/overhaul/GRAIN_RULES.md, DECISIONS 7-51): ①~④ 는 기본 끔, ⑦ (grainSurplusCap·surplusGrowth) 은 기본 켬. 여기서는 모두 켠다.
 // 켰을 때도 화폐 보존과 결정성(저장/불러오기)이 지켜지는지만 본다 (경제 결과는 보지 않는다)
 const ON = { wageFloorWeeks: 52, tenantSellRef: 1, grainEatElast: 1, tenantKindSigma: 1, grainSurplusCap: 0.5, surplusGrowth: 0.1 };
 const before: Record<string, unknown> = {};

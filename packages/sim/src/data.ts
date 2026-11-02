@@ -655,7 +655,7 @@ export const TUNE = {
   // 기준 채움 = 켜진 뒤 첫 수확 날 그 지역 채움 (Region.tenantFill0). 시작 상태에서 1배라 중립이고, 모두 떠나면 1 + tenantSlack 배 (market.ts tenantSlackMult).
   // 0 = 끔. 후보 0.5 (마이크로 시제품의 α). 2026-11-02 사용자 "소작지 수확 체감은 일단 메모만" 으로 끈 채 둔다 (DECISIONS 7-38, DESIGN 11)
   tenantSlack: 0,
-  // 곡물 S/D 1.3 세계 규칙 후보 (이슈 #11, 2026-11-02 wt-grainrule, docs/overhaul/GRAIN_RULES.md, 사용자 결정 대기 DECISIONS 7-51). 모두 0 = 끔 (지금 규칙).
+  // 곡물 S/D 1.3 세계 규칙 후보 (이슈 #11, 2026-11-02 wt-grainrule, docs/overhaul/GRAIN_RULES.md, DECISIONS 7-51 결정 2026-11-02). ①~④ 는 0 = 끔 (실험 스위치로 남김, ⑦ 만 기본 켬).
   // ① wageFloorWeeks > 0: 노동자·농부 임금 아래 끝(시장 임금의 바닥, startWage·outsideWage)에 쓰는 소작 1인 소득을 그 주 수의 지수 이동평균으로 잰다 (Region.tenantAvg).
   //    사람이 옮기는 판단(누가 오려는가)은 지금 소작 소득 그대로다 (labor.ts moveRegionWages). 후보 52 / 104
   wageFloorWeeks: 0,

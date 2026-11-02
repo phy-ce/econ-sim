@@ -2,8 +2,8 @@
 
 **지금 상태 (2026-11-02): ⑦ 을 기본으로 켰다 (`grainSurplusCap` 0.5, `surplusGrowth` 0.05, 11장). ①~④ 는 꺼진 실험 스위치다.** 사용자 선택: "세계 규칙 후보를 분석·비교". 1~10장은 후보 비교 기록이다. 7-51 에 대한 사용자 답 ("싸면 더 사먹고 인구도 그만큼 더 늘게 하면안됨?") 으로 ⑦ 을 더했다 (9~10장, 권고는 10장이 7장을 대신한다). 1~10장 시점에는 아무것도 켜지 않았다 (golden 같음). 결정은 DECISIONS 7-51.
 
-- 코드: wt-grainrule = main ce8a5f7 + TUNE 스위치 여섯 (`wageFloorWeeks`, `tenantSellRef`, `grainEatElast`, `tenantKindSigma`, ⑦ `grainSurplusCap`·`surplusGrowth`, `data.ts` 곡물 S/D 후보 줄).
-- 진단 출발점: wt-grain11 `RESULT.md` (main 9ba5acc), DECISIONS 7-49 (wt-grain11 에 있음, main 에는 아직 없다).
+- 코드: wt-grainrule = main ce8a5f7 (1~10장 비교), 3222e73 병합 뒤 ⑦ 값 고르기 (11장) + TUNE 스위치 여섯 (`wageFloorWeeks`, `tenantSellRef`, `grainEatElast`, `tenantKindSigma`, ⑦ `grainSurplusCap`·`surplusGrowth`, `data.ts` 곡물 S/D 후보 줄).
+- 진단 출발점: wt-grain11 `RESULT.md` (main 9ba5acc), DECISIONS 7-49 (wt-grain11, main 3222e73 에 병합됨).
 - 결과 파일: `.tmp/gr/` (마이크로 `micro/*.jsonl`, 본 게임 `full10all2.jsonl`·`full20all.jsonl`, 커밋 안 함). 비교 명세 `docs/overhaul/GRAIN_RULES_SPECS.json`.
 - 그래프: `.tmp/reports/2026-11-02-grainrule-micro.png`, `-full10.png`, `-full20.png`, `-full20-g.png` (⑦).
 

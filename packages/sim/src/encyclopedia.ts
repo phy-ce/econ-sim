@@ -307,7 +307,7 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   },
   {
     id: 'clearing', category: 'market', title: t('체결', 'Market clearing'),
-    rule: t('지역 시장마다 그날 가격 하나로 체결한다. 체결량 = min(수요, 공급). 파는 쪽은 같은 비율로 팔고, 사는 쪽은 같은 비율로 받는다. 건물 산출은 그날 못 팔면 사라진다.', 'Each regional market clears at one daily price. Volume = min(demand, supply). Sellers sell, and buyers receive, the same fraction. Unsold building output is lost.'),
+    rule: t('지역 시장마다 그날 가격 하나로 체결한다. 체결량 = min(수요, 공급). 파는 쪽은 같은 비율로 팔고, 사는 쪽은 같은 비율로 받는다. 건물 산출은 그날 못 팔면 사라진다. 단, 싼 곡물을 필요 밖으로 더 사는 주문은 필요 주문이 다 찬 뒤 남는 물건만 받는다.', 'Each regional market clears at one daily price. Volume = min(demand, supply). Sellers sell, and buyers receive, the same fraction. Unsold building output is lost. Extra grain bought beyond need only gets what is left after need orders are filled.'),
     formula: 'sold = min(D, S);  seller share = sold / S;  buyer share = sold / D',
     params: [],
     example: () => ({
@@ -321,7 +321,7 @@ export const ENCYCLOPEDIA: EncEntry[] = [
         return { rows: [row('오늘 수요', 'Demand today', r2(mg.demand), 'good'), row('오늘 공급', 'Supply today', r2(mg.supply), 'good'), row('체결', 'Sold', r2(mg.sold), 'good'), row('가격', 'Price', mg.price, 'florin')] };
       },
     },
-    related: ['price-formula', 'trade', 'day-order'], seenIn: ['market', 'resource'], source: ['market.ts clearMarkets'], design: ['6'],
+    related: ['price-formula', 'trade', 'day-order', 'surplus-food'], seenIn: ['market', 'resource'], source: ['market.ts clearMarkets'], design: ['6'],
   },
   {
     id: 'price-formula', category: 'market', title: t('가격 공식', 'Price formula'),
@@ -881,7 +881,7 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   },
   {
     id: 'surplus-food', category: 'people', title: t('싼 곡물과 인구', 'Cheap grain and population'),
-    rule: t('곡물이 기본가보다 싸면 가계는 묶음을 다 사고 남는 돈으로 곡물을 식량 필요 × (기본가 ÷ 값 − 1) 만큼 더 사 먹는다 (최대 {0}). 필요량은 그대로이고, 더 사는 곡물은 필요 주문이 다 찬 뒤 남는 곡물만 받는다. 더 먹은 비율 × {1} 만큼 해마다 인구가 더 는다.', 'When grain is below its base price, households that have bought their whole basket spend leftover money on extra grain: food need × (base ÷ price − 1), at most {0}. Needs do not change, and the extra grain only gets what is left after all need orders are filled. Population grows faster each year by the extra share eaten × {1}.'),
+    rule: t('곡물이 기본가보다 싸면 가계는 묶음을 다 사고 남는 돈으로 곡물을 식량 필요를 곡물로 채울 양 × (기본가 ÷ 값 − 1) 만큼 더 사 먹는다 (최대 {0}). 필요량은 그대로이고, 더 사는 곡물은 필요 주문이 다 찬 뒤 남는 곡물만 받는다. 더 먹은 비율 × {1} 만큼 해마다 인구가 더 는다.', 'When grain is below its base price, households that have bought their whole basket spend leftover money on extra grain: the grain that would cover their food need × (base ÷ price − 1), at most {0}. Needs do not change, and the extra grain only gets what is left after all need orders are filled. Population grows faster each year by the extra share eaten × {1}.'),
     formula: 'extra = food need (in grain) × min({0}, base ÷ price − 1);  growth += {1} × extra eaten ÷ food need (per year)',
     params: [tune('grainSurplusCap', '더 사는 상한', 'Extra cap', 'pct'), tune('surplusGrowth', '더 먹은 비율당 연 증가', 'Yearly growth per extra share', 'pct')],
     example: () => {
@@ -918,8 +918,8 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   },
   {
     id: 'growth', category: 'people', title: t('인구 증감', 'Population growth'),
-    rule: t('출생·사망은 생활수준 곡선(빅토리아3)이다. 출생 = 사망이 되는 생활수준이 계층마다 다르다 ({0}). 생활수준 × 5 ÷ 평형점을 곡선에 넣는다. 문해력 100%면 출생 −10%.', 'Births and deaths follow the Victoria 3 SoL curves. The SoL where births equal deaths differs by stratum ({0}); SoL × 5 ÷ equilibrium goes into the curve. Full literacy cuts births 10%.'),
-    formula: 'daily growth = (birth(SoL′) − death(SoL′)) ÷ 30',
+    rule: t('출생·사망은 생활수준 곡선(빅토리아3)이다. 출생 = 사망이 되는 생활수준이 계층마다 다르다 ({0}). 생활수준 × 5 ÷ 평형점을 곡선에 넣는다. 문해력 100%면 출생 −10%. 싼 곡물을 더 먹은 가계는 그 비율 × surplusGrowth 만큼 해마다 더 는다 (싼 곡물과 인구).', 'Births and deaths follow the Victoria 3 SoL curves. The SoL where births equal deaths differs by stratum ({0}); SoL × 5 ÷ equilibrium goes into the curve. Full literacy cuts births 10%. Households eating extra cheap grain grow faster each year by that share × surplusGrowth (Cheap grain and population).'),
+    formula: 'daily growth = (birth(SoL′) − death(SoL′)) ÷ 30 + surplusGrowth × extra food share ÷ 360',
     params: [tune('growthEq', '평형 생활수준', 'Equilibrium SoL')],
     example: () => {
       const sol = 2, eq = TUNE.growthEq.lower, s = sol * 5 / eq;
@@ -936,7 +936,7 @@ export const ENCYCLOPEDIA: EncEntry[] = [
         return { bars: w.pops.filter((x) => x.regionId === r.id && x.size > 1000).sort((a, b) => b.size - a.size).slice(0, 12).map((x) => bar(classLabel(x.prof), r2(x.growth / 100), 'pct')) };
       },
     },
-    related: ['wealth', 'food'], seenIn: ['pops', 'charts'], source: ['pops.ts growthAt'], design: ['3.4'],
+    related: ['wealth', 'food', 'surplus-food'], seenIn: ['pops', 'charts'], source: ['pops.ts growthAt', 'pops.ts growthWith'], design: ['3.4'],
   },
   {
     id: 'food', category: 'people', title: t('굶주림', 'Starvation'),
