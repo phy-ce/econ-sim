@@ -1,11 +1,11 @@
 #!/bin/bash
 # 조정값 비교: ./cli/sweep.sh out.jsonl '<TUNE JSON>' '<TUNE JSON>' ...  (기본 20년 × 시드 1·2)
-# 환경 변수: SEEDS (기본 "1 2"), YEARS (기본 20), PAR 동시 실행 수 (기본: CPU 코어 수 − 2),
+# 환경 변수: SEEDS (기본 "1 2"), YEARS (기본 20), PAR 동시 실행 수 (기본 6 과 CPU 코어 수 − 2 중 작은 쪽: PC 를 다 채우지 않게, 2026-11-02 사용자),
 #            TIMING=1 이면 실행마다 걸린 시간을 stderr 에 찍고 결과 줄에 time 을 넣는다.
 #            TSX=1 이면 tsx 로 돌린다 (기본은 sweep.ts 를 esbuild 로 한 번 묶어 node 로 돌린다: 같은 결과, 더 빠름).
 # 결과 줄은 입력 순서(조정값 → 시드)대로 쓴다. 임시 파일은 지우지 않고 남긴다 (경로를 stderr 에 찍는다).
 OUT=$1; shift; TMP=$(mktemp -d); i=0
-PAR=${PAR:-$(( $(nproc) - 2 ))}; SEEDS=${SEEDS:-"1 2"}; YEARS=${YEARS:-20}
+C=$(( $(nproc) - 2 )); PAR=${PAR:-$(( C < 6 ? C : 6 ))}; SEEDS=${SEEDS:-"1 2"}; YEARS=${YEARS:-20}
 (( PAR < 1 )) && PAR=1
 echo "sweep: $# 조정값 × 시드 [$SEEDS] × ${YEARS}년, 동시 $PAR, 임시 $TMP" >&2
 T0=$(date +%s)

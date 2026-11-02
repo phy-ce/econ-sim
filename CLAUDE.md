@@ -65,6 +65,8 @@
 - `cd packages/sim && npx vitest run`: 전체 테스트 (파일 병렬, 약 1~2분). 시험은 코드 문제(완주·화폐 보존·결정성·범위·공식)만 판정하고 경제 결과로는 실패하지 않는다 (2026-11-01 사용자). `npm run test:long`: 20년 시드 1·2, 해마다 지표를 `.tmp/test-data/long-<시드>.jsonl`에 남긴다 (`python cli/report.py <id> 파일`로 보고서, `LONG_DATA=0`으로 끈다)
 - `bash packages/sim/cli/sweep.sh out.jsonl '<TUNE JSON>' ...` → `python packages/sim/cli/sweepsum.py out.jsonl`:
   20년 × 시드 2개 비교 (packages/sim 에서 실행). `SEEDS="1 2 3"`, `YEARS=10`, `TIMING=1`(실행 시간) 로 바꾼다
+- 컴퓨팅 자원 (2026-11-02 사용자: PC 를 너무 많이 쓴다): lab·sweep 은 동시 6판이 기본이고(`PAR`), 실행은 우선순위 '보통 이하'로 돈다 (`cli/lowprio.ts`, `LOWPRIO=0` 이면 끔).
+  비교 실행을 하는 에이전트는 한 번에 하나만 띄우고, 한 묶음이 끝나기 전에 다음 묶음을 시작하지 않는다. premerge 는 비교 실행이 없을 때 돌린다
 - `bash packages/sim/cli/fast.sh <cli 파일> 인자`: tsx 대신 esbuild 로 묶어 실행 (같은 결과, 시작 2초·계산 10% 빠름)
 - 진단 CLI (`packages/sim/cli/`): popdiag(인구·착공), soldiag(하층 생활수준), treasury(국고 장부),
   skilldiag(직종별 일자리·자격자), schooldiag(학교·교육), jobdiag(지역별 실업), perf(단계별 시간, `fast.sh perf.ts 2`)
