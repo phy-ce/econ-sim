@@ -239,3 +239,121 @@
 - 기술 전파(tech spread): 트리마다 한 기술씩, 다른 나라가 아는 기술이 퍼져 온다. 속도 = (25 + 0.2 × 쓰지 못한 혁신 + 0.75 × 문해력%) × 법 배율(언론 보호 +25%, 검열 −10% 등) × 무작위 0.5~1.5.
 - 기술 값: 시대별 7,500 / 10,000 / 12,500 / 15,000 / 17,500. 같은 트리의 앞 시대 미연구 기술 수만큼 비싸진다.
 - 다른 나라가 아는 기술이 싸진다는 내용은 위키에서 확인 못 함 (전파는 값을 깎지 않고 포인트를 쌓는다).
+
+## 임금 조정·채용·가격 속도·임금 바닥 (2026-11-02 확인)
+출처 (모두 직접 열어 확인):
+- G2 = https://github.com/jink47787/Historical_MP_Series_Vic3/blob/main/basegame-ver/ (게임 원본 미러, defines 마지막 커밋 cb2d2ff "base latest 1.13.11"). 위 "소작농 소득"의 G와 같은 저장소다.
+- T = https://github.com/tjysdsg/Victoria-3-files/blob/master/game/ (1.9.0). 같은 defines 키를 견주었다.
+- 개발 일지: 포럼(forum.paradoxplaza.com)은 브라우저 확인 페이지만 준다. web.archive.org 사본으로 열었다 (링크마다 사본 시각).
+- 패치 노트: https://vic3.paradoxwikis.com/Patch_1.1 ~ https://vic3.paradoxwikis.com/Patch_1.8 (1.4에는 해당 줄이 없다).
+- 소유 건물 규칙 정리는 wt-manor 의 "소유 건물·소유 이동·임금 조정 (2026-11-02)" 절이 맡는다. 여기서는 개발 일지 원문 인용(5)만 둔다.
+
+### 1. 건물 임금이 오르내리는 규칙
+- 개발 일지 #11 (2021-08-19, 출시 전, https://web.archive.org/web/20221028033826/https://forum.paradoxplaza.com/forum/developer-diary/victoria-3-dev-diary-11-employment-and-qualifications.1487723/):
+  - "Wages are set by individual buildings in response to market conditions. A building that is losing money will decrease wages until it's back in the black. A building that has open jobs it can't seem to fill will raise wages until it either fills the necessary positions or runs out of excess profits."
+  - "buildings won't increase wages due to labor competition if this would cause them to go into deficit"
+  - 옮기는 조건: "they must be offered a measurably higher wage than the wage they're currently getting from their current employment."
+- 게임 안 설명 (G2 `localization/english/concepts_l_english.yml` `concept_building_wage_desc`, 변수는 풀어 씀): "If a building's balance allows for raising wages at all, the building will only do so if it needs to in order to attract more pops to its workforce. If a building's balance is negative, it will consider lowering wages to return to profitability."
+- 임금은 건물마다 기본 임금 하나다: "As a building can only adjust its base wage, all professions maintain the same ratio." (https://vic3.paradoxwikis.com/Peasants, 1.13)
+- Defines (G2 `common/defines/00_defines.txt` NEconomy 484~547행, 1.13.11). 값과 주석 요지:
+
+| 키 | 값 | 주석 요지 |
+|---|---|---|
+| MAX_WAGE_STEP_CHANGE | 0.1 | "Wage rates can change at most this much each week" |
+| BUILDING_WEEKS_BETWEEN_PAY_CHANGES (적자일 때 `_WHEN_UNPROFITABLE`) | 0 (0) | 임금을 바꾼 뒤 쉬는 주. 0이라 매주 바꿀 수 있다 |
+| BUILDING_INITIAL_WAGE_WEEKS | 2 | 새 건물은 처음 2주 임금을 바꾸지 않는다 |
+| BUILDING_PROFIT_TARGET_TO_RAISE_WAGES | 0.25 | 이익률이 이 이상이어야 생활수준·채용 때문에 올리기를 검토한다 (소유 건물 0.5, 자급 건물 0.7) |
+| BUILDING_PROFIT_TARGET_TO_LOWER_WAGES | 0.15 | 이익률이 이 이하면 내린다 (소유 건물 0.3, 자급 건물 0.5) |
+| BUILDING_RAISE_WAGES_TARGET_WEALTH_MULT | 0.9 | "significant pops" 중 하나라도 부가 (기대 생활수준에 맞는 목표 부) × 0.9 이하면 올리기를 검토한다 |
+| BUILDING_LOWER_WAGES_TARGET_WEALTH_MULT | 1.2 | 모두 목표 부 × 1.2 이상이면 내리기를 검토한다 |
+| BUILDING_PREFER_LAYOFFS_TARGET_WEALTH_MULT | 0.66 | 하나라도 목표 부 × 0.66 이하면 임금을 깎기보다 해고를 택한다 (1.9.0은 0.5) |
+| BUILDING_MAX_EMPLOYMENT_FRACTION_TO_RAISE_WAGES | 0.5 | 고용률이 이보다 높으면 다른 건물 일꾼을 빼 오려고 올리지 않는다 |
+| BUILDING_HIGH_CASH_RESERVES_THRESHOLD | 0.5 | 유보 자산이 상한의 50%를 넘으면 적자여도 비용을 줄이지 않는다 |
+| BUILDING_WAGES_OWNERSHIP_BUILDING_FACTOR | 0.75 | 다른 건물을 소유한 건물은 목표 임금 × 0.75 |
+| BUILDING_FOREIGN_OWNERSHIP_WAGE_FACTOR | −0.25 | 외국 소유 비율만큼 목표 임금 −25% |
+| BUILDING_WAGES_AVERAGE_PRODUCTIVITY_FACTOR (THRESHOLD 0.5, MAX 2.5) | 0.5 | 같은 종류 평균보다 생산성이 높은 건물은 이익이 괜찮으면 임금을 더 후하게 준다 |
+| BUILDING_WAGES_MIN_RELEVANT_POP_SIZE | 50 | 노동력 50 미만 pop은 판정에서 뺀다 (직원 200 이상인 건물만, `_MIN_EMPLOYEES_FOR_RELEVANT_POP_SIZE_CHECK`) |
+| MINIMUM_WAGE_RATE / MAXIMUM_WAGE_RATE | 10 / 100,000 | 임금률(직원 10,000명당 주급 £)의 절대 하한·상한 |
+
+- T (1.9.0)도 MAX_WAGE_STEP_CHANGE, 쉬는 주, 이익률 문턱(0.25/0.15, 소유 0.5/0.3, 자급 0.7/0.5), LOWER 1.2가 같다. RAISE 0.9, 생산성 배율, 외국 소유 배율은 1.9.0 파일에 없다.
+- 패치 노트로 본 바뀐 과정:
+  - 1.1: "Buildings will now only raise wages if they are either competing for wages or are below their minimum wage target; the target is based on employees' Expected Standard of Living to prevent too much active radicalization", "Building wage targets are lowered in unincorporated states (e.g. colonies) and for discriminated pops"
+  - 1.2: "Buildings will now lower wages or lay off employees if they are running a deficit and have <50% cash reserves…", "Buildings will no longer raise wages to attract new employees if no qualifying employees exist"
+  - 1.5: "Buildings will no longer raise their wages to try and hire additional employees unless they can maintain a decent profitability after accounting for the increased employment", "A new building's wage rate is now initialized to whatever the average needed wage would be to sustain wealth levels in the state", "Buildings now evaluate wages more frequently when they're unprofitable"
+  - 1.8: "Fixed an issue where non-ownership buildings had a too high profit target below which they'd lower wages… resulting in them lowering wages too soon"
+- 위를 합쳐 읽으면: 임금은 주 단위로 많아야 0.1씩 움직이고, 올리는 쪽은 이익률 25% 이상일 때 빈자리나 직원 생활수준 때문에, 내리는 쪽은 이익률 15% 이하(1.2부터 유보 자산 50% 미만)일 때와 직원 부가 목표의 1.2배 이상일 때다 (두 조건의 결합은 아래 확인 못 함).
+- **확인 못 함:** MAX_WAGE_STEP_CHANGE 0.1이 비율(10%)인지 임금률 절대값인지 (주석은 "this much"), 임금 검토가 매주 일어나는지 (쉬는 주 0과 1.5 "적자일 때 더 자주"만 확인), 올리기·내리기 조건이 서로 "그리고"인지 "또는"인지, "이익률"의 분모 (BUILDING_MAX_PROFIT_TO_PAUSE_HIRES 주석은 "fraction of revenue in profit"이라 매출 대비로 보인다).
+
+**채용·해고 속도** (같은 파일 487~491·504·508·519·544~547·597~601행, 1.13.11)
+
+| 키 | 값 | 주석 요지 |
+|---|---|---|
+| DEFAULT_MIN_HIRING_RATE / DEFAULT_MAX_HIRING_RATE | 0.01 / 0.1 | 건물·직종마다 한 주에 뽑는 양의 하한·상한, 완전 고용 대비 비율 |
+| HIRING_RANGE_WEEKLY_CHANGE | 0.01 | 지금 속도로 뽑지 못하는지에 따라 채용 범위를 주마다 0.01씩 줄이거나 늘린다 |
+| EMPLOYMENT_PROPORTIONALITY_LIMIT | 0.1 | 두 직종의 충원율 차가 0.1을 넘을 수 없다 |
+| MINIMUM_EMPLOYEES | 10 | 직원이 10명 미만이면 늘 뽑으려 한다 |
+| BUILDING_PROFIT_TARGET_TO_HIRE_EMPLOYEES | 0.25 | 이익률 25% 이상이면 더 뽑으려 한다 (소유 건물 0.5) |
+| BUILDING_DEFAULT_MIN_EARNINGS_TO_HIRE_EMPLOYEES | 3 | 보조금 없는 건물은 직원 1인당 연 수익이 3 아래로 떨어지게 되면 뽑지 않는다 |
+| BUILDING_PAUSE_HIRES_* | 0.75 / 0.1 / 0.5 / 0.2 | 이익이 매출의 20% 미만이고 고용률 10% 이상이면 채용을 멈출 수 있다. 유보 자산 75% 초과이고 고용률 50% 미만이면 이익이 낮아도 뽑는다 |
+| BUILDING_FAILED_HIRE_COOLDOWN_WEEKS_WITHOUT_WAGE_RAISE | 4 | 채용에 실패하면 4주 쉰다. 그 사이 임금을 올리거나 채용 속도를 바꾸면 다시 시도 |
+| BUILDING_LAYOFFS_DECREASE_BY | 0.05 | 해고는 고용률에 (1 − 0.05)를 곱한다 (주석 예: 0.15면 57% → 48.45%) |
+| BUILDING_LAYOFF_HIRING_COOLDOWN_WEEKS | 4 | 해고한 건물은 4주 동안 뽑지 않는다 |
+| MIN_RAISE_TO_HIRE | 0.10 | pop이 일자리를 옮기려면 임금이 10% 이상 높아야 한다 ("1.0 = +100% = x2") |
+
+- T (1.9.0)도 채용 하한·상한, 범위 변화, 쉬는 주 4·4, 해고 0.05, MIN_RAISE_TO_HIRE 0.10이 같다.
+- 패치 노트: 1.3 "Buildings with low cash reserves, at least 10% employment, and low profits will now avoid hiring more employees as this would often result in those employees then being fired a few weeks later". 1.5 "Buildings that want to hire more employees but do not succeed will now wait 4 weeks before trying again.", "If a building in hiring cooldown raises its wages, it will reset the cooldown."
+- 이 게임과 다른 점: 이 게임은 건물마다가 아니라 지역·직종마다 시장 임금이 하나이고, 맞는 임금 쪽으로 날마다 거리의 `wageTargetSpeed` 비율씩 움직인다 (DESIGN 7.3). 채용은 날마다 자리별 상한이 있고, 재직자가 옮기는 문턱은 `switchPremium` 이다 (DESIGN 7.2). 빅토리아3의 옮기는 문턱 MIN_RAISE_TO_HIRE 와 같은 자리의 값이다.
+
+### 2. 시장 가격이 움직이는 속도
+- 개발 일지 #9 (2021-08-05, 출시 전, https://web.archive.org/web/20210821203738/https://forum.paradoxplaza.com/forum/developer-diary/victoria-3-dev-diary-9-national-markets.1484917/): "In Victoria 3, a single unit of goods is produced and immediately sold at a price determined by how many consumers are willing to buy it at the moment of production. When this happens prices shift right away along with actual supply and demand". 재고도 없다: "there are no goods stockpiles involved in this system."
+- Defines (G2 00_defines.txt 415~417행, 1.13.11): 가격 키는 MIN_GOODS_PRICE 1, PRICE_RANGE 0.75, BUY_SELL_DIFF_AT_MAX_FACTOR 2 ("if set to 4 then if buy orders are 4x sell orders price is maxed")뿐이다. "price"·"smooth"·"speed"로 찾았을 때 가격을 천천히 따라가게 하는 키는 없었다. T (1.9.0)도 PRICE_RANGE 0.75, BUY_SELL_DIFF_AT_MAX_FACTOR 2.
+- 위키 Market (1.13)도 공식만 쓰고 갱신 주기·평활은 쓰지 않는다 (https://vic3.paradoxwikis.com/Market).
+- 가격을 만드는 주문 쪽은 천천히 움직인다. 키는 확인했고, 이것이 가격을 느리게 만든다는 것은 해석이다:
+  - 고용: 위 채용 상한(직종마다 주 10%). 산출은 고용을 따라 오른다.
+  - pop 소비: 부 단계가 천천히 오르내린다 (NPops WEALTH_PROGRESS_INCREASE 0.2, WEALTH_PROGRESS_DECREASE 0.1, 1395~1399행).
+  - 대체재 수요: 한 번 갱신에 MAX_DEMAND_ADJUSTMENT_BASE_AMOUNT 0.01 + MAX_DEMAND_ADJUSTMENT_SCALED_AMOUNT 0.09까지만 바뀐다.
+  - 품귀 벌칙: 하루 0.01씩 오르내린다 (GOODS_SHORTAGE_PENALTY_INCREASE_SPEED / DECREASE_SPEED).
+- **확인 못 함:** 가격을 매일 계산하는지 매주 계산하는지.
+- 이 게임과 다른 점: 이 게임은 가격이 날마다 `PRICE_SPEED` 비율씩 따라간다 (DESIGN 11장 `PRICE_SPEED` 행). 빅토리아3는 가격 자체에 따라가는 속도가 없고, 주문이 느리게 바뀐다.
+
+### 3. 최저임금·자급 소득·임금 바닥
+- 기본 게임 1.13.11 법 파일(G2 `common/laws/`)에 "최저임금" 법은 없다. 임금에 닿는 법은 노동권(Labor Rights: No Workers' Rights / Regulatory Bodies / Workers' Protections)과 복지(Welfare: Poor Laws / Wage Subsidies / Old Age Pension 등)다. 같은 저장소의 `Historical MP Series/common/laws/HMPS_minimum_wage.txt`는 모드 파일이다.
+- 이 법들이 주는 것은 "건물 임금 목표" 배율 `building_minimum_wage_mult`다. 화면 이름 "Building Wage Target", 설명 "A bonus or penalty to what is considered an acceptable wage for a [concept_building] to pay to its employees. Increasing this will result in higher average wages over time." (G2 `localization/english/modifiers_l_english.yml`)
+  - Workers' Protections: 작업장 안전 기관 레벨당 +10% (`common/laws/02_labor_rights.txt` `institution_modifier`). Regulatory Bodies에는 없다.
+  - Wage Subsidies: 사회 보장 기관 레벨당 +10%, Old Age Pension: +15% (`common/laws/02_welfare.txt`). Poor Laws에는 없다.
+  - 비편입 주: −20%, 자급 산출도 −20% (`common/static_modifiers/00_code_static_modifiers.txt` `unincorporated_state`, 주석 "To balance for unincorporated states not paying taxes").
+  - 이벤트 수정치 "Temporary Minimum Wages": +20% (`common/static_modifiers/105_modifiers.txt` `temporary_minimum_wages`).
+- 그래서 빅토리아3의 "최저임금"은 법정 바닥이 아니라, 건물 AI가 받아들일 만하다고 보는 임금 목표를 올리는 배율이다. 목표 자체는 1.1 패치 노트대로 직원의 기대 생활수준에서 온다 (위 1절).
+- Peasants 문서 (1.13): 보통 임금은 "used as the base wage of government-funded buildings as well as the baseline for welfare payments and minimum wage." 보통 임금이 임금 목표의 기준이라는 뜻으로 읽히나, 1.1의 "기대 생활수준 기준"과 어떻게 합쳐지는지는 **확인 못 함**.
+- 보조금 건물에만 보통 임금이 바닥이 된다 (concepts `concept_subsidized_wage_desc`, 태그는 풀어 씀): "When a Subsidized Building cannot pay their Workforce at least the Normal Wage, the remainder is covered by government Subsidies through the Treasury. In return the Building will never fire its Workforce and aim to keep Throughput maximized at all times."
+- 자급 소득과 임금: SUBSISTENCE_OUTPUT_AVERAGE_WAGE_RATE_FACTOR = 150, "Each 1.0 of subsistence output counts as this much wage rate when setting normal wages" (00_defines.txt 530행, 1.9.0도 150). 소작농 현물 소득이 보통 임금 계산에 임금으로 들어가고, 보통 임금은 정부 임금·복지·(위키 표현의) 최저임금의 기준이 된다. 자급 산출이 민간 건물 임금의 바닥으로 직접 쓰인다는 내용은 못 찾았다.
+  - 시작 임금: STARTING_WAGE_RATE_SUBSISTENCE_MULTIPLIER 0.5 (자급 건물 시작 임금률 × 0.5), PEASANT_STARTING_WAGE_RATE_FACTOR 1.0 (시작 보통 임금을 셀 때 소작농 직종 배율을 1로 본다).
+  - 절대 하한은 MINIMUM_WAGE_RATE 10 (직원 10,000명당 주 £10)뿐이다.
+- 이 게임과 다른 점: 이 게임은 최저임금·곡물 최저가를 두지 않는다 (CLAUDE.md). 빅토리아3도 법정 임금 바닥은 없고 (엔진 하한 MINIMUM_WAGE_RATE 와 보조금 건물의 보통 임금만 예외), 법은 건물이 임금을 올리는 목표를 바꾼다.
+
+### 4. 정부 임금 단계와 보통 임금
+- 단계 값 (G2 `common/static_modifiers/00_code_static_modifiers.txt`): `government_wages_very_low` −0.3 / `low` −0.15 / `medium` (비어 있음 = 0) / `high` +0.15 / `very_high` +0.3 (`country_government_wages_mult`). 위 "정부 임금 단계"의 −30~+30%가 맞다. 군 임금도 같은 다섯 값이다 (`country_military_wages_mult`).
+  - 다른 효과: 지식인·소부르주아 이익집단 지지 −2/−1/0/+1/+2, 매우 낮음·낮음은 위신 −20%/−10%, 높음·매우 높음은 권위 +5%/+10%.
+- 나라 하나에 한 단계다: "All [Government Buildings] except [Military Buildings] pay their [workforce] according to the same standardized Government Wage rate. This rate is based on the [Normal Wage] in the [country], with any adjustments set in the Budget panel." (concepts `concept_government_wage_desc`, 태그 줄임). 수정치 설명: "How much more or less than the [concept_normal_wage] government employees get paid." (modifiers `country_government_wages_mult_desc`)
+- 보통 임금 = 편입 주 산업 건물 임금의 나라 평균: "It is determined from the average $concept_building_wages$ paid by [Concept('concept_building','$concept_building_industries$')] across [Concept('concept_incorporated_state', '$concept_incorporated_states$')]." (concepts `concept_normal_wage_desc`). Peasants 문서: "The country-wide average of base wages in incorporated states is called the normal wage."
+- 위 인용을 합친 식: 정부 건물 임금 = 보통 임금 × (1 + 단계 배율) × 직종 배율 (위 직종 배율 표). 민간 임금이 오르면 보통 임금을 거쳐 정부 임금도 오른다. 정부 건물은 매출이 없고 국고에서 받는다 (concepts `concept_government_building_desc`).
+- **확인 못 함:** 보통 임금 평균이 사람 수 가중인지, 얼마나 자주 다시 계산하는지, 자급 산출 150 환산이 소작농을 어떤 무게로 넣는지.
+
+### 5. 개발 일지 원문 (#110, #71, web.archive.org)
+- DD#110 "Building Ownership & Foreign Investment" (2024-03-28, 1.7 대상, https://web.archive.org/web/20240914145639/https://forum.paradoxplaza.com/forum/developer-diary/victoria-3-dev-diary-110-building-ownership-foreign-investment.1647879/). 위 "저택" 절의 "원문 확인 못 함"을 채운다:
+  - "Manor Houses are able to own levels of other buildings, in our case at game start all the levels of Subsistence Farms in their own states. They pay their wages and dividends by collecting dividends from the buildings they own and distributing them among their employees."
+  - 금융가: "They too have different employment PMs, can own levels of other buildings and pay their employees by collecting dividends from owned building levels."
+  - "In worker-owned buildings employees work for themselves basically. So any dividends they may accumulate, they split amongst themselves."
+  - "Both new buildings expand automatically, depending on how many levels they own."
+  - "All building levels that you construct are country-owned. Under certain laws, this status can change soon after they are finished constructing."
+  - "When a building is about to be constructed by private investment, we randomly determine who is building it, favoring already existing Financial Districts and Manor Houses over creating new ones."
+  - "In a worker-owned economy, the private investment pool will continue to function, but they will only expand their own buildings, not create new ones."
+  - 임금 수치나 임금 규칙 변경은 이 일지에 없다.
+- DD#71 "Autonomous Investment in 1.2" (2023-01-18, https://web.archive.org/web/20230120172750/https://forum.paradoxplaza.com/forum/developer-diary/victoria-3-dev-diary-71-autonomous-investment-in-1-2.1565414/, 요약본 https://paradoxinteractive.com/games/victoria-3/news/dev-diary-71-autonomous-investment-in-1-2):
+  - "Certain Pop Types with ownership shares in buildings pay part of their dividends into the Investment Pool"
+  - "Capitalists invest the highest percentage of their dividends (20%), followed by Aristocrats at 10%, with Farmers and Shopkeepers investing only 5% each." 1.2 일지의 값이다. 위 "저택" 절의 1.13 Treasury 위키 값(자본가 30%, 귀족·성직자·상점주 20%)과 버전이 달라 값이 다르다.
+  - "The Construction capacity of the country will be split between the Private and Government queues in a proportion based on your economic law, though if there isn't enough constructions queued of one type to use its full allocation, the excess can be used by the other queue instead."
+  - "Private Constructions, unlike Government ones, cannot be reprioritized or canceled"
+  - 민간 공사 AI는 "prioritizes the creation of profitable buildings which will create lucrative jobs for the investing Pop types"
+  - 임금에 관한 문장은 없다.
+- DD#11은 1절에 인용했다. DD#131(기상 조건)은 이번에 다시 시도하지 않았다.
