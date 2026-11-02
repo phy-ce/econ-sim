@@ -174,7 +174,8 @@ LAB = {'solPeasAvg': ('소작농 생활수준 (연평균)', ''), 'solUnskAvg': (
 for k, (nm, u) in LAB.items(): LABELS[k] = L(nm, '0b 측정', u)
 GROUPS = ['경제', '0b 측정', '생활수준', '소득', '인구', '계층 인구', '계층 노동 인구', '일자리', '임금', '돈', '돈 ÷ 총생산', '왕실', '연구', '건축사무소', '복지', '왕실 장부', '민간 장부',
           '소유 건물 흐름', '시장', '값 (기본가 대비)', '공급', '수요', '공급÷수요', '거래량', '가계 수요', '건물 레벨', 'AI 길', '소유', '정부', '하급 귀족 일자리', '기타']
-# 해마다 한 줄 진단 파일(.tmp/col/collapse.ts)에서만 뜻이 다른 이름
+# 옛 해마다 한 줄 진단 파일(.tmp/col/collapse.ts, 보고서 2026-10-22-collapse40·2026-10-30-0a-probe)에서만 뜻이 다른 이름.
+# cli/lab.ts 줄(src/lab/metrics.ts)의 peas 는 소작농 비율이고 소작농 수는 peasK 라서, peasK 가 있는 파일에는 쓰지 않는다 (finish)
 FLAT = {'peas': L('소작농 수', '인구', '백만')}
 FLAT_DEFAULTS = ['gdp', 'pop', 'peas', 'food', 'stock.savAll', 'stock.gov', 'stock.fin', 'stock.total', 'wage.pU', 'price.grain', 'sellThru', 'util']
 DEFAULTS = ['gdp', 'levels', 'solUnsk', 'solPeas', 'peas', 'rCrown', 'rFin', 'rHh', 'taxStep', 'tight', 'sellThru', 'revWk', 'taxRatio', 'privCash', 'jobless']
@@ -209,8 +210,9 @@ def pack(seeds, keys):
 
 def finish(runs, flat_mode, defaults=None):
     """runs: [(이름, 조정값, {seed: [점]})] -> 보고서 사전 (제목·날짜 빼고)"""
-    keys = sorted({k for _, _, s in runs for tr in s.values() for p in tr for k in p if k != 'y'},
-                  key=lambda k: (GROUPS.index(label(k, flat_mode)['group']), k))
+    allk = {k for _, _, s in runs for tr in s.values() for p in tr for k in p if k != 'y'}
+    old_flat = flat_mode and 'peasK' not in allk  # FLAT 이름은 옛 진단 파일에만 (cli/lab.ts 줄은 peas = 소작농 비율)
+    keys = sorted(allk, key=lambda k: (GROUPS.index(label(k, old_flat)['group']), k))
     if defaults is None:
         defaults = os.environ['K'].split() if os.environ.get('K') else [k for k in (FLAT_DEFAULTS if flat_mode else DEFAULTS) if k in keys]
     return {
@@ -219,7 +221,7 @@ def finish(runs, flat_mode, defaults=None):
         'seeds': sorted({int(x) for _, _, s in runs for x in s}),
         'years': sorted({p['y'] for _, _, s in runs for tr in s.values() for p in tr}),
         'keys': keys,
-        'labels': {k: label(k, flat_mode) for k in keys},
+        'labels': {k: label(k, old_flat) for k in keys},
         'groupOrder': GROUPS,
         'defaults': defaults,
         'runs': [{'label': lb, 'tune': t, 'seeds': pack(s, keys)} for lb, t, s in runs],
