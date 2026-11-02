@@ -51,8 +51,9 @@ sim 변경 반영 (오늘 병합: wt-wagelag·wt-admin·wt-wagespeed)
 정리
 16. 죽은 코드·문자열: 옛 `Research` 컴포넌트 (2-61), `Bag`·`bag` (2-51), `BuildingEconomics.tsx:28` (2-32), `expandTen`·`myHouse` (2-42-7).
 
-sim 변경 반영 (wt-ig: 이익집단 읽기 전용 층, 아직 main 에 안 합침)
-15. **2-88 정치 창 (낮음)**: 왕국 이익집단 6줄 (영향력·승인·기분), 투표법 라벨. 읽기 전용, 효과 없음. wt-ig 가 main 에 들어온 뒤.
+sim 변경 반영 (wt-batch2: wt-manor 저택 지분 기본 켬 + wt-ig 이익집단 읽기 전용 층, main 병합 뒤)
+17. **2-87 저택 지분 (wt-manor, `TUNE.manorShares` 기본 켬)**: 저택 창 주인 목록을 금융가처럼 지분 수로 (`ownershipPortfolio.ts ownershipPeople` 저택 갈래), 지분 값·수익률 한 줄, pop 창 보유 지분에 저택 지분. 고침 셋(`nobleChoice`·`manorSellCap`·`lawSteer`)은 AI 판단이라 화면에 새 값이 없다.
+18. **2-88 정치 창 (낮음)**: 왕국 이익집단 6줄 (영향력·승인·기분), 투표법 라벨. 읽기 전용, 효과 없음.
 
 sim 대기 · 결정 대기
 - **2-86 목표 임금**: sim 준비됨 (2026-11-02 wt-uiapi, `marketWageTargets` `labor.ts:549`, index `index.ts:15`). 규칙 자체는 사용자 확인 대기 (DECISIONS 7-43)지만 화면 설계는 규칙이 바뀌어도 같아 지금 해도 된다.
@@ -782,6 +783,21 @@ sim 변경 (wt-research):
 - 빼는 것: 없음.
 - 완료 기준: 툴팁 목표가 같은 날 `marketWageTargets` 값과 소수 둘째 자리까지 같다. 화살표 방향이 다음 날 `r.wages[s]` 변화 부호와 같다 (차이 0.5% 넘을 때). `wageTarget` 0 세계에서 화살표·툴팁 줄이 없다. typecheck.
 - 사용자 결정: 규칙 자체가 확인 대기다 (DECISIONS 7-43: 그대로 둘지, 위 끝 배율 `TUNE.wageTargetSpan`·속도 `wageTargetSpeed` 를 바꿀지. 2026-11-02 wt-span 비교에서 배율 1.5·3, 속도 0.2 모두 기본값보다 고르게 낫지 않아 2·0.1 그대로, DESIGN 11장 두 행, 보고서 2026-11-02-wagespan). 화면 설계는 규칙이 바뀌어도 같다 (목표·끝 값만 sim 이 준다). 7-42 결정 대기 1 이 (b) "플레이어 왕실에 정부 건물 지역 웃돈 손잡이"로 정해지면 그때 새 절을 쓴다.
+
+### 2-87. 저택 지분 (wt-manor, DESIGN 9.3 `manorShares`·`absenteeShare`·`manorBuyScope`, 사전 `manor-shares`, DECISIONS 7-44)
+- 상태: 2026-11-02 wt-manor 에서 `TUNE.manorShares` 기본 켬 (HANDOFF 0-1102h, DECISIONS 7-44, main 병합 뒤 적용). 0 으로 끄면 화면이 바꿀 것은 없다. 클라이언트 코드는 sim 작업자가 고치지 않았다.
+- sim:
+  - 저택 지분은 금융가 지분과 같은 `Pop.fund` (`{ id: number[]; u: number[] }`, 건물 id 오름차순) 에 든다. 저택 id 와 금융가 id 는 겹치지 않는다. 한 pop 이 여러 저택(다른 지역·다른 왕국 포함)과 금융가 지분을 함께 가질 수 있다.
+  - 저택 지분 값: `Building.nav` (저택에도 생긴다, 매주). 지분 주인 = 저택 id 지분이 0 보다 큰 pop (상급·하급 귀족, 되사기 전의 다른 직종이 잠깐 있을 수 있다). 저택에 앉은 pop 은 상급 귀족뿐이고, 앉은 자리는 몫과 상관없다.
+  - 하급 귀족은 저택에 앉지 않는다. 일자리가 없는 하급 귀족은 실업(`work === 0`)이고 배당으로 산다 (실업률에 들어간다).
+  - `TUNE.absenteeShare` > 0 이면 다른 지역 건물의 배당 일부가 그 건물 지역 저택으로 간다. `Building.payout.paid` 에 그 저택 id 줄이 생긴다 (배당 기록과 같은 모양).
+- 화면:
+  1. 저택 창 주인 목록 (`packages/client/src/ownershipPortfolio.ts:4 ownershipPeople`): 지금은 `b.typeId === 'finance'` 일 때만 지분 수를 쓰고 저택은 `p.work === b.id ? p.size * shareWeight(p.prof) : 0` 이다. `TUNE.manorShares` 가 켜져 있으면 저택도 금융가처럼 `p.fund` 의 지분 수를 무게로 쓴다 (`TUNE` 은 sim export). 끄면 지금 식 그대로.
+  2. 저택 창 머리 한 줄: 지분 합, 지분 값(`b.nav`), 지분 1개당 주간 배당 (사전 `manor-shares` live 와 같은 값). 라벨만, 설명 문구 없음.
+  3. pop 창(또는 계층 표)의 보유 지분: 저택 지분도 금융가 지분처럼 건물 이름·지역과 지분 수·값(지분 × nav)으로. 다른 왕국 저택이면 왕국 이름.
+  4. 실업 표에서 하급 귀족을 따로 볼 수 있게 (선택): 지분을 켜면 하급 귀족 실업률이 70~90% 로 보인다 (배당으로 산다). 실업률에는 하급 귀족을 그대로 넣는다 (DECISIONS 7-44 결정 2, 사용자 2026-11-02).
+  5. `OwnerSummary` 'nobleSeats' 라벨: 상급 귀족 자리만 남는다 (하급 귀족 자리 없음).
+- 문자열: "지분"/"Units", "지분 값"/"Unit value", "수익률"/"Yield" (이미 있으면 그것). 완료 기준: typecheck. 낮은 우선순위 (기본 끔이면).
 
 ### 2-88. 정치 창: 이익집단 (wt-ig, DESIGN 9.6, DECISIONS 7-45, 사전 `interest-groups`, sim 준비됨 (`interestGroups`), 낮은 우선순위: 읽기 전용 층)
 - sim: `interestGroups(w, kingdomId): IgStatus` = `{ kingdomId, votingLaw, groups: IgRow[] }` (`interestGroups.ts`). 세계를 바꾸지 않는다. 값은 반올림하지 않았다 (화면이 소수 둘째 자리로 반올림, % 는 정수).

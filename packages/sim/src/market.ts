@@ -1,7 +1,7 @@
 import { ABS_LIMITS, CLASS_DEFS, CONSUMPTION_PER_CAPITA, GOOD_IDS, GOODS, NEEDS, SKILL_DEFS, SUBSISTENCE, TICKS_PER_WEEK, TRADING_POST, TUNE, WORKFORCE_RATIO, getMethod, needsAt, rawMax, tenantYield, tradeReserveOf } from './data';
 import { CARTAGE_RATE, RAIL_RATE, borrow, companyById, harvestFactor, priceBounds, priceFormula, regionById, sellThrough, shareWeight, shippingRate, isSubsistence, wagesAt } from './economy';
-import { financeIdle, treasuryOver, payRent, paySalvage, taxDue, taxRates } from './finance';
-import { borderCost, kingdomById, kingdomOf, payTariff, toTreasury } from './kingdoms';
+import { choiceYield, financeIdle, isNoble, sellManorUnits, treasuryOver, treasuryTarget, payRent, paySalvage, taxDue, taxRates } from './finance';
+import { borderCost, flow, kingdomById, kingdomOf, payTariff, toTreasury } from './kingdoms';
 import { INVEST_CLASSES } from './policy';
 import { addFund, findPop, payPops, payProf, workforce } from './pops';
 import { officeLoad } from './production';
@@ -871,6 +871,7 @@ function investSurplus(w: World, p: Pop, cashCost: number) {
     return;
   }
   const k = kingdomById(w, kingdomOf(w, p.regionId));
+  if (TUNE.manorShares && isNoble(p.prof)) { nobleInvest(w, p, daily, INVEST_CLASSES[k.investLaw].includes(p.prof)); return; }
   if (!INVEST_CLASSES[k.investLaw].includes(p.prof)) return;
   const over = (p.savings - daily * TUNE.cashBufferDays) * INVEST_RATE;
   if (over <= 0) return;
@@ -880,6 +881,80 @@ function investSurplus(w: World, p: Pop, cashCost: number) {
   p.savings -= over;
   toTreasury(f, over, 'units');
   addFund(p, f.id, over / Math.max(0.01, f.nav ?? 1));
+  flow(`fbuy.${isNoble(p.prof) ? 'noble' : 'other'}.${kingdomOf(w, f.regionId)}`, over);
+}
+
+/**
+ * 귀족의 남는 현금 (저택 지분 TUNE.manorShares, AI 판단): 현금이 생활비·세금 cashBufferDays 일치보다 모자라면 저택 지분을 판다 (finance.ts sellManorUnits).
+ * 넘으면 넘는 돈의 INVEST_RATE 로, 지분 수익률(finance.ts choiceYield: 받은 배당 이동평균 ÷ 지분 값 (부재 지주 몫이 오간 뒤), TUNE.nobleChoice 1 이면 새 돈의 기대 수익률 ownerViews)이
+ * 가장 높은 곳의 지분을 산다: 금고가 목표(treasuryTarget)에 못 미친 저택 (TUNE.manorBuyScope 범위: 어느 지역·왕국이든 / 같은 왕국 / 자기 지역, 목표까지 남은 만큼만), 또는 (투자법이 허용하면) 자기 지역 금융가.
+ * 같은 수익률이면 자기 지역 저택, 그다음 id 가 작은 저택. 저택은 금고 목표를 넘겨 새 지분을 팔지 않는다 (넘는 금고는 돌려주므로, 넘겨 팔면 산 돈이 바로 되돌아와 돈다).
+ * TUNE.manorSellCap > 0: 저택 하나가 하루에 파는 새 지분은 받은 배당·지대 이동평균(하루) × 그 값까지 (manorRoom)
+ */
+function nobleInvest(w: World, p: Pop, daily: number, financeOk: boolean) {
+  const gap = daily * TUNE.cashBufferDays - p.savings;
+  if (gap > 0) { sellManorUnits(w, p, gap); return; }
+  const over = -gap * INVEST_RATE;
+  if (!(over > 0)) return;
+  // 살 수 있는 저택 (TUNE.manorBuyScope): 'world' 어느 저택이든, 'kingdom' 같은 왕국, 'region' 자기 지역만
+  const scope = TUNE.manorBuyScope, kid = scope === 'kingdom' ? kingdomOf(w, p.regionId) : 0;
+  let best: Building | undefined, by = -1, room = Infinity;
+  for (const x of rankedManors(w)) {
+    const home = x.o.regionId === p.regionId;
+    if (!home && (scope === 'region' || (scope === 'kingdom' && kingdomOf(w, x.o.regionId) !== kid))) continue;
+    const r = manorRoom(w, x.o);
+    if (!(r > 1e-9)) continue;
+    if (!best) { best = x.o; by = x.y; room = r; if (home) break; continue; }
+    if (home) { if (x.y >= by) { best = x.o; by = x.y; room = r; } break; }
+  }
+  const f = financeOk ? financeOf(w, p.regionId) : undefined;
+  const fin = f && !financeIdle(w, f) && !treasuryOver(w, f) ? f : undefined;
+  const yf = fin ? choiceYield(w, fin) : -1;
+  // TUNE.manorInvestSplit 1: 저택과 금융가에 수익률 비율로 나눠 산다 (둘 다 0 이면 반씩). 0: 수익률이 높은 한 곳에 다 산다
+  let toFin = 0;
+  if (fin && best) toFin = TUNE.manorInvestSplit ? (by + yf > 0 ? yf / (by + yf) : 0.5) : yf > by ? 1 : 0;
+  else if (fin) toFin = 1;
+  const buy = (o: Building, amt: number) => {
+    if (!(amt > 0)) return;
+    p.savings -= amt;
+    toTreasury(o, amt, 'units');
+    addFund(p, o.id, amt / Math.max(0.01, o.nav ?? 1));
+    if (o.typeId === 'manor') flow(o.regionId === p.regionId ? 'mbuy.home' : kingdomOf(w, o.regionId) === kingdomOf(w, p.regionId) ? 'mbuy.away' : 'mbuy.foreign', amt);
+    flow(`${o.typeId === 'manor' ? 'mbuy' : 'fbuy'}.noble.${kingdomOf(w, o.regionId)}`, amt);
+  };
+  if (best) buy(best, Math.min(over * (1 - toFin), room));
+  if (fin) buy(fin, over * toFin);
+}
+
+/**
+ * 저택과 그 수익률(choiceYield), 수익률 높은 순 (같으면 id 순). 금고 목표(treasuryTarget, TUNE.treasuryKeepWeeks 0 이면 없음)도 함께.
+ * TUNE.manorSellCap > 0 이면 목표를 그날 처음 금고 + 받은 배당·지대 이동평균 × manorSellCap 으로 묶는다 (하루 새 지분 상한). 틱마다 처음 물을 때 정한다
+ */
+interface RankedManor { o: Building; y: number; target: number }
+const manorRankCache = new WeakMap<World, { tick: number; list: RankedManor[]; byId: Map<number, RankedManor> }>();
+function rankedManors(w: World): RankedManor[] {
+  return manorRanks(w).list;
+}
+function manorRanks(w: World) {
+  let c = manorRankCache.get(w);
+  if (!c || c.tick !== w.tick) {
+    const list: RankedManor[] = [];
+    for (const b of w.buildings) {
+      if (b.typeId !== 'manor') continue;
+      let target = TUNE.treasuryKeepWeeks > 0 ? treasuryTarget(w, b) : Infinity;
+      if (TUNE.manorSellCap > 0) target = Math.min(target, (b.cash ?? 0) + Math.max(0, b.profitEma) * TUNE.manorSellCap);
+      list.push({ o: b, y: choiceYield(w, b), target });
+    }
+    list.sort((a, b) => b.y - a.y || a.o.id - b.o.id);
+    c = { tick: w.tick, list, byId: new Map(list.map((x) => [x.o.id, x])) };
+    manorRankCache.set(w, c);
+  }
+  return c;
+}
+/** 저택이 오늘 더 팔 수 있는 새 지분 값 = 금고 목표 − 지금 금고 (목표는 그 틱 처음 물을 때의 값) */
+function manorRoom(w: World, o: Building): number {
+  const x = manorRanks(w).byId.get(o.id);
+  return (x ? x.target : Infinity) - (o.cash ?? 0);
 }
 
 /** 소작농 저축이 가는 저택: 그 지역 저택, 없으면 그 왕국에서 id 가 가장 작은 저택 (날마다 같은 세계면 다시 찾지 않는다) */

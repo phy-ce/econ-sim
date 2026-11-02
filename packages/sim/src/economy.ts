@@ -340,6 +340,8 @@ export function slots(b: Building, skill: Skill): number {
  * 아니면 undefined (방식 자리 × 레벨, 저택 레벨은 일자리 없는 하급 귀족이 다 앉을 만큼 커진다, production.ts updateOwnership)
  */
 export function manorGentrySeats(b: Building): number | undefined {
+  // 저택 지분(TUNE.manorShares): 하급 귀족은 저택에 앉지 않는다 (배당은 지분으로 받는다)
+  if (TUNE.manorShares && b.typeId === 'manor') return 0;
   if (!(TUNE.manorGentrySeats > 0) || b.typeId !== 'manor' || b.nobleSeats === undefined) return undefined;
   return (b.nobleSeats * TUNE.manorGentrySeats) / 100;
 }
@@ -486,6 +488,8 @@ export function shareWeight(s: PopClass): number {
 export function shareWage(b: Building, s: Skill): number {
   // 금융가 전문가: 보장 임금 + 성과급 (받은 배당 이동평균 × TUNE.financeBonus ÷ 인원)
   if (b.typeId === 'finance') return TUNE.financeWage + (Math.max(0, b.profitEma) * TUNE.financeBonus) / Math.max(ABS_LIMITS.shareMin, b.employed.expert);
+  // 저택 지분(TUNE.manorShares): 저택 수입은 앉은 사람이 아니라 지분 주인에게 가므로 저택 자리의 소득은 0 이다
+  if (TUNE.manorShares && b.typeId === 'manor') return 0;
   let total = 0;
   for (const k of SKILLS) total += shareWeight(k) * (k === s ? Math.max(ABS_LIMITS.shareMin, b.employed[k]) : b.employed[k]);
   return (Math.max(0, b.profitEma) * shareWeight(s)) / total;

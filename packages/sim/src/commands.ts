@@ -6,7 +6,7 @@ import { buildingNameEn, landNameEn, regionNameEn, techNameEn } from './i18n';
 import { round2 } from './rng';
 import { writePool } from './round';
 import { BUDGET_ITEMS, BUDGET_STEPS, INVEST_LAWS, TAX_LAWS, WELFARE_LAWS } from './types';
-import { lawUnlocked, startLawChange } from './policy';
+import { lawSteer, lawUnlocked, startLawChange } from './policy';
 import type { Command, World } from './types';
 
 /** 명령 오류: 한국어 문장과 같은 내용의 영어 문장 */
@@ -73,7 +73,7 @@ function runCommand(w: World, actor: number, cmd: Command): CommandError | null 
     let escrowFrom: Record<number, number> | null = null;
     if (!company.state && !company.isPlayer) {
       const cost = constructionEstimate(w, company, typeId).cost;
-      funders = chooseFunders(w, company.kingdomId, regionId, typeId, levels, cost + escrowPer);
+      funders = chooseFunders(w, company.kingdomId, regionId, typeId, levels, cost + escrowPer, lawSteer(w, company.kingdomId));
       if (!funders) return fail('공사비를 낼 저택·금융가 금고가 모자랍니다.', 'The manors and financial districts lack the funds for this project.');
       if (escrow > 0) {
         // 약정액 중 묶는 돈의 몫을 지금 낸다 (마지막 금고가 남은 몫을 내서 합이 escrow 와 같다). 남은 약정이 공사비다

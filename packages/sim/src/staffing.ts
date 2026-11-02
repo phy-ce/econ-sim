@@ -23,6 +23,8 @@ export function labourPool(w: World, r: Region, s: Skill, strict = false): numbe
     // 같은 직종: 실업자 전부. 소유 건물에 앉은 사람(귀족·자본가·저택의 하급 귀족)은 몫 자리에서 임금 자리로 옮겨 오는 몫을 센다
     if (p.prof === s) { n += p.work === 0 ? workforce(p) : s === 'capitalist' || s === 'aristocrat' || seats.has(p.work) ? workforce(p) * reach : 0; continue; }
     if (p.prof === 'capitalist' || p.prof === 'aristocrat') continue;
+    // 저택 지분(TUNE.manorShares): 하급 귀족은 노동자·농부 자리에 가지 않는다 (labor.ts isOwnerClass 와 같은 규칙)
+    if (TUNE.manorShares && p.prof === 'gentry' && isLowerJob(s)) continue;
     const q = isLowerJob(s) ? workforce(p) : (p.quals[s] ?? 0);
     // strict (TUNE.laborStrict): 다른 임금 자리에서 일하는 사람은 세지 않는다 (소작농만 소작지에서 옮겨 오는 몫을 센다)
     n += p.work === 0 ? q : strict && p.prof !== 'peasant' ? 0 : q * reach;

@@ -470,6 +470,14 @@ export function scaleBonus(level: number): number {
  * - manorTargetMult: 저택이 거두는 양을 앉은 귀족의 필요로 묶는다 (market.ts manorNeed). 0 이면 끔 (peasantKeepWeeks 를 넘는 몫을 다 거둔다).
  *   0 보다 크면 저택은 앉은 귀족 1몫의 하루 몫(shareWage)이 목표(그 지역 민간 전문가 임금 × manorTargetMult)에 모자란 만큼 × 앉은 몫 합까지만 하루에 거둔다
  * - manorGentrySeats: 저택의 하급 귀족 자리 = 상급 귀족 자리 × manorGentrySeats ÷ 100. 0 이면 끔 (일자리 없는 하급 귀족이 다 앉는다, 저택 레벨이 그만큼 커진다)
+ * - manorShares: 1 = 저택 지분 (귀족만 가지는 지분 회사, 사고·팔고·되사고·사람을 따라간다). 0 = 앉은 귀족 몫 (finance.ts manorSharesOn)
+ * - manorBuyScope: 귀족이 지분을 사는 저택의 범위 ('world' 어느 저택이든, 'kingdom' 같은 왕국, 'region' 자기 지역). 수익률이 가장 높은 곳을 산다 (AI 판단)
+ * - manorInvestSplit: 1 = 귀족이 저택 지분과 금융가 지분을 수익률 비율로 나눠 산다, 0 = 수익률이 높은 쪽에 다 산다 (AI 판단)
+ * - absenteeShare: 저택·금융가가 자기 지역 밖 건물에서 받는 배당 중 그 건물 지역 저택으로 가는 비율 (0 = 끔)
+ * - nobleChoice: 1 = 귀족이 지분을 고를 때 새 돈의 기대 수익률로 본다 (finance.ts ownerViews: 새 레벨 수익률, 금고·짓는 공사, 저택 지대 × 52 를 자산에, 1레벨 미리 넣기)
+ *   그리고 소유 건물 금고 목표는 적어도 좋아하는 종류 1레벨 공사비 (finance.ts treasuryTarget). 0 = 지난 배당 ÷ 지분 값 (AI 판단)
+ * - manorSellCap: > 0 이면 저택 하나가 하루에 파는 새 지분 = 받은 배당·지대 이동평균(하루) × 이 값까지 (market.ts manorRanks, AI 판단). 0 = 끔
+ * - lawSteer: 1 = AI 왕국의 금융가 자산 비율이 투자법 다음 단계 기준에 못 미치면 민간 공사 돈줄을 금융가 먼저로 (policy.ts lawSteer, AI 판단). 0 = 끔
  * - landTax, pollTax, incomeTax: 세금 수준 3단계(보통)의 토지세(소작농 1인당 하루), 인두세(소작농을 뺀 1인당 하루), 소득세율(소작농을 뺀 소득).
  *   세 세율을 같은 배율로 비교했다 (빅토리아3 보통 단계 기준 ×1·×1.5·×2·×2.5, 20년 × 시드 1~4). ×2는 ×1보다 건물 레벨이
  *   10년차 약 50%, 20년차 약 13% 많고 실업이 낮다 (×1은 세금 단계를 1~5 모두 쓰지만 건물이 가장 적다). ×2.5는 노동자 생활수준이 가장 낮다
@@ -582,6 +590,24 @@ export const TUNE = {
   wealthSavLower: 1,
   manorTargetMult: 0, // 비교 전 (0 = 끔, 후보 2·3)
   manorGentrySeats: 0, // 비교 전 (0 = 끔, 후보 100·50·25)
+  // 저택 지분 (2026-11-02 사용자 결정, docs/overhaul/MANOR_SHARES.md 1단계, DECISIONS 7-44): 1 = 저택은 금융가처럼 지분 회사다. 지분(Pop.fund, 같은 건물 id 공간)은 상급·하급 귀족만 가지고,
+  // 저택 수입(배당·지대)은 지분 수대로 나눈다 (어디서 일하든). 귀족은 남는 현금으로 수익률(받은 배당 이동평균 ÷ 지분 값, 디버프 반영)이 가장 높은 저택(어느 지역·왕국이든)이나 자기 지역 금융가 지분을 사고,
+  // 현금이 생활비 cashBufferDays 일치 아래면 저택 지분을 지분 값에 저택에 판다. 귀족이 아니게 된 pop 의 저택 지분은 저택이 매주 되산다. 하급 귀족은 저택에 앉지 않고,
+  // 노동자·농부·소작 자리에 가지 못한다 (일자리가 없으면 실업으로 배당에 산다). 0 = 앉은 귀족 몫 (옛 동작).
+  // 2026-11-02 기본 1 (아래 고침 셋과 함께, 20년 × 시드 1·2 × salt 0..3, wt-manor 97c1bc5: 대륙 세전 총생산 10·15·20년차 603/816/1,095, 대조(끔) 615/868/1,200, 고침 없이 켬 520/571/671. 근거 DESIGN 11)
+  manorShares: 1,
+  // 귀족이 지분을 살 수 있는 저택 (AI 판단, 2026-11-02 사용자 "수익률 계산. 단 디버프가 적용된 최종 가격으로 AI 가 판단함"): 'world' 어느 지역·왕국이든, 'kingdom' 같은 왕국, 'region' 자기 지역만
+  manorBuyScope: 'world' as 'world' | 'kingdom' | 'region',
+  // 귀족이 저택과 금융가를 함께 살 수 있을 때 (AI 판단, manorShares 1 일 때만 돈다): 1 = 수익률 비율로 나눠 산다, 0 = 수익률이 높은 한 곳에 다 산다.
+  // 2026-11-02 기본 1 (20년 × 시드 1·2 × salt 0..3, wt-manor 743c8c6: 5·10·15·20년차 세전 총생산 평균 512/520/571/671 대 0 의 498/497/536/622, salt 띠는 겹침. 근거 DESIGN 11)
+  manorInvestSplit: 1,
+  // 부재 지주 몫 (2026-11-02 사용자 결정 "다른 지역 배당 디버프", DECISIONS 7-44): 저택·금융가가 자기 지역 밖 건물에서 받는 배당의 이 비율은 그 건물 지역의 저택으로 간다 (finance.ts payDividends). 0 = 끔
+  absenteeShare: 0,
+  // 저택 지분 고침 (AI 판단, wt-manor 2026-11-02, 진단 .tmp/manor-diag/RESULT.md: 지분을 켜면 금융가가 차가운 시작에 갇혀 투자법이 넓어지지 않는다). 0 = 끔 (4509ec3 전 동작, samecheck 같음).
+  // manorSellCap 0 / 0.5 / 1 비교에서 0.5 (20년 8회 모두 왕국 2 투자법이 5년차 기술자·10년차 노동자, 20년차 대륙 세전 총생산 최솟값이 가장 높음. 근거 DESIGN 11)
+  nobleChoice: 1,
+  manorSellCap: 0.5,
+  lawSteer: 1,
   pollTax: 0.6, // 인두세: 소작농을 뺀 1인당 하루 (세금 수준 3단계 기준)
   incomeTax: 0.3,
   officeTargetDays: 30,

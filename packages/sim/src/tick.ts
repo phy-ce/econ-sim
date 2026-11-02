@@ -8,7 +8,7 @@ import { payWelfare } from './welfare';
 import { weeklyAlerts } from './alerts';
 import { recordMetrics } from './metrics';
 import { applyCommandMsg } from './commands';
-import { chargeInterest, collectIncomeTax, doResearch, updateFunds, mintMoney, payDividends, spendBudget, weeklyBanking } from './finance';
+import { beginStep, chargeInterest, collectIncomeTax, doResearch, updateFunds, mintMoney, payDividends, spendBudget, weeklyBanking } from './finance';
 import { laborMarket, migrate, payWages, syncEmployment, updateMarketWages } from './labor';
 import { clearMarkets, collectOrders, harvest, newBook, resetMarkets, updatePrices } from './market';
 import { aggregateHouseholds, matchNobles, prunePops, toward, updateGrowth, updateLiteracy, updateQualifications } from './pops';
@@ -27,6 +27,7 @@ const HISTORY_CAP = 1500;
  */
 export function step(w: World, commands: QueuedCommand[] = []): string[] {
   const errors: string[] = [];
+  beginStep(w);
   for (const q of commands) {
     const err = applyCommandMsg(w, q.actor, q.cmd);
     if (err) errors.push(err.text);

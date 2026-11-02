@@ -125,9 +125,9 @@ function seatsIn(w: World, r: Region, local: Building[], comp: Map<number, Compa
   return out;
 }
 
-/** 노동자·농부·소작농 자리는 귀족·자본가 말고 누구나 들어갈 수 있다 */
+/** 노동자·농부·소작농 자리는 귀족·자본가 말고 누구나 들어갈 수 있다 (저택 지분 TUNE.manorShares 이면 하급 귀족도 못 들어간다) */
 const OPEN: PopClass[] = ['unskilled', 'farmer', 'peasant'];
-const isOwnerClass = (c: PopClass) => c === 'capitalist' || c === 'aristocrat';
+const isOwnerClass = (c: PopClass) => c === 'capitalist' || c === 'aristocrat' || (c === 'gentry' && !!TUNE.manorShares);
 
 /**
  * 일하는 사람이 지금 소득 cur 에서 소득 v 인 자리로 하루에 옮기는 비율: 소득이 switchPremium 배 넘게 나을 때만 옮기고,
