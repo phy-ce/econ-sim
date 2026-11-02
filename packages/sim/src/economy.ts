@@ -614,7 +614,7 @@ export function projectedSD(w: World, regionId: number, g: GoodId, addOutput = 0
 
 /**
  * 지금 공급 ÷ 수요 (읽기 전용): 지역 공급 이동평균 ÷ 수요 이동평균 (공사 중 레벨은 넣지 않는다). 수요 이동평균이 FLOW_ZERO 이하이면 null.
- * AI 가동률 감축·철거(ai.ts sdExit, TUNE.aiCutSD·aiDemoSD, 오버홀 03 5-2)가 쓴다: 감축은 아직 안 지은 공급이 아니라 지금 넘친 것을 본다
+ * (이것을 쓰던 0b′ AI 감축·철거 sdExit·sellDemo 는 2026-11-02 wt-simplify 1-G 에서 지웠다. 읽기 함수로 남긴다)
  */
 export function currentSD(w: World, regionId: number, g: GoodId): number | null {
   const mk = regionById(w, regionId).market[g];

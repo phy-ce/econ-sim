@@ -1,9 +1,8 @@
 import { BUILDING_BY_ID, buildPointsOf, BUILDING_TYPES, EDUCATION_FLOOR, EDUCATION_RANGE, GOOD_IDS, GOODS, SKILL_DEFS, TECH_BY_ID, TICKS_PER_WEEK, TICKS_PER_YEAR, TRADING_POST, TUNE, getMethod, regionPerk, tradeEscrowPerLevel, tradeReserveOf } from './data';
 import { withEstimateCache, regionAvgWealth, regionPopulation, wageCostOf,
-  availableMethods, ownBuildingAt, builderOf, canBuildType, disbanded, kingdomGdp, paysDividend, paysShare, companyById, constructionEstimate, creditLimit, depositFree, efficiency, estimateMethod, harvestFactor, hasBuilder, isGovernment, regionById, wagesAt, researchableTechs, roomFor, sellsShares, slots, mainOutput, projectedSD, currentSD,
-  FLOW_ZERO, harvestFactorEma, priceFormula, shareWage,
+  availableMethods, ownBuildingAt, builderOf, canBuildType, disbanded, kingdomGdp, paysDividend, paysShare, companyById, constructionEstimate, creditLimit, depositFree, efficiency, estimateMethod, harvestFactor, hasBuilder, isGovernment, regionById, wagesAt, researchableTechs, roomFor, sellsShares, slots, mainOutput, projectedSD,
+  shareWage,
 } from './economy';
-import { BY_EMA, PRICE_MAX, PRICE_MIN } from './market';
 import { MAX_CONCURRENT_CONSTRUCTIONS, MAX_LEVELS_PER_PROJECT, applyCommand } from './commands';
 import { applyStateWages, budgetMult, committedCost, favours, funderWeight, hasReserve, lawRevenue, ownerBuildings, ownerFunds, reserveCap, reserveOf, taxRates, treasuryFree } from './finance';
 import { privatizeLevel } from './production';
@@ -42,13 +41,8 @@ export const MIXED_LEVELS = 2;
 const MIN_STAFFING = () => TUNE.minStaffing;
 /** 왕실 행정청·건축사무소의 레벨 가중 충원율이 이 값 아래면 일손이 모자란 것으로 본다 (adjustBudget·adjustStatePremium, 근거 없음) */
 export const ADMIN_STAFFED = 0.9;
-/** 새 건물이 사람을 뽑는 주 수: 유보 철거·A3 철거가 이 동안의 적자를 세지 않는다 */
+/** 새 건물이 사람을 뽑는 주 수: 유보 철거가 이 동안의 적자를 세지 않는다 */
 const RAMP_WEEKS = 8;
-
-/** 징수율 하한 (TUNE.aiAdminFloor > 0, 오버홀 07 A4): 그 왕국 징수율(taxRatio)이 하한 아래인가 */
-function belowAdminFloor(k: Kingdom | undefined): boolean {
-  return TUNE.aiAdminFloor > 0 && !!k && (k.taxRatio ?? 1) < TUNE.aiAdminFloor;
-}
 
 /** 왕실 건축사무소(켜진 건물, 해산한 사무소 제외)의 가동 레벨 가중 충원율. 사무소가 없으면 1 (adjustBudget) */
 function officeStaffing(w: World, c: Company): number {
@@ -82,9 +76,6 @@ export const aiTrace: { on?: (w: World, c: Company, path: string, typeId: string
 export function runAi(w: World) {
   if (!w.config.ai) return;
   countHotPrices(w);
-  if (TUNE.aiCutSD > 0 || TUNE.aiDemoSD > 0) sdExit(w);
-  if (TUNE.aiSellDemoSD > 0) sellDemo(w);
-  if (TUNE.aiMarginal >= 2) marginExit(w);
   const outlook = marketOutlook(w);
   // 이번 주 방식 바꾸기가 함께 쓰는 일손 곳간 (지역, 직종): 한 건물이 바꾸며 더 뽑을 사람을 빼 두어, 같은 사람을 여러 건물이 세지 않는다
   const switchPools = new Map<string, number>();
@@ -322,7 +313,7 @@ export function treasuryTight(w: World, c: Company, k: Kingdom): boolean {
  *   임금 지수가 1을 넘으면 보통(3)으로 되돌린다. 그 밖에는 국영 임금을 보통 위로 올리지 않는다
  * - 행정청 일손 (wt-wagelag A2, 오버홀 07 A4): 행정청과 건축사무소 충원율 중 낮은 쪽이 ADMIN_STAFFED 아래인 동안 국영 임금을 내리지 않고,
  *   그 점검에서는 다른 손잡이보다 먼저 국영 임금을 한 칸 올린다 (5까지). 행정청 일꾼은 국영 임금을 받으므로, 국고가 조일 때 임금을 깎으면 징수율이 더 떨어진다.
- *   (징수율 하한 aiAdminFloor 를 보던 갈래 aiAdminWage 1 과 끄는 갈래 0 은 2026-11-02 wt-simplify 1-E 에서 지웠다)
+ *   (징수율 하한 aiAdminFloor 를 보던 갈래 aiAdminWage 1 과 끄는 갈래 0 은 2026-11-02 wt-simplify 1-E, 하한 자체는 1-G 에서 지웠다)
  * - 복지 (cutWelfare·raiseWelfare): 조임에서는 복지를 가장 먼저 줄인다 (단계를 1까지, 빚이 있으면 그다음 복지법을 끈다). 조이지 않는데 국고가 줄며
  *   TUNE.welfareWeeks 의 절반 주치 아래면 복지 단계를 내린다. 다른 손잡이를 움직이지 않은 점검에서는 복지를 켜거나 올린다 (raiseWelfare)
  */
@@ -615,7 +606,7 @@ function manageBuildings(w: World, c: Company, o: Outlook, pools: Map<string, nu
 
     if (!b.active) {
       b.pausedWeeks += 1;
-      if (current.margin > 0.05 && inputsAvailable(w, cur, b.level, b) && !sdHold(w, b)) {
+      if (current.margin > 0.05 && inputsAvailable(w, cur, b.level, b)) {
         applyCommand(w, c.id, { type: 'setActive', buildingId: b.id, active: true });
         applyCommand(w, c.id, { type: 'setUtilization', buildingId: b.id, utilization: 0.3 });
         b.lossWeeks = 0; b.profitEma = 0;
@@ -634,7 +625,7 @@ function manageBuildings(w: World, c: Company, o: Outlook, pools: Map<string, nu
       applyCommand(w, c.id, { type: 'setUtilization', buildingId: b.id, utilization: Math.max(0.1, b.utilization - 0.1) });
       b.lossWeeks = 0;
       aiTrace.on?.(w, c, 'lossCut', b.typeId, b.methodId, 0, undefined, b.regionId);
-    } else if (b.utilization < 1 && current.margin > 0 && !(TUNE.starveWeeks > 0 && b.last.inputFill < RAISE_FILL) && !sdHold(w, b)) {
+    } else if (b.utilization < 1 && current.margin > 0 && !(TUNE.starveWeeks > 0 && b.last.inputFill < RAISE_FILL)) {
       applyCommand(w, c.id, { type: 'setUtilization', buildingId: b.id, utilization: b.utilization + 0.1 });
       aiTrace.on?.(w, c, 'utilUp', b.typeId, b.methodId, 0, undefined, b.regionId);
     }
@@ -970,12 +961,6 @@ function reviewLevels(w: World, c: Company, o: Outlook, pointsPerDay: number) {
     if (w.constructions.some((k) => k.targetBuildingId === b.id)) { b.negWeeks = 0; delete b.staffPeak; continue; }
     // 굶는 건물은 지금 투입 충족으로 잰다 (장기 전망은 투입을 다 산다고 본다)
     const hungry = starving(b);
-    // 징수율 하한 (TUNE.aiAdminFloor, 오버홀 07 A4): 왕국 징수율이 하한 아래인 동안 행정청은 헐지 않는다 (적자 주를 세지 않고, 올려 둔 철거 대기를 거둔다)
-    if (c.state && getMethod(b.typeId, b.methodId).taxCapacity && belowAdminFloor(w.kingdoms.find((x) => x.id === regionById(w, b.regionId).kingdomId))) {
-      if (b.shrinking && !b.swap) b.shrinking = 0;
-      b.negWeeks = 0;
-      continue;
-    }
     const v = levelValue(w, c, o, b, pointsPerDay, hungry ? b.last.inputFill : undefined);
     if (b.shrinking) {
       if (v > 0 && !b.swap) b.shrinking = 0;
@@ -1152,17 +1137,8 @@ function reserveLevels(w: World, c: Company, canStart: () => boolean, free: () =
     // (공사 중 레벨 산출 포함, projectedSD)가 임계를 넘으면 이번 주 증설 확률 0 (찬 주로 세지 않는다). aiRand 는 키 해시라 막아도 다른 난수가 밀리지 않는다
     if (rich && TUNE.aiGlutSD > 0) {
       const g = mainOutput(b.typeId, b.methodId);
-      const sd = g ? glutSD(w, b.regionId, g) : null;
+      const sd = g ? projectedSD(w, b.regionId, g) : null;
       if (sd !== null && sd > TUNE.aiGlutSD) { rich = false; aiTrace.on?.(w, c, 'glutBlock', b.typeId, b.methodId, 0, undefined, b.regionId); }
-    }
-    // 자기 값 효과 (TUNE.aiMarginal ≥ 1, 0b′ A3): 이 회사가 그 지역 그 상품에서 버는 하루 손익이 레벨 +1 로 늘 때만 늘린다 (growGain)
-    if (rich && TUNE.aiMarginal >= 1) {
-      const g = mainOutput(b.typeId, b.methodId);
-      if (g) {
-        const ok = growGain(w, c, b, g) > 0;
-        aiTrace.on?.(w, c, ok ? 'marginOk' : 'marginBlock', b.typeId, b.methodId, 0, undefined, b.regionId);
-        if (!ok) rich = false;
-      }
     }
     // 새 건물(시작 건물은 0일에 생긴 것으로 본다)은 RAMP_WEEKS 동안 사람을 뽑으며 내는 적자를 세지 않는다
     const ramping = w.tick - (b.builtTick ?? 0) < RAMP_WEEKS * TICKS_PER_WEEK;
@@ -1192,8 +1168,8 @@ interface Pick { regionId: number; typeId: string; methodId: string; levels: num
 /**
  * 증설 위치 (AI 판단, 2026-11-01 마이크로 시제품 microB S5, 2026-11-02 기본): 유보 증설이 뽑힌 건물 b 의 1레벨을 지을 지역.
  * 후보 = 왕국 지역 중 그 종류 부지·땅(매장량, 기상 조건 없음)이 있고 일손이 되는 곳 (laborAvailability ≥ MIN_STAFFING: 직종마다 그 지역 구직 가능 인원 ÷ 필요,
- * 기술자·전문가는 자격자만 센다). 그중 산출 상품(mainOutput)의 지역 예상 공급 ÷ 수요(glutSD, 과잉 검사와 같은 값)가 가장 낮은 곳, 같으면 b 의 지역, 그다음 지역 순서.
- * 수요가 없는 지역(glutSD null)은 후보가 아니다. 후보가 없으면 b 의 지역 (끈 것과 같다).
+ * 기술자·전문가는 자격자만 센다). 그중 산출 상품(mainOutput)의 지역 예상 공급 ÷ 수요(projectedSD, 과잉 검사와 같은 값)가 가장 낮은 곳, 같으면 b 의 지역, 그다음 지역 순서.
+ * 수요가 없는 지역(projectedSD null)은 후보가 아니다. 후보가 없으면 b 의 지역 (끈 것과 같다).
  * 같은 지역이면 b 를 늘리고, 다른 지역이면 그 지역의 같은 종류·방식 건물을 늘리거나 새로 짓는다 (start → ownBuildingAt).
  * 마이크로 시제품과 다른 점: 수요 없는 지역을 S/D 0 으로 보지 않고 뺀다, 같은 값이면 b 의 지역을 먼저 본다
  */
@@ -1206,7 +1182,7 @@ function growRegion(w: World, c: Company, b: Building): number {
   for (const r of [...own.filter((x) => x.id === b.regionId), ...own.filter((x) => x.id !== b.regionId)]) {
     if (roomFor(w, r.id, b.typeId) < 1 || harvestFactor(w, r.id, land) < 1) continue;
     if (laborAvailability(w, r, m, 1, c.state) < MIN_STAFFING()) continue;
-    const sd = glutSD(w, r.id, g);
+    const sd = projectedSD(w, r.id, g);
     if (sd !== null && sd < low) { low = sd; best = r.id; }
   }
   return best;
@@ -1232,7 +1208,7 @@ function fundFromReserve(w: World, c: Company, b: Building, regionId: number, ne
 /**
  * 마지막 공급자 지킴 (AI 판단, 2026-11-01 마이크로 시제품 microB S7, 2026-11-02 기본): 건물 b 의 남는 레벨(레벨 − 철거 대기)이 1 이하이고,
  * b 가 왕국에서 그 산출 상품(mainOutput)을 내는 마지막 건물이며 (자동 건물 제외, 남는 레벨 > 0 인 건물만 센다), 왕국의 다른 건물(자동 제외)이 그 상품을 원료로 쓰면 true.
- * AI 철거 경로(reserveLevels 유보 철거, sdExit 5-2, sellDemo A2, marginExit A3)는 이런 건물을 헐지 않는다 (적자여도).
+ * AI 철거 경로(reserveLevels 유보 철거)는 이런 건물을 헐지 않는다 (적자여도).
  * 이유 (마이크로 기본 세계, 시드 1~8): 공방이 유보 0·적자로 헐리면 공구가 끊겨 공구를 쓰는 건물이 차례로 무너졌다.
  * 소작지(자동 건물)가 같은 상품을 내도 세지 않는다. 공사 중인 새 생산 건물도 세지 않는다
  */
@@ -1249,276 +1225,6 @@ function keepLast(w: World, b: Building): boolean {
     if ((m.inputs[g] ?? 0) > 0) used = true;
   }
   return used;
-}
-
-// ---------------------------------------------------------------- 팔리지 않음 기준 가동률 감축·철거 (TUNE.aiCutSD·aiDemoSD, 오버홀 03 5-2, 0b′)
-//
-// 0b (main be7e72f, 20년 × 시드 1~4): 곡물 S/D 2.3~2.8, 값이 하한 0.25 에 10년차부터 붙었다. 적자 4주 감축은 유보 자산이 있으면 면제되고,
-// 유보 0·적자 26주 철거는 임금 바닥이 곡물값을 따라 내려가 손익이 적자로 잘 안 가서 켜지지 않았다 (docs/overhaul/0B_RESULTS.md 1장).
-// 그래서 '적자'가 아니라 '팔리지 않음'(지역 지금 공급 ÷ 수요)을 퇴출 신호로 쓴다. 문턱 순서는 03 5장 1번의 AI 판단 원칙
-// 증설 허용(aiGlutSD) < 감축 시작(aiCutSD) < 철거 시작(aiDemoSD) 이고 (07 5.4 표), 이 순서를 지키는 조합만 비교한다 (코드로 막지 않는다).
-
-/**
- * 감축이 다시 올리기를 막는 동안인가 (aiCutSD > 0 일 때만): 유보 기준 생산 건물의 산출 상품(mainOutput) 지역 예상 S/D(projectedSD, 공사 중 포함)가
- * 증설 임계 aiGlutSD 를 넘으면 (aiGlutSD 가 0 이거나 aiCutSD 이상이면 aiCutSD 를 넘으면) 가동률을 올리지도, 꺼진 건물을 다시 켜지도 않는다.
- * "증설이 막힐 만큼 넘치는 동안은 다시 올리지 않는다": 감축 시작(aiCutSD)보다 낮은 선에서 다시 올리므로 [올림선, aiCutSD) 구간은 그대로 둔다
- * (같은 선에서 줄이고 올리면 주마다 오르내린다). 올리기 자체는 그 전 규칙(마진 > 0 이면 +10%)이다
- */
-function sdHold(w: World, b: Building): boolean {
-  if (!(TUNE.aiCutSD > 0) || !reserveRuled(b)) return false;
-  const g = mainOutput(b.typeId, b.methodId);
-  const sd = g ? glutSD(w, b.regionId, g) : null;
-  const line = TUNE.aiGlutSD > 0 && TUNE.aiGlutSD < TUNE.aiCutSD ? TUNE.aiGlutSD : TUNE.aiCutSD;
-  return sd !== null && sd > line;
-}
-
-/** 감축 하한 (manageBuildings 의 적자 감축과 같은 10%) */
-export const UTIL_FLOOR = 0.1;
-
-/**
- * 팔리지 않음 기준 감축·철거 (매주 runAi 앞에서 한 번, 회사 판단보다 먼저):
- * 1) 지역·상품마다 지금 공급 ÷ 수요(currentSD, 공사 중 제외: 감축은 지금 넘친 것을 본다)가 aiCutSD 이상인 연속 주(Region.cutWeeks),
- *    aiDemoSD 이상인 연속 주(Region.demoWeeks)를 센다. 수요가 없으면(null) 세지 않는다.
- * 2) cutWeeks ≥ aiExitWeeks 이면 그 지역에서 그 상품을 산출(mainOutput)하는 AI 회사의 유보 기준 생산 건물(reserveRuled, 켜져 있고 가동률 > 10%) 중
- *    레벨당 장기 손익(profitEma ÷ 레벨)이 가장 나쁜 하나의 가동률을 10% 줄인다 (유보 자산이 있어도). 문턱 아래로 내려갈 때까지 주마다 한 번.
- * 3) demoWeeks ≥ aiExitWeeks 이면 같은 건물 중 가동률이 하한(10%)이거나 꺼진 것(철거 대기·증설 공사 중 제외)에서 레벨당 손익이 가장 나쁜 하나를 1레벨 헌다.
- * 완충 (07 A5 범위, 근거 없음): 한 지역·상품에서 한 주에 감축 한 건물, 철거 한 건물까지. 여러 회사 건물이 함께 줄이면 EMA(하루 10%) 반응보다 빨리 줄어 지나치게 줄 수 있어서다.
- * 같은 값이면 w.buildings 순서가 앞선 건물 (결정성). 플레이어 건물은 건드리지 않지만 그 공급은 S/D 에 들어간다
- */
-function sdExit(w: World) {
-  const cut = TUNE.aiCutSD, demo = TUNE.aiDemoSD, need = TUNE.aiExitWeeks;
-  const ai = new Map(w.companies.filter((c) => !c.isPlayer).map((c) => [c.id, c] as const));
-  const groups = new Map<string, Building[]>();
-  for (const b of w.buildings) {
-    if (b.level <= 0 || !ai.has(b.companyId) || !reserveRuled(b)) continue;
-    const g = mainOutput(b.typeId, b.methodId);
-    if (!g) continue;
-    const key = `${b.regionId}|${g}`;
-    const list = groups.get(key);
-    if (list) list.push(b); else groups.set(key, [b]);
-  }
-  const perLevel = (b: Building) => b.profitEma / Math.max(1, b.level);
-  const worst = (list: Building[]) => list.reduce<Building | null>((x, b) => (!x || perLevel(b) < perLevel(x) ? b : x), null);
-  for (const r of w.regions) {
-    const cw: Partial<Record<GoodId, number>> = {}, dw: Partial<Record<GoodId, number>> = {};
-    for (const g of GOOD_IDS) {
-      const sd = currentSD(w, r.id, g);
-      if (sd === null) continue;
-      if (cut > 0 && sd >= cut) cw[g] = (r.cutWeeks?.[g] ?? 0) + 1;
-      if (demo > 0 && sd >= demo) dw[g] = (r.demoWeeks?.[g] ?? 0) + 1;
-    }
-    if (Object.keys(cw).length) r.cutWeeks = cw; else delete r.cutWeeks;
-    if (Object.keys(dw).length) r.demoWeeks = dw; else delete r.demoWeeks;
-    for (const g of GOOD_IDS) {
-      const list = groups.get(`${r.id}|${g}`);
-      if (!list) continue;
-      if ((cw[g] ?? 0) >= need) {
-        const b = worst(list.filter((x) => x.active && x.utilization > UTIL_FLOOR + 1e-9));
-        const c = b && ai.get(b.companyId);
-        if (b && c && !applyCommand(w, c.id, { type: 'setUtilization', buildingId: b.id, utilization: Math.max(UTIL_FLOOR, b.utilization - 0.1) })) aiTrace.on?.(w, c, 'sdCut', b.typeId, b.methodId, 0, undefined, r.id);
-      }
-      if ((dw[g] ?? 0) >= need) {
-        const b = worst(list.filter((x) => (!x.active || x.utilization <= UTIL_FLOOR + 1e-9) && !x.shrinking && !w.constructions.some((k) => k.targetBuildingId === x.id) && !keepLast(w, x)));
-        const c = b && ai.get(b.companyId);
-        if (b && c && !applyCommand(w, c.id, { type: 'demolish', buildingId: b.id, levels: 1 })) aiTrace.on?.(w, c, 'sdDemo', b.typeId, b.methodId, -1, undefined, r.id);
-      }
-    }
-  }
-}
-
-// ---------------------------------------------------------------- 곡물 균형 후보 (0b′ A1·A2·A3, 진단 .tmp/0bp/diag/RESULT.md 4.1, 기본 0 = 끔)
-//
-// 진단 (wt-0bp c9b2967, 20년 × 시드 1·2 × salt 0..3): 곡물 S/D 가 1.7~1.9 에 머문다. 임금 바닥이 곡물값을 따라가 농장 손익 ≈ p × (6,848σ − 2,250) − 75 로
-// S/D 2.7 까지 흑자라 적자 감축(S/D 3.5 이상)이 걸리지 않고, 진입은 과잉 검사(aiGlutSD) 하나가 막는데 흉년에 열리고 풍년에 안 닫히는 한쪽 톱니다.
-// 세 후보는 모두 AI 판단만 바꾼다 (세계 규칙은 그대로, CLAUDE.md 작업 방식 2). 유보 신호·방식 전환·소작지·planTrials·정부 건물은 건드리지 않는다.
-
-/**
- * 과잉 검사가 보는 지역 예상 공급 ÷ 수요 (reserveLevels 의 aiGlutSD 검사와 sdHold). TUNE.aiGlutIdle = 0 이면 projectedSD 그대로.
- * aiGlutIdle = 1 (0b′ A1) 이면 projectedSD 의 공급에 둘을 더한다:
- *  (가) 놀고 있는 설비: 그 지역에서 g 를 내는 자동 아닌 건물마다 (1 − 가동률, 꺼진 건물은 1) × (레벨 − 철거 대기) × 레벨당 산출 × (1 + 특산 보너스),
- *  (나) 기상 조건으로 줄어든 공급 (weatherShortfall).
- * 이유 (진단 1장 3·4번): 흉년에 지역 S/D 가 문턱 아래로 잠깐 내려가면 증설이 열리고 풍년에 되돌리는 길이 없어 한쪽 톱니가 되고,
- * 5-2 감축은 가동률만 줄여 공급 이동평균이 내려가 과잉 검사가 다시 열린다 (감축 → 증설). 둘 다 설비는 그대로인데 공급이 잠깐 작아 보이는 것이다
- */
-function glutSD(w: World, regionId: number, g: GoodId): number | null {
-  if (!TUNE.aiGlutIdle) return projectedSD(w, regionId, g);
-  let add = 0;
-  for (const b of w.buildings) {
-    if (b.regionId !== regionId || BUILDING_BY_ID[b.typeId].auto) continue;
-    const out = getMethod(b.typeId, b.methodId).outputs[g];
-    if (!out) continue;
-    const idle = 1 - (b.active ? b.utilization : 0);
-    if (idle > 0) add += out * Math.max(0, b.level - (b.shrinking ?? 0)) * idle * (1 + regionPerk(regionId, b.typeId));
-  }
-  return projectedSD(w, regionId, g, add + weatherShortfall(w, regionId, g));
-}
-
-/**
- * 기상 조건으로 줄어든 지역 공급 (A1): 조건이 걸렸던 땅의 생산자(소작지, 땅 건물) 출처별 공급 이동평균을 평년 양으로 되돌린 차 Σ q × (1/f − 1).
- * f = 그 이동평균에 남은 배율 (harvestFactorEma, 소작지는 그날 수확을 팔아 1일 전, 건물은 전날 만든 것을 팔아 2일 전). outlook.ts marketOutlook 의 되돌리기와 같은 계산.
- * 진단은 소작 공급만 되돌리자고 했으나 같은 조건이 땅 건물(농장) 산출도 줄이므로 outlook 과 같이 둘 다 되돌린다
- */
-function weatherShortfall(w: World, regionId: number, g: GoodId): number {
-  if (!(TUNE.harvestChance > 0)) return 0;
-  let add = 0;
-  for (const [src, q] of Object.entries(regionById(w, regionId).market[g].supplyByEma ?? {})) {
-    const typeId = src === 'subsistence' ? src : src.startsWith('bld:') ? src.slice(4) : null;
-    const land = typeId ? BUILDING_BY_ID[typeId]?.land : undefined;
-    if (!land || land === 'plot') continue;
-    const f = harvestFactorEma(w, regionId, land, BY_EMA, src === 'subsistence' ? 1 : 2);
-    if (f < 1 && f > 0) add += q * (1 / f - 1);
-  }
-  return add;
-}
-
-const aiCompanies = (w: World) => new Map(w.companies.filter((c) => !c.isPlayer).map((c) => [c.id, c] as const));
-const perLevelProfit = (b: Building) => b.profitEma / Math.max(1, b.level);
-/** 레벨당 장기 손익이 가장 나쁜 건물 (같으면 목록에서 앞선 것 = w.buildings 순서) */
-const worstPerLevel = (list: Building[]) => list.reduce<Building | null>((x, b) => (!x || perLevelProfit(b) < perLevelProfit(x) ? b : x), null);
-const expanding = (w: World, b: Building) => w.constructions.some((k) => k.targetBuildingId === b.id);
-
-/**
- * 팔리지 않음 기준 설비 철거 (TUNE.aiSellDemoSD > 0, 0b′ A2, 매주 runAi 앞에서 sdExit 다음):
- * 지역·상품마다 지금 공급 ÷ 수요(currentSD)가 aiSellDemoSD 이상인 연속 주(Region.sellWeeks)를 세고, aiSellDemoWeeks 주 이상이면
- * 그 지역에서 그 상품(mainOutput)을 내는 AI 회사의 유보 기준 생산 건물 중 레벨당 장기 손익(profitEma ÷ 레벨)이 가장 나쁜 하나를 가동률과 무관하게 1레벨 헌다
- * (철거 대기·증설 공사 중 제외. 한 지역·상품에서 주에 한 건물 한 레벨, 문턱 아래로 내려갈 때까지 주마다).
- * 5-2 (sdExit) 와 다른 점: 가동률을 먼저 줄이지 않고 설비를 줄인다 (진단 4번: 가동률만 줄이면 과잉 검사가 다시 열려 증설된다).
- * 증설 문턱 aiGlutSD 보다 높게 둬야 짓고 허는 반복이 없다 (코드로 막지 않고 그 조합만 비교한다, docs/overhaul/0BP_GRAIN_SPECS.json).
- * 농장을 헐면 그 일꾼이 소작으로 돌아가 제 곡물을 먹어 수요도 준다 (진단 5번: 줄인 공급의 약 40%). 판단에는 넣지 않았다:
- * 문턱 위에 있는 동안만 주마다 한 레벨이라 수요가 같이 줄어도 문턱 아래로 내려가면 멈춘다 (늦게 멈출 뿐 문턱 아래로 계속 헐지는 않는다)
- */
-function sellDemo(w: World) {
-  const line = TUNE.aiSellDemoSD, need = TUNE.aiSellDemoWeeks;
-  const ai = aiCompanies(w);
-  const groups = new Map<string, Building[]>();
-  for (const b of w.buildings) {
-    if (b.level <= 0 || !ai.has(b.companyId) || !reserveRuled(b)) continue;
-    const g = mainOutput(b.typeId, b.methodId);
-    if (!g) continue;
-    const key = `${b.regionId}|${g}`;
-    const list = groups.get(key);
-    if (list) list.push(b); else groups.set(key, [b]);
-  }
-  for (const r of w.regions) {
-    const sw: Partial<Record<GoodId, number>> = {};
-    for (const g of GOOD_IDS) {
-      const sd = currentSD(w, r.id, g);
-      if (sd !== null && sd >= line) sw[g] = (r.sellWeeks?.[g] ?? 0) + 1;
-    }
-    if (Object.keys(sw).length) r.sellWeeks = sw; else delete r.sellWeeks;
-    for (const g of GOOD_IDS) {
-      if ((sw[g] ?? 0) < need) continue;
-      const list = groups.get(`${r.id}|${g}`);
-      if (!list) continue;
-      const b = worstPerLevel(list.filter((x) => !x.shrinking && !expanding(w, x) && !keepLast(w, x)));
-      const c = b && ai.get(b.companyId);
-      if (b && c && !applyCommand(w, c.id, { type: 'demolish', buildingId: b.id, levels: 1 })) aiTrace.on?.(w, c, 'sellDemo', b.typeId, b.methodId, -1, undefined, r.id);
-    }
-  }
-}
-
-/** 가격 범위 안의 가격 공식 값 (시장 값이 따라가는 목표, market.ts updatePrices) */
-function boundedPrice(g: GoodId, demand: number, supply: number): number {
-  const base = GOODS[g].basePrice;
-  return clamp(priceFormula(g, demand, supply), base * PRICE_MIN, base * PRICE_MAX);
-}
-
-/**
- * 회사가 지역에서 상품 g 를 팔아 버는 하루 매출 (A3): 지역 공급 S, 회사 몫 Q 일 때 Q × 값(S) × 팔린 비율(S).
- * 값 = priceFormula(g, 수요 이동평균 D, S) (가격 범위 안), 팔린 비율 = min(1, D ÷ S) (market.ts clearMarkets: 지역 안 모든 판매가 같은 비율로 팔린다)
- */
-function ownSales(g: GoodId, D: number, S: number, Q: number): number {
-  if (!(Q > 0)) return 0;
-  return Q * boundedPrice(g, D, S) * (S > FLOW_ZERO ? Math.min(1, D / S) : 1);
-}
-
-/**
- * A3 의 출발점: D = 지역 수요 이동평균, S = 지역 공급 이동평균 + 모든 회사 공사 중 산출 (projectedSD 와 같은 셈) − 철거 대기 레벨의 어제 산출,
- * Q = 회사 c 의 그 지역 자동 아닌 건물 어제 산출 합 (가동률·충원·기상이 들어간 실제 값) + 자기 공사 중 산출 − 자기 철거 대기 몫. 수요가 없으면 null
- */
-function ownMarket(w: World, c: Company, regionId: number, g: GoodId): { D: number; S: number; Q: number } | null {
-  const mk = regionById(w, regionId).market[g];
-  if (mk.demandEma <= FLOW_ZERO) return null;
-  let S = mk.supplyEma, Q = 0;
-  for (const k of w.constructions) {
-    if (k.regionId !== regionId) continue;
-    const out = getMethod(k.typeId, k.methodId).outputs[g];
-    if (!out) continue;
-    const q = out * (k.levels ?? 1) * (1 + regionPerk(regionId, k.typeId));
-    S += q;
-    if (k.companyId === c.id) Q += q;
-  }
-  for (const b of w.buildings) {
-    if (b.regionId !== regionId || b.level <= 0 || BUILDING_BY_ID[b.typeId].auto) continue;
-    const q = b.last.output[g] ?? 0;
-    if (!(q > 0)) continue;
-    const gone = b.shrinking ? q * Math.min(1, b.shrinking / b.level) : 0;
-    S -= gone;
-    if (b.companyId === c.id) Q += q - gone;
-  }
-  return { D: mk.demandEma, S: Math.max(0, S), Q: Math.max(0, Q) };
-}
-
-/**
- * 레벨 +1 의 회사 하루 손익 변화 (TUNE.aiMarginal ≥ 1, 0b′ A3 증설): (Q + o) × 값(S + o) × 팔린 비율(S + o) − Q × 값(S) × 팔린 비율(S) − k.
- * o = 그 방식 레벨당 산출 × (1 + 특산 보너스) (다 뽑고 다 가동), k = 그 방식 1레벨 하루 원료비 + 인건비 (estimateMethod, 지금 값·지금 임금).
- * 회사의 다른 레벨 원가는 그대로라 빠진다. 자기 몫 Q 만 보므로 지역에 농장 회사가 여럿이면 몫이 작은 회사일수록 값 효과를 덜 본다.
- * 임금은 지금 값으로 둔다: 공급이 바뀌면 곡물값을 따라 임금 바닥도 움직이지만 (진단 1번) 그 반응은 넣지 않았다 (근거 없음).
- * 산출이 여럿인 방식은 mainOutput 만 본다 (2026-11-01 데이터에는 산출이 둘 이상인 방식이 없다). 수요가 없으면 막지 않는다 (+∞)
- */
-function growGain(w: World, c: Company, b: Building, g: GoodId): number {
-  const mk = ownMarket(w, c, b.regionId, g);
-  if (!mk) return Infinity;
-  const o = (getMethod(b.typeId, b.methodId).outputs[g] ?? 0) * (1 + regionPerk(b.regionId, b.typeId));
-  const e = estimateMethod(w, b.regionId, b.typeId, b.methodId, wagesAt(c, b.typeId, w, b.regionId), c.state);
-  return ownSales(g, mk.D, mk.S + o, mk.Q + o) - ownSales(g, mk.D, mk.S, mk.Q) - (e.inputCost + e.wageCost);
-}
-
-/**
- * 건물 b 를 1레벨 헐 때 회사 하루 손익 변화 (A3 철거): (Q − o) × 값(S − o) × 팔린 비율(S − o) − Q × 값(S) × 팔린 비율(S) + k.
- * o, k = b 의 어제 산출, 원료비 + 인건비 ÷ 레벨 (실제 값). 임금은 지금 값 (growGain 과 같다). 수요가 없으면 −∞ (헐지 않는다)
- */
-function shrinkGain(w: World, c: Company, b: Building, g: GoodId): number {
-  const mk = ownMarket(w, c, b.regionId, g);
-  if (!mk) return -Infinity;
-  const o = (b.last.output[g] ?? 0) / b.level, k = (b.last.inputCost + b.last.wageCost) / b.level;
-  return ownSales(g, mk.D, Math.max(0, mk.S - o), Math.max(0, mk.Q - o)) - ownSales(g, mk.D, mk.S, mk.Q) + k;
-}
-
-/**
- * 자기 값 효과 철거 (TUNE.aiMarginal ≥ 2, 0b′ A3, 매주 runAi 앞에서 sellDemo 다음): AI 회사마다 지역·산출 상품(mainOutput)별 유보 기준 생산 건물 묶음에서
- * 켜져 있고 증설 공사 중·새 건물(RAMP_WEEKS 안)이 아닌 건물 중 레벨당 손익이 가장 나쁜 하나 b 를 골라, shrinkGain > 0 인 주를 센다 (Region.marginWeeks, 키 "회사 id|상품").
- * aiSellDemoWeeks 주 이어지면 b 를 1레벨 헌다 (그 뒤로도 조건이 이어지는 동안 주마다). 묶음에 철거 대기가 있으면 그 주는 세지도 헐지도 않는다 (센 주는 그대로).
- * 연속 주 조건은 이동평균 흔들림에 주마다 헐고 짓는 것을 막는 완충이다 (근거 없음)
- */
-function marginExit(w: World) {
-  const need = TUNE.aiSellDemoWeeks;
-  const ai = aiCompanies(w);
-  const groups = new Map<string, { c: Company; regionId: number; g: GoodId; list: Building[] }>();
-  for (const b of w.buildings) {
-    const c = ai.get(b.companyId);
-    if (!c || b.level <= 0 || !reserveRuled(b)) continue;
-    const g = mainOutput(b.typeId, b.methodId);
-    if (!g) continue;
-    const key = `${c.id}|${b.regionId}|${g}`;
-    const x = groups.get(key);
-    if (x) x.list.push(b); else groups.set(key, { c, regionId: b.regionId, g, list: [b] });
-  }
-  const next = new Map<number, Record<string, number>>();
-  for (const { c, regionId, g, list } of groups.values()) {
-    const r = regionById(w, regionId), key = `${c.id}|${g}`, prev = r.marginWeeks?.[key] ?? 0;
-    const put = (n: number) => { if (n > 0) { const m = next.get(regionId) ?? {}; m[key] = n; next.set(regionId, m); } };
-    if (list.some((x) => x.shrinking)) { put(prev); continue; }
-    const b = worstPerLevel(list.filter((x) => x.active && !expanding(w, x) && w.tick - (x.builtTick ?? 0) >= RAMP_WEEKS * TICKS_PER_WEEK && !keepLast(w, x)));
-    if (!b || !(shrinkGain(w, c, b, g) > 0)) continue;
-    const n = prev + 1;
-    put(n);
-    if (n >= need && !applyCommand(w, c.id, { type: 'demolish', buildingId: b.id, levels: 1 })) aiTrace.on?.(w, c, 'marginDemo', b.typeId, b.methodId, -1, undefined, regionId);
-  }
-  for (const r of w.regions) {
-    const m = next.get(r.id);
-    if (m) r.marginWeeks = m; else delete r.marginWeeks;
-  }
 }
 
 /**

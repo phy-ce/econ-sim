@@ -510,16 +510,6 @@ export interface Region {
   market: Record<GoodId, MarketGood>;
   /** 유보 기준 AI 새 투자 (planTrials): 상품 값이 기본가의 1.25배 이상이었던 연속 주 수 (0인 상품은 없다). 없으면 모두 0 (18판에서 생겼다) */
   hotWeeks?: Partial<Record<GoodId, number>>;
-  /**
-   * AI 가동률 감축·철거 (TUNE.aiCutSD·aiDemoSD, 오버홀 03 5-2): 지금 공급 ÷ 수요가 aiCutSD 이상 / aiDemoSD 이상이었던 연속 주 수 (0인 상품은 없다).
-   * 문턱이 0(끔)이면 생기지 않는다. 없으면 모두 0 (18판 안에서 더한 칸이라 판을 올리지 않았다)
-   */
-  cutWeeks?: Partial<Record<GoodId, number>>;
-  demoWeeks?: Partial<Record<GoodId, number>>;
-  /** 0b′ A2 설비 철거 (TUNE.aiSellDemoSD): 지금 공급 ÷ 수요가 aiSellDemoSD 이상이었던 연속 주 수 (0인 상품은 없다). 문턱이 0(끔)이면 생기지 않는다 */
-  sellWeeks?: Partial<Record<GoodId, number>>;
-  /** 0b′ A3 자기 값 효과 철거 (TUNE.aiMarginal ≥ 2): 키 "회사 id|상품" → 1레벨 헐면 회사 손익이 느는 연속 주 수 (0인 키는 없다). 끔이면 생기지 않는다 */
-  marginWeeks?: Record<string, number>;
   /** 소작지 여유 (시제품 TUNE.tenantSlack > 0): 그 지역 소작지 채움(일하는 소작농 노동 인구 ÷ 칸 × 1칸 인원)의 기준값. 켜진 뒤 첫 수확 날의 채움 (0이면 다음 날 다시). 끔이면 생기지 않는다 */
   tenantFill0?: number;
   /**

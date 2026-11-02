@@ -57,6 +57,7 @@
   - 1-D 옛 전망 AI 의 생산 건물 짓기·철거: `aiReserveRule` 0 갈래, 발전 투자 `devShare`·`devLoss`, 증설 가동률 문턱 `expandUtilMin`, `reserveGrowMax` 0 갈래 (상수 `RESERVE_FULL`, AI 난수 태그 `pickDev`). 그 전 코드 b2486fa. 써지기만 하는 상태 칸 `Company.startCost`·`devCost`·`Building.richWeeks`는 지우면 세계 해시가 바뀌어 남겼다 (1-D′, 다음 일)
   - 1-E 옛 임금 규칙 (7-43 확인 뒤): 회사 임금표와 AI 임금 판단(`wageMarket` 0, `adjustWages`, `wageCeil`·`wageLossCut`, `applyWagePolicy`), 하루 고정 속도(`wageTarget` 0, `wageMarketRate`·`wageMarketRateUp`), 비교용 쏠림(`wageTarget` 1, `WAGE_TILT`), `aiAdminWage` 0·1 갈래와 키. 그 전 코드 e99d349. `commands.ts setWage` 는 그대로다 (화면은 쓰지 않는다)
   - 1-F 키 합치기 (값이 같아 동작 같음): `officeRichWeeks`(52) → `treasuryRich`(`treasuryHighWeeks` 52, `crownGdpReserve` 0 에서 같은 식), `reserveShrinkWeeks`(26) → `shrinkWeeks`(26). 그 전 코드 57fa584. 마이크로 도구(`microcheck --preset labor`, `admindiag`)가 1e9 로 끄던 유보 철거 손잡이는 이제 정부 건물·무역소 적자 철거도 끈다
+  - 1-G 0b′ AI 스위치 여덟 (`aiCutSD`·`aiDemoSD`·`aiExitWeeks`·`aiGlutIdle`·`aiSellDemoSD`·`aiSellDemoWeeks`·`aiMarginal`·`aiAdminFloor`)과 그 코드·시험. 그 전 코드 9ac8ad7, 7-46
 
 ### 4-2. 지우면 동작이 바뀌는 것 (하나씩 결정)
 | 항목 | 지금 | 지우면 |
@@ -1031,4 +1032,10 @@ AI 노동자 임금 바닥 (기본값 0.03 · 2~6):
 - 숫자: DESIGN 11장 `wageTarget`·`wageTargetSpeed` 행, 보고서 2026-11-02-wagespeed. 20년 8회 평균 대조 → 맞는 임금 0.1: 1년차 행정청 충원 (왕국 1·2·3) 0.00/0.54/0.70 → 0.90/0.97/0.98, 생산 하층 고용 1·5·20년차 60.8/261/848 → 74.6/280/887천, 세전 총생산 20년차 1,140 → 1,200, 국고 20년차 192 → 251. 약점: 10·15년차 세전 총생산 −12% (범위 겹침), 10~20년차 S/D 가 조금 더 벌어짐, 20년차 소작 생활수준 1.13 → 1.03.
 - 확인 대기 (게임 방향): 이 규칙 그대로 둘지, 또는 위 끝 배율(`wageTargetSpan` 2)·속도(0.1)를 바꿀지 (2026-11-02 wt-span 비교: 배율 1.5·3, 속도 0.2 모두 대조보다 고르게 낫지 않아 기본값 그대로, DESIGN 11장 두 행, 보고서 2026-11-02-wagespan). 같이 묻는 것: 7-42 결정 대기 1 (플레이어 왕실 국영 웃돈)은 이 규칙에서 방치 플레이어 왕국 1년차 행정청 충원이 0.00 → 0.90 이 되어 급함이 줄었다.
 - 7-43 확인 (사용자 2026-11-02): 맞는 임금 규칙을 받아들였다. 그래서 2026-11-02 wt-simplify 1-E 에서 스위치 `wageMarket`·`wageTarget` 과 옛 규칙의 키(`wageMarketRate`·`wageMarketRateUp`·`wageCeil`·`wageLossCut`, `aiAdminWage` 0·1 갈래)를 지웠다 (동작 같음, 그 전 코드 e99d349). 위 끝 배율·속도는 `wageTargetSpan`·`wageTargetSpeed` 로 남는다.
+
+### 7-46. 0b′ AI 스위치 여덟을 지운다 (2026-11-02 wt-simplify 1-G, 결정됨: 비교했고 채택하지 않음)
+- 지운 키: 5-2 `aiCutSD`·`aiDemoSD`·`aiExitWeeks` (팔리지 않음 기준 감축·철거), A1 `aiGlutIdle` (노는 설비·기상 되돌림), A2 `aiSellDemoSD`·`aiSellDemoWeeks` (설비 철거), A3 `aiMarginal` (자기 값 효과), A4 `aiAdminFloor` (행정청 징수율 하한). 같이 지운 것: `ai.ts` `sdExit`·`sdHold`·`glutSD`·`weatherShortfall`·`sellDemo`·`ownSales`·`ownMarket`·`growGain`·`shrinkGain`·`marginExit`·`belowAdminFloor`·`UTIL_FLOOR`, 상태 칸 타입 `Region.cutWeeks`·`demoWeeks`·`sellWeeks`·`marginWeeks` (끈 채로는 생기지 않는 칸), 시험 `test/gate/sdexit.test.ts`·`grainbal.test.ts`.
+- 이유: 모두 기본 0(끔)이고 0b′ 에서 비교했으나 채택하지 않았다 (7-38 "끈 채 둠"). A4 의 목적(이슈 #4 행정청 충원)은 `aiStatePremium`(7-42)과 맞는 임금(7-43)이 맡았다. 동작은 같다 (골든 c7fb7c00ef46d24c, samecheck 5/5 같음). 5-1 과잉 검사 `aiGlutSD`(기본 1.5)는 남는다.
+- 되살리기: 지우기 바로 전 커밋 9ac8ad7 (브랜치 wt-simplify)에 있다. 예: `git show 9ac8ad7:packages/sim/src/ai.ts`, `git show 9ac8ad7:packages/sim/test/gate/sdexit.test.ts`.
+- 비교 명세 `docs/overhaul/0BP_5-2_SPECS.json`·`0BP_A4_SPECS.json`·`0BP_GRAIN_SPECS.json`은 기록으로 남긴다. 그 키는 이제 TUNE 에 없어서 그대로 돌리면 lab 입구가 "TUNE 에 없는 키"로 멈춘다 (wt-simplify 가드, `data.ts overrideTune`). 다시 돌리려면 9ac8ad7 에서 돌린다.
 

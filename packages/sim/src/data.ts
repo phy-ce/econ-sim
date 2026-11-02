@@ -643,26 +643,6 @@ export const TUNE = {
   // 공급 이동평균 + 모든 회사의 공사 중 레벨 산출, ÷ 수요 이동평균)가 이 값을 넘는 주는 증설하지 않는다. 0 = 검사 없음 (그 전과 같음).
   // 후보 1.25 / 1.5 / 1.75 와 0 을 비교 중 (docs/overhaul/0BP_5-1_SPECS.json), 근거 없음
   aiGlutSD: 1.5,
-  // 팔리지 않음 기준 가동률 감축·철거 (오버홀 03 5-2, 07 5.4 문턱 표, 0b′, AI 판단, ai.ts sdExit): 지역 지금 공급 ÷ 수요(currentSD)가 aiCutSD 이상인 주가
-  // aiExitWeeks 주 이어지면 그 지역 그 상품을 내는 AI 생산 건물 중 레벨당 손익이 가장 나쁜 하나의 가동률을 주마다 10% 줄이고 (유보 자산이 있어도),
-  // aiDemoSD 이상인 주가 aiExitWeeks 주 이어지면 가동률이 하한(10%)이거나 꺼진 건물 중 하나를 주마다 1레벨 헌다. aiCutSD > 0 이면 증설이 막힐 만큼
-  // 넘치는 동안(예상 S/D > aiGlutSD, aiGlutSD 가 0 이거나 aiCutSD 이상이면 aiCutSD) 가동률을 다시 올리거나 다시 켜지 않는다. 0 = 끔 (그 전과 같음).
-  // 켤 때는 aiGlutSD < aiCutSD < aiDemoSD 인 조합만 비교한다 (docs/overhaul/0BP_5-2_SPECS.json). 후보 감축 1.75 / 2, 철거 2 / 2.5, N 26 / 52, 근거 없음
-  aiCutSD: 0,
-  aiDemoSD: 0,
-  aiExitWeeks: 26,
-  // 곡물 균형 후보 (0b′ A1·A2·A3, AI 판단, 진단 .tmp/0bp/diag/RESULT.md 4.1, 비교 명세 docs/overhaul/0BP_GRAIN_SPECS.json). 모두 0 = 끔 (c9b2967 과 같음), 근거 없음.
-  // aiGlutIdle 1 (A1): 과잉 검사(aiGlutSD)와 sdHold 가 보는 예상 공급에 놀고 있는 설비 산출((1 − 가동률) × 레벨 × 레벨당 산출)과 기상 조건으로 줄어든 공급(평년으로 되돌린 차)을 더한다 (ai.ts glutSD)
-  aiGlutIdle: 0,
-  // aiSellDemoSD > 0 (A2): 지역 지금 공급 ÷ 수요가 이 값 이상인 주가 aiSellDemoWeeks 주 이어지면 그 지역 그 상품의 AI 생산 건물 중 레벨당 손익이 가장 나쁜 하나를
-  // 가동률과 무관하게 주마다 1레벨 헌다 (ai.ts sellDemo). aiSellDemoWeeks 는 A3 철거의 연속 주 수로도 쓴다
-  aiSellDemoSD: 0,
-  aiSellDemoWeeks: 26,
-  // aiMarginal (A3): 회사가 자기 값 효과를 본다. 1 = 증설은 그 지역 그 상품의 자기 하루 손익이 레벨 +1 로 늘 때만 (ai.ts growGain), 2 = 그리고 레벨 −1 로 늘면 헌다 (marginExit)
-  aiMarginal: 0,
-  // 행정청 징수율 하한 (오버홀 07 A4, 0b′, AI 판단, 이슈 #4): > 0 이면 AI 왕실은 왕국 징수율(taxRatio)이 이 값 아래인 동안 행정청 레벨을 헐지 않는다
-  // (reviewLevels 가 적자 주를 세지 않고, 올려 둔 행정청 철거 대기를 거둔다). 0 = 하한 없음 (그 전과 같음). 후보 0.6 / 0.7 / 0.8 과 0 을 비교 중 (docs/overhaul/0BP_A4_SPECS.json), 근거 없음
-  aiAdminFloor: 0,
   // 왕실 국영 건물의 지역 웃돈 (2026-11-02 wt-admin, AI 판단): > 0 이면 AI 왕실이 매주 지역마다 그 지역 정부 건물(행정청·건축사무소·학교)의 직종 충원율이
   // ADMIN_STAFFED 아래면 웃돈을 바로 바깥 소득 × STATE_HIRE_PULL 에 맞추고, 차 있으면 바깥 소득과 같은 국영 임금까지 PREMIUM_STEP 씩 내린다 (웃돈 0 ~ 이 값, 이 값 = 웃돈 상한).
   // 바깥 소득 = 그 지역 시장 임금과 다음 중 큰 쪽: 노동자·농부는 소작 1인 소득, 하급 귀족은 그 지역 저택의 하급 귀족 1인 몫 (ai.ts adjustStatePremium, Company.statePremium,
