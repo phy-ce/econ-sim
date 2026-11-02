@@ -1,0 +1,439 @@
+{
+ "about": "곡물 S/D 세계 규칙 후보 (이슈 #11, wt-grainrule, main ce8a5f7 + TUNE wageFloorWeeks·tenantSellRef·grainEatElast·tenantKindSigma, 모두 기본 0 = 끔, golden 같음). ctl = 지금 규칙. e05·e10 = ③ grainEatElast 0.5·1, s10 = ② tenantSellRef 1, w52·w104 = ① wageFloorWeeks 52·104, k1 = ④ tenantKindSigma 1, w52e10 = ① 52 + ③ 1. 돌리기 (packages/sim 에서): KEY=specs10 PAR=2 bash cli/lab.sh <out.jsonl> ../../docs/overhaul/GRAIN_RULES_SPECS.json (10년 × 시드 1 × salt 0 거르기), PAR=2 bash cli/lab.sh <out.jsonl> ../../docs/overhaul/GRAIN_RULES_SPECS.json (20년 × 시드 1·2 × salt 0..3). 요약: python cli/labsum.py <out.jsonl> --compare ctl. 결과·판단: docs/overhaul/GRAIN_RULES.md specs (20년 × 시드 1·2 × salt 0..3): ctl, w52, e10, w52e10 (10년 거르기에서 고름, GRAIN_RULES.md 3장).",
+ "code": "wt-grainrule (main ce8a5f7 + 후보 스위치)",
+ "specs10": [
+  {
+   "item": "GRAINRULE",
+   "name": "ctl",
+   "seed": 1,
+   "salt": 0,
+   "years": 10,
+   "tune": {},
+   "control": "ctl"
+  },
+  {
+   "item": "GRAINRULE",
+   "name": "e05",
+   "seed": 1,
+   "salt": 0,
+   "years": 10,
+   "tune": {
+    "grainEatElast": 0.5
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "GRAINRULE",
+   "name": "e10",
+   "seed": 1,
+   "salt": 0,
+   "years": 10,
+   "tune": {
+    "grainEatElast": 1
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "GRAINRULE",
+   "name": "s10",
+   "seed": 1,
+   "salt": 0,
+   "years": 10,
+   "tune": {
+    "tenantSellRef": 1
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "GRAINRULE",
+   "name": "w52",
+   "seed": 1,
+   "salt": 0,
+   "years": 10,
+   "tune": {
+    "wageFloorWeeks": 52
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "GRAINRULE",
+   "name": "w104",
+   "seed": 1,
+   "salt": 0,
+   "years": 10,
+   "tune": {
+    "wageFloorWeeks": 104
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "GRAINRULE",
+   "name": "k1",
+   "seed": 1,
+   "salt": 0,
+   "years": 10,
+   "tune": {
+    "tenantKindSigma": 1
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "GRAINRULE",
+   "name": "w52e10",
+   "seed": 1,
+   "salt": 0,
+   "years": 10,
+   "tune": {
+    "wageFloorWeeks": 52,
+    "grainEatElast": 1
+   },
+   "control": "ctl"
+  }
+ ],
+ "specs": [
+  {
+   "item": "GRAINRULE",
+   "name": "ctl",
+   "seed": 1,
+   "salt": 0,
+   "years": 20,
+   "tune": {},
+   "control": "ctl"
+  },
+  {
+   "item": "GRAINRULE",
+   "name": "ctl",
+   "seed": 1,
+   "salt": 1,
+   "years": 20,
+   "tune": {},
+   "control": "ctl"
+  },
+  {
+   "item": "GRAINRULE",
+   "name": "ctl",
+   "seed": 1,
+   "salt": 2,
+   "years": 20,
+   "tune": {},
+   "control": "ctl"
+  },
+  {
+   "item": "GRAINRULE",
+   "name": "ctl",
+   "seed": 1,
+   "salt": 3,
+   "years": 20,
+   "tune": {},
+   "control": "ctl"
+  },
+  {
+   "item": "GRAINRULE",
+   "name": "ctl",
+   "seed": 2,
+   "salt": 0,
+   "years": 20,
+   "tune": {},
+   "control": "ctl"
+  },
+  {
+   "item": "GRAINRULE",
+   "name": "ctl",
+   "seed": 2,
+   "salt": 1,
+   "years": 20,
+   "tune": {},
+   "control": "ctl"
+  },
+  {
+   "item": "GRAINRULE",
+   "name": "ctl",
+   "seed": 2,
+   "salt": 2,
+   "years": 20,
+   "tune": {},
+   "control": "ctl"
+  },
+  {
+   "item": "GRAINRULE",
+   "name": "ctl",
+   "seed": 2,
+   "salt": 3,
+   "years": 20,
+   "tune": {},
+   "control": "ctl"
+  },
+  {
+   "item": "GRAINRULE",
+   "name": "w52",
+   "seed": 1,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "wageFloorWeeks": 52
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "GRAINRULE",
+   "name": "w52",
+   "seed": 1,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "wageFloorWeeks": 52
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "GRAINRULE",
+   "name": "w52",
+   "seed": 1,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "wageFloorWeeks": 52
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "GRAINRULE",
+   "name": "w52",
+   "seed": 1,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "wageFloorWeeks": 52
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "GRAINRULE",
+   "name": "w52",
+   "seed": 2,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "wageFloorWeeks": 52
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "GRAINRULE",
+   "name": "w52",
+   "seed": 2,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "wageFloorWeeks": 52
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "GRAINRULE",
+   "name": "w52",
+   "seed": 2,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "wageFloorWeeks": 52
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "GRAINRULE",
+   "name": "w52",
+   "seed": 2,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "wageFloorWeeks": 52
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "GRAINRULE",
+   "name": "e10",
+   "seed": 1,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "grainEatElast": 1
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "GRAINRULE",
+   "name": "e10",
+   "seed": 1,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "grainEatElast": 1
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "GRAINRULE",
+   "name": "e10",
+   "seed": 1,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "grainEatElast": 1
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "GRAINRULE",
+   "name": "e10",
+   "seed": 1,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "grainEatElast": 1
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "GRAINRULE",
+   "name": "e10",
+   "seed": 2,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "grainEatElast": 1
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "GRAINRULE",
+   "name": "e10",
+   "seed": 2,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "grainEatElast": 1
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "GRAINRULE",
+   "name": "e10",
+   "seed": 2,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "grainEatElast": 1
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "GRAINRULE",
+   "name": "e10",
+   "seed": 2,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "grainEatElast": 1
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "GRAINRULE",
+   "name": "w52e10",
+   "seed": 1,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "wageFloorWeeks": 52,
+    "grainEatElast": 1
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "GRAINRULE",
+   "name": "w52e10",
+   "seed": 1,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "wageFloorWeeks": 52,
+    "grainEatElast": 1
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "GRAINRULE",
+   "name": "w52e10",
+   "seed": 1,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "wageFloorWeeks": 52,
+    "grainEatElast": 1
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "GRAINRULE",
+   "name": "w52e10",
+   "seed": 1,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "wageFloorWeeks": 52,
+    "grainEatElast": 1
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "GRAINRULE",
+   "name": "w52e10",
+   "seed": 2,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "wageFloorWeeks": 52,
+    "grainEatElast": 1
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "GRAINRULE",
+   "name": "w52e10",
+   "seed": 2,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "wageFloorWeeks": 52,
+    "grainEatElast": 1
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "GRAINRULE",
+   "name": "w52e10",
+   "seed": 2,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "wageFloorWeeks": 52,
+    "grainEatElast": 1
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "GRAINRULE",
+   "name": "w52e10",
+   "seed": 2,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "wageFloorWeeks": 52,
+    "grainEatElast": 1
+   },
+   "control": "ctl"
+  }
+ ]
+}

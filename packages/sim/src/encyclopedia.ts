@@ -108,7 +108,9 @@ export const TUNE_EXPERIMENTAL: TuneKey[] = ['subReturn', 'laborNet', 'officeRic
   // AI 왕실 민영화 (비교용, 기본 'off': 민영화는 플레이어가 켠다)
   'crownPrivatize',
   // AI 수정 비교 (2026-10-22, 기본 0 = 지금 동작)
-  'crownGdpReserve', 'financeIdle', 'laborStrict', 'welfareCutOff'];
+  'crownGdpReserve', 'financeIdle', 'laborStrict', 'welfareCutOff',
+  // 곡물 S/D 세계 규칙 후보 (이슈 #11, DECISIONS 7-51, 기본 0 = 끔)
+  'wageFloorWeeks', 'tenantSellRef', 'grainEatElast', 'tenantKindSigma'];
 
 function showTune(v: unknown): number | string {
   if (typeof v === 'number') return Number.isFinite(v) ? v : '∞';

@@ -1,5 +1,5 @@
 import {recordPopIncome} from './popIncome';
-import { ABS_LIMITS, BUILDING_BY_ID, CLASS_DEFS, SKILL_DEFS, TUNE, getMethod } from './data';
+import { ABS_LIMITS, BUILDING_BY_ID, CLASS_DEFS, SKILL_DEFS, TICKS_PER_WEEK, TUNE, getMethod } from './data';
 import { borrow, disbanded, emptyJobs, emptyStats, isGovernment, isSubsistence, manorGentrySeats, offsetWages, paysDividend, paysShare, peasantSlots, shareWage, wagesAt } from './economy';
 import { tenantIncomePerWorker } from './market';
 import { findPop, getPop, movePeople, workforce } from './pops';
@@ -489,6 +489,8 @@ export function updateMarketWages(w: World) {
   const regionPops = new RegionPops(w);
   for (const r of w.regions) {
     const tenant = subsistenceWage(w, r);
+    // ① 임금 바닥의 소작 소득 이동평균 (TUNE.wageFloorWeeks > 0, 이슈 #11 후보, 기본 끔)
+    if (TUNE.wageFloorWeeks > 0) r.tenantAvg = r.tenantAvg === undefined ? tenant : r.tenantAvg + (tenant - r.tenantAvg) / (TUNE.wageFloorWeeks * TICKS_PER_WEEK);
     const wages = ensureWages(w, r, tenant);
     const avg = (r.wageAvg ??= { ...wages });
     moveRegionWages(w, r, wages, localOf.get(r.id) ?? NO_BUILDINGS, regionPops.of(r.id), comp, tenant);
@@ -509,6 +511,8 @@ function moveRegionWages(w: World, r: Region, wages: Record<Skill, number>, loca
   const mode = TUNE.wageTarget, speed = TUNE.wageTargetSpeed;
   const curves = mode === 2 ? emptyCurves() : undefined;
   const tab = labourTable(w, r, local, pops, comp, tenant, (s) => wages[s], curves);
+  // 아래 끝(시작 임금·바깥 소득)에 쓰는 소작 소득: ① TUNE.wageFloorWeeks > 0 이면 이동평균 (오려는 사람은 위 표에서 지금 소득으로 센다)
+  if (TUNE.wageFloorWeeks > 0 && r.tenantAvg !== undefined) tenant = r.tenantAvg;
   /** 목표 셈의 아래 끝·위 끝 (위 끝 = 바깥 소득 × wageTargetSpan, 기본 임금 × MARKET_WAGE_RANGE 위 끝 이하) */
   const ends = (s: Skill): [number, number] => {
     const lo = startWage(wages, s, tenant);

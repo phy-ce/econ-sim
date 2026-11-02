@@ -680,6 +680,17 @@ export const TUNE = {
   // 기준 채움 = 켜진 뒤 첫 수확 날 그 지역 채움 (Region.tenantFill0). 시작 상태에서 1배라 중립이고, 모두 떠나면 1 + tenantSlack 배 (market.ts tenantSlackMult).
   // 0 = 끔. 후보 0.5 (마이크로 시제품의 α). 2026-11-02 사용자 "소작지 수확 체감은 일단 메모만" 으로 끈 채 둔다 (DECISIONS 7-38, DESIGN 11)
   tenantSlack: 0,
+  // 곡물 S/D 1.3 세계 규칙 후보 (이슈 #11, 2026-11-02 wt-grainrule, docs/overhaul/GRAIN_RULES.md, 사용자 결정 대기 DECISIONS 7-51). 모두 0 = 끔 (지금 규칙).
+  // ① wageFloorWeeks > 0: 노동자·농부 임금 아래 끝(시장 임금의 바닥, startWage·outsideWage)에 쓰는 소작 1인 소득을 그 주 수의 지수 이동평균으로 잰다 (Region.tenantAvg).
+  //    사람이 옮기는 판단(누가 오려는가)은 지금 소작 소득 그대로다 (labor.ts moveRegionWages). 후보 52 / 104
+  wageFloorWeeks: 0,
+  // ② tenantSellRef > 0: 소작농이 식구가 쓰고 남은 수확을 min(1, (값 ÷ 기본가) ÷ tenantSellRef) 만큼만 판다. 나머지는 팔지 않고 사라진다(먹거나 묵혀 썩힌다, 소득 아님). 지대 몫은 다 판다 (market.ts harvest). 후보 1 / 0.8
+  tenantSellRef: 0,
+  // ③ grainEatElast > 0: 곡물값이 기본가 아래면 곡물 1개가 채우는 식량이 (값 ÷ 기본가)^grainEatElast 배로 준다 (싸면 더 먹는다. 값의 탄력성 −e 의 수요). 기본가 이상이면 그대로.
+  //    가계 구매·현물 쓰기·소작 판매·생활비 모두 같은 배율 (market.ts grainEatMult). 후보 0.5 / 1
+  grainEatElast: 0,
+  // ④ tenantKindSigma 1: 소작 1인 소득(임금 바닥의 기준)에서 직접 먹은 현물도 팔린 비율(sellThrough)로 할인해 잰다 (market.ts tenantIncomePerWorker). 0 = 지금 (현물은 제값)
+  tenantKindSigma: 0,
   quakeChance: 0,
   quakeLoss: 0.25,
   quakeYears: 3,

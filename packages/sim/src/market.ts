@@ -143,7 +143,7 @@ function makePicks(nc: NeedCache, ni: number, wealth: number): Pick[] {
   const need = NEEDS[ni];
   // computeSplit(need, 가격, 상한) 과 같은 계산. 무게는 가격으로만 정해지므로 상한 키끼리 같이 쓴다
   const share = splitShares((nc.weights ??= splitWeights(need, nc.prices)), need.options.map((o) => rawMax(o.max, wealth)));
-  return need.options.map((o, i) => ({ gi: GOOD_INDEX[o.good], good: o.good, units: o.units, share: share[i], price: nc.prices[i] }));
+  return need.options.map((o, i) => ({ gi: GOOD_INDEX[o.good], good: o.good, units: o.good === 'grain' ? o.units * grainEatMult(nc.prices[i]) : o.units, share: share[i], price: nc.prices[i] }));
 }
 
 /** basketCostAt 과 같은 값 (하루 표로) */
@@ -225,10 +225,11 @@ export function harvest(w: World, book: Book) {
     if (TUNE.tenantSlack && r.tenantFill0 === undefined) { const f = tenantFill(w, b, pop); if (f !== null && f > 0) r.tenantFill0 = f; }
     // 기상 조건이 걸리면 수확이 그만큼 줄어든다 (economy.ts harvestFactor). 소작지 여유 배율 (끔이면 1)
     const out = harvestOutput(workforce(pop) * harvestFactor(w, r.id, 'arable') * tenantSlackMult(w, r, b, pop));
-    const { own, sell } = splitHarvest(pop.size, wealthOf(pop), GOOD_IDS.map((g) => (out[g] ?? 0) * (1 - rent)));
+    const { own, sell } = splitHarvest(pop.size, wealthOf(pop), GOOD_IDS.map((g) => (out[g] ?? 0) * (1 - rent)), grainEatMult(r.market.grain.price));
     for (let i = 0; i < NG; i++) {
       const g = GOOD_IDS[i], q = out[g];
       if (!q) continue;
+      sell[i] *= tenantSellFrac(r, g);
       b.last.output[g] = q;
       pop.inKind[g] = own[i];
       const rq = q * rent;
@@ -261,9 +262,33 @@ export function harvestShares(w: World, r: Region, wealth = WEALTH_MAX): { rent:
  * 소작지 수확 out(GOOD_IDS 순서)을 size 명, 부 wealth 인 소작농이 나누는 법 (현물 사용 순서·상한은 collectOrders 와 같다).
  * 그날 지금 부 단계로 쓸 만큼 쓰고(own) 나머지를 판다(sell). 수확이 필요보다 적으면 다 쓰고 팔지 않는다
  */
-export function splitHarvest(size: number, wealth: number, out: number[]): { own: number[]; sell: number[] } {
-  const left = useOwnKind(size, wealth, out.slice());
+export function splitHarvest(size: number, wealth: number, out: number[], gm = 1): { own: number[]; sell: number[] } {
+  const left = useOwnKind(size, wealth, out.slice(), gm);
   return { own: out.map((x, i) => Math.max(0, x - left[i])), sell: left.map((x) => Math.max(0, x)) };
+}
+
+/**
+ * ② 소작 판매의 값 반응 (TUNE.tenantSellRef > 0, 이슈 #11 후보, 기본 끔): 식구가 쓰고 남은 수확 중 파는 비율 = min(1, (값 ÷ 기본가) ÷ tenantSellRef).
+ * 팔지 않은 몫은 사라진다 (먹거나 묵혀 썩힌다, 소득 아님). 끔이면 1
+ */
+export function tenantSellFrac(r: Region, g: GoodId): number {
+  const ref = TUNE.tenantSellRef;
+  if (!(ref > 0)) return 1;
+  return Math.min(1, r.market[g].price / GOODS[g].basePrice / ref);
+}
+
+/**
+ * ③ 곡물 수요의 값 반응 (TUNE.grainEatElast > 0, 이슈 #11 후보, 기본 끔): 곡물 1개가 채우는 식량 단위에 곱하는 수 = max(1, (기본가 ÷ 값)^grainEatElast), 지수는 0.5 단위로 끊는다 (Math.pow 를 쓰지 않는다).
+ * 값이 기본가 아래면 같은 식량을 채우는 데 곡물이 더 든다 (싸면 더 먹는다). 끔이면 1
+ */
+export function grainEatMult(price: number): number {
+  const e = TUNE.grainEatElast;
+  if (!(e > 0) || !(price > 0)) return 1;
+  const x = price / GOODS.grain.basePrice;
+  if (x >= 1) return 1;
+  // 엔진마다 같은 결과를 내도록 Math.pow 대신 0.5 단위 지수만 쓴다: (1/x)^정수부 × (소수부가 0.5 이상이면 1/√x)
+  const n = Math.floor(e), half = e - n >= 0.5;
+  return ipow(1 / x, n) * (half ? 1 / Math.sqrt(x) : 1);
 }
 
 function bagOf(q: number[]): GoodBag {
@@ -279,11 +304,12 @@ function bagOf(q: number[]): GoodBag {
 export function tenantIncomePerWorker(w: World, r: Region, wealth: number): number {
   const out = harvestOutput(harvestFactor(w, r.id, 'arable') * tenantSlackMult(w, r));
   const sh = harvestShares(w, r, wealth);
-  const { own, sell } = splitHarvest(1 / WORKFORCE_RATIO, wealth, GOOD_IDS.map((g) => (out[g] ?? 0) * (1 - sh.rent)));
+  const { own, sell } = splitHarvest(1 / WORKFORCE_RATIO, wealth, GOOD_IDS.map((g) => (out[g] ?? 0) * (1 - sh.rent)), grainEatMult(r.market.grain.price));
   let v = 0;
   for (let i = 0; i < NG; i++) {
     const mg = r.market[GOOD_IDS[i]];
-    v += sell[i] * mg.price * sellThrough(mg) + own[i] * mg.price;
+    // ② 값이 싸면 덜 판다 (TUNE.tenantSellRef), ④ 먹은 현물도 팔린 비율로 할인 (TUNE.tenantKindSigma). 끔이면 둘 다 1
+    v += sell[i] * tenantSellFrac(r, GOOD_IDS[i]) * mg.price * sellThrough(mg) + own[i] * mg.price * (TUNE.tenantKindSigma ? sellThrough(mg) : 1);
   }
   v -= sh.tax;
   return v;
@@ -373,7 +399,7 @@ export function collectOrders(w: World, book: Book) {
       if (!per) continue;
       // 현물을 먼저 쓰고 (useKind), 남은 필요를 산다
       const total = per * units0;
-      const units = inKind ? useKind(NEEDS[ni], total, L, inKind) : total;
+      const units = inKind ? useKind(NEEDS[ni], total, L, inKind, grainEatMult(d.price[GOOD_INDEX.grain])) : total;
       const isFood = ni === FOOD_NEED;
       if (isFood) { foodNeed = total; foodInKind = total - units; }
       for (const opt of (memo[ni] ??= pickOf(d, ni, L))) {
@@ -1032,7 +1058,7 @@ export function basketCostAt(r: Region, size: number, wealth: number): number {
   for (const n of NEEDS) {
     const per = need[n.id];
     if (!per) continue;
-    for (const opt of needSplit(r, n.id, wealth)) v += per * units * opt.units * opt.share * r.market[opt.good].price;
+    for (const opt of needSplit(r, n.id, wealth)) v += per * units * opt.units * (opt.good === 'grain' ? grainEatMult(r.market.grain.price) : 1) * opt.share * r.market[opt.good].price;
   }
   return v;
 }
@@ -1042,26 +1068,28 @@ export function basketCostAt(r: Region, size: number, wealth: number): number {
  * 선택지 순서로, 상품마다 그 상품이 채울 수 있는 최대 비중(rawMax)까지만 쓴다.
  * left(GOOD_IDS 순서 수량)에서 쓴 만큼 빼고, 현물로 못 채운 필요 단위를 돌려준다
  */
-function useKind(n: NeedDef, units: number, wealth: number, left: number[]): number {
+function useKind(n: NeedDef, units: number, wealth: number, left: number[], gm = 1): number {
   const total = units;
   for (const opt of n.options) {
     const i = GOOD_INDEX[opt.good];
     const a = left[i];
     if (a <= 0 || units <= 0) continue;
-    const use = Math.min(units, a / opt.units, rawMax(opt.max, wealth) * total);
-    left[i] = a - use * opt.units;
+    // ③ 곡물 1개가 채우는 식량 (grainEatMult, 끔이면 gm = 1)
+    const ou = opt.good === 'grain' ? opt.units * gm : opt.units;
+    const use = Math.min(units, a / ou, rawMax(opt.max, wealth) * total);
+    left[i] = a - use * ou;
     units -= use;
   }
   return units;
 }
 
 /** size 명, 부 wealth 인 pop 이 현물 left(GOOD_IDS 순서) 로 오늘 필요를 채우고 남는 양 (left 를 그 양으로 바꿔 돌려준다) */
-function useOwnKind(size: number, wealth: number, left: number[]): number[] {
+function useOwnKind(size: number, wealth: number, left: number[], gm = 1): number[] {
   const units0 = size * CONSUMPTION_PER_CAPITA;
   const need = needsAt(wealth);
   for (const n of NEEDS) {
     const per = need[n.id];
-    if (per) useKind(n, per * units0, wealth, left);
+    if (per) useKind(n, per * units0, wealth, left, gm);
   }
   return left;
 }
