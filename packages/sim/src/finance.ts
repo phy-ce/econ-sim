@@ -576,13 +576,13 @@ export function payDividends(w: World, c: Company) {
 
 /**
  * 민간 건물 b 의 하루 운영비 (운영 자금을 셀 때): 오늘 실제로 쓴 임금 + 원료.
- * TUNE.firmCallPlan = 1 (AI 판단, DECISIONS 7-40): 지금 값·임금으로 원료를 다 채워 돌리면 흑자인 생산 건물은 그 계획 운영비
+ * AI 판단 (DECISIONS 7-40): 지금 값·임금으로 원료를 다 채워 돌리면 흑자인 생산 건물은 그 계획 운영비
  * (레벨 × 가동률 × 지금 일손 비율, market.ts collectOrders 가 원료를 사는 양과 같다)와 큰 쪽.
  * 실제로 쓴 돈만 세면 현금이 0 이 된 상회는 임금·원료를 못 내 그 값이 0 이 되고, 운영 자금도 0 으로 보여 주인이 채우지 않았다 (현금 0 함정)
  */
 function opsDay(w: World, c: Company, b: Building): number {
   const paid = b.last.wageCost + b.last.inputCost;
-  if (!TUNE.firmCallPlan || !b.active) return paid;
+  if (!b.active) return paid;
   const m = getMethod(b.typeId, b.methodId);
   if (m.construction || m.seats) return paid;
   const e = estimateMethod(w, b.regionId, b.typeId, b.methodId, wagesAt(c, b.typeId, w, b.regionId), b.stateOwned);

@@ -53,6 +53,7 @@
 - 2026-11-02 wt-simplify 1단계 (`docs/overhaul/SIMPLIFY_AUDIT.md` 3-1, 골든·samecheck 같음)로 지운 TUNE 키와 꺼진 갈래:
   - 1-A 실험 스위치 12: `lossBuildsPerWeek`·`lossTolerance`·`crownPrivatize`·`subReturn`·`laborNet`·`laborPoach`·`laborStrict`·`officeSelfPay`·`officeSchoolFirst`·`aiSwitchV2`·`financeIdle`·`welfareCutOff` (상태 칸 `Building.fundedTick`도). 그 전 코드 c4676de
   - 1-B 비교용 가격 공식 `priceExp`·`priceRange` (가격 범위는 `market.ts PRICE_MIN`·`PRICE_MAX` 한 곳). 그 전 코드 7df16c4. `nobleSeats` 옛 방식과 키 다섯은 wt-manor 가 같은 함수를 고치므로 남겼다
+  - 1-C 기본으로 켠 스위치 12의 키와 꺼진 갈래: `latentFeasible`·`aiInputFill`·`needFixedTotal`·`firmCallPlan`·`crownDebtNoBuild`·`taxCurve`·`aiKeepLastSupplier`·`aiGrowWhere`·`aiReserveFund`·`aiWagePremium`·`wealthSavLower`·`aiBuildNow` (켠 갈래만 남김). 그 전 코드 b4cb7c5. `aiAdminWage` 0·1 갈래는 키와 함께 1-E 에서 지웠다
 
 ### 4-2. 지우면 동작이 바뀌는 것 (하나씩 결정)
 | 항목 | 지금 | 지우면 |

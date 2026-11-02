@@ -4,12 +4,12 @@ import type { World } from '../../src/index';
 import { PREMIUM_MAX } from '../../src/ai';
 import { firstDiff } from '../helpers';
 
-// 임금 지연 고치기 (wt-wagelag): A1 상회 웃돈(aiWagePremium), A2 국영 임금 지키기(aiAdminWage 2), W1 오를 때 속도(wageMarketRateUp)를 켜도
+// 임금 지연 고치기 (wt-wagelag): A1 상회 웃돈(ai.ts adjustPremium, 2026-11-02 기본, 스위치는 wt-simplify 1-C 에서 지움), A2 국영 임금 지키기(aiAdminWage 2), W1 오를 때 속도(wageMarketRateUp)를 켜도
 // 화폐 보존·결정성(저장/불러오기)이 지켜지고 웃돈이 범위 안에 있다. 정해 둔 흉작(SCRIPTED_HARVESTS)은 그 지역·기간에만 산출을 깎는다
 // (W1 은 wageTarget 0 일 때만 쓰이므로 이 시험은 wageTarget 0 으로 돈다)
-const KEYS = ['aiWagePremium', 'aiAdminWage', 'wageMarketRateUp', 'wageTarget'] as const;
+const KEYS = ['aiAdminWage', 'wageMarketRateUp', 'wageTarget'] as const;
 const saved = Object.fromEntries(KEYS.map((k) => [k, TUNE[k]]));
-beforeAll(() => { Object.assign(TUNE, { aiWagePremium: 1, aiAdminWage: 2, wageMarketRateUp: 0.01, wageTarget: 0 }); });
+beforeAll(() => { Object.assign(TUNE, { aiAdminWage: 2, wageMarketRateUp: 0.01, wageTarget: 0 }); });
 afterAll(() => { Object.assign(TUNE, saved); SCRIPTED_HARVESTS.length = 0; });
 
 const reload = (w: World): World => JSON.parse(JSON.stringify(w));

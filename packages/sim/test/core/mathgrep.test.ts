@@ -11,8 +11,7 @@ const SAFE_MATH = new Set(['abs', 'min', 'max', 'floor', 'ceil', 'round', 'trunc
 
 /** 허용 목록: 파일 + 줄 내용 일부 (줄 번호 대신이라 줄이 옮겨도 덜 깨진다). 2026-10-30 wt-a0 (main 9b46c2d) 에서 grep 한 것 */
 const ALLOWED: { file: string; has: string; why: string }[] = [
-  // 꺼진 비교 경로 (8.5 정리 때 지운다)
-  { file: 'economy.ts', has: '1 - Math.exp(-x)', why: "collectionRatio 의 TUNE.taxCurve = 'exp' 경로 (기본 'hyp')" },
+  // 꺼진 비교 경로 둘(taxCurve 'exp', priceExp)은 2026-11-02 wt-simplify 1-B·1-C 에서 지웠다
   // data.ts tradeReserveOf·market.ts 대체재 비중·pops.ts Pop.growth 의 Math.pow·** 3곳은 0a 에서 rng/ipow.ts 로 바꿨다
 ];
 

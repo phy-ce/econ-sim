@@ -368,7 +368,7 @@ export function wagesAt(c: Company, typeId: string, w?: World, regionId?: number
     if (r.wages) {
       if (c.state && isGovernment(typeId)) return r.stateWages ?? c.stateWages ?? r.wages;
       const base = c.wageOffset ? offsetWages(r.wages, c.wageOffset) : r.wages;
-      // AI 민간 상회의 지역 웃돈 (TUNE.aiWagePremium, ai.ts adjustPremium)
+      // AI 민간 상회의 지역 웃돈 (ai.ts adjustPremium)
       const ai = c.aiPremium?.[regionId];
       return ai ? offsetWages(base, ai.off) : base;
     }
@@ -541,13 +541,13 @@ export function wageCostOf(method: MethodDef, wages: Record<Skill, number>, stat
 }
 
 /**
- * 징수율: 행정청이 감당하는 인구 / 왕국 인구 = x 일 때 x / (1 + x) (TUNE.taxCurve = 'hyp'). 한도가 인구와 같으면 50%, 2배면 67%, 3배면 75%.
- * 'exp' 곡선이면 1 − e^(−x) (63%, 86%, 95%). 100%에는 닿지 않고, 행정청을 늘릴수록 더 걷히는 몫이 줄어든다
+ * 징수율: 행정청이 감당하는 인구 / 왕국 인구 = x 일 때 x / (1 + x). 한도가 인구와 같으면 50%, 2배면 67%, 3배면 75%.
+ * 100%에는 닿지 않고, 행정청을 늘릴수록 더 걷히는 몫이 줄어든다
  */
 export function collectionRatio(capacity: number, people: number): number {
   if (people <= 0) return 1;
   const x = Math.max(0, capacity) / people;
-  return TUNE.taxCurve === 'hyp' ? x / (1 + x) : 1 - Math.exp(-x);
+  return x / (1 + x);
 }
 
 /** 지역 시장의 현재 가격과 주어진 임금으로 본 레벨 1 만원 가동 하루 손익 */

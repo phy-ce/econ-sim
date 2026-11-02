@@ -1015,8 +1015,8 @@ function updateWealth(p: Pop, rd: RegionDay, plan: PopPlan) {
 function wealthMove(p: Pop, L: number, inKind: number, costCur: number, costNext: number) {
   // 소득 = 판 돈(현금 소득에 들어 있다) + 먹고 쓴 현물
   const income = Math.max(0, p.incomeEma);
-  // 저축을 부에 넣기 (TUNE.wealthSavWeeks > 0, 기본 52): 생활비 wealthSavBuffer 주치를 넘는 저축 ÷ wealthSavWeeks 주 (wealthSavLower 1 이면 하층만)
-  const fromSavings = TUNE.wealthSavWeeks > 0 && (!TUNE.wealthSavLower || CLASS_DEFS[p.prof].stratum === 'lower')
+  // 저축을 부에 넣기 (TUNE.wealthSavWeeks > 0, 기본 52, 하층만): 생활비 wealthSavBuffer 주치를 넘는 저축 ÷ wealthSavWeeks 주
+  const fromSavings = TUNE.wealthSavWeeks > 0 && CLASS_DEFS[p.prof].stratum === 'lower'
     ? Math.max(0, p.savings - TUNE.wealthSavBuffer * TICKS_PER_WEEK * costCur) / (TUNE.wealthSavWeeks * TICKS_PER_WEEK) : 0;
   const total = income + inKind + fromSavings;
   let drift = 0;

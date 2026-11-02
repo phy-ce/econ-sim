@@ -448,9 +448,6 @@ export function scaleBonus(level: number): number {
  * - ownerTilt: 저택은 땅 건물(농지·산림·광맥), 금융가는 그 밖의 건물을 좋아한다 (AI 성향). 좋아하지 않는 종류에 낼 마음의 배율
  * - privatizeMargin, privatizePayback: 민영화 레벨을 사는 조건 (AI): 금고 ≥ 레벨 값 × privatizeMargin, 레벨 값 ÷ 그 레벨의 1년 이익 ≤ privatizePayback 년
  * - firmBufferWeeks: 민간 상회가 배당 전에 남기는 운영 자금 = 주간 (임금 + 원료) × 이 주 수 (임금·원료가 판매 대금보다 먼저 나간다)
- * - firmCallPlan: 1 = 운영 자금의 하루 운영비를, 원료를 다 채우면 흑자인 생산 건물은 계획 운영비(지금 값·임금·일손)와 실제로 쓴 돈 중 큰 쪽으로 센다 (finance.ts opsDay, AI 판단).
- *   0 = 실제로 쓴 돈만 (현금 0 이면 운영 자금도 0 으로 보여 주인이 채우지 않는다, d964485 까지의 동작)
- * - taxCurve: 징수율 곡선. 'exp' = 1 − e^(−x), 'hyp' = x / (1 + x) (x = 행정청 한도 / 인구)
  * - wageMarket, wageMarketRate: 1 이면 지역·직종 시장 임금 (labor.ts updateMarketWages). wageTarget 0 이면 날마다 임금 × wageMarketRate × clamp((자리 − 오려는 사람) ÷ min(자리, 오려는 사람), −1, 1) 만큼 움직인다.
  *   오려는 사람 = 재직자 + 자격 있는 실업자 + 다른 자리에서 일하는 자격자 × switchShare(지금 소득, 시장 임금) ÷ switchMax. 0 이면 회사 임금표와 AI 임금 판단 (ai.ts adjustWages)
  * - wageMarketRateUp: > 0 이면 시장 임금이 오를 때(자리 > 오려는 사람)만 wageMarketRate 대신 이 하루 속도 (0 = 끔)
@@ -537,7 +534,7 @@ export const TUNE = {
   switchRate: 0.005,
   switchPremium: 1.1,
   switchMax: 0.05,
-  // 지역 시장 임금 (2026-11-01 사용자 승인 "지역 임금 규칙 검증", docs/overhaul/LABOR_MARKET.md 1단계 (가)): 1 = 지역·직종마다 시장 임금 하나를 모든 임금 건물이 준다 (AI 민간 상회는 aiWagePremium 웃돈을 얹을 수 있다)
+  // 지역 시장 임금 (2026-11-01 사용자 승인 "지역 임금 규칙 검증", docs/overhaul/LABOR_MARKET.md 1단계 (가)): 1 = 지역·직종마다 시장 임금 하나를 모든 임금 건물이 준다 (AI 민간 상회는 웃돈 ai.ts adjustPremium 을 얹을 수 있다)
   // (labor.ts updateMarketWages: 기본 wageTarget 2 면 날마다 맞는 임금 쪽으로 차이 × wageTargetSpeed, wageTarget 0 이면 옛 규칙 임금 × wageMarketRate × clamp((자리 − 오려는 사람) ÷ min(자리, 오려는 사람), −1, 1)). AI 임금 판단(adjustWages)은 돌지 않는다 (상회 웃돈 ai.ts adjustPremium 만).
   // 0 = 그 전 규칙 (회사 임금표, AI 바닥·천장). 2026-11-02 사용자 "all 의 나머지를 넣어서" 로 기본 1 (근거: DESIGN 11, 보고서 2026-11-02-combo)
   wageMarket: 1,
@@ -559,18 +556,15 @@ export const TUNE = {
   localBias: 0.5,
   ownerTilt: 0.5,
   firmBufferWeeks: 2,
-  firmCallPlan: 1,
   privatizeMargin: 2,
   privatizePayback: 10,
-  taxCurve: 'hyp' as 'exp' | 'hyp',
   cashBufferDays: 10,
   peasantKeepWeeks: 8,
-  // 저축을 부에 넣기 (2026-11-01 마이크로 시제품 microA D2, 세계 규칙, 사용자 결정 대기 DECISIONS 7-37): wealthSavWeeks > 0 이면 부 단계를 정하는 소득(market.ts updateWealth)에
-  // max(0, 저축 − 생활비 × wealthSavBuffer 주) ÷ wealthSavWeeks 주를 더한다. wealthSavLower 1 = 하층(소작농·노동자·농부)만, 0 = 모든 pop.
+  // 저축을 부에 넣기 (2026-11-01 마이크로 시제품 microA D2, 세계 규칙, 사용자 결정 대기 DECISIONS 7-37): wealthSavWeeks > 0 이면 하층(소작농·노동자·농부)의 부 단계를 정하는 소득(market.ts updateWealth)에
+  // max(0, 저축 − 생활비 × wealthSavBuffer 주) ÷ wealthSavWeeks 주를 더한다 (모든 pop 에 넣던 비교 갈래 wealthSavLower 0 은 2026-11-02 wt-simplify 1-C 에서 지웠다).
   // wealthSavWeeks 0 = 끔. 2026-11-02 사용자 "all 의 나머지를 넣어서" 로 기본 52 (버퍼 8, 하층만 = D2, DECISIONS 7-38, 근거: DESIGN 11)
   wealthSavWeeks: 52,
   wealthSavBuffer: 8,
-  wealthSavLower: 1,
   manorTargetMult: 0, // 비교 전 (0 = 끔, 후보 2·3)
   manorGentrySeats: 0, // 비교 전 (0 = 끔, 후보 100·50·25)
   pollTax: 0.6, // 인두세: 소작농을 뺀 1인당 하루 (세금 수준 3단계 기준)
@@ -651,11 +645,8 @@ export const TUNE = {
   ratioGate: 0.9, // 지금 규칙 (30년 × 시드 1~4 비교, DESIGN 11): 노동자·농부 충원 상한 = 기술자·전문가 충원율 ÷ 이 값 (labor.ts ratioGate). 0 이면 끈다
   minRoi: 0.2,
   minStaffing: 0.5,
-  // 잠재 수요 (2026-10-22, 새 방식 사다리): 1 = 새 규칙, 0 = 옛 규칙. 산업 유형 뒤 다시 비교(ca466d8)해 1 (DESIGN 11)
-  latentFeasible: 1, // 40년 × 시드 1~4 비교로 켬 (DESIGN 11).  잠재 수요에 실제로 바꿀 수 있는 몫만 센다 (지역 일손 × 다른 투입재)
   // AI 건설 전망 (2026-10-23, DESIGN 10·11): 보통 투자는 지금 수요가 사 가는 만큼만, 일부(devShare)만 잠재 수요를 보고 짓는다
-  aiBuildNow: 1, // 사용자 결정으로 1 유지 (2026-10-23, DECISIONS 7-24): 비교에서는 40년 × 시드 1~4 평균 총생산 1 = 757, 옛 셈 0 = 1,177 (main 9276561 병합 뒤, 보고서 2026-10-23-aibuild2, DESIGN 11). 1 = 보통 투자 매출 = 산출 × 팔리는 비율(수요 ÷ (공급 + 내 산출), 수요 = 지금 + 공사 중 투입 + 대체 수요 + 데려올 소작농 수확) × 값 (잠재 수요 제외). 0 = 옛 셈 (다 팔린다, 장기 가격에 잠재 수요)
-  devShare: 0.2, // 0·0.1·0.2 비교 (DESIGN 11). 발전 투자 몫: 회사의 착공 공사비(52주 이동 합) 중 잠재 수요를 보고 짓는 공사비의 상한. 0 = 끔 (aiBuildNow = 1 일 때만)
+  devShare: 0.2, // 0·0.1·0.2 비교 (DESIGN 11). 발전 투자 몫: 회사의 착공 공사비(52주 이동 합) 중 잠재 수요를 보고 짓는 공사비의 상한. 0 = 끔
   devLoss: 0.25, // 0·0.25 비교 (DESIGN 11). 발전 투자가 감수하는 손실: 잠재 수요까지 센 장기 손익 ≥ −인건비 × 이 값
   expandUtilMin: 0.5, // 0.5·0.7·끔 비교로 0.5 (DESIGN 11). 0 = 끔. 왕국 안 같은 종류·같은 산출 건물의 레벨 가중 가동률(꺼진 건물 0)이 이 값 미만이거나 장기 손익(profitEma) 합이 음수이면 그 방식은 새로 짓지도 늘리지도 않는다 (ai.ts glutOf)
   // 유보 기준 AI (2026-10-25 사용자 요청 "유보액을 기준으로 건물을 늘리고 줄였으면 좋겠는데. + 신규투자", DECISIONS 7-27, DESIGN 10·11): 1 = 생산 건물은 유보 자산이 4주 차면 1레벨 증설, 바닥난 채 4주 적자면 1레벨 철거,
@@ -663,8 +654,6 @@ export const TUNE = {
   aiReserveRule: 1,
   // 유보 기준 AI: 유보 0·적자가 이 주 수 이어지면 1레벨 철거 (2026-10-25 사용자 "26주로 늘려서", 그 전 4주)
   reserveShrinkWeeks: 26,
-  // 1 = 부마다 묶음 합계를 그 전 곡선의 합으로 고정하고 구성만 바꾼다 (needsAt), 0 = 늘린 곡선 그대로
-  needFixedTotal: 1,
   // 유보 기준 AI 증설 확률 (2026-10-25 사용자 "확률분포로"): 주마다 확률 = reserveGrowMax × (유보 ÷ 상한 − reserveGrowFrom) ÷ (1 − reserveGrowFrom), 0~reserveGrowMax.
   // reserveGrowMax 0 이면 그 전 규칙. 처음 값 0.25 (가득 차면 주에 25%, 근거 없음). 2026-11-02 사용자 "all 의 나머지를 넣어서" 로 1 (가득 차면 매주, 근거: DESIGN 11)
   reserveGrowMax: 1,
@@ -690,26 +679,13 @@ export const TUNE = {
   aiSellDemoWeeks: 26,
   // aiMarginal (A3): 회사가 자기 값 효과를 본다. 1 = 증설은 그 지역 그 상품의 자기 하루 손익이 레벨 +1 로 늘 때만 (ai.ts growGain), 2 = 그리고 레벨 −1 로 늘면 헌다 (marginExit)
   aiMarginal: 0,
-  // 마지막 공급자 지킴 (2026-11-01 마이크로 시제품 microB S7, AI 판단): 1 = AI 철거(유보 철거·5-2·A2·A3)는 왕국에서 다른 건물이 원료로 쓰는 상품의
-  // 마지막 생산 건물(자동 건물 제외)의 마지막 레벨을 헐지 않는다 (ai.ts keepLast). 0 = 끔. 2026-11-02 기본 1 (근거: DESIGN 11)
-  aiKeepLastSupplier: 1,
-  // 증설 위치 (2026-11-01 마이크로 시제품 microB S5, AI 판단): 1 = 유보 증설이 뽑히면 왕국 안에서 그 산출 상품의 지역 예상 공급 ÷ 수요(glutSD)가 가장 낮고
-  // 땅·부지·일손(자격자 포함, laborAvailability ≥ minStaffing)이 되는 지역에 1레벨 짓는다 (ai.ts growRegion). 0 = 끔 (그 건물 지역). 2026-11-02 기본 1 (근거: DESIGN 11)
-  aiGrowWhere: 1,
-  // 유보로 증설비 (2026-11-01 마이크로 시제품 microB S8): 1 = 민간 AI 회사의 유보 증설이 저택·금융가 금고 부족으로 막히면, 그 건물 유보 자산이 모자란 돈 이상일 때
-  // 그만큼을 회사 현금에서 공사비를 낼 저택·금융가 금고로 옮긴다 (ai.ts fundFromReserve, 돈은 옮길 뿐). 0 = 끔. 2026-11-02 기본 1 (근거: DESIGN 11)
-  aiReserveFund: 1,
   // 행정청 징수율 하한 (오버홀 07 A4, 0b′, AI 판단, 이슈 #4): > 0 이면 AI 왕실은 왕국 징수율(taxRatio)이 이 값 아래인 동안 행정청 레벨을 헐지 않는다
   // (reviewLevels 가 적자 주를 세지 않고, 올려 둔 행정청 철거 대기를 거둔다). 0 = 하한 없음 (그 전과 같음). 후보 0.6 / 0.7 / 0.8 과 0 을 비교 중 (docs/overhaul/0BP_A4_SPECS.json), 근거 없음
   aiAdminFloor: 0,
   // 1 = 징수율이 aiAdminFloor 아래인 동안 AI 왕실은 국영 임금을 내리지 않고, 행정청 충원율이 ADMIN_STAFFED 아래면 4주 점검마다 국영 임금을 한 칸 올린다 (5까지, ai.ts adjustBudget).
   // 2 = 징수율과 상관없이, 행정청과 건축사무소 충원율 중 낮은 쪽이 ADMIN_STAFFED 아래면 같은 일을 한다 (2026-11-02 wt-wagelag A2: 흉작으로 소작 소득이 뛰면 국영 사무소가 빈다).
-  // 0 = 끔. 1 은 aiAdminFloor 가 0 이면 아무것도 하지 않는다. 2026-11-02 기본 2 (aiWagePremium 1 과 함께, 근거: DESIGN 11, 보고서 2026-11-02-wagelag). 0b 시드 2 왕국 3 의 징수율 0 은 행정청 철거보다 먼저 세습 관료(하급 귀족)가 저택 자리로 떠나서 생겼다 (0BP_A4_SPECS.json about)
+  // 0 = 끔. 1 은 aiAdminFloor 가 0 이면 아무것도 하지 않는다. 2026-11-02 기본 2 (상회 웃돈 adjustPremium 과 함께, 근거: DESIGN 11, 보고서 2026-11-02-wagelag). 0b 시드 2 왕국 3 의 징수율 0 은 행정청 철거보다 먼저 세습 관료(하급 귀족)가 저택 자리로 떠나서 생겼다 (0BP_A4_SPECS.json about)
   aiAdminWage: 2,
-  // 민간 AI 상회의 지역 웃돈 (2026-11-02 wt-wagelag A1, AI 판단): 1 = 매주 지역마다, 그 지역 생산 건물 이익(profitEma 합)이 > 0 이고 직종 시장 임금이
-  // 바깥 소득(노동자·농부는 소작 1인 소득, 위 직종은 한 칸 아래 직종이 그 상회에서 받는 임금) × switchPremium 아래이면서 그 상회의 그 직종 고용이 줄거나 빈자리가 늘면
-  // 웃돈을 그 차이 쪽으로 올리고, 차이보다 크거나 이익이 없으면 내린다 (ai.ts adjustPremium, Company.aiPremium). 0 = 끔. 2026-11-02 기본 1 (근거: DESIGN 11, 보고서 2026-11-02-wagelag)
-  aiWagePremium: 1,
   // 왕실 국영 건물의 지역 웃돈 (2026-11-02 wt-admin, AI 판단): > 0 이면 AI 왕실이 매주 지역마다 그 지역 정부 건물(행정청·건축사무소·학교)의 직종 충원율이
   // ADMIN_STAFFED 아래면 웃돈을 바로 바깥 소득 × STATE_HIRE_PULL 에 맞추고, 차 있으면 바깥 소득과 같은 국영 임금까지 PREMIUM_STEP 씩 내린다 (웃돈 0 ~ 이 값, 이 값 = 웃돈 상한).
   // 바깥 소득 = 그 지역 시장 임금과 다음 중 큰 쪽: 노동자·농부는 소작 1인 소득, 하급 귀족은 그 지역 저택의 하급 귀족 1인 몫 (ai.ts adjustStatePremium, Company.statePremium,
@@ -733,13 +709,8 @@ export const TUNE = {
   pollTaxIncomeCap: 0.3,
   // 공사 포인트 배율 (회수 기간 손잡이, 2026-10-22). 모든 건물의 공사 포인트 = buildPoints × 이 값 (10 단위로 둥글게). 비용과 공사 일수가 같이 준다. 1·0.75·0.5 비교 (40년 × 시드 1~4): 0.75·0.5는 네 시드 중 둘이 무너져 1
   buildCostMult: 1,
-  // AI 투입 판단 (2026-10-22, wt-aiinput, 비교 전). 진단: 40년 × 시드 1~4에서 광석 없이 지은 제련소(30년차 1,803레벨, 광석 공급/수요 25년 101/320)가 적자로 민간 이익과 국고를 말렸다.
-  // aiInputFill: 1 = 건설 전망(착공·증설)의 매출·원료비에 투입 충족(대륙 남는 투입재 ÷ 새 레벨 필요, 같은 주 착공은 뺀다)을 곱하고, 방식·재가동의 공급 기준도 남는 양으로 본다. 0 = 옛 판단
-  aiInputFill: 1,
   // 투입 충족 < 0.5 가 이 주 수 이어진 생산 건물은 유보 자산이 있어도 적자면 가동률을 줄이고, 철거 판단에서도 유보 자산으로 메운다고 빼지 않는다 (0 = 끔)
   starveWeeks: 8,
-  // 1 = AI 왕실은 빚이 현금보다 많으면 생산 건물을 새로 짓지 않는다 (행정청·학교·사무소는 그대로). 0 = 끔
-  crownDebtNoBuild: 1,
   // 무역소 1레벨의 유보액 R (기본 방식, 장부 상회 2R, 무역 회사 4R). 금고가 이것을 넘으면 넘는 돈을 주인에게 보낸다.
   // 5,000: b1550a5 에서 상인(자본 1억)의 하루 교역 매입액을 20년 × 시드 1로 재어 1·5·10·20년차 평균 49,901 / 97,885 / 170,275 / 211,009 (네 해 평균 약 132,000)이었고,
   // 시작 무역소 3곳(왕국마다 1레벨)의 금고 합(3R)이 그 약 1/10 이 되게 둥글게 골랐다 (사용자 지시 규칙). 5,000·2만·5만 비교(20년 × 시드 1·2)는 DESIGN 11 `tradeReserve` 행
@@ -953,14 +924,12 @@ export function needsAt(wealth: number): Record<NeedId, number> {
   };
   // 묶음 합계는 부마다 정해져 있다 (2026-10-25 사용자 "그렇게 해봐": 합계는 그대로, 구성만 바꾼다). 합계 = 그 전(main) 곡선의 합.
   // 식량은 위 값 그대로 두고, 나머지 필요를 위 비율대로 늘리거나 줄여 합계를 맞춘다. 잘살수록 식량 몫이 줄고 나머지 몫이 는다
-  if (TUNE.needFixedTotal) {
-    const u5 = Math.max(0, L - 5), r10 = Math.max(0, L - 10), f8 = Math.max(0, L - 8);
-    const total = 1.5 + 0.1 * Math.min(L, 10) + 0.1 * over10 + 0.3 * Math.min(L, 10) + 0.4 * u5 + 0.01 * u5 * u5 + 0.3 * r10 + 0.02 * r10 * r10 + 0.3 * f8 + 0.01 * f8 * f8;
-    let rest = 0;
-    for (const k in out) if (k !== 'nourishment') rest += out[k as NeedId];
-    const room = Math.max(0, total - out.nourishment);
-    if (rest > 0) for (const k in out) if (k !== 'nourishment') out[k as NeedId] *= room / rest;
-  }
+  const u5 = Math.max(0, L - 5), r10 = Math.max(0, L - 10), f8 = Math.max(0, L - 8);
+  const total = 1.5 + 0.1 * Math.min(L, 10) + 0.1 * over10 + 0.3 * Math.min(L, 10) + 0.4 * u5 + 0.01 * u5 * u5 + 0.3 * r10 + 0.02 * r10 * r10 + 0.3 * f8 + 0.01 * f8 * f8;
+  let rest = 0;
+  for (const k in out) if (k !== 'nourishment') rest += out[k as NeedId];
+  const room = Math.max(0, total - out.nourishment);
+  if (rest > 0) for (const k in out) if (k !== 'nourishment') out[k as NeedId] *= room / rest;
   // 비교 실행용 필요량 배율 (기본은 비어 있다)
   for (const k in TUNE.needMul) out[k as NeedId] *= TUNE.needMul[k as NeedId]!;
   return out;
