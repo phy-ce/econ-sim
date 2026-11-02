@@ -56,6 +56,7 @@
   - 1-C 기본으로 켠 스위치 12의 키와 꺼진 갈래: `latentFeasible`·`aiInputFill`·`needFixedTotal`·`firmCallPlan`·`crownDebtNoBuild`·`taxCurve`·`aiKeepLastSupplier`·`aiGrowWhere`·`aiReserveFund`·`aiWagePremium`·`wealthSavLower`·`aiBuildNow` (켠 갈래만 남김). 그 전 코드 b4cb7c5. `aiAdminWage` 0·1 갈래는 키와 함께 1-E 에서 지웠다
   - 1-D 옛 전망 AI 의 생산 건물 짓기·철거: `aiReserveRule` 0 갈래, 발전 투자 `devShare`·`devLoss`, 증설 가동률 문턱 `expandUtilMin`, `reserveGrowMax` 0 갈래 (상수 `RESERVE_FULL`, AI 난수 태그 `pickDev`). 그 전 코드 b2486fa. 써지기만 하는 상태 칸 `Company.startCost`·`devCost`·`Building.richWeeks`는 지우면 세계 해시가 바뀌어 남겼다 (1-D′, 다음 일)
   - 1-E 옛 임금 규칙 (7-43 확인 뒤): 회사 임금표와 AI 임금 판단(`wageMarket` 0, `adjustWages`, `wageCeil`·`wageLossCut`, `applyWagePolicy`), 하루 고정 속도(`wageTarget` 0, `wageMarketRate`·`wageMarketRateUp`), 비교용 쏠림(`wageTarget` 1, `WAGE_TILT`), `aiAdminWage` 0·1 갈래와 키. 그 전 코드 e99d349. `commands.ts setWage` 는 그대로다 (화면은 쓰지 않는다)
+  - 1-F 키 합치기 (값이 같아 동작 같음): `officeRichWeeks`(52) → `treasuryRich`(`treasuryHighWeeks` 52, `crownGdpReserve` 0 에서 같은 식), `reserveShrinkWeeks`(26) → `shrinkWeeks`(26). 그 전 코드 57fa584. 마이크로 도구(`microcheck --preset labor`, `admindiag`)가 1e9 로 끄던 유보 철거 손잡이는 이제 정부 건물·무역소 적자 철거도 끈다
 
 ### 4-2. 지우면 동작이 바뀌는 것 (하나씩 결정)
 | 항목 | 지금 | 지우면 |

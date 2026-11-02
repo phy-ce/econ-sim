@@ -16,7 +16,7 @@ const seed = Number(pos[0] ?? 1), years = Number(pos[1] ?? 2), salt = Number(pos
 const every = Number(opt('--every') ?? 0), json = opt('--json'), run = opt('--run') ?? 'run';
 // --micro N: 마이크로 세계 (인구 N, cli/microcheck.ts --preset labor 와 같은 축소·TUNE)
 const micro = Number(opt('--micro') ?? 0);
-if (micro) TUNE.reserveShrinkWeeks = 1e9;
+if (micro) TUNE.shrinkWeeks = 1e9; // 2026-11-02 1-F 뒤로는 정부 건물·무역소의 적자 철거도 멈춘다 (그 전 reserveShrinkWeeks 는 유보 철거만)
 const w = micro ? createMicroWorld({ seed, aiSalt: salt, people: [micro], typeScale: { workshop: 0.15, textile: 0.25, fiber_farm: 0.25 } }) : createWorld(seed, { withPlayer: true, aiSalt: salt });
 const ai = micro ? w.kingdoms : w.kingdoms.filter((k) => k.governmentId !== PLAYER_ID);
 const f2 = (x: number) => (Number.isFinite(x) ? x.toFixed(2) : '-'), k1 = (x: number) => (micro ? x.toFixed(1) : (x / 1e3).toFixed(1) + 'k');

@@ -469,7 +469,8 @@ export function scaleBonus(level: number): number {
  * - luxuryLinear, luxuryQuad: 사치품 필요 = linear × (부 − 6) + quad × (부 − 6)², 고급 의복·고급 가구가 반씩
  * - meatLinear, meatQuad: 고기 필요 = linear × (부 − 8) + quad × (부 − 8)²
  * - intoxLinear: 기호품(술) 필요 = intoxLinear × min(부, 10). 식량 필요는 같은 만큼 줄어 묶음 합은 그대로다
- * - shrinkWeeks: 마지막 레벨의 손익이 이 주 수 동안 계속 마이너스면 AI가 철거를 시작한다
+ * - shrinkWeeks: AI 철거까지 적자 주 수. 정부 건물·무역소는 마지막 레벨의 장기 손익이 이 주 수 동안 계속 마이너스면 철거를 시작하고(reviewLevels),
+ *   유보 기준 생산 건물은 유보 자산 0·주간 적자가 이 주 수 이어지면 1레벨 헌다(reserveLevels). 둘 다 26이던 reserveShrinkWeeks 를 2026-11-02 wt-simplify 1-F 에서 합쳤다
  * - reserveWeeks: 건물 유보 자산 상한 = 레벨 × 지금 방식의 레벨당 주간 산출 가치(기본가) × 이 주 수. 이익의 35%를 여기까지 쌓고, 적자는 여기서 먼저 뺀다 (finance.ts settleReserve).
  *   레벨당 고정 50,000(농지 0.5주, 공장 0.2~0.3주치)과 0.25·0.5·1·2·4주 비교 (10년 거름, 20년 × 시드 1·2·3): 0.5주가 산출 비례 중 20년차 연 총생산(2,580 / 1주 2,423 / 고정 2,745)·
  *   건물 레벨(2,636 / 2,370 / 2,491)·노동자 생활수준(3.75 / 3.63 / 3.92)이 가장 낫고 철거(15~20년차 210 / 231 / 201)가 가장 적다. 4주는 10년차 총생산이 크게 준다(888 / 1,140)
@@ -605,7 +606,7 @@ export const TUNE = {
   // 연구가 돈이 들지 않게 된 뒤 다시 3·4 비교 (40년 × 시드 1·2): 25~40년 총생산이 4에서 약 13% 높다 (DESIGN 11)
   doneWageMax: 4,
   startTreasuryWeeks: 26,
-  shrinkWeeks: 26,
+  shrinkWeeks: 26, // 유보 기준 철거도 이 값 (2026-10-25 사용자 "26주로 늘려서", 그 전 4주. 그때 reserveShrinkWeeks)
   reserveWeeks: 0.5,
   officeShrinkWeeks: 52, // 26주는 공사가 크게 줄고(10~20년차 하루 사용 포인트 69), 78주는 부지 몫과 40% 이상 지역이 늘어난다
   adminFillRetry: 0.02,
@@ -632,10 +633,8 @@ export const TUNE = {
   minRoi: 0.2,
   minStaffing: 0.5,
   // 유보 기준 AI (2026-10-25 사용자 요청 "유보액을 기준으로 건물을 늘리고 줄였으면 좋겠는데. + 신규투자", DECISIONS 7-27, DESIGN 10·11): 생산 건물은 유보 자산으로 늘리고(증설 확률, 아래) 줄이며
-  // (바닥난 채 적자가 reserveShrinkWeeks 주면 1레벨 철거), 새 투자는 값이 기본가 1.25배 이상 4주(가)이거나 굶는 건물의 투입재(나)인 상품을 내는 건물이 없는 곳에 1레벨 (ai.ts reserveLevels·planTrials).
+  // (바닥난 채 적자가 shrinkWeeks 주면 1레벨 철거), 새 투자는 값이 기본가 1.25배 이상 4주(가)이거나 굶는 건물의 투입재(나)인 상품을 내는 건물이 없는 곳에 1레벨 (ai.ts reserveLevels·planTrials).
   // 옛 전망 AI 의 생산 건물 짓기·철거(aiReserveRule 0, 발전 투자 devShare·devLoss, 증설 가동률 문턱 expandUtilMin)는 2026-11-02 wt-simplify 1-D 에서 지웠다.
-  // 유보 0·적자가 이 주 수 이어지면 1레벨 철거 (2026-10-25 사용자 "26주로 늘려서", 그 전 4주)
-  reserveShrinkWeeks: 26,
   // 유보 기준 AI 증설 확률 (2026-10-25 사용자 "확률분포로"): 주마다 확률 = reserveGrowMax × (유보 ÷ 상한 − reserveGrowFrom) ÷ (1 − reserveGrowFrom), 0~reserveGrowMax (0 이면 늘리지 않는다).
   // 처음 값 0.25 (가득 차면 주에 25%, 근거 없음). 2026-11-02 사용자 "all 의 나머지를 넣어서" 로 1 (가득 차면 매주, 근거: DESIGN 11). 찬 주가 4주 이어질 때 늘리던 그 전 규칙(reserveGrowMax 0)은 wt-simplify 1-D 에서 지웠다
   reserveGrowMax: 1,
@@ -670,7 +669,6 @@ export const TUNE = {
   // 그 지역 국영 임금 = 시장 임금 × 단계 배율 × (1 + 웃돈), finance.ts applyStateWages). 0 = 끔. 2026-11-02 기본 1 (후보 1·2·3 비교, 총생산이 가장 높은 1, 근거: DESIGN 11, 보고서 2026-11-02-admin)
   aiStatePremium: 1,
   aiMixedMethods: 0, // 1 = 건물 전체를 바꿀 수 없을 때 같은 지역에 더 나은 방식 1~2레벨을 따로 짓는다 (세계 규칙이 바뀌어 사용자 결정 필요, DECISIONS 7-21)
-  officeRichWeeks: 52,
   needMul: {} as Partial<Record<NeedId, number>>,
   startLumber: 1.2, // 1레벨이 일꾼 500명이 되어 1,000명 시절 0.6·0.2의 두 배
   startFiber: 0.4,

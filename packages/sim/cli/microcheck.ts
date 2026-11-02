@@ -3,7 +3,7 @@
 //                       [--build "farm=2,lumber=1,workshop=1,builder=1@crown,admin=1@crown"]  (시작 건물: 종류[:방식]=레벨[@crown])
 //                       [--tune '{"wageTargetSpeed":0.05}']  (실행마다 TUNE 을 바꾸고 끝나면 되돌린다. TUNE 에 없는 키면 멈춘다)
 //                       [--typescale "workshop=0.15,textile=0.25"]  (건물 종류별 추가 축소, micro.ts MicroOptions.typeScale)
-//                       [--preset labor]  (노동시장 검증용 살아 있는 세계: typescale workshop=0.15,textile=0.25,fiber_farm=0.25 + TUNE reserveShrinkWeeks 1e9.
+//                       [--preset labor]  (노동시장 검증용 살아 있는 세계: typescale workshop=0.15,textile=0.25,fiber_farm=0.25 + TUNE shrinkWeeks 1e9 (1-F 뒤로 정부 건물·무역소 적자 철거도 멈춘다).
 //                                         기본 세계는 공방·방직 1레벨이 지역 수요의 몇 배라 값이 바닥에 붙어 적자 → 유보 규칙으로 헐리고 → 공구가 끊겨 3년차에 생산 건물이 0 이 된다)
 //                       [--arableslack 1] [--moneypeople 400]  (소작지 칸 배율, 돈 문턱을 셀 인구: 시작 인구만 줄이는 비교용, micro.ts MicroOptions)
 //                       [--quakeloss 0.25 --quakeyears 3]  (quake·quaketwo 실행의 소작지 손실 비율·기간)
@@ -73,7 +73,7 @@ const buildings: MicroBuilding[] | undefined = BUILD ? BUILD.split(',').map((x) 
 }) : undefined;
 const KEY_GOODS = ['grain', 'fiber', 'timber', 'cloth', 'tools', 'furniture', 'liquor'];
 const PRESET = arg('preset', '');
-const TUNE_SET: Record<string, unknown> = { ...(PRESET === 'labor' ? { reserveShrinkWeeks: 1e9 } : {}), ...JSON.parse(arg('tune', '{}')) };
+const TUNE_SET: Record<string, unknown> = { ...(PRESET === 'labor' ? { shrinkWeeks: 1e9 } : {}), ...JSON.parse(arg('tune', '{}')) };
 const TYPESCALE_ARG = arg('typescale', PRESET === 'labor' ? 'workshop=0.15,textile=0.25,fiber_farm=0.25' : '');
 const typeScale: Record<string, number> | undefined = TYPESCALE_ARG ? Object.fromEntries(TYPESCALE_ARG.split(',').map((x) => { const [k, v] = x.split('='); return [k, Number(v)]; })) : undefined;
 const SECTIONS = arg('sections', 'abcd');
