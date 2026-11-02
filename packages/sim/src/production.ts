@@ -461,6 +461,8 @@ export function funderShares(k: Construction, byId: Map<number, Building>): [Bui
 /**
  * 민간 공사 완공: add 레벨을 약정액 비율로 나눈다. 나눠떨어지지 않는 레벨은 약정액이 큰 쪽부터 1레벨씩 갖는다.
  * 그다음 실제로 낸 돈(공사비 × 약정 비율)과 가진 레벨 몫(공사비 × 레벨 ÷ add)의 차이를 정산한다: 더 가진 쪽이 덜 가진 쪽에 돌려준다.
+ * TUNE.settleCap = 1 이면 더 가진 쪽은 금고에 있는 돈까지만 낸다 (모자란 몫은 덜 가진 쪽이 받지 못한다, 이슈 #10).
+ * 0 이면 금고를 보지 않고 다 뺀다 (금고가 음수가 될 수 있다): 여러 금고가 함께 낸 레벨(chooseFunders 의 모아 내기)은 금고 돈을 다 약정한 쪽이 갖게 되기 쉽다.
  * 약정이 없는 공사(플레이어 민간 상회 등)는 그 지역 금융가 몫으로 적는다
  */
 function giveLevels(w: World, k: Construction, b: Building, add: number) {
@@ -478,7 +480,14 @@ function giveLevels(w: World, k: Construction, b: Building, add: number) {
   // 정산: 낸 돈 − 가진 레벨 몫. 음수인 쪽이 내고, 양수인 쪽이 받는다 (받는 쪽 비율대로)
   const diff = got.map((x) => ({ o: x.o, d: k.spent * x.sh - (k.spent * x.n) / add }));
   let pot = 0;
-  for (const x of diff) if (x.d < 0) { const pay = -x.d; x.o.cash = (x.o.cash ?? 0) - pay; pot += pay; }
+  for (const x of diff) if (x.d < 0) {
+    const owe = -x.d;
+    const pay = TUNE.settleCap ? Math.min(owe, Math.max(0, x.o.cash ?? 0)) : owe;
+    // 진단용 흐름 (sim 은 읽지 않는다, cli/settlediag.ts): 낼 돈, 그중 금고에 없던 돈, 횟수, settleCap 으로 못 낸 돈
+    flow(`settle.${x.o.typeId}`, owe); flow(`settleShort.${x.o.typeId}`, Math.max(0, owe - Math.max(0, x.o.cash ?? 0))); flow('settleN', 1);
+    if (pay < owe) flow(`settleCap.${x.o.typeId}`, owe - pay);
+    x.o.cash = (x.o.cash ?? 0) - pay; pot += pay;
+  }
   const takers = diff.filter((x) => x.d > 0);
   const want = takers.reduce((a, x) => a + x.d, 0);
   // 마지막으로 받는 쪽이 남은 몫을 받아 받은 돈의 합이 낸 돈과 같다
