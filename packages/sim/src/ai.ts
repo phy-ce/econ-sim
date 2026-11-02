@@ -75,7 +75,9 @@ function adminStaffing(w: World, c: Company): number {
 /**
  * 진단용 (cli/builddiag.ts): AI가 공사를 넣고(levels > 0), 헐고(< 0), 방식을 바꿀 때 그 길(path)과 함께 부른다.
  * path: pick 보통 후보, loss 손해 후보(allowLoss), govInputs 왕실 원료 확보, office 건축사무소, shrink 철거, swap 땅 바꾸기 철거, switchIn·switchOut 방식 바꾸기,
- * reserve 유보 자산이 찬 건물 증설, reserveShrink 유보 자산이 바닥난 적자 건물 철거, trial 새 투자 1레벨 (TUNE.aiReserveRule).
+ * reserve 유보 자산이 찬 건물 증설, reserveShrink 유보 자산이 바닥난 적자 건물 철거, trial 새 투자 1레벨 (TUNE.aiReserveRule),
+ * officeShrink 건축사무소 철거, schoolShrink 빚 때문에 학교 철거, sdDemo·sellDemo·marginDemo 팔리지 않음 철거.
+ * 철거 길은 모두 regionId 를 넘긴다 (cli/churndiag.ts 가 철거 원인을 건물에 붙인다).
  * 시뮬레이션 상태를 바꾸지 않는다 (비어 있으면 아무것도 하지 않는다)
  */
 export const aiTrace: { on?: (w: World, c: Company, path: string, typeId: string, methodId: string, levels: number, o?: Outlook, regionId?: number) => void } = {};
@@ -481,7 +483,7 @@ function shrinkSchools(w: World, c: Company) {
   const big = list.reduce<Building | null>((x, b) => (!x || left(b) > left(x) ? b : x), null);
   const n = Math.min(Math.max(1, Math.round(total * 0.25)), big ? left(big) : 0);
   // 손익이 나아 보여도 취소하지 않는다 (reviewLevels 는 swap 표시가 붙은 철거를 되돌리지 않는다)
-  if (big && n > 0 && !applyCommand(w, c.id, { type: 'demolish', buildingId: big.id, levels: n })) big.swap = true;
+  if (big && n > 0 && !applyCommand(w, c.id, { type: 'demolish', buildingId: big.id, levels: n })) { big.swap = true; noteDemolish(w, big); aiTrace.on?.(w, c, 'schoolShrink', big.typeId, big.methodId, -n, undefined, big.regionId); }
 }
 
 /** 세법을 바꾸는 기준: 다른 세법의 예상 세입이 지금의 이 배수를 넘을 때, 마지막으로 바꾼 지 LAW_COOLDOWN 틱이 지났을 때 */
@@ -937,7 +939,7 @@ function planConstruction(w: World, c: Company, o: Outlook) {
       let spot: { regionId: number; fit: number; room: number; has: boolean } | null = null;
       for (const r of ownRegions(w, c)) {
         const room = roomFor(w, r.id, 'builder');
-        if (room < 1) continue;
+        if (room < 1 || rebuildBlocked(w, r.id, 'builder')) continue;
         const fit = Math.floor(Math.min(levels, room, officeStaffable(w, c, r, m, byId)));
         if (fit < 1) continue;
         const has = offices.some((b) => b.regionId === r.id);
@@ -1043,6 +1045,7 @@ function secureGovInputs(w: World, c: Company, o: Outlook, costPerDay: number) {
     // 행정청이 큰 지역부터, 땅과 일손이 되는 곳
     const regions = ownRegions(w, c).sort((x, y) => (where.get(y.id) ?? 0) - (where.get(x.id) ?? 0) || x.id - y.id);
     for (const r of regions) {
+      if (rebuildBlocked(w, r.id, t.id)) continue;
       const fit = Math.min(levels, Math.floor(roomFor(w, r.id, t.id)));
       if (fit < 1 || laborAvailability(w, r, m, fit, true) < MIN_STAFFING()) continue;
       const existing = ownBuildingAt(w, c.id, r.id, t.id, m.id);
@@ -1159,7 +1162,7 @@ function reviewLevels(w: World, c: Company, o: Outlook, pointsPerDay: number) {
     if (!m.construction) {
       if (b.negWeeks >= TUNE.shrinkWeeks) {
         const n = Math.max(1, Math.round(b.level * 0.25));
-        if (!applyCommand(w, c.id, { type: 'demolish', buildingId: b.id, levels: n })) aiTrace.on?.(w, c, 'shrink', b.typeId, b.methodId, -n);
+        if (!applyCommand(w, c.id, { type: 'demolish', buildingId: b.id, levels: n })) { noteDemolish(w, b); aiTrace.on?.(w, c, 'shrink', b.typeId, b.methodId, -n, undefined, b.regionId); }
         b.negWeeks = 0;
       }
       continue;
@@ -1171,7 +1174,7 @@ function reviewLevels(w: World, c: Company, o: Outlook, pointsPerDay: number) {
       const spare = Math.min(quarter, Math.floor(officeSpare(w, c, pointsPerDay) / (m.construction * b.utilization * efficiency(b))));
       const empty = b.staffPeak == null ? 0 : Math.floor(b.level * (1 - b.staffPeak) + 1e-9);
       const n = Math.min(Math.max(empty, spare), officeLevels(w, c) - 1);
-      if (n >= 1) applyCommand(w, c.id, { type: 'demolish', buildingId: b.id, levels: n });
+      if (n >= 1 && !applyCommand(w, c.id, { type: 'demolish', buildingId: b.id, levels: n })) { noteDemolish(w, b); aiTrace.on?.(w, c, 'officeShrink', b.typeId, b.methodId, -n, undefined, b.regionId); }
       b.negWeeks = 0;
       delete b.staffPeak;
     }
@@ -1199,7 +1202,7 @@ function swapLand(w: World, c: Company, o: Outlook, cand: Pick) {
   }
   if (!worst || cand.score <= Math.max(MIN_ROI(), worst.roi) * TUNE.swapMult) return;
   const n = Math.min(worst.b.level, cand.levels);
-  if (!applyCommand(w, c.id, { type: 'demolish', buildingId: worst.b.id, levels: n })) { worst.b.swap = true; aiTrace.on?.(w, c, 'swap', worst.b.typeId, worst.b.methodId, -n); }
+  if (!applyCommand(w, c.id, { type: 'demolish', buildingId: worst.b.id, levels: n })) { worst.b.swap = true; noteDemolish(w, worst.b); aiTrace.on?.(w, c, 'swap', worst.b.typeId, worst.b.methodId, -n, undefined, worst.b.regionId); }
 }
 
 // ---------------------------------------------------------------- 유보 기준 증설·철거와 새 투자 (TUNE.aiReserveRule, 2026-10-25)
@@ -1220,7 +1223,25 @@ export const RESERVE_STREAK = 4;
 /** 새 투자 (가): 지역 시장값이 기본가의 이 배수 이상 (사용자 합의 값, 근거 없음) */
 export const TRIAL_PRICE = 1.25;
 
-/** TUNE.aiReserveRule 로 늘리고 줄이는 건물: 자동·정부 건물(행정청·학교·사무소)·무역소가 아니고 유보 자산을 쌓는 생산 건물 */
+/**
+ * 다시 짓기 기다림 (TUNE.aiRebuildWait > 0, 이슈 #7): AI 철거 명령이 받아들여질 때마다 그 지역·종류의 날을 적는다 (Region.demoAt).
+ * 모든 AI 철거 길(유보 철거·reviewLevels·사무소·학교·땅 바꾸기·5-2·A2·A3)이 부른다. 끔이면 아무것도 하지 않는다
+ */
+function noteDemolish(w: World, b: Building) {
+  if (TUNE.aiRebuildWait > 0) (regionById(w, b.regionId).demoAt ??= {})[b.typeId] = w.tick;
+}
+
+/**
+ * 그 지역에서 그 종류의 AI 철거 명령이 TUNE.aiRebuildWait 주 안에 있었는가: 그러면 AI 는 그 지역에 그 종류를 짓지도 늘리지도 않는다
+ * (pickProject·planTrials·reserveLevels·growRegion·secureGovInputs·사무소 증설). 왕실·민간 어느 쪽이 헐었든 같은 지역·종류면 막는다
+ */
+function rebuildBlocked(w: World, regionId: number, typeId: string): boolean {
+  if (!(TUNE.aiRebuildWait > 0)) return false;
+  const t = regionById(w, regionId).demoAt?.[typeId];
+  return t != null && w.tick - t < TUNE.aiRebuildWait * TICKS_PER_WEEK;
+}
+
+/** TUNE.aiReserveRule 로 늘리고 줄이는 건물:자동·정부 건물(행정청·학교·사무소)·무역소가 아니고 유보 자산을 쌓는 생산 건물 */
 export function reserveRuled(b: Building): boolean {
   if (!TUNE.aiReserveRule || BUILDING_BY_ID[b.typeId].auto || isGovernment(b.typeId) || b.typeId === TRADING_POST) return false;
   return hasReserve(b) && reserveCap(b) > 0;
@@ -1279,7 +1300,7 @@ function planTrials(w: World, c: Company, canStart: () => boolean, free: () => n
     for (const r of regions) {
       for (const t of BUILDING_TYPES) {
         if (!canBuildType(c, t) || isGovernment(t.id) || t.id === TRADING_POST) continue;
-        if (harvestFactor(w, r.id, t.land) < 1 || roomFor(w, r.id, t.id) < 1) continue;
+        if (harvestFactor(w, r.id, t.land) < 1 || roomFor(w, r.id, t.id) < 1 || rebuildBlocked(w, r.id, t.id)) continue;
         if (w.buildings.some((x) => x.companyId === c.id && x.regionId === r.id && x.typeId === t.id)) continue;
         const cost = constructionEstimate(w, c, t.id).cost;
         if (!Number.isFinite(cost) || free() < cost) continue;
@@ -1342,13 +1363,13 @@ function reserveLevels(w: World, c: Company, canStart: () => boolean, free: () =
     if (nb) b.brokeWeeks = nb; else delete b.brokeWeeks;
     if (nb >= TUNE.reserveShrinkWeeks && keepLast(w, b)) { aiTrace.on?.(w, c, 'keepLast', b.typeId, b.methodId, 0, undefined, b.regionId); delete b.brokeWeeks; continue; }
     if (nb >= TUNE.reserveShrinkWeeks) {
-      if (!applyCommand(w, c.id, { type: 'demolish', buildingId: b.id, levels: 1 })) aiTrace.on?.(w, c, 'reserveShrink', b.typeId, b.methodId, -1);
+      if (!applyCommand(w, c.id, { type: 'demolish', buildingId: b.id, levels: 1 })) { noteDemolish(w, b); aiTrace.on?.(w, c, 'reserveShrink', b.typeId, b.methodId, -1, undefined, b.regionId); }
       delete b.brokeWeeks;
       continue;
     }
     if ((TUNE.reserveGrowMax > 0 ? !rich : nr < RESERVE_STREAK) || inDebt || !canStart()) continue;
     const at = TUNE.aiGrowWhere ? growRegion(w, c, b) : b.regionId;
-    if (roomFor(w, at, b.typeId) < 1) continue;
+    if (roomFor(w, at, b.typeId) < 1 || rebuildBlocked(w, at, b.typeId)) continue;
     const cost = constructionEstimate(w, c, b.typeId).cost;
     if (TUNE.aiReserveFund && !c.state && !c.isPlayer && Number.isFinite(cost) && free() < cost) fundFromReserve(w, c, b, at, cost - free());
     if (!Number.isFinite(cost) || free() < cost) continue;
@@ -1373,7 +1394,7 @@ function growRegion(w: World, c: Company, b: Building): number {
   const own = ownRegions(w, c);
   let best = b.regionId, low = Infinity;
   for (const r of [...own.filter((x) => x.id === b.regionId), ...own.filter((x) => x.id !== b.regionId)]) {
-    if (roomFor(w, r.id, b.typeId) < 1 || harvestFactor(w, r.id, land) < 1) continue;
+    if (roomFor(w, r.id, b.typeId) < 1 || harvestFactor(w, r.id, land) < 1 || rebuildBlocked(w, r.id, b.typeId)) continue;
     if (laborAvailability(w, r, m, 1, c.state, undefined, c) < MIN_STAFFING()) continue;
     const sd = glutSD(w, r.id, g);
     if (sd !== null && sd < low) { low = sd; best = r.id; }
@@ -1489,7 +1510,7 @@ function sdExit(w: World) {
       if ((dw[g] ?? 0) >= need) {
         const b = worst(list.filter((x) => (!x.active || x.utilization <= UTIL_FLOOR + 1e-9) && !x.shrinking && !w.constructions.some((k) => k.targetBuildingId === x.id) && !keepLast(w, x)));
         const c = b && ai.get(b.companyId);
-        if (b && c && !applyCommand(w, c.id, { type: 'demolish', buildingId: b.id, levels: 1 })) aiTrace.on?.(w, c, 'sdDemo', b.typeId, b.methodId, -1, undefined, r.id);
+        if (b && c && !applyCommand(w, c.id, { type: 'demolish', buildingId: b.id, levels: 1 })) { noteDemolish(w, b); aiTrace.on?.(w, c, 'sdDemo', b.typeId, b.methodId, -1, undefined, r.id); }
       }
     }
   }
@@ -1581,7 +1602,7 @@ function sellDemo(w: World) {
       if (!list) continue;
       const b = worstPerLevel(list.filter((x) => !x.shrinking && !expanding(w, x) && !keepLast(w, x)));
       const c = b && ai.get(b.companyId);
-      if (b && c && !applyCommand(w, c.id, { type: 'demolish', buildingId: b.id, levels: 1 })) aiTrace.on?.(w, c, 'sellDemo', b.typeId, b.methodId, -1, undefined, r.id);
+      if (b && c && !applyCommand(w, c.id, { type: 'demolish', buildingId: b.id, levels: 1 })) { noteDemolish(w, b); aiTrace.on?.(w, c, 'sellDemo', b.typeId, b.methodId, -1, undefined, r.id); }
     }
   }
 }
@@ -1682,7 +1703,7 @@ function marginExit(w: World) {
     if (!b || !(shrinkGain(w, c, b, g) > 0)) continue;
     const n = prev + 1;
     put(n);
-    if (n >= need && !applyCommand(w, c.id, { type: 'demolish', buildingId: b.id, levels: 1 })) aiTrace.on?.(w, c, 'marginDemo', b.typeId, b.methodId, -1, undefined, regionId);
+    if (n >= need && !applyCommand(w, c.id, { type: 'demolish', buildingId: b.id, levels: 1 })) { noteDemolish(w, b); aiTrace.on?.(w, c, 'marginDemo', b.typeId, b.methodId, -1, undefined, regionId); }
   }
   for (const r of w.regions) {
     const m = next.get(r.id);
@@ -1763,6 +1784,7 @@ export function pickProject(w: World, c: Company, o: Outlook, free: number, allo
       if (t.id === 'builder' || !canBuildType(c, t)) continue;
       if (inDebt && !isGovernment(t.id)) continue;
       if (dev && isGovernment(t.id)) continue;
+      if (rebuildBlocked(w, r.id, t.id)) continue;
       // TUNE.aiReserveRule: 생산 건물은 전망으로 짓지 않는다 (새 투자 planTrials, 증설·철거 reserveLevels). 정부 건물·무역소만 여기서 고른다
       if (TUNE.aiReserveRule && !isGovernment(t.id) && t.id !== TRADING_POST) continue;
       // 기상 조건이 걸린 땅에는 짓지 않는다 (줄어든 산출과 오른 값은 일시적이다)

@@ -709,6 +709,9 @@ export const TUNE = {
   // 유보로 증설비 (2026-11-01 마이크로 시제품 microB S8): 1 = 민간 AI 회사의 유보 증설이 저택·금융가 금고 부족으로 막히면, 그 건물 유보 자산이 모자란 돈 이상일 때
   // 그만큼을 회사 현금에서 공사비를 낼 저택·금융가 금고로 옮긴다 (ai.ts fundFromReserve, 돈은 옮길 뿐). 0 = 끔. 2026-11-02 기본 1 (근거: DESIGN 11)
   aiReserveFund: 1,
+  // 다시 짓기 기다림 (이슈 #7, AI 판단, ai.ts rebuildBlocked): > 0 이면 AI 는 어느 AI 회사가 한 지역에서 한 종류의 철거를 명령한 뒤 이 주 수 동안
+  // 그 지역에 그 종류를 짓지도 늘리지도 않는다 (Region.demoAt). 0 = 끔 (그 전과 같음). 근거: DESIGN 11
+  aiRebuildWait: 0,
   // 행정청 징수율 하한 (오버홀 07 A4, 0b′, AI 판단, 이슈 #4): > 0 이면 AI 왕실은 왕국 징수율(taxRatio)이 이 값 아래인 동안 행정청 레벨을 헐지 않는다
   // (reviewLevels 가 적자 주를 세지 않고, 올려 둔 행정청 철거 대기를 거둔다). 0 = 하한 없음 (그 전과 같음). 후보 0.6 / 0.7 / 0.8 과 0 을 비교 중 (docs/overhaul/0BP_A4_SPECS.json), 근거 없음
   aiAdminFloor: 0,

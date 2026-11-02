@@ -522,6 +522,8 @@ export interface Region {
   sellWeeks?: Partial<Record<GoodId, number>>;
   /** 0b′ A3 자기 값 효과 철거 (TUNE.aiMarginal ≥ 2): 키 "회사 id|상품" → 1레벨 헐면 회사 손익이 느는 연속 주 수 (0인 키는 없다). 끔이면 생기지 않는다 */
   marginWeeks?: Record<string, number>;
+  /** 다시 짓기 기다림 (TUNE.aiRebuildWait > 0, 이슈 #7): 건물 종류 → AI 가 이 지역에서 그 종류의 철거를 마지막으로 명령한 날. 끔이면 생기지 않는다 (18판 안에서 더한 칸) */
+  demoAt?: Record<string, number>;
   /** 소작지 여유 (시제품 TUNE.tenantSlack > 0): 그 지역 소작지 채움(일하는 소작농 노동 인구 ÷ 칸 × 1칸 인원)의 기준값. 켜진 뒤 첫 수확 날의 채움 (0이면 다음 날 다시). 끔이면 생기지 않는다 */
   tenantFill0?: number;
   /**
