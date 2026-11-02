@@ -238,3 +238,8 @@ DetailWindow 독립 NavigationProvider/버튼, BuildingPops 및 ResourceInspecto
 - 루트 typecheck/클라이언트23파일62시험 통과. 헤드리스 스크린샷 확인(1920×1080): C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/manor-gentry-share-ko.png. 동부 삼림 저택23레벨·하급2.3k/상급433 및 배당 아이콘2개, 본문418/scroll418. 영문·다크 상세 및 실제 몫 지급은 화면 미검증.
 - 코드 대조 완료: 옛 CompanyView는 8d66c52에서 제거. 현재 KingdomMoney.tsx의 creditLimit은 d.government에만 사용하고 민간 카드에는 현금·유보·저택·금융가 금고만 표시. FinancePanel.tsx:42와 상단 칩은 플레이어 왕실 금고/신용 한도. 민간에 대출 조작이나 대출 한도 행 없음. packages/client/src에서 World.bank 사용 없음.
 - 이 항목은 코드 대조만 수행해 추가 화면 미검증. 앞선 왕국 자금 카드 스크린샷은 그때 확인 범위로 유지한다. 직전 검증 루트 typecheck/클라이언트23파일62시험 통과(코드 변경 없음). 하급 귀족 표식 커밋 cceaa08.
+
+## 2026-11-02 2-45·2-56 정책 표시 후속
+- 투자법 상세에 INVEST_CLASSES의 대상 직종24px 아이콘 추가. KO 라이트 최대6직종, 본문418/scroll418. 잠금 표식은 lucide Lock으로 통일. 헤드리스 스크린샷 확인(1920×1080): C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/policy-invest-classes-ko.png.
+- eventDestination.ts:3에서 lawChanged/lawFailed 둘 다 국가 창 법 탭으로 이동하며 App·GameWindow·Notifications가 같은 함수를 사용함을 코드 대조. 실제 전환 완료/실패 사건 클릭, 영문/다크 새 아이콘은 화면 미검증. 2-45 원문은 잔여 검증 범위를 보존해 유지.
+- 최신 main 병합 후 루트 typecheck와 클라이언트23파일62시험 통과. 다음 사용자 최신 우선순위 2-81 진행. 민간 대출 감사 커밋39906cd.

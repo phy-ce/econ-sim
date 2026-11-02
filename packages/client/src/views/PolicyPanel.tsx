@@ -1,10 +1,11 @@
 import {useEffect} from 'react';
 import {useNavigationState} from '../NavigationHistory';
-import {BookOpen} from 'lucide-react';
-import { policyStatus, taxRates, TUNE } from '@econ/sim';
+import {BookOpen,Lock} from 'lucide-react';
+import { INVEST_CLASSES, policyStatus, taxRates, TUNE } from '@econ/sim';
 import type { World, TaxLaw, InvestLaw, WelfareLaw } from '@econ/sim';
 import type { Game } from '../useGame';
-import { useT, techName } from '../i18n';
+import { className, useT, techName } from '../i18n';
+import {Sprite64} from '../sprites';
 import { NumericValue } from '../NumericValue';
 import {exactNumber,shortDate} from '../format';
 import { Bar } from '../ui';
@@ -39,9 +40,10 @@ export function PolicyPanel({world,game,kingdomId,onResearch,domainRequest}:{dom
   <div className="policy-context"><span tabIndex={0} data-help={S.conditionHelp}>{S.financeRatio} <b>{ratio(st.financeRatio)}</b></span><span>{S.ownerTreasury} <b><NumericValue value={k.investmentPool} format="money"/></b></span></div>
   {pending&&<section className="policy-transition" aria-label={S.transition}><div><strong>{names[status.current]} → {names[pending.to]}</strong><span>{Math.max(0,pending.endTick-world.tick)} {S.days}</span><button onClick={()=>change(kind,status.current)}>{S.cancel}</button></div><Bar value={(world.tick-pending.startTick)/Math.max(1,pending.endTick-pending.startTick)} tone={pendingInvalid?'neg':'gold'} label={S.transition}/>{pendingThreshold!==null&&pendingThreshold!==undefined&&<small className={pendingInvalid?'neg':undefined} data-help={S.financeRatio}>{ratio(st.financeRatio)} / {ratio(pendingThreshold)}</small>}{'pendingOk' in status&&status.pendingOk===false&&<small className="neg" tabIndex={0} data-help={S.conditionHelp}>{S.conditionLost}</small>}</section>}
   {kind!=='welfare'&&k.lawFail?.[kind]!==undefined&&<small className="neg">{S.failed} · {shortDate(k.lawFail[kind]!)}</small>}
-  <div className="policy-options" aria-label={S[kind+'Law' as 'taxLaw'|'investLaw'|'welfareLaw']}>{status.options.map(opt=>{const isLocked='unlocked' in opt&&!opt.unlocked;return <button key={opt.id} aria-pressed={selected.id===opt.id} data-help={optionHelp(opt.id)} onClick={()=>setChoices(prev=>({...prev,[kind]:opt.id}))}><span aria-hidden="true">{opt.id===status.current?'✓':opt.id===pending?.to?'◷':isLocked?'◇':'○'}</span><strong>{names[opt.id]}</strong><small>{opt.id===status.current?S.current:opt.id===pending?.to?S.transition:''}</small></button>;})}</div>
+  <div className="policy-options" aria-label={S[kind+'Law' as 'taxLaw'|'investLaw'|'welfareLaw']}>{status.options.map(opt=>{const isLocked='unlocked' in opt&&!opt.unlocked;return <button key={opt.id} aria-pressed={selected.id===opt.id} data-help={optionHelp(opt.id)} onClick={()=>setChoices(prev=>({...prev,[kind]:opt.id}))}><span aria-hidden="true">{opt.id===status.current?'✓':opt.id===pending?.to?'◷':isLocked?<Lock size={13}/>: '○'}</span><strong>{names[opt.id]}</strong><small>{opt.id===status.current?S.current:opt.id===pending?.to?S.transition:''}</small></button>;})}</div>
   <section className="policy-detail"><header><h3 tabIndex={0} className="help-text" data-help={optionHelp(selected.id)}>{names[selected.id]}</h3><a className="law-dictionary" href={`https://phy-ce.github.io/econ-sim/encyclopedia/#${entries[kind]}`} target="_blank" rel="noopener noreferrer" aria-label={`${names[selected.id]} · ${T.lawDictionary}`} data-help={T.lawDictionary}><BookOpen size={15}/></a></header>
-   <dl>{'tech' in selected&&selected.tech&&<div><dt>{T.research}</dt><dd><button className="entity-link" onClick={()=>{if('tech' in selected&&selected.tech)onResearch(selected.tech);}}>{locked?'🔒 ': '✓ '}{techName(selected.tech)} ↗</button></dd></div>}{selected.threshold!==null&&<div><dt>{S.financeRatio}</dt><dd className={st.financeRatio<selected.threshold?'neg':''}>{ratio(st.financeRatio)} / {ratio(selected.threshold)}</dd></div>}{'weekly' in selected&&<div><dt>{S.week}</dt><dd><NumericValue value={selected.weekly} format="signedMoney"/></dd></div>}<div><dt>{S.transition}</dt><dd>{TUNE.lawDays} {S.days}</dd></div></dl>
+   {kind==='invest'&&<div className="policy-classes" aria-label={S.covered}>{INVEST_CLASSES[selected.id as InvestLaw].map(id=><span key={id} tabIndex={0} data-help={className(id)}><Sprite64 id={id} size={24} label={className(id)}/></span>)}</div>}
+   <dl>{'tech' in selected&&selected.tech&&<div><dt>{T.research}</dt><dd><button className="entity-link" onClick={()=>{if('tech' in selected&&selected.tech)onResearch(selected.tech);}}>{locked?<Lock size={13} aria-hidden="true"/>: '✓ '}{techName(selected.tech)} ↗</button></dd></div>}{selected.threshold!==null&&<div><dt>{S.financeRatio}</dt><dd className={st.financeRatio<selected.threshold?'neg':''}>{ratio(st.financeRatio)} / {ratio(selected.threshold)}</dd></div>}{'weekly' in selected&&<div><dt>{S.week}</dt><dd><NumericValue value={selected.weekly} format="signedMoney"/></dd></div>}<div><dt>{S.transition}</dt><dd>{TUNE.lawDays} {S.days}</dd></div></dl>
    <div tabIndex={0} data-help={[optionHelp(selected.id),kind==='welfare'?'':S.conditionHelp,locked&&'tech' in selected&&selected.tech?techName(selected.tech):''].filter(Boolean).join('\n')}><button className="policy-enact" disabled={!!pending||locked||!selected.eligible||selected.id===status.current} onClick={()=>change(kind,selected.id)}>{selected.id===status.current?S.current:selected.id===pending?.to?S.transition:S.enact}</button></div>
   </section>
  </div>;
