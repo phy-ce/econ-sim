@@ -297,3 +297,11 @@ d = §11 근거 칸에 "근거 없음"이 있음.
   - 1-D′처럼 상태 칸을 지우면, 옛 저장의 남은 칸을 `migrateWorld`에서 지우는 한 줄을 둔다. 고정 저장 `save-v18-8y`에 그 칸이 있으면 samecheck (3)과 골든 B가 달라진다.
 - 비교 도구 주의: `sweep`·`*diag`는 `Object.assign(TUNE, …)`로 모르는 키도 조용히 받는다 (`cli/builddiag.ts:19` 등). 지운 키를 쓰는 옛 명세(`docs/overhaul/0BP_5-2_SPECS.json`, `0BP_A4_SPECS.json`, `COMBO_SPECS.json`, `LABOR_SPECS.json`, `WAGELAG_SPECS.json` 등)는 오류 없이 기본값으로 돈다.
   - 제안: 정리와 같이 sweep 입구에 "TUNE에 없는 키면 멈춤" 검사를 둔다.
+  - 했음 (2026-11-02 wt-simplify): `data.ts checkTuneKeys`·`overrideTune` 한 곳에 두고 `cli/sweep.ts`, `src/lab/run.ts runSpec`, `cli/microcheck.ts` (`--tune`, 충격 `tune`), 진단 CLI 전부(`Object.assign(TUNE, …)` 하던 곳)가 그것을 쓴다. 시험 `test/core/tuneGuard.test.ts`.
+
+## 4. 1단계 결과 (2026-11-02 wt-simplify, 이 문서의 줄 번호는 정리 전 81494a1 기준이다)
+
+- TUNE 키 158 → 111 (−47, main 93bc0b0 이 `wageTargetSpan` 을 더해 시작이 158). 커밋: 1-A 7df16c4 (−12), 1-B b4cb7c5 (−2), 1-C b2486fa (−12), 1-D e99d349 (−4), 1-E 57fa584 (−7), 1-F 9ac8ad7 (−2), 1-G 95f3637 (−8). 골든 c7fb7c00ef46d24c 와 samecheck 5개가 묶음마다 같았다.
+- 하지 않은 것: `nobleSeats` 옛 방식 다섯과 키 (wt-manor 가 같은 함수를 고친다, 1-B), 1-D′ 상태 칸 `Company.startCost`·`devCost`·`Building.richWeeks` (지우면 세계 해시가 바뀐다: `RULES_REV` +1·`compat.ts` 정리·골든 새 항목이 필요해 다음 일), (c) 값의 "0 = 끔" 갈래 (`ratioGate` 등, 값 손잡이라 남김).
+- 1-C 의 `aiAdminWage` 0·1 갈래는 키와 함께 1-E 에서 지웠다.
+- 지운 키를 쓰는 비교 명세 (기록으로 남김, 그대로 돌리면 가드가 멈춘다): `0BP_5-2_SPECS.json` (`aiCutSD`·`aiDemoSD`·`aiExitWeeks`), `0BP_A4_SPECS.json` (`aiAdminFloor`·`aiAdminWage`), `0BP_GRAIN_SPECS.json` (`aiGlutIdle`·`aiMarginal`·`aiSellDemoSD`·`aiSellDemoWeeks`), `0B_SPECS.json` (`wageCeil`), `ADMIN_SPECS.json` (`aiAdminWage`), `COMBO_SPECS.json` (`aiGrowWhere`·`aiKeepLastSupplier`·`aiReserveFund`·`wageMarket`·`wageMarketRate`), `LABOR_SPECS.json`·`MANOR_SPECS.json`·`POP_SPECS.json`·`QUAKE_SPECS.json` (`wageMarket`·`wageMarketRate`), `WAGELAG_SPECS.json` (`aiAdminWage`·`aiWagePremium`·`wageMarketRateUp`), `WAGESPEED_SPECS.json` (`wageTarget`). `MANOR_SPECS`·`POP_SPECS`·`QUAKE_SPECS` 를 다시 돌리려면 `wageMarket`·`wageMarketRate` 를 빼야 한다 (`wageMarketRate` 0.005 는 지운 옛 임금 규칙이라 같은 조건이 아니다).

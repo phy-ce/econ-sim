@@ -3,12 +3,12 @@
 // 매주 표본을 해마다 평균해 왕국마다 한 줄: 행정청 충원(레벨 가중), 징수율, 국영 임금 단계, 행정청이 있는 지역의 하급 귀족 소득 비교
 // (저택 1인 몫 ÷ 국영 하급 귀족 임금, 시장 하급 귀족 임금 ÷ 소작 1인 소득), 하급 귀족 일터, 행정청 레벨·전문 관료제 비율.
 // --every N 이면 N 일마다 지역별 줄도 찍는다. TUNE 은 환경변수 TUNE='{"key":value}' 로 덮는다.
-import { createWorld, step, TUNE, getMethod, shareWage, PLAYER_ID } from '../src/index';
+import { createWorld, step, TUNE, getMethod, shareWage, PLAYER_ID, overrideTune } from '../src/index';
 import { subsistenceWage } from '../src/labor';
 import { workforce } from '../src/pops';
 import { appendFileSync } from 'node:fs';
 import { createMicroWorld } from '../src/lab/micro';
-if (process.env.TUNE) Object.assign(TUNE, JSON.parse(process.env.TUNE));
+if (process.env.TUNE) overrideTune(JSON.parse(process.env.TUNE), 'cli/admindiag');
 const args = process.argv.slice(2);
 const opt = (k: string) => { const i = args.indexOf(k); return i >= 0 ? args[i + 1] : undefined; };
 const pos = args.filter((a, i) => !a.startsWith('--') && !(i > 0 && args[i - 1].startsWith('--')));

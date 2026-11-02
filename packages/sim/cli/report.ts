@@ -1,11 +1,11 @@
 // 주요 지표 보고: npx tsx cli/report.ts [seed] [years] [out.json] ['<TUNE JSON>']
 // 왕국별 연간 표를 출력하고, out.json 을 주면 매달 기록 전체(w.metrics)를 저장한다
 import { writeFileSync } from 'node:fs';
-import { TUNE } from '../src/data';
+import { TUNE, overrideTune } from '../src/data';
 import { createWorld, step } from '../src/index';
 
 const seed = Number(process.argv[2] ?? 1), years = Number(process.argv[3] ?? 10), file = process.argv[4];
-Object.assign(TUNE, JSON.parse(process.argv[5] ?? '{}'));
+overrideTune(JSON.parse(process.argv[5] ?? '{}'), 'cli/report');
 // 비교 실행에서는 플레이어 왕국도 AI가 맡는다
 const w = createWorld(seed, { withPlayer: false });
 for (let d = 0; d < years * 360; d++) step(w);

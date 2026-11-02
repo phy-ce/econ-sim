@@ -1,12 +1,12 @@
 // 복지 진단: npx tsx cli/welfdiag.ts [seed] [years] '<TUNE JSON>'
 // 해마다 왕국별: 국고(백만), 주간 지출(천), 국고 주치, 정책 단계, 복지법, 지난주 복지(천), 법별 1·3·5단계 주간 예상(천)·모자란 사람(천)
-import { TUNE } from '../src/data';
+import { TUNE, overrideTune } from '../src/data';
 import { createWorld, step } from '../src/index';
 import { welfareShortOf, welfareWeekly } from '../src/welfare';
 import type { WelfareLaw } from '../src/types';
 
 const seed = Number(process.argv[2] ?? 1), years = Number(process.argv[3] ?? 8);
-Object.assign(TUNE, JSON.parse(process.argv[4] ?? '{}'));
+overrideTune(JSON.parse(process.argv[4] ?? '{}'), 'cli/welfdiag');
 const w = createWorld(seed, { withPlayer: false });
 const laws: WelfareLaw[] = ['poor', 'wage', 'universal'];
 for (let d = 1; d <= years * 360; d++) {

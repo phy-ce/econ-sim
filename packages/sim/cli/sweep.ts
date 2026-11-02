@@ -1,7 +1,7 @@
 // 조정값 비교: npx tsx cli/sweep.ts '<TUNE JSON>' [seed] [years]  (JSON 의 "subsistence" 는 SUBSISTENCE 를 바꾼다)
 // 주요 지표(w.metrics)에서 5년마다(와 마지막 해) 대륙 합계를 뽑아 한 줄 JSON으로 출력한다.
 // TIMING=1 이면 time: { ms 시뮬레이션 시간, msPerDay 하루 평균 } 을 덧붙인다 (sweepsum.py 가 따로 요약한다)
-import { BUILDING_BY_ID, GOOD_IDS, GOODS, LAW_TECH, SKILL_DEFS, SUBSISTENCE, TECH_BY_ID, TECH_COST, TECHS, TUNE } from '../src/data';
+import { BUILDING_BY_ID, GOOD_IDS, GOODS, LAW_TECH, SKILL_DEFS, SUBSISTENCE, TECH_BY_ID, TECH_COST, TECHS, TUNE, overrideTune } from '../src/data';
 import { isGovernment, paysDividend, slots } from '../src/economy';
 import { committedCost } from '../src/finance';
 import { aiTrace, treasuryTight } from '../src/ai';
@@ -68,7 +68,7 @@ if (lawTech) Object.assign(LAW_TECH, lawTech);
 if (tech4) for (const t of TECHS) if (t.cost === TECH_COST[4]) t.cost = tech4;
 // "techScale": 모든 기술 값(연구 포인트)에 곱한다
 if (techScale) for (const t of TECHS) t.cost *= techScale;
-Object.assign(TUNE, tune);
+overrideTune(tune, 'cli/sweep');
 if (subsistence) Object.assign(SUBSISTENCE, subsistence);
 applyWorld(world);
 // 비교 실행에서는 플레이어 왕국도 AI가 맡는다

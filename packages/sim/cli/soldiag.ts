@@ -1,6 +1,6 @@
 // 하층 생활수준 진단: npx tsx cli/soldiag.ts '<TUNE JSON>' [seed] [years]
 // 직종 × 고용/실업별 1인당 하루: 현금 소득, 현물 가치, 인두세·소득세, 지금 부 단계 생활비, 부 5 생활비, 그리고 부·충족률·생활수준
-import { GOODS, TUNE } from '../src/data';
+import { GOODS, TUNE, overrideTune } from '../src/data';
 import { createWorld, step, wealthOf } from '../src/index';
 import { basketCostAt } from '../src/market';
 import { kingdomOf, kingdomById } from '../src/kingdoms';
@@ -9,7 +9,7 @@ import { taxDue } from '../src/finance';
 
 const over = JSON.parse(process.argv[2] ?? '{}');
 const seed = Number(process.argv[3] ?? 1), years = Number(process.argv[4] ?? 20);
-Object.assign(TUNE, over);
+overrideTune(over, 'cli/soldiag');
 const w = createWorld(seed, { withPlayer: false });
 const at = new Set([30, 360, 720, 1440, 1800, 3600, 5040, 7200].filter((d) => d <= years * 360));
 const f = (x: number) => x.toFixed(2);

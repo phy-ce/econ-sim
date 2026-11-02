@@ -43,7 +43,7 @@
 //   (q) 재해 실행(quake·quaketwo, 재해 없는 실행은 같은 날짜 대조): 지역마다 소작지 칸·일하는 소작농·노동자·실업 소작농·인구, 노동자 시장 임금, 소작 1인 소득, 곡물 S/D·값, 생활수준. 해마다와 재해 앞뒤 주
 import { mkdirSync, writeFileSync, appendFileSync } from 'node:fs';
 import { dirname } from 'node:path';
-import { BUILDING_BY_ID, GOODS, TICKS_PER_WEEK, TICKS_PER_YEAR, TUNE, getMethod } from '../src/data';
+import { BUILDING_BY_ID, GOODS, TICKS_PER_WEEK, TICKS_PER_YEAR, TUNE, getMethod, checkTuneKeys, overrideTune } from '../src/data';
 import { subsistenceWage } from '../src/labor';
 import { companyById, isGovernment, wagesAt } from '../src/economy';
 import { FLOW } from '../src/kingdoms';
@@ -337,7 +337,7 @@ const stateHash = (w: World) => createHash('sha1').update(JSON.stringify({ ...w,
 function replay(def: RunDef, reloadAt: number): string {
   const saved: Record<string, unknown> = {};
   for (const k of Object.keys(TUNE_SET)) saved[k] = (TUNE as Record<string, unknown>)[k];
-  Object.assign(TUNE, TUNE_SET);
+  overrideTune(TUNE_SET, 'microcheck --tune');
   const tuneSaved: Record<string, number> = {};
   let w = createMicroWorld(def.opts);
   const shocks = [...def.shocks];
@@ -355,6 +355,7 @@ function replay(def: RunDef, reloadAt: number): string {
 
 function applyShock(w: World, s: LabShock, tuneSaved: Record<string, number>) {
   if (s.kind !== 'tune') { applyMicroShock(w, s); return; }
+  checkTuneKeys(s.set, `microcheck 충격 (${s.t}일)`);
   for (const [k, v] of Object.entries(s.set)) { if (!(k in tuneSaved)) tuneSaved[k] = (TUNE as unknown as Record<string, number>)[k]; (TUNE as unknown as Record<string, number>)[k] = v; }
 }
 
@@ -362,7 +363,7 @@ function run(def: RunDef): RunResult {
   const t0 = Date.now();
   const saved: Record<string, unknown> = {};
   for (const k of Object.keys(TUNE_SET)) saved[k] = (TUNE as Record<string, unknown>)[k];
-  Object.assign(TUNE, TUNE_SET);
+  overrideTune(TUNE_SET, 'microcheck --tune');
   const tuneSaved: Record<string, number> = {};
   const w = createMicroWorld(def.opts);
   const file = OUT ? `${OUT}-${def.name}.jsonl` : '';

@@ -673,6 +673,21 @@ export const TUNE = {
   tradeReserve: 5_000,
 };
 
+/**
+ * TUNE 덮어쓰기에 TUNE 에 없는 키가 있으면 멈춘다 (2026-11-02 wt-simplify, docs/overhaul/SIMPLIFY_AUDIT.md 3-3).
+ * 지운 키를 쓰는 옛 비교 명세가 오류 없이 기본값으로 도는 것을 막는다. where 는 오류에 붙일 출처 (명세 이름, CLI 이름 등)
+ */
+export function checkTuneKeys(over: Record<string, unknown>, where = 'TUNE 덮어쓰기'): void {
+  const bad = Object.keys(over).filter((k) => !Object.prototype.hasOwnProperty.call(TUNE, k));
+  if (bad.length) throw new Error(`${where}: TUNE 에 없는 키 ${bad.join(', ')} (지운 키는 docs/DECISIONS.md 4-1·7-46)`);
+}
+
+/** 비교 도구(sweep·lab·microcheck·진단 CLI)가 TUNE 을 덮는 한 길: 키를 검사(checkTuneKeys)하고 덮는다 */
+export function overrideTune(over: Record<string, unknown>, where = 'TUNE 덮어쓰기'): void {
+  checkTuneKeys(over, where);
+  Object.assign(TUNE, over);
+}
+
 /** 무역소 건물 id */
 export const TRADING_POST = 'trading_post';
 /** 무역소 방식이 한 단계 오를 때마다 레벨당 유보액 배율 (기본 R, 장부 상회 2R, 무역 회사 4R. 2026-10-23 사용자 설계) */
