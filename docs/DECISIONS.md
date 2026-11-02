@@ -1034,12 +1034,6 @@ AI 노동자 임금 바닥 (기본값 0.03 · 2~6):
 - 확인 대기 (게임 방향): 이 규칙 그대로 둘지, 또는 위 끝 배율(`wageTargetSpan` 2)·속도(0.1)를 바꿀지 (2026-11-02 wt-span 비교: 배율 1.5·3, 속도 0.2 모두 대조보다 고르게 낫지 않아 기본값 그대로, DESIGN 11장 두 행, 보고서 2026-11-02-wagespan). 같이 묻는 것: 7-42 결정 대기 1 (플레이어 왕실 국영 웃돈)은 이 규칙에서 방치 플레이어 왕국 1년차 행정청 충원이 0.00 → 0.90 이 되어 급함이 줄었다.
 - 7-43 확인 (사용자 2026-11-02): 맞는 임금 규칙을 받아들였다. 그래서 2026-11-02 wt-simplify 1-E 에서 스위치 `wageMarket`·`wageTarget` 과 옛 규칙의 키(`wageMarketRate`·`wageMarketRateUp`·`wageCeil`·`wageLossCut`, `aiAdminWage` 0·1 갈래)를 지웠다 (동작 같음, 그 전 코드 e99d349). 위 끝 배율·속도는 `wageTargetSpan`·`wageTargetSpeed` 로 남는다.
 
-### 7-46. 0b′ AI 스위치 여덟을 지운다 (2026-11-02 wt-simplify 1-G, 결정됨: 비교했고 채택하지 않음)
-- 지운 키: 5-2 `aiCutSD`·`aiDemoSD`·`aiExitWeeks` (팔리지 않음 기준 감축·철거), A1 `aiGlutIdle` (노는 설비·기상 되돌림), A2 `aiSellDemoSD`·`aiSellDemoWeeks` (설비 철거), A3 `aiMarginal` (자기 값 효과), A4 `aiAdminFloor` (행정청 징수율 하한). 같이 지운 것: `ai.ts` `sdExit`·`sdHold`·`glutSD`·`weatherShortfall`·`sellDemo`·`ownSales`·`ownMarket`·`growGain`·`shrinkGain`·`marginExit`·`belowAdminFloor`·`UTIL_FLOOR`, 상태 칸 타입 `Region.cutWeeks`·`demoWeeks`·`sellWeeks`·`marginWeeks` (끈 채로는 생기지 않는 칸), 시험 `test/gate/sdexit.test.ts`·`grainbal.test.ts`.
-- 이유: 모두 기본 0(끔)이고 0b′ 에서 비교했으나 채택하지 않았다 (7-38 "끈 채 둠"). A4 의 목적(이슈 #4 행정청 충원)은 `aiStatePremium`(7-42)과 맞는 임금(7-43)이 맡았다. 동작은 같다 (골든 c7fb7c00ef46d24c, samecheck 5/5 같음). 5-1 과잉 검사 `aiGlutSD`(기본 1.5)는 남는다.
-- 되살리기: 지우기 바로 전 커밋 9ac8ad7 (브랜치 wt-simplify)에 있다. 예: `git show 9ac8ad7:packages/sim/src/ai.ts`, `git show 9ac8ad7:packages/sim/test/gate/sdexit.test.ts`.
-- 비교 명세 `docs/overhaul/0BP_5-2_SPECS.json`·`0BP_A4_SPECS.json`·`0BP_GRAIN_SPECS.json`은 기록으로 남긴다. 그 키는 이제 TUNE 에 없어서 그대로 돌리면 lab 입구가 "TUNE 에 없는 키"로 멈춘다 (wt-simplify 가드, `data.ts overrideTune`). 다시 돌리려면 9ac8ad7 에서 돌린다.
-
 ### 7-44. 저택 지분 (2026-11-02 사용자 결정, wt-manor, 설계 `docs/overhaul/MANOR_SHARES.md` 1단계)
 - 사용자 답 (2026-11-02, 설계 8장 질문에 대한 답, 코디네이터가 옮김):
   1. 저택 = 금융가 같은 지분 회사. 저택 지분은 상급·하급 귀족만 가진다 (법과 상관없다). 지분은 재산이라 어디서 일하든 지분 수대로 배당을 받는다. 지분은 지분 값(NAV) 사기·팔기, 새 발행, 사람 따라가기로 바뀐다.
@@ -1078,6 +1072,12 @@ AI 노동자 임금 바닥 (기본값 0.03 · 2~6):
 - 사용자 세 번째 답 (2026-11-02): (1) 확률 규칙 **"이대로, 모든 법에"** (세법·투자법·복지법·투표권법 모두 이 확률로 바뀐다), (2) 계층 지위 0.05 / 0.2 / 1 **"이대로"**, (3) 자본가 끌림 50 × 지분 가치 ÷ 1년 생활비, 최대 250 **"이대로"**. 남은 것 (지식인 집단, 생활수준 항 배율 25, 근거 없는 입장, 특성 대응)은 단계 1 설계 때 기본값으로 진행하고 근거 칸에 "근거 없음"으로 둔다.
 - 지키는 것: 정당성·정부 구성은 만들지 않는다 (오버홀 05 SD6, 왕실 하나). 경제 샌드박스 위의 층이다.
 
+### 7-46. 0b′ AI 스위치 여덟을 지운다 (2026-11-02 wt-simplify 1-G, 결정됨: 비교했고 채택하지 않음)
+- 지운 키: 5-2 `aiCutSD`·`aiDemoSD`·`aiExitWeeks` (팔리지 않음 기준 감축·철거), A1 `aiGlutIdle` (노는 설비·기상 되돌림), A2 `aiSellDemoSD`·`aiSellDemoWeeks` (설비 철거), A3 `aiMarginal` (자기 값 효과), A4 `aiAdminFloor` (행정청 징수율 하한). 같이 지운 것: `ai.ts` `sdExit`·`sdHold`·`glutSD`·`weatherShortfall`·`sellDemo`·`ownSales`·`ownMarket`·`growGain`·`shrinkGain`·`marginExit`·`belowAdminFloor`·`UTIL_FLOOR`, 상태 칸 타입 `Region.cutWeeks`·`demoWeeks`·`sellWeeks`·`marginWeeks` (끈 채로는 생기지 않는 칸), 시험 `test/gate/sdexit.test.ts`·`grainbal.test.ts`.
+- 이유: 모두 기본 0(끔)이고 0b′ 에서 비교했으나 채택하지 않았다 (7-38 "끈 채 둠"). A4 의 목적(이슈 #4 행정청 충원)은 `aiStatePremium`(7-42)과 맞는 임금(7-43)이 맡았다. 동작은 같다 (골든 c7fb7c00ef46d24c, samecheck 5/5 같음). 5-1 과잉 검사 `aiGlutSD`(기본 1.5)는 남는다.
+- 되살리기: 지우기 바로 전 커밋 9ac8ad7 (브랜치 wt-simplify)에 있다. 예: `git show 9ac8ad7:packages/sim/src/ai.ts`, `git show 9ac8ad7:packages/sim/test/gate/sdexit.test.ts`.
+- 비교 명세 `docs/overhaul/0BP_5-2_SPECS.json`·`0BP_A4_SPECS.json`·`0BP_GRAIN_SPECS.json`은 기록으로 남긴다. 그 키는 이제 TUNE 에 없어서 그대로 돌리면 lab 입구가 "TUNE 에 없는 키"로 멈춘다 (wt-simplify 가드, `data.ts overrideTune`). 다시 돌리려면 9ac8ad7 에서 돌린다.
+
 ### 7-47. 복지 예산 상한 (`welfareCap`, 이슈 #9, 2026-11-02 wt-welfare9, 기본 끔, 사용자 결정 대기)
 - 문제 (지금 규칙, main 9ba5acc, `cli/welfmon.ts`, 0b levers `m.welfareLaw.*` 조건: 플레이어 왕국에 0일 복지법 강제·복지 단계 3·연구 고정 순서, 5년 × 시드 1·2 × salt 0, 한 번에 한 프로세스, 결과 `.tmp/wt/welfare9/.tmp/welfare9/base-*.jsonl`):
   - 구빈법·보편 보장: 첫 달에 시작 국고 약 1,200만을 다 쓴다 (그달 복지 1,230~1,240만, 그달 필요액 4,300~4,800만 = 그달 세금·관세 46~50만의 약 90~100배). 임금 보조: 필요액 달 150~170만 (세금·관세의 약 3배), 국고 1,020~1,030만 → 두 시드 모두 9달째 0.
@@ -1099,7 +1099,7 @@ AI 노동자 임금 바닥 (기본값 0.03 · 2~6):
 - 숫자와 다른 후보: DESIGN 11장 `settleCap` 행, HANDOFF 0-1102-fix10, 보고서 2026-11-02-fix10.
 
 ### 7-49. 곡물 S/D 1.3~1.4 를 세계 규칙으로 고칠지 (이슈 #11, 2026-11-02 wt-grain11, 사용자 결정 대기, 아무것도 만들지 않았다)
-- 진단 (`.tmp/grain11/RESULT.md`, main 9ba5acc, `cli/graindiag.ts`): 농부 임금 바닥 = 소작 1인 소득 × 1.1 (`switchPremium`) 이고 소작 소득은 곡물을 지금 값으로 잰 것이라, 곡물값이 농장 매출과 인건비에 함께 들어가 지워진다. 농장 손익은 팔린 비율 σ 에 반응하고 손익분기 σ* 가 0.63~0.66 (본 게임 10년 × 시드 1, 3~10년차) 이라 S/D 약 1.5 까지 흑자다. 나가는 규칙(유보 0·적자 26주)이 켜지지 않고 진입은 과잉 검사 `aiGlutSD` 1.5 하나가 막아 S/D 가 그 바로 아래에 머문다. 수요는 값에 반응하지 않는다 (필요량 고정).
+- 진단 (`.tmp/wt/grain11/.tmp/grain11/RESULT.md`, main 9ba5acc, `cli/graindiag.ts`): 농부 임금 바닥 = 소작 1인 소득 × 1.1 (`switchPremium`) 이고 소작 소득은 곡물을 지금 값으로 잰 것이라, 곡물값이 농장 매출과 인건비에 함께 들어가 지워진다. 농장 손익은 팔린 비율 σ 에 반응하고 손익분기 σ* 가 0.63~0.66 (본 게임 10년 × 시드 1, 3~10년차) 이라 S/D 약 1.5 까지 흑자다. 나가는 규칙(유보 0·적자 26주)이 켜지지 않고 진입은 과잉 검사 `aiGlutSD` 1.5 하나가 막아 S/D 가 그 바로 아래에 머문다. 수요는 값에 반응하지 않는다 (필요량 고정).
 - AI 판단 쪽 처리 (CLAUDE.md 작업 방식 2): 넘침 퇴출 `aiTrimSD` (DESIGN 10장 `trimExit` 줄, 11장 `aiTrimSD` 행, 보고서 2026-11-02-grain11). 20년 × 시드 1·2 × salt 0..3 (main 9ba5acc + `trimExit`) 에서 진입 `aiGlutSD` 1.2 와 함께 켜면 곡물 S/D 가 대조보다 0.02~0.17 낮았지만 (5~20년차) 해 평균이 0.9~1.25 밖인 해가 3~6개 남았고 (대조 13개), 20년차 세전 총생산이 대조의 절반 (589~601 대 1,200), 소작 비율 0.64~0.67 대 0.21 이었다. 비용 대부분은 진입 1.2 에서 왔다 (진입만 1.2: 총생산 622). 그래서 AI 판단만으로는 고치지 못했고 기본은 끔이다. AI 판단으로 남은 길 (돌리지 않음): 곡물만 퇴출·진입을 바꾸기, 진입 1.25·1.3.
 - 아래 셋은 플레이어가 보는 세계 규칙을 바꾸므로 묻는다 (만들지 않았다):
   - **W1. 농부 임금 바닥이 곡물값을 따라가는 규칙.** 본 게임 10년 동안 농부 임금 ÷ 소작 1인 소득 = 1.10~1.11 (해마다), 시드 1 에서 곡물값 1.02 → 0.70 일 때 농부 임금 3.06 → 2.33 (4년차 → 9년차). 루이스 이중 경제의 "곡물로 잰 생존 임금"과 같은 꼴이라 경제학적으로 이상하지는 않다. 바꾸는 길: (가) 소작 현물을 팔린 비율로 할인해 소작 소득을 잰다 (σ 가 임금에도 들어가 손익분기 σ* 가 1 쪽으로), (나) 임금 바닥을 소작 소득의 긴 이동평균(예: 52주)으로 잰다 (값이 내려간 직후 인건비가 늦게 따라가 적자가 먼저 난다). 둘 다 임금 규칙이 바뀐다. 최저임금은 두지 않는다 (CLAUDE.md).

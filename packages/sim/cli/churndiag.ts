@@ -1,7 +1,7 @@
 import './lowprio';
 // 짓고 허는 반복 진단 (이슈 #7): npx tsx cli/churndiag.ts '<TUNE JSON>' [시드] [해] [out.jsonl]   (packages/sim 에서. SALT=n 이면 AI 난수 salt, TOP=n 상위 개수)
 // (왕국, 지역, 건물 종류)마다 세는 것 (자동 건물 제외, 왕실·민간 합):
-//   start  착공 레벨 (AI 길별: trial·reserve·pick·loss·govInputs·office·dev, 길을 못 찾으면 untraced)
+//   start  착공 레벨 (AI 길별: trial·reserve·pick·govInputs·office, 길을 못 찾으면 untraced. loss·dev 는 wt-simplify 1-A·1-D 에서 지운 길)
 //   built  완공 레벨, demo 실제로 헐린 레벨 (주마다 progressDemolition 이 1레벨씩 헌다)
 //   quick2 지은 지 104주(2년) 안에 헐린 레벨, quick1 52주 안 (같은 (왕국, 지역, 종류)에서 가장 최근에 완공된 레벨과 짝짓는다: 후입선출)
 //   rebuild 같은 키에서 철거 명령 뒤 104주 안에 다시 착공한 레벨, cycle 짓기 → 헐기 → 짓기 (착공 → 104주 안 철거 명령 → 104주 안 다시 착공) 횟수
@@ -26,7 +26,7 @@ const w: World = createWorld(seed, { withPlayer: false, aiSalt: salt });
 
 const W2 = 104 * TICKS_PER_WEEK, W1 = 52 * TICKS_PER_WEEK;
 const DEMO_PATHS = new Set(['reserveShrink', 'shrink', 'officeShrink', 'schoolShrink', 'swap', 'sdDemo', 'sellDemo', 'marginDemo']);
-const BUILD_PATHS = new Set(['pick', 'loss', 'dev', 'govInputs', 'office', 'trial', 'reserve']);
+const BUILD_PATHS = new Set(['pick', 'govInputs', 'office', 'trial', 'reserve']);
 
 type Acc = Record<string, number>;
 const add = (a: Acc, k: string, v = 1) => { if (v) a[k] = (a[k] ?? 0) + v; };

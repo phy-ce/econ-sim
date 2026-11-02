@@ -131,7 +131,7 @@ export function updateWageIndex(w: World, k: Kingdom) {
 
 /**
  * 국영 임금 (빅토리아3 정부 임금): 그 지역 시장 임금 × 국영 임금 수준 배율 × (1 + AI 왕실 웃돈). 왕실의 정부 건물(행정청·건축사무소·학교)만 이 임금을 준다.
- * 왕실 생산 건물은 민간 상회처럼 회사 임금표(wages)를 쓴다 (2026-10-23 사용자 결정, DECISIONS 6-2)
+ * 왕실 생산 건물은 민간 상회처럼 그 지역 시장 임금을 준다 (economy.ts wagesAt, 2026-10-23 사용자 결정, DECISIONS 6-2)
  */
 export function applyStateWages(w: World, k: Kingdom) {
   const gov = companyById(w, k.governmentId);

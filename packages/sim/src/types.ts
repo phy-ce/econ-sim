@@ -407,7 +407,7 @@ export interface Company {
   cash: number;
   /** 회사 대표 임금표: 그 회사 생산 건물 지역 시장 임금(웃돈 포함)의 고용 가중 평균 (labor.ts syncCompanyWages, 화면·지역을 정하지 않은 추정용). 실제 지급은 wagesAt (지역 임금) */
   wages: Record<Skill, number>;
-  /** 국영 임금표 (왕실만): 정부 건물(행정청·건축사무소·학교)의 임금 = 직종별 시장 임금(왕실 건물 제외) × 국영 임금 수준 배율 (finance.ts applyStateWages) */
+  /** 국영 임금표 (왕실만, 화면·추정용 대표값): 왕국 지역들의 국영 임금(Region.stateWages = 지역 시장 임금 × 국영 임금 단계 배율 × (1 + AI 왕실 웃돈)) 평균 (finance.ts applyStateWages). 실제 지급은 Region.stateWages */
   stateWages?: Record<Skill, number>;
   /** 지난주 직종별 고용 인원. 지운 AI 임금 판단(adjustWages, wt-simplify 1-E)만 썼다. 이제 써지지 않고 옛 저장에만 남는다 (SIMPLIFY_AUDIT 1-D′ 에서 지울 칸) */
   lastEmployed?: Partial<Record<Skill, number>>;

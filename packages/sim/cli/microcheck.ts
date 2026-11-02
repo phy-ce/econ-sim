@@ -568,7 +568,7 @@ function quakeTable(r: RunResult) {
   };
   for (let ri = 0; ri < nReg; ri++) {
     console.log('');
-    console.log(`(q) 재해 [${r.def.name}] 지역 ${ri}${!r.def.shocks.some((x) => x.kind === 'quake') ? ' (재해 없음, 같은 날짜 대조)' : ri === 0 ? ' (재해 지역)' : ''}: ${q.t}일 ~ ${end}일. 노동 인구(칸·인구 제외), 시장 임금 = 노동자 (wageMarket 0 이면 고용 가중 평균), 소득은 1인 하루`);
+    console.log(`(q) 재해 [${r.def.name}] 지역 ${ri}${!r.def.shocks.some((x) => x.kind === 'quake') ? ' (재해 없음, 같은 날짜 대조)' : ri === 0 ? ' (재해 지역)' : ''}: ${q.t}일 ~ ${end}일. 노동 인구(칸·인구 제외), 시장 임금 = 노동자, 소득은 1인 하루`);
     console.log('년/주'.padEnd(12) + cols.map((c) => pad(c, 9)).join(''));
     byYear(r).forEach((ws, y) => line(`${y + 1}년`, ws.map((wk) => wk.reg[ri]).filter(Boolean)));
     const at = (t: number) => r.weeks.filter((wk) => wk.t > t - TICKS_PER_WEEK && wk.t <= t).map((wk) => wk.reg[ri]).filter(Boolean);

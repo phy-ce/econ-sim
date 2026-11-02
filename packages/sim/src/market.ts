@@ -1119,7 +1119,7 @@ export function wealthDrivers(w: World, p: Pop): { income: number; inKind: numbe
 
 // ---------------------------------------------------------------- 가격
 
-/** 빅토리아3 가격 범위 (기본가 배수). 시장 가격(updatePrices)과 AI 장기 가격(outlook.ts longRunPrice, ai.ts boundedPrice) 모두 여기서 읽는다 */
+/** 빅토리아3 가격 범위 (기본가 배수). 시장 가격(updatePrices)과 AI 장기 가격(outlook.ts longRunPrice) 모두 여기서 읽는다 */
 export const PRICE_MIN = 0.25;
 export const PRICE_MAX = 1.75;
 /** 하루에 목표 가격으로 다가가는 비율 */

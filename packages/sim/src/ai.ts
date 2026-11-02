@@ -1285,7 +1285,7 @@ function keepLast(w: World, b: Building): boolean {
   return used;
 }
 
-// ---------------------------------------------------------------- 넘침 퇴출 (TUNE.aiTrimSD > 0, 이슈 #11 F3, 진단 .tmp/grain11/RESULT.md 4장, 기본 0 = 끔)
+// ---------------------------------------------------------------- 넘침 퇴출 (TUNE.aiTrimSD > 0, 이슈 #11 F3, 진단 .tmp/wt/grain11/.tmp/grain11/RESULT.md 4장, 기본 0 = 끔)
 //
 // 진단 (wt-grain11, main 9ba5acc): 농부 임금 바닥이 곡물값을 따라가 농장 손익이 값보다 팔린 비율에 반응하고, 손익분기 팔린 비율 약 0.65 라
 // S/D 약 1.5 까지 흑자다. 진입은 과잉 검사(aiGlutSD) 하나가 막고 나가는 규칙은 켜지지 않아 S/D 가 문턱 바로 아래에 머문다.
@@ -1323,7 +1323,7 @@ function workerDemandPerLevel(w: World, b: Building, g: GoodId, popsAt: Map<numb
  *    o = b 의 어제 g 산출 ÷ 레벨, d = 그 레벨 일꾼 식구가 사던 g (workerDemandPerLevel), D = 수요 이동평균.
  * 헐면 TRIM_WAIT_WEEKS 주 동안 그 지역 그 상품은 다시 보지 않는다 (Region.trim). TUNE.aiTrimPause > 0 이면 기다림이 끝난 주에
  * 예상 공급 ÷ 수요가 헐 때(sd)보다 내려가지 않았으면 헐어도 줄지 않는 곳으로 보고 aiTrimPause 주 더 쉰다 (헐린 일꾼이 소작으로 돌아가 팔고,
- * 일자리·임금이 줄어 사는 양도 줄어 d 보다 수요가 더 준다: 마이크로 진단 .tmp/grain11/f3). 플레이어 건물은 헐지 않지만 그 공급은 S/D 에 들어간다.
+ * 일자리·임금이 줄어 사는 양도 줄어 d 보다 수요가 더 준다: 마이크로 진단 .tmp/wt/grain11/.tmp/grain11/f3). 플레이어 건물은 헐지 않지만 그 공급은 S/D 에 들어간다.
  * 같은 값이면 w.buildings 순서가 앞선 건물 (결정성)
  */
 function trimExit(w: World) {

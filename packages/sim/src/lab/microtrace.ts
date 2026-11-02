@@ -47,7 +47,7 @@ export interface LaborRow {
    */
   market: number; D: number; S: number;
 }
-/** weekProfit 는 이번 주 누계(주 끝 표본에서는 막 0 이 됐다), lastWeekProfit 는 지난주 손익 (AI 임금 판단이 본 값) */
+/** weekProfit 는 이번 주 누계(주 끝 표본에서는 막 0 이 됐다), lastWeekProfit 는 지난주 손익 (화면 지난주 손익 칩과 같은 값) */
 export interface CoRow { id: number; state: boolean; cash: number; debt: number; weekProfit: number; lastWeekProfit: number; wages: Record<Skill, number> }
 export interface MicroRow {
   t: number;

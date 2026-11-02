@@ -260,7 +260,7 @@ export function baseValue(m: MethodDef, c: Company): number {
 export interface Valuation { revenue: number; inputCost: number; wageCost: number; profit: number; utilization: number }
 
 /**
- * 새로 지을지 판단할 때 쓰는 장기 임금: 생산 건물은 민간·왕실 모두 지금 임금과 기본 임금 × TUNE.investWage 중 큰 값.
+ * 새로 지을지 판단할 때 쓰는 장기 임금: 생산 건물은 민간·왕실 모두 그 지역 회사 임금과 지역 시장 임금 52주 이동평균 중 큰 값 (아래). 지역 임금이 아직 없으면 지금 임금과 기본 임금 × TUNE.investWage 중 큰 값.
  * 왕실의 정부 건물(행정청 등)은 정책(국영 임금 수준)이 정하므로 지금 국영 임금 그대로 본다.
  * 지역(w, r)을 주고 그 지역 시장 임금이 있으면: 그 지역 회사 임금(wagesAt)과 지역 시장 임금 52주 이동평균(Region.wageAvg) 중 큰 값 (정부 건물은 그 지역 국영 임금)
  */

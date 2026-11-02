@@ -443,7 +443,7 @@ export function scaleBonus(level: number): number {
  *   lab 지표의 "임금 ÷ 바닥"도 이 값으로 잰다
  * - adminScale: 행정청 1레벨이 감당하는 인구 배율 (기본 50만 명 × 이 값)
  * - adminStart: 시작 행정청이 감당하는 인구 / 왕국 인구
- * - investWage: AI가 새로 지을지 판단할 때 쓰는 임금의 바닥 = 기본 임금 × 이 값 (0이면 지금 임금만 본다)
+ * - investWage: AI가 새로 지을지 판단할 때 쓰는 임금의 바닥 = 기본 임금 × 이 값 (0이면 지금 임금만 본다). 지역 시장 임금(Region.wages)이 아직 없을 때만 쓴다 (outlook.ts longRunWages)
  * - localBias: 저택·금융가가 자기 지역 공사에 돈을 낼 마음과, 민간 상회가 그 돈으로 그 지역에 지을 때 수익률에 곱하는 가산점 (1 + localBias)
  * - ownerTilt: 저택은 땅 건물(농지·산림·광맥), 금융가는 그 밖의 건물을 좋아한다 (AI 성향). 좋아하지 않는 종류에 낼 마음의 배율
  * - privatizeMargin, privatizePayback: 민영화 레벨을 사는 조건 (AI): 금고 ≥ 레벨 값 × privatizeMargin, 레벨 값 ÷ 그 레벨의 1년 이익 ≤ privatizePayback 년
@@ -688,7 +688,7 @@ export const TUNE = {
   // 증설 문턱 aiGlutSD 이상이면 1레벨 헌다. 헌 뒤 TRIM_WAIT_WEEKS 주는 그 지역 그 상품을 다시 헐지 않는다. 0 = 끔 (그 전과 같음).
   // 끈 채로 둔다: 20년 × 시드 1·2 × salt 0..3 에서 aiGlutSD 1.2 와 함께 켜면 곡물 S/D 는 0.02~0.17 내려갔지만 0.9~1.25 안에 다 남지 않았고 20년차 세전 총생산이 절반이었다 (근거: DESIGN 11)
   aiTrimSD: 0,
-  // 넘침 퇴출을 시작하는 주 (0일부터): 시작 세계의 소작 판매가 1년차 S/D 를 부풀린다 (진단 .tmp/grain11/RESULT.md 1장). 근거: DESIGN 11
+  // 넘침 퇴출을 시작하는 주 (0일부터): 시작 세계의 소작 판매가 1년차 S/D 를 부풀린다 (진단 .tmp/wt/grain11/.tmp/grain11/RESULT.md 1장). 근거: DESIGN 11
   aiTrimFrom: 52,
   // 넘침 퇴출이 듣지 않는 곳 쉬기 (주): > 0 이면 철거 뒤 기다림이 끝난 주에 예상 공급 ÷ 수요가 헐 때보다 내려가지 않았으면 그 지역 그 상품을 이 주 수만큼 더 쉰다. 0 = 끔.
   // 후보 0 / 52: 52 는 마이크로 시드 1 에서 농장이 0 까지 헐리는 것을 막았지만 본 게임 20년에서 곡물 S/D 가 더 높아 0 (근거: DESIGN 11)

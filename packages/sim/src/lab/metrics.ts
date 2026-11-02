@@ -201,9 +201,9 @@ class Acc {
   soldV = 0; supV = 0;
   demoLv = 0; quickDemo = 0; startLv = 0; builtLv = 0; pledgeNew = 0;
   growStarts = 0; glutBlock = 0;
-  // 0b′ 5-2 (03 5장 2번): 팔리지 않음 기준 가동률 감축('sdCut')·철거('sdDemo', 레벨), 가동률 올리기('utilUp', 모든 생산 건물), 적자 감축('lossCut') 횟수
+  // 0b′ 5-2 감축('sdCut')·철거('sdDemo')는 2026-11-02 wt-simplify 1-G 에서 지운 길이라 이제 늘 0 (옛 결과 파일과 열을 맞추려고 남김). 가동률 올리기('utilUp', 모든 생산 건물), 적자 감축('lossCut') 횟수
   sdCut = 0; sdDemo = 0; utilUp = 0; lossCut = 0;
-  // 0b′ 곡물 균형 후보: A2 설비 철거('sellDemo', 레벨), A3 자기 값 효과 철거('marginDemo', 레벨), A3 가 막은('marginBlock')·허용한('marginOk') 증설 (건물·주)
+  // 0b′ A2·A3 철거·증설 판단('sellDemo'·'marginDemo'·'marginBlock'·'marginOk'): 1-G 에서 지운 길, 늘 0 (옛 결과 파일용)
   sellDemo = 0; marginDemo = 0; marginBlock = 0; marginOk = 0;
   // 넘침 퇴출 (이슈 #11 F3, TUNE.aiTrimSD): 헌 레벨('trimDemo'), 진입 문턱 아래로 내려갈까 봐 쉰 번('trimHold', 지역·상품·주), 헐어도 S/D 가 줄지 않아 길게 쉰 번('trimStop')
   trimDemo = 0; trimHold = 0; trimStop = 0;
@@ -314,8 +314,8 @@ export class Collector {
 
   /**
    * ai.ts aiTrace 로 받는 AI 판단 기록 (run.ts 가 이어 준다): 유보 증설 착공('reserve', 레벨), 과잉 검사로 막힌 증설('glutBlock', 건물·주),
-   * 5-2 감축('sdCut', 10%씩 한 번)·철거('sdDemo', 1레벨), 가동률 올리기('utilUp', 10%씩 한 번), 적자 감축('lossCut', 10%씩 한 번),
-   * 곡물 균형 후보 A2 철거('sellDemo', 1레벨)·A3 철거('marginDemo', 1레벨)·A3 증설 판단('marginBlock' 막음, 'marginOk' 허용, 건물·주),
+   * 가동률 올리기('utilUp', 10%씩 한 번), 적자 감축('lossCut', 10%씩 한 번),
+   * (5-2 'sdCut'·'sdDemo', A2 'sellDemo', A3 'marginDemo'·'marginBlock'·'marginOk' 는 1-G 에서 지운 길이라 늘 0, 옛 결과 파일과 열을 맞추려고 받는다)
    * 넘침 퇴출 철거('trimDemo', 1레벨)·쉼('trimHold', 지역·상품·주)
    */
   trace(path: string, regionId: number | undefined, levels: number) {
