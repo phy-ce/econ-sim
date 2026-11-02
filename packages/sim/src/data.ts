@@ -666,11 +666,12 @@ export const TUNE = {
   grainEatElast: 0,
   // ④ tenantKindSigma 1: 소작 1인 소득(임금 바닥의 기준)에서 직접 먹은 현물도 팔린 비율(sellThrough)로 할인해 잰다 (market.ts tenantIncomePerWorker). 0 = 지금 (현물은 제값)
   tenantKindSigma: 0,
-  // ⑦ grainSurplusCap > 0 (2026-11-02 사용자 "싸면 더 사먹고 인구도 그만큼 더 늘게", DECISIONS 7-51): 곡물이 기본가보다 싸면 가계가 묶음을 다 사고 남는 돈으로
-  //    곡물을 식량 필요(곡물로 채울 양) × min(grainSurplusCap, 기본가 ÷ 값 − 1) 만큼 더 사 먹는다 (필요량은 그대로, 남는 돈이 없으면 안 산다, market.ts collectOrders).
-  //    더 먹은 비율(Pop.foodSurplus) × surplusGrowth 가 해마다 인구 증가율에 더해진다 (pops.ts growthWith). 후보 cap 0.5, surplusGrowth 0.05 / 0.1
-  grainSurplusCap: 0,
-  surplusGrowth: 0,
+  // ⑦ 싼 곡물과 인구 (2026-11-02 사용자 "싸면 더 사먹고 인구도 그만큼 더 늘게 하면안됨?", DECISIONS 7-51, 세계 규칙, 기본 켬): 곡물이 기본가보다 싸면 가계가 묶음을 다 사고
+  //    남는 돈으로 곡물을 식량 필요(곡물로 채울 양) × min(grainSurplusCap, 기본가 ÷ 값 − 1) 만큼 더 사 먹는다 (필요량은 그대로, 필요 주문이 다 찬 뒤 남는 곡물만, market.ts collectOrders·clearMarkets).
+  //    더 먹은 비율(Pop.foodSurplus) × surplusGrowth 가 해마다 인구 증가율에 더해진다 (pops.ts growthWith). 0 = 끔.
+  //    고른 값: cap 0.25 / 0.5 / 1 × surplusGrowth 0.05, surplusGrowth 0.025 / 0.05 × cap 0.5 를 20년 × 시드 1·2 × salt 0..3 (main 3222e73) 로 비교. 근거: DESIGN 11
+  grainSurplusCap: 0.5,
+  surplusGrowth: 0.05,
   quakeChance: 0,
   quakeLoss: 0.25,
   quakeYears: 3,

@@ -1,6 +1,22 @@
 {
  "reports": [
   {
+   "id": "2026-11-02-grainrule40",
+   "title": "곡물 ⑦ 40년 (인구가 멈추는가)",
+   "desc": "main 3222e73 + ⑦, 40년 × 시드 1·2 × salt 0: ctl / c05 (grainSurplusCap 0.5, surplusGrowth 0.05)",
+   "date": "2026-11-02",
+   "created": "2026-11-02T23:55:36",
+   "code": "a9f3b1fd"
+  },
+  {
+   "id": "2026-11-02-grainrule",
+   "title": "곡물 ⑦ 싼 곡물과 인구 (이슈 #11)",
+   "desc": "main 3222e73 + ⑦, 20년 × 시드 1·2 × salt 0..3: ctl(끔) / grainSurplusCap 0.25·0.5·1 (surplusGrowth 0.05) / cap 0.5·surplusGrowth 0.025. 고른 값 c05 (0.5, 0.05)",
+   "date": "2026-11-02",
+   "created": "2026-11-02T23:55:35",
+   "code": "e3e56a5b"
+  },
+  {
    "id": "2026-11-02-grain11-micro",
    "title": "곡물 넘침 퇴출 F3 마이크로 (이슈 #11)",
    "desc": "wt-grain11, 마이크로 (쇠 농기구 농장 8레벨, typescale farm 0.25·workshop 0.15·textile 0.25·fiber_farm 0.25) 10년 × 시드 1·2. main, F2 = aiGlutSD 1.1 + aiSellDemoSD 1.25, F1 = aiGlutSD 1.2 만, F3 = 진입 1.2·퇴출 1.3 (쉼 끔 / 52주), F3 1.25 = 퇴출 1.25·쉼 52주. cli/graindiag.ts 해 평균",
@@ -25,14 +41,6 @@
    "code": "ab261a0c"
   },
   {
-   "id": "2026-11-02-churn7",
-   "title": "짓고 허는 반복 (이슈 #7)",
-   "desc": "churndiag 20년 × 시드 1·2 (wt-churn7). 대조 = main 9ba5acc 규칙, 다시 짓기 기다림 aiRebuildWait: 생산 건물만 52·104주, 모든 종류 26·52·104주. quick2 = 지은 지 2년 안에 헐린 레벨, cycle = 짓기→헐기→짓기 확인 묶음 (lab 20년 × 시드 1·2 × salt 0..3) 은 보고서 2026-11-02-churn7-ens",
-   "date": "2026-11-02",
-   "created": "2026-11-02T21:21:30",
-   "code": "c7c8fa1a"
-  },
-  {
    "id": "2026-11-02-admin4-k2",
    "title": "행정청 평균 손익 (이슈 #4, AI 왕국 2)",
    "desc": "같은 실행의 AI 왕국 2 줄: aiAdminValue 0 (ctl) / 1 (v1, 기본) / 2 (v2). 20년 × 시드 1·2 × salt 0..3",
@@ -49,36 +57,12 @@
    "code": "6eafa53f"
   },
   {
-   "id": "2026-11-02-ig0",
-   "title": "이익집단 단계 0 (읽기 전용)",
-   "desc": "wt-ig (main 93bc0b0 코드), 20년 × 시드 1·2, 왕국 셋 평균: 전제에서 영향력·승인, 투표법 여섯마다 영향력, AI 법 바꾸기의 바뀔 확률(단계 2 규칙)·실패했을 기대 수",
+   "id": "2026-11-02-churn7",
+   "title": "짓고 허는 반복 (이슈 #7)",
+   "desc": "churndiag 20년 × 시드 1·2 (wt-churn7). 대조 = main 9ba5acc 규칙, 다시 짓기 기다림 aiRebuildWait: 생산 건물만 52·104주, 모든 종류 26·52·104주. quick2 = 지은 지 2년 안에 헐린 레벨, cycle = 짓기→헐기→짓기 확인 묶음 (lab 20년 × 시드 1·2 × salt 0..3) 은 보고서 2026-11-02-churn7-ens",
    "date": "2026-11-02",
-   "created": "2026-11-02T21:02:59",
-   "code": "ebda0b32"
-  },
-  {
-   "id": "2026-11-02-welfare9",
-   "title": "복지법 국고 고갈과 복지 상한 (이슈 #9)",
-   "desc": "main 9ba5acc, 플레이어 왕국 복지법 강제(단계 3, 5년 × 시드 1·2 × salt 0): 끔은 1~9달에 국고 0. welfareCap 0.5(세입의 단계 × 10%)는 국고를 지킨다. 단계 5·값 0.25/1 은 시드 1만",
-   "date": "2026-11-02",
-   "created": "2026-11-02T21:07:08",
-   "code": "8557806c"
-  },
-  {
-   "id": "2026-11-02-fix10",
-   "title": "공사 완공 정산 금고 상한 (이슈 #10)",
-   "desc": "settleCap 0 대 1, main 9ba5acc + 915ab53, 20년 × 시드 1·2, cli/settlediag.ts",
-   "date": "2026-11-02",
-   "created": "2026-11-02T21:07:21",
-   "code": "db7e52db"
-  },
-  {
-   "id": "2026-11-02-wagespan",
-   "title": "맞는 임금의 위 끝 배율·하루 속도 비교",
-   "desc": "wt-span (main 81494a1 + wageTargetSpan TUNE 키). ctl = span 2·속도 0.1 (기본), sp15 = span 1.5, sp3 = span 3, v20 = 속도 0.2. 20년 × 시드 1·2 × salt 0..3 (.sN = salt N), 대륙 줄. 덧붙인 지표 skRatio·lnsd6·lo6·adminSt1~3 은 lab 줄에서 계산",
-   "date": "2026-11-02",
-   "created": "2026-11-02T18:40:07",
-   "code": "73e7774d"
+   "created": "2026-11-02T21:21:30",
+   "code": "c7c8fa1a"
   },
   {
    "id": "2026-11-02-manorfix-k3",
@@ -105,6 +89,30 @@
    "code": "2d3b153d"
   },
   {
+   "id": "2026-11-02-fix10",
+   "title": "공사 완공 정산 금고 상한 (이슈 #10)",
+   "desc": "settleCap 0 대 1, main 9ba5acc + 915ab53, 20년 × 시드 1·2, cli/settlediag.ts",
+   "date": "2026-11-02",
+   "created": "2026-11-02T21:07:21",
+   "code": "db7e52db"
+  },
+  {
+   "id": "2026-11-02-welfare9",
+   "title": "복지법 국고 고갈과 복지 상한 (이슈 #9)",
+   "desc": "main 9ba5acc, 플레이어 왕국 복지법 강제(단계 3, 5년 × 시드 1·2 × salt 0): 끔은 1~9달에 국고 0. welfareCap 0.5(세입의 단계 × 10%)는 국고를 지킨다. 단계 5·값 0.25/1 은 시드 1만",
+   "date": "2026-11-02",
+   "created": "2026-11-02T21:07:08",
+   "code": "8557806c"
+  },
+  {
+   "id": "2026-11-02-ig0",
+   "title": "이익집단 단계 0 (읽기 전용)",
+   "desc": "wt-ig (main 93bc0b0 코드), 20년 × 시드 1·2, 왕국 셋 평균: 전제에서 영향력·승인, 투표법 여섯마다 영향력, AI 법 바꾸기의 바뀔 확률(단계 2 규칙)·실패했을 기대 수",
+   "date": "2026-11-02",
+   "created": "2026-11-02T21:02:59",
+   "code": "ebda0b32"
+  },
+  {
    "id": "2026-11-02-manor-k1",
    "title": "저택 지분 1단계: 플레이어 왕국 (방치)",
    "desc": "같은 실행의 왕국 1 줄 (플레이어 왕실 방치). 행정청 충원·세전 총생산",
@@ -119,6 +127,14 @@
    "date": "2026-11-02",
    "created": "2026-11-02T18:44:47",
    "code": "9d653f46"
+  },
+  {
+   "id": "2026-11-02-wagespan",
+   "title": "맞는 임금의 위 끝 배율·하루 속도 비교",
+   "desc": "wt-span (main 81494a1 + wageTargetSpan TUNE 키). ctl = span 2·속도 0.1 (기본), sp15 = span 1.5, sp3 = span 3, v20 = 속도 0.2. 20년 × 시드 1·2 × salt 0..3 (.sN = salt N), 대륙 줄. 덧붙인 지표 skRatio·lnsd6·lo6·adminSt1~3 은 lab 줄에서 계산",
+   "date": "2026-11-02",
+   "created": "2026-11-02T18:40:07",
+   "code": "73e7774d"
   },
   {
    "id": "2026-11-02-wagespeed",

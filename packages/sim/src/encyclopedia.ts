@@ -108,7 +108,7 @@ export const TUNE_EXPERIMENTAL: TuneKey[] = ['needMul',
   // AI 수정 비교 (2026-10-22, 기본 0 = 지금 동작)
   'crownGdpReserve',
   // 곡물 S/D 세계 규칙 후보 (이슈 #11, DECISIONS 7-51, 기본 0 = 끔)
-  'wageFloorWeeks', 'tenantSellRef', 'grainEatElast', 'tenantKindSigma', 'grainSurplusCap', 'surplusGrowth'];
+  'wageFloorWeeks', 'tenantSellRef', 'grainEatElast', 'tenantKindSigma'];
 
 function showTune(v: unknown): number | string {
   if (typeof v === 'number') return Number.isFinite(v) ? v : '∞';
@@ -878,6 +878,30 @@ export const ENCYCLOPEDIA: EncEntry[] = [
     rule: t('현물을 먼저 쓰고 나머지를 산다. 예산 = min(저축, 소득 이동평균 + 저축 × {0}). 돈이 모자라면 식량부터 산다.', 'Households use in-kind goods first, then buy. Budget = min(savings, income EMA + savings × {0}). When short, food is bought first.'),
     params: [p('저축 인출', 'Savings draw', () => SAVINGS_DRAW, 'pct')],
     related: ['needs', 'cash-surplus', 'wealth'], seenIn: ['pops'], source: ['market.ts collectOrders'], design: ['5'],
+  },
+  {
+    id: 'surplus-food', category: 'people', title: t('싼 곡물과 인구', 'Cheap grain and population'),
+    rule: t('곡물이 기본가보다 싸면 가계는 묶음을 다 사고 남는 돈으로 곡물을 식량 필요 × (기본가 ÷ 값 − 1) 만큼 더 사 먹는다 (최대 {0}). 필요량은 그대로이고, 더 사는 곡물은 필요 주문이 다 찬 뒤 남는 곡물만 받는다. 더 먹은 비율 × {1} 만큼 해마다 인구가 더 는다.', 'When grain is below its base price, households that have bought their whole basket spend leftover money on extra grain: food need × (base ÷ price − 1), at most {0}. Needs do not change, and the extra grain only gets what is left after all need orders are filled. Population grows faster each year by the extra share eaten × {1}.'),
+    formula: 'extra = food need (in grain) × min({0}, base ÷ price − 1);  growth += {1} × extra eaten ÷ food need (per year)',
+    params: [tune('grainSurplusCap', '더 사는 상한', 'Extra cap', 'pct'), tune('surplusGrowth', '더 먹은 비율당 연 증가', 'Yearly growth per extra share', 'pct')],
+    example: () => {
+      const price = 0.8, s0 = Math.min(TUNE.grainSurplusCap, GOODS.grain.basePrice / price - 1);
+      const units = 4 * CONSUMPTION_PER_CAPITA, needFood = needsAt(5).nourishment * units, grainBase = needFood * NEEDS[0].options[0].units;
+      return {
+        inputs: [row('곡물 값', 'Grain price', price, 'florin'), row('부', 'Wealth', 5), row('식구 4명 소비 단위', 'Units for 4 people', units)],
+        steps: [row('더 사는 비율', 'Extra share', r4(s0), 'pct'), row('식량 필요를 곡물로', 'Food need in grain', r2(grainBase)), row('더 사는 곡물', 'Extra grain', r2(grainBase * s0))],
+        result: [row('연 인구 증가 더하기', 'Added yearly growth', r4(s0 * TUNE.surplusGrowth), 'pct')],
+      };
+    },
+    live: {
+      pick: [], run: (w) => ({
+        bars: w.regions.map((r) => {
+          const ps = w.pops.filter((x) => x.regionId === r.id), n = ps.reduce((a, x) => a + x.size, 0);
+          return bar(regionLabel(r), r2(n > 0 ? ps.reduce((a, x) => a + (x.foodSurplus ?? 0) * x.size, 0) / n : 0), 'pct', 1);
+        }),
+      }),
+    },
+    related: ['orders', 'growth', 'food', 'needs'], seenIn: ['pops'], source: ['market.ts collectOrders', 'market.ts clearMarkets', 'pops.ts growthWith'], design: ['5', '3.4'],
   },
   {
     id: 'wealth', category: 'people', title: t('부와 생활수준', 'Wealth and standard of living'),

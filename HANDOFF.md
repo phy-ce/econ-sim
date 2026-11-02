@@ -9,6 +9,18 @@
 - 클라우드 세션(claude.ai/code)으로 이어서 할 수 있다. 규칙은 CLAUDE.md "클라우드 세션"을 본다.
 - 옛 세션 기록: `docs/log/` (2026-10-25 이전 HANDOFF 절은 `docs/log/HANDOFF_2026-10-18_to_10-25.md`, 날짜별 UI 기록도 여기). 다른 문서의 "HANDOFF 0-ind3"·"HANDOFF 0-aifix" 같은 옛 절 참조는 그 파일에 있다.
 
+## 0-1102-grainrule. 2026-11-02: wt-grainrule (이슈 #11 곡물 S/D, 사용자 규칙 ⑦ 기본 켬, main 3222e73 병합, main 에 합치지 않음 · premerge 대기)
+- 무엇: 곡물 S/D 1.3 을 세계 규칙으로 고치는 후보 ①~④·⑦ 을 비교했고 (`docs/overhaul/GRAIN_RULES.md`, DECISIONS 7-51), 사용자 규칙 ⑦ "싸면 더 사먹고 인구도 그만큼 더 늘게 하면안됨?" 을 기본으로 켰다.
+  한 줄 규칙: 곡물이 기본가보다 싸면 가계는 필요한 것을 다 사고 남는 돈으로 곡물을 (기본가 ÷ 값 − 1) 만큼 더 사 먹는다 (식량 필요의 최대 50%, `grainSurplusCap` 0.5). 더 먹은 비율 × 5% (`surplusGrowth` 0.05) 만큼 해마다 인구가 더 는다.
+- 코드: `market.ts` collectOrders (더 사는 곡물, `Book.extra`), clearMarkets (더 사는 곡물은 필요 주문 뒤 순서, `extraFill`), `Pop.foodSurplus` (types.ts), `pops.ts growthWith`. 실험 스위치 (기본 끔): `wageFloorWeeks`(① `Region.tenantAvg`), `tenantSellRef`(②), `grainEatElast`(③), `tenantKindSigma`(④). 사전 새 항목 `surplus-food`. README Classes "Cheap grain". DESIGN 3.4·5·11. 시험 `test/core/grainRules.test.ts` (후보 모두 켬: 화폐·저장/불러오기).
+- 시험 고침: `test/core/aiRand.test.ts` 의 `aiGrowBuilding` 이 첫 AI 생산 건물 대신 그 주에 실제로 증설 난수를 뽑는 첫 건물을 고른다. ⑦ 을 켜자 140일 첫 농장이 뽑지 않아 '증설 키 순번' 시험이 [1] 만 받았다 (세계 숫자에 기대던 시험, 시험 뜻은 그대로).
+- 값 근거 (main 3222e73 + ⑦, 20년 × 시드 1·2 × salt 0..3, 보고서 2026-11-02-grainrule): cap 0.25 / 0.5 / 1 (surplusGrowth 0.05) 곡물 S/D 5~20년차 1.09~1.24 / 1.09~1.22 / 1.09~1.22 (끔 1.12~1.41), 0.9~1.25 밖 13 / 6 / 4 (128 중, 끔 90). surplusGrowth 0.025 는 밖 18. 고른 값 0.5·0.05. 1~20년차 160 실행·해 중 153 이 0.9~1.25 안 (끔 49).
+- 해마다 (끔 / 켬, 8회 평균): S/D 1년 1.86 / 1.05, 5년 1.12 / 1.09, 10년 1.31 / 1.17, 15년 1.32 / 1.19, 20년 1.29 / 1.17. 값 0.57 / 0.99, 0.89 / 0.94, 0.74 / 0.85, 0.71 / 0.81, 0.72 / 0.83. 인구 5.00 / 5.03, 5.01 / 5.07, 5.06 / 5.24, 5.15 / 5.54, 5.31 / 5.96. 노동자 생활수준 1.02 / 1.01, 1.69 / 1.56, 1.34 / 1.32, 1.62 / 2.11, 1.99 / 2.11. 하층 식량 0.96~1.00 / 0.97~1.00. 세전 총생산 20년 1,225 / 1,903.
+- 40년 × 시드 1·2 × salt 0 (보고서 2026-11-02-grainrule40): 인구 증가율이 35~40년차 0.7~1.0%/년으로 느려지지만 멈추지 않는다 (40년차 7.51·7.58 대 끔 6.19). 40년차 노동자 생활수준 1.47·1.34 (끔 1.63·1.82), 하층 식량 0.93~0.94. 시드 2 는 25~40년차 S/D 1.25~1.34.
+- 알려진 약점: S/D 1.0 이 아니라 1.1~1.2 (손익분기 팔린 비율이 값과 무관한 뿌리, GRAIN_RULES 1장). AI 수요 전망(`outlook.ts`)은 더 사는 곡물을 모른다. 40년 뒤 인구 압력. 2년차 공구 S/D 0.57 (끔 1.20).
+- golden: 규칙 판 9 (bba6036b92c386dd, 이전 98d367876468e375). 화면: 사전 항목·README 만 바뀜. `Pop.foodSurplus` 를 화면에 보이려면 UI_CHANGES 에 따로 적어야 한다 (적지 않았다).
+- 결과 파일 (커밋 안 함): `.tmp/wt/grainrule/.tmp/gr/` (nb20.jsonl, y40.jsonl, full20all.jsonl, micro/), 그래프 `.tmp/wt/grainrule/.tmp/reports/2026-11-02-grainrule-*.png`.
+
 ## 0-1102-batch3. 2026-11-02: wt-batch3 (main ce8a5f7 에 끝난 브랜치 넷을 합침, main 에 합치지 않음 · premerge 대기)
 - 합친 순서: wt-simplify (eda0ae0) → wt-admin4 (9236717) → wt-churn7 (a6022ff) → wt-grain11 (fce2135), 골든 6877ba6. 무엇이 들어왔는지는 각 절 (0-1102j, 0-1102-admin4, 0-1102-churn7, 0-1102-grain11).
 - wt-simplify 충돌 (바탕이 main 93bc0b0 이라 저택 지분·fix10·이익집단 앞): main 의 새 키·동작은 모두 두고, 지운 키는 main ce8a5f7 에서도 죽은 곳만 지웠다. `labor.ts`: main 의 `moveRegionWages`·`marketWageTargets` 를 두고 맞는 임금 갈래만 남김 (`wageMarket`·`wageTarget`·`wageMarketRate`·`wageMarketRateUp` 갈래 뺌), `marketWageTargets` 는 이제 지역이 없거나 `Region.wages` 가 없을 때만 null (`wageTarget.test.ts` 의 스위치 null 경우 뺌, UI_CHANGES 2-79·2-86 완료 기준 고침). `market.ts nobleInvest`: `financeIdle` 확인 뺌 (키 0 이라 늘 거짓, 함수는 simplify 가 지움). `data.ts`: `settleCap` 둠, `firmCallPlan`·`crownPrivatize`·`taxCurve` 설명은 키와 함께 뺌. `ratchet` `finance.ts` [12, 5] (main +2/+2, simplify 대입 −1). README·DESIGN 7.3/10/11·HANDOFF 는 저택 지분 글과 simplify 글을 합침 (`welfareCap`·`settleCap` 행은 simplify 행 옆에 둠).

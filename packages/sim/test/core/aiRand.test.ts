@@ -91,7 +91,15 @@ describe('같은 키 같은 난수 (T5, 4.7)', () => {
   const growOf = (w: World) => traced(() => runAi(reload(w)), 'grow');
   /** 플레이어 소유 사본을 배열 맨 앞에 끼운다 (AI 는 플레이어 건물을 보지 않으므로 다른 건물이 끼어든 것과 같다) */
   const insertFront = (w: World, like: Building) => { w.buildings.unshift({ ...structuredClone(like), id: w.nextId++, companyId: 100 }); };
-  const aiGrowBuilding = (w: World) => w.buildings.find((x) => reserveRuled(x) && !w.companies.find((c) => c.id === x.companyId)!.isPlayer && !x.shrinking)!;
+  /**
+   * 이 세계의 주간 AI 가 실제로 증설 난수를 뽑는 첫 AI 생산 건물 (키 = 회사, 지역, 종류, 방식, 주, 묶음 순번).
+   * 첫 생산 건물을 그냥 고르면 세계 숫자가 바뀔 때 뽑지 않는 건물이 걸린다 (2026-11-02 wt-grainrule: ⑦ 을 켜자 140일 첫 농장이 뽑지 않았다)
+   */
+  const aiGrowBuilding = (w: World) => {
+    const drawn = new Set([...growOf(w).got.keys()].map((k) => k.split(',').slice(0, 4).join(',')));
+    const key = (x: Building) => `grow|${[keyCompany(x.companyId), keyRegion(x.regionId), keyStr(x.typeId), keyStr(x.methodId)].join(',')}`;
+    return w.buildings.find((x) => reserveRuled(x) && !w.companies.find((c) => c.id === x.companyId)!.isPlayer && !x.shrinking && drawn.has(key(x)))!;
+  };
 
   it('증설 키의 묶음 안 순번은 배열 순서로 센다: 같은 틱에 같은 키 건물 둘이 완공돼도, 다른 건물이 끼어들어도 그대로다', () => {
     const b0 = aiGrowBuilding(base);
