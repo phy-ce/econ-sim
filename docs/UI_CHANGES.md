@@ -50,7 +50,7 @@ sim 변경 반영 (main c952e65, wt-labor 병합: 지역 시장 임금·저축�
 10. **2-75 공급 ÷ 수요**: sim 대기 풀림 (`projectedSD`·`currentSD`·`mainOutput`이 main에 들어왔다). 절 본문대로 진행.
 11. **2-83 재해 칩 (낮음)**: `quakeChance` 기본 0이라 지금은 안 보인다. 사건 열은 이미 나온다. 소작지 행·지역 머리 칩만.
 12. **2-84 코드 완료**: 국영 임금 식에 웃돈이 있으면 표시. 별도 지역 표 열은 만들지 않음(선택 사항). UI_DONE 참조.
-12b. **2-85 저택 지분 (wt-manor, `TUNE.manorShares` 켜졌을 때만)**: 저택 창 주인 목록을 금융가처럼 지분 수로 (`ownershipPortfolio.ts ownershipPeople` 저택 갈래), 지분 값·수익률 한 줄, pop 창 보유 지분에 저택 지분. 끈 동안은 화면이 그대로다.
+12b. **2-87 저택 지분 (wt-manor, `TUNE.manorShares` 켜졌을 때만)**: 저택 창 주인 목록을 금융가처럼 지분 수로 (`ownershipPortfolio.ts ownershipPeople` 저택 갈래), 지분 값·수익률 한 줄, pop 창 보유 지분에 저택 지분. 끈 동안은 화면이 그대로다.
 
 정리
 13. **2-50 코드 완료**: 6c8119a (UI_DONE 참조).
@@ -1160,7 +1160,7 @@ sim 변경 (wt-research):
 - 문자열: "일"/"d" (기존 날 단위 재사용). 종류 이름과 문장은 `quakeLabel`이 준다.
 - 완료 기준: `TUNE.quakeChance = 1` 개발 세계 2년차에 칩이 나오고 사건 열 문장과 같은 % · 남은 날. 0이면 칩 없음. typecheck.
 
-### 2-85. 저택 지분 (wt-manor, DESIGN 9.3 `manorShares`·`absenteeShare`·`manorBuyScope`, 사전 `manor-shares`, DECISIONS 7-44)
+### 2-87. 저택 지분 (wt-manor, DESIGN 9.3 `manorShares`·`absenteeShare`·`manorBuyScope`, 사전 `manor-shares`, DECISIONS 7-44)
 - 상태: sim 은 스위치 뒤에 있다 (`TUNE.manorShares` 기본값은 HANDOFF 0-1102h 참조). 켜지 않으면 화면이 바꿀 것은 없다. 클라이언트 코드는 sim 작업자가 고치지 않았다.
 - sim:
   - 저택 지분은 금융가 지분과 같은 `Pop.fund` (`{ id: number[]; u: number[] }`, 건물 id 오름차순) 에 든다. 저택 id 와 금융가 id 는 겹치지 않는다. 한 pop 이 여러 저택(다른 지역·다른 왕국 포함)과 금융가 지분을 함께 가질 수 있다.

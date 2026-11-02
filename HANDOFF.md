@@ -13,7 +13,7 @@
 - 사용자 결정 (DECISIONS 7-44): 저택 = 귀족만 가지는 지분 회사, 하급 귀족은 노동자 자리에 "아예 못 감", 가문은 나중, "다른 지역 배당 디버프", 다른 지역·왕국 저택도 수익률로 산다.
 - 코드 (모두 `TUNE` 스위치 뒤, 끄면 samecheck 5개 같음: a6fd0cb 대비, main 81494a1 병합 뒤 대비): `manorShares` (finance.ts 저택 지분 절: payHolders·issueManorUnits·initManorShares·unitYield·sellManorUnits·updateManorShares, market.ts nobleInvest, economy.ts manorGentrySeats·shareWage, labor.ts isOwnerClass, production.ts updateOwnership, staffing.ts·outlook.ts 일손 셈), `absenteeShare` (finance.ts payDividends), `manorBuyScope`, `manorInvestSplit` (기본 1, AI). 시험 `test/core/manorShares.test.ts`, 래칫 표. 진단 `cli/manordiag.ts`, `cli/manorsum.py`, microcheck 절 n (귀족 하루 추적), lab 지표 gJobless·solGent·solArist·incGent·incArist·manorCash·manorNav·mflow.*.
 - 결과 (DESIGN 11 행, 보고서 2026-11-02-manor·-k1): 행정청 충원은 고친다 (플레이어 왕국 모든 해 1.00), 1~5년차 세전 총생산은 높지만 10년차 뒤 AI 왕국 둘의 성장이 대조의 절반이라 **기본 끔**. 원인은 못 찾았다 (공사 약정 감소까지만 봄). 마이크로 (3년 × 시드 1, preset labor, base·two): 화폐 어긋남 1.5e-15~2.6e-15, 하급 귀족 1인 소득은 배당 몫으로, 귀족 소득의 55~92% 가 금고 돌려주기('기타').
-- 다음 일: AI 왕국 성장 감소 진단 (DECISIONS 7-44 대기 1), 2단계 (지대를 지분 값에, 산출 보너스 대신 디버프 크기), 화면 2-85.
+- 다음 일: AI 왕국 성장 감소 진단 (DECISIONS 7-44 대기 1), 2단계 (지대를 지분 값에, 산출 보너스 대신 디버프 크기), 화면 2-87.
 - 거르기 기록: 옛 기준 (a6fd0cb 위 15183e6) 20년 비교 `.tmp/lab/m20.jsonl` (명세 specsOld), 나눠 사기·자기 지역 `.tmp/lab/m20s.jsonl` — 기준이 달라 판단 근거로 쓰지 않았다.
 
 ## 0-1102f. 2026-11-02: wt-wagespeed (임금이 고정 속도로 움직임 → 맞는 임금 쪽으로)
