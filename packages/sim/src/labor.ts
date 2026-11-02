@@ -471,18 +471,12 @@ export function clearingWage(cv: WillingCurve, jobs: number, lo: number, hi: num
   return b;
 }
 
-/**
- * 맞는 임금(TUNE.wageTarget = 2)의 위 끝 = 바깥 소득(outsideWage, × switchPremium 포함) × 이 값. 2 는 옮기는 비율이 최대(switchMax)가 되는 소득 배율
- * (1 + switchMax ÷ switchRate × (switchPremium − 1) = 2, labor.ts switchShare)에서 왔다: 바깥 소득에 switchPremium 이 들어 있어 실제 위 끝은 바깥 자리 사람이 다 오는 임금 × switchPremium
- */
-export const WAGE_TARGET_SPAN = 2;
-
 /** 가격처럼 움직이는 임금(TUNE.wageTarget = 1)의 쏠림 계수: 목표 = 바깥 소득 × (1 + 이 값 × clamp(쏠림, ±1)) (가격 공식 priceFormula 의 0.75 와 같다) */
 export const WAGE_TILT = 0.75;
 
 /**
  * 지역 시장 임금 (TUNE.wageMarket = 1, 날마다 노동시장 앞에서): 지역·직종마다
- * TUNE.wageTarget = 2 (기본): 임금 += wageTargetSpeed × (맞는 임금 − 임금) (clearingWage, 아래 끝 startWage, 위 끝 outsideWage × WAGE_TARGET_SPAN).
+ * TUNE.wageTarget = 2 (기본): 임금 += wageTargetSpeed × (맞는 임금 − 임금) (clearingWage, 아래 끝 startWage, 위 끝 outsideWage × TUNE.wageTargetSpan).
  * = 1: 목표 = outsideWage × (1 + WAGE_TILT × clamp(쏠림, ±1)). = 0: 임금 × (1 + wageMarketRate × clamp((자리 − 오려는 사람) ÷ min(자리, 오려는 사람), −1, 1)),
  * TUNE.wageMarketRateUp > 0 이면 오를 때(clamp > 0)만 그 속도.
  * 자리가 없으면 시작 임금 규칙(한 칸 아래 × switchPremium), 자격자가 아무도 없으면 움직이지 않는다. 안전 범위는 기본 임금의 MARKET_WAGE_RANGE 배.
@@ -512,7 +506,7 @@ export function updateMarketWages(w: World) {
         if (mode === 1) v += speed * (outsideWage(wages, s, tenant, local) * (1 + WAGE_TILT * x) - v);
         else if (curves) {
           const lo = startWage(wages, s, tenant);
-          const hi = Math.min(SKILL_DEFS[s].baseWage * MARKET_WAGE_RANGE[1], Math.max(lo, outsideWage(wages, s, tenant, local)) * WAGE_TARGET_SPAN);
+          const hi = Math.min(SKILL_DEFS[s].baseWage * MARKET_WAGE_RANGE[1], Math.max(lo, outsideWage(wages, s, tenant, local)) * TUNE.wageTargetSpan);
           v += speed * (clearingWage(curves[s], cell.jobs, lo, hi) - v);
         }
         else v *= 1 + (x > 0 && rateUp > 0 ? rateUp : rate) * x;

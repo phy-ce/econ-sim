@@ -913,6 +913,7 @@ export class Collector {
       // 핵심·카드 지표 (08 3.3.1)
       pop: sig(pop / M), peas: sig(div(n[CI.peasant], pop) ?? NaN), jobless: sig(div(jobless.reduce((s, v) => s + v, 0), pop) ?? NaN),
       solPeas: sig(div(sol[CI.peasant], n[CI.peasant]) ?? NaN), solUnsk: sig(div(sol[CI.unskilled], n[CI.unskilled]) ?? NaN),
+      solSkill: sig(div(sol[CI.skilled], n[CI.skilled]) ?? NaN),
       solPeasAvg: sig(div(a.solPeas, a.nPeas) ?? NaN), solUnskAvg: sig(div(a.solUnsk, a.nUnsk) ?? NaN),
       solLower: sig(lower(sol) ?? NaN), fulfil: sig(lower(ful) ?? NaN), foodLow: sig(lower(food) ?? NaN),
       foodUnsk: sig(div(food[CI.unskilled], n[CI.unskilled]) ?? NaN), foodUnskMin: a.foodUN ? sig(a.foodUMin) : null, foodUnskAvg: sig(div(a.foodU, a.foodUN) ?? NaN),

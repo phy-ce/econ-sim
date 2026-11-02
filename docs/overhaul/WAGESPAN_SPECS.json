@@ -1,0 +1,418 @@
+{
+ "about": "맞는 임금(wageTarget 2)의 위 끝 배율 wageTargetSpan 과 하루 속도 wageTargetSpeed 비교 (wt-span, main 81494a1 + wageTargetSpan TUNE 키, 기본 2 면 samecheck 5개 같음). ctl = 기본값 (span 2, 속도 0.1), sp15 = span 1.5, sp3 = span 3, v20 = 속도 0.2. 돌리기 (packages/sim 에서): PAR=6 bash cli/lab.sh <out.jsonl> ../../docs/overhaul/WAGESPAN_SPECS.json (KEY=specs10 은 10년 × 시드 1 × salt 0·1 거르기). 요약: python cli/labsum.py <out.jsonl> --compare ctl.",
+ "code": "wt-span (main 81494a1 + wageTargetSpan TUNE 키)",
+ "specs10": [
+  {
+   "item": "WAGESPAN",
+   "name": "ctl",
+   "seed": 1,
+   "salt": 0,
+   "years": 10,
+   "tune": {}
+  },
+  {
+   "item": "WAGESPAN",
+   "name": "ctl",
+   "seed": 1,
+   "salt": 1,
+   "years": 10,
+   "tune": {}
+  },
+  {
+   "item": "WAGESPAN",
+   "name": "sp15",
+   "seed": 1,
+   "salt": 0,
+   "years": 10,
+   "tune": {
+    "wageTargetSpan": 1.5
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "WAGESPAN",
+   "name": "sp15",
+   "seed": 1,
+   "salt": 1,
+   "years": 10,
+   "tune": {
+    "wageTargetSpan": 1.5
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "WAGESPAN",
+   "name": "sp3",
+   "seed": 1,
+   "salt": 0,
+   "years": 10,
+   "tune": {
+    "wageTargetSpan": 3
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "WAGESPAN",
+   "name": "sp3",
+   "seed": 1,
+   "salt": 1,
+   "years": 10,
+   "tune": {
+    "wageTargetSpan": 3
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "WAGESPAN",
+   "name": "v20",
+   "seed": 1,
+   "salt": 0,
+   "years": 10,
+   "tune": {
+    "wageTargetSpeed": 0.2
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "WAGESPAN",
+   "name": "v20",
+   "seed": 1,
+   "salt": 1,
+   "years": 10,
+   "tune": {
+    "wageTargetSpeed": 0.2
+   },
+   "control": "ctl"
+  }
+ ],
+ "specs": [
+  {
+   "item": "WAGESPAN",
+   "name": "ctl",
+   "seed": 1,
+   "salt": 0,
+   "years": 20,
+   "tune": {}
+  },
+  {
+   "item": "WAGESPAN",
+   "name": "ctl",
+   "seed": 1,
+   "salt": 1,
+   "years": 20,
+   "tune": {}
+  },
+  {
+   "item": "WAGESPAN",
+   "name": "ctl",
+   "seed": 1,
+   "salt": 2,
+   "years": 20,
+   "tune": {}
+  },
+  {
+   "item": "WAGESPAN",
+   "name": "ctl",
+   "seed": 1,
+   "salt": 3,
+   "years": 20,
+   "tune": {}
+  },
+  {
+   "item": "WAGESPAN",
+   "name": "ctl",
+   "seed": 2,
+   "salt": 0,
+   "years": 20,
+   "tune": {}
+  },
+  {
+   "item": "WAGESPAN",
+   "name": "ctl",
+   "seed": 2,
+   "salt": 1,
+   "years": 20,
+   "tune": {}
+  },
+  {
+   "item": "WAGESPAN",
+   "name": "ctl",
+   "seed": 2,
+   "salt": 2,
+   "years": 20,
+   "tune": {}
+  },
+  {
+   "item": "WAGESPAN",
+   "name": "ctl",
+   "seed": 2,
+   "salt": 3,
+   "years": 20,
+   "tune": {}
+  },
+  {
+   "item": "WAGESPAN",
+   "name": "sp15",
+   "seed": 1,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "wageTargetSpan": 1.5
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "WAGESPAN",
+   "name": "sp15",
+   "seed": 1,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "wageTargetSpan": 1.5
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "WAGESPAN",
+   "name": "sp15",
+   "seed": 1,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "wageTargetSpan": 1.5
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "WAGESPAN",
+   "name": "sp15",
+   "seed": 1,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "wageTargetSpan": 1.5
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "WAGESPAN",
+   "name": "sp15",
+   "seed": 2,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "wageTargetSpan": 1.5
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "WAGESPAN",
+   "name": "sp15",
+   "seed": 2,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "wageTargetSpan": 1.5
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "WAGESPAN",
+   "name": "sp15",
+   "seed": 2,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "wageTargetSpan": 1.5
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "WAGESPAN",
+   "name": "sp15",
+   "seed": 2,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "wageTargetSpan": 1.5
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "WAGESPAN",
+   "name": "sp3",
+   "seed": 1,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "wageTargetSpan": 3
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "WAGESPAN",
+   "name": "sp3",
+   "seed": 1,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "wageTargetSpan": 3
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "WAGESPAN",
+   "name": "sp3",
+   "seed": 1,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "wageTargetSpan": 3
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "WAGESPAN",
+   "name": "sp3",
+   "seed": 1,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "wageTargetSpan": 3
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "WAGESPAN",
+   "name": "sp3",
+   "seed": 2,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "wageTargetSpan": 3
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "WAGESPAN",
+   "name": "sp3",
+   "seed": 2,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "wageTargetSpan": 3
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "WAGESPAN",
+   "name": "sp3",
+   "seed": 2,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "wageTargetSpan": 3
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "WAGESPAN",
+   "name": "sp3",
+   "seed": 2,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "wageTargetSpan": 3
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "WAGESPAN",
+   "name": "v20",
+   "seed": 1,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "wageTargetSpeed": 0.2
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "WAGESPAN",
+   "name": "v20",
+   "seed": 1,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "wageTargetSpeed": 0.2
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "WAGESPAN",
+   "name": "v20",
+   "seed": 1,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "wageTargetSpeed": 0.2
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "WAGESPAN",
+   "name": "v20",
+   "seed": 1,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "wageTargetSpeed": 0.2
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "WAGESPAN",
+   "name": "v20",
+   "seed": 2,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "wageTargetSpeed": 0.2
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "WAGESPAN",
+   "name": "v20",
+   "seed": 2,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "wageTargetSpeed": 0.2
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "WAGESPAN",
+   "name": "v20",
+   "seed": 2,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "wageTargetSpeed": 0.2
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "WAGESPAN",
+   "name": "v20",
+   "seed": 2,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "wageTargetSpeed": 0.2
+   },
+   "control": "ctl"
+  }
+ ]
+}
