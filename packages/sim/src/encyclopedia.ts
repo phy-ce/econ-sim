@@ -1099,7 +1099,23 @@ export const ENCYCLOPEDIA: EncEntry[] = [
     rule: t('소유 건물이 받은 돈은 앉은 사람에게 몫대로 나눈다: 귀족 1명 1몫, 하급 귀족 1명 {0}몫. 노동시장은 한 사람 몫을 임금처럼 비교한다.', 'Money an owner building receives is split by shares: one per noble, {0} per gentry. The labour market compares one person\'s share like a wage.'),
     formula: 'share wage = profitEma × weight ÷ Σ seated weights',
     params: [tune('gentryShare', '하급 귀족 몫', 'Gentry share')],
-    related: ['owner-buildings', 'best-seat'], seenIn: ['region'], source: ['economy.ts shareWage', 'finance.ts payOwners'], design: ['3.2'],
+    related: ['owner-buildings', 'best-seat', 'manor-shares'], seenIn: ['region'], source: ['economy.ts shareWage', 'finance.ts payOwners'], design: ['3.2'],
+  },
+  {
+    id: 'manor-shares', category: 'ownership', title: t('저택 지분', 'Manor shares'),
+    rule: t('{0} = 1이면 저택은 금융가처럼 지분 회사다. 저택 지분은 상급·하급 귀족만 가진다. 저택이 받은 배당·지대는 금고 몫을 빼고 지분 수대로 나누고, 어디서 일하든 받는다. 귀족은 남는 현금으로 지분 값에 지분을 사고 (새 지분이 생긴다), 현금이 생활비 며칠분 아래로 내려가면 지분 값에 저택에 판다. 어느 저택을 살지는 수익률(받은 배당 ÷ 지분 값)로 고르고, 범위는 {1}. 귀족이 아니게 된 사람의 저택 지분은 저택이 되산다. 하급 귀족은 저택에 앉지 않고 노동자·농부·소작 자리에 가지 않는다. 저택·금융가가 자기 지역 밖 건물에서 받는 배당의 {2}는 그 건물 지역의 저택으로 간다.', 'With {0} = 1 a manor is a share company like a financial district. Only high nobles and gentry hold manor units. Dividends and rent the manor receives, minus the kept share, are split by units, wherever the holder works. Nobles buy units at unit value with surplus cash (new units are issued) and sell them back to the manor at unit value when cash falls below a few days of living costs. Which manor to buy is picked by yield (dividends received ÷ unit value), within {1}. Manor units of someone who stops being noble are bought back by the manor. Gentry do not sit in manors and do not take labourer, farmer or tenant jobs. {2} of the dividends a manor or district receives from buildings outside its region go to the manor of the building\'s region.'),
+    formula: 'yield = profitEma × 7 × (1 − keep) ÷ (units × unitValue); unitValue = (treasury + owned levels × level cost) ÷ units',
+    params: [tune('manorShares', '저택 지분', 'Manor shares'), tune('manorBuyScope', '살 수 있는 저택', 'Manors open to buy'), tune('absenteeShare', '부재 지주 몫', 'Absentee share', 'pct')],
+    live: {
+      pick: [], run: (w) => ({
+        rows: w.buildings.filter((b) => b.typeId === 'manor').map((b) => {
+          let u = 0;
+          for (const p of w.pops) for (let i = 0; i < (p.fund?.id.length ?? 0); i++) if (p.fund!.id[i] === b.id) u += p.fund!.u[i];
+          return row(`${regionById(w, b.regionId).name} 지분 / 지분 값`, `${regionNameEn(b.regionId)} units / unit value`, `${Math.round(u).toLocaleString()} / ${r2(b.nav ?? 1)}`);
+        }),
+      }),
+    },
+    related: ['shares', 'owner-buildings', 'owner-treasury', 'cash-surplus', 'dividends'], seenIn: ['finance', 'region'], source: ['finance.ts payHolders', 'finance.ts updateManorShares', 'finance.ts sellManorUnits', 'finance.ts unitYield', 'market.ts nobleInvest', 'finance.ts payDividends'], design: ['9.3'],
   },
   {
     id: 'reserves', category: 'ownership', title: t('유보 자산', 'Building reserves'),

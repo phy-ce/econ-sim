@@ -464,6 +464,9 @@ export function scaleBonus(level: number): number {
  * - manorTargetMult: 저택이 거두는 양을 앉은 귀족의 필요로 묶는다 (market.ts manorNeed). 0 이면 끔 (peasantKeepWeeks 를 넘는 몫을 다 거둔다).
  *   0 보다 크면 저택은 앉은 귀족 1몫의 하루 몫(shareWage)이 목표(그 지역 민간 전문가 임금 × manorTargetMult)에 모자란 만큼 × 앉은 몫 합까지만 하루에 거둔다
  * - manorGentrySeats: 저택의 하급 귀족 자리 = 상급 귀족 자리 × manorGentrySeats ÷ 100. 0 이면 끔 (일자리 없는 하급 귀족이 다 앉는다, 저택 레벨이 그만큼 커진다)
+ * - manorShares: 1 = 저택 지분 (귀족만 가지는 지분 회사, 사고·팔고·되사고·사람을 따라간다). 0 = 앉은 귀족 몫 (finance.ts manorSharesOn)
+ * - manorBuyScope: 귀족이 지분을 사는 저택의 범위 ('world' 어느 저택이든, 'kingdom' 같은 왕국, 'region' 자기 지역). 수익률이 가장 높은 곳을 산다 (AI 판단)
+ * - absenteeShare: 저택·금융가가 자기 지역 밖 건물에서 받는 배당 중 그 건물 지역 저택으로 가는 비율 (0 = 끔)
  * - landTax, pollTax, incomeTax: 세금 수준 3단계(보통)의 토지세(소작농 1인당 하루), 인두세(소작농을 뺀 1인당 하루), 소득세율(소작농을 뺀 소득).
  *   세 세율을 같은 배율로 비교했다 (빅토리아3 보통 단계 기준 ×1·×1.5·×2·×2.5, 20년 × 시드 1~4). ×2는 ×1보다 건물 레벨이
  *   10년차 약 50%, 20년차 약 13% 많고 실업이 낮다 (×1은 세금 단계를 1~5 모두 쓰지만 건물이 가장 적다). ×2.5는 노동자 생활수준이 가장 낮다
@@ -568,6 +571,15 @@ export const TUNE = {
   wealthSavLower: 1,
   manorTargetMult: 0, // 비교 전 (0 = 끔, 후보 2·3)
   manorGentrySeats: 0, // 비교 전 (0 = 끔, 후보 100·50·25)
+  // 저택 지분 (2026-11-02 사용자 결정, docs/overhaul/MANOR_SHARES.md 1단계, DECISIONS 7-43): 1 = 저택은 금융가처럼 지분 회사다. 지분(Pop.fund, 같은 건물 id 공간)은 상급·하급 귀족만 가지고,
+  // 저택 수입(배당·지대)은 지분 수대로 나눈다 (어디서 일하든). 귀족은 남는 현금으로 수익률(받은 배당 이동평균 ÷ 지분 값, 디버프 반영)이 가장 높은 저택(어느 지역·왕국이든)이나 자기 지역 금융가 지분을 사고,
+  // 현금이 생활비 cashBufferDays 일치 아래면 저택 지분을 지분 값에 저택에 판다. 귀족이 아니게 된 pop 의 저택 지분은 저택이 매주 되산다. 하급 귀족은 저택에 앉지 않고,
+  // 노동자·농부·소작 자리에 가지 못한다 (일자리가 없으면 실업으로 배당에 산다). 0 = 끔 (지금 동작, samecheck 같음)
+  manorShares: 0,
+  // 귀족이 지분을 살 수 있는 저택 (AI 판단, 2026-11-02 사용자 "수익률 계산. 단 디버프가 적용된 최종 가격으로 AI 가 판단함"): 'world' 어느 지역·왕국이든, 'kingdom' 같은 왕국, 'region' 자기 지역만
+  manorBuyScope: 'world' as 'world' | 'kingdom' | 'region',
+  // 부재 지주 몫 (2026-11-02 사용자 결정 "다른 지역 배당 디버프", DECISIONS 7-43): 저택·금융가가 자기 지역 밖 건물에서 받는 배당의 이 비율은 그 건물 지역의 저택으로 간다 (finance.ts payDividends). 0 = 끔
+  absenteeShare: 0,
   pollTax: 0.6, // 인두세: 소작농을 뺀 1인당 하루 (세금 수준 3단계 기준)
   incomeTax: 0.3,
   officeTargetDays: 30,

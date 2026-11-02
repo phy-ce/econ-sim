@@ -16,7 +16,7 @@
 // - 저택·금융가 크기 규칙(OWNERSHIP_SEATS·OWNER_SEATS_PER_LEVEL·financeStaff)은 레벨 단위의 비율이라 표 축소만으로 맞는다.
 import { ABS_LIMITS, BUILDING_BY_ID, BUILDING_TYPES, GOOD_IDS, MICRO_BUILD_SCALE, SUBSISTENCE, TAX_PEOPLE_PER_LEVEL, TICKS_PER_YEAR, TIERS, TRADING_POST, TUNE, WORKFORCE_RATIO, tradeReserveOf } from '../data';
 import { SCRIPTED_HARVESTS, SCRIPTED_QUAKES, collectionRatio, newBuilding, paysDividend, slots } from '../economy';
-import { applyStateWages, taxCapacity, updateWageIndex } from '../finance';
+import { applyStateWages, initManorShares, taxCapacity, updateWageIndex } from '../finance';
 import { createWorld } from '../index';
 import { initMarketWages, syncEmployment } from '../labor';
 import { affordableTenantWealth, affordableWealth } from '../market';
@@ -331,6 +331,8 @@ export function createMicroWorld(opts: MicroOptions = {}): World {
     f.nav = 1;
     if (n > 0) for (const p of nobles) addFund(p, f.id, ((f.cash ?? 0) * p.size) / n);
   }
+  // 저택 지분 (TUNE.manorShares): 저택 자산을 지분 값 1 의 지분으로 그 지역 귀족에게 (상급 1 : 하급 gentryShare)
+  initManorShares(w);
   aggregateHouseholds(w);
   writePool(w);
   INFO.set(w, { scale, popRatio, jobRatio, adminK, regionIds: ids, floors });

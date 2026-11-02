@@ -21,7 +21,8 @@ const EXPECTED: Record<string, [number, number]> = {
   'commands.ts': [3, 2],
   'compat.ts': [1, 2],
   'economy.ts': [4, 5],
-  'finance.ts': [10, 4],
+  // 저택 지분 (TUNE.manorShares, wt-manor): 팔기(sellManorUnits)·되사기(updateManorShares)가 저택 금고 → pop 저축 (±= 2, 대입 2)
+  'finance.ts': [12, 6],
   'kingdoms.ts': [3, 1],
   'labor.ts': [2, 0],
   // 0b 측정 도구의 고갈 처방 drain (국고 0·부채 한도, 소멸은 w.mint.retired 에 적는다). 게임 번들 밖, 개발용 충격
@@ -29,7 +30,8 @@ const EXPECTED: Record<string, [number, number]> = {
   // 마이크로 세계 시작 상태 (createMicroWorld: 시작 돈·저축·국고를 world.ts createWorld 와 같은 자리에 넣는다). 게임 번들 밖, 개발용.
   // drain 충격 (applyMicroShock, 현금 0 함정 재현 DECISIONS 7-40): 상회 현금을 레벨 주인 금고로 옮긴다 (±= 1, 대입 1)
   'lab/micro.ts': [1, 8],
-  'market.ts': [9, 3],
+  // 저택 지분 사기 (nobleInvest): pop 저축 → 저택·금융가 금고 (toTreasury) (±= 1)
+  'market.ts': [10, 3],
   'pops.ts': [8, 0],
   'production.ts': [6, 8],
   'welfare.ts': [2, 0],

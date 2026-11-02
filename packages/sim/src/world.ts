@@ -4,7 +4,7 @@ import { addFund, aggregateHouseholds, findPop, getPop, movePeople, workforce } 
 import { updateOwnership, updateSubsistence } from './production';
 import { initMarketWages, syncEmployment } from './labor';
 import { affordableTenantWealth, affordableWealth } from './market';
-import { applyStateWages, taxCapacity, updateWageIndex } from './finance';
+import { applyStateWages, initManorShares, taxCapacity, updateWageIndex } from './finance';
 import { writePool } from './round';
 import { round2 } from './rng';
 import type { Company, GoodId, Kingdom, MarketGood, PopClass, Region, Skill, World } from './types';
@@ -340,6 +340,8 @@ export function createWorld(seed = 1, opts: CreateWorldOptions = {}): World {
     f.nav = 1;
     if (n > 0) for (const p of nobles) addFund(p, f.id, ((f.cash ?? 0) * p.size) / n);
   }
+  // 저택 지분 (TUNE.manorShares): 저택 자산을 지분 값 1 의 지분으로 그 지역 귀족에게 (상급 1 : 하급 gentryShare)
+  initManorShares(w);
   aggregateHouseholds(w);
   writePool(w);
   return w;

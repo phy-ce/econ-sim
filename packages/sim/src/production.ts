@@ -112,6 +112,8 @@ export function updateOwnership(w: World) {
         if (!(per > 0) || (seats !== undefined && s === 'aristocrat')) continue;
         // 하급 귀족 자리 상한(TUNE.manorGentrySeats)이 있으면 하급 귀족은 저택을 키우지 않는다 (자리는 economy.ts manorGentrySeats)
         if (s === 'gentry' && seats !== undefined && TUNE.manorGentrySeats > 0) continue;
+        // 저택 지분(TUNE.manorShares): 하급 귀족은 저택에 앉지 않는다
+        if (s === 'gentry' && TUNE.manorShares) continue;
         let wf = 0;
         for (const p of w.pops) if (p.regionId === r.id && p.prof === s && (p.work === 0 || p.work === b.id)) wf += workforce(p);
         levels = Math.max(levels, wf / per);
