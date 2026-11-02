@@ -205,6 +205,12 @@
 - 기관 레벨당 효과 (위키 표): 구빈법 복지 지급 +20%·식량 안보 +2%·받는 pop 정치력 −15% / 임금 보조 복지 지급 +20%·식량 안보 +2%·건물 임금 목표 +10% / 노령 연금 복지 지급 +30%·식량 안보 +3%·노동 인구 비율 −1%·부양가족 소득 +20%·건물 임금 목표 +15%. 그룹 설명은 "소득이 모자란 사람에 대한 정부 지원".
 - 지급 공식(누구에게 얼마를, 어떤 생활수준을 목표로 주는지)은 확인 못 함. 이 게임은 목표 생활수준을 단계(2~4)로 직접 고르고, 모자란 소득을 채우는 규칙을 쓴다 (DESIGN 9.5).
 
+## 복지 지급과 국고 (2026-11-02 확인, 이슈 #9)
+- 국가 지출 항목: "Welfare Payments – The cost of subsidies paid to pops with wages below the threshold defined by the Social Security institution." 출처: https://vic3.paradoxwikis.com/Budget (Treasury 문서로 이어짐). 문턱의 크기·지급 비율 식은 이 문서에 없다.
+- 보유고가 비면 적자는 자동으로 국가 신용 대출이 된다. 돈이 없을 때 지출을 자동으로 줄인다는 내용은 없다 (같은 문서). 파산 선언 벌칙에 "−100% Welfare payments"(10년에 걸쳐 줄어듦)가 있다.
+- 사회 보장 기관: 기본 효과 복지 지급 +20%·식량 안보 +2%, "기관 레벨이 효과와 관료 비용을 함께 곱한다". 출처: https://vic3.paradoxwikis.com/Institutions. 구빈법·임금 보조는 레벨당 복지 지급 +20%, 노령 연금 +30% (https://vic3.paradoxwikis.com/Human_rights_laws). 그래서 빅토리아3의 복지 크기는 법 + 기관 레벨(관료 비용을 내고 올림)로 정해지고, 지급 상한이나 세입 비율 항목은 확인 못 함.
+- 게임 정의 파일 (`common/defines/00_defines.txt`, https://raw.githubusercontent.com/jink47787/Historical_MP_Series_Vic3/main/basegame-ver/common/defines/00_defines.txt, 1.13.11)에서 복지 관련 줄은 `BUILDING_WAGES_WELFARE_INCOME_FACTOR = 0.8` (복지 소득 비율만큼 건물이 보는 부를 줄여 임금 덤핑을 막는다) 하나만 찾았다. 지급 식은 확인 못 함.
+
 ## 생산 방식의 공구 (2026-10-22, 위키 List of production methods)
 출처: https://vic3.paradoxwikis.com/List_of_production_methods
 - 광산 기본 방식 곡괭이와 삽(Picks and Shovels): 상점주 500·노동자 4,500, 공구 5 투입 → 석탄 25 (철·납·유황 광산은 각 20). 기본 방식도 공구를 쓴다.

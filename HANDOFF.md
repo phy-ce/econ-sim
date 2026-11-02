@@ -5,9 +5,18 @@
 - 폴더: `C:\Users\phyju\Desktop\Coding_Desk\2026\estera economy sim`
 - 저장소: https://github.com/phy-ce/econ-sim (main). 검증된 병합마다 푸시한다(2026-10-19 사용자 지시).
 - 작업 규칙: `CLAUDE.md`. 경제 규칙 요약: `docs/DESIGN.md`. 빅토리아3 근거: `docs/VIC3_REFERENCE.md`.
-- 사용자 결정 대기: `docs/overhaul/12_DECISIONS_NEEDED.md`(Q1~Q20)와 `docs/DECISIONS.md`. 지금 답을 기다리는 것은 아래 0-1030 절 0b′ 의 "사용자 답 대기" 줄, 0-1102 의 `tenantSlack` 메모, 0-1102e 의 플레이어 왕실 국영 웃돈·하급 귀족 시작 임금 (DECISIONS 7-42), 0-1102f 의 목표 임금 규칙 확인 (DECISIONS 7-43, 기본 켬; 7-41 W1 은 이것이 대신함). 화면 작업자에게 넘길 것: `docs/UI_CHANGES.md` 맨 위 "0. 지금 할 일".
+- 사용자 결정 대기: `docs/overhaul/12_DECISIONS_NEEDED.md`(Q1~Q20)와 `docs/DECISIONS.md`. 지금 답을 기다리는 것은 아래 0-1030 절 0b′ 의 "사용자 답 대기" 줄, 0-1102 의 `tenantSlack` 메모, 0-1102e 의 플레이어 왕실 국영 웃돈·하급 귀족 시작 임금 (DECISIONS 7-42), 0-1102f 의 목표 임금 규칙 확인 (DECISIONS 7-43, 기본 켬; 7-41 W1 은 이것이 대신함), 0-1102-welfare9 의 복지 상한 (DECISIONS 7-47, 기본 끔). 화면 작업자에게 넘길 것: `docs/UI_CHANGES.md` 맨 위 "0. 지금 할 일".
 - 클라우드 세션(claude.ai/code)으로 이어서 할 수 있다. 규칙은 CLAUDE.md "클라우드 세션"을 본다.
 - 옛 세션 기록: `docs/log/` (2026-10-25 이전 HANDOFF 절은 `docs/log/HANDOFF_2026-10-18_to_10-25.md`, 날짜별 UI 기록도 여기). 다른 문서의 "HANDOFF 0-ind3"·"HANDOFF 0-aifix" 같은 옛 절 참조는 그 파일에 있다.
+
+## 0-1102-welfare9
+2026-11-02, 브랜치 `wt-welfare9` (main 9ba5acc 에서), 이슈 #9 (복지법 하나가 왕실 국고를 비운다). 합치지 않았다.
+- 측정 (지금 규칙, 새 CLI `cli/welfmon.ts`: 0b levers `m.welfareLaw.*` 조건 = 플레이어 왕국에 0일 복지법 강제·단계 3, 30일마다 국고·빚·한도·복지·세입·생활수준 한 줄, 결과 `.tmp/wt/welfare9/.tmp/welfare9/*.jsonl`, 해마다 표 `.tmp/welfare9/yearly.py`): 5년 × 시드 1 × salt 0 에서 구빈법·보편 보장은 첫 달에 국고 1,200만을 다 쓰고 (그달 복지 1,240만, 필요액 달 4,600만 = 세금·관세의 약 90배), 임금 보조는 9달째 국고 0. 5년차 빚 ÷ 한도 구빈 1.09 / 임금 1.13 / 보편 1.14, 복지 없음은 국고 1,200만 → 6,690만·빚 0. 시드 2 도 같은 모양 (구빈·보편 첫 달, 임금 9달째 국고 0, 5년차 빚 ÷ 한도 1.25 / 1.16 / 1.28, 복지 없음 5,820만). 구빈·보편에서도 소작농 생활수준은 1.00~1.05 (국고가 빈 뒤 지급이 필요의 2~5%).
+- 바뀐 것: `TUNE.welfareCap` (기본 0 = 끔, 골든 해시 c7fb7c00ef46d24c 가 main 규칙 판 6 과 같음). 켜면 하루 복지 합 ≤ 지난주 세입 ÷ 7 × welfareCap × 단계 ÷ 5 (`welfare.ts welfareCapDaily`, `payWelfare`·`welfareWeekly` 가 쓴다). 사전 `welfare` 항목에 손잡이 줄과 식, 같은 항목의 바꾸는 날 수 자리표시가 `{0}` (목표 생활수준 표를 가리켰다) → `{1}` (lawDays). `cli/report.py` LAB 에 welfareY·taxY·welTax 이름. VIC3_REFERENCE '복지 지급과 국고' 절 (지급 식은 확인 못 함).
+- 비교 (켬): DECISIONS 7-47, DESIGN 11장 `welfareCap` 행, 보고서 2026-11-02-welfare9 (`tools/reports/public/data/`, 해마다 값은 `.tmp/welfare9/y/`). 0.5 (단계 × 10%), 단계 3: 구빈·임금·보편 × 시드 1·2 여섯 실행 모두 빚 0, 5년차 국고 4,780만~5,550만 (복지 없음 5,820만·6,690만), 복지 ÷ 세금·관세 0.34 → 0.53. 단계 5 (시드 1): 0.5 국고 4,680만, 1 은 1,950만. 0.25 / 1 (단계 3): 6,060만 / 4,040만. 소작농 생활수준은 그대로 1.00~1.04, 임금 보조 노동자 생활수준은 복지 없음보다 조금 높다 (5년차 1.40·1.46 대 1.23·1.25). 켜면 AI 왕국이 보편 보장을 켜기 시작한다 (10실행 중 6, 빚 0). 끄면 `welfmon` 결과가 지금 main 과 같다 (구빈 시드 1 60달 줄이 같음).
+- 남은 것: 사용자 결정 7-47 (켤지, 값). 하루 순서(임금 → 복지)·못 낸 이자가 빚에 쌓임·복지가 총생산(국채 한도)에 들어감은 그대로다. 20년 비교는 하지 않았다.
+- 화면: 넘길 것 없음 (기본 끔). 켜면 정책 창·예산 미리보기에 상한 줄이 필요하다 (복지 내역 `drillWelfare` 의 지역 줄은 상한 전 필요액이라 줄인 몫이 smoothing 에 들어간다).
+- 검증: typecheck, test:core 24파일 80개 (새 시험 'welfareCap: 하루 지급이 상한을 넘지 않고 돈이 보존된다' 포함), `cli/golden.ts` 같음. 전체 vitest 는 돌리지 않았다.
 
 ## 0-1102k. 2026-11-02: wt-batch1 (wt-par 비교 실행 자원 + wt-uidocs UI_CHANGES 감사)
 - 바뀐 것 (wt-par a17d0f7): `cli/lab.sh`·`cli/sweep.sh` 의 `PAR` 기본이 'CPU 코어 수 − 2' 에서 '6 과 코어 수 − 2 중 작은 쪽 (최소 1)' 으로 (이 PC 16코어: 14 → 6, 클라우드 VM 약 4 vCPU: 2 그대로). `cli/lowprio.ts` (프로세스 우선순위 '보통 이하', `LOWPRIO=0` 이면 끔)를 `cli/lab.ts`·`cli/sweep.ts` 가 맨 앞에서 import 한다. CLAUDE.md '실행과 검증'에 컴퓨팅 자원 줄 (2026-11-02 사용자: PC 를 너무 많이 쓴다). 계산 결과는 같다 (우선순위·동시 실행 수만 바뀐다). 숫자: 실행 시간은 재지 않았다.
