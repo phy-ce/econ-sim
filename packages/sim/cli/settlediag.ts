@@ -1,8 +1,8 @@
 // 민간 공사 완공 정산 진단 (이슈 #10): npx tsx cli/settlediag.ts [시드] [년] ['<TUNE JSON>']
-// 해마다 한 줄 JSON (cli/report.py 가 읽는 진단 줄 꼴: run·seed·year 와 숫자 칸):
+// 해마다 한 줄 JSON (cli/report.py 가 읽는 lab 줄 꼴: run·k('all')·seed·y 와 숫자 칸, 실행 이름은 RUN 환경 변수):
 //   negDays 저택·금융가 금고가 음수인 날, low 그해 가장 낮은 저택·금융가 금고, otherNeg·otherLow 그 밖의 건물 금고(무역소)가 음수인 날·가장 낮은 값, settleN 정산에서 돈을 낸 횟수, settle 낼 돈(천), short 그중 금고에 없던 돈(천), cap settleCap 으로 못 낸 돈(천), capManor 그중 저택이 못 낸 돈(천),
 //   pooled 그해 착공 중 한 레벨을 여러 금고가 나눠 약정한 공사 수, starts 약정이 있는 착공 수,
-//   gdp 연 총생산(백만, 대륙 합), lvP 민간 건물 레벨, lvS 왕실 건물 레벨, manor·finance 연말 금고 합(백만), drift 화폐 보존 어긋남
+//   gdpY 연 총생산(백만, 대륙 합), lv.priv 민간 건물 레벨, lv.state 왕실 건물 레벨, manor·finance 연말 금고 합(백만), drift 화폐 보존 어긋남
 // 정산 흐름은 kingdoms.ts FLOW (settle.*, settleShort.*, settleN, settleCap.*) 에서 읽는다
 import './lowprio';
 import { BUILDING_BY_ID, TUNE } from '../src/data';
@@ -52,8 +52,8 @@ for (let t = 1; t <= 360 * years; t++) {
   const now = { n: f('settleN'), settle: sum('settle.'), short: sum('settleShort.'), cap: sum('settleCap.'), capManor: f('settleCap.manor') };
   const r2 = (x: number) => Math.round(x * 100) / 100;
   console.log(JSON.stringify({
-    run, seed, year: t / 360, negDays, low: Math.round(low), otherNeg, otherLow: Math.round(otherLow), settleN: now.n - prev.n, settle: r2((now.settle - prev.settle) / 1e3), short: r2((now.short - prev.short) / 1e3),
-    cap: r2((now.cap - prev.cap) / 1e3), capManor: r2((now.capManor - prev.capManor) / 1e3), pooled, starts, gdp: r2(gdp / 1e6), lvP, lvS, manor: r2(manor / 1e6), finance: r2(finance / 1e6),
+    run, k: 'all', seed, y: t / 360, negDays, low: Math.round(low), otherNeg, otherLow: Math.round(otherLow), settleN: now.n - prev.n, settle: r2((now.settle - prev.settle) / 1e3), short: r2((now.short - prev.short) / 1e3),
+    cap: r2((now.cap - prev.cap) / 1e3), capManor: r2((now.capManor - prev.capManor) / 1e3), pooled, starts, gdpY: r2(gdp / 1e6), lv: { priv: lvP, state: lvS }, manor: r2(manor / 1e6), finance: r2(finance / 1e6),
     drift: Math.abs(moneyIdentity(w) - m0) / m0,
   }));
   prev = now; negDays = 0; low = 0; otherNeg = 0; otherLow = 0; pooled = 0; starts = 0;

@@ -453,7 +453,7 @@ export function scaleBonus(level: number): number {
  * - firmCallPlan: 1 = 운영 자금의 하루 운영비를, 원료를 다 채우면 흑자인 생산 건물은 계획 운영비(지금 값·임금·일손)와 실제로 쓴 돈 중 큰 쪽으로 센다 (finance.ts opsDay, AI 판단).
  *   0 = 실제로 쓴 돈만 (현금 0 이면 운영 자금도 0 으로 보여 주인이 채우지 않는다, d964485 까지의 동작)
  * - settleCap: 1 = 민간 공사 완공 정산에서 약정 몫보다 레벨을 더 받은 저택·금융가는 금고에 있는 돈까지만 낸다 (production.ts giveLevels, 이슈 #10).
- *   0 = 금고를 보지 않고 다 뺀다 (금고가 음수가 될 수 있다)
+ *   0 = 금고를 보지 않고 다 뺀다 (금고가 음수가 될 수 있다, 915ab53 까지의 동작). 2026-11-02 기본 1 (근거: DESIGN 11, 보고서 2026-11-02-fix10)
  * - crownPrivatize: 비교용. 'all' 이면 AI 왕실이 생산 건물 모두에 민영화를 켠다 (기본 'off': 민영화는 플레이어가 켠다)
  * - taxCurve: 징수율 곡선. 'exp' = 1 − e^(−x), 'hyp' = x / (1 + x) (x = 행정청 한도 / 인구)
  * - wageMarket, wageMarketRate: 1 이면 지역·직종 시장 임금 (labor.ts updateMarketWages). wageTarget 0 이면 날마다 임금 × wageMarketRate × clamp((자리 − 오려는 사람) ÷ min(자리, 오려는 사람), −1, 1) 만큼 움직인다.
@@ -567,7 +567,7 @@ export const TUNE = {
   ownerTilt: 0.5,
   firmBufferWeeks: 2,
   firmCallPlan: 1,
-  settleCap: 0,
+  settleCap: 1,
   privatizeMargin: 2,
   privatizePayback: 10,
   crownPrivatize: 'off' as 'off' | 'all',
