@@ -10,7 +10,9 @@
 //                       [--sections abcdj]  (j = 노동시장 판정 J1~J4·M 시나리오·해마다 직종 소득 표)
 //                       (k = 상회 현금 표: 해마다 민간 상회 현금 평균·최저, 현금 0 인 날 수, 원료 충족(레벨 가중), 민간 생산 레벨·고용, 주인(저택·금융가) 금고 합, 운전자금 넣은 돈)
 //                       (m = 저택 거둠 표: 소작농 저축·부·생활수준, 상급·하급 귀족 1인 소득·부·생활수준·자리, 저택 금고·필요·거둠, 공산품 지출·소비재 공장 레벨,
-//                        민간 공사 약정, 직종 소득 순서. 조합은 --tune 으로 실행마다 바꾼다: manorTargetMult, manorGentrySeats)
+//                        민간 공사 약정, 직종 소득 순서. 조합은 --tune 으로 실행마다 바꾼다: manorTargetMult, manorGentrySeats, manorShares, absenteeShare)
+//                       (n = 귀족 하루 추적 (wt-manor 저택 지분): 날마다 상급·하급 귀족 pop 마다 일터·인원·저축·그날 소득(출처별)·저택/금융가 지분·생활수준을
+//                        <접두>-<이름>-nobles.jsonl 에 쓰고, 해마다 1인 하루 소득 최저·평균·최고, 출처별 몫(배당·지대·임금·기타), 하급 귀족 실업률, 행정청 충원, 저택 지분 값을 낸다)
 //   (빠르게: bash cli/fast.sh microcheck.ts ...)
 // 실행마다 <접두>-<이름>.jsonl 에 관측 줄(src/lab/microtrace.ts, --every 일마다: pop·건물·시장·노동시장·회사·화폐 전부)과 끝에 요약 줄 하나를 쓴다.
 // 판정은 시험 실패가 아니라 표다 (사용자: 시험은 코드 문제만 판정한다). 종료 코드는 늘 0 (실행 오류만 1).
@@ -143,6 +145,8 @@ interface ManorWeek {
   peas: Per; work: Per; arist: Per; gentry: Per;
   gSeat: number; gOther: number; gIdle: number; aSeat: number;
   cash: number; need: number; skim: number; release: number; cons: Record<string, number>; consSpend: number; consLv: number; pledge: number; privCons: number; expertW: number;
+  /** 저택 지분 (TUNE.manorShares): 저택 지분 합, 지분 값 평균, 행정청 충원 (레벨 가중) */
+  units: number; nav: number; adminSt: number;
 }
 const CONS_GOODS = ['cloth', 'furniture', 'liquor', 'luxury_cloth', 'luxury_furniture'];
 let flowLast = { skim: 0, release: 0 };
@@ -187,7 +191,12 @@ function manorWeek(w: World): ManorWeek {
   }
   const k0 = w.kingdoms[0], firm = k0 ? companyById(w, k0.privateIds[0]) : undefined;
   const expertW = firm ? wagesAt(firm, 'manor', w, w.regions[0].id).expert : NaN;
-  return { peas, work, arist, gentry, gSeat, gOther, gIdle, aSeat, cash, need, skim, release, cons, consSpend, consLv, pledge, privCons, expertW };
+  let units = 0, nav = 0, nm = 0, aS = 0, aL = 0;
+  for (const b of w.buildings) {
+    if (b.typeId === 'manor') { nav += b.nav ?? 1; nm++; for (const p of w.pops) if (p.fund) for (let i = 0; i < p.fund.id.length; i++) if (p.fund.id[i] === b.id) units += p.fund.u[i]; }
+    if (b.typeId === 'admin') { aS += b.last.staffing * b.level; aL += b.level; }
+  }
+  return { peas, work, arist, gentry, gSeat, gOther, gIdle, aSeat, cash, need, skim, release, cons, consSpend, consLv, pledge, privCons, expertW, units, nav: nm ? nav / nm : NaN, adminSt: aL ? aS / aL : NaN };
 }
 interface RegWeek { cells: number; tenants: number; workers: number; idle: number; pop: number; wage: number; tenantInc: number; grainSD: number; grainP: number; solW: number; solT: number }
 
@@ -323,7 +332,7 @@ function lagTable(r: RunResult) {
     console.log(String(Math.round(x.t / TICKS_PER_WEEK)).padEnd(5) + [f2(x.wageMkt), f2(x.wagePaid), f2(x.tenant), f2(x.wageMkt / x.tenant), f2(x.wagePaid / x.tenant), f2(x.prodEmp), f2(x.prodJobs), f2(x.office), f2(x.admin), f2(x.grain), String(x.stateStep), f2(fl)].map((v) => pad(v, 10)).join(''));
   }
 }
-export interface RunResult { lag?: LagWeek[]; def: RunDef; weeks: Week[]; days?: CashDay[]; drift: number; driftAbs: number; driftTick: number; ms: number; rows: number; hash: string; same?: boolean }
+export interface RunResult { lag?: LagWeek[]; def: RunDef; weeks: Week[]; days?: CashDay[]; nobles: NobleDay[]; drift: number; driftAbs: number; driftTick: number; ms: number; rows: number; hash: string; same?: boolean }
 
 const stateHash = (w: World) => createHash('sha1').update(JSON.stringify({ ...w, config: { ...w.config, rulesHash: '' } })).digest('hex').slice(0, 12);
 
@@ -366,6 +375,7 @@ function run(def: RunDef): RunResult {
   let drift = 0, driftAbs = 0, driftTick = 0, rows = 0;
   const shocks = [...def.shocks];
   const days: CashDay[] = [];
+  const nobles: NobleDay[] = [];
   const lag: LagWeek[] = [];
   lagFlow.v = 0;
   if (SECTIONS.includes('w')) lag.push(lagWeek(w));
@@ -379,6 +389,7 @@ function run(def: RunDef): RunResult {
     step(w);
     if (SECTIONS.includes('k')) { const cd = cashDay(w); cd.call -= call0; days.push(cd); }
     if (SECTIONS.includes('w')) { lagDay(w); if (w.tick % TICKS_PER_WEEK === 0) lag.push(lagWeek(w)); }
+    if (SECTIONS.includes('n')) nobleDay(w, nobles, file ? `${OUT}-${def.name}-nobles.jsonl` : '');
     const dev = Math.abs(moneyIdentity(w) - m0);
     const rel = dev / Math.max(1, totalMoney(w));
     if (rel > drift) { drift = rel; driftAbs = dev; driftTick = w.tick; }
@@ -394,7 +405,8 @@ function run(def: RunDef): RunResult {
   Object.assign(TUNE, tuneSaved);
   restoreMicroScale();
   Object.assign(TUNE, saved);
-  return { def, weeks, days, lag, drift, driftAbs, driftTick, ms: Date.now() - t0, rows, hash };
+  if (nobleBuf.length) { appendFileSync(`${OUT}-${def.name}-nobles.jsonl`, nobleBuf.join('\n') + '\n'); nobleBuf = []; }
+  return { def, weeks, days, lag, nobles, drift, driftAbs, driftTick, ms: Date.now() - t0, rows, hash };
 }
 
 // ---------------------------------------------------------------- 표
@@ -558,6 +570,48 @@ function quakeTable(r: RunResult) {
   }
 }
 
+/** (n) 귀족 하루 값: 상급·하급 귀족 1인 그날 소득(식구 포함)과 출처별 합, 하급 귀족 실업 비율 */
+interface NobleDay { t: number; aInc: number; gInc: number; gIdleInc: number; src: Record<string, number>; gJobless: number }
+let nobleBuf: string[] = [];
+function nobleDay(w: World, out: NobleDay[], file: string) {
+  let an = 0, ai = 0, gn = 0, gi = 0, gin = 0, gii = 0;
+  const src: Record<string, number> = {};
+  for (const p of w.pops) {
+    if ((p.prof !== 'aristocrat' && p.prof !== 'gentry') || p.size <= 0) continue;
+    if (p.prof === 'aristocrat') { an += p.size; ai += p.lastIncome; } else { gn += p.size; gi += p.lastIncome; if (p.work === 0) { gin += p.size; gii += p.lastIncome; } }
+    for (const [k, v] of Object.entries(p.incomeBreakdown ?? {})) src[`${p.prof[0]}.${k}`] = (src[`${p.prof[0]}.${k}`] ?? 0) + (v ?? 0);
+    if (file) {
+      const units: Record<string, number> = {};
+      if (p.fund) for (let i = 0; i < p.fund.id.length; i++) { const b = w.buildings.find((x) => x.id === p.fund!.id[i]); units[`${b?.typeId ?? '?'}${p.fund.id[i]}`] = p.fund.u[i]; }
+      const work = p.work ? w.buildings.find((x) => x.id === p.work)?.typeId ?? '?' : '';
+      nobleBuf.push(JSON.stringify({ t: w.tick, id: p.id, r: p.regionId, prof: p.prof, work, size: p.size, sav: p.savings, inc: p.lastIncome, src: p.incomeBreakdown ?? {}, units, sol: p.sol }));
+      if (nobleBuf.length >= 200) { appendFileSync(file, nobleBuf.join('\n') + '\n'); nobleBuf = []; }
+    }
+  }
+  out.push({ t: w.tick, aInc: an ? ai / an : NaN, gInc: gn ? gi / gn : NaN, gIdleInc: gin ? gii / gin : NaN, src, gJobless: gn ? gin / gn : NaN });
+}
+
+/** (n) 귀족 하루 추적 표: 해마다 1인 하루 소득 최저·평균·최고 (상급·하급), 실업 하급 귀족 1인 소득, 출처별 몫, 하급 귀족 실업률, 행정청 충원·저택 지분 값 (주 표본 평균) */
+function nobleTable(r: RunResult) {
+  const tag = `${r.def.name} manorShares=${TUNE_SET.manorShares ?? TUNE.manorShares} absenteeShare=${TUNE_SET.absenteeShare ?? TUNE.absenteeShare}`;
+  console.log(`
+(n) 귀족 하루 추적 [${tag}]: 1인 하루 소득 (최저/평균/최고), 실업 하급 귀족 1인, 출처별 몫 (배당·지대·임금·기타 ÷ 합), 하급 귀족 실업률, 행정청 충원, 저택 지분 값`);
+  console.log('년'.padEnd(4) + ['상급min', '상급avg', '상급max', '하급min', '하급avg', '하급max', '실업하급', '배당%', '지대%', '임금%', '기타%', '하급실업', '행정충원', '지분값'].map((c) => pad(c, 9)).join(''));
+  const yw = byYear(r);
+  for (let y = 0; y < YEARS; y++) {
+    const ds = r.nobles.filter((d) => d.t > y * TICKS_PER_YEAR && d.t <= (y + 1) * TICKS_PER_YEAR);
+    if (!ds.length) continue;
+    const st = (f: (d: NobleDay) => number) => { const v = ds.map(f).filter(Number.isFinite); return v.length ? [Math.min(...v), mean(v), Math.max(...v)] : [NaN, NaN, NaN]; };
+    const tot: Record<string, number> = {};
+    for (const d of ds) for (const [k, v] of Object.entries(d.src)) { const s = k.slice(2); tot[s] = (tot[s] ?? 0) + v; }
+    const all = Object.values(tot).reduce((a, b) => a + b, 0) || NaN;
+    const mn = yw[y].map((wk) => wk.mn).filter((x): x is ManorWeek => !!x);
+    console.log(String(y + 1).padEnd(4) + [...st((d) => d.aInc), ...st((d) => d.gInc), mean(ds.map((d) => d.gIdleInc).filter(Number.isFinite)),
+      (tot.dividends ?? 0) / all * 100, (tot.rent ?? 0) / all * 100, (tot.wages ?? 0) / all * 100, (tot.other ?? 0) / all * 100,
+      mean(ds.map((d) => d.gJobless)), mean(mn.map((x) => x.adminSt)), mean(mn.map((x) => x.nav))].map((v) => pad(f2(v), 9)).join(''));
+  }
+}
+
 /** (m) 저택 거둠 표: 해마다 평균 (1인 값은 식구 포함, 소득은 하루) */
 function manorTable(r: RunResult) {
   const yw = byYear(r);
@@ -640,6 +694,7 @@ for (const name of RUNS) {
     money: { drift: r.drift, abs: r.driftAbs, tick: r.driftTick },
     judge: SECTIONS.includes('j') ? laborJudge(r, AT, YEARS) : undefined, yearly: SECTIONS.includes('j') ? laborYearly(r, YEARS) : undefined,
     manor: SECTIONS.includes('m') ? manorTable(r) : undefined,
+    nobleTable: SECTIONS.includes('n') ? nobleTable(r) : undefined,
     cash: SECTIONS.includes('k') ? cashTable(r) : undefined,
   };
   if (OUT) appendFileSync(`${OUT}-${name}.jsonl`, JSON.stringify(summary) + '\n');

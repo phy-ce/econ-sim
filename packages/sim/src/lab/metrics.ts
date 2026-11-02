@@ -247,6 +247,8 @@ function weeklySd(xs: number[]): number {
 const sig = (x: number) => (Number.isFinite(x) ? (x === 0 || Number.isInteger(x) ? x : Number(x.toPrecision(6))) : null);
 const div = (a: number, b: number) => (b !== 0 ? a / b : null);
 const M = 1e6, K = 1e3;
+/** 저택 지분 흐름 이름 (finance.ts·market.ts 의 flow 태그) */
+const MANOR_FLOWS = ['mbuy.home', 'mbuy.away', 'mbuy.foreign', 'msell.manor', 'mbuyback.manor', 'absentee.manor'];
 
 export interface CollectorOptions { run: string; seed: number; salt: number }
 
@@ -275,6 +277,8 @@ export class Collector {
   /** 연초 금고 합 (범위별), 연초 저택 거둠 누계 (kingdoms.ts FLOW) */
   vault0: number[] = [];
   skim0 = 0;
+  /** 저택 지분 흐름 누계 (kingdoms.ts FLOW, wt-manor) 의 연초 값 */
+  mflow0: Record<string, number> = {};
   /** 건물 종류.방식별 한 해 [매출, 원료비, 임금] (대륙) */
   margin = new Map<string, [number, number, number]>();
   /** 상품별 레벨 합 (그 상품을 내는 자동 아닌 건물, capLv 와 같은 셈): 지난 연말 (처음은 시작 세계). 해마다 변화 capLvD 를 낸다 */
@@ -348,6 +352,7 @@ export class Collector {
       this.vault0[this.nk] += b.cash ?? 0;
     }
     this.skim0 = FLOW['skim.manor'] ?? 0;
+    for (const t of MANOR_FLOWS) this.mflow0[t] = FLOW[t] ?? 0;
     this.margin.clear();
     for (const a of this.acc) a.sav0.fill(0);
     for (const p of w.pops) {
@@ -817,10 +822,11 @@ export class Collector {
     // 오려는 사람 ÷ 자리. 자리 임금은 지역 시장 임금 (없으면 그 지역 고용 가중 임금, 고용이 없으면 직종 전체 임금)
     const lab = this.labourRows(w, inScope, wageOf);
     // 0b′ 5-1: 저택·금융가 금고 합, 남은 금고 공사 약정액 (약정 − 낸 공사비, finance.ts pledgeLeft 의 합), 행정청 인원·레벨
-    let vault = 0, pledge = 0, adminStaff = 0, adminLv = 0, adminSt = 0;
+    let vault = 0, pledge = 0, adminStaff = 0, adminLv = 0, adminSt = 0, manorCash = 0, manorNav = 0, manorN = 0;
     for (const b of w.buildings) {
       if (!inScope(b.regionId)) continue;
       if (isOwnerBuilding(b.typeId)) vault += b.cash ?? 0;
+      if (b.typeId === 'manor') { manorCash += b.cash ?? 0; manorNav += b.nav ?? 1; manorN++; }
       if (b.typeId === 'admin') { adminLv += b.level; adminSt += b.last.staffing * b.level; for (const s of SKILLS) adminStaff += b.employed[s]; }
     }
     for (const x of w.constructions) {
@@ -847,6 +853,8 @@ export class Collector {
     // 소득 흐름 (직종별 한 해 합, 백만)
     const cls: Record<string, Record<string, number | null>> = {};
     let welLow = 0, grossLow = 0, gdpPre = 0, taxY = 0;
+    /** 직종 한 해 소득 (복지 포함, cls.inc 와 같은 셈) */
+    const clsInc = (ci: number) => { let t = 0; for (const s of ['wages', 'dividends', 'rent', 'sales', 'other', 'welfare'] as PopIncomeSource[]) t += a.inc[ci * NS + SI[s]]; return t; };
     POP_CLASSES.forEach((c, ci) => {
       const get = (s: PopIncomeSource) => a.inc[ci * NS + SI[s]];
       const gross = get('wages') + get('dividends') + get('rent') + get('sales') + get('other');
@@ -950,6 +958,10 @@ export class Collector {
       sellDemo: a.sellDemo, marginDemo: a.marginDemo, marginBlock: a.marginBlock, marginOk: a.marginOk, lvProd: lvTot, adminStaff: sig(adminStaff / K), adminLv,
       // 0b′ A4: 행정청 레벨 가중 충원율 (연말), 징수율 해 안 최저·평균 (날마다)
       adminSt: sig(div(adminSt, adminLv) ?? NaN), taxRatioMin: sig(a.trMin), taxRatioAvg: sig(a.trSum / d),
+      // 저택 지분 (wt-manor): 하급 귀족 실업 비율·생활수준, 상급 귀족 생활수준, 1인 하루 소득 (한 해 소득 ÷ 연말 인원 ÷ 360), 저택 금고 합 (백만)·지분 값 평균
+      gJobless: sig(div(jobless[CI.gentry], n[CI.gentry]) ?? NaN), solGent: sig(div(sol[CI.gentry], n[CI.gentry]) ?? NaN), solArist: sig(div(sol[CI.aristocrat], n[CI.aristocrat]) ?? NaN),
+      incGent: sig(div(clsInc(CI.gentry), n[CI.gentry] * TICKS_PER_YEAR) ?? NaN), incArist: sig(div(clsInc(CI.aristocrat), n[CI.aristocrat] * TICKS_PER_YEAR) ?? NaN),
+      manorCash: sig(manorCash / M), manorNav: sig(div(manorNav, manorN) ?? NaN),
       // X08-H (왕국 단위 요약), 08 3.5 한계
       harvDays: a.harvDays, k4Share: sig(div(k4n, k4d) ?? NaN), lim,
       // 소작지 재해 (관측 전용): 걸린 지역·날, 못 쓰는 소작지 칸 (날 평균, 지역 합), 실업 소작농 노동 인구 (날 평균, 천 명)
@@ -1019,6 +1031,9 @@ export class Collector {
       if (methodTier(typeId, methodId) === 1) { r1 += rev; p1 += rev - inp - wage; }
     }
     const skim = (FLOW['skim.manor'] ?? 0) - this.skim0;
+    // 저택 지분 흐름 (한 해 합, 백만): 자기 지역·다른 지역(같은 왕국)·다른 왕국 저택 사기, 팔기, 되사기, 부재 지주 몫
+    const mflow: Record<string, number | null> = {};
+    for (const t of MANOR_FLOWS) mflow[t.replace('.manor', '')] = sig(((FLOW[t] ?? 0) - (this.mflow0[t] ?? 0)) / M);
     const reg: Record<string, Record<string, number | null>> = {};
     for (const r of w.regions) {
       const a = this.regions.get(r.id)!;
@@ -1027,7 +1042,7 @@ export class Collector {
     // 계층 이동 (w.mobility 의 한 해 증가, 천 명, 0 이 아닌 것만): 출발>도착. 왕국을 가리지 않는 기록이라 대륙 줄에만 낸다
     const mob: Record<string, number | null> = {};
     for (const [key, v] of Object.entries(w.mobility ?? {})) { const d = v - (this.mob0[key] ?? 0); if (d !== 0) mob[key] = sig(d / K); }
-    return { sd, sdMax, sdAvg, lo, hi, price, sup, dem, subSup, bldSup, tIn, tOut, hh, cap, capLv, capLvD, utilG, reg, sdSwing, sdSwingR, sdSwingRMax, sellG, margR, margR1: sig(r1 > 0 ? p1 / r1 / 0.2 : NaN), skim: sig(skim / M), mob };
+    return { sd, sdMax, sdAvg, lo, hi, price, sup, dem, subSup, bldSup, tIn, tOut, hh, cap, capLv, capLvD, utilG, reg, sdSwing, sdSwingR, sdSwingRMax, sellG, margR, margR1: sig(r1 > 0 ? p1 / r1 / 0.2 : NaN), skim: sig(skim / M), mob, mflow };
   }
 }
 

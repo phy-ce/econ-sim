@@ -1,0 +1,688 @@
+{
+ "about": "저택 지분 1단계 (wt-manor, 2026-11-02 사용자 결정, docs/overhaul/MANOR_SHARES.md, DECISIONS 7-43). ctl = 지금 기본값 (manorShares 0), on = manorShares 1 (manorBuyScope world, absenteeShare 0), on_p0 = on + aiStatePremium 0 (AI 왕실 국영 웃돈 끔), on_a10·on_a20 = on + 부재 지주 몫 10%·20%, on_k = on + manorBuyScope kingdom (같은 왕국 저택만). 돌리기 (packages/sim 에서): PAR=12 bash cli/lab.sh <out.jsonl> ../../docs/overhaul/MANOR_SHARES_SPECS.json (KEY=specs5 이면 5년 거르기). 요약: python cli/labsum.py <out.jsonl> --compare ctl --metrics adminSt,gJobless,incArist,incGent,solArist,solGent,solPeas,solUnsk,gdpPre,treasury,manorCash,mflow.*",
+ "code": "wt-manor (a6fd0cb + manorShares·absenteeShare·manorBuyScope 스위치, 끄면 samecheck 5개 같음)",
+ "specs5": [
+  {
+   "item": "MANOR_SHARES",
+   "name": "ctl",
+   "seed": 1,
+   "salt": 0,
+   "years": 5,
+   "tune": {},
+   "control": "ctl"
+  },
+  {
+   "item": "MANOR_SHARES",
+   "name": "ctl",
+   "seed": 2,
+   "salt": 0,
+   "years": 5,
+   "tune": {},
+   "control": "ctl"
+  },
+  {
+   "item": "MANOR_SHARES",
+   "name": "on",
+   "seed": 1,
+   "salt": 0,
+   "years": 5,
+   "tune": {
+    "manorShares": 1
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "MANOR_SHARES",
+   "name": "on",
+   "seed": 2,
+   "salt": 0,
+   "years": 5,
+   "tune": {
+    "manorShares": 1
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "MANOR_SHARES",
+   "name": "on_p0",
+   "seed": 1,
+   "salt": 0,
+   "years": 5,
+   "tune": {
+    "manorShares": 1,
+    "aiStatePremium": 0
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "MANOR_SHARES",
+   "name": "on_p0",
+   "seed": 2,
+   "salt": 0,
+   "years": 5,
+   "tune": {
+    "manorShares": 1,
+    "aiStatePremium": 0
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "MANOR_SHARES",
+   "name": "on_a10",
+   "seed": 1,
+   "salt": 0,
+   "years": 5,
+   "tune": {
+    "manorShares": 1,
+    "absenteeShare": 0.1
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "MANOR_SHARES",
+   "name": "on_a10",
+   "seed": 2,
+   "salt": 0,
+   "years": 5,
+   "tune": {
+    "manorShares": 1,
+    "absenteeShare": 0.1
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "MANOR_SHARES",
+   "name": "on_a20",
+   "seed": 1,
+   "salt": 0,
+   "years": 5,
+   "tune": {
+    "manorShares": 1,
+    "absenteeShare": 0.2
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "MANOR_SHARES",
+   "name": "on_a20",
+   "seed": 2,
+   "salt": 0,
+   "years": 5,
+   "tune": {
+    "manorShares": 1,
+    "absenteeShare": 0.2
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "MANOR_SHARES",
+   "name": "on_k",
+   "seed": 1,
+   "salt": 0,
+   "years": 5,
+   "tune": {
+    "manorShares": 1,
+    "manorBuyScope": "kingdom"
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "MANOR_SHARES",
+   "name": "on_k",
+   "seed": 2,
+   "salt": 0,
+   "years": 5,
+   "tune": {
+    "manorShares": 1,
+    "manorBuyScope": "kingdom"
+   },
+   "control": "ctl"
+  }
+ ],
+ "specs": [
+  {
+   "item": "MANOR_SHARES",
+   "name": "ctl",
+   "seed": 1,
+   "salt": 0,
+   "years": 20,
+   "tune": {},
+   "control": "ctl"
+  },
+  {
+   "item": "MANOR_SHARES",
+   "name": "ctl",
+   "seed": 1,
+   "salt": 1,
+   "years": 20,
+   "tune": {},
+   "control": "ctl"
+  },
+  {
+   "item": "MANOR_SHARES",
+   "name": "ctl",
+   "seed": 1,
+   "salt": 2,
+   "years": 20,
+   "tune": {},
+   "control": "ctl"
+  },
+  {
+   "item": "MANOR_SHARES",
+   "name": "ctl",
+   "seed": 1,
+   "salt": 3,
+   "years": 20,
+   "tune": {},
+   "control": "ctl"
+  },
+  {
+   "item": "MANOR_SHARES",
+   "name": "ctl",
+   "seed": 2,
+   "salt": 0,
+   "years": 20,
+   "tune": {},
+   "control": "ctl"
+  },
+  {
+   "item": "MANOR_SHARES",
+   "name": "ctl",
+   "seed": 2,
+   "salt": 1,
+   "years": 20,
+   "tune": {},
+   "control": "ctl"
+  },
+  {
+   "item": "MANOR_SHARES",
+   "name": "ctl",
+   "seed": 2,
+   "salt": 2,
+   "years": 20,
+   "tune": {},
+   "control": "ctl"
+  },
+  {
+   "item": "MANOR_SHARES",
+   "name": "ctl",
+   "seed": 2,
+   "salt": 3,
+   "years": 20,
+   "tune": {},
+   "control": "ctl"
+  },
+  {
+   "item": "MANOR_SHARES",
+   "name": "on",
+   "seed": 1,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "manorShares": 1
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "MANOR_SHARES",
+   "name": "on",
+   "seed": 1,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "manorShares": 1
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "MANOR_SHARES",
+   "name": "on",
+   "seed": 1,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "manorShares": 1
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "MANOR_SHARES",
+   "name": "on",
+   "seed": 1,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "manorShares": 1
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "MANOR_SHARES",
+   "name": "on",
+   "seed": 2,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "manorShares": 1
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "MANOR_SHARES",
+   "name": "on",
+   "seed": 2,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "manorShares": 1
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "MANOR_SHARES",
+   "name": "on",
+   "seed": 2,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "manorShares": 1
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "MANOR_SHARES",
+   "name": "on",
+   "seed": 2,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "manorShares": 1
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "MANOR_SHARES",
+   "name": "on_p0",
+   "seed": 1,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "manorShares": 1,
+    "aiStatePremium": 0
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "MANOR_SHARES",
+   "name": "on_p0",
+   "seed": 1,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "manorShares": 1,
+    "aiStatePremium": 0
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "MANOR_SHARES",
+   "name": "on_p0",
+   "seed": 1,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "manorShares": 1,
+    "aiStatePremium": 0
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "MANOR_SHARES",
+   "name": "on_p0",
+   "seed": 1,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "manorShares": 1,
+    "aiStatePremium": 0
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "MANOR_SHARES",
+   "name": "on_p0",
+   "seed": 2,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "manorShares": 1,
+    "aiStatePremium": 0
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "MANOR_SHARES",
+   "name": "on_p0",
+   "seed": 2,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "manorShares": 1,
+    "aiStatePremium": 0
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "MANOR_SHARES",
+   "name": "on_p0",
+   "seed": 2,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "manorShares": 1,
+    "aiStatePremium": 0
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "MANOR_SHARES",
+   "name": "on_p0",
+   "seed": 2,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "manorShares": 1,
+    "aiStatePremium": 0
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "MANOR_SHARES",
+   "name": "on_a10",
+   "seed": 1,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "manorShares": 1,
+    "absenteeShare": 0.1
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "MANOR_SHARES",
+   "name": "on_a10",
+   "seed": 1,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "manorShares": 1,
+    "absenteeShare": 0.1
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "MANOR_SHARES",
+   "name": "on_a10",
+   "seed": 1,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "manorShares": 1,
+    "absenteeShare": 0.1
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "MANOR_SHARES",
+   "name": "on_a10",
+   "seed": 1,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "manorShares": 1,
+    "absenteeShare": 0.1
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "MANOR_SHARES",
+   "name": "on_a10",
+   "seed": 2,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "manorShares": 1,
+    "absenteeShare": 0.1
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "MANOR_SHARES",
+   "name": "on_a10",
+   "seed": 2,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "manorShares": 1,
+    "absenteeShare": 0.1
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "MANOR_SHARES",
+   "name": "on_a10",
+   "seed": 2,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "manorShares": 1,
+    "absenteeShare": 0.1
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "MANOR_SHARES",
+   "name": "on_a10",
+   "seed": 2,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "manorShares": 1,
+    "absenteeShare": 0.1
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "MANOR_SHARES",
+   "name": "on_a20",
+   "seed": 1,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "manorShares": 1,
+    "absenteeShare": 0.2
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "MANOR_SHARES",
+   "name": "on_a20",
+   "seed": 1,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "manorShares": 1,
+    "absenteeShare": 0.2
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "MANOR_SHARES",
+   "name": "on_a20",
+   "seed": 1,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "manorShares": 1,
+    "absenteeShare": 0.2
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "MANOR_SHARES",
+   "name": "on_a20",
+   "seed": 1,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "manorShares": 1,
+    "absenteeShare": 0.2
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "MANOR_SHARES",
+   "name": "on_a20",
+   "seed": 2,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "manorShares": 1,
+    "absenteeShare": 0.2
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "MANOR_SHARES",
+   "name": "on_a20",
+   "seed": 2,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "manorShares": 1,
+    "absenteeShare": 0.2
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "MANOR_SHARES",
+   "name": "on_a20",
+   "seed": 2,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "manorShares": 1,
+    "absenteeShare": 0.2
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "MANOR_SHARES",
+   "name": "on_a20",
+   "seed": 2,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "manorShares": 1,
+    "absenteeShare": 0.2
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "MANOR_SHARES",
+   "name": "on_k",
+   "seed": 1,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "manorShares": 1,
+    "manorBuyScope": "kingdom"
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "MANOR_SHARES",
+   "name": "on_k",
+   "seed": 1,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "manorShares": 1,
+    "manorBuyScope": "kingdom"
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "MANOR_SHARES",
+   "name": "on_k",
+   "seed": 1,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "manorShares": 1,
+    "manorBuyScope": "kingdom"
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "MANOR_SHARES",
+   "name": "on_k",
+   "seed": 1,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "manorShares": 1,
+    "manorBuyScope": "kingdom"
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "MANOR_SHARES",
+   "name": "on_k",
+   "seed": 2,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "manorShares": 1,
+    "manorBuyScope": "kingdom"
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "MANOR_SHARES",
+   "name": "on_k",
+   "seed": 2,
+   "salt": 1,
+   "years": 20,
+   "tune": {
+    "manorShares": 1,
+    "manorBuyScope": "kingdom"
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "MANOR_SHARES",
+   "name": "on_k",
+   "seed": 2,
+   "salt": 2,
+   "years": 20,
+   "tune": {
+    "manorShares": 1,
+    "manorBuyScope": "kingdom"
+   },
+   "control": "ctl"
+  },
+  {
+   "item": "MANOR_SHARES",
+   "name": "on_k",
+   "seed": 2,
+   "salt": 3,
+   "years": 20,
+   "tune": {
+    "manorShares": 1,
+    "manorBuyScope": "kingdom"
+   },
+   "control": "ctl"
+  }
+ ]
+}
