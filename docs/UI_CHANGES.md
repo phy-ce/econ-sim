@@ -496,7 +496,7 @@ sim 대기 · 결정 대기
 - 건물 집합(2-42 `전체`/`민영`/`국영`)은 건물마다 `buildingEcon`을 구해 더한다: 돈·고용·일자리·`reserve`·`reserveCap`·`reserveWeek`·`dividendsWeek`는 합, 이익률 = `Σ day.profit / Σ day.sales` (매출 0이면 "—"), 레벨당 = `Σ profitWeek / Σ level`, 충원율 = `Σ (staffing × jobs) / Σ jobs` (일자리 가중, 일자리 0이면 "—"). `owners`는 키 (`owner === 'state'`이면 `'state'`, 아니면 `ownerBuildingId`)로 모아 `levels`·`dividendWeek`를 더하고 `share` = levels ÷ Σ level로 다시 센다. `ownerless`는 받은 건물 id별 합. client 함수 하나 `sumEcon(econs: BuildingEcon[], levels: number)`로 만든다.
 - 다시 구하는 때: 열려 있는 행·상세만, 주 1회(정산 다음 틱)면 된다. `day.*`만 매일 바뀐다.
 
-#### 2-59-2. 목록 행 (440 px 창, 2-53)
+#### 2-59-2. 목록 행 (주 창 420 px 상한, 0장 '최신 적용 기준'. 옛 2-53 440 px 고정 창은 폐기)
 - 한 행 높이 44 px, 칸 넷: 그림 32 | 이름 칸 (유연) | 막대 칸 120 | 숫자 칸 96 (오른쪽 정렬, `tabular-nums`).
 
 | 칸 | 위 줄 | 아래 줄 |
@@ -691,7 +691,7 @@ sim 변경 (wt-research):
 
 ### 2-79. 지역 시장 임금 표 (main c952e65, wt-labor 병합, DESIGN 7.3, DECISIONS 7-32·7-38, 사전 `market-wage`)
 - 2026-11-02 반영 확인 (main 81494a1): 안 됨 (커밋된 클라이언트에 지역 임금 표가 없다. `RegionExplorer.tsx:30~38` 은 인구·토지·교육 `DetailWindow` 셋뿐). 화면 작업자가 작업 중인 것으로 보인다 (커밋 전). 들어오면 아래 완료 기준으로 본다.
-- 2026-11-02 덧붙임: 소작 1인 소득 `subsistenceWage` 는 sim 준비됨 (index export, wt-sim2). 아래 2.의 "sim export가 들어오기 전에는 그리지 않는다"는 없앤다. 국영 칸 툴팁은 6., 시장 임금이 가는 쪽(목표 임금)은 2-86.
+- 2026-11-02 덧붙임: 소작 1인 소득 `subsistenceWage` 는 sim 준비됨 (index export, wt-sim2). 아래 2.는 그에 맞게 고쳤다 (옛 '그리지 않는다' 조건은 뺐다). 국영 칸 툴팁은 6., 시장 임금이 가는 쪽(목표 임금)은 2-86.
 - sim에서 바뀐 것: `TUNE.wageMarket` 1이 기본이다. 지역마다 직종마다 시장 임금이 하나 있고, 그 지역의 모든 임금 건물(왕실 생산 건물 포함)이 그 값을 준다 (`labor.ts:436 updateMarketWages`, `economy.ts:349 wagesAt`). AI 임금 판단(`ai.ts:87 adjustWages`)은 돌지 않는다. (wt-wagelag 부터 AI 민간 상회 건물은 시장 임금 × (1 + `Company.aiPremium[지역 id].off[직종]`) 를 준다. 건물 임금을 보일 때는 `Region.wages` 가 아니라 `wagesAt(c, b.typeId, w, b.regionId)` 를 읽는다, 사전 `ai-wage-premium`).
 - 쓸 필드 (모두 1인 하루 ƒ, 지역 값):
   - `Region.wages?: Record<Skill, number>` (`types.ts:527`): 지금 시장 임금. 날마다 맞는 임금 쪽으로 차이의 `wageTargetSpeed` 만큼 움직인다 (2026-11-02 wt-wagespeed, DESIGN 7.3 '목표 임금'; 그 전에는 하루 최대 ±0.25% `wageMarketRate`). 저장값은 반올림하지 않는다.
@@ -766,7 +766,7 @@ sim 변경 (wt-research):
 - 사용자 결정: 필요 없음 (자리 추천안: 일꾼 줄이 직종별 줄이라 1인 임금이 그 줄의 값이다. 별도 표를 만들지 않는다).
 
 ### 2-86. 시장 임금이 가는 쪽: 목표 임금 (main 81494a1, wt-wagespeed, DESIGN 7.3 '목표 임금', DECISIONS 7-43, 사전 `market-wage`, **sim 쪽 필요**)
-- sim에서 바뀐 것: `TUNE.wageTarget` 2 (기본), `wageTargetSpeed` 0.1. 시장 임금은 날마다 목표 임금(맞는 임금) 쪽으로 차이의 10%씩 움직인다 (`labor.ts updateMarketWages`, `:491~527`). 목표 = 아래 끝(`startWage`: 한 칸 아래 직종 × `switchPremium`, 노동자·농부는 소작 1인 소득 × `switchPremium`)과 위 끝(바깥 소득 `outsideWage` × `WAGE_TARGET_SPAN` 2, 기본 임금 × `MARKET_WAGE_RANGE` 위 끝 이하) 사이에서 오려는 사람이 자리를 채우는 가장 낮은 임금 (`clearingWage`, `:461`). 아래 끝은 최저임금이 아니다 (수렴값, 그 아래 임금도 둔다).
+- sim에서 바뀐 것: `TUNE.wageTarget` 2 (기본), `wageTargetSpeed` 0.1. 시장 임금은 날마다 목표 임금(맞는 임금) 쪽으로 차이의 10%씩 움직인다 (`labor.ts updateMarketWages`, `:485~519`, main 93bc0b0). 목표 = 아래 끝(`startWage`: 한 칸 아래 직종 × `switchPremium`, 노동자·농부는 소작 1인 소득 × `switchPremium`)과 위 끝(바깥 소득 `outsideWage` × `TUNE.wageTargetSpan` 2 (기본, `data.ts:558`, 근거는 DESIGN 11장 `wageTargetSpan` 행), 기본 임금 × `MARKET_WAGE_RANGE` 위 끝 이하) 사이에서 오려는 사람이 자리를 채우는 가장 낮은 임금 (`clearingWage`, `:461`). 아래 끝은 최저임금이 아니다 (수렴값, 그 아래 임금도 둔다).
 - 지금 화면: 목표 임금이 어디에도 없다. 플레이어는 시장 임금이 오를지 내릴지 알 수 없다. 목표 임금과 자리·오려는 사람은 sim 안에서만 세고 저장하지 않으며 index 가 내보내지 않는다 (`labor.ts` 에서 export 되는 것은 `subsistenceWage` 하나, `index.ts:15`).
 - sim 쪽 필요 (3장): `marketWageTargets(w: World, regionId: number): Record<Skill, { target: number; lo: number; hi: number; jobs: number; willing: number }> | null`. 세계를 바꾸지 않는다. `updateMarketWages` 의 `wageTarget` 2 셈과 같은 식: `lo`·`hi` 는 위 아래·위 끝 (1인 하루 ƒ), `target` 은 `clearingWage` (자리가 없으면 `startWage`, 자격자가 없으면 지금 임금), `jobs` = 그 지역 채울 수 있는 자리 (명, 지역 합계), `willing` = 지금 시장 임금에서 오려는 사람 (명, 지역 합계, `labourTable` 의 `willing`). `wageMarket` 0 이거나 `wageTarget` ≠ 2 이거나 `Region.wages` 가 없으면 `null`.
 - 화면 (sim이 들어온 뒤, 2-79 표 안):
@@ -777,7 +777,7 @@ sim 변경 (wt-research):
 - 문자열 (ko/en): "목표"/"Target", "아래 끝"/"Low end", "위 끝"/"High end", "자리"/"Jobs", "오려는 사람"/"Willing". ("바닥"/"Floor" 는 쓰지 않는다: 최저임금으로 읽힌다.)
 - 빼는 것: 없음.
 - 완료 기준: 툴팁 목표가 같은 날 `marketWageTargets` 값과 소수 둘째 자리까지 같다. 화살표 방향이 다음 날 `r.wages[s]` 변화 부호와 같다 (차이 0.5% 넘을 때). `wageTarget` 0 세계에서 화살표·툴팁 줄이 없다. typecheck.
-- 사용자 결정: 규칙 자체가 확인 대기다 (DECISIONS 7-43: 그대로 둘지, `WAGE_TARGET_SPAN`·속도를 바꿀지). 화면 설계는 규칙이 바뀌어도 같다 (목표·끝 값만 sim 이 준다). 7-42 결정 대기 1 이 (b) "플레이어 왕실에 정부 건물 지역 웃돈 손잡이"로 정해지면 그때 새 절을 쓴다.
+- 사용자 결정: 규칙 자체가 확인 대기다 (DECISIONS 7-43: 그대로 둘지, 위 끝 배율 `TUNE.wageTargetSpan`·속도 `wageTargetSpeed` 를 바꿀지. 2026-11-02 wt-span 비교에서 배율 1.5·3, 속도 0.2 모두 기본값보다 고르게 낫지 않아 2·0.1 그대로, DESIGN 11장 두 행, 보고서 2026-11-02-wagespan). 화면 설계는 규칙이 바뀌어도 같다 (목표·끝 값만 sim 이 준다). 7-42 결정 대기 1 이 (b) "플레이어 왕실에 정부 건물 지역 웃돈 손잡이"로 정해지면 그때 새 절을 쓴다.
 
 ## 3. sim 쪽 필요 사항 (Claude가 처리할 것, UI 작업자는 요청만)
 - **2-86 목표 임금 (2026-11-02, wt-wagespeed 뒤):** `marketWageTargets(w, regionId): Record<Skill, { target; lo; hi; jobs; willing }> | null` (읽기 전용, `updateMarketWages` 의 `wageTarget` 2 셈과 같은 식). 뜻·단위는 2-86.
