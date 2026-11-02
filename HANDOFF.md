@@ -5,9 +5,16 @@
 - 폴더: `C:\Users\phyju\Desktop\Coding_Desk\2026\estera economy sim`
 - 저장소: https://github.com/phy-ce/econ-sim (main). 검증된 병합마다 푸시한다(2026-10-19 사용자 지시).
 - 작업 규칙: `CLAUDE.md`. 경제 규칙 요약: `docs/DESIGN.md`. 빅토리아3 근거: `docs/VIC3_REFERENCE.md`.
-- 사용자 결정 대기: `docs/overhaul/12_DECISIONS_NEEDED.md`(Q1~Q20)와 `docs/DECISIONS.md`. 지금 답을 기다리는 것은 아래 0-1030 절 0b′ 의 "사용자 답 대기" 줄, 0-1102 의 `tenantSlack` 메모, 0-1102d 의 W1 `wageMarketRateUp` (DECISIONS 7-41), 0-1102e 의 플레이어 왕실 국영 웃돈·하급 귀족 시작 임금 (DECISIONS 7-42). 화면 작업자에게 넘길 것: `docs/UI_CHANGES.md` 맨 위 "0. 지금 할 일".
+- 사용자 결정 대기: `docs/overhaul/12_DECISIONS_NEEDED.md`(Q1~Q20)와 `docs/DECISIONS.md`. 지금 답을 기다리는 것은 아래 0-1030 절 0b′ 의 "사용자 답 대기" 줄, 0-1102 의 `tenantSlack` 메모, 0-1102e 의 플레이어 왕실 국영 웃돈·하급 귀족 시작 임금 (DECISIONS 7-42), 0-1102f 의 목표 임금 규칙 확인 (DECISIONS 7-43, 기본 켬; 7-41 W1 은 이것이 대신함). 화면 작업자에게 넘길 것: `docs/UI_CHANGES.md` 맨 위 "0. 지금 할 일".
 - 클라우드 세션(claude.ai/code)으로 이어서 할 수 있다. 규칙은 CLAUDE.md "클라우드 세션"을 본다.
 - 옛 세션 기록: `docs/log/` (2026-10-25 이전 HANDOFF 절은 `docs/log/HANDOFF_2026-10-18_to_10-25.md`, 날짜별 UI 기록도 여기). 다른 문서의 "HANDOFF 0-ind3"·"HANDOFF 0-aifix" 같은 옛 절 참조는 그 파일에 있다.
+
+## 0-1102f. 2026-11-02: wt-wagespeed (임금이 고정 속도로 움직임 → 맞는 임금 쪽으로)
+- 사용자: "임금이나 상품 가격이나 속도가 무조건 일정 속도로 변화하는건 말이 안됨. 수요-공급 차에 따라서 숫자가(하한/상한 수렴값은 존재함) 변하게 해야지". 가격은 이미 목표가(기본가 25~175%)로 거리의 3%씩 가므로 그대로, 임금만 바꿨다.
+- 바뀐 것: `TUNE.wageTarget` (0 = 옛 하루 0.25%, 1 = 바깥 소득 기준 쏠림 비교용, 2 = 맞는 임금 기본), `TUNE.wageTargetSpeed` 0.1. `labor.ts clearingWage`·`willingAt`·`WillingCurve`·`outsideWage`·`WAGE_TARGET_SPAN` 2·`WAGE_TILT` 0.75, `labourTable` 에 선택 인자 `curves`. 끄면 samecheck 5개 같음 (0f23b14). 시험 `test/core/wageTarget.test.ts` (맞는 임금 식, 1·2 의 화폐 보존·저장/불러오기·범위). `test/core/budget.test.ts` 세금 단계 미리보기 허용 오차 0.08 → 0.1 (시드 42 단계 5 오차 8.4%, 임금이 한 주 안에 더 움직인다). `cli/microcheck.ts` (w) 절에 날마다 지역 0 시장 임금 기록 (`-w.json` 의 `days`). 사전 `market-wage`, DESIGN 7.3·11장, DECISIONS 7-43 (7-41 은 이것이 대신함), UI_CHANGES 2-79 한 줄 고침 (화면 변경 없음).
+- 1차 (위 끝 = 기본 임금 × 10) 실패: 기술자 자리가 자격자보다 많으면 기술자 자격의 전문가·하급 귀족까지 끌어오는 임금으로 올라 기술자 임금이 노동자의 6~11배, 10년차부터 생산 레벨 대조의 약 60%. 위 끝을 바깥 소득 × 2 로 묶어 고쳤다.
+- 숫자: DESIGN 11장 `wageTarget`·`wageTargetSpeed` 행, 보고서 2026-11-02-wagespeed (명세 `docs/overhaul/WAGESPEED_SPECS.json` specs·specs2, 결과 `.tmp/wt/wagespeed/.tmp/ws/y20.jsonl`·`y20c2.jsonl`, 요약 `.tmp/ws/sum.py`). 마이크로 (`.tmp/ws/micro/`, 3년 시드 1, base·drought·people·jobs·cloth): 노동자 임금 < 소작 소득인 주 76~117/154 → 3~10/154, 직종 순서 5실행 모두 맞음. 성능: `updateMarketWages` 하루 0.46 → 0.50ms (step 7ms 중, `fast.sh perf.ts 2`).
+- 남은 것: 10·15년차 세전 총생산 −12% (원인 확인 못 함), 10~20년차 S/D 조금 더 벌어짐, 20년차 소작 생활수준 낮음. `WAGE_TARGET_SPAN` 2 는 근거 없음 (다른 값 안 돌림). 골든 해시가 바뀐다 (합친 뒤 `npm run golden:update`). main 에 합치지 않음 (premerge 대기).
 
 ## 0-1102e. 2026-11-02: wt-admin (행정청 충원 0, 세습 관료가 저택으로 떠남)
 - 진단: `.tmp/wt/admin/.tmp/admin/RESULT.md` (main b1bd1fa, 새 도구 `cli/admindiag.ts`: 매주 표본의 해 평균, `--every N` 지역별, `--micro N` 마이크로). 세습 관료제 행정청(왕국마다 수도 한 지역)의 하급 귀족은 저택의 하급 귀족 1인 몫과 비교해 떠난다. 저택 이익 이동평균이 0 에서 시작해 첫 120일 동안 시장 하급 귀족 임금이 4.14 → 3.07 로 내리고, 그 뒤 저택 몫이 국영 임금의 1.5~3배가 되어 150~210일에 행정청이 빈다. 시장 임금(하루 0.25%)과 A2 국영 임금 단계(5단계 × 1.3)로는 1년 안에 못 따라간다. 1년차 충원 평균 0.39~0.44 (10년 × 시드 1·2, AI 왕국). 인쇄술은 1년차에 알지만 종이가 없어 전문 관료제로 못 바꾼다. 마이크로(인구 2,000)는 저택 자리 정수 효과로 재현되지 않았다.
@@ -21,7 +28,7 @@
 - 바뀐 것 (2fbc1de 스위치, 끄면 samecheck 5개 같음 → 그다음 커밋에서 A1·A2 기본 켬):
   - A1 `aiWagePremium` 1 (기본): 민간 AI 상회가 사람이 빠지는 이익 지역에 웃돈 (`ai.ts adjustPremium`, `Company.aiPremium`, `economy.ts wagesAt`, DESIGN 7.3·10장). DECISIONS 7-39 (플레이어 왕실 웃돈)과 별개.
   - A2 `aiAdminWage` 2 (기본): 왕실이 행정청·건축사무소 충원 중 낮은 쪽이 0.9 아래면 국영 임금 단계를 올리고 내리지 않는다 (옛 `aiAdminWage` 1 에 모드를 더함, 새 키 없음).
-  - W1 `wageMarketRateUp` (기본 0 = 끔, DECISIONS 7-41 결정 대기): 오를 때만 하루 속도.
+  - W1 `wageMarketRateUp` (기본 0 = 끔, DECISIONS 7-41; 2026-11-02 wt-wagespeed 부터 wageTarget 0 일 때만 쓰임, 7-43 이 대신함): 오를 때만 하루 속도.
   - 마이크로 흉작 충격 `microcheck --runs drought` (`economy.ts SCRIPTED_HARVESTS`, `--droughtcut`·`--droughtdays`), 표 `--sections w`. 시험 `test/core/wageLag.test.ts`.
 - 숫자: DESIGN 11장 `aiWagePremium`·`aiAdminWage`·`wageMarketRateUp` 행, 보고서 2026-11-02-wagelag (20년 × 시드 1·2 × salt 0..3, 명세 `docs/overhaul/WAGELAG_SPECS.json`). 대조 → A1+A2 세전 총생산 8회 평균 1·5·10·20년차 148/454/571/824 → 170/466/696/1,064. 결과 파일: `.tmp/wagelag/` (lab20.jsonl, y1_*.jsonl, micro/).
 - 남은 것: 가뭄 지역 국영 건축사무소는 A2 로 못 고친다 (국영 임금 단계가 왕국 하나). 행정청 충원 0 (세습 관료 이탈, 0b′ A4)은 그대로 → 0-1102e (wt-admin `aiStatePremium`)에서 AI 왕실은 고침, 플레이어 왕실은 DECISIONS 7-42 대기. 3~5년차 생산 레벨이 대조보다 적다. 국고·징수율이 15~20년차에 낮다. A1·A2 기본을 바꿔 골든 해시가 바뀐다 (합친 뒤 `npm run golden:update`). 화면: 따로 넘길 것 없음. 클라이언트는 `wagesAt` 을 부르지 않고 AI 상회 임금표를 보여 주지 않는다 (`Wages` 는 플레이어 회사 `me.wages`, CompanyPanel.tsx:325). 건물 임금 비용 `econ.day.wages` 는 웃돈이 든 실제 지급액이고, 회사 임금표 `Company.wages` (`syncCompanyWages`, `wagesAt` 의 고용 가중 평균)에도 웃돈이 들어간다. 사전 항목 `ai-wage-premium`.
