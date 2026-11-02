@@ -1,7 +1,6 @@
-import { EDUCATION_FLOOR, EDUCATION_RANGE, GOOD_IDS, SKILL_DEFS, TICKS_PER_WEEK, TUNE, getMethod } from './data';
-import { round2 } from './rng';
+import { EDUCATION_FLOOR, EDUCATION_RANGE, GOOD_IDS, TICKS_PER_WEEK, getMethod } from './data';
 import { roundAll, writePool } from './round';
-import { colonyPopulation, colonySol, marketWage, prospect, totalMoney, unemploymentRate } from './economy';
+import { colonyPopulation, colonySol, prospect, totalMoney, unemploymentRate } from './economy';
 import { runAi } from './ai';
 import { updateLaws } from './policy';
 import { payWelfare } from './welfare';
@@ -37,7 +36,6 @@ export function step(w: World, commands: QueuedCommand[] = []): string[] {
   updateLaws(w);
   updateSubsistence(w);
   updateIdleOffices(w);
-  applyWagePolicy(w);
   updateMarketWages(w);
   chargeInterest(w);
   doResearch(w);
@@ -77,19 +75,6 @@ export function step(w: World, commands: QueuedCommand[] = []): string[] {
   // 화면 표시용 사본 (round.ts)
   writePool(w);
   return errors;
-}
-
-/** 시장임금 정책을 쓰는 회사(플레이어)의 임금을 매일 시장에 맞춘다 */
-function applyWagePolicy(w: World) {
-  // TUNE.wageMarket = 1: 플레이어 임금은 지역 시장 임금 × (1 + 웃돈)이다 (economy.ts wagesAt). 대표 임금표는 updateMarketWages 가 맞춘다
-  if (TUNE.wageMarket) return;
-  for (const c of w.companies) {
-    if (!c.wageOffset) continue;
-    for (const s of SKILLS) {
-      const base = SKILL_DEFS[s].baseWage;
-      c.wages[s] = round2(Math.min(base * 10, Math.max(base * 0.1, marketWage(w, s, c.id) * (1 + c.wageOffset[s]))));
-    }
-  }
 }
 
 /** 교육 접근도(0..1)는 매일 학교가 감당하는 인구 비율을 향해 천천히 움직인다 (문해력과 같은 속도) */

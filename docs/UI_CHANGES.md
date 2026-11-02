@@ -694,14 +694,14 @@ sim 변경 (wt-research):
 ### 2-79. 지역 시장 임금 표 (main c952e65, wt-labor 병합, DESIGN 7.3, DECISIONS 7-32·7-38, 사전 `market-wage`)
 - 2026-11-02 반영 확인 (main 81494a1): 안 됨 (커밋된 클라이언트에 지역 임금 표가 없다. `RegionExplorer.tsx:30~38` 은 인구·토지·교육 `DetailWindow` 셋뿐). 화면 작업자가 작업 중인 것으로 보인다 (커밋 전). 들어오면 아래 완료 기준으로 본다.
 - 2026-11-02 덧붙임: 소작 1인 소득 `subsistenceWage` 는 sim 준비됨 (index export, wt-sim2). 아래 2.는 그에 맞게 고쳤다 (옛 '그리지 않는다' 조건은 뺐다). 국영 칸 툴팁은 6., 시장 임금이 가는 쪽(목표 임금)은 2-86.
-- sim에서 바뀐 것: `TUNE.wageMarket` 1이 기본이다. 지역마다 직종마다 시장 임금이 하나 있고, 그 지역의 모든 임금 건물(왕실 생산 건물 포함)이 그 값을 준다 (`labor.ts:485 updateMarketWages`, `economy.ts:367 wagesAt`). AI 임금 판단(`ai.ts:87 adjustWages`)은 돌지 않는다. (wt-wagelag 부터 AI 민간 상회 건물은 시장 임금 × (1 + `Company.aiPremium[지역 id].off[직종]`) 를 준다. 건물 임금을 보일 때는 `Region.wages` 가 아니라 `wagesAt(c, b.typeId, w, b.regionId)` 를 읽는다, 사전 `ai-wage-premium`).
+- sim에서 바뀐 것: `TUNE.wageMarket` 1이 기본이다 (스위치 `wageMarket` 은 2026-11-02 wt-simplify 1-E 에서 지웠다: 지역 시장 임금만 남음). 지역마다 직종마다 시장 임금이 하나 있고, 그 지역의 모든 임금 건물(왕실 생산 건물 포함)이 그 값을 준다 (`labor.ts:485 updateMarketWages`, `economy.ts:367 wagesAt`). AI 임금 판단(`ai.ts:87 adjustWages`)은 돌지 않는다. (wt-wagelag 부터 AI 민간 상회 건물은 시장 임금 × (1 + `Company.aiPremium[지역 id].off[직종]`) 를 준다. 건물 임금을 보일 때는 `Region.wages` 가 아니라 `wagesAt(c, b.typeId, w, b.regionId)` 를 읽는다, 사전 `ai-wage-premium`).
 - 쓸 필드 (모두 1인 하루 ƒ, 지역 값):
   - `Region.wages?: Record<Skill, number>` (`types.ts:527`): 지금 시장 임금. 날마다 맞는 임금 쪽으로 차이의 `wageTargetSpeed` 만큼 움직인다 (2026-11-02 wt-wagespeed, DESIGN 7.3 '목표 임금'; 그 전에는 하루 최대 ±0.25% `wageMarketRate`). 저장값은 반올림하지 않는다.
   - `Region.wageAvg?: Record<Skill, number>` (`:529`): `wages`의 52주 이동평균 (`WAGE_AVG_DAYS` 364일, 날마다 1/364씩 다가감). AI 투자 판단 임금.
   - `Region.stateWages?: Record<Skill, number>` (`:531`): 그 지역 정부 건물(행정청·건축사무소·학교)의 국영 임금 = `wages` × 국영 임금 단계 배율, 매주, 소수 둘째 자리로 저장 (`finance.ts:147~151`).
   - 소작 1인 소득: `subsistenceWage(w, r)` (`labor.ts:93`). 소작농 1인 하루 소득 가치 (판매 대금 − 지대·토지세 + 쓴 현물, 기상 조건 포함). 노동자·농부 시작 임금과 고용 0 대체값의 기준 (× `switchPremium` 1.1). **sim 준비됨 (`subsistenceWage`, wt-sim2).**
   - 실업: `regionUnemployment(world, r.id, s)` (`economy.ts:726`, 0~1, 노동 인구 기준).
-  - 세 `Region` 칸은 `wageMarket` 0이거나 옛 저장의 첫날이면 없다 (`undefined`).
+  - 세 `Region` 칸은 옛 저장의 첫날이면 없다 (`undefined`). (`wageMarket` 0 세계는 스위치를 지워 없어졌다, wt-simplify 1-E)
 - 지금 화면: 지역 시장 임금이 어디에도 없다. 지역 개요 칸(`RegionPanel.tsx:96~113`)에는 임금이 없고, 재정 창의 `Wages`(`CompanyPanel.tsx:326~349`)가 보이는 "시장임금"은 `marketWage(world, s, me.id)` (`economy.ts:716`) = 세계 전체(다른 왕국 포함) 회사들의 고용 가중 평균이라 어느 지역의 지급액도 아니다 (2-81).
 - 바꿀 것:
   1. 지역 개요 원장 `RegionExplorer.tsx:35~38` (교육 `DetailWindow` 다음)에 `DetailWindow` 하나: 제목 "임금", 요약 `ƒ{r.wages.unskilled}` (노동자 시장 임금). `r.wages`가 없으면 이 창을 그리지 않는다. 다른 왕국 지역도 그대로 보인다 (읽기 전용).
@@ -712,7 +712,7 @@ sim 변경 (wt-research):
   6. (2026-11-02 wt-admin) 국영 칸 툴팁: 식 하나. `시장 임금 ƒa × 단계 b` 이고, 그 지역 왕실의 국영 웃돈 `p = companyById(world, kingdom.governmentId)?.statePremium?.[r.id]?.[s]` 가 > 0 이면 `× (1 + 웃돈 p)` 를 붙인다 (`BudgetJobs.tsx:12` 와 같은 꼴, 문자열 `T.marketWage`·`T.stage`·`T.wagePremium` 재사용). 단계 b = `TUNE.govWageLevels[kingdom.budget.wages − 1]` (`kingdom` = 그 지역의 왕국). `Region.stateWages` 는 이미 웃돈이 든 값이라 칸 숫자는 그대로 읽는다 (`types.ts:540`). 플레이어 왕실은 웃돈이 없다 (DECISIONS 7-42 결정 대기 1).
 - 문자열 (ko/en): "임금"/"Wages", "시장 임금"/"Market wage" (`T.marketWage` 재사용 가능), "52주 평균"/"52-week avg", "국영"/"State", "소작 1인 소득"/"Tenant income / head", "실업"/"Unemployment" (재사용), 툴팁 "노동자 ÷ 소작"/"Labourer ÷ tenant".
 - 빼는 것: 없음.
-- 완료 기준: 같은 날 표의 값이 `r.wages`·`r.wageAvg`·`r.stateWages`를 소수 둘째 자리로 반올림한 값과 같다. `TUNE.wageMarket = 0` 세계에서 창이 없다. 420×560 창에서 다섯 열이 넘치지 않는다 (ko/en). 다크 모드에서 실업 막대가 보인다. typecheck.
+- 완료 기준: 같은 날 표의 값이 `r.wages`·`r.wageAvg`·`r.stateWages`를 소수 둘째 자리로 반올림한 값과 같다. `Region.wages` 가 없으면 (옛 저장의 첫날) 창이 없다. 420×560 창에서 다섯 열이 넘치지 않는다 (ko/en). 다크 모드에서 실업 막대가 보인다. typecheck.
 - 사용자 결정: 필요 없음. 자리는 추천안이다: 지역 개요가 지역 사실을 모으는 곳이고 시장 임금은 지역 값이다. 노동 상세(`Workforce.tsx`)는 건물 하나의 일꾼 표라 지역 표를 넣을 자리가 아니다.
 
 ### 2-82. 저축과 부 이동 (main c952e65, DESIGN 5장 부 이동, DECISIONS 7-37·7-38, sim 준비됨 (`wealthDrivers`, wt-sim2))
@@ -752,7 +752,7 @@ sim 변경 (wt-research):
   1. `Workforce` 줄 끝에 1인 하루 임금 칸 하나 (`NumericValue format="money"`). 줄 격자 `workspace.css:168` 의 세 칸 → 네 칸 (`... auto auto`).
      - 배당 자리(`paysShare(b, s)` 가 참, 동전 아이콘이 이미 붙는 줄): "—" (임금이 없다).
      - 소작지 줄: `subsistenceWage(world, region)` (소작 1인 소득, 주마다 다시 셈: `Math.floor(world.tick / 7)` 키). 2-79 표의 "소작 1인 소득"과 같은 값.
-     - `Region.wages` 가 없는 세계(`wageMarket` 0, 옛 저장의 첫날)는 `wagesAt` 이 회사 임금표를 돌려준다. 그대로 쓴다.
+     - `Region.wages` 가 없는 세계(옛 저장의 첫날)는 `wagesAt` 이 회사 임금표를 돌려준다. 그대로 쓴다.
   2. 웃돈 칩: 그 줄의 웃돈 `p` 가 0.005 이상이면 임금 옆에 `+{pct(p)}` 작은 칩 (라벨 없음, 툴팁만). 색은 중립(강조색 한 가지). 오르면 좋음/나쁨 색을 쓰지 않는다 (일꾼에게는 좋고 주인에게는 나쁘다).
      - AI 민간 상회: `p = owner.aiPremium?.[b.regionId]?.off[s] ?? 0`.
      - 왕실 정부 건물(`owner.state && isGovernment(b.typeId)`): `p = owner.statePremium?.[b.regionId]?.[s] ?? 0`.
@@ -769,7 +769,7 @@ sim 변경 (wt-research):
 - sim 준비됨 (2026-11-02 wt-uiapi 확인, 새 export 필요 없음): `wagesAt` (`economy.ts:367`), `paysShare` (`economy.ts:478`), `isGovernment` (`economy.ts:350`), `companyById` (`economy.ts:872`), `regionById` (`economy.ts:16`) 는 `index.ts:3` `export * from './economy'` 로, `subsistenceWage` (`labor.ts:93`) 는 `index.ts:15` 로 나간다. 웃돈은 `Company.aiPremium`·`statePremium` (`types.ts`), 단계 배율은 `TUNE.govWageLevels` (`data.ts:651`).
 
 ### 2-86. 시장 임금이 가는 쪽: 목표 임금 (main 81494a1, wt-wagespeed, DESIGN 7.3 '목표 임금', DECISIONS 7-43, 사전 `market-wage`, sim 준비됨)
-- sim에서 바뀐 것: `TUNE.wageTarget` 2 (기본), `wageTargetSpeed` 0.1. 시장 임금은 날마다 목표 임금(맞는 임금) 쪽으로 차이의 10%씩 움직인다 (`labor.ts updateMarketWages` `:485~498`, 지역 하나의 셈은 `moveRegionWages` `:507~538`, wt-uiapi 에서 나눔). 목표 = 아래 끝(`startWage`: 한 칸 아래 직종 × `switchPremium`, 노동자·농부는 소작 1인 소득 × `switchPremium`)과 위 끝(바깥 소득 `outsideWage` × `TUNE.wageTargetSpan` 2 (기본, `data.ts:568`, 근거는 DESIGN 11장 `wageTargetSpan` 행), 기본 임금 × `MARKET_WAGE_RANGE` 위 끝 이하) 사이에서 오려는 사람이 자리를 채우는 가장 낮은 임금 (`clearingWage`, `:461`). 아래 끝은 최저임금이 아니다 (수렴값, 그 아래 임금도 둔다).
+- sim에서 바뀐 것: `TUNE.wageTarget` 2 (기본, 스위치는 2026-11-02 wt-simplify 1-E 에서 지워 맞는 임금 규칙만 남음), `wageTargetSpeed` 0.1. 시장 임금은 날마다 목표 임금(맞는 임금) 쪽으로 차이의 10%씩 움직인다 (`labor.ts updateMarketWages` `:485~498`, 지역 하나의 셈은 `moveRegionWages` `:507~538`, wt-uiapi 에서 나눔). 목표 = 아래 끝(`startWage`: 한 칸 아래 직종 × `switchPremium`, 노동자·농부는 소작 1인 소득 × `switchPremium`)과 위 끝(바깥 소득 `outsideWage` × `TUNE.wageTargetSpan` 2 (기본, `data.ts:568`, 근거는 DESIGN 11장 `wageTargetSpan` 행), 기본 임금 × `MARKET_WAGE_RANGE` 위 끝 이하) 사이에서 오려는 사람이 자리를 채우는 가장 낮은 임금 (`clearingWage`, `:461`). 아래 끝은 최저임금이 아니다 (수렴값, 그 아래 임금도 둔다).
 - 지금 화면: 목표 임금이 어디에도 없다. 플레이어는 시장 임금이 오를지 내릴지 알 수 없다. 목표 임금과 자리·오려는 사람은 sim 안에서만 세고 저장하지 않는다 (화면은 아래 `marketWageTargets` 로 읽는다).
 - sim 준비됨 (2026-11-02 wt-uiapi): `marketWageTargets(w: World, regionId: number): Record<Skill, WageTarget> | null` (`labor.ts:549`, index `index.ts:15`, 타입 `WageTarget = { target; lo; hi; jobs; willing }` `labor.ts:501`, index `index.ts:16`). 세계를 바꾸지 않는다 (`updateMarketWages` 와 같은 `moveRegionWages` 를 지역 임금표 사본에 돌린다. 위 직종의 아래 끝은 아래 직종이 그날 움직인 뒤 값, `updateMarketWages` 와 같다. 시험 `test/core/wageTarget.test.ts:72`·`readonly.test.ts`, 골든 같음). 그 지역이 없어도 `null`. `updateMarketWages` 의 `wageTarget` 2 셈과 같은 식: `lo`·`hi` 는 위 아래·위 끝 (1인 하루 ƒ), `target` 은 `clearingWage` (자리가 없으면 `startWage`, 자격자가 없으면 지금 임금), `jobs` = 그 지역 채울 수 있는 자리 (명, 지역 합계), `willing` = 지금 시장 임금에서 오려는 사람 (명, 지역 합계, `labourTable` 의 `willing`). `wageMarket` 0 이거나 `wageTarget` ≠ 2 이거나 `Region.wages` 가 없으면 `null`.
 - 화면 (sim이 들어온 뒤, 2-79 표 안):
@@ -779,7 +779,7 @@ sim 변경 (wt-research):
 - 이유 (추천안): 이 규칙에서 임금이 움직이는 까닭을 숫자 하나로 보여 주는 것이 목표 임금이다. 420×560 창에 2-79 의 다섯 열이 이미 차 있어 열을 늘리지 않고 아이콘 + 툴팁으로 둔다. 버린 안: "목표" 열 추가 (영어에서 넘침), 하루 이동량 표시 (= 0.1 × 차이라 목표와 겹친다).
 - 문자열 (ko/en): "목표"/"Target", "아래 끝"/"Low end", "위 끝"/"High end", "자리"/"Jobs", "오려는 사람"/"Willing". ("바닥"/"Floor" 는 쓰지 않는다: 최저임금으로 읽힌다.)
 - 빼는 것: 없음.
-- 완료 기준: 툴팁 목표가 같은 날 `marketWageTargets` 값과 소수 둘째 자리까지 같다. 화살표 방향이 다음 날 `r.wages[s]` 변화 부호와 같다 (차이 0.5% 넘을 때). `wageTarget` 0 세계에서 화살표·툴팁 줄이 없다. typecheck.
+- 완료 기준: 툴팁 목표가 같은 날 `marketWageTargets` 값과 소수 둘째 자리까지 같다. 화살표 방향이 다음 날 `r.wages[s]` 변화 부호와 같다 (차이 0.5% 넘을 때). `marketWageTargets` 가 `null` 이면 (그 지역이 없거나 `Region.wages` 가 없을 때) 화살표·툴팁 줄이 없다 (`wageMarket`·`wageTarget` 이 아니면 `null` 이던 경우는 wt-batch3 에서 두 스위치와 함께 없어졌다). typecheck.
 - 사용자 결정: 규칙 자체가 확인 대기다 (DECISIONS 7-43: 그대로 둘지, 위 끝 배율 `TUNE.wageTargetSpan`·속도 `wageTargetSpeed` 를 바꿀지. 2026-11-02 wt-span 비교에서 배율 1.5·3, 속도 0.2 모두 기본값보다 고르게 낫지 않아 2·0.1 그대로, DESIGN 11장 두 행, 보고서 2026-11-02-wagespan). 화면 설계는 규칙이 바뀌어도 같다 (목표·끝 값만 sim 이 준다). 7-42 결정 대기 1 이 (b) "플레이어 왕실에 정부 건물 지역 웃돈 손잡이"로 정해지면 그때 새 절을 쓴다.
 
 ### 2-87. 저택 지분 (wt-manor, DESIGN 9.3 `manorShares`·`absenteeShare`·`manorBuyScope`, 사전 `manor-shares`, DECISIONS 7-44)

@@ -1,7 +1,7 @@
 // 건축사무소 방식·광석·광산·철도 진단 (2주마다): npx tsx cli/officediag.ts '<TUNE JSON>' [seed] [시작 년] [끝 년]
-import { TUNE } from '../src/data';
+import { TUNE, overrideTune } from '../src/data';
 import { createWorld, step } from '../src/index';
-const tune = JSON.parse(process.argv[2] ?? '{}'); Object.assign(TUNE, tune);
+const tune = JSON.parse(process.argv[2] ?? '{}'); overrideTune(tune, 'cli/officediag');
 const seed = Number(process.argv[3] ?? 2), y0 = Number(process.argv[4] ?? 3), y1 = Number(process.argv[5] ?? 5);
 const w = createWorld(seed, { withPlayer: false });
 for (let d = 1; d <= y1 * 360; d++) {

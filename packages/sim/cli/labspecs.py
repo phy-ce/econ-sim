@@ -51,6 +51,7 @@ add('X08-L', 'script4', S14, 20, script=SCRIPTS['schools5'] + SCRIPTS['admins2']
 for h in (0.03, 0.1):
     add('X08-W', f'hw.{h:g}', S12, 20, tune={'harvestChance': h})
 add('X08-V', 'base', (5, 6, 7, 8), 10)
+# wageCeil 은 2026-11-02 wt-simplify 1-E 에서 지웠다: 이 명세를 다시 만들어 돌리면 lab 입구가 없는 키로 멈춘다 (그 전 코드에서 돌린다)
 for k, vals in (('wageOutside', (1.0, 1.5)), ('wageCeil', (0.7, 1.0))):
     for v in vals:
         add('X07-A6', f'a6.{k}{v:g}', S12, 5, tune={k: v})

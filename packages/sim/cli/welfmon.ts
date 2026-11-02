@@ -7,7 +7,7 @@
 //   solP 소작농 생활수준, solU 노동자 생활수준 (플레이어 왕국 인구 가중), welShare 하층(소작농·노동자) 그달 소득 중 복지 비율,
 //   ai 다른 왕국마다 [복지법, 복지 단계, 국고(백만), 빚 ÷ 한도]
 import './lowprio';
-import { TUNE } from '../src/data';
+import { overrideTune } from '../src/data';
 import { companyById, creditLimit, kingdomGdp } from '../src/economy';
 import { DAILY_INTEREST } from '../src/finance';
 import { applyCommandMsg, createWorld, step } from '../src/index';
@@ -18,7 +18,7 @@ import type { WelfareLaw } from '../src/types';
 
 const law = (process.argv[2] ?? 'poor') as WelfareLaw;
 const seed = Number(process.argv[3] ?? 1), salt = Number(process.argv[4] ?? 0), years = Number(process.argv[5] ?? 5);
-Object.assign(TUNE, JSON.parse(process.argv[6] ?? '{}'));
+overrideTune(JSON.parse(process.argv[6] ?? '{}'), 'welfmon');
 const w = createWorld(seed, { withPlayer: true, aiSalt: salt });
 const k = w.kingdoms.find((x) => x.governmentId === PLAYER_ID)!;
 const gov = companyById(w, PLAYER_ID)!;

@@ -50,6 +50,14 @@
 - 화면 수정이 함께 필요한 것 (md에 적어서 넘긴다):
   - `setResearchBudget`, `MAX_RESEARCH_BUDGET`: 연구비 슬라이더 → 읽기 전용 표시
   - `landlordJobs`: 늘 0이다. 화면의 지주 행을 없앤다.
+- 2026-11-02 wt-simplify 1단계 (`docs/overhaul/SIMPLIFY_AUDIT.md` 3-1, 골든·samecheck 같음)로 지운 TUNE 키와 꺼진 갈래:
+  - 1-A 실험 스위치 12: `lossBuildsPerWeek`·`lossTolerance`·`crownPrivatize`·`subReturn`·`laborNet`·`laborPoach`·`laborStrict`·`officeSelfPay`·`officeSchoolFirst`·`aiSwitchV2`·`financeIdle`·`welfareCutOff` (상태 칸 `Building.fundedTick`도). 그 전 코드 c4676de
+  - 1-B 비교용 가격 공식 `priceExp`·`priceRange` (가격 범위는 `market.ts PRICE_MIN`·`PRICE_MAX` 한 곳). 그 전 코드 7df16c4. `nobleSeats` 옛 방식과 키 다섯은 wt-manor 가 같은 함수를 고치므로 남겼다
+  - 1-C 기본으로 켠 스위치 12의 키와 꺼진 갈래: `latentFeasible`·`aiInputFill`·`needFixedTotal`·`firmCallPlan`·`crownDebtNoBuild`·`taxCurve`·`aiKeepLastSupplier`·`aiGrowWhere`·`aiReserveFund`·`aiWagePremium`·`wealthSavLower`·`aiBuildNow` (켠 갈래만 남김). 그 전 코드 b4cb7c5. `aiAdminWage` 0·1 갈래는 키와 함께 1-E 에서 지웠다
+  - 1-D 옛 전망 AI 의 생산 건물 짓기·철거: `aiReserveRule` 0 갈래, 발전 투자 `devShare`·`devLoss`, 증설 가동률 문턱 `expandUtilMin`, `reserveGrowMax` 0 갈래 (상수 `RESERVE_FULL`, AI 난수 태그 `pickDev`). 그 전 코드 b2486fa. 써지기만 하는 상태 칸 `Company.startCost`·`devCost`·`Building.richWeeks`는 지우면 세계 해시가 바뀌어 남겼다 (1-D′, 다음 일)
+  - 1-E 옛 임금 규칙 (7-43 확인 뒤): 회사 임금표와 AI 임금 판단(`wageMarket` 0, `adjustWages`, `wageCeil`·`wageLossCut`, `applyWagePolicy`), 하루 고정 속도(`wageTarget` 0, `wageMarketRate`·`wageMarketRateUp`), 비교용 쏠림(`wageTarget` 1, `WAGE_TILT`), `aiAdminWage` 0·1 갈래와 키. 그 전 코드 e99d349. `commands.ts setWage` 는 그대로다 (화면은 쓰지 않는다)
+  - 1-F 키 합치기 (값이 같아 동작 같음): `officeRichWeeks`(52) → `treasuryRich`(`treasuryHighWeeks` 52, `crownGdpReserve` 0 에서 같은 식), `reserveShrinkWeeks`(26) → `shrinkWeeks`(26). 그 전 코드 57fa584. 마이크로 도구(`microcheck --preset labor`, `admindiag`)가 1e9 로 끄던 유보 철거 손잡이는 이제 정부 건물·무역소 적자 철거도 끈다
+  - 1-G 0b′ AI 스위치 여덟 (`aiCutSD`·`aiDemoSD`·`aiExitWeeks`·`aiGlutIdle`·`aiSellDemoSD`·`aiSellDemoWeeks`·`aiMarginal`·`aiAdminFloor`)과 그 코드·시험. 그 전 코드 9ac8ad7, 7-46
 
 ### 4-2. 지우면 동작이 바뀌는 것 (하나씩 결정)
 | 항목 | 지금 | 지우면 |
@@ -59,7 +67,7 @@
 | 손익 추정 3종 | 화면 미리보기와 AI 판단이 서로 다른 계산을 써서 결과가 다를 수 있다 | 하나로 합친다 |
 | 이주 알림 | 이주는 이제 상층 실업자만 하는데, 알림 문구는 노동자·기술자 기준이다 | 알림과 관련 계수 삭제 (또는 고치기) |
 | `grantRatio` | 학교 보조금 충족률이 왕국 구분 없이 하나다 | 왕국별로 바꾸거나 학교 포화 판단과 함께 삭제 |
-| AI 소규칙 | 민간 최소 공사 2건, 손해 후보 주 1건, 대기 120일 기준 | 모두 특례라 정리 대상 |
+| AI 소규칙 | 민간 최소 공사 2건, 대기 120일 기준 (손해 후보 짓기는 기본 0으로 꺼져 있다가 2026-11-02 wt-simplify 1-A에서 코드를 지웠다) | 모두 특례라 정리 대상 |
 
 ## 5. 그 밖의 결정
 
@@ -753,7 +761,7 @@ AI 노동자 임금 바닥 (기본값 0.03 · 2~6):
 ### 7-17. 상급 귀족 = 저택 자리 수, 저택 크기를 정하는 규칙 (비교 자료, 브랜치 wt-nobles, 2026-10-21)
 정해진 것 (사용자): 상급 귀족 수는 저택 자리만큼이다 (부로 오르내리지 않는다). 자리 없는 귀족은 하루 1%씩 하급 귀족이 되고,
 빈 자리는 하루 빈 자리의 1%씩 그 지역 저택의 하급 귀족(없으면 실업 하급 귀족)이 채운다 (`pops.ts matchNobles`). 처음 귀족은 지금의 ×0.2.
-남은 결정: 저택 자리를 무엇으로 정할지. 코드는 `TUNE.nobleSeats` 스위치로 넣었고 기본 `'fit'`(지금 규칙: 지역 귀족이 다 앉는다)이라 아직 바뀐 것은 없다.
+남은 결정: 저택 자리를 무엇으로 정할지. 코드는 `TUNE.nobleSeats` 스위치로 넣었고 그때 기본은 `'fit'`(그때 규칙: 지역 귀족이 다 앉는다)이었다. 지금 기본은 `'econ'` 이다 (저택 경제 규모 ÷ `nobleEconPer`, 6e4b001 부터, `data.ts`. 2026-11-02 wt-simplify 감사가 이 줄의 낡은 'fit' 을 고쳤다).
 
 | 규칙 | 한 줄 | 귀족/기술자 1인당 소득 (1·3·5·10·15·20년) | 2~3배 안 해 비율 | 귀족 (천 명, 1→20년) | 총생산 10·20년 | classGap 10·20년 |
 |---|---|---|---|---|---|---|
@@ -915,6 +923,7 @@ AI 노동자 임금 바닥 (기본값 0.03 · 2~6):
 - 운송 조합: 산업 유형 '운송'(1레벨 100명, 원료 45~55%)을 새로 두고 숫자를 약 1/3로 (짐마차 90/10, 곡물 800·목재 400 → 운송 1,150, 공사 포인트 350 → 100. 증기 철도 40/20/10, 기계 30·석탄 610 → 1,650). DESIGN 5장 산업 유형 표
 - 결과 (조건: 5년 × 시드 1·2 (wt-reserveai, wt-grain f204747 위 + 운송 100명, 보고서 2026-10-25-reserveai, 1~5년차): 레벨 옛 AI 시드 1 393 / 594 / 563 / 520 / 462, 시드 2 407 / 934 / 791 / 853 / 811; 유보 기준 시드 1 162 / 132 / 117 / 98 / 89, 시드 2 148 / 125 / 110 / 97 / 83. 연 총생산(백만) 옛 320 / 168 / 257 / 131 / 156, 413 / 814 / 186 / 225 / 139; 유보 156 / 69 / 29 / 44 / 16, 117 / 39 / 33 / 31 / 26. 노동자 생활수준 옛 1.39~2.48, 유보 1.00~1.05. 5년 누적 레벨: 옛 보통 착공 690 / 1,129·철거 356 / 582, 유보 새 투자 131 / 139·유보 철거 132 / 132·유보 증설 13 / 12. 1년차 진단(`cli/resdiag.ts`, 시드 1): 시작 생산 건물(곡물·섬유 농장, 목공구 공방)은 첫 주부터 유보 자산 0에 적자라 4주마다 1레벨씩 헐렸고, 새 투자(가구 14, 목공구 10, 맞춤 재단 7, 장인 가구 6, 목장·석탄광산 4 등)는 사람을 다 뽑기 전후로 적자가 되어 대부분 헐렸다. 흑자로 증설된 것은 벌목장뿐(1년 8레벨)이고, 공사가 줄어 목재 수요가 줄자 벌목장도 18주 뒤 적자로 돌아섰다. 이 조건에서는 경제가 줄기만 했다 (옛 AI도 5년 동안 총생산이 준다))
 - **결정 필요:** 이 조건에서는 유보 기준 AI가 5년 동안 레벨·총생산을 옛 AI의 약 1/5로 줄였다. 기본값을 1로 두고 시작 세계(시작 생산 건물의 적자)를 먼저 볼지, 0으로 두고 비교만 남길지. 지금 브랜치는 1 (사용자 요청대로)
+- 2026-11-02 wt-simplify 1-D: 기본값 1 이 그 뒤로 계속 쓰여 스위치 `aiReserveRule` 과 옛 전망 AI 의 생산 건물 짓기·철거(0 갈래, 발전 투자 `devShare`·`devLoss`, `expandUtilMin`)를 지웠다 (동작 같음, 그 전 코드 b2486fa). 0 으로 되돌리려면 git 에서 되살린다.
 
 ### 7-26. 상인 1억 대신 무역소 (2026-10-23 사용자 승인 설계, 브랜치 wt-trade, 2026-10-23 사용자 지시 "테스트하지말고합치기만해"로 비교 없이 합침)
 - 승인된 설계: 지역마다 짓는 건물 `trading_post`(왕실·민간 모두), 방식 셋(상단 / 장부 상회 인쇄술 / 무역 회사 증기 철도), 레벨당 유보액 R(단계마다 ×2), 금고가 상한을 넘으면 주인에게, 공사 때 레벨당 0.5R을 묶어 금고 시작 돈으로, 그날 지역 매입은 그 지역 무역소 금고 합까지, 시작 무역소는 왕국 수도마다 1레벨, R은 시작 무역소 금고 합이 지금 하루 교역액의 약 1/10 → 5,000 (DESIGN 11 `tradeReserve`).
@@ -1006,7 +1015,7 @@ AI 노동자 임금 바닥 (기본값 0.03 · 2~6):
 - 받아들인 것: 주인 금고(약정 뺀 돈)도 비어 있으면 그대로 굳는다 (민간은 빌리지 않는다, 2026-10-21 사용자 결정 그대로). 원료를 채워도 적자인 건물이 끌어내린 현금 0 도 막지 않는다.
 
 ### 7-41. 시장 임금이 오를 때만 빠르게 (W1 `wageMarketRateUp`, 2026-11-02 wt-wagelag, 7-43 이 대신함 (wt-wagespeed))
-- 2026-11-02 wt-wagespeed: 7-43(목표 임금, 기본 켬)이 이 질문을 대신한다. `wageMarketRateUp` 은 `wageTarget` 0 일 때만 쓰인다 (키는 지우지 않았다).
+- 2026-11-02 wt-wagespeed: 7-43(목표 임금, 기본 켬)이 이 질문을 대신한다. `wageMarketRateUp` 은 `wageTarget` 0 일 때만 쓰였고, 7-43 확인 뒤 2026-11-02 wt-simplify 1-E 에서 키를 지웠다.
 - (예전) 결정 대기 한 줄: 세계 규칙 "일손이 모자라면 임금이 빨리 오르고(하루 `wageMarketRateUp`), 남으면 천천히 내린다(`wageMarketRate`)" 를 켤지. 기본 끔 (0). 숫자는 DESIGN 11장 `wageMarketRateUp` 행, 보고서 2026-11-02-wagelag (a12w1).
 - 같은 브랜치에서 AI 판단 둘은 결정 없이 켰다: A1 `aiWagePremium` 1 (민간 AI 상회 지역 웃돈), A2 `aiAdminWage` 2 (왕실: 행정청·건축사무소 충원이 모자라면 국영 임금 단계를 올림). A1 은 7-39 와 별개로 본다: 7-39 는 플레이어 왕실의 웃돈 명령(`setWageOffset`)을 닫은 결정이고, A1 은 AI 민간 상회의 판단이며 플레이어 웃돈(`Company.wageOffset`)과 다른 칸(`Company.aiPremium`)에 둔다. 왕실(국영)은 웃돈을 쓰지 않고 A2 로 간다.
 - 판단 재료: A1+A2 위에 W1 을 더하면 1~2년차(흉작 충격 구간)는 더 좋고 (본 게임 1년 세전 196.6 → 202.5, 시드 2), 시드 1 가뭄 지역 건축사무소 충원도 조금 돌아오지만 (52주 0.00 → 0.06), 20년 8회 평균 15·20년차 세전 총생산은 A1+A2 보다 낮다 (963 → 829, 1,064 → 904; 대조 695·824 보다는 높다).
@@ -1017,12 +1026,19 @@ AI 노동자 임금 바닥 (기본값 0.03 · 2~6):
 - **결정 대기 1**: 플레이어 왕실에도 같은 손잡이(지역별 국영 웃돈)를 줄지. 지금 플레이어 왕실은 국영 임금 단계(왕국 하나)만 있고, 웃돈 명령은 7-39 로 닫혀 있다. 그대로 두면 플레이어의 행정청도 1년차에 같은 이유로 빈다 (lab 의 방치 플레이어 왕국). 선택지: (a) 그대로 (AI 만), (b) 정부 건물에 한해 지역 웃돈을 플레이어에게 연다 (화면에 손잡이 하나, UI_CHANGES 필요), (c) 세계 규칙으로 바꾼다 (아래 2).
 - **결정 대기 2 (세계 규칙, 바꾸지 않았다)**: 원인의 뿌리 둘 — 하급 귀족 시작 시장 임금이 기술자 × 1.1 (`labor.ts startWage`, 하급 귀족 기본 임금의 약 40%)이고, 저택 이익 이동평균이 0 에서 시작한다 (첫 120일 동안 저택 몫이 낮아 시장 하급 귀족 임금이 4.14 → 3.07 로 내린다). 바꿀 후보: 하급 귀족 시작 임금을 저택 몫 또는 기본 임금으로, 저택 이익 이동평균을 시작 지대로 채움, `manorGentrySeats` (7-36). 비교는 하지 않았다.
 
-### 7-43. 시장 임금을 맞는 임금 쪽으로 (`wageTarget` 2, 2026-11-02 wt-wagespeed, 사용자 지시로 켬, 확인 대기)
+### 7-43. 시장 임금을 맞는 임금 쪽으로 (`wageTarget` 2, 2026-11-02 wt-wagespeed, 사용자 지시로 켬, 7-43 확인 (사용자 2026-11-02))
 - 사용자 (2026-11-02): "임금이나 상품 가격이나 속도가 무조건 일정 속도로 변화하는건 말이 안됨. 수요-공급 차에 따라서 숫자가(하한/상한 수렴값은 존재함) 변하게 해야지".
 - 상품 가격은 이미 그렇게 돈다 (`market.ts updatePrices`: 목표 = 기본가 × (1 + 0.75 × clamp((D − S) ÷ min(D, S), ±1)), 기본가의 25~175%, 날마다 거리의 `PRICE_SPEED` 0.03). 그래서 가격은 바꾸지 않았다. 고정 속도였던 것은 임금 하나 (하루 ±0.25% `wageMarketRate`, 쏠림이 ±1 에서 막혀 큰 부족·과잉에서도 0.25%).
 - 바꾼 세계 규칙 한 줄: **"임금은 일하러 올 사람이 자리 수와 맞는 임금 쪽으로 날마다 그 차이의 10%씩 움직인다."** 맞는 임금의 아래 끝은 바깥 소득 × 1.1 (시작 임금 규칙), 위 끝은 그 2배. 최저임금은 아니다 (아래 끝은 수렴값이고 그 아래 임금도 둔다).
 - 숫자: DESIGN 11장 `wageTarget`·`wageTargetSpeed` 행, 보고서 2026-11-02-wagespeed. 20년 8회 평균 대조 → 맞는 임금 0.1: 1년차 행정청 충원 (왕국 1·2·3) 0.00/0.54/0.70 → 0.90/0.97/0.98, 생산 하층 고용 1·5·20년차 60.8/261/848 → 74.6/280/887천, 세전 총생산 20년차 1,140 → 1,200, 국고 20년차 192 → 251. 약점: 10·15년차 세전 총생산 −12% (범위 겹침), 10~20년차 S/D 가 조금 더 벌어짐, 20년차 소작 생활수준 1.13 → 1.03.
 - 확인 대기 (게임 방향): 이 규칙 그대로 둘지, 또는 위 끝 배율(`wageTargetSpan` 2)·속도(0.1)를 바꿀지 (2026-11-02 wt-span 비교: 배율 1.5·3, 속도 0.2 모두 대조보다 고르게 낫지 않아 기본값 그대로, DESIGN 11장 두 행, 보고서 2026-11-02-wagespan). 같이 묻는 것: 7-42 결정 대기 1 (플레이어 왕실 국영 웃돈)은 이 규칙에서 방치 플레이어 왕국 1년차 행정청 충원이 0.00 → 0.90 이 되어 급함이 줄었다.
+- 7-43 확인 (사용자 2026-11-02): 맞는 임금 규칙을 받아들였다. 그래서 2026-11-02 wt-simplify 1-E 에서 스위치 `wageMarket`·`wageTarget` 과 옛 규칙의 키(`wageMarketRate`·`wageMarketRateUp`·`wageCeil`·`wageLossCut`, `aiAdminWage` 0·1 갈래)를 지웠다 (동작 같음, 그 전 코드 e99d349). 위 끝 배율·속도는 `wageTargetSpan`·`wageTargetSpeed` 로 남는다.
+
+### 7-46. 0b′ AI 스위치 여덟을 지운다 (2026-11-02 wt-simplify 1-G, 결정됨: 비교했고 채택하지 않음)
+- 지운 키: 5-2 `aiCutSD`·`aiDemoSD`·`aiExitWeeks` (팔리지 않음 기준 감축·철거), A1 `aiGlutIdle` (노는 설비·기상 되돌림), A2 `aiSellDemoSD`·`aiSellDemoWeeks` (설비 철거), A3 `aiMarginal` (자기 값 효과), A4 `aiAdminFloor` (행정청 징수율 하한). 같이 지운 것: `ai.ts` `sdExit`·`sdHold`·`glutSD`·`weatherShortfall`·`sellDemo`·`ownSales`·`ownMarket`·`growGain`·`shrinkGain`·`marginExit`·`belowAdminFloor`·`UTIL_FLOOR`, 상태 칸 타입 `Region.cutWeeks`·`demoWeeks`·`sellWeeks`·`marginWeeks` (끈 채로는 생기지 않는 칸), 시험 `test/gate/sdexit.test.ts`·`grainbal.test.ts`.
+- 이유: 모두 기본 0(끔)이고 0b′ 에서 비교했으나 채택하지 않았다 (7-38 "끈 채 둠"). A4 의 목적(이슈 #4 행정청 충원)은 `aiStatePremium`(7-42)과 맞는 임금(7-43)이 맡았다. 동작은 같다 (골든 c7fb7c00ef46d24c, samecheck 5/5 같음). 5-1 과잉 검사 `aiGlutSD`(기본 1.5)는 남는다.
+- 되살리기: 지우기 바로 전 커밋 9ac8ad7 (브랜치 wt-simplify)에 있다. 예: `git show 9ac8ad7:packages/sim/src/ai.ts`, `git show 9ac8ad7:packages/sim/test/gate/sdexit.test.ts`.
+- 비교 명세 `docs/overhaul/0BP_5-2_SPECS.json`·`0BP_A4_SPECS.json`·`0BP_GRAIN_SPECS.json`은 기록으로 남긴다. 그 키는 이제 TUNE 에 없어서 그대로 돌리면 lab 입구가 "TUNE 에 없는 키"로 멈춘다 (wt-simplify 가드, `data.ts overrideTune`). 다시 돌리려면 9ac8ad7 에서 돌린다.
 
 ### 7-44. 저택 지분 (2026-11-02 사용자 결정, wt-manor, 설계 `docs/overhaul/MANOR_SHARES.md` 1단계)
 - 사용자 답 (2026-11-02, 설계 8장 질문에 대한 답, 코디네이터가 옮김):

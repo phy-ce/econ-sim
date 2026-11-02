@@ -1,16 +1,16 @@
-import { ABS_LIMITS, BUILDING_BY_ID, GOOD_IDS, GOODS, NEEDS, SKILL_DEFS, TUNE, getMethod, needsAt, regionPerk, tenantYield } from './data';
+import { ABS_LIMITS, BUILDING_BY_ID, GOOD_IDS, GOODS, NEEDS, SKILL_DEFS, TUNE, getMethod, regionPerk, tenantYield } from './data';
 import { STAFFING_HORIZON, extraNeed, poolKey, poolOf } from './staffing';
 import { workforce } from './pops';
-import { FLOW_ZERO, availableMethods, collectionRatio, priceBounds, priceFormula, harvestFactorEma, regionAvgWealth, isGovernment, regionById, shippingRate, wageCostOf, wagesAt } from './economy';
-import { BY_EMA, needSharesAt } from './market';
+import { FLOW_ZERO, availableMethods, collectionRatio, priceFormula, harvestFactorEma, isGovernment, regionById, shippingRate, wageCostOf, wagesAt } from './economy';
+import { BY_EMA, PRICE_MIN } from './market';
 import { clamp } from './rng';
 import { SKILLS } from './types';
-import type { Building, Company, GoodId, Kingdom, MethodDef, NeedDef, Region, Skill, World } from './types';
+import type { Building, Company, GoodId, Kingdom, MethodDef, Region, Skill, World } from './types';
 
 /**
  * 시장 전망: AI 투자 판단의 공통 바탕. 상품마다 대륙 전체의 앞으로의 수요와 공급을 세고 그 비율로 장기 가격을 본다.
- * - 수요 = 지금 수요(이동평균) + 공사 중인 건물의 투입 + 대체 수요 (+ TUNE.aiBuildNow: 공사 중 건물이 데려갈 소작농의 수확, freed)
- * - 잠재 수요: 더 나은 방식으로 바꾸면 쓸 투입. aiBuildNow = 0 이면 파는 쪽 가격에, 1 이면 발전 투자에만 센다
+ * - 수요 = 지금 수요(이동평균) + 공사 중인 건물의 투입 + 대체 수요 + 공사 중 건물이 데려갈 소작농의 수확 (freed)
+ * - 잠재 수요: 더 나은 방식으로 바꾸면 쓸 투입. AI 투자 판단은 세지 않고, 화면 미리보기(estimateAfterEntry)의 산출 값 변화에만 들어간다
  * - 공급 = 지금 공급 + 공사 중인 건물의 산출
  * 같은 주에 착공하면 전망에 바로 반영해(add) 여럿이 같은 빈자리로 몰리지 않게 한다.
  */
@@ -30,13 +30,12 @@ export interface Outlook {
   /** 지역 밖으로 못 나가는 상품의 그 지역 수요·잠재 수요·공급 (공사 중 포함, 대륙 값과 같은 셈). 다른 상품은 대륙 값 */
   local(g: GoodId, regionId: number): { demand: number; latent: number; supply: number };
   /**
-   * 소작농을 데려와 생기는 수요 (TUNE.aiBuildNow): 이 지역에 방식 m 을 levels 레벨 새로 돌리면 하급 일꾼(노동자·농부) 중 소작농 몫(peasantShare)이
+   * 소작농을 데려와 생기는 수요: 이 지역에 방식 m 을 levels 레벨 새로 돌리면 하급 일꾼(노동자·농부) 중 소작농 몫(peasantShare)이
    * 소작지를 떠나 그 수확(1인당 tenantYield)을 시장에서 사거나 더는 팔지 않는다. 상품 g 의 (수요 − 공급) 증가를 수요로 센다.
-   * aiBuildNow = 0 이면 0
    */
   freed(g: GoodId, regionId: number, m: MethodDef, levels: number): number;
   /**
-   * 남는 투입재 (TUNE.aiInputFill): 대륙 공급(이동평균, 기상 조건 보정, 절반 넘게 지은 공사의 산출) − 대륙 수요(이동평균) − 공사 중 건물의 투입.
+   * 남는 투입재 (투입 충족 Outlook.fill 의 바탕): 대륙 공급(이동평균, 기상 조건 보정, 절반 넘게 지은 공사의 산출) − 대륙 수요(이동평균) − 공사 중 건물의 투입.
    * 같은 주에 착공을 정하면 add 가 그 투입을 뺀다 (주간 공유 풀: 여러 공사가 같은 남는 양을 다시 세지 않는다)
    */
   spare: Record<GoodId, number>;
@@ -61,7 +60,7 @@ const PRODUCIBLE = new Set<GoodId>(Object.values(BUILDING_BY_ID).flatMap((t) => 
 /** 장기 가격: 가격 공식과 같은 모양 (수요/공급 비율) */
 function longRunPrice(g: GoodId, D: number, S: number): number {
   // 시장과 같은 공식 (economy.ts priceFormula). 사고파는 양이 둘 다 없으면 범위 아래 끝으로 본다
-  if (Math.min(D, S) <= FLOW_ZERO && D <= S) return GOODS[g].basePrice * priceBounds()[0];
+  if (Math.min(D, S) <= FLOW_ZERO && D <= S) return GOODS[g].basePrice * PRICE_MIN;
   return priceFormula(g, D, S);
 }
 
@@ -89,7 +88,7 @@ export function marketOutlook(w: World): Outlook {
   const shareOf = (regionId: number) => { let x = shareMemo.get(regionId); if (x === undefined) shareMemo.set(regionId, (x = peasantShare(w, regionId))); return x; };
   const freed = (g: GoodId, regionId: number, m: MethodDef, levels: number) => {
     const q = tenantYield(g);
-    if (!q || !TUNE.aiBuildNow) return 0;
+    if (!q) return 0;
     return q * ((m.workers.unskilled ?? 0) + (m.workers.farmer ?? 0)) * levels * shareOf(regionId);
   };
   const demand = {} as Record<GoodId, number>;
@@ -131,7 +130,7 @@ export function marketOutlook(w: World): Outlook {
   for (const k of w.constructions) {
     const m = getMethod(k.typeId, k.methodId);
     const perk = 1 + regionPerk(k.regionId, k.typeId);
-    // 남는 투입재에는 절반 넘게 지은 공사의 산출만 센다 (막 시작한 공사의 산출을 믿고 지으면 원료가 끊긴다, ai.ts switchSpare 와 같다)
+    // 남는 투입재에는 절반 넘게 지은 공사의 산출만 센다 (막 시작한 공사의 산출을 믿고 지으면 원료가 끊긴다)
     const half = k.points >= k.required / 2;
     for (const g of GOOD_IDS) {
       const out = (m.outputs[g] ?? 0) * perk * (k.levels ?? 1), inp = (m.inputs[g] ?? 0) * (k.levels ?? 1);
@@ -143,12 +142,12 @@ export function marketOutlook(w: World): Outlook {
     for (const g of PERISHABLE) { addLocal(k.regionId, 'supply', g, (m.outputs[g] ?? 0) * perk * (k.levels ?? 1)); addLocal(k.regionId, 'demand', g, (m.inputs[g] ?? 0) * (k.levels ?? 1)); }
   }
   // 공사 중 건물이 데려갈 소작농의 수확도 수요로 센다 (freed, 남는 투입재 spare 에는 넣지 않는다)
-  if (TUNE.aiBuildNow) for (const k of w.constructions) {
+  for (const k of w.constructions) {
     const m = getMethod(k.typeId, k.methodId);
     for (const g of GOOD_IDS) { const q = freed(g, k.regionId, m, k.levels ?? 1); demand[g] += q; addLocal(k.regionId, 'demand', g, q); }
   }
   // 잠재 수요: 기본가로 따져 지금 방식보다 나은 방식이 있으면 그 방식이 더 쓰는 투입재 (건축사무소는 포인트가 더 많은 방식).
-  // TUNE.latentFeasible: 실제로 바꿀 수 있는 몫만 센다. 일손 = 지역·직종마다 곳간 ÷ 그 지역 후보들이 더 필요한 사람 (후보 순서와 무관),
+  // 실제로 바꿀 수 있는 몫만 센다. 일손 = 지역·직종마다 곳간 ÷ 그 지역 후보들이 더 필요한 사람 (후보 순서와 무관),
   // 투입 = 세는 상품을 뺀 다른 새 투입재가 남는 양으로 얼마나 채워지는가 (세는 상품 자신으로 막으면 공구·금속이 시작되지 못한다)
   const cands: { b: Building; r: Region; cur: MethodDef; best: MethodDef; state: boolean }[] = [];
   for (const b of w.buildings) {
@@ -166,10 +165,9 @@ export function marketOutlook(w: World): Outlook {
     }
     if (best) cands.push({ b, r: regionById(w, b.regionId), cur, best, state: c.state });
   }
-  const feasible = !!TUNE.latentFeasible;
   const need = new Map<string, number>();
   const pools = new Map<string, number>();
-  if (feasible) for (const x of cands) for (const [s, n] of Object.entries(extraNeed(x.best, x.b.level, x.state, x.b)) as [Skill, number][]) {
+  for (const x of cands) for (const [s, n] of Object.entries(extraNeed(x.best, x.b.level, x.state, x.b)) as [Skill, number][]) {
     const k = poolKey(x.r, s);
     need.set(k, (need.get(k) ?? 0) + n);
   }
@@ -177,7 +175,7 @@ export function marketOutlook(w: World): Outlook {
   for (const g of GOOD_IDS) room[g] = supply[g] - demand[g];
   for (const x of cands) {
     let fL = 1;
-    if (feasible) for (const [s] of Object.entries(extraNeed(x.best, x.b.level, x.state, x.b)) as [Skill, number][]) {
+    for (const [s] of Object.entries(extraNeed(x.best, x.b.level, x.state, x.b)) as [Skill, number][]) {
       const n = need.get(poolKey(x.r, s)) ?? 0;
       if (n > 0) fL = Math.min(fL, clamp(poolOf(w, x.r, s, pools) / n, 0, 1));
     }
@@ -188,15 +186,14 @@ export function marketOutlook(w: World): Outlook {
     }
     for (const [g, e] of Object.entries(extra) as [GoodId, number][]) {
       let fI = 1;
-      if (feasible) for (const [h, eh] of Object.entries(extra) as [GoodId, number][]) if (h !== g) fI = Math.min(fI, clamp(room[h] / eh, 0, 1));
-      latent[g] += e * (feasible ? fL * fI : 1);
-      addLocal(x.r.id, 'latent', g, e * (feasible ? fL * fI : 1));
+      for (const [h, eh] of Object.entries(extra) as [GoodId, number][]) if (h !== g) fI = Math.min(fI, clamp(room[h] / eh, 0, 1));
+      latent[g] += e * (fL * fI);
+      addLocal(x.r.id, 'latent', g, e * (fL * fI));
     }
   }
   // 대체 수요: 가공품이 비싸서 원자재로 버티는 가계 수요의 절반은 값이 내려가면 돌아온다 (공장의 원료 수요는 대체하지 않는다)
   const household = (g: GoodId) => w.regions.reduce((a, r) => a + Object.entries(r.market[g].demandByEma ?? {}).reduce((x, [k, v]) => x + (k.startsWith('pop:') ? v : 0), 0), 0);
-  const sub = TUNE.subReturn ? returnableDemand(w) : null;
-  if (!sub) for (const n of NEEDS) for (const opt of n.options) {
+  for (const n of NEEDS) for (const opt of n.options) {
     if (!opt.appeal || opt.appeal <= 1) continue;
     for (const other of n.options) if (other !== opt) demand[opt.good] += (household(other.good) / other.units) * opt.units * 0.5;
   }
@@ -225,35 +222,13 @@ export function marketOutlook(w: World): Outlook {
       const v = view(g, regionId);
       const S = v.S + dS, D = v.D + dD + (withLatent ? v.L : 0);
       if (S < ABS_LIMITS.unsuppliedQty && dD > 0) return GOODS[g].basePrice * UNSUPPLIED_INPUT;
-      const back = sub?.get(g);
-      if (!back) return longRunPrice(g, D, S);
-      // 돌아오는 수요는 값이 낮을수록 크다: 장기 가격 = 그 값에서 돌아오는 수요까지 센 가격이 되는 값 (격자에서 찾아 선형 보간)
-      const base = GOODS[g].basePrice;
-      let prev = 0;
-      for (let i = 0; i < SUB_GRID.length; i++) {
-        const p = base * SUB_GRID[i], gap = longRunPrice(g, D + back[i], S) - p;
-        if (gap <= 0) {
-          if (i === 0) return p;
-          const p0 = base * SUB_GRID[i - 1];
-          return p0 + ((p - p0) * prev) / (prev - gap);
-        }
-        prev = gap;
-      }
-      return base * SUB_GRID[SUB_GRID.length - 1];
+      return longRunPrice(g, D, S);
     },
     sellRate(g, dS = 0, regionId) {
       const v = view(g, regionId);
       const S = v.S + dS;
       if (S < 1e-6) return 1;
-      let D = v.D + v.L;
-      const back = sub?.get(g);
-      if (back) {
-        const x = this.price(g, dS, 0, true, regionId) / GOODS[g].basePrice;
-        const i = Math.min(SUB_GRID.length - 2, Math.max(0, Math.floor((x - SUB_GRID[0]) / GRID_STEP)));
-        const t = clamp((x - SUB_GRID[i]) / GRID_STEP, 0, 1);
-        D += back[i] * (1 - t) + back[i + 1] * t;
-      }
-      return Math.min(1, D / S);
+      return Math.min(1, (v.D + v.L) / S);
     },
     sold(g, dS = 0, dD = 0, withLatent = false, regionId) {
       const v = view(g, regionId);
@@ -275,60 +250,6 @@ export function marketOutlook(w: World): Outlook {
   };
 }
 
-/** 돌아오는 수요를 셀 가공품 값 격자 (기본가 배율, 가격 범위 priceBounds 를 30칸으로 고르게 나눈다. 지금 범위 0.25~1.75면 0.05씩) */
-const GRID_STEPS = 30;
-let gridKey = '', SUB_GRID: number[] = [], GRID_STEP = 0.05;
-function subGrid(): number[] {
-  const [mn, mx] = priceBounds(), key = mn + ':' + mx;
-  if (key !== gridKey) { gridKey = key; GRID_STEP = (mx - mn) / GRID_STEPS; SUB_GRID = Array.from({ length: GRID_STEPS + 1 }, (_, i) => mn + GRID_STEP * i); }
-  return SUB_GRID;
-}
-
-/**
- * 돌아오는 수요 (TUNE.subReturn): 가공품 값이 격자의 값일 때, 지금 원자재로 그 필요를 채우는 가계 수요 중 가공품으로 옮겨 올 양.
- * 가계가 실제로 고르는 규칙(needSharesAt: 지역 값과 부의 상한)으로 센다. 원자재 가계 수요는 필요별로 나눈다
- * (목재는 난방과 생활용품: 지역 평균 부의 필요량 × 지금 비중으로). 이미 가공품을 사는 수요는 지금 수요에 들어 있으므로 더하지 않는다
- */
-function returnableDemand(w: World): Map<GoodId, number[]> {
-  subGrid();
-  const out = new Map<GoodId, number[]>();
-  for (const r of w.regions) {
-    const L = regionAvgWealth(r), amount = needsAt(L);
-    const local = (n: NeedDef) => n.options.map((o) => r.market[o.good].price);
-    const hh = (g: GoodId) => { let x = 0; for (const [k, v] of Object.entries(r.market[g].demandByEma ?? {})) if (k.startsWith('pop:')) x += v; return x; };
-    // 원자재 g 의 가계 수요 중 필요 n 의 몫
-    const rawShare = (g: GoodId, n: NeedDef) => {
-      let mine = 0, all = 0;
-      for (const m of NEEDS) {
-        const i = m.options.findIndex((o) => o.good === g);
-        if (i < 0) continue;
-        const x = amount[m.id] * needSharesAt(m.id, local(m), L)[i] * m.options[i].units;
-        all += x;
-        if (m === n) mine = x;
-      }
-      return all > 0 ? mine / all : 0;
-    };
-    for (const n of NEEDS) n.options.forEach((opt, pi) => {
-      if (!opt.appeal || opt.appeal <= 1) return;
-      const prices = local(n), now = needSharesAt(n.id, prices, L);
-      const arr = out.get(opt.good) ?? new Array(SUB_GRID.length).fill(0);
-      n.options.forEach((raw, ri) => {
-        if (ri === pi || now[ri] < 1e-6) return;
-        const units = (hh(raw.good) * rawShare(raw.good, n)) / raw.units;
-        if (!(units > 0)) return;
-        for (let i = 0; i < SUB_GRID.length; i++) {
-          const p = prices.slice();
-          p[pi] = GOODS[opt.good].basePrice * SUB_GRID[i];
-          const moved = units * Math.max(0, 1 - needSharesAt(n.id, p, L)[ri] / now[ri]);
-          arr[i] += moved * opt.units;
-        }
-      });
-      out.set(opt.good, arr);
-    });
-  }
-  return out;
-}
-
 /** 기본가 기준 하루 이윤 (방식끼리 비교용) */
 export function baseValue(m: MethodDef, c: Company): number {
   let v = 0;
@@ -341,10 +262,10 @@ export interface Valuation { revenue: number; inputCost: number; wageCost: numbe
 /**
  * 새로 지을지 판단할 때 쓰는 장기 임금: 생산 건물은 민간·왕실 모두 지금 임금과 기본 임금 × TUNE.investWage 중 큰 값.
  * 왕실의 정부 건물(행정청 등)은 정책(국영 임금 수준)이 정하므로 지금 국영 임금 그대로 본다.
- * TUNE.wageMarket = 1 이고 지역(w, r)을 주면: 그 지역 회사 임금(wagesAt)과 지역 시장 임금 52주 이동평균(Region.wageAvg) 중 큰 값 (정부 건물은 그 지역 국영 임금)
+ * 지역(w, r)을 주고 그 지역 시장 임금이 있으면: 그 지역 회사 임금(wagesAt)과 지역 시장 임금 52주 이동평균(Region.wageAvg) 중 큰 값 (정부 건물은 그 지역 국영 임금)
  */
 export function longRunWages(c: Company, typeId: string, w?: World, r?: Region): Record<Skill, number> {
-  if (TUNE.wageMarket && w && r?.wages) {
+  if (w && r?.wages) {
     const now = wagesAt(c, typeId, w, r.id);
     if (c.state && isGovernment(typeId)) return now;
     const lr = {} as Record<Skill, number>;
@@ -361,16 +282,14 @@ export function longRunWages(c: Company, typeId: string, w?: World, r?: Region):
  * 한 지역에 이 방식으로 levels 개를 새로 돌릴 때의 장기 하루 손익 (가장 이익이 나는 가동률로).
  * existing: 이미 돌고 있는 레벨의 손익 (그 산출과 투입은 이미 전망에 들어 있으므로 더하지 않는다). 짓기와 철거를 같은 계산으로 비교한다.
  * 매출 = 산출 × 팔리는 비율 × 값. 값은 들어간 뒤의 장기 가격과 현지 가격의 평균이고, 지역 밖으로 나가는 몫은 운송비를 뺀다.
- * TUNE.aiBuildNow = 1 (보통 투자): 팔리는 비율 = 수요(지금 + 공사 중 투입 + 대체 수요 + 데려올 소작농의 수확 freed) ÷ (공급 + 내 산출), 장기 가격도 같은 수요로 (잠재 수요 제외).
- * dev (발전 투자): 팔리는 비율과 장기 가격에 잠재 수요(바꿀 수 있는 몫)를 더한다.
- * aiBuildNow = 0 (옛 셈): 산출은 다 팔리고 장기 가격에 잠재 수요를 센다.
+ * 팔리는 비율 = 수요(지금 + 공사 중 투입 + 대체 수요 + 데려올 소작농의 수확 freed) ÷ (공급 + 내 산출), 장기 가격도 같은 수요로 (잠재 수요 제외).
  * 투입재: 사들인 뒤의 장기 가격(잠재 수요 제외)과 현지 가격의 평균, 지역에서 모자란 몫은 운송비를 더한다.
  */
-export function valueMethod(w: World, o: Outlook, r: Region, c: Company, typeId: string, m: MethodDef, levels = 1, existing = false, fill?: number, dev = false): Valuation {
+export function valueMethod(w: World, o: Outlook, r: Region, c: Company, typeId: string, m: MethodDef, levels = 1, existing = false, fill?: number): Valuation {
   const fixed = valueFixed(w, r, c, typeId, m);
   let best: Valuation | null = null;
   for (const u of [1, 0.75, 0.5, 0.25]) {
-    const v = valueAt(o, r, c, m, levels * u, existing, fixed, fill, dev);
+    const v = valueAt(o, r, c, m, levels * u, existing, fixed, fill);
     if (!best || v.profit > best.profit) best = { ...v, utilization: u };
   }
   return best!;
@@ -416,10 +335,10 @@ function valueFixed(w: World, r: Region, c: Company, typeId: string, m: MethodDe
 }
 
 /**
- * 투입 충족 (fill): 주어지면 그 값, 아니면 새로 짓는 레벨(existing = false)이고 TUNE.aiInputFill 이면 전망의 남는 투입재로 채우는 비율 (Outlook.fill,
+ * 투입 충족 (fill): 주어지면 그 값, 아니면 새로 짓는 레벨(existing = false)이면 전망의 남는 투입재로 채우는 비율 (Outlook.fill,
  * 가동률마다 그 필요로 센다). 매출(행정청 세금 몫 포함)과 원료비에 곱하고 인건비는 그대로 낸다 (생산은 가장 모자란 투입을 따른다)
  */
-function valueAt(o: Outlook, r: Region, c: Company, m: MethodDef, levels: number, existing: boolean, fixed: ValueFixed, fillIn?: number, dev = false): Omit<Valuation, 'utilization'> {
+function valueAt(o: Outlook, r: Region, c: Company, m: MethodDef, levels: number, existing: boolean, fixed: ValueFixed, fillIn?: number): Omit<Valuation, 'utilization'> {
   const { perk, ship } = fixed;
   let revenue = 0, inputCost = 0;
   // 쓰지도 만들지도 않는 상품은 산출·투입이 0 이라 건너뛴다
@@ -428,11 +347,10 @@ function valueAt(o: Outlook, r: Region, c: Company, m: MethodDef, levels: number
     if (out > 0) {
       const dS = existing ? 0 : out;
       const outside = GOODS[g].perishable ? 0 : clamp(1 - r.market[g].demandEma / out, 0, 1);
-      // 보통 투자는 잠재 수요를 세지 않고 팔리는 몫만 판다고 본다. 발전 투자(dev)와 옛 셈은 잠재 수요를 센다
-      const now = !!TUNE.aiBuildNow, withLatent = !now || dev;
+      // 잠재 수요는 세지 않고 팔리는 몫만 판다고 본다
       const dD = existing ? 0 : o.freed(g, r.id, m, levels);
-      const p = o.price(g, dS, dD, withLatent, r.id);
-      const sold = now ? o.sold(g, dS, dD, withLatent, r.id) : 1;
+      const p = o.price(g, dS, dD, false, r.id);
+      const sold = o.sold(g, dS, dD, false, r.id);
       // 지역 밖으로 못 나가는 상품은 이 지역의 장기 가격(내 산출을 넣은 값)만 본다. 지금 현지 값은 공급이 없으면 가격 상한이라 들어간 뒤의 값과 크게 다르다
       if (GOODS[g].perishable) revenue += out * sold * p;
       else revenue += out * sold * ((1 - outside) * (p + r.market[g].price) / 2 + outside * p * (1 - ship));
@@ -455,7 +373,7 @@ function valueAt(o: Outlook, r: Region, c: Company, m: MethodDef, levels: number
       revenue += (k.taxOwed ?? 0) * (existing ? collectionRatio(cap, n) - collectionRatio(Math.max(0, cap - add), n) : collectionRatio(cap + add, n) - collectionRatio(cap, n));
     }
   }
-  const fill = fillIn ?? (!existing && TUNE.aiInputFill ? o.fill(m, levels) : 1);
+  const fill = fillIn ?? (!existing ? o.fill(m, levels) : 1);
   if (fill < 1) { revenue *= fill; inputCost *= fill; }
   const wageCost = fixed.wage * levels;
   return { revenue, inputCost, wageCost, profit: revenue - inputCost - wageCost };

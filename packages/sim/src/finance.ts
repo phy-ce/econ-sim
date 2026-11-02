@@ -108,7 +108,7 @@ export function taxRates(k: Kingdom, law: TaxLaw = k.taxLaw): { land: number; po
 
 /**
  * 임금 지수 (매주, 빅토리아3의 '보통 임금'): 왕국 민간 건물 노동자·농부의 평균 임금 ÷ 기본 임금 (고용 가중)의 이동평균.
- * TUNE.wageMarket = 1 이면 기본 임금 대신 그 지역 소작 1인 소득 × switchPremium 으로 나눈다 (1 = 일손이 남는 지역의 균형, LABOR_MARKET.md 7장).
+ * 기본 임금 대신 그 지역 소작 1인 소득 × switchPremium 으로 나눈다 (1 = 일손이 남는 지역의 균형, LABOR_MARKET.md 7장).
  * 국영 임금 계산에는 쓰지 않고, AI 가 국영 임금 단계를 고를 때 본다 (ai.ts). 민간 노동자 고용이 없으면 그대로 둔다
  */
 export function updateWageIndex(w: World, k: Kingdom) {
@@ -118,23 +118,19 @@ export function updateWageIndex(w: World, k: Kingdom) {
     if (b.stateOwned || BUILDING_BY_ID[b.typeId].auto || kingdomOf(w, b.regionId) !== k.id) continue;
     const c = companyById(w, b.companyId);
     if (!c) continue;
-    if (TUNE.wageMarket) {
-      if (!(b.employed.unskilled > 0 || b.employed.farmer > 0)) continue;
-      const r = regionById(w, b.regionId);
-      let t = tenant.get(r.id);
-      if (t === undefined) { t = subsistenceWage(w, r); tenant.set(r.id, t); }
-      const wages = wagesAt(c, b.typeId, w, b.regionId);
-      for (const s of LOWER_JOBS) { paid += b.employed[s] * wages[s]; base += b.employed[s] * t * TUNE.switchPremium; }
-      continue;
-    }
-    for (const s of LOWER_JOBS) { paid += b.employed[s] * c.wages[s]; base += b.employed[s] * SKILL_DEFS[s].baseWage; }
+    if (!(b.employed.unskilled > 0 || b.employed.farmer > 0)) continue;
+    const r = regionById(w, b.regionId);
+    let t = tenant.get(r.id);
+    if (t === undefined) { t = subsistenceWage(w, r); tenant.set(r.id, t); }
+    const wages = wagesAt(c, b.typeId, w, b.regionId);
+    for (const s of LOWER_JOBS) { paid += b.employed[s] * wages[s]; base += b.employed[s] * t * TUNE.switchPremium; }
   }
   if (base <= 0) return;
   k.wageIndex = k.wageIndex == null ? paid / base : k.wageIndex * 0.75 + (paid / base) * 0.25;
 }
 
 /**
- * 국영 임금 (빅토리아3 정부 임금): 직종별 시장임금(왕실 건물 제외, marketWages) × 국영 임금 수준 배율. 왕실의 정부 건물(행정청·건축사무소·학교)만 이 임금을 준다.
+ * 국영 임금 (빅토리아3 정부 임금): 그 지역 시장 임금 × 국영 임금 수준 배율 × (1 + AI 왕실 웃돈). 왕실의 정부 건물(행정청·건축사무소·학교)만 이 임금을 준다.
  * 왕실 생산 건물은 민간 상회처럼 회사 임금표(wages)를 쓴다 (2026-10-23 사용자 결정, DECISIONS 6-2)
  */
 export function applyStateWages(w: World, k: Kingdom) {
@@ -142,22 +138,17 @@ export function applyStateWages(w: World, k: Kingdom) {
   if (!gov) return;
   const t = (gov.stateWages ??= { ...gov.wages });
   const mult = budgetMult(k, 'wages');
-  if (TUNE.wageMarket) {
-    // 지역 시장 임금: 정부 건물은 그 지역 시장 임금 × 단계 배율 × (1 + AI 왕실 웃돈) (Region.stateWages). 왕실 국영 임금표는 왕국 지역들의 평균 (화면·추정용 대표값)
-    for (const r of w.regions) {
-      if (r.kingdomId !== k.id) continue;
-      const wages = ensureWages(w, r);
-      const st = (r.stateWages ??= { ...wages });
-      // AI 왕실의 지역 웃돈 (TUNE.aiStatePremium, ai.ts adjustStatePremium). 없으면 시장 임금 × 단계 배율
-      const prem = gov.statePremium?.[r.id];
-      for (const s of SKILLS) st[s] = round2(wages[s] * mult * (prem ? 1 + prem[s] : 1));
-    }
-    const mean = kingdomWageMean(w, k.id, (r) => r.stateWages ?? r.wages!);
-    if (mean) for (const s of SKILLS) t[s] = round2(mean[s]);
-    return;
+  // 지역 시장 임금: 정부 건물은 그 지역 시장 임금 × 단계 배율 × (1 + AI 왕실 웃돈) (Region.stateWages). 왕실 국영 임금표는 왕국 지역들의 평균 (화면·추정용 대표값)
+  for (const r of w.regions) {
+    if (r.kingdomId !== k.id) continue;
+    const wages = ensureWages(w, r);
+    const st = (r.stateWages ??= { ...wages });
+    // AI 왕실의 지역 웃돈 (TUNE.aiStatePremium, ai.ts adjustStatePremium). 없으면 시장 임금 × 단계 배율
+    const prem = gov.statePremium?.[r.id];
+    for (const s of SKILLS) st[s] = round2(wages[s] * mult * (prem ? 1 + prem[s] : 1));
   }
-  const market = marketWages(w, gov.id);
-  for (const s of SKILLS) t[s] = round2(market[s] * mult);
+  const mean = kingdomWageMean(w, k.id, (r) => r.stateWages ?? r.wages!);
+  if (mean) for (const s of SKILLS) t[s] = round2(mean[s]);
 }
 
 /**
@@ -728,17 +719,6 @@ export function updateFunds(w: World) {
     let assets = Math.max(0, o.cash ?? 0);
     if (firm) for (const x of levelsOf.get(o.id) ?? []) { const c = constructionEstimate(w, firm, x.typeId).cost; if (Number.isFinite(c)) assets += c * x.n; }
     const u = units.get(o.id) ?? 0;
-    // TUNE.financeIdle: 쉬는 금융가는 금고에서 (금고 + 가진 레벨 값) × KEEP_SHARE 를 넘는 돈을 지분 주인에게 지분 수대로 돌려준다
-    if (u > 0 && financeIdle(w, o)) {
-      const out = Math.max(0, o.cash ?? 0) - assets * (KEEP_SHARE.finance ?? 0);
-      if (out > 0) {
-        const holders = w.pops.filter((p) => fundOf(p, o.id) > 0);
-        o.cash = (o.cash ?? 0) - out;
-        flow('idle.finance', out);
-        payPops(w, holders, out, (p) => fundOf(p, o.id), 'other');
-        assets -= out;
-      }
-    }
     o.nav = u > 0 ? Math.max(0.01, assets / u) : 1;
   }
 }
@@ -790,17 +770,6 @@ function releaseTreasuries(w: World) {
     flow(`release.${o.typeId}`, out);
     payPops(w, pops, out, weight, 'other');
   }
-}
-
-/**
- * 쉬는 금융가 (TUNE.financeIdle 주, 0 이면 끔): 그만큼 공사비를 맡지 않았고 아직 낼 약정도 없다.
- * 쉬는 금융가는 새 지분을 팔지 않고 (market.ts investSurplus: 투자자는 현금을 그대로 든다), 남는 금고를 배당한다 (updateFunds)
- */
-export function financeIdle(w: World, o: Building): boolean {
-  if (!(TUNE.financeIdle > 0) || o.typeId !== 'finance') return false;
-  if (w.tick - (o.fundedTick ?? 0) <= TUNE.financeIdle * TICKS_PER_WEEK) return false;
-  for (const k of w.constructions) if (k.funders?.[o.id] && pledgeLeft(k, o.id) > 0) return false;
-  return true;
 }
 
 /**
@@ -872,13 +841,13 @@ export function payDividends(w: World, c: Company) {
 
 /**
  * 민간 건물 b 의 하루 운영비 (운영 자금을 셀 때): 오늘 실제로 쓴 임금 + 원료.
- * TUNE.firmCallPlan = 1 (AI 판단, DECISIONS 7-40): 지금 값·임금으로 원료를 다 채워 돌리면 흑자인 생산 건물은 그 계획 운영비
+ * AI 판단 (DECISIONS 7-40): 지금 값·임금으로 원료를 다 채워 돌리면 흑자인 생산 건물은 그 계획 운영비
  * (레벨 × 가동률 × 지금 일손 비율, market.ts collectOrders 가 원료를 사는 양과 같다)와 큰 쪽.
  * 실제로 쓴 돈만 세면 현금이 0 이 된 상회는 임금·원료를 못 내 그 값이 0 이 되고, 운영 자금도 0 으로 보여 주인이 채우지 않았다 (현금 0 함정)
  */
 function opsDay(w: World, c: Company, b: Building): number {
   const paid = b.last.wageCost + b.last.inputCost;
-  if (!TUNE.firmCallPlan || !b.active) return paid;
+  if (!b.active) return paid;
   const m = getMethod(b.typeId, b.methodId);
   if (m.construction || m.seats) return paid;
   const e = estimateMethod(w, b.regionId, b.typeId, b.methodId, wagesAt(c, b.typeId, w, b.regionId), b.stateOwned);

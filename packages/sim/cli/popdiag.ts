@@ -1,12 +1,12 @@
 // 인구·건설 진단: npx tsx cli/popdiag.ts '<TUNE JSON>' [seed] [years]
 // 매년 직종별 인구·생활수준·식량·연 증감률, 건물 종류별 착공(왕실/민간/손해 짓기)과 손익을 대륙 합계로 출력한다
-import { TUNE } from '../src/data';
+import { TUNE, overrideTune } from '../src/data';
 import { createWorld, step } from '../src/index';
 import { POP_CLASSES } from '../src/types';
 
 const over = JSON.parse(process.argv[2] ?? '{}');
 const seed = Number(process.argv[3] ?? 1), years = Number(process.argv[4] ?? 20);
-Object.assign(TUNE, over);
+overrideTune(over, 'cli/popdiag');
 const w = createWorld(seed, { withPlayer: false });
 const starts: Record<string, Record<string, number>> = {};
 let lastYear = 0;

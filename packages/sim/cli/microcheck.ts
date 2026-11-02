@@ -1,9 +1,9 @@
 // 마이크로 세계 균형 점검 (src/lab/micro.ts, 2026-11-01 사용자 지시: 작은 모델에서 모든 사람을 추적하며 먼저 확인한다).
 // packages/sim 에서:  npx tsx cli/microcheck.ts [--years 10] [--seed 1] [--at 360] [--runs base,jobs,cloth,people,control] [--every 7] [--out 파일접두] [--scale 0.02] [--people 400] [--floors 0]
 //                       [--build "farm=2,lumber=1,workshop=1,builder=1@crown,admin=1@crown"]  (시작 건물: 종류[:방식]=레벨[@crown])
-//                       [--tune '{"wageMarket":1,"wageMarketRate":0.005}']  (실행마다 TUNE 을 바꾸고 끝나면 되돌린다)
+//                       [--tune '{"wageTargetSpeed":0.05}']  (실행마다 TUNE 을 바꾸고 끝나면 되돌린다. TUNE 에 없는 키면 멈춘다)
 //                       [--typescale "workshop=0.15,textile=0.25"]  (건물 종류별 추가 축소, micro.ts MicroOptions.typeScale)
-//                       [--preset labor]  (노동시장 검증용 살아 있는 세계: typescale workshop=0.15,textile=0.25,fiber_farm=0.25 + TUNE reserveShrinkWeeks 1e9.
+//                       [--preset labor]  (노동시장 검증용 살아 있는 세계: typescale workshop=0.15,textile=0.25,fiber_farm=0.25 + TUNE shrinkWeeks 1e9 (1-F 뒤로 정부 건물·무역소 적자 철거도 멈춘다).
 //                                         기본 세계는 공방·방직 1레벨이 지역 수요의 몇 배라 값이 바닥에 붙어 적자 → 유보 규칙으로 헐리고 → 공구가 끊겨 3년차에 생산 건물이 0 이 된다)
 //                       [--arableslack 1] [--moneypeople 400]  (소작지 칸 배율, 돈 문턱을 셀 인구: 시작 인구만 줄이는 비교용, micro.ts MicroOptions)
 //                       [--quakeloss 0.25 --quakeyears 3]  (quake·quaketwo 실행의 소작지 손실 비율·기간)
@@ -45,7 +45,7 @@
 //   (q) 재해 실행(quake·quaketwo, 재해 없는 실행은 같은 날짜 대조): 지역마다 소작지 칸·일하는 소작농·노동자·실업 소작농·인구, 노동자 시장 임금, 소작 1인 소득, 곡물 S/D·값, 생활수준. 해마다와 재해 앞뒤 주
 import { mkdirSync, writeFileSync, appendFileSync } from 'node:fs';
 import { dirname } from 'node:path';
-import { BUILDING_BY_ID, GOODS, TICKS_PER_WEEK, TICKS_PER_YEAR, TUNE, getMethod } from '../src/data';
+import { BUILDING_BY_ID, GOODS, TICKS_PER_WEEK, TICKS_PER_YEAR, TUNE, getMethod, checkTuneKeys, overrideTune } from '../src/data';
 import { subsistenceWage } from '../src/labor';
 import { companyById, isGovernment, wagesAt } from '../src/economy';
 import { FLOW } from '../src/kingdoms';
@@ -75,7 +75,7 @@ const buildings: MicroBuilding[] | undefined = BUILD ? BUILD.split(',').map((x) 
 }) : undefined;
 const KEY_GOODS = ['grain', 'fiber', 'timber', 'cloth', 'tools', 'furniture', 'liquor'];
 const PRESET = arg('preset', '');
-const TUNE_SET: Record<string, unknown> = { ...(PRESET === 'labor' ? { reserveShrinkWeeks: 1e9 } : {}), ...JSON.parse(arg('tune', '{}')) };
+const TUNE_SET: Record<string, unknown> = { ...(PRESET === 'labor' ? { shrinkWeeks: 1e9 } : {}), ...JSON.parse(arg('tune', '{}')) };
 const TYPESCALE_ARG = arg('typescale', PRESET === 'labor' ? 'workshop=0.15,textile=0.25,fiber_farm=0.25' : '');
 const typeScale: Record<string, number> | undefined = TYPESCALE_ARG ? Object.fromEntries(TYPESCALE_ARG.split(',').map((x) => { const [k, v] = x.split('='); return [k, Number(v)]; })) : undefined;
 const SECTIONS = arg('sections', 'abcd');
@@ -346,7 +346,7 @@ const stateHash = (w: World) => createHash('sha1').update(JSON.stringify({ ...w,
 function replay(def: RunDef, reloadAt: number): string {
   const saved: Record<string, unknown> = {};
   for (const k of Object.keys(TUNE_SET)) saved[k] = (TUNE as Record<string, unknown>)[k];
-  Object.assign(TUNE, TUNE_SET);
+  overrideTune(TUNE_SET, 'microcheck --tune');
   const tuneSaved: Record<string, number> = {};
   let w = createMicroWorld(def.opts);
   const shocks = [...def.shocks];
@@ -364,6 +364,7 @@ function replay(def: RunDef, reloadAt: number): string {
 
 function applyShock(w: World, s: LabShock, tuneSaved: Record<string, number>) {
   if (s.kind !== 'tune') { applyMicroShock(w, s); return; }
+  checkTuneKeys(s.set, `microcheck 충격 (${s.t}일)`);
   for (const [k, v] of Object.entries(s.set)) { if (!(k in tuneSaved)) tuneSaved[k] = (TUNE as unknown as Record<string, number>)[k]; (TUNE as unknown as Record<string, number>)[k] = v; }
 }
 
@@ -371,7 +372,7 @@ function run(def: RunDef): RunResult {
   const t0 = Date.now();
   const saved: Record<string, unknown> = {};
   for (const k of Object.keys(TUNE_SET)) saved[k] = (TUNE as Record<string, unknown>)[k];
-  Object.assign(TUNE, TUNE_SET);
+  overrideTune(TUNE_SET, 'microcheck --tune');
   const tuneSaved: Record<string, number> = {};
   const w = createMicroWorld(def.opts);
   const file = OUT ? `${OUT}-${def.name}.jsonl` : '';
@@ -424,7 +425,7 @@ const pad = (s: string, n: number) => s.padStart(n);
 const mean = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : NaN);
 const gmean = (xs: number[]) => { const v = xs.filter((x) => x > 0 && Number.isFinite(x)); return v.length ? Math.exp(mean(v.map(Math.log))) : NaN; };
 const byYear = (r: RunResult) => Array.from({ length: YEARS }, (_, y) => r.weeks.filter((wk) => wk.t > y * TICKS_PER_YEAR && wk.t <= (y + 1) * TICKS_PER_YEAR));
-const FLOOR = 0.25, CEIL = 1.75; // economy.ts priceBounds 기본
+const FLOOR = 0.25, CEIL = 1.75; // market.ts PRICE_MIN·PRICE_MAX
 
 /** (a) 상품 점검 */
 function goodsCheck(r: RunResult) {

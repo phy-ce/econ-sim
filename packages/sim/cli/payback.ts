@@ -3,11 +3,11 @@
 //    회수 기간(년) = 공사비 ÷ (하루 이익 × 360). 왕실은 자기 사무소 비용을, 민간은 같은 포인트당 비용을 수수료로 내므로 기본가에서는 둘이 같다.
 // 2. 실제 (seed, years): 방식마다 레벨·일 평균 이익(세전, 세후), 실제 1레벨 공사비(끝난 공사의 spent ÷ 레벨, 건물 종류별),
 //    회수 기간 = 실제 공사비 ÷ (실제 세후 이익 × 360). 해마다 왕실 사무소의 실제 포인트당 비용도 낸다.
-import { BUILDING_BY_ID, BUILDING_TYPES, GOODS, SKILL_DEFS, TICKS_PER_YEAR, TUNE, buildPointsOf } from '../src/data';
+import { BUILDING_BY_ID, BUILDING_TYPES, GOODS, SKILL_DEFS, TICKS_PER_YEAR, TUNE, buildPointsOf, overrideTune } from '../src/data';
 import { createWorld, step } from '../src/index';
 import type { GoodId, MethodDef, Skill } from '../src/types';
 
-Object.assign(TUNE, JSON.parse(process.argv[2] ?? '{}'));
+overrideTune(JSON.parse(process.argv[2] ?? '{}'), 'cli/payback');
 const seed = Number(process.argv[3] ?? 1), years = Number(process.argv[4] ?? 10);
 const sum = <K extends string>(o: Partial<Record<K, number>>, f: (k: K, n: number) => number) => (Object.entries(o) as [K, number][]).reduce((a, [k, n]) => a + f(k, n), 0);
 const wageOf = (m: MethodDef) => sum(m.workers as Record<Skill, number>, (s, n) => n * SKILL_DEFS[s].baseWage);

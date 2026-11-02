@@ -71,7 +71,7 @@ export interface KingdomMetrics {
   levelsBy: Record<string, number>;
   /** 건물 종류별: 일꾼, 일자리, 하루 손익 합(이동평균), 적자 건물 레벨 */
   typeBy: Record<string, TypeMetrics>;
-  /** 이번 달 착공 레벨: '건물|s'(왕실) '건물|p'(민간) '건물|loss'(AI 손해 짓기) '건물|d'(철거) */
+  /** 이번 달 착공 레벨: '건물|s'(왕실) '건물|p'(민간) '건물|d'(철거) */
   starts: Record<string, number>;
   /** 국영 임금 (정부 건물의 노동자, 기술자), 아는 기술 수 */
   wageUnskilled: number;
