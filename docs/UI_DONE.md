@@ -1342,3 +1342,480 @@ ownershipAssets API로 소유 기관 소재지 기준 왕국/지역 막대, 내 
 - 코드 완료: BudgetJobs는 marketWage가 있으면 시장 임금 × 단계만 표시하고, AI 국영 premium이 있으면 ×(1+웃돈) 추가. 지역 값이 없는 wageMarket0/옛 자료는 기본 임금 × 임금 지수 × 단계 식 유지. 화면 숫자는 소수2자리, 원래 계산값 불변.
 - 헤드리스 스크린샷 확인(1920×1080): C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/state-wage-regional-en-dark.png. 동부 삼림 행정청 하급 귀족700명, 1인ƒ4.00·Market wage4×Stage1. 직접 API 대조 perHead3.997182848716258/Region.stateWages4 → 표시값4.00 동일. AI 웃돈 및 지역 임금0 세계는 SSR 회귀만, 화면 미검증.
 - 클라이언트25파일66시험 통과(지역/웃돈식·옛 계산식 호환 포함). 루트 typecheck 통과. 이전 2-81 커밋9d61d99.
+
+## 2026-11-02 · UI_CHANGES 3장 뒤 진행 메모 (원문, 2026-11-02 옮김)
+- 근거: 같은 범위의 완료 기록이 이 문서에 있다 (K 2-70, C 2-71·2-72 1항, H 2-73, J 2-74, 2-50 잔여, 모두 2026-11-01 절). 할 일이 남지 않아 UI_CHANGES 에서 뺐다.
+- K(2-70): 코드 완료, 화면 미검증. UI_DONE 참조.
+- 진행 C(2-71·2-72 1항): 국가 예산/법 탭 통합, 외부 링크 탭 목적지, 복지법 없음 잠금. 본문/명령 재사용.
+- 진행 H(2-73): 지역 칩·짓기/대기열·지도 선택 연동·BuildList 재사용.
+- 진행 J(2-74): 워커 틱 경계 목표 정지, 이유 칩, 위험 에피소드 35틱 거르기. sim 파일 변경 없음.
+- 진행 2-50 잔여: 옛 상회 저택·금융가 행을 OwnerSummary/자리/금고 전용으로 분기.
+
+## 2026-11-02 확인 (main `81494a1` 클라이언트 코드 대조, 화면 작업자 커밋 d47e766·9d61d99·e152f49 포함)
+- 코드만 읽어 판정했다. 화면 검증 범위는 UI_STATUS 기록을 따른다 (적힌 것 밖은 화면 미검증).
+
+### 2-43 확인: 완료 (그림 양식은 2026-10-24에 바뀌었다). `RegionMap.tsx:7`·`:69`·`:72` (regions.json, 바탕 이미지, 호수·산괴), 이웃 검사 `scripts/build-map.ts:18~29` (`assets:check`).
+
+### 2-43. 지도 다시 그리기: 생성 이미지 + 지역 경계 벡터 (사용자 요청 2026-10-21)
+
+> 2026-10-24 적용: 최신 사용자 지시에 따라 풍경 삽화 대신 단순한 평면 지도, 아이콘은 첨부 참조의 선명한 카툰 양식으로 교체했다. 아래 옛 그림체 프롬프트보다 최신 지시를 우선한다. 구현·규격·검증 범위는 [UI_ATLAS_2026-10-24.md](log/UI_ATLAS_2026-10-24.md), 실제 프롬프트는 `packages/client/public/ASSETS.md` 참조.
+
+**문제:** 지금 지도(`RegionMap.tsx`)는 지역 중심점 7개(`POS` 16~19)로 사각형 땅(`LAND` 21~24)을 보로노이로 자른 것(`clip` 28~42, `cells` 68~84)이다. 모양이 직선 다각형이라 엉성하고, 경계가 sim 이웃과 맞지 않는다 (예: 벨마르 항(1)과 북부 광산지대(6)가 위쪽에서 맞닿아 보이지만 sim에서는 이웃이 아니다). 바다·해안선(114~115, 94~98·129)도 손으로 찍은 점 몇 개다.
+**바꿀 것:** 그린 지도 한 장(바탕 그림) + 그 그림에서 딴 지역 경계 벡터(상호작용·색 레이어). 순서: 2-43-1 이미지 생성(사용자) → 2-43-2 경계 따기 → 2-43-3 게임에 넣기 → 2-43-4 지울 것·확인.
+
+**지역 수는 늘어난다 (사용자 2026-10-21).** 지금 7개는 임시이고 나중에 지역을 늘린다. 그래서 이 절의 작업은 "한 번 그리고 끝"이 아니라 다시 돌릴 수 있는 과정으로 만든다.
+- 코드와 데이터 어디에도 지역 수 7을 박지 않는다. 지역 목록·이웃·이름은 늘 sim(`w.regions`, `neighbors`)에서 읽고, `regions.json`은 지역 id를 키로 한 사전으로 둔다 (빠진 지역은 원 표시로 대신 그려 게임이 깨지지 않게).
+- 프롬프트(2-43-1)는 지역 목록 표에서 만들어지게 적는다: 지역이 늘면 표에 줄을 더하고 같은 틀로 다시 생성한다.
+- 경계 따기(2-43-2)는 스크립트로 만든다 (단색 키 판 → 경로 → 검사). 손으로 딴 경우에도 같은 검사(이웃 = sim `neighbors`)를 빌드에서 돌린다.
+- 나중 확장 방식은 둘 중 하나로 고를 수 있게 둔다: (가) 지도를 통째로 다시 생성, (나) 대륙 바깥에 새 땅을 이어 붙이기. 어느 쪽이든 지역 id는 바뀌지 않는다.
+
+#### 2-43-0. 지도에 담을 사실 (sim 기준, 바꾸지 말 것)
+- 지역 7개 (`packages/sim/src/data.ts` 505~540 `REGIONS`). 왕국 3개(에스테라·벨로니아·카르텐)는 **시드마다 무작위로 나뉜다** (`world.ts` 59 `splitKingdoms`: 왕국마다 이어진 2지역 이상). 그래서 그림에 왕국 색·왕국 경계를 넣지 않는다. 왕국 경계는 게임이 지역 경계 중에서 골라 그린다.
+- 이웃 (`neighbors`, 이것과 정확히 같아야 한다. 이웃 9쌍):
+  `1-2, 1-3, 2-3, 2-4, 3-5, 3-6, 4-5, 5-7, 6-7`.
+  이웃이 **아닌** 쌍이 닿으면 안 된다. 특히 `1-6`, `3-4`, `2-5`, `3-7`, `5-6`.
+- 평면에 이 그래프를 그리면 네 지역이 둘러싸는 고리가 두 개 생긴다 (2-3-5-4, 3-6-7-5). 마주 보는 지역이 닿지 않게 고리 가운데에 **주인 없는 땅**을 하나씩 둔다: 2·3·4·5 사이에 **호수**, 3·5·6·7 사이에 **높은 바위 산괴**. 둘 다 클릭되지 않는다.
+- 배치(추천, 그래프와 맞음):
+
+  | id | 이름 | 위치 | 땅 모양 (근거: perks, forest, veins) |
+  |---|---|---|---|
+  | 1 | 벨마르 항 / Port Belmar | 북서 해안 | 항구 도시, 부두·범선, 작업장 거리, 작은 밭 (항구는 이 지역뿐: `spaceport`) |
+  | 2 | 강변 평야 / River Plain | 서쪽~남서 해안 | 큰 강이 바다로 나간다, 황금빛 밀밭·아마밭 (`farm`, `fiber_farm`) |
+  | 3 | 중앙 고원 / Central Highlands | 가운데, 북쪽 끝까지 뻗어 1과 6을 가른다 | 낮은 고원, 풍차·밭, 숲 조금, 작은 철 언덕, 길이 모이는 곳 (`railway`) |
+  | 4 | 남부 습지 / Southern Marshes | 남쪽 | 갈대·늪·물길, 습지 숲 (`fiber_farm` 0.15, forest 100) |
+  | 5 | 동부 삼림 / Eastern Forest | 남동~동쪽 | 짙은 숲, 제재소 (forest 200, 석탄 조금) |
+  | 6 | 북부 광산지대 / Northern Mining District | 북동 | 언덕·산, 갱도·제련 연기 (철 200, 석탄 150) |
+  | 7 | 회색 협곡 / Grey Gorge | 동쪽 끝 | 회색 바위 협곡과 계곡 강 (철 150, 석탄 100) |
+
+  바다는 서쪽과 북서쪽만. 해안에 닿는 지역은 1·2 (4는 남서 끝이 살짝 닿아도 된다). 동·남·북의 지도 끝은 그냥 땅이 이어지다 잘린 모양(또는 옅게 흐려짐)으로 둔다. 강: 고원(3)에서 시작해 평야(2)를 지나 바다로, 하나 더는 협곡(7)을 따라 남쪽으로.
+
+#### 2-43-1. 이미지 생성 (사용자가 ChatGPT로)
+- **참고 그림 확인:** 사용자가 준 나무위키 이미지(신성 로마 제국 지도, 500×410 webp)를 열어 봤다. 역사 지도책 양식이다: 나라마다 납작한 파스텔·원색 칠, 옅은 음영 기복, 연한 파란 바다와 해안 음영, 붉은 국경선과 점선, 파란 강, 글자가 아주 많다.
+- **양식 결정 (추천):** 참고 그림의 지도책 구성(기복 음영, 또렷한 해안·강, 경계가 읽히는 땅)을 따르되, 게임의 양피지 색(지금 땅 `#d0c495`, 바다 `#93afb3`, `strategy.css` 51)으로 **손으로 칠한 양피지 지도책**으로 한다. 이유: (1) 왕국이 시드마다 바뀌므로 정치색은 게임이 위에 칠해야 하고, 바탕은 채도가 낮아야 그 색이 읽힌다. (2) 픽셀 아트는 지도 크기에서 확대(최대 300%)하면 계단이 지고 경계 따기가 어렵다. 픽셀 아트는 지금처럼 지역 아이콘(`region-1..7` 스프라이트)에만 쓴다. (3) 글자를 넣지 않아야 한·영 전환과 숫자 표시를 게임이 한다.
+- **크기:** 가로 3:2, `1536×1024` (ChatGPT 가로형 크기). 시안을 3~4장 받아 2-43-0 배치와 이웃 조건을 가장 잘 지킨 한 장을 고른다. 고른 그림으로 같은 대화에서 깨끗한 판(아래 B)을 만든다.
+
+**A. 그림 판 (바탕) — 한국어**
+```
+가로 3:2(1536×1024) 판타지-근세 왕국의 대륙 지도를 그려줘. 오래된 양피지에 수채와 잉크로 손으로 칠한 역사 지도책 양식. 위에서 내려다본 시점, 은은한 기복 음영, 채도 낮은 흙빛·올리브·청회색. 글자, 숫자, 지명, 범례, 나침반, 테두리 장식, 격자는 절대 넣지 마.
+서쪽과 북서쪽은 바다(연한 청회색, 해안 음영). 땅은 7개 지역으로 나뉘고, 지역 사이 경계는 가늘고 또렷한 짙은 갈색 잉크 선으로 그려. 지역마다 땅 모양이 다르게:
+1) 북서 해안: 성벽 있는 항구 도시, 부두와 범선, 작업장 지붕, 작은 밭.
+2) 서쪽~남서 해안: 넓은 평야, 큰 강이 바다로 흐름, 황금빛 밀밭과 아마밭.
+3) 지도 가운데 고원, 북쪽 끝까지 길게 뻗어 1과 6을 갈라놓음: 풍차, 밭, 작은 숲, 낮은 바위 언덕, 길이 모이는 곳.
+4) 남쪽: 갈대 습지, 늪과 물길, 습지 숲.
+5) 남동~동쪽: 아주 짙은 숲과 제재소.
+6) 북동: 언덕과 산, 갱도 입구, 제련소 연기.
+7) 동쪽 끝: 회색 바위 협곡, 협곡을 따라 남쪽으로 흐르는 강.
+2·3·4·5가 만나는 곳에는 호수가 있어서 2와 5, 3과 4는 서로 닿지 않아. 3·5·6·7이 만나는 곳에는 아무 지역에도 속하지 않는 높은 바위 산괴가 있어서 3과 7, 5와 6은 서로 닿지 않아. 1은 2·3하고만, 6은 3·7하고만 닿아.
+지도 동·남·북 가장자리는 땅이 이어지다 잘린 모양. 나라 색칠이나 국경 색은 넣지 마.
+```
+**A. Painted base — English**
+```
+A 3:2 landscape (1536x1024) continental map of an early-modern fantasy kingdom, hand-painted historical atlas style: watercolor and ink on aged parchment, top-down view, soft hillshade relief, muted earthy ochre, olive and slate-blue palette. Absolutely no text, letters, numbers, place names, legend, compass rose, decorative frame, or grid.
+Sea to the west and north-west (pale slate-blue with coastal shading). The land is divided into exactly 7 regions separated by thin, crisp dark-brown ink border lines. Each region has distinct terrain:
+1) North-west coast: walled harbour town, docks and sailing ships, workshop roofs, small fields.
+2) West to south-west coast: broad plain, a large river flowing into the sea, golden wheat and flax fields.
+3) Central plateau that extends north to the top edge, separating region 1 from region 6: windmills, fields, small woods, low rocky hills, a road junction.
+4) South: reed marshes, bogs and channels, swamp woods.
+5) South-east to east: very dense forest with sawmills.
+6) North-east: hills and mountains, mine entrances, smelter smoke.
+7) Far east: grey rocky gorge with a river running south through it.
+Where regions 2, 3, 4 and 5 meet there is a lake, so 2 does not touch 5 and 3 does not touch 4. Where 3, 5, 6 and 7 meet there is a high rocky massif belonging to no region, so 3 does not touch 7 and 5 does not touch 6. Region 1 touches only 2 and 3; region 6 touches only 3 and 7.
+The east, south and north map edges are land cut off by the frame. No political colors or colored national borders.
+```
+**B. 깨끗한 판 (경계 따기용) — 고른 그림으로 같은 대화에서**
+```
+방금 고른 지도와 구도·해안선·경계선 위치를 픽셀 단위로 똑같이 유지해서, 그림 없이 평면 색만 있는 판으로 바꿔줘. 7개 지역을 각각 하나의 단색으로 꽉 채워: 1 #FF0000, 2 #00FF00, 3 #0000FF, 4 #FFFF00, 5 #FF00FF, 6 #00FFFF, 7 #FF8000. 바다는 #FFFFFF, 호수는 #808080, 바위 산괴는 #404040, 강은 #000080 2픽셀 선. 지역 경계선, 음영, 질감, 그림자, 글자는 넣지 마. 안티앨리어싱 없이 가장자리를 또렷하게.
+```
+```
+Keep the exact composition, coastline and every border position of the chosen map, pixel for pixel, but render it as a flat color-key map with no artwork. Fill each of the 7 regions with one solid color: 1 #FF0000, 2 #00FF00, 3 #0000FF, 4 #FFFF00, 5 #FF00FF, 6 #00FFFF, 7 #FF8000. Sea #FFFFFF, lake #808080, rocky massif #404040, rivers as 2-px #000080 lines. No border lines, shading, texture, shadows or text. Hard edges, no anti-aliasing.
+```
+- B가 A와 어긋나면(생성 모델은 다시 그릴 때 선이 조금 움직일 수 있다) B를 버리고 A 위에서 직접 딴다 (2-43-2의 "손으로 따기"). 어느 쪽이든 최종 벡터는 A 그림에 겹쳐 맞춘다.
+- 사용자가 고른 A·B 원본 PNG를 `packages/client/public/assets/map/`에 `map-base.png`, `map-key.png`로 둔다 (원본 보관용, 빌드에는 webp만).
+
+#### 2-43-2. 경계를 벡터로 따기
+- **좌표계:** 벡터 좌표 = 그림 픽셀 좌표. `viewBox="0 0 1536 1024"`. 그림을 자르거나 늘리지 않는다 (자를 거면 벡터 따기 전에 자르고 크기를 기록).
+- **자동 따기 (B가 있을 때, 추천):** 색 키 그림을 지역 번호 래스터로 바꾼다 (색마다 가장 가까운 키 색으로 반올림, 경계의 섞인 픽셀 정리). 같은 래스터에서 다각형을 뽑으면 이웃끼리 경계가 **같은 점**을 공유한다 (예: Python `rasterio.features.shapes` → GeoJSON). 그다음 위상을 지키는 단순화(예: `mapshaper -simplify` 는 공유 경계를 한 번만 단순화해 틈·겹침이 안 생긴다)로 점 수를 줄인다. 지역마다 300점 안팎이면 충분하다.
+- **손으로 따기 (B가 어긋날 때):** Inkscape(또는 Figma)에서 A를 잠근 바탕으로 깔고 경계선을 따라 펜으로 그린다. 공유 경계는 **한 번만** 그리고 양쪽 지역이 그 선을 같이 쓴다 (Inkscape: 경계선들을 그린 뒤 해안선 닫힌 도형과 함께 `Path > Split Path`/도형 빌더로 조각을 만든다, 또는 스냅을 켜고 노드를 같은 점에 붙인다). 틈·겹침이 0.5px 넘으면 안 된다.
+- **만들 레이어:** 지역 7개(닫힌 경로 하나씩, `id = region id`), 주인 없는 땅 2개(호수 `lake`, 산괴 `massif`), 해안선(열린 선), 강(열린 선 여러 개), **이웃 쌍마다 공유 경계 선**(9개, `a<b`), 바다 영역.
+- **기준점 (지역마다, 그림을 보고 손으로 찍는다):** `label`(이름표 자리, 넓고 빈 곳), `icon`(지금 `region-N` 스프라이트 자리), `city`·`farm`·`forest`·`mine` 중 그 지역에 있는 것(건물 칩·광맥 표시 자리), `rail`(철도 선이 닿는 점). 겹치지 않게 최소 60px 띄운다.
+- **저장 파일:** `packages/client/src/map/regions.json` (코드가 읽음) 하나. 모양:
+  ```ts
+  type MapData = {
+    viewBox: [0, 0, 1536, 1024];
+    image: { light: string; dark?: string };          // public 경로, 예 'assets/map/map-base.webp'
+    regions: { id: number; d: string;                  // SVG path, 좌표 소수 1자리
+      bbox: [number, number, number, number];          // x, y, w, h
+      centroid: [number, number]; label: [number, number]; icon: [number, number];
+      anchors: Partial<Record<'city'|'farm'|'forest'|'mine'|'rail', [number, number]>> }[];
+    borders: { a: number; b: number; d: string }[];   // 이웃 쌍마다 공유 경계 (열린 선)
+    unclaimed: { id: 'lake'|'massif'; d: string }[];
+    coast: string; rivers: string[]; sea: string;
+  };
+  ```
+  편집 원본 `packages/client/src/map/regions.svg`(Inkscape 파일, 그룹 id = 위 이름)도 같이 둔다. json은 svg에서 스크립트(`packages/client/scripts/build-map.ts`)로 만든다. 손으로 json을 고치지 않는다.
+- **이웃 검사 (필수, 스크립트에 넣는다):** 두 지역 경로가 길이 20px 넘게 경계를 공유하면 이웃이다. 이 집합이 `REGIONS`(`@econ/sim`)의 `neighbors` 9쌍과 정확히 같아야 하고, 다르면 빌드가 실패한다. `borders`의 쌍도 같은 9쌍이어야 한다. 이웃 아닌 쌍은 꼭짓점 하나(길이 0)로도 닿지 않게 한다.
+
+#### 2-43-3. 게임에 넣기 (`RegionMap.tsx`)
+- **층 (아래부터):**
+  1. 바탕 그림: `<image href=… x=0 y=0 width=1536 height=1024 preserveAspectRatio="none">`. 클릭 없음.
+  2. 데이터 칠: 지역 경로 7개에 레이어 색. `territory`는 왕국 색 `fill-opacity .35`, `wealth`·`sol`은 2-33의 연속 색(`wealthColor`) `fill-opacity .55`. `mix-blend-mode: multiply`로 그림의 질감이 비치게 한다. 경계선은 칠하지 않는다(그림에 있음).
+  3. 왕국 경계: `borders` 중 `kingdomId`가 다른 쌍만, 지금처럼 밝은 선 위 어두운 선 두 겹(128행 모양 그대로, 굵기만 새 좌표에 맞게 약 ×15). 왕국은 시드마다 다르므로 매번 계산.
+  4. 상호작용: 같은 지역 경로를 투명 칠(`fill: transparent; pointer-events: all`)로 한 번 더. hover는 밝게(`filter: brightness(1.08)` 또는 흰 칠 .12), 선택은 굵은 테두리(선택 지역을 맨 위로 그리는 지금 방식 `order` 유지), 포커스는 `--accent` 테두리.
+  5. 철도: 이웃 쌍마다 두 지역 `anchors.rail`을 잇는 선(지금 `edges`와 같은 9쌍). 직선 대신 살짝 굽힌 2차 곡선.
+  6. 글자·숫자·아이콘: 게임이 그린다. 이름표는 `label`, 지역 아이콘은 `icon`, 소유 막대·내 건물 배지는 `label` 기준 아래. 글자는 화면 크기가 줌과 무관하게 일정하도록 `font-size`를 `1/zoom`로 맞추거나 `vector-effect`를 쓴다. 글자에 양피지색 테두리(`paint-order: stroke`)를 둬 그림 위에서 읽히게.
+- **줌·이동:** 지금 카메라 코드(55~58, 107~112)를 그대로 쓰되 단위를 1536×1024에 맞춘다: 기본 보기는 그림 전체, 줌 100~300%, 이동은 그림 밖으로 10% 넘게 나가지 않게 고정. 줌 300%에서 흐리면 그림을 2배(3072×2048)로 키운 판을 쓴다 (아래 용량 안에서).
+- **다크 모드:** 그림을 바꾸지 않고 바탕 그림 위에 어두운 막(`rect` 칠 `#101418` 불투명 .45, 또는 `filter: brightness(.6) saturate(.8)`)을 깐다. 데이터 칠·경계·글자는 그 위라 다크에서도 또렷하다. 다크 전용 그림(`image.dark`)은 선택.
+- **성능:** 그림 한 장 + 경로 7×2 + 선 20개 안팎. 경로 문자열은 모듈에서 한 번 읽고, 틱마다 바뀌는 것은 `fill`뿐. 그림은 `decoding="async"`, 한 번만 불러온다.
+- **파일·용량:** `packages/client/public/assets/map/map-base.webp` (품질 80 안팎, **2MB 이하**, 1536×1024면 보통 0.5MB 안). `regions.json` 100KB 이하.
+- **출처 기록:** `packages/client/public/ASSETS.md`에 "지도 바탕: 사용자가 ChatGPT 이미지 생성으로 만듦 (날짜), 프롬프트 원문은 docs/UI_CHANGES 2-43-1, 고른 시안, 후처리(webp 변환·크기)"를 적는다. 사용자 계정에서 만든 그림이라 이용 조건은 사용자가 확인한다 (공개 배포 전에 결정 필요 표시).
+- 왼쪽 범례(`map-keys` 163~)의 바다·땅 표시는 그대로, 철도·광산 표시는 새 선 모양과 맞춘다.
+
+#### 2-43-4. 지울 것과 확인
+- **지울 것 (`RegionMap.tsx`):** `POS` 16~19, `LAND` 21~24, `Pt`·`clip`·`toPath` 26~43, `cells` 68~84, `borders` 계산 85~93(→ `borders` 데이터 + 왕국 비교), `coast` 94~98, `map-bg`·`sea` 114~115, `coast-line` 129, 철도의 `POS` 사용 130~133, 이름표·아이콘의 `POS` 사용 136~(→ `label`·`icon`), `viewBox` 계산 107의 `-24`,`-8`,`148`,`116` 상수.
+- **CSS:** `strategy.css` 51의 `.map-bg`·`.sea` 칠, `styles.css` 234~236(`.map-bg`, `.sea`, `.coast-line`)은 쓰지 않으면 지운다. `.cell-fill`(238~241)은 새 층 규칙으로 바꾼다.
+- **그대로 둘 것:** 레이어 버튼·범례·지역 목록 표(`map-directory`), 소유 막대·내 건물 배지 모양, `RegionCircles.tsx`(지역 패널의 땅 고리, 지도와 무관).
+- **확인:**
+  - 7지역 모두 클릭·키보드(Enter/Space) 선택이 되고, 호수·산괴·바다는 눌러도 선택이 바뀌지 않는다.
+  - 경계에 틈·겹침이 없다 (300% 확대에서 바탕색이 새지 않음, 투명 칠 겹침 없음).
+  - 빌드 스크립트의 이웃 검사가 통과한다 (`neighbors` 9쌍과 같음). 시드 1·2·3에서 왕국 경계가 실제 왕국이 다른 이웃 사이에만 그려진다.
+  - 세 레이어(영토·부·생활수준) 색이 그림 위에서 구분되고, 다크 모드에서도 구분된다.
+  - 그림에 글자가 없다. 한·영 전환 때 이름표만 바뀐다.
+  - 그림 용량 2MB 이하, 첫 표시 지연이 눈에 띄지 않는다.
+- sim 변경 없음.
+
+### 2-45 확인: 코드 완료 (d47e766 투자 직종 아이콘·잠금 아이콘, 5beb5c0 세율 툴팁, 631751f 기술 링크·전환 상태). `PolicyPanel.tsx:30` 세율 툴팁, `:41` 전환 막대(조건 미달 빨강), `:43` 잠금, `:45` 투자 직종 아이콘, `:46` 기술 링크. 사건 이동 `eventDestination.ts:3`. 예산 칩·재정 칩 항목은 정책·재정이 국가 창 하나로 합쳐져(`StatePanel.tsx`, 2-71) 폐기. 화면 미검증: 법 전환 완료/실패 사건 클릭, 영어·다크 새 아이콘 (UI_STATUS 2026-11-02).
+
+### 2-45. 정책 창 (세법·투자법, 사용자 요청 2026-10-21, 일부 sim 쪽 필요)
+
+> 현재 상태 (2026-10-28): API 대기 해제: policyStatus export와 PolicyPanel 구현 존재. 아래 초기 두 세법/전환 없음 설명은 최신 시스템으로 간주하지 않는다. 기능별 검증 필요.
+**사용자 말:** 정책 탭(창)을 새로 만든다. 세법(토지세/인두세/소득세 중 하나, 시작 토지세)을 고르고, 바꾸면 6개월에 걸쳐 바뀌며 진행 막대가 보인다. 고를 수 있는지는 금융가 자산 비율 조건으로 정해진다. 투자법도 같은 모양 (DECISIONS 7-18 세법, 7-19 투자법).
+
+**지금 화면:** 세법은 재정 창 `FinancePanel.tsx` 20의 `select` (`land`/`capita` 둘, 누르면 바로 바뀜, `setTaxLaw`). 예산 단계 버튼 1~5는 같은 표 24 (2-23·2-30).
+
+#### 2-45-1. 창
+- `WindowWorkspace.tsx` 7 `WindowId`에 `'policy'`, `App.tsx` 201 `finance` 다음에 `{ id:'policy', title:T.policy, icon:<Scale size={18}/> }` (lucide `Scale`). dock 버튼도 생긴다 (2-34 토글 규칙).
+- 내용: `SectionStack storageKey="policy"`, 섹션은 법마다 하나: `taxLaw`, `investLaw`. 나중 정책은 같은 모양의 섹션을 하나씩 더한다 (빈 자리·"준비 중" 칸은 그리지 않는다).
+- 맨 위 한 줄(섹션 밖): `금융가 비율 NN%` + 2-44와 같은 저택|금융가 비율 막대 (내 왕국). 모든 조건이 이 값 하나를 쓴다.
+- 예산 단계(세금·국영 임금·연구비)는 **재정 창에 둔다 (추천).** 단계 버튼은 2-30 미리보기 숫자와 붙어 있어야 효과가 보이고, 빅토리아3도 세금 수준·정부 임금은 예산 화면, 법은 법 화면이다. 정책 창 맨 아래에 한 줄 `예산 단계  세금 3 · 임금 3 · 연구 3  ↗` (읽기 전용 칩, ↗ 누르면 `showWindow('finance')`). 사용자가 옮기기를 원하면 2-30 표째 옮긴다 (사용자 결정, DECISIONS에 올리지 않음: 화면 배치라서).
+
+#### 2-45-2. 법 섹션 하나의 모양 (공통 컴포넌트 `LawPicker`)
+- 행 = 선택지 하나. 칸: 이름 · 조건 숫자 `≥ NN%` (조건 없으면 비움) · 상태.
+- 상태 넷:
+  | 상태 | 모양 | 누르면 |
+  |---|---|---|
+  | 지금 법 | `aria-pressed=true`, 채운 배경 | 전환 중이면 전환 취소, 아니면 없음 |
+  | 전환 중 (목표) | 테두리 accent + 행 바닥 진행 막대 `(tick − startTick) / (endTick − startTick)` + `n일` | 없음 |
+  | 고를 수 있음 | 보통 버튼 | 전환 시작 (명령) |
+  | 조건 미달 | `disabled`, 조건 숫자를 `neg` 색 | 없음 |
+  | 잠김 (2-56) | `disabled`, 흐리게, 자물쇠 아이콘(lucide `Lock`) + 여는 기술 이름 (`TECH_BY_ID[o.tech].name`) | 없음 (툴팁 `기술: 이름`, 누르면 연구 창으로 가도 된다) |
+- 전환 중에는 다른 선택지를 모두 `disabled`로 둔다 (취소만 된다). 전환 중에는 지금 법이 그대로 적용된다 (7-18).
+- 전환 중 행 (2-56): 진행 막대 옆에 지금 비율 / 필요 비율 `금융가 NN% / NN%`. `pendingOk === false`면 막대와 숫자를 `neg` 색 (지금 끝나면 실패한다는 뜻). 기간이 끝날 때 조건이 안 맞으면 바뀌지 않고 지금 법이 남는다 (소식 `lawFailed`). 다시 누르면 다시 시작한다.
+- 조건 미달 툴팁: `금융가 NN% / 필요 NN%`. 세법 선택지 툴팁: 그 법의 세율 (`taxRates(k, law)`: 토지세 = 소작농 1인당 ƒ, 인두세 = 1인당 ƒ, 소득세 = %).
+- 확인 창은 두지 않는다 (전환 중 취소가 되므로).
+
+#### 2-45-3. 세법
+- 선택지: `토지세 / Land tax`, `인두세 / Poll tax`, `소득세 / Income tax`. 시작은 토지세. 조건은 sim이 준다 (예 인두세 30%, 소득세 60%, 비교로 정함 — 화면에 숫자를 박지 않는다). 순서 상관없이 기술로 열리고(2-56) 조건이 맞으면 고른다.
+- **지금 할 수 있는 것:** 창을 만들고 `FinancePanel.tsx` 20의 `select`와 세율 문구를 이 섹션으로 옮긴다. 지금 sim은 `TaxLaw = 'land' | 'capita'` 둘이고 전환 없이 바로 바뀐다: 두 행 모두 "고를 수 있음", 조건 칸 비움. 3장 필드가 들어오면 세 행·조건·진행 막대로 바꾼다.
+- 재정 창 20행에는 세법 칩 하나만 남긴다 (`토지세` + 전환 중이면 작은 진행 막대, 누르면 `showWindow('policy')`).
+
+#### 2-45-4. 투자법 (금융가 지분을 살 수 있는 사람, sim 쪽 필요)
+- 선택지 넷 (넓어지는 순): `귀족만 / Nobles only` (시작) → `상층 평민까지 / + Upper commoners` (전문가) → `중층까지 / + Middle` (기술자) → `하층까지 / + Lower` (노동자·농부). 행 툴팁에 포함 직종 아이콘.
+- 넓히는 쪽은 기술로 열린 뒤(2-56) 조건(금융가 비율 ≥ 그 행의 값)이 맞아야 하고, 좁히는 쪽은 조건 없이 된다. 둘 다 6개월 전환.
+- 조건 숫자는 행마다 `≥ NN%`, 위의 지금 비율과 비교된다 (값은 비교 실행으로 정함, sim이 준다).
+- sim에 들어오기 전에는 섹션을 그리지 않는다.
+
+#### 2-45-5. 소식
+- 전환이 끝나면 sim 소식 `GameEvent.topic === 'lawChanged'`(바뀜, `info`) 또는 `'lawFailed'`(실패, `warn`, 문구에 금융가 비율 / 필요 비율)를 띄운다. 누르면 정책 창 (`eventDestination.ts`에 `topic`이 있으면 `policy` 목적지).
+- 문자열: `policy` 정책 / Policies, `taxLawTitle` 세법 / Tax law, `investLaw` 투자법 / Investment law, `landTax`·`pollTax`·`incomeTax`(있는 것 재사용), `investNobles`·`investUpper`·`investMiddle`·`investLower`, `budgetSteps` 예산 단계 / Budget levels, `financeShare`(2-44).
+
+### 2-46 확인: 완료. `RegionWindow.tsx:12`·`:17` 개요·인구·건물 탭 (탐색 이력 상태). 작은 잔여(`role=tablist`, ←/→ 키)는 넘기지 않는다.
+
+### 2-46. 지역 창 하나로: 개요·인구·건물 (사용자 요청 2026-10-21)
+
+> 현재 상태 (2026-10-28): 구현: 지역 창 개요·인구·건물 탭 통합. 최신 개요는 장부형이며 신규 구현 대상으로 다시 시작하지 않는다.
+**사용자 말:** 지역 개요 창과 지역 건물 창을 합친다.
+
+**지금:** `App.tsx` 200이 `RegionPanel`을 `mode` 셋(`overview`·`market`·`industry`)으로 세 창에 띄운다. 창마다 같은 머리(`RegionPanel.tsx` 88~124: 이름·작황·특산·지표 6칸)가 반복된다. 개요 창은 `RegionExplorer`(43줄)와 "지역 건물 전체 보기" 링크(122), 건물 창은 2-42 목록. `RegionPanel`에는 `!mode`일 때 쓰는 탭 줄(127~131)이 이미 있지만 쓰이지 않는다.
+
+**바꿀 것**
+- 창 `overview`·`industry`를 `region` 하나로 (`WindowId`에서 둘을 빼고 `'region'`, 제목 = 지역 이름, 아이콘 `MapPin`). 시세 창은 지역 창에서 떼어 따로 둔다 (2-47). localStorage의 창 위치(`rects`)는 `industry` 것을 `region`으로 한 번 옮긴다.
+- 창 머리 (모든 탭 공통, 한 줄): 지역 그림 · 이름 · `HarvestBadge` · 특산 칩 · 왕국 색 점. 지표 6칸(103~121)은 개요 탭으로 내린다.
+- 탭 셋 (`role="tablist"`, ←/→로 이동, 고른 탭은 localStorage `region-tab`):
+  1. **개요**: 지표 6칸(생활수준·인구·1인당 부·노동자 부·실업·교육, 지금 막대 그대로) + `RegionExplorer`의 땅·원 그림(`RegionCircles`). 건물 종류 요약(RegionExplorer 16의 `groups`)과 "지역 건물 전체 보기" 링크(122)는 지운다 (건물 탭이 같은 창에 있다).
+  2. **인구**: 직종별 인구 막대(`ClassDonut` 또는 RegionExplorer의 직종 줄) + 그 지역으로 고정한 `PopTable` (지역 필터를 잠근다). 직종을 누르면 같은 탭에서 표를 그 직종으로 거른다. 지금 `openPops`(`App.tsx` 112)는 통계 창으로 가는데, 이 탭으로 바꾼다.
+  3. **건물**: 2-42 전부 (종류별 행, 전체/민영/국영 상세, `+ 새 건물`, 소유 건물 두 행 → 2-32 표). 탭 이름 옆 숫자는 종류 수.
+- 여는 길:
+  - 지도 클릭(`selectRegion`, `App.tsx` 111): `region` 창을 열고 **탭은 그대로** (처음엔 `건물`, 2-0-1 유지).
+  - 건물 링크·소식의 건물(`openBuilding` 113, 117): `건물` 탭 + 그 건물 상세.
+  - 직종 링크(`openPops` 112): `인구` 탭.
+- `RegionPanel`의 `mode` prop, `onViewBuildings`, `region-buildings-link`(122), 머리 문구(123)를 지운다. 2-32 "보여줄 곳 2"는 이미 2-42로 대체됐고 2-42는 이 창의 건물 탭이 된다.
+- 문자열: `regionTabOverview` 개요 / Overview, `regionTabPeople` 인구 / People, `regionTabBuildings` 건물 / Buildings. 쓰지 않게 되는 `'지역 개요'`·`'지역 건물'`·`'지역 건물 전체 보기'` 인라인 문자열(`App.tsx` 200, `RegionPanel.tsx` 122·128)은 지운다.
+- sim 변경 없음.
+
+### 2-52 확인: 완료 (양식은 바뀜). `scripts/icons/list.ts` (별칭 없는 전체 목록), `scripts/icons/pack.py`, `assets-src/icons.json`, 생성 아틀라스 `spriteSheets.gen.ts`. 다음 시트 프롬프트 출력·미리보기 페이지는 넘기지 않는다.
+
+### 2-52. 아이콘 에셋을 지도와 같은 양식으로 ChatGPT에서 만들기 (사용자 요청 2026-10-21)
+
+> 2026-10-24 적용: 최신 사용자 지시에 따라 풍경 삽화 대신 단순한 평면 지도, 아이콘은 첨부 참조의 선명한 카툰 양식으로 교체했다. 아래 옛 그림체 프롬프트보다 최신 지시를 우선한다. 구현·규격·검증 범위는 [UI_ATLAS_2026-10-24.md](log/UI_ATLAS_2026-10-24.md), 실제 프롬프트는 `packages/client/public/ASSETS.md` 참조.
+
+**목표:** 2-39의 빌린 아이콘을 모두 없애고, 2-43 지도 바탕(손으로 칠한 양피지 지도책)과 같은 그림체로 아이콘 전체를 한 번에 다시 만든다. 그림 생성은 사용자(ChatGPT), 목록·자르기·묶기·검사는 화면 작업자. 상품·건물·지역이 늘면 목록에 줄을 더하고 같은 과정을 다시 돌린다.
+- **양식 결정 (추천):** 픽셀 아트(지금 v2 아틀라스)를 버리고 **잉크 윤곽 + 수채 칠 양피지 스티커** 양식으로 통일. 이유: 지도와 같은 화면에 나란히 나온다 (2-43-1의 "픽셀 아트는 지역 아이콘에만"도 이 절이 바꾼다). 굵은 짙은 갈색 잉크 윤곽이 있어야 16~24 px에서 모양이 읽히고 배경 따기가 깨끗하다. 픽셀 아트를 남기고 싶으면 과정은 같고 프롬프트의 양식 줄만 바꾼다 (사용자 결정 가능).
+
+#### 2-52-0. 필요한 아이콘 id 전체 (2026-10-21 sim·client 기준, 69개)
+sim에서 읽는 것 (`packages/sim/src/data.ts`, `types.ts`):
+
+| 묶음 | id | 출처 |
+|---|---|---|
+| 상품 16 | `grain fiber timber ore fuel food cloth metal tools furniture electronics transport luxury_furniture luxury_cloth meat paper` | `GOOD_IDS` (data.ts 25) |
+| 건물 20 | `subsistence manor finance farm fiber_farm ranch lumber mine coal_mine foodplant textile smelter workshop furniture paper_mill fab railway school builder admin` | `BUILDING_TYPES` (data.ts 131~282) |
+| 계층 8 | `peasant farmer unskilled skilled expert gentry aristocrat capitalist` (화면 id는 `c-` 앞붙임) | `POP_CLASSES` (types.ts 29). `capitalist`는 DECISIONS 7-19로 없어질 수 있다 |
+| 지역 7 | `region-1` … `region-7` (땅 모양은 2-43-0 표) | `REGIONS` (data.ts 514) |
+| 기상 3 | `drought flood wildfire` (지금 그림 없음, `HarvestBadge`용) | `HARVEST_KINDS` (data.ts 461) |
+
+client에서만 쓰는 상징 15 (`spriteAtlas.ts` 7·8행 시트, `Notifications.tsx` 25~30, `App.tsx`):
+`crest royal-crown private-purse coin bell sun ev-famine ev-migrate ev-build ev-price ev-seize ev-research m-ship m-tree demolish`
+- `demolish`(망치)는 2-49용 새 id. `m-wheat`·`m-mine`·`factory`·`locomotive`·`laborer`·`fuelworks`는 옛 이름 별칭이라 남겨도 된다 (sim id가 아니다). **sim id의 별칭은 0개**여야 한다.
+- `furniture`는 상품(가구 더미)과 건물(가구 공방) 두 칸 (지금처럼 `family`로 가른다).
+
+#### 2-52-1. 시트 배치 (목록에서 생성)
+- 목록 파일 `packages/client/assets-src/icons.json`: `[{ id, family: 'goods'|'building'|'general', sheet, subject_ko, subject_en }]`. 프롬프트·자르기·`spriteAtlas.ts` `sheets`·검사의 유일한 원본.
+- ChatGPT 한 장 = `1536×1024`(가로형) **3열 × 2행 = 6칸, 칸 512×512** (정사각. ChatGPT가 4:3 크기를 주지 않아서). 한 장에 6개라 칸마다 그림이 크고 고르게 나온다.
+- 게임 아틀라스는 지금 형식 그대로 4×3칸 × 480 px (`ATLAS_CELL`·`ATLAS_COLUMNS`·`ATLAS_ROWS` 그대로). 생성 두 장(12칸) = 아틀라스 한 장.
+
+| 아틀라스 | 칸 (순서대로, `/` = 생성 장 경계) |
+|---|---|
+| `goods-a` | grain fiber timber ore fuel food / cloth metal tools furniture electronics transport |
+| `goods-b` | luxury_furniture luxury_cloth meat paper (+ 빈 8칸, 새 상품 자리) |
+| `buildings-a` | subsistence farm fiber_farm ranch lumber mine / coal_mine foodplant textile smelter workshop furniture |
+| `buildings-b` | paper_mill fab railway school builder admin / manor finance (+ 빈 4칸) |
+| `people` | peasant farmer unskilled skilled expert gentry / aristocrat capitalist royal-crown private-purse crest coin |
+| `places` | region-1 … region-6 / region-7 drought flood wildfire demolish bell |
+| `events` | ev-famine ev-migrate ev-build ev-price ev-seize ev-research / sun m-ship m-tree (+ 빈 3칸) |
+
+- 생성 13장. 빈 칸은 투명.
+
+#### 2-52-2. ChatGPT 프롬프트 (붙여 넣기용, 6칸 한 장)
+처음 한 장(`goods-a` 앞 6개)을 골라 둔 뒤, **같은 대화에서** 그 그림을 첨부하고 "첨부한 그림과 똑같은 양식으로"를 앞에 붙여 나머지를 만든다 (장마다 양식이 흔들리는 것을 줄인다). 지도 바탕(2-43)을 먼저 만들었다면 그것도 첨부한다. `{CELLS}`는 스크립트(2-52-4)가 목록에서 채운다.
+
+**한국어**
+```
+가로 1536×1024 아이콘 시트를 그려줘. 보이지 않는 3열 × 2행 격자, 똑같은 정사각 칸 6개(각 512×512). 칸마다 아이콘 하나, 칸 가운데에 두고 칸의 가운데 70% 안에만 그려. 칸 밖으로 넘치거나 다른 아이콘과 닿으면 안 돼.
+양식: 오래된 양피지 지도책에 그린 손그림 아이콘. 굵고 고른 짙은 갈색 잉크 윤곽선(모든 아이콘 같은 굵기), 안은 채도 낮은 수채 칠(황토·올리브·청회색·벽돌색), 왼쪽 위에서 오는 부드러운 빛, 정면에서 살짝 위로 본 시점. 모양은 단순하고 실루엣이 또렷해서 24픽셀로 줄여도 알아볼 수 있게. 근세(17~19세기 초) 유럽 분위기.
+배경은 완전히 투명(PNG 알파). 투명이 안 되면 칸 전체를 순수한 단색 #FF00FF로 칠하고 그림에는 그 색을 쓰지 마.
+글자, 숫자, 라벨, 테두리, 격자선, 바닥 그림자, 장식은 절대 넣지 마.
+칸 순서 (윗줄 왼쪽부터 오른쪽, 그다음 아랫줄):
+{CELLS}
+```
+**English**
+```
+A 1536x1024 landscape icon sheet. Invisible 3-column x 2-row grid of six identical square cells (512x512 each). One icon per cell, centered, drawn only inside the central 70% of its cell; nothing may cross a cell edge or touch another icon.
+Style: hand-drawn icons from an old parchment atlas. Bold, even dark-brown ink outline (same stroke weight on every icon), muted watercolor fills (ochre, olive, slate blue, brick red), soft light from the top left, front view tilted slightly from above. Simple shapes with a strong silhouette that stays readable at 24 pixels. Early-modern European (17th to early 19th century) mood.
+Fully transparent background (PNG alpha). If transparency is not possible, fill every cell with flat pure #FF00FF and never use that color in the art.
+Absolutely no text, numbers, labels, frames, grid lines, ground shadows or decorations.
+Cells, top row left to right, then bottom row:
+{CELLS}
+```
+- `{CELLS}` 예 (`goods-a` 1장): `1) 묶은 밀 단 / a tied sheaf of wheat  2) 아마 섬유 다발 / a bundle of flax fibre  3) 통나무 더미 / a stack of logs  4) 붉은 철광석 덩이 / a lump of reddish iron ore  5) 석탄 자루 / a sack of coal  6) 빵과 치즈 바구니 / a basket of bread and cheese`.
+- 피사체 줄(`subject_ko`/`subject_en`) 규칙: 상품 = 그 물건 한 무더기, 건물 = 그 건물 한 채(건물마다 지붕 색을 다르게), 계층 = 상반신 인물 한 명(옷·모자로 구분: 소작농 누더기 두건, 농부 밀짚모자와 낫, 노동자 작업모, 기술자 앞치마와 망치, 전문가 안경과 책, 하급 귀족 소박한 상의와 지팡이, 상급 귀족 깃 장식과 칼, 자본가 실크해트), 지역 = 2-43-0 표의 땅 모양을 둥근 메달 안에, 기상 = 갈라진 땅 / 넘친 강 / 불붙은 숲, 사건 = 지금 v2 그림의 뜻(굶주림 빈 그릇, 이주 보따리와 길, 건설 비계, 가격 저울, 압류 봉인된 문서, 연구 펼친 책과 컴퍼스), `demolish` = 망치와 무너진 벽돌.
+- 헷갈리기 쉬운 쌍은 피사체 줄에 차이를 적는다: 농부/소작농, 하급/상급 귀족, 종이(흰 종이 묶음)/옷감(천 두루마리)/고급 옷감(자주색 비단과 금실), 가구/고급 가구(금박 장식), 고기/식료품, 목장(울타리와 소)/곡물 농장, 철광산(붉은 바위)/석탄광산(검은 더미).
+- 장마다 3~4번 뽑아 고른다. 고른 원본은 `packages/client/assets-src/icons/raw/<sheet>-<1|2>.png` (보관용, 배포 안 함).
+
+#### 2-52-3. 자르기·묶기 (`packages/client/scripts/icons/pack.py`, PIL)
+1. 원본을 3×2로 나눠 512 칸 6개. 배경이 `#FF00FF`면 그 색(허용 오차 40)을 투명으로, 가장자리에 남은 분홍 1 px를 지운다.
+2. 칸마다 알파 경계 상자를 찾아 **긴 변 384 px**로 같은 비율로 맞추고 480 칸 가운데에 둔다 (사방 48 px 이상 여백). 모든 아이콘 크기가 같아진다. (`ASSETS.md`의 "안쪽으로 자르지 않음"은 표시 규칙이다: 화면은 지금처럼 480 칸 전체를 그린다. 이 정규화는 묶을 때 한 번만.)
+3. `icons.json` 순서로 4×3 아틀라스(1920×1440)에 넣고 `public/assets/icons/<sheet>.webp`(알파 포함, 품질 85)로 저장.
+4. `public/assets/icons/manifest.json` (`{ cell, columns, rows, sheets: { name: ids[] } }`)과 `src/spriteSheets.gen.ts`(지금 `spriteAtlas.ts` 4~11의 `sheets` 대신)를 생성. `spriteAtlas.ts`는 생성 파일을 읽고 시트 이름으로 `family` 후보를 고른다 (`goods-*` = goods, `buildings-*` = building, 나머지 = general).
+5. `sprites.tsx` 10의 주소를 `assets/icons/${a.file}.webp?v=<manifest 해시>`로 (지금 `.png?v=3`).
+- **용량:** 시트 한 장 400KB 이하, 전체 3MB 이하 (지금 v2 png 6장 약 5MB). 넘으면 품질 80.
+- 옛 그림(`*-v2.png`, `buildings-generated.png`, `buildings-grid.png`, `goods.png`, `symbols.png`, `portraits.png`, `sprite-grid-guide.png`)은 새 시트가 다 들어간 뒤 쓰는 곳이 없으면(grep) 지운다.
+
+#### 2-52-4. 목록·프롬프트 생성과 검사 (다시 돌릴 수 있게)
+- `packages/client/scripts/icons/list.ts` (tsx): sim의 `GOOD_IDS`·`BUILDING_TYPES`·`POP_CLASSES`·`REGIONS`·`HARVEST_KINDS`와 client 상징 목록(2-52-0)을 `icons.json`과 비교해 (1) 빠진 id, (2) 목록에만 있는 id, (3) 빈 칸 위치를 찍고, (4) 빠진 id로 다음 장 프롬프트(ko·en, `{CELLS}` 채움)를 출력한다. sim에 상품·건물·지역이 더해지면 이것만 돌리면 된다.
+- 테스트 `test/uiRefresh.test.ts` 17~23을 바꾼다 (2-39의 별칭 방식 대체):
+  - 모든 sim id(상품·건물·`c-`계층·`region-n`·기상)가 `spriteAsset`에서 null이 아니고, **별칭을 거치지 않으며**(`aliases`에 sim id 키가 없다), 같은 `family` 안에서 `(file, index)`가 서로 다르다.
+  - `icons.json`의 id 집합 = sim id ∪ client 상징 (빠짐·남음 0).
+  - 지역 수는 `REGIONS.length`로 센다 (7을 박지 않는다, 2-43).
+- 그림 검사 `scripts/icons/check.py` (묶은 뒤 수동): 칸마다 알파가 비어 있지 않고, 칸 가장자리 8 px에 그림이 없고, 두 칸의 8×8 평균 해시가 너무 가까우면(같은 그림 복사) 경고.
+- **다크 모드:** 짙은 갈색 윤곽이 어두운 바탕에 묻힌다. 그림은 그대로 두고 CSS로 `:root[data-theme="dark"] .generated-sprite { filter: drop-shadow(0 0 1px #e8dcc0) drop-shadow(0 0 1px #e8dcc0); }` (양피지색 테두리). 개발용 확인 화면(`?icons`)에 모든 id를 16·24·32·48 px로 밝은·어두운 바탕에 나란히 (id 라벨만). 2-39의 헷갈리는 쌍이 24 px에서 구분돼야 한다.
+- **출처 기록:** `packages/client/public/ASSETS.md`의 "Pixel sprite atlas v2" 절을 새 절로 바꾼다: 생성 도구(ChatGPT 이미지 생성, 날짜), 프롬프트 원문 = 이 절 + `icons.json` 피사체 줄, 원본 위치, 후처리(배경 제거·384 정규화·webp 85). `docs/sprite-generation-prompts.json`은 장마다 실제로 넣은 프롬프트 원문으로 채운다. **이용 조건:** 사용자 계정에서 만든 그림이다. 공개 배포 전에 사용자가 OpenAI 이용 약관(산출물 권리·상업적 이용)을 직접 확인한다 (확인 못 함, 결정 필요).
+- 끝나면 2-39는 UI_DONE으로 옮기고, `spriteAtlas.ts` 13의 sim id 별칭 8개와 `ui.tsx` 8의 농부 임시 색은 없어진다 (색 토큰 `--c-farmer`는 2-39대로 따로).
+- sim 변경 없음.
+
+### 2-53 확인: 폐기 (좌우 고정 두 자리·크기 조절 없앰 방식은 UI_DESIGN 3장 자유 이동 창으로 대체, UI_CHANGES 0장 "최신 적용 기준").
+
+### 2-53. 창 크기 조절 없앰 + 좁은 고정 창 + 통계·소식 깨짐 (사용자 요청 2026-10-21: "윈도우 창 조절하는 거 없애고 깨지는 거 해결. 통계·소식이 깨짐.")
+
+> 현재 상태 (2026-10-28): 대체됨: 좌우 고정·최대 두 창·크기 조절 일괄 금지 요구는 최신 자유 이동 창 요구로 폐기. 아래 원문은 역사적 참고이며 새 작업의 기준이 아니다.
+**전제 (사용자):** 화면은 늘 1920×1080. 이 크기만 맞춘다. 창 하나는 왼쪽, 하나는 오른쪽에 동시에 두고도 가운데 지도가 다 보여야 한다. 그래서 창은 좁고 정보 밀도가 높아야 한다 (짧은 행, 작지만 읽히는 글자, 긴 목록 대신 탭, 문장 대신 숫자·막대).
+
+**확인 방법.** 개발 서버(5199)를 1920×1080 headless Chrome으로 열어 통계·소식 창을 띄우고, 오른쪽 모서리를 왼쪽으로 끌어 **최소 너비(560px)** 로 만든 뒤 탭 8개와 `전체 보기`를 찍었다. 제안 너비 440px도 같은 방법으로 찍었다 (게임을 500배속으로 40초 돌려 3년 4월 데이터). 스크립트 `.tmp/reports/ui-shot.mjs` (Chrome DevTools 프로토콜, `node ui-shot.mjs <출력 폴더>`, 환경변수 `PROF`=임시 프로필 폴더). 스크린샷은 커밋하지 않는다.
+- 최소 너비 560: `.tmp/reports/1920b/ui-trends-min-{0..7}.png`, `ui-trends-min-all.png` (0 요약, 1 인구, 2 상회, 3 왕국 재정, 4 생활수준, 5 기상, 6 순위, 7 소식)
+- 440 (제안 너비, 지금 CSS 그대로): `.tmp/reports/1920b/ui-trends-w440-{0..7}.png`, `ui-trends-w440-all.png`
+- 다른 창 440×1000: `.tmp/reports/1920b/ui-win440-{1..7}.png` (1 지역 개요, 2 시세, 3 지역 건물, 4 재정, 5 연구, 6 건설, 7 통계·소식). 측정값 `.tmp/reports/1920b/ui-report.json`
+
+#### 2-53-1. 지금 무엇이 깨지는가 (1920×1080, 원인 file:line)
+1. **인구 상세 표가 창 밖으로 나간다 (가장 큰 깨짐).** `.pop-table {min-width:1100px}` (`workspace.css` 243)와 `.strategy-panel .pop-table {min-width:1000px}` (`strategy.css` 66), 열 12개 (`PopTable.tsx` 17). 560 창에서 표 칸이 422px라 578px가 가로 스크롤 뒤로 숨고, 오른쪽 끝 숫자가 잘린다(`902.4k`가 `902.4l`로 보임, `min-1.png`). 높이도 `pop-directory {height:360px}` (`strategy.css` 43, 66은 280)로 고정이라 창 스크롤 안에 표 스크롤이 또 있고, 가로·세로 스크롤바가 둘 다 생긴다. `전체 보기`에서도 같다 (`min-all.png`).
+2. **왼쪽 분류 줄이 너비를 먹는다.** 탐색 모드 `.information-explorer {grid-template-columns:88px minmax(0,1fr)}` (`strategy.css` 5)에 테두리·여백까지 더해 상세 칸은 창 너비 −114px다 (560→446, 440→326). 그래서 아래 3·4번이 생긴다.
+3. **왕실 요약·상회 상세의 세 칸(인력/투입 부족/수지)이 좁은 칸에서 넘친다.** `.strategy-panel .hsum {grid-template-columns:repeat(3,minmax(0,1fr))}`, `.srow {grid-template-columns:60px minmax(30px,1fr) auto}` (`strategy.css` 70), `.wf-val {min-width:64px}` (`styles.css` 134). 560에서는 가운데 `투입 부족` 칸이 거의 비어 있는데 `수지` 칸은 `이익률 −896%`가 두 줄로 꺾인다 (`min-0.png`). 440에서는 수지 금액이 잘리고 창 전체에 가로 스크롤바가 생긴다 (window-body 469/438, `w440-0.png`, `w440-2.png`).
+4. **상회 상세 머리:** 상회 선택 `<select>`가 배지 아래로 떨어지고, 임금 목록이 두 칸으로 꺾여 7줄이 된다 (`w440-2.png`).
+5. **순위 (`BottomPanel.tsx` 55~71):** 4열. `table-layout:fixed`, 상회 칸 46%, 배지는 `max-width:100%;overflow:hidden;text-overflow:ellipsis`.
+6. **소식 (`Notifications.tsx` 51~):** `<h2>{T.news}</h2>` (53) 삭제 (탭 제목과 중복). 필터 칩과 `모두 읽음`을 한 줄 (`.notices-head {flex-wrap:nowrap}`, 칩 `min-height:24px;font-size:10px`). 창 안에서는 `.events {max-height:none;overflow:visible}` (`styles.css` 448, `.bell-panel`처럼 184). 행: 아이콘 26px, 본문 11px 두 줄까지 (`-webkit-line-clamp:2`, 전체는 `title`), 메타 줄(날짜·상회 배지·지역·건물)은 `flex-wrap:nowrap;overflow:hidden`이고 상회 배지는 아이콘+짧은 이름.
+7. **스크롤바가 생기면 내용이 옆으로 밀린다.** `.strategy-panel .window-body {scrollbar-gutter:auto}` (`strategy.css` 57). 상회 상세처럼 내용이 길어지면 스크롤바 15px가 생기며 `탐색/전체 보기` 버튼과 표가 왼쪽으로 밀린다 (`min-0.png`와 `min-2.png` 비교).
+8. **최소 높이 280** (`windowGeometry.ts` 11·13)에서는 분류 줄(279px)만으로 창이 찬다. 크기 조절을 없애면 이 경우는 사라진다.
+9. **다른 창 (440×1000에서 확인):** 지역 개요·시세도 같은 88px 분류 줄(상세 326px)을 쓴다. 재정 표·연구·건설은 440에서 넘침 없음. 지역 건물은 넘침 없음. 재정의 `정보 구역 / 초기화` 줄과 구역 높이 손잡이(`workspace.css` 146)는 좁은 창에서 공간만 먹는다.
+
+#### 2-53-2. 바꿀 동작: 크기 조절 없앰, 왼쪽·오른쪽 두 자리
+- **창 크기는 사용자가 바꾸지 않는다.** 모서리·변 끌기, 최대화 버튼, 제목 줄 두 번 누르기(최대화), Enter(최대화), Shift+방향키(크기)를 모두 없앤다.
+- **창 자리는 둘: 왼쪽, 오른쪽.** 모든 창이 같은 크기다.
+  - 1920×1080에서 작업 영역은 1920×998 (위 띠 44 + 아래 줄 38, `strategy.css` 47·58). 지도 사각형은 스크린샷에서 x 530~1390 (860px)이다. 창이 지도를 가리지 않으려면 `8 + 너비 ≤ 530` → 너비 ≤ 522.
+  - **너비 440px, 높이 982px (위아래 8px 여백)**, 왼쪽 자리 x=8, 오른쪽 자리 x=1920−8−440=1472, y=8. 지도 양옆에 82px씩 남아 가장자리 지역 이름까지 보인다. 440은 위 측정에서 재정·연구·건설·지역 건물이 이미 넘침 없이 들어가는 너비이고, 480보다 지도 여유가 두 배다.
+  - 식: `slotRect(side, bounds) = {x: side==='left' ? 8 : bounds.width-8-W, y: 8, width: W, height: bounds.height-16}`, `W = Math.min(440, bounds.width-16)`. 창 종류마다 너비를 다르게 두지 않는다 (규칙 하나).
+- **어느 자리에 여는가.** 창마다 기본 자리가 있다: 왼쪽 = 지역(2-46)·건설·연구·정책(2-45), 오른쪽 = 시세·재정·통계·소식. 기본 자리가 차 있고 반대쪽이 비어 있으면 반대쪽에 연다. 둘 다 차 있으면 기본 자리의 창을 닫고 그 자리에 연다. 그래서 한 번에 보이는 창은 최대 둘이다 (가려진 창이 없으니 2-34의 "버튼 = 열기/닫기"가 그대로 맞는다).
+- **옮기기는 남긴다 (자리 바꾸기만).** 제목 줄을 끌다 놓으면 놓은 곳이 화면 왼쪽 절반이면 왼쪽, 오른쪽 절반이면 오른쪽 자리로 붙는다. 그 자리에 다른 창이 있으면 두 창이 자리를 바꾼다. 끄는 동안에는 창을 따라 움직여도 되지만 놓으면 반드시 자리에 붙는다. 키보드: 제목 줄에 초점이 있을 때 ←/→로 자리 바꾸기. 이유: 사용자는 크기 조절을 없애라고 했고, 어느 쪽에 둘지는 지도에서 보는 곳에 따라 달라서 남긴다. 자유 위치는 지도를 가리므로 두지 않는다.
+- 자리는 닫았다 다시 열어도 기억한다 (창마다 `side`).
+
+#### 2-53-3. 고칠 곳: 창 틀
+- `WindowWorkspace.tsx`
+  - 14 `maximized`, 23 `toggleMax`, 35~40 (최대화에서 끌기), 42·56의 `resizeWindow` 호출, 49 최대화 크기, 51 `onDoubleClick`, 53 Enter, 60 최대화 버튼, 64 `window-edge` 8개를 지운다. 13·59 최소화는 2-34대로 지운다.
+  - 12 `rects`를 `side: Partial<Record<WindowId,'left'|'right'>>`로 바꾸고, 19 `base`·20 `rect`는 `slotRect(side[id] ?? DEFAULT_SIDE[id], bounds)`로. 27~45 끌기는 `edge==='move'`만 남기고, `end`에서 `e.clientX - areaLeft < bounds.width/2`로 자리를 정한다 (같은 자리 창과 맞바꾸기).
+  - `focus`(21)·`showWindow`(`App.tsx` 63)에서 2-53-2의 "어느 자리에 여는가" 규칙을 적용한다 (그 자리 창을 `opened`에서 뺀다).
+- `windowGeometry.ts` 7~15 `resizeWindow`를 지우고 `slotRect`를 넣는다. `fitWindow`(3~6)는 안 쓰면 지운다. `test/windowGeometry.test.ts`의 크기 조절 시험을 `slotRect` 시험으로 바꾼다: 1920×998 → 왼쪽 `{x:8,y:8,width:440,height:982}`, 오른쪽 `{x:1472,...}`, 그리고 두 창 사이(448~1472)가 지도 사각형(530~1390)을 덮지 않는다.
+- `strategy.css` 55·82의 고정 `width/height`(460·520·600×560)와 `max-height`를 지운다 (크기는 inline style 하나). 97 `.is-maximized`, 98 `.window-edge` 규칙을 지운다. 57 `scrollbar-gutter:auto` → `stable` (2-53-1의 7번).
+- **지도 위 도구를 가운데로.** 오른쪽 창이 지도 도구를 가린다: 층 버튼 `.world-map .map-layers {right:18px;top:12px}` (51), 확대 `.map-camera-tools` (52), 범례 `.map-legend` (53), `지역 목록` `.map-directory` (54)가 모두 오른쪽 위·아래(x 1592~1902)에 있다. 가운데 열(x 448~1472) 안으로 옮긴다: 층 버튼+확대를 한 줄로 위 가운데(`left:50%;transform:translateX(-50%)`), 범례를 아래 가운데. `지역 목록`은 2-46 지역 창이 같은 일을 하므로 없애는 것을 추천 (남기면 층 버튼 줄 아래 가운데).
+- 문자열 (`strings.ts` 11~21, 영어 308~): `windowMaximize`·`windowRestore`·`windowMinimize`·`windowMinimizeHelp`를 지운다. `windowDragHelp`는 툴팁이라 남기되 `제목줄을 끌어 왼쪽·오른쪽 자리 바꾸기` / `Drag the title bar to switch sides`로 줄인다. `windowDockHint`(`제목줄 이동 · 모서리 크기 조절 · Esc 앞 창 닫기`)는 설명 문구라 지운다 (`dock-hint` span도).
+- 2-34의 "창 크기·위치(`rects`)와 최대화는 기억한다"는 이 절로 대체된다 (자리만 기억).
+
+#### 2-53-4. 고칠 곳: 좁은 창 공통 (모든 창, 안쪽 너비 422px = 440 − 테두리 2 − 여백 16)
+- **글자:** 본문 11px, 숫자 12px, 가장 작은 라벨 10px. 지금 9px인 곳(`strategy.css` 62 `.stat-label`·`.tag-soft`, 63 `.owner-badge`, 64 `.industry-name small`, 66 `.tax-controls label`, 85 `.gauge-label`)은 10px로 올린다. 대신 행 높이·여백을 줄인다 (행 24~28px, 칸 여백 2~4px).
+- **탭은 위 한 줄.** 탐색 모드의 왼쪽 분류 줄(`SectionStack.tsx` 94~97, `strategy.css` 5~10)을 창 위쪽 가로 탭으로 바꾼다: `.information-explorer {grid-template-columns:minmax(0,1fr)}`, `.explorer-rail {flex-direction:row;flex-wrap:wrap;position:sticky;top:0;z-index:2;background:var(--sheet);border-bottom:1px solid var(--rule)}`, 버튼은 `flex:1 1 auto;min-width:0;min-height:26px;padding:3px 6px;border-left:0;border-bottom:2px solid transparent`, 고른 탭은 `border-bottom-color:var(--gold)`. 꺾쇠 아이콘(`ChevronRight`, 96)은 뺀다. `.explorer-detail {border-left:0;padding-left:0}` (10). 상세 칸이 326 → 422px로 넓어진다.
+  - 탭 글자는 `shortTitle`(짧게)을 쓴다. 통계·소식: `요약 · 인구 · 상회 · 왕국 · 생활 · 기상 · 순위 · 소식` / `Summary · Pops · House · Kingdoms · Living · Weather · Ranks · News` (`BottomPanel.tsx` 39~72의 각 항목에 `shortTitle`). 8개가 한 줄(약 52px씩)에 들어가고, 영어가 넘치면 두 줄로 꺾여도 된다 (`flex-wrap`). 지역 개요·시세 창도 같은 탭 모양.
+  - `탐색 / 전체 보기` 전환(`SectionStack.tsx` 90~93)은 창 안에서는 없앤다 (탭만). 긴 목록 대신 탭 규칙.
+- **구역 높이 손잡이 없앰.** `section-resize` (`SectionStack.tsx` 117~120, `workspace.css` 146~148)와 `section-content`의 `maxHeight`(116)·`overflow:auto`(`workspace.css` 139)를 없애 내용이 창 스크롤 하나로 흐르게 한다 (스크롤 안의 스크롤 없앰). 재정 창(`FinancePanel.tsx` 22)처럼 쌓는 창은 접기·순서는 남기고 높이만 없앤다. `정보 구역 / 초기화` 줄(102)은 접기·순서만 초기화하므로 작은 아이콘 버튼 하나로 줄인다.
+- **가로 스크롤 금지.** 창 안에서 가로 스크롤이 생기면 깨진 것으로 본다. 표는 `table-layout:fixed;width:100%;min-width:0`, 칸 안 글자는 `overflow:hidden;text-overflow:ellipsis` (+`title`).
+- **flex/grid 자식은 `min-width:0`.** `.hsum > *`, `.srow > *`, `.notices-head > *`, `.ev-main`, `.explorer-detail > div`.
+
+#### 2-53-5. 고칠 곳: 통계·소식 각 탭 (422px 안에)
+1. **요약 / 상회 (`CompanySummary`, `CompanyPanel.tsx` 251~280):** 좁은 창에서는 세 칸을 세로로 쌓는다. `.strategy-panel .hsum {grid-template-columns:minmax(0,1fr)}` (`strategy.css` 70). 순서는 수지 → 인력 → 투입 부족. 투입 부족이 0이면 칸 대신 머리 줄 배지(`0`)만. `.srow {grid-template-columns:72px minmax(0,1fr) 72px}`, `.wf-val {min-width:0}` (`styles.css` 134 덮어쓰기). 수지 머리 `−ƒ220.7k  이익률 −896%`는 한 줄 (`.htile-h {flex-wrap:nowrap}`, 이익률은 `white-space:nowrap`).
+   - 상회 상세 머리: 배지와 상회 `<select>`를 한 줄 grid `minmax(0,1fr) auto`로, `<select> {max-width:160px}`. 임금은 2칸 grid로 고정 (`.strategy-panel .wages {grid-template-columns:repeat(2,minmax(0,1fr))}` 81은 이미 있음, 상회 상세의 임금 목록도 같은 grid).
+2. **인구 (`PopTable.tsx` 17·27~28):** 12열을 422px에 넣지 않는다. 고정 2열 + 보기 칩으로 고른 숫자 4열.
+   - 고정: `지역` (아래 작은 둘째 줄에 `일터 ↗` 링크), `직종` (계층 아이콘 16px + 색, 이름은 `title`).
+   - 보기 칩 (필터 줄 오른쪽, `pxseg`): `생활` = 인구·생활수준·식량·충족, `소득` = 인구·부·소득·현물, `교육` = 인구·문해·증감. 정렬은 보이는 열 머리로. 칩 상태는 localStorage.
+   - 열 너비: 지역 34%, 직종 28px, 숫자 4열 나머지 등분. `.pop-table {min-width:0;table-layout:fixed;width:100%}` (`workspace.css` 243·`strategy.css` 66의 `min-width:1100/1000px` 삭제).
+   - 높이: `.pop-directory {height:auto}` (`strategy.css` 43·66의 360/280 삭제), 표 스크롤을 없애고 창 스크롤 하나로. 머리 줄은 `position:sticky;top:<탭 줄 높이>`.
+3. **왕국 (`BottomPanel.tsx` 42 `kingdom-accounts`):** 3열이라 그대로 들어간다. `width:100%;table-layout:fixed`만.
+4. **생활수준·기상 그래프 (`Chart.tsx`):** `ResponsiveContainer width="100%"`는 그대로. 부모에 `min-width:0` (`.explorer-detail > div`). `YAxis width` 52 → 34 (27), `XAxis minTickGap` 36 → 48 (26). `빈곤선` 글자는 그래프 안에 두지 않고 범례 줄 끝에 점선 표본 + `빈곤선 5`로 (36~37의 `label` 삭제, 선은 남김). 범례(`BottomPanel.tsx` 46~50)는 아이콘 14px·글자 10px·간격 2px 8px로 8개가 두 줄 안에. 높이: 생활수준 200 → 220, 기상 145 → 120 (탭이라 세로 여유가 있다, 982px 창).
+5. **순위 (`BottomPanel.tsx` 55~71):** 4열. `table-layout:fixed`, 상회 칸 46%, 배지는 `max-width:100%;overflow:hidden;text-overflow:ellipsis`.
+6. **소식 (`Notifications.tsx` 51~):** `<h2>{T.news}</h2>` (53) 삭제 (탭 제목과 중복). 필터 칩과 `모두 읽음`을 한 줄 (`.notices-head {flex-wrap:nowrap}`, 칩 `min-height:24px;font-size:10px`). 창 안에서는 `.events {max-height:none;overflow:visible}` (`styles.css` 448, `.bell-panel`처럼 184). 행: 아이콘 26px, 본문 11px 두 줄까지 (`-webkit-line-clamp:2`, 전체는 `title`), 메타 줄(날짜·상회 배지·지역·건물)은 `flex-wrap:nowrap;overflow:hidden`이고 상회 배지는 아이콘+짧은 이름.
+
+#### 2-53-6. 다른 창 (같은 종류의 깨짐, 440×982 기준)
+- **지역 개요 / 시세 (`RegionExplorer.tsx` 25, `RegionPanel.tsx` 133):** 같은 88px 분류 줄 → 2-53-4의 위 탭으로. 지역 개요 도넛은 상세가 넓어지므로 `.strategy-panel .explorer-detail .donut {width:154px}` (`strategy.css` 17) 그대로, 계층 줄 숫자는 한 줄.
+- **재정 (`FinancePanel.tsx`):** 440에서 넘침 없음. 구역 높이 손잡이·`정보 구역` 줄만 2-53-4대로. `.strategy-panel .finance-table` 칸 여백 그대로.
+- **연구·건설·지역 건물:** 넘침 없음. 2-48 연구 그래프는 이 너비(422px)에서 세로로 단계를 쌓는 모양으로 설계한다 (가로 스크롤 금지 규칙).
+- **2-42·2-46·2-45·2-51처럼 앞으로 만드는 창도 422px 안쪽 너비를 기준으로 짠다.**
+
+#### 2-53-7. 받아들임 기준
+- 1920×1080에서 왼쪽 창 하나 + 오른쪽 창 하나를 열었을 때 지도 사각형(x 530~1390)이 하나도 가려지지 않는다. 층 버튼·확대·범례가 보인다.
+- 모든 창·모든 탭에서 `.window-body`와 그 안의 어떤 요소도 `scrollWidth > clientWidth`가 아니다 (가로 스크롤 0). 창 밖으로 나가는 요소 0. 스크롤 영역은 창 몸통 하나뿐 (`.events`, `.pop-table-scroll`, `.section-content`에 자체 세로 스크롤 없음).
+- 모서리 끌기·최대화·더블클릭이 없다. 제목 줄을 끌어 놓으면 왼쪽/오른쪽 자리에 붙는다.
+- 시험: `test/windowGeometry.test.ts`에 `slotRect` 시험 (2-53-3). 화면 확인은 `.tmp/reports/ui-shot.mjs`를 고쳐(크기 끌기 부분 빼고) 각 창·탭을 찍고 `ui-report.json`의 `SCROLLX`·`OUT` 항목이 비었는지 본다. 다크 모드에서도 한 번.
+- 문자열: 탭 짧은 이름 ko/en (2-53-5), 지울 것 (2-53-3). 새 설명 문구 없음.
+- sim 변경 없음.
+
+### 2-56 확인: 완료. `PolicyPanel.tsx:22`·`:43`·`:46` (열림·기술·잠금, 전환 중 조건), 연구 → 법 해금 줄 `ResearchPanel.tsx:34`.
+
+### 2-56. 법은 기술로 열리고, 끝날 때 조건을 다시 본다 (2026-10-22, 사용자 규칙, DECISIONS 7-18·7-19)
+**사용자 말:** "원래 정책은 기술로 먼저 열고, 조건이 맞으면 플레이어나 AI가 바꿔서 그때 조건이 맞으면 바뀌는거임".
+- 규칙: 법 선택지마다 1) 여는 기술(`LAW_TECH`, `data.ts`) 2) 시작 조건(금융가 자산 비율 ≥ 기준) 3) 180일 전환 4) 끝날 때 조건이 아직 맞아야 바뀜, 아니면 실패하고 지금 법이 남는다. 토지세·귀족만은 처음부터 열림. 투자법 좁히기는 조건 없음.
+- sim API:
+  - `policyStatus(world, kingdomId)` 선택지(`LawOption`)에 `tech: string | null`(여는 기술 id), `unlocked: boolean`. `eligible`은 이제 `unlocked && 조건`. `LawStatus.pendingOk?: boolean` (전환 중일 때만: 지금 끝나면 바뀌는가).
+  - `lawUnlocked(world, kingdom, law)`, `LAW_TECH: Record<TaxLaw | InvestLaw, string | null>`.
+  - `unlocksOf(techId)` → `{ methods: { typeId; methodId }[]; buildings: string[]; policies: (TaxLaw | InvestLaw)[] }` (3장 2-48 요청분).
+  - 명령 오류: 잠긴 법이면 `그 세법은 아직 기술로 열리지 않았습니다.` / 조건 미달이면 지금 문구.
+  - 소식: `GameEvent.topic?: 'lawChanged' | 'lawFailed'`. 실패 소식은 `kind: 'warn'`.
+  - `Kingdom.lawFail?: { tax?: number; invest?: number }` (실패한 틱, AI 쿨다운용. 화면에 안 써도 된다).
+- 화면 (2-45-2 표의 `잠김` 행, 전환 중 행, 2-45-5 소식, 2-48 정책 줄): 위 절에 적었다. 조건 숫자는 `threshold`, 지금 값은 `financeRatio` 하나.
+- 클라이언트 컴파일 수정 없음 (화면이 `policyStatus`를 아직 안 쓴다).
+
+### 2-57 확인: 완료. 복지 법 칸과 주간 금액 `PolicyPanel.tsx:46`, 목표 생활수준 툴팁 `FinancePanel.tsx:35`·`:45`. 읽기 전용 칩 항목은 국가 창 통합(2-71)으로 필요 없음.
+
+### 2-57. 복지법·복지 단계 (최저 생활수준 보장, 사용자 요청 2026-10-22)
+**사용자 말:** "최저 생활수준을 타겟(예: 3)해서 보장하는 정책을 여러 개 만들어서 고를 수 있게 해 줘 (+ AI가 상황에 맞게 정책을 고르도록)".
+
+- sim 변경 (DESIGN 9.5):
+  - 복지법 `WelfareLaw = 'none' | 'poor' | 'wage' | 'universal'` (`WELFARE_LAWS`), 필드 `Kingdom.welfareLaw` (시작 `'none'`), 명령 `{ type: 'setWelfareLaw', law }`. 세법·투자법처럼 `TUNE.lawDays`(180)일 전환 (`Kingdom.lawChange.welfare = { to, startTick, endTick }`), 지금 법과 같은 값을 보내면 전환 취소. 조건 없이 늘 고를 수 있다.
+  - 정책 단계 넷째 손잡이 `welfare` (`BUDGET_ITEMS = ['tax','wages','research','welfare']`, `Kingdom.budget.welfare` 1~5, 시작 3). 단계의 값은 배율이 아니라 **목표 생활수준** `TUNE.welfareLevels` = 2 / 2.5 / 3 / 3.5 / 4.
+  - `budgetPreview` 줄에 `welfare` (지출, 0 이하, `knob: 'welfare'`, `byLevel` 단계 1~5). `netByLevel.welfare`. 복지법이 `'none'`이면 0. `Kingdom.lastBudget.welfare`, 장부 `Company.ledger.welfare`(왕실).
+  - `policyStatus(w, kingdomId).welfare` = `{ current, pending?, options: { id, threshold: null, eligible: true, weekly }[] }`. `weekly` = 그 법을 지금 복지 단계로 켰을 때의 주간 예상액 (0 이하, 100·10 단위로 둥글게).
+  - export: `welfareTarget(step)`, `welfareGroup(pop)` (`'poor'|'wage'|null`), `welfareCovers(law, group)`, `welfareIncome(region, target)`, `welfareWeekly(kingdom, law, step)`. 저장 10판.
+- 화면 작업자가 할 일:
+  1. **정책 창 (2-45) 복지법 섹션** `welfareLaw`: 2-45-2 `LawPicker` 그대로. 행 넷 `없음 / None`, `구빈법 / Poor laws`, `임금 보조 / Wage subsidies`, `보편 보장 / Universal welfare`. 조건 칸 대신 그 법의 주간 예상액 (`options[].weekly`, `signedMoney`, 0이면 비움). 전환 중이면 진행 막대 + `n일`. 행 툴팁: 받는 직종 아이콘 (구빈법 = 소작농 + 실업, 임금 보조 = 노동자·농부·기술자·전문가, 보편 = 둘 다. 귀족·자본가는 없음).
+  2. **재정 창 예산 표** (2-60-2의 복지 묶음으로 대신한다. 툴팁 내용만 여기 것): `FinancePanel.tsx` 17의 지출 묶음 키 목록에 `'welfare'`를 더해 `복지 / Welfare` 줄을 그린다 (문자열 `budgetLines.welfare`). 단계 버튼 1~5 툴팁은 배율 `×` 대신 `목표 생활수준 3` 처럼 `TUNE.welfareLevels[level-1]`을 보인다 (`복지 3 · 생활수준 3 · −12,300 · 순수지 …`). 복지법이 `'none'`이면 줄은 0이고 버튼은 그대로 둔다 (법을 켜기 전에 단계를 정할 수 있다).
+  3. 정책 창 아래 읽기 전용 칩(2-45-1)에 `복지 3`을 더한다.
+  4. 소식: 전환이 끝나면 sim 이벤트 `복지법이 바뀌었습니다: poor` (`topic: 'lawChanged'`) (2-45-5와 같은 처리, 법 이름으로 바꿔 보이기).
+- 문자열: `welfareLaw` 복지법 / Welfare law, `welfareNone`·`welfarePoor`·`welfareWage`·`welfareUniversal` (위 이름), `budgetLines.welfare` 복지 / Welfare, `welfareTarget` 목표 생활수준 / Target SoL.
+
+### 2-58 확인: 완료. 클라이언트에 100배 값 칸·`roundWorld` 사용 없음 (grep 0건).
+
+### 2-58. sim 저장값 반올림 없앰 (2026-10-22, 사용자 확인: 소수 둘째 자리는 보이는 값에만)
+- sim 이 하루 끝에 모든 숫자를 소수 둘째 자리로 맞추던 일(`roundWorld`)을 없앴다. 저장값은 계산한 double 그대로다.
+- 100배 저장 필드(`wealth100`·`literacy100`·`education100`·`exp100`·`crew100`)를 없앴다. 화면이 읽던 이름이 그대로 규칙 값이 된다:
+  `Pop.wealth` 1~99, `Pop.literacy` 0~1, `Region.education` 0~1, `Building.crew` 0~1 (없으면 충원율), `Building.exp` 0~1 (새 이름, 화면은 안 씀). `wealthOf`·`literacyOf`·`educationOf`·`crewOf`·`expOf`는 그대로 있다.
+- 여전히 소수 둘째 자리인 것: `history`·`metrics` 기록, `Kingdom.lastBudget`, `Kingdom.investmentPool`, 회사 임금(`wages`). 예산 미리보기는 둥근 수.
+- 그 밖의 숫자(가격, 저축, 인구, 생활수준 `Pop.sol`·`growth`, 시장 이동평균 등)는 끝자리가 길 수 있다. 화면에서 숫자를 그대로 문자열로 찍는 곳이 있으면 형식을 붙인다. 확인한 곳(`App.tsx` 140, `CompanyPanel.tsx` 140·600, `RegionPanel.tsx` 149, `PopTable.tsx` 37)은 이미 `NumericValue`·`toFixed`를 쓴다.
+- 없어진 export: `roundWorld`, `roundingDrift` (화면은 안 씀). 새 모듈 export (index에는 없음, 화면은 안 씀): `CARGO_MIN` (market.ts), `toward` (pops.ts, `weekToward` 대신).
+- `Pop.fund` 모양이 바뀌었다 (저장 11판): `{ id: number[]; u: number[] }` (id 오름차순, u[i] = id[i] 금융가 지분 수). 지분 주인 수는 `pops.filter(p => p.fund?.id.includes(b.id))`. 타입 `FundUnits`.
+- 저장 형식 12판. 10·11판 저장은 `migrateWorld`가 바꿔 불러온다 (저장 키 `estera-save-v7`은 바꿀 필요 없다). (wt-regionecon 이후 13판: 화면 전용 기록만 더했다. 12판도 그대로 불러온다)
+- 규칙 사전: `rounding` 항목이 "보이는 소수 자리"로, `idle-market`(거래 없는 시장)·`trade`(화물 1단위 아래면 없어짐)·`literacy`(매일 움직임) 문구가 바뀌었다.
+
+### 2-63 확인: 완료. 레벨 입력에 50 고정 상한 없음, 방식 숫자는 sim 데이터에서 읽고 공구는 FlowRow 로 보인다.
+
+### 2-63. 방식 사다리와 1레벨 약 500명 (2026-10-22, 사용자 결정, DESIGN 7.1)
+- 모든 건물의 방식이 바뀌었다 (`data.ts BUILDING_TYPES`). 기본 방식 1레벨은 일꾼 약 500명(옛 1,000명)이고 산출도 약 절반이다. 단계가 오를수록 일꾼은 줄고 기술자·전문가와 공구·석탄·철·기계가 늘며, 레벨당 이익은 단계마다 2배다.
+- 새 방식: 방직 공장 `textile_spin` (방적기, 철 가공). 방직 공장 방식 순서가 손베틀·방적기·증기 직기·맞춤 재단·증기 재단으로 바뀌었다 (방식 id는 그대로). 철·석탄 광산 방식 이름: `iron_shaft`·`coal_shaft` "곡괭이와 삽 / Picks and shovels", `iron_pick`·`coal_pick` "발파 / Blasting".
+- 기본 방식 대부분이 공구를 10~30 쓴다 (광산 30, 2-64) (투입·산출 표시 2-51에 공구가 새로 보인다). 소작지가 공구를 낸다 (`SUBSISTENCE.output.tools`). (2026-10-23 sim 변경, DECISIONS 7-25: 소작지는 이제 곡물·술·의복·목재만 내고 가구·공구는 내지 않는다. 화면은 산출 키를 그대로 읽으면 따로 고칠 것이 없다.)
+- 숫자가 바뀐 상수: `SUBSISTENCE.workersPerCell` 500, `OWNER_SEATS_PER_LEVEL` 5, `TUNE.financeStaff` 1, `START_OFFICE_LEVELS` 20, `MAX_LEVELS_PER_PROJECT` 100, 공사 포인트(`buildPoints`) 200~550 (2-64에서 바뀜), 건축사무소 목조 2점·비계 4점·철골 6점. 공사 레벨 입력 칸 상한이 50으로 박혀 있으면 `MAX_LEVELS_PER_PROJECT`를 읽는다.
+- 이익률 막대(사전 `methods-rule`)는 이제 최대 약 55%라 눈금 상한을 0.6으로 했다.
+
+### 2-65 확인: 대체됨. 1항(왕실 슬라이더)은 2-69가 뒤집었고, 지역 시장 임금은 2-79~2-81·2-84가 맡는다. 왕실 임금 읽기 전용 `CompanyPanel.tsx:344` (9d61d99).
+
+### 2-65. 국영 임금은 정부 건물만, 왕실 생산 건물은 시장 임금 (사용자 결정 2026-10-23, DECISIONS 6-2, DESIGN 7.3·9.2, 브랜치 wt-statewage)
+- 2026-11-02 상태: 1항(왕실 슬라이더)은 2-69가 뒤집었다 (플레이어 왕실 `setWage`·`setWageOffset`은 오류, `commands.ts:148~161`). main c952e65부터 지역 시장 임금이 기본이라 아래 "AI `adjustWages`가 매주 움직인다"·"국영 임금 = 기본 임금 × 임금 지수 × 단계"는 지금 규칙이 아니다 (`ai.ts:87`은 `wageMarket` 0일 때만). 남은 일은 2-79~2-81로 옮겼다. 이 절은 원문 보관용이다.
+- sim에서 바뀐 것:
+  - `Company.wages`: 모든 회사의 생산 건물 임금표. 왕실도 생산 건물(농장·공장·무역 등)은 이것을 준다. AI 왕실은 민간과 같은 규칙(`adjustWages`)으로 매주 움직인다.
+  - 새 칸 `Company.stateWages?` (왕실만): 국영 임금표 = 기본 임금 × 임금 지수 × 국영 임금 단계 배율. 정부 건물(행정청·건축사무소·학교)만 이것을 준다. 건물 하나의 실제 임금표는 새 export `wagesAt(company, typeId)`.
+  - `setWage`·`setWageOffset`이 왕실에도 된다 (예전에는 오류). 플레이어 왕실은 시장임금 정책 +0% (`wageOffset` = 모두 0)으로 시작한다.
+  - 예산 미리보기: `stateFirms` 줄의 왕실 생산 건물 임금은 지금 임금(단계와 상관없음), 건축사무소 임금만 국영 임금 단계를 따른다. `budgetDrill` `stateFirms` 행의 `wages`도 같다. `firmWages`(옛 사본)는 생산 건물 임금 + 그 단계의 사무소 임금.
+  - 지표 `KingdomMetrics.wageUnskilled`·`wageSkilled`는 국영 임금(`stateWages`) 그대로.
+  - 저장 17판 (16판까지는 `wages`를 `stateWages`로 베낀다).
+- 화면에서 할 일:
+  1. 임금 탭 (`CompanyPanel.tsx` 444~470 `Wages`): 458의 `!me.state &&` 를 지워 왕실도 직종별 슬라이더(시장 임금 대비 −50~+100%)를 쓴다. 값과 시장 임금·실업 막대는 그대로.
+  2. 같은 탭 아래에 왕실(`me.state`)일 때만 국영 임금 줄: 직종별 `me.stateWages[s]` (슬라이더 없음, 단계는 재정 창 국영 임금 손잡이). 라벨은 `T.govWages`(이미 있는 문자열 '정부 임금'/'Government wages')를 써도 된다.
+  3. 회사 요약의 임금 칸(`CompanyPanel.tsx` 149~153)은 그대로 `c.wages` (생산 건물 임금).
+  4. 건물 상세에서 건물 임금을 보이는 곳이 있으면 `wagesAt(owner, b.typeId)[s]`로 읽는다 (정부 건물은 국영 임금).
+  5. 재정 창 국영 임금 묶음 툴팁·자세히 보기: 왕실 생산 건물의 임금은 단계 버튼으로 바뀌지 않는다 (값은 `budgetDrill`이 이미 그렇게 준다).
+  설명 문구는 넣지 않는다 (규칙은 README·사전).
+
+### 2-66 확인: 완료. 술·양조장 아틀라스 `spriteSheets.gen.ts:22`·`:54`, `assets-src/icons.json`. 상품 목록은 `GOOD_IDS` 에서 그린다.
+
+### 2-66. 술·기호품·양조장 (사용자 요청 2026-10-23 "술을 만드는 건 괜찮은 것 같은데", DESIGN 4·5·7.1, 브랜치 wt-liquor2)
+- 새 sim 값 (`data.ts`): `GoodId`에 `'liquor'` (`GOODS.liquor`: 술 / Liquor, 기본가 3, `GOOD_IDS` 맨 끝), `NeedId`에 `'intoxicants'` (`NEEDS` 맨 끝: 기호품 / Intoxicants, 선택지 술 하나),
+  건물 `distillery` (양조장 / Distillery, 가공, 공장 부지, 포인트 300): 방식 `liquor_pot` 단식 증류 / Pot stills (기술 없음), `liquor_column` 연속식 증류 / Column stills (기술 `food_machinery`).
+  소작지 수확(`SUBSISTENCE.output`)에 술이 들어간다. 조정값 `TUNE.intoxLinear` (기호품 필요 계수, 식량 필요에서 같은 만큼 빠진다).
+- 옛 저장: `migrateWorld`가 지역 시장에 술을 기본가로 넣는다 (판 번호는 그대로).
+- 화면 요청:
+  1. 아이콘: `spriteAtlas.ts` 13의 `aliases`에 `liquor`(예: `food`)와 `distillery`(예: `foodplant`)를 넣거나 새 그림. 지금은 별칭이 없어 빈 그림일 수 있다.
+  2. 상품을 `GOOD_IDS`·`GOODS`로 돌며 그리는 곳(시세 창, 지역 시장, 건설 카드 원료·산출)은 저절로 술이 나온다. 상품 목록을 손으로 적은 곳이 있으면 술을 더한다.
+  3. 필요를 `NEEDS`로 돌며 그리는 곳(pop 필요·충족 막대)은 저절로 기호품이 나온다. 손으로 적은 목록이 있으면 기호품을 더한다.
+  설명 문구는 넣지 않는다 (규칙은 README·사전).
+
+### 2-72 1항 확인: 완료 (C 단위). 복지법 없음이면 단계 버튼 비활성 + 잠금 칩 → 법 탭 `FinancePanel.tsx:45`. 2항은 UI_CHANGES 2-72에 남김.
+
+### 2-72. 0b 결과에서 화면이 알아야 할 것: 복지 다이얼, 인두세 부담 (docs/overhaul/0B_RESULTS.md 2.4·2.9·2.10)
+1. **복지 다이얼은 복지법이 없으면 아무 일도 안 한다 (지금 할 일, 2-71과 같이).**
+   - 사실: 플레이어 왕국의 복지법은 시작부터 `none` (`world.ts:173`). `welfareCovers('none', g)`는 어느 무리도 덮지 않아 (`welfare.ts:25~27`) 복지 단계 `k.budget.welfare`는 읽히지 않는다 (`welfare.ts:87~88`). 0b (main be7e72f, 20년 × 시드 1·2 × salt 0..3)에서 복지 단계 1과 5의 결과가 기준선과 같았다.
+   - 지금 화면: `FinancePanel.tsx:34` 복지 줄의 단계 버튼 1~5가 늘 눌리고, 눌러도 수지가 0으로 그대로라 왜 안 바뀌는지 읽히지 않는다.
+   - 바꿀 것 (추천안): `k.welfareLaw === 'none'`이면 복지 줄의 단계 버튼 다섯 개를 `disabled`로 (지금 단계는 눌린 모양 그대로 회색). 줄 머리에 잠금 칩 하나: 자물쇠 아이콘 + `{S.welfareLaw}: {법 이름}` (법 이름은 PolicyPanel이 쓰는 `names[st.welfare.current]`). 칩을 누르면 국가 창 법 탭, 분야 `welfare` 선택. 툴팁은 라벨만 ("복지법: 없음").
+   - 이유: 움직여도 결과가 0인 손잡이는 읽히지 않는다 (0B 2.4 해석). 규칙은 바꾸지 않는다. 버린 안: 버튼은 살리고 수치 0만 보이기 (법을 고르기 전에 단계를 미리 정할 이유가 작고, 눌러도 안 바뀌는 혼동이 남는다). 사용자가 반대하면 버린 안으로 바꾼다.
+   - 데이터: `world.kingdoms.find(k => k.id === me.kingdomId).welfareLaw` (`WelfareLaw`), 법 이름은 `policyStatus(world, kingdomId).welfare`.
+   - 문자열: 새 문자열 없음 (복지법 라벨·법 이름 재사용).
+
