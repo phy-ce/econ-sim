@@ -19,9 +19,11 @@ describe('소작지 재해 (quakeChance > 0)', () => {
   it('화폐 총량이 장부와 맞고, 재해 날 소작지 칸이 손실만큼 줄며 사건이 남는다', () => {
     const w = createWorld(42);
     const m0 = moneyIdentity(w);
-    let worst = 0, hit = 0, cut = 0;
+    let worst = 0, hit = 0, cut = 0, logged = false;
     while (w.tick < END) {
       step(w);
+      // 사건 열은 상한(최근 N개)이 있어 끝에서 한 번만 보면 재해 사건이 밀려 나갈 수 있다: 날마다 본다
+      logged ||= w.events.some((e) => e.textEn?.includes('tenant land'));
       worst = Math.max(worst, Math.abs(moneyIdentity(w) - m0) / Math.max(1, totalMoney(w)));
       for (const r of w.regions) {
         // step 안의 updateSubsistence 는 w.tick − 1 날 재해로 칸을 정했다. 그 뒤 공사가 땅을 쓸 수 있어 같은 날 빈 농지와 다시 비교하지 않고 줄어든 칸만 본다
@@ -37,7 +39,7 @@ describe('소작지 재해 (quakeChance > 0)', () => {
     expect(worst).toBeLessThan(MONEY_TOLERANCE);
     expect(hit).toBeGreaterThan(0);
     expect(cut).toBeGreaterThan(0);
-    expect(w.events.some((e) => e.textEn?.includes('tenant land'))).toBe(true);
+    expect(logged).toBe(true);
   });
 
   it('재해가 걸린 채로 저장/불러오기 해도 결과가 같다', () => {
