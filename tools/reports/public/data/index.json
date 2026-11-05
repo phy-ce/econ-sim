@@ -1,6 +1,14 @@
 {
  "reports": [
   {
+   "id": "2026-11-05-welfarefill",
+   "title": "복지 차례 채우기",
+   "desc": "생활수준이 낮은 pop 부터 다 채우기와 같은 비율 비교. main 0acc1a2 + d8960db, 플레이어 왕국 복지법 강제, 단계 3, 시드 1·2, salt 0. 20년은 상한 1, 5년은 상한 없음·0.25·0.5",
+   "date": "2026-11-05",
+   "created": "2026-11-05T18:41:32",
+   "code": "42ef1852"
+  },
+  {
    "id": "2026-11-02-grainrule40",
    "title": "곡물 ⑦ 40년 (인구가 멈추는가)",
    "desc": "main 3222e73 + ⑦, 40년 × 시드 1·2 × salt 0: ctl / c05 (grainSurplusCap 0.5, surplusGrowth 0.05)",
