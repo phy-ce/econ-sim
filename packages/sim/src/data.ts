@@ -726,6 +726,10 @@ export const TUNE = {
   // 바깥 소득 = 그 지역 시장 임금과 다음 중 큰 쪽: 노동자·농부는 소작 1인 소득, 하급 귀족은 그 지역 저택의 하급 귀족 1인 몫 (manorShares 1 이면 0) (ai.ts adjustStatePremium, Company.statePremium,
   // 그 지역 국영 임금 = 시장 임금 × 단계 배율 × (1 + 웃돈), finance.ts applyStateWages). 0 = 끔. 2026-11-02 기본 1 (후보 1·2·3 비교, 총생산이 가장 높은 1, 근거: DESIGN 11, 보고서 2026-11-02-admin)
   aiStatePremium: 1,
+  // 잠재 수요 새 투자 (2026-11-05 사용자 방향, AI 판단, ai.ts latentWants): 기술로 열린 방식이 원료가 없어서만 막혔고 더 나으면, 왕국에 없는 그 원료를 새 투자 대상으로 본다.
+  // 0 = 끔, 1 = 민간·왕실이 보통 새 투자처럼, 2 = 왕실만 (국고로 짓고 웃돈으로 사람을 데려온다, crownPioneerPremium), 3 = 민간도 짓고 왕실은 2 처럼.
+  // 2026-11-05 기본 3 (0·2·3 비교 20년 × 시드 1·2 × salt 0..3, 1 은 salt 0 만, 근거: DESIGN 11, 보고서 2026-11-05-ironchain). 초반 이득만 뒷받침되고 장기 총생산은 중립이다
+  aiLatentInput: 3,
   aiMixedMethods: 0, // 1 = 건물 전체를 바꿀 수 없을 때 같은 지역에 더 나은 방식 1~2레벨을 따로 짓는다 (세계 규칙이 바뀌어 사용자 결정 필요, DECISIONS 7-21)
   needMul: {} as Partial<Record<NeedId, number>>,
   startLumber: 1.2, // 1레벨이 일꾼 500명이 되어 1,000명 시절 0.6·0.2의 두 배

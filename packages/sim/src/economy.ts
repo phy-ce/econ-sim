@@ -370,7 +370,7 @@ export function wagesAt(c: Company, typeId: string, w?: World, regionId?: number
     if (r.wages) {
       if (c.state && isGovernment(typeId)) return r.stateWages ?? c.stateWages ?? r.wages;
       const base = c.wageOffset ? offsetWages(r.wages, c.wageOffset) : r.wages;
-      // AI 민간 상회의 지역 웃돈 (ai.ts adjustPremium)
+      // AI 회사의 지역 웃돈 (ai.ts adjustPremium, 왕실 선구 건물은 crownPioneerPremium)
       const ai = c.aiPremium?.[regionId];
       return ai ? offsetWages(base, ai.off) : base;
     }

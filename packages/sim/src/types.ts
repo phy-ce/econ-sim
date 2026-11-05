@@ -418,7 +418,7 @@ export interface Company {
   weekStartCash: number;
   wageOffset: Record<Skill, number> | null;
   /**
-   * AI 민간 상회의 지역별 웃돈 (ai.ts adjustPremium): 지역 id → 직종별 웃돈 비율(off, 그 지역 임금 = 시장 임금 × (1 + off))과
+   * AI 회사의 지역별 웃돈 (민간 상회 ai.ts adjustPremium, 왕실 생산 건물 ai.ts crownPioneerPremium): 지역 id → 직종별 웃돈 비율(off, 그 지역 임금 = 시장 임금 × (1 + off))과
    * 지난 점검의 그 지역 고용·빈자리 (사람이 빠지는지 본다). 끄면 생기지 않는다
    */
   aiPremium?: Record<number, { off: Record<Skill, number>; emp: Record<Skill, number>; vac: Record<Skill, number> }>;

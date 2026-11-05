@@ -96,6 +96,7 @@ export function runAi(w: World) {
     // 임금은 지역 시장 임금이 정한다 (labor.ts updateMarketWages). AI 는 자리(가동률·증설·철거)만 정한다.
     // 민간 상회는 사람이 빠지는 지역에 웃돈을 얹는다 (adjustPremium)
     if (!c.state) adjustPremium(w, c);
+    else if (TUNE.aiLatentInput >= 2 && !c.isPlayer) crownPioneerPremium(w, c);
     manageBuildings(w, c, outlook, switchPools);
     if (c.state) planResearch(w, c, outlook);
     withEstimateCache(() => planConstruction(w, c, outlook));
@@ -171,6 +172,25 @@ function officeStaffable(w: World, c: Company, r: Region, m: MethodDef, byId: Ma
 export const PREMIUM_STEP = 0.1;
 /** 상회 웃돈 상한 (플레이어 웃돈 손잡이 setWageOffset 의 위 끝과 같다). AI 는 웃돈만 얹으므로 아래 끝은 0 */
 export const PREMIUM_MAX = 1;
+
+/**
+ * 왕실이 체인을 연다 (AI 판단, TUNE.aiLatentInput 2, 매주): 왕실 선구 건물(latentPioneer)이 일손 기준(TUNE.minStaffing)에 못 미치는 지역은 왕실 생산 건물 임금에 웃돈을 PREMIUM_STEP 씩 얹고 (PREMIUM_MAX 까지),
+ * 일손이 찼거나 선구 건물이 없는 지역은 PREMIUM_STEP 씩 내린다. 시장 임금이 같으면 새 건물은 사람을 못 뽑는다: 시드 1 7년차 r7 기술자 곳간 1명, 빈자리 약 3,800. 시장 임금 규칙은 바뀌지 않는다
+ */
+function crownPioneerPremium(w: World, c: Company) {
+  const short = new Set<number>(), all = new Set<number>(Object.keys(c.aiPremium ?? {}).map(Number));
+  for (const b of w.buildings) {
+    if (b.companyId !== c.id || b.level <= 0 || isGovernment(b.typeId) || BUILDING_BY_ID[b.typeId].auto) continue;
+    if (b.last.staffing < MIN_STAFFING() && latentPioneer(w, b)) { short.add(b.regionId); all.add(b.regionId); }
+  }
+  const next: NonNullable<Company['aiPremium']> = {};
+  for (const rid of [...all].sort((x, y) => x - y)) {
+    const off = { ...(c.aiPremium?.[rid]?.off ?? emptyRecord()) };
+    for (const s of SKILLS) off[s] = short.has(rid) ? Math.min(PREMIUM_MAX, off[s] + PREMIUM_STEP) : Math.max(0, off[s] - PREMIUM_STEP);
+    if (SKILLS.some((s) => off[s] > 0)) next[rid] = { off, emp: emptyRecord(), vac: emptyRecord() };
+  }
+  if (Object.keys(next).length) c.aiPremium = next; else delete c.aiPremium;
+}
 
 /**
  * 민간 AI 상회의 지역 웃돈 (AI 판단, 2026-11-02 wt-wagelag A1, 매주). 지역마다 그 상회 생산 건물(정부·소유·소작 건물 제외)을 보고, 직종마다:
@@ -470,14 +490,18 @@ function chooseTaxLaw(w: World, c: Company) {
  * 남는 양 = 대륙 공급 − 대륙 수요 (이동평균) + 이 건물 b 가 지금 방식으로 쓰는 양 (레벨 × 가동률, 바꾸면 풀린다. 꺼진 건물은 0)
  */
 function inputsAvailable(w: World, m: MethodDef, levels: number, b?: Building): boolean {
-  const own = b?.active ? getMethod(b.typeId, b.methodId) : null;
   for (const [g, per] of Object.entries(m.inputs) as [keyof typeof GOODS, number][]) {
-    let avail = 0;
-    for (const x of w.regions) avail += x.market[g].supplyEma - x.market[g].demandEma;
-    if (own && b) avail += (own.inputs[g] ?? 0) * b.level * b.utilization;
-    if (avail < per * levels * INPUT_SUPPLY_MIN) return false;
+    if (inputSpare(w, g, b) < per * levels * INPUT_SUPPLY_MIN) return false;
   }
   return true;
+}
+
+/** 대륙에 남는 투입재 g: 공급 − 수요 (이동평균) + 건물 b 가 지금 방식으로 쓰는 양 (레벨 × 가동률, 바꾸면 풀린다. 꺼진 건물은 0) */
+function inputSpare(w: World, g: GoodId, b?: Building): number {
+  let avail = 0;
+  for (const x of w.regions) avail += x.market[g].supplyEma - x.market[g].demandEma;
+  if (b?.active) avail += (getMethod(b.typeId, b.methodId).inputs[g] ?? 0) * b.level * b.utilization;
+  return avail;
 }
 
 /** 굶는 투입 충족: 이 값 미만이면 굶은 주로 센다 (TUNE.starveWeeks, 건축사무소 자재 바꾸기). 근거 없음 */
@@ -583,7 +607,9 @@ function manageBuildings(w: World, c: Company, o: Outlook, pools: Map<string, nu
     // 생산 방식: 레벨당 하루 손익이 SWITCH_GAIN + SWITCH_FLOOR 넘게 나은 방식 (값이 다른 상품을 섞어 내는 방식이 있어 산출 단위로 나누지 않는다) (3주 쿨다운, 투입재를 못 구해 멈췄으면 쿨다운 없이).
     // 일손 기대(지금 재직자 포함)가 기준 미만이거나 공급이 필요의 50% 미만인 방식은 고르지 않는다.
     // 지금 방식이 반도 채워지지 않고 일손도 구할 수 없으면(understaffed), 손익이 낮아도 일손을 구할 수 있는 방식으로 바꾼다
-    const starved = Object.keys(cur.inputs).length > 0 && Object.keys(cur.outputs).length > 0 && b.active && b.last.inputFill < STARVE_FILL && b.last.staffing > 0;
+    // TUNE.aiLatentInput: 막 바꾼 건물은 RAMP_WEEKS 동안 굶어도 되돌리지 않는다 (새 원료는 무역으로 오는 데 시간이 든다)
+    const settling = !!TUNE.aiLatentInput && w.tick - b.lastSwitchTick < RAMP_WEEKS * TICKS_PER_WEEK;
+    const starved = Object.keys(cur.inputs).length > 0 && Object.keys(cur.outputs).length > 0 && b.active && b.last.inputFill < STARVE_FILL && b.last.staffing > 0 && !settling;
     const region = regionById(w, b.regionId);
     const staffable = (m: MethodDef) => laborAvailability(w, region, m, b.level, c.state, undefined, b) >= MIN_STAFFING();
     const understaffed = b.active && b.last.staffing < MIN_STAFFING() && !staffable(cur);
@@ -621,7 +647,7 @@ function manageBuildings(w: World, c: Company, o: Outlook, pools: Map<string, nu
     const actualMargin = cost > 0 ? (b.last.revenue - cost) / cost : 0;
     // 유보 자산이 남아 있으면 적자를 거기서 메우고 가동률을 줄이지 않는다. 다만 굶는 건물(starving)은 유보 자산이 있어도 줄인다
     const hungry = starving(b);
-    const bleeding = (hungry || !b.reserve) && harvestFactor(w, b.regionId, BUILDING_BY_ID[b.typeId].land) >= 1 && b.profitEma < 0 && (current.margin < -0.2 || actualMargin < -0.2);
+    const bleeding = (hungry || !b.reserve) && harvestFactor(w, b.regionId, BUILDING_BY_ID[b.typeId].land) >= 1 && b.profitEma < 0 && (current.margin < -0.2 || actualMargin < -0.2) && !latentPioneer(w, b);
     b.lossWeeks = bleeding ? b.lossWeeks + 1 : 0;
     if (b.lossWeeks >= 4 && b.utilization > 0.1 + 1e-9) {
       applyCommand(w, c.id, { type: 'setUtilization', buildingId: b.id, utilization: Math.max(0.1, b.utilization - 0.1) });
@@ -1123,7 +1149,7 @@ function planTrials(w: World, c: Company, canStart: () => boolean, free: () => n
   if (c.state && c.debt > c.cash) return;
   const own = ownRegions(w, c);
   const kingdom = new Set(own.map((r) => r.id));
-  const wants: { g: GoodId; regions: Region[] }[] = [];
+  const wants: { g: GoodId; regions: Region[]; qty?: number }[] = [];
   const seen = new Set<GoodId>();
   for (const r of own) for (const g of GOOD_IDS) {
     if ((r.hotWeeks?.[g] ?? 0) < RESERVE_STREAK || seen.has(g) || makes(w, new Set([r.id]), g)) continue;
@@ -1142,28 +1168,125 @@ function planTrials(w: World, c: Company, canStart: () => boolean, free: () => n
     seen.add(short);
     wants.push({ g: short, regions: [regionById(w, b.regionId), ...own.filter((r) => r.id !== b.regionId)] });
   }
+  if (TUNE.aiLatentInput === 1 || TUNE.aiLatentInput === 3 || (TUNE.aiLatentInput === 2 && c.state)) wants.push(...latentWants(w, c, own, kingdom, seen));
   let started = 0;
   const pools = new Map<string, number>();
-  for (const { g, regions } of wants) {
+  for (const { g, regions, qty } of wants) {
     if (started >= TUNE.startsPerWeek || !canStart()) break;
     let best: Pick | null = null;
+    // 왕실이 여는 체인(aiLatentInput 2): 곳간을 보지 않고 웃돈으로 데려오며 (crownPioneerPremium), 돈은 행정청 원료 공사(secureGovInputs)처럼 국고가 조이지 않으면 남길 돈 선을 넘어서 쓴다
+    const pay = !!qty && TUNE.aiLatentInput >= 2 && c.state;
+    const money = () => (pay ? (treasuryTight(w, c, kingdomById(w, c.kingdomId)) ? 0 : c.cash - committedCost(w, c)) : free());
     for (const r of regions) {
       for (const t of BUILDING_TYPES) {
         if (!canBuildType(c, t) || isGovernment(t.id) || t.id === TRADING_POST) continue;
         if (harvestFactor(w, r.id, t.land) < 1 || roomFor(w, r.id, t.id) < 1 || rebuildBlocked(w, r.id, t.id)) continue;
         if (w.buildings.some((x) => x.companyId === c.id && x.regionId === r.id && x.typeId === t.id)) continue;
         const cost = constructionEstimate(w, c, t.id).cost;
-        if (!Number.isFinite(cost) || free() < cost) continue;
+        if (!Number.isFinite(cost) || money() < cost) continue;
         for (const m of availableMethods(c, t.id)) {
-          if (!((m.outputs[g] ?? 0) > 0) || laborAvailability(w, r, m, 1, c.state, pools) < MIN_STAFFING()) continue;
+          if (!((m.outputs[g] ?? 0) > 0) || (!pay && laborAvailability(w, r, m, 1, c.state, pools) < MIN_STAFFING())) continue;
           const v = estimateMethod(w, r.id, t.id, m.id, wagesAt(c, t.id, w, r.id), c.state).profit;
-          if (!best || v > best.score) best = { regionId: r.id, typeId: t.id, methodId: m.id, levels: 1, score: v };
+          if (!best || v > best.score) {
+            // 잠재 수요(qty)는 그 양을 낼 레벨까지, 땅·돈·일손이 되는 만큼 짓는다. 다른 갈래는 1레벨
+            let levels = qty ? Math.max(1, Math.min(Math.ceil(qty / m.outputs[g]!), Math.floor(roomFor(w, r.id, t.id)), Math.floor(money() / cost))) : 1;
+            while (!pay && levels > 1 && laborAvailability(w, r, m, levels, c.state, pools) < MIN_STAFFING()) levels--;
+            best = { regionId: r.id, typeId: t.id, methodId: m.id, levels, score: v };
+          }
         }
       }
       if (best) break;
     }
-    if (best && start(best, 'trial')) started++;
+    if (best && start(best, qty ? 'latentTrial' : 'trial')) started++;
   }
+}
+
+/**
+ * 잠재 수요 (AI 판단, TUNE.aiLatentInput): 왕국의 건물이 기술로 열린 방식을 원료가 없어서만 못 쓰고, 일손이 되고 지금 값으로 지금 방식보다 벌 때 (방식 바꾸기와 같은 문턱),
+ * 그 원료는 잠재 수요다. 수요가 0 이면 값이 기본가에 머물러 새 투자 갈래 (가)·(나)가 영영 켜지지 않기 때문이다. 양은 그 원료가 모자란 건물 중 가장 작은 건물이 바꿀 수 있는 만큼 (inputsAvailable 문턱).
+ * 왕국마다 그날 한 번 센다 (세계에서 다시 계산되는 값이라 저장하지 않는다)
+ */
+function latentNeed(w: World, kingdomId: number): LatentNeed {
+  let memo = latentMemo.get(w);
+  if (!memo || memo.tick !== w.tick) { memo = { tick: w.tick, by: new Map() }; latentMemo.set(w, memo); }
+  const hit = memo.by.get(kingdomId);
+  if (hit) return hit;
+  const need: LatentNeed = { short: new Map(), wanted: new Set() };
+  const used = new Set<GoodId>();
+  for (const b of w.buildings) if (b.level > 0 && regionById(w, b.regionId).kingdomId === kingdomId) for (const g of Object.keys(getMethod(b.typeId, b.methodId).inputs) as GoodId[]) used.add(g);
+  for (const b of w.buildings) {
+    const region = regionById(w, b.regionId);
+    const now = getMethod(b.typeId, b.methodId);
+    if (region.kingdomId !== kingdomId || !b.active || BUILDING_BY_ID[b.typeId].auto || (isGovernment(b.typeId) && !now.construction) || b.typeId === TRADING_POST) continue;
+    const oc = companyById(w, b.companyId);
+    if (!oc) continue;
+    const wages = wagesAt(oc, b.typeId, w, b.regionId);
+    let cur: number | undefined;
+    for (const m of availableMethods(oc, b.typeId)) {
+      if (m.id === b.methodId) continue;
+      const inputs = Object.entries(m.inputs) as [GoodId, number][];
+      for (const [g] of inputs) if (!used.has(g)) need.wanted.add(g);
+      const short = inputs.filter(([g, per]) => inputSpare(w, g, b) < per * b.level * INPUT_SUPPLY_MIN);
+      if (!short.length || laborAvailability(w, region, m, b.level, oc.state, undefined, b) < MIN_STAFFING()) continue;
+      // 건축사무소는 하루 포인트로, 나머지는 방식 바꾸기와 같은 손익 문턱으로 본다 (manageBuildings)
+      if (now.construction) { if (!((m.construction ?? 0) > now.construction)) continue; }
+      else {
+        cur ??= estimateMethod(w, b.regionId, b.typeId, b.methodId, wages, oc.state).profit;
+        if (!(estimateMethod(w, b.regionId, b.typeId, m.id, wages, oc.state).profit > cur * (1 + SWITCH_GAIN) + SWITCH_FLOOR)) continue;
+      }
+      for (const [g, per] of short) {
+        const qty = per * b.level * INPUT_SUPPLY_MIN - inputSpare(w, g, b), old = need.short.get(g);
+        if (!old || qty < old.qty) need.short.set(g, { qty, region });
+      }
+    }
+  }
+  memo.by.set(kingdomId, need);
+  return need;
+}
+/** short: 모자란 잠재 수요 원료와 양·소비자 지역. wanted: 기술로 열린 방식이 쓰는데 왕국에 아직 쓰는 건물이 없는 상품 (선구 건물을 소비자가 바꿀 때까지 남긴다) */
+interface LatentNeed { short: Map<GoodId, { qty: number; region: Region }>; wanted: Set<GoodId> }
+const latentMemo = new WeakMap<World, { tick: number; by: Map<number, LatentNeed> }>();
+
+/** 상품 g 를 내는 모든 방식(회사 c 가 아는 것)이 쓰는 원료: 체인의 윗단 */
+function upstreamOf(c: Company, g: GoodId): { h: GoodId; per: number }[] {
+  const ways = BUILDING_TYPES.filter((t) => canBuildType(c, t) && !isGovernment(t.id)).flatMap((t) => availableMethods(c, t.id).filter((m) => (m.outputs[g] ?? 0) > 0));
+  if (!ways.length) return [];
+  return (Object.entries(ways[0].inputs) as [GoodId, number][]).filter(([h]) => ways.every((m) => (m.inputs[h] ?? 0) > 0)).map(([h, per]) => ({ h, per: per / ways[0].outputs[g]! }));
+}
+
+const marketSupply = (w: World, g: GoodId) => w.regions.reduce((a, r) => a + r.market[g].supplyEma, 0);
+
+/**
+ * 잠재 수요가 부르는 새 투자: 왕국에 생산 건물이 없는 잠재 수요 원료. 윗단 원료가 아직 시장에 없으면 윗단부터 짓고, 나올 때까지 아랫단은 기다린다
+ * (같이 지으면 아랫단이 원료 없이 임금만 내다 철거된다: 시드 1 10년, 2026-11-05). 양은 latentNeed 의 양을 윗단 비율로 환산한다
+ */
+function latentWants(w: World, c: Company, own: Region[], kingdom: Set<number>, seen: Set<GoodId>): { g: GoodId; regions: Region[]; qty: number }[] {
+  const out: { g: GoodId; regions: Region[]; qty: number }[] = [];
+  const visit = (g: GoodId, qty: number, region: Region) => {
+    if (seen.has(g) || makes(w, kingdom, g)) return;
+    seen.add(g);
+    let wait = false;
+    for (const { h, per } of upstreamOf(c, g)) if (!(marketSupply(w, h) > 0)) { wait = true; visit(h, qty * per, region); }
+    if (!wait) out.push({ g, regions: [region, ...own.filter((r) => r.id !== region.id)], qty });
+  };
+  for (const [g, x] of latentNeed(w, c.kingdomId).short) visit(g, x.qty, x.region);
+  return out;
+}
+
+/** 잠재 수요 체인의 선구 건물: 왕국에서 혼자 내는 상품이 잠재 수요이거나 그 윗단이면, 소비자가 바꿀 때까지 적자여도 남기고 가동률을 깎지 않는다 */
+function latentPioneer(w: World, b: Building): boolean {
+  if (!TUNE.aiLatentInput) return false;
+  const k = regionById(w, b.regionId).kingdomId;
+  const { short, wanted } = latentNeed(w, k);
+  if (!short.size && !wanted.size) return false;
+  const gov = companyById(w, kingdomById(w, k).governmentId);
+  if (!gov) return false;
+  const chain = new Set<GoodId>();
+  const up = (g: GoodId) => { if (chain.has(g)) return; chain.add(g); for (const { h } of upstreamOf(gov, g)) up(h); };
+  for (const g of short.keys()) up(g);
+  for (const g of wanted) up(g);
+  const goods = (Object.keys(getMethod(b.typeId, b.methodId).outputs) as GoodId[]).filter((g) => chain.has(g));
+  return goods.some((g) => !w.buildings.some((x) => x !== b && x.level > 0 && regionById(w, x.regionId).kingdomId === k && (getMethod(x.typeId, x.methodId).outputs[g] ?? 0) > 0));
 }
 
 /**
@@ -1267,6 +1390,7 @@ function fundFromReserve(w: World, c: Company, b: Building, regionId: number, ne
  */
 function keepLast(w: World, b: Building): boolean {
   if (b.level - (b.shrinking ?? 0) > 1) return false;
+  if (latentPioneer(w, b)) return true;
   const kingdomId = regionById(w, b.regionId).kingdomId;
   const goods = Object.keys(getMethod(b.typeId, b.methodId).outputs) as GoodId[];
   const others = new Set<GoodId>(), used = new Set<GoodId>();
