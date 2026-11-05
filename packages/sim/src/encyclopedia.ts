@@ -12,7 +12,7 @@ import {
   BUILDING_BY_ID, BUILDING_TYPES, CLASS_DEFS, CONSUMPTION_PER_CAPITA, DEPENDENT_CONSUMPTION, EDUCATION_FLOOR, EDUCATION_RANGE, GOODS, GOOD_IDS,
   HARVEST_KINDS, HARVEST_MAX_SEASONS, HARVEST_SEASON_DAYS, HARVEST_SPREAD, HARVEST_STEP, LAW_TECH, MAX_POINTS_PER_LEVEL_DAY, NEEDS, OWNERSHIP_SEATS,
   OWNER_SEATS_PER_LEVEL, REGIONS, STEP_PROFIT_MULT, BUILD_POINT_FACTOR, INDUSTRIES, INDUSTRY_SKILL_TOL, INDUSTRY_UPPER_INPUT_TOL, industryOf, SKILL_DEFS, SUBSISTENCE, tenantIncomeAtBase, tenantYield, TAX_PEOPLE_PER_LEVEL, TECHS, TECH_BY_ID, TECH_COST, TICKS_PER_WEEK, TICKS_PER_YEAR,
-  NEED_LUXURY_FROM, NEED_STANDARD_FROM, TIERS, TIER_JITTER, TUNE, WORKFORCE_RATIO, getMethod, needsAt, rawMax, regionPerk, scaleBonus,
+  GATED_GOODS, NEED_LUXURY_FROM, NEED_STANDARD_FROM, TIERS, TIER_JITTER, TUNE, WORKFORCE_RATIO, getMethod, goodTechs, needsAt, rawMax, regionPerk, scaleBonus,
   buildPointsOf, TRADING_POST, TRADE_STEP_MULT, TRADE_ESCROW_SHARE, tradeReserveOf,
 } from './data';
 import {
@@ -843,8 +843,8 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   },
   {
     id: 'needs', category: 'people', title: t('필요 묶음', 'Needs basket'),
-    rule: t('필요는 소비 단위 1의 하루 금액(기본가)이다. 묶음 합계는 부마다 정해져 있다. 식량은 {5} + {6} × 부(30까지)이고, 나머지 필요가 합계의 남은 몫을 비율대로 나눈다: 기호품(술)은 {4} × 부(10까지), 난방·의복·생활용품은 부 10까지 늘고 (난방은 그 뒤에도 천천히 는다), 표준 의복·가정용품은 부 {7}부터, 고기·사치품은 부 {8}부터 생긴다.', 'Needs are the daily value (at base prices) per consumption unit. The basket total is fixed for each wealth step. Food is {5} + {6} × W (to 30), and the other needs share the rest in proportion: intoxicants (liquor) {4} × W (to 10), heating, clothing and crude items grow to W 10 (heating keeps growing slowly after that), standard clothing and household items start at W {7}, meat and luxuries at W {8}.'),
-    params: [tune('luxuryLinear', '사치품 1차', 'Luxury linear'), tune('luxuryQuad', '사치품 2차', 'Luxury quadratic'), tune('meatLinear', '고기 1차', 'Meat linear'), tune('meatQuad', '고기 2차', 'Meat quadratic'), tune('intoxLinear', '기호품 1차', 'Intoxicants linear'), p('식량 시작', 'Food base', () => needsAt(0).nourishment), p('식량 1차', 'Food per wealth', () => r2(needsAt(1).nourishment - needsAt(0).nourishment)), p('표준 의복 시작 부', 'Standard goods from wealth', () => NEED_STANDARD_FROM), p('고기·사치품 시작 부', 'Meat and luxuries from wealth', () => NEED_LUXURY_FROM)],
+    rule: t('필요는 소비 단위 1의 하루 금액(기본가)이다. 묶음 합계는 부마다 정해져 있다. 식량은 {5} + {6} × 부(30까지)이고, 나머지 필요가 합계의 남은 몫을 비율대로 나눈다: 기호품(술)은 {4} × 부(10까지), 난방·의복·생활용품은 부 10까지 늘고 (난방은 그 뒤에도 천천히 는다), 표준 의복·가정용품은 부 {7}부터, 고기·사치품은 부 {8}부터 생긴다. 이동은 {9} × (부 − {7}), 정밀 기기는 사치품 곡선의 {10}배다. 운송·종이·정밀 기기는 왕국이 그 상품을 만들 기술을 연 뒤에야 주민이 산다. 공구는 주민이 사지 않는다.', 'Needs are the daily value (at base prices) per consumption unit. The basket total is fixed for each wealth step. Food is {5} + {6} × W (to 30), and the other needs share the rest in proportion: intoxicants (liquor) {4} × W (to 10), heating, clothing and crude items grow to W 10 (heating keeps growing slowly after that), standard clothing and household items start at W {7}, meat and luxuries at W {8}. Travel is {9} × (W − {7}), precision instruments {10} × the luxury curve. Transport, paper and precision instruments are bought only once the kingdom has the tech to make them. Residents never buy tools.'),
+    params: [tune('luxuryLinear', '사치품 1차', 'Luxury linear'), tune('luxuryQuad', '사치품 2차', 'Luxury quadratic'), tune('meatLinear', '고기 1차', 'Meat linear'), tune('meatQuad', '고기 2차', 'Meat quadratic'), tune('intoxLinear', '기호품 1차', 'Intoxicants linear'), p('식량 시작', 'Food base', () => needsAt(0).nourishment), p('식량 1차', 'Food per wealth', () => r2(needsAt(1).nourishment - needsAt(0).nourishment)), p('표준 의복 시작 부', 'Standard goods from wealth', () => NEED_STANDARD_FROM), p('고기·사치품 시작 부', 'Meat and luxuries from wealth', () => NEED_LUXURY_FROM), tune('travelLinear', '이동 1차', 'Travel linear'), tune('instrumentShare', '정밀 기기 몫', 'Instrument share'), p('기술로 열리는 수요', 'Tech-gated demand', () => GATED_GOODS.map((g) => `${GOODS[g].name} ← ${goodTechs(g).map((x) => TECH_BY_ID[x].name).join(' / ')}`).join(', '))],
     example: () => {
       const n = needsAt(5), units = 4 * CONSUMPTION_PER_CAPITA;
       const total = Object.values(n).reduce((a, x) => a + x, 0);
@@ -1410,7 +1410,7 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   },
   {
     id: 'ai-research', category: 'ai', title: t('연구 고르기', 'Choosing research'),
-    rule: t('고른 기술이 없으면 늘 (가치 + 1) ÷ 비용 × 무작위 (1 ± {0})가 가장 큰 기술을 고른다. 가치 = 여는 방식의 손익 개선(학교 기술은 모자란 자리 가치). 후속 기술 가치의 절반을 물려받는다.', 'Whenever no tech is chosen, pick the tech with the highest (value + 1) ÷ cost × random (1 ± {0}). Value = profit gain from unlocked methods (school techs: missing seat value), plus half of successors\' value.'),
+    rule: t('고른 기술이 없으면 늘 (가치 + 1) ÷ 비용 × 무작위 (1 ± {0})가 가장 큰 기술을 고른다. 가치 = 여는 방식의 손익 개선(학교 기술은 모자란 자리 가치, 주민 수요를 여는 기술은 그 수요를 채울 레벨의 기본가 이윤). 후속 기술 가치의 절반을 물려받는다.', 'Whenever no tech is chosen, pick the tech with the highest (value + 1) ÷ cost × random (1 ± {0}). Value = profit gain from unlocked methods (school techs: missing seat value; techs that open resident demand: base-price profit of the levels that would fill it), plus half of successors\' value.'),
     params: [p('무작위 폭', 'Random spread', () => AI_JITTER, 'pct')],
     related: ['tech', 'research'], seenIn: ['finance'], source: ['ai.ts planResearch', 'outlook.ts techValue'], design: ['10'],
   },

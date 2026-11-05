@@ -1,4 +1,4 @@
-import { BUILDING_BY_ID, GOOD_IDS, GOODS, REGIONS, SKILL_DEFS, SUBSISTENCE, TICKS_PER_WEEK, TIER_COUNTS, TIER_JITTER, TIERS, TRADING_POST, TUNE, WORKFORCE_RATIO, getMethod, tradeReserveOf } from './data';
+import { BUILDING_BY_ID, GOOD_IDS, GOODS, REGIONS, SKILL_DEFS, SUBSISTENCE, TICKS_PER_WEEK, TIER_COUNTS, TIER_JITTER, TIERS, TRADING_POST, TUNE, WORKFORCE_RATIO, getMethod, lockedGoodsFor, tradeReserveOf } from './data';
 import { collectionRatio, emptyJobs, knownVeins, isGovernment, newBuilding, paysDividend, slots, wageCostOf } from './economy';
 import { addFund, aggregateHouseholds, findPop, getPop, movePeople, workforce } from './pops';
 import { updateOwnership, updateSubsistence } from './production';
@@ -170,7 +170,7 @@ export function createWorld(seed = 1, opts: CreateWorldOptions = {}): World {
     const deposits = knownVeins(def.veins);
     return {
       id: def.id, name: def.name, description: def.description, spaceport: def.spaceport, neighbors: [...def.neighbors],
-      kingdomId: owner[def.id], tier: st.tier,
+      kingdomId: owner[def.id], lockedGoods: lockedGoodsFor(START_TECHS), tier: st.tier,
       land: { arable: st.arable, forest: def.forest, plot: st.plot, ore: deposits.iron + deposits.coal }, deposits,
       education: st.education, households: {} as Region['households'], market: newMarket(),
     };

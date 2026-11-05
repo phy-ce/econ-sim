@@ -20,11 +20,11 @@ FORMAT = 2
 CLS = {'peasant': '소작농', 'unskilled': '노동자', 'farmer': '농부', 'skilled': '기술자', 'expert': '전문가', 'gentry': '하급 귀족',
        'capitalist': '자본가', 'aristocrat': '상급 귀족'}
 GOODS = {'grain': '곡물', 'fiber': '섬유', 'timber': '목재', 'ore': '철광석', 'fuel': '석탄', 'food': '식료품', 'cloth': '의복', 'metal': '철',
-         'tools': '공구', 'furniture': '가구', 'electronics': '기계', 'transport': '운송', 'luxury_furniture': '고급 가구', 'luxury_cloth': '고급 의복',
+         'tools': '공구', 'furniture': '가구', 'electronics': '정밀 기기', 'transport': '운송', 'luxury_furniture': '고급 가구', 'luxury_cloth': '고급 의복',
          'meat': '고기', 'paper': '종이', 'liquor': '술'}
 BLDG = {'subsistence': '소작지', 'manor': '저택', 'finance': '금융가', 'farm': '곡물 농장', 'fiber_farm': '섬유 농장', 'ranch': '목장', 'lumber': '벌목장',
         'mine': '철광산', 'coal_mine': '석탄광산', 'foodplant': '식료품 공장', 'textile': '방직 공장', 'smelter': '제철소', 'workshop': '공방',
-        'furniture': '가구 공방', 'paper_mill': '종이 공장', 'fab': '기계 공장', 'railway': '운송 조합', 'school': '학교', 'builder': '건축사무소', 'admin': '행정청'}
+        'furniture': '가구 공방', 'paper_mill': '종이 공장', 'fab': '정밀 기기 공장', 'railway': '운송 조합', 'school': '학교', 'builder': '건축사무소', 'admin': '행정청'}
 LEDGER = {'sales': '매출', 'tax': '세금', 'mint': '주조', 'buildFees': '공사 수수료', 'wages': '임금', 'inputs': '원료', 'research': '연구',
           'interest': '이자', 'welfare': '복지', 'dividends': '배당', 'investment': '투자', 'buildPaid': '공사비 지출'}
 FLOWS = {'divIn': ('배당 받음', '가진 건물에서 들어온 배당'), 'toPops': ('주인에게 나눔', '배당 중 귀족·지분 가진 pop 에게 나눈 몫'),
@@ -137,6 +137,22 @@ for g, ko in GOODS.items():
     LABELS['sd.' + g] = L(ko + ' 공급÷수요', '공급÷수요', '', '공급 ÷ 수요 (한 해 하루 평균, sup·dem 에서 계산)')
 for b, ko in BLDG.items():
     LABELS['lvT.' + b] = L(ko, '건물 레벨')
+# cli/demanddiag.ts 줄 (한 해 주마다 평균)
+for g, ko in GOODS.items():
+    LABELS['S.' + g] = L(ko + ' 공급', '공급', '/일', '공급 이동평균의 지역 합, 한 해 평균')
+    LABELS['D.' + g] = L(ko + ' 수요', '수요', '/일', '수요 이동평균의 지역 합, 한 해 평균')
+    LABELS['H.' + g] = L(ko + ' 주민 수요', '가계 수요', '/일', '수요 중 pop 몫, 한 해 평균')
+    LABELS['p.' + g] = L(ko + ' 값', '값 (기본가 대비)', '', '지역 평균 값 ÷ 기본가, 한 해 평균')
+    LABELS['pmin.' + g] = L(ko + ' 값 (가장 싼 지역)', '값 (기본가 대비)', '', '가장 싼 지역 값 ÷ 기본가, 한 해 평균')
+    LABELS['pmax.' + g] = L(ko + ' 값 (가장 비싼 지역)', '값 (기본가 대비)', '', '가장 비싼 지역 값 ÷ 기본가, 한 해 평균')
+    LABELS['open.' + g] = L(ko + ' 기술 연 왕국', '연구', '', '그 상품을 만들 기술을 연 왕국 수')
+for b, ko in BLDG.items():
+    LABELS['lv.' + b] = L(ko, '건물 레벨')
+LABELS['outV'] = L('기본가 산출', '경제', '백만/일', '모든 상품 공급 × 기본가')
+LABELS['wealth'] = L('평균 부', '생활수준', '', '인구 가중')
+LABELS['w6'] = L('부 6 이상 비율', '생활수준')
+LABELS['cash'] = L('국고', '왕실', '백만')
+LABELS['debt'] = L('국채', '왕실', '백만')
 LABELS['buildPts'] = L('건축 포인트', '건축사무소', '/일', '건축사무소가 낸 공사 포인트 합, 열흘마다 잰 한 해 평균')
 LABELS['toolFill'] = L('공구 쓰는 건물 원료 충족', '경제', '', '공구를 원료로 쓰는 방식의 원료 충족률 (레벨 가중, 열흘마다 잰 한 해 평균)')
 LABELS['workshopLv'] = L('공방 레벨', '건물 레벨', '', '공방 레벨 합, 열흘마다 잰 한 해 평균')

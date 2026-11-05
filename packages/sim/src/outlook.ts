@@ -2,7 +2,7 @@ import { ABS_LIMITS, BUILDING_BY_ID, GOOD_IDS, GOODS, NEEDS, SKILL_DEFS, TUNE, g
 import { STAFFING_HORIZON, extraNeed, poolKey, poolOf } from './staffing';
 import { workforce } from './pops';
 import { FLOW_ZERO, availableMethods, collectionRatio, mainOutput, priceFormula, harvestFactorEma, isGovernment, regionById, shippingRate, wageCostOf, wagesAt } from './economy';
-import { BY_EMA, PRICE_MIN } from './market';
+import { BY_EMA, PRICE_MIN, lockedDemand } from './market';
 import { clamp } from './rng';
 import { SKILLS } from './types';
 import type { Building, Company, GoodId, Kingdom, MethodDef, Region, Skill, World } from './types';
@@ -392,6 +392,8 @@ export function techValue(w: World, o: Outlook, c: Company, techId: string): num
         value += Math.max(0, valueMethod(w, o, r, c, t.id, m, b.level).profit - valueMethod(w, o, r, c, t.id, getMethod(b.typeId, b.methodId), b.level).profit);
       }
       value += Math.max(0, valueMethod(w, o, home, c, t.id, m, 1).profit);
+      // 이 기술이 여는 주민 수요 (data.ts lockedGoodsFor): 열기 전에는 수요가 없어 값이 안 오르므로, 그 수요를 채울 레벨의 기본가 이윤으로 본다
+      for (const g of home.lockedGoods) if ((m.outputs[g] ?? 0) > 0) value += (lockedDemand(w, c.kingdomId, g) / m.outputs[g]!) * Math.max(0, baseValue(m, c));
     }
   }
   return value;

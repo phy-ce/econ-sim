@@ -38,6 +38,9 @@ sim 변경 반영 (2026-11-05: wt-luxmix, 사용자 결정으로 wt-batch4 에 �
 sim 변경 반영 (2026-11-05: wt-ironchain)
 0. **2-93 실제 가동 (새, 사용자 2026-11-05)**: 건물 창과 건설 서브창에 `실제 가동` 한 값. 2-93 식 그대로, sim 읽기 전용 값으로 바로 된다.
 
+sim 변경 반영 (2026-11-05: wt-demand)
+0. **2-94 기술로 열리는 수요 (새)**: 시장 창의 운송·종이·정밀 기기 줄에 잠금 표시 (`Region.lockedGoods`), 툴팁에 여는 기술 (`goodTechs`). 이름 변경(기계 → 정밀 기기)은 `GOODS`·`BUILDING_BY_ID` 를 읽는 곳이면 저절로 된다.
+
 sim 변경 반영 (2026-11-05: wt-welfarefill)
 1. **2-89 복지 상한 (새)**: 정책 창·예산 미리보기 복지 줄에 상한 숫자, `welfareCapDaily` × 7, 라벨과 숫자만. 복지 내역의 '평활 차이' 를 "상한으로 줄인 몫" 으로.
 
@@ -479,6 +482,16 @@ sim 변경 (wt-research):
 - 라벨 `실제 가동` / `Actual output rate`. 값은 퍼센트, 소수 둘째 자리까지. 효율이 1 을 넘으면 100% 를 넘을 수 있으니 막대는 잘라도 숫자는 자르지 않는다.
 - 툴팁에 곱하는 값을 하나씩 (가동률, 작업 인원, 효율, 원료 충족, 기상 조건). 화면 본문에 설명 문구는 넣지 않는다.
 - 건축사무소는 맡은 공사만큼만 돌기도 한다 (`officeLoad`, 8장). 위 식에는 들어 있지 않다. 사무소 줄에서 `officeLoad` 를 곱할지는 화면 작업자가 정한다 (`CompanyPanel.tsx` 가 이미 import 한다).
+
+### 2-94. 기술로 열리는 수요 (wt-demand, DESIGN 5장, 사전 `needs`, sim 준비됨)
+
+운송·종이·정밀 기기는 왕국이 그 상품을 만들 기술을 연 뒤에야 주민이 산다. 공구는 주민이 사지 않는다. 화면이 고칠 것은 표시뿐이고 컴파일은 깨지지 않는다 (클라이언트는 `NeedId` 를 쓰지 않는다, 합친 뒤 main 에서 다시 확인).
+
+- 잠금: `Region.lockedGoods: GoodId[]` (그 지역 왕국이 아직 못 만드는 수요 상품). 시장 창의 상품 줄과 상품 상세에 잠금 아이콘. 툴팁은 여는 기술 이름 (`goodTechs(g)` → `TECH_BY_ID[x].name`). 본문에 설명 문구는 넣지 않는다.
+- 새 필요 둘: `travel` (이동 / Free movement), `fine_instruments` (정밀 기기 / Precision instruments). `NEEDS` 를 도는 표는 저절로 늘어난다. 잠긴 왕국의 pop 은 그 필요가 0 이므로 0 인 줄을 가리는 표는 그대로 둔다.
+- 가정용품 선택지에 종이가 들어갔다 (`NEEDS` household, 상한 0.5).
+- 이름 변경: 상품 `electronics` 는 `정밀 기기 / Precision instruments`, 건물 `fab` 은 `정밀 기기 공장 / Instrument works`, 방식 `machine_steam` 은 `증기 정밀 가공`. id 는 그대로다. 화면 파일에 옛 이름을 적은 곳은 없다 (`기계` 검색, main eeb99e1 기준). 아이콘을 상품 이름으로 고른다면 바꿀 때 본다.
+- 종이 공장은 이제 인쇄술이 있어야 짓는다 (`pulp_press.tech = 'printing'`). 건설 목록과 기술 트리는 `canBuildType`·`unlocksOf` 를 읽으므로 저절로 맞다.
 
 ## 3. sim 쪽 필요 사항 (Claude가 처리할 것, UI 작업자는 요청만)
 - **2-59 주 단위 수지 (요청됨, 2026-10-22):** `BuildingEcon`에 `week: { sales, tax, inputs, wages, profit }` (건물 `revenue`·`tax`·`inputCost`·`wageCost`의 이동평균 × 7, `profitEma`와 같은 기간). 들어오면 2-59-3 폭포 라벨을 `/주`로. (2026-11-02 wt-uiapi 보류: 지금 건물에 있는 이동평균은 `profitEma`·`firmEma`(왕실 생산 건물·건축사무소만) 뿐이라 매출·세금·원료비·임금 이동평균을 건물 상태에 새로 저장해야 한다. 읽기 전용이 아니고 골든이 바뀐다.)
