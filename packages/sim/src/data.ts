@@ -546,7 +546,7 @@ export const TUNE = {
   switchPremium: 1.1,
   switchMax: 0.05,
   // 지역 시장 임금 (2026-11-01 사용자 승인 "지역 임금 규칙 검증", docs/overhaul/LABOR_MARKET.md 1단계 (가), 2026-11-02 기본): 지역·직종마다 시장 임금 하나를 모든 임금 건물이 준다
-  // (AI 민간 상회는 웃돈 ai.ts adjustPremium 을 얹을 수 있다). 시장 임금은 맞는 임금 쪽으로 움직인다 (2026-11-02 사용자 "수요-공급 차에 따라서 숫자가(하한/상한 수렴값은 존재함) 변하게",
+  // (AI 회사는 웃돈 ai.ts adjustPremium·crownPioneerPremium 을 얹을 수 있다). 시장 임금은 맞는 임금 쪽으로 움직인다 (2026-11-02 사용자 "수요-공급 차에 따라서 숫자가(하한/상한 수렴값은 존재함) 변하게",
   // DECISIONS 7-43 확인 2026-11-02, labor.ts updateMarketWages). 스위치 wageMarket·wageTarget 과 옛 갈래의 키(wageMarketRate·wageMarketRateUp)는 2026-11-02 wt-simplify 1-E 에서 지웠다.
   // 목표 임금까지 거리 중 하루에 움직이는 비율 (가격 PRICE_SPEED 0.03 과 같은 꼴). 후보 0.03 / 0.05 / 0.1 (보고서 2026-11-02-wagespeed), 0.2 (2026-11-02-wagespan). 근거: DESIGN 11
   wageTargetSpeed: 0.1,
@@ -728,7 +728,7 @@ export const TUNE = {
   aiStatePremium: 1,
   // 잠재 수요 새 투자 (2026-11-05 사용자 방향, AI 판단, ai.ts latentWants): 기술로 열린 방식이 원료가 없어서만 막혔고 더 나으면, 왕국에 없는 그 원료를 새 투자 대상으로 본다.
   // 0 = 끔, 1 = 민간·왕실이 보통 새 투자처럼, 2 = 왕실만 (국고로 짓고 웃돈으로 사람을 데려온다, crownPioneerPremium), 3 = 민간도 짓고 왕실은 2 처럼.
-  // 2026-11-05 기본 3 (0·2·3 비교 20년 × 시드 1·2 × salt 0..3, 1 은 salt 0 만, 근거: DESIGN 11, 보고서 2026-11-05-ironchain). 초반 이득만 뒷받침되고 장기 총생산은 중립이다
+  // 2026-11-05 기본 3 (0·2·3 비교 20년 × 시드 1·2 × salt 0..3, 1 은 salt 0 만, 근거: DESIGN 11, 보고서 2026-11-05-ironchain). 이 조건에서 1~10년 누계는 +6.3% (8개 중 7개), 16~20년 누계는 −1.7% (4개), 20년차 총생산은 1,901 대 2,003 이었다
   aiLatentInput: 3,
   aiMixedMethods: 0, // 1 = 건물 전체를 바꿀 수 없을 때 같은 지역에 더 나은 방식 1~2레벨을 따로 짓는다 (세계 규칙이 바뀌어 사용자 결정 필요, DECISIONS 7-21)
   needMul: {} as Partial<Record<NeedId, number>>,

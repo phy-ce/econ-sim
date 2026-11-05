@@ -151,7 +151,7 @@ for k, v in {'start': ('착공 레벨', '그해 착공한 레벨'), 'built': ('�
              'lvPriv': ('민간 레벨', '연말 민간 건물 레벨 (자동 건물 제외)'), 'lvState': ('국영 레벨', '연말 국영 건물 레벨 (자동 건물 제외)')}.items():
     LABELS[k] = L(v[0], '짓고 허는 반복', '/년' if k not in ('lvPriv', 'lvState', 'quickIdx') else '', v[1])
 for p, n in (('demoBy', '헐린 레벨'), ('quick2By', '2년 안 헐린 레벨'), ('startBy', '착공 레벨'), ('rebuildBy', '다시 착공 레벨')):
-    for path in ('reserveShrink', 'shrink', 'officeShrink', 'schoolShrink', 'swap', 'sdDemo', 'sellDemo', 'marginDemo', 'untraced', 'player', 'reserve', 'trial', 'pick', 'loss', 'dev', 'govInputs', 'office'):
+    for path in ('reserveShrink', 'shrink', 'officeShrink', 'schoolShrink', 'swap', 'sdDemo', 'sellDemo', 'marginDemo', 'untraced', 'player', 'reserve', 'trial', 'latentTrial', 'pick', 'loss', 'dev', 'govInputs', 'office'):
         LABELS[f'{p}.{path}'] = L(f'{n}: {path}', '짓고 허는 반복', '/년', f'{n} 중 AI 길 {path} 몫 (ai.ts aiTrace)')
 LABELS['toolSh'] = L('공구 쓰는 방식 비율', '경제', '', '공구를 원료로 쓰는 방식의 레벨 ÷ 생산 건물 레벨 (학교·사무소 제외)')
 LABELS['upSh'] = L('윗단 방식 비율', '경제', '', '첫 방식이 아닌 방식의 레벨 ÷ 생산 건물 레벨 (학교·사무소 제외)')

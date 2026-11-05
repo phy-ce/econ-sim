@@ -55,12 +55,12 @@ const w: World = FULL
   : createMicroWorld({ seed: SEED, aiSalt: SALT, people: [Number(arg('people', '400'))], ...(buildings ? { buildings } : {}), ...(typeScale ? { typeScale } : {}), ...(SLACK ? { arableSlack: Number(SLACK) } : {}) });
 
 // ---------------------------------------------------------------- AI 판단 세기
-const EV_KEYS = ['reserve', 'trial', 'glutBlock', 'reserveShrink', 'trimDemo', 'trimHold', 'trimStop', 'lossCut', 'utilUp', 'keepLast'];
+const EV_KEYS = ['reserve', 'trial', 'latentTrial', 'glutBlock', 'reserveShrink', 'trimDemo', 'trimHold', 'trimStop', 'lossCut', 'utilUp', 'keepLast'];
 let ev: Record<string, number> = {};
 const makesG = (typeId: string, methodId: string) => (getMethod(typeId, methodId).outputs[G] ?? 0) > 0;
 aiTrace.on = (_w, _c, path, typeId, methodId, levels) => {
   if (!typeId || !methodId || !BUILDING_BY_ID[typeId] || !makesG(typeId, methodId)) return;
-  ev[path] = (ev[path] ?? 0) + (path === 'reserve' || path === 'trial' ? Math.max(1, levels) : 1);
+  ev[path] = (ev[path] ?? 0) + (path === 'reserve' || path === 'trial' || path === 'latentTrial' ? Math.max(1, levels) : 1);
 };
 
 // ---------------------------------------------------------------- 하루 표본

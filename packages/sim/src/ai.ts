@@ -46,8 +46,8 @@ export const MIXED_LEVELS = 2;
 const MIN_STAFFING = () => TUNE.minStaffing;
 /** 왕실 행정청·건축사무소의 레벨 가중 충원율이 이 값 아래면 일손이 모자란 것으로 본다 (adjustBudget·adjustStatePremium, 근거 없음) */
 export const ADMIN_STAFFED = 0.9;
-/** 새 건물이 사람을 뽑는 주 수: 유보 철거가 이 동안의 적자를 세지 않는다 */
-const RAMP_WEEKS = 8;
+/** 새 건물이 사람을 뽑는 주 수: 유보 철거가 이 동안의 적자를 세지 않는다. 넘침 퇴출도 쓰고, 방식을 막 바꾼 건물의 굶음 판단도 이 주 수를 쓴다 (TUNE.aiLatentInput) */
+export const RAMP_WEEKS = 8;
 
 /** 왕실 건축사무소(켜진 건물, 해산한 사무소 제외)의 가동 레벨 가중 충원율. 사무소가 없으면 1 (adjustBudget) */
 function officeStaffing(w: World, c: Company): number {
@@ -73,7 +73,7 @@ function adminStaffing(w: World, c: Company): number {
 /**
  * 진단용 (cli/builddiag.ts): AI가 공사를 넣고(levels > 0), 헐고(< 0), 방식을 바꿀 때 그 길(path)과 함께 부른다.
  * path: pick 보통 후보, govInputs 왕실 원료 확보, office 건축사무소, shrink 철거, swap 땅 바꾸기 철거, switchIn·switchOut 방식 바꾸기,
- * reserve 유보 자산이 찬 건물 증설, reserveShrink 유보 자산이 바닥난 적자 건물 철거, trial 새 투자 1레벨 (reserveLevels·planTrials),
+ * reserve 유보 자산이 찬 건물 증설, reserveShrink 유보 자산이 바닥난 적자 건물 철거, trial 새 투자 1레벨, latentTrial 잠재 수요 새 투자 (reserveLevels·planTrials),
  * officeShrink 건축사무소 철거, schoolShrink 빚 때문에 학교 철거.
  * 철거 길은 모두 regionId 를 넘긴다 (cli/churndiag.ts 가 철거 원인을 건물에 붙인다).
  * 시뮬레이션 상태를 바꾸지 않는다 (비어 있으면 아무것도 하지 않는다)
@@ -89,7 +89,7 @@ export function runAi(w: World) {
   const switchPools = new Map<string, number>();
   for (const c of w.companies) {
     if (c.isPlayer) continue;
-    // 왕실은 세법과 정책 단계(정부 건물의 국영 임금 포함)를 정한다. 생산 건물 임금은 민간과 왕실 모두 같은 규칙으로 정한다
+    // 왕실은 세법과 정책 단계(정부 건물의 국영 임금 포함)를 정한다. 생산 건물 임금은 민간과 왕실 모두 지역 시장 임금이고, 웃돈은 민간 adjustPremium, 왕실 crownPioneerPremium 이 얹는다
     if (c.state) { chooseTaxLaw(w, c); adjustBudget(w, c); }
     // TUNE.aiStatePremium: 왕실은 정부 건물 일손이 모자라는 지역에 국영 임금 웃돈을 얹는다 (adjustStatePremium)
     if (c.state && TUNE.aiStatePremium) adjustStatePremium(w, c);
@@ -168,13 +168,13 @@ function officeStaffable(w: World, c: Company, r: Region, m: MethodDef, byId: Ma
   return best;
 }
 
-/** 상회 웃돈(adjustPremium)을 한 주에 움직이는 최대 폭 (시장 임금 대비 비율). 근거: DESIGN 11 aiWagePremium 행 */
+/** 상회 웃돈(adjustPremium)과 왕실 선구 웃돈(crownPioneerPremium)을 한 주에 움직이는 최대 폭 (시장 임금 대비 비율). 근거: DESIGN 11 aiWagePremium 행 */
 export const PREMIUM_STEP = 0.1;
-/** 상회 웃돈 상한 (플레이어 웃돈 손잡이 setWageOffset 의 위 끝과 같다). AI 는 웃돈만 얹으므로 아래 끝은 0 */
+/** 상회·왕실 선구 웃돈 상한 (플레이어 웃돈 손잡이 setWageOffset 의 위 끝과 같다). AI 는 웃돈만 얹으므로 아래 끝은 0 */
 export const PREMIUM_MAX = 1;
 
 /**
- * 왕실이 체인을 연다 (AI 판단, TUNE.aiLatentInput 2, 매주): 왕실 선구 건물(latentPioneer)이 일손 기준(TUNE.minStaffing)에 못 미치는 지역은 왕실 생산 건물 임금에 웃돈을 PREMIUM_STEP 씩 얹고 (PREMIUM_MAX 까지),
+ * 왕실이 체인을 연다 (AI 판단, TUNE.aiLatentInput 2·3, 매주): 왕실 선구 건물(latentPioneer)이 일손 기준(TUNE.minStaffing)에 못 미치는 지역은 왕실 생산 건물 임금에 웃돈을 PREMIUM_STEP 씩 얹고 (PREMIUM_MAX 까지),
  * 일손이 찼거나 선구 건물이 없는 지역은 PREMIUM_STEP 씩 내린다. 시장 임금이 같으면 새 건물은 사람을 못 뽑는다: 시드 1 7년차 r7 기술자 곳간 1명, 빈자리 약 3,800. 시장 임금 규칙은 바뀌지 않는다
  */
 function crownPioneerPremium(w: World, c: Company) {
@@ -607,7 +607,7 @@ function manageBuildings(w: World, c: Company, o: Outlook, pools: Map<string, nu
     // 생산 방식: 레벨당 하루 손익이 SWITCH_GAIN + SWITCH_FLOOR 넘게 나은 방식 (값이 다른 상품을 섞어 내는 방식이 있어 산출 단위로 나누지 않는다) (3주 쿨다운, 투입재를 못 구해 멈췄으면 쿨다운 없이).
     // 일손 기대(지금 재직자 포함)가 기준 미만이거나 공급이 필요의 50% 미만인 방식은 고르지 않는다.
     // 지금 방식이 반도 채워지지 않고 일손도 구할 수 없으면(understaffed), 손익이 낮아도 일손을 구할 수 있는 방식으로 바꾼다
-    // TUNE.aiLatentInput: 막 바꾼 건물은 RAMP_WEEKS 동안 굶어도 되돌리지 않는다 (새 원료는 무역으로 오는 데 시간이 든다)
+    // TUNE.aiLatentInput: 막 바꾼 생산 건물은 RAMP_WEEKS 동안 굶은 것으로 보지 않는다 (쿨다운 없는 바꾸기를 쓰지 않고 starvedWeeks 도 세지 않는다. 새 원료는 무역으로 오는 데 시간이 든다)
     const settling = !!TUNE.aiLatentInput && w.tick - b.lastSwitchTick < RAMP_WEEKS * TICKS_PER_WEEK;
     const starved = Object.keys(cur.inputs).length > 0 && Object.keys(cur.outputs).length > 0 && b.active && b.last.inputFill < STARVE_FILL && b.last.staffing > 0 && !settling;
     const region = regionById(w, b.regionId);
@@ -1082,7 +1082,7 @@ function swapLand(w: World, c: Company, o: Outlook, cand: Pick) {
 // - 생산 건물 (자동·정부 건물·무역소가 아니고 유보 자산을 쌓는 건물): 매주 확률 TUNE.reserveGrowMax × clamp((유보 ÷ 상한 − TUNE.reserveGrowFrom) ÷ (1 − TUNE.reserveGrowFrom))로 1레벨 증설
 //   (확률은 AI 난수 aiRand 'grow'),
 //   유보 자산 0이고 주간 손익 < 0 이 TUNE.shrinkWeeks 주 이어지면 1레벨 철거 (마지막 레벨이면 건물이 없어진다). 그 밖에는 아무것도 하지 않는다.
-// - 새 투자: 그 상품을 내는 건물이 없는 곳에 1레벨 시험 공사. (가) 지역 시장값 ≥ 기본가 × TRIAL_PRICE 가 RESERVE_STREAK 주 이어진 상품 (그 지역에 생산 건물이 없을 때),
+// - 새 투자: 그 상품을 내는 건물이 없는 곳에 1레벨 시험 공사 (잠재 수요 갈래 (다)는 planTrials 주석). (가) 지역 시장값 ≥ 기본가 × TRIAL_PRICE 가 RESERVE_STREAK 주 이어진 상품 (그 지역에 생산 건물이 없을 때),
 //   (나) 투입 충족 < STARVE_FILL 이 RESERVE_STREAK 주 이어진 건물(Building.starvedWeeks)의 가장 모자란 투입재 (그 왕국에 생산 건물이 없을 때. 광석 → 철 → 공구 사슬을 연다).
 //   다 지은 뒤에는 위 증설·철거 규칙이 맡는다. 방식 바꾸기는 그대로다 (manageBuildings)
 /** AI 점수 흔들기 폭: 연구·착공 점수에 1 ± 이 값의 고른 무작위를 곱한다 (0.85~1.15, 첫 커밋 9c76862 부터의 값, 근거 없음) */
@@ -1141,8 +1141,9 @@ function makes(w: World, regionIds: Set<number>, g: GoodId): boolean {
 /**
  * 새 투자: (가) 자기 지역에서 값이 RESERVE_STREAK 주 기본가 × TRIAL_PRICE 이상이고 그 지역에 생산 건물이 없는 상품,
  * (나) 왕국 안에서 굶는 건물(투입 충족 < STARVE_FILL 이 RESERVE_STREAK 주)의 가장 모자란 투입재(그 지역 공급 ÷ 수요 이동평균이 가장 작은 것)이고 왕국에 생산 건물이 없는 상품.
- * 상품마다 1레벨을 짓는다: (가)는 그 지역, (나)는 굶는 건물의 지역부터 자기 지역 id 순. 그 상품을 내는 방식 중 기술·땅(매장량)·일손({@link MIN_STAFFING})이 되고
+ * (가)·(나)는 상품마다 1레벨을 짓는다: (가)는 그 지역, (나)는 굶는 건물의 지역부터 자기 지역 id 순. 그 상품을 내는 방식 중 기술·땅(매장량)·일손({@link MIN_STAFFING})이 되고
  * 회사에 그 종류 건물이 그 지역에 없는 것에서 지금 시장값 하루 손익(estimateMethod)이 가장 큰 것. 주에 TUNE.startsPerWeek 건까지
+ * (다) 잠재 수요 latentWants (TUNE.aiLatentInput): 소비자 지역부터 그 양을 낼 레벨까지 (1레벨 제한 없음), 값 2·3 의 왕실은 일손을 보지 않고 국고로 짓는다 (DESIGN 10)
  */
 function planTrials(w: World, c: Company, canStart: () => boolean, free: () => number, start: (p: Pick, path: string) => boolean) {
   // 빚이 현금보다 많은 왕실은 생산 건물을 새로 짓지 않는다
@@ -1174,7 +1175,7 @@ function planTrials(w: World, c: Company, canStart: () => boolean, free: () => n
   for (const { g, regions, qty } of wants) {
     if (started >= TUNE.startsPerWeek || !canStart()) break;
     let best: Pick | null = null;
-    // 왕실이 여는 체인(aiLatentInput 2): 곳간을 보지 않고 웃돈으로 데려오며 (crownPioneerPremium), 돈은 행정청 원료 공사(secureGovInputs)처럼 국고가 조이지 않으면 남길 돈 선을 넘어서 쓴다
+    // 왕실이 여는 체인(aiLatentInput 2·3): 곳간을 보지 않고 웃돈으로 데려오며 (crownPioneerPremium), 돈은 행정청 원료 공사(secureGovInputs)처럼 국고가 조이지 않으면 남길 돈 선을 넘어서 쓴다
     const pay = !!qty && TUNE.aiLatentInput >= 2 && c.state;
     const money = () => (pay ? (treasuryTight(w, c, kingdomById(w, c.kingdomId)) ? 0 : c.cash - committedCost(w, c)) : free());
     for (const r of regions) {
@@ -1384,6 +1385,7 @@ function fundFromReserve(w: World, c: Company, b: Building, regionId: number, ne
 /**
  * 마지막 공급자 지킴 (AI 판단, 2026-11-01 마이크로 시제품 microB S7, 2026-11-02 기본): 건물 b 의 남는 레벨(레벨 − 철거 대기)이 1 이하이고,
  * b 가 왕국에서 어떤 산출 상품을 내는 마지막 건물이며 (자동 건물 제외, 남는 레벨 > 0 인 건물만 센다), 왕국의 다른 건물(자동 제외)이 그 상품을 원료로 쓰면 true. 산출이 여럿이면 상품마다 본다.
+ * 잠재 수요 선구 건물(latentPioneer)은 아직 쓰는 건물이 없어도 true (TUNE.aiLatentInput).
  * AI 철거 경로(reserveLevels 유보 철거)는 이런 건물을 헐지 않는다 (적자여도).
  * 이유 (마이크로 기본 세계, 시드 1~8): 공방이 유보 0·적자로 헐리면 공구가 끊겨 공구를 쓰는 건물이 차례로 무너졌다.
  * 소작지(자동 건물)가 같은 상품을 내도 세지 않는다. 공사 중인 새 생산 건물도 세지 않는다

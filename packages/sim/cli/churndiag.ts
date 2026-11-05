@@ -26,7 +26,7 @@ const w: World = createWorld(seed, { withPlayer: false, aiSalt: salt });
 
 const W2 = 104 * TICKS_PER_WEEK, W1 = 52 * TICKS_PER_WEEK;
 const DEMO_PATHS = new Set(['reserveShrink', 'shrink', 'officeShrink', 'schoolShrink', 'swap', 'sdDemo', 'sellDemo', 'marginDemo']);
-const BUILD_PATHS = new Set(['pick', 'govInputs', 'office', 'trial', 'reserve']);
+const BUILD_PATHS = new Set(['pick', 'govInputs', 'office', 'trial', 'latentTrial', 'reserve']);
 
 type Acc = Record<string, number>;
 const add = (a: Acc, k: string, v = 1) => { if (v) a[k] = (a[k] ?? 0) + v; };
