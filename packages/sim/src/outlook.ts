@@ -1,7 +1,7 @@
 import { ABS_LIMITS, BUILDING_BY_ID, GOOD_IDS, GOODS, NEEDS, SKILL_DEFS, TUNE, getMethod, regionPerk, tenantYield } from './data';
 import { STAFFING_HORIZON, extraNeed, poolKey, poolOf } from './staffing';
 import { workforce } from './pops';
-import { FLOW_ZERO, availableMethods, collectionRatio, priceFormula, harvestFactorEma, isGovernment, regionById, shippingRate, wageCostOf, wagesAt } from './economy';
+import { FLOW_ZERO, availableMethods, collectionRatio, mainOutput, priceFormula, harvestFactorEma, isGovernment, regionById, shippingRate, wageCostOf, wagesAt } from './economy';
 import { BY_EMA, PRICE_MIN } from './market';
 import { clamp } from './rng';
 import { SKILLS } from './types';
@@ -399,7 +399,7 @@ export function techValue(w: World, o: Outlook, c: Company, techId: string): num
 
 /**
  * 화면의 건설 후보 미리보기: AI가 짓기 전에 보는 것과 같은 계산(valueMethod)을 1레벨 기준으로 돌려준다.
- * wages 는 보는 회사의 임금이다. outputPriceChange 는 들어간 뒤 첫 산출물의 장기 가격 변화율이다
+ * wages 는 보는 회사의 임금이다. outputPriceChange 는 들어간 뒤 대표 산출(mainOutput)의 장기 가격 변화율이다
  */
 export function estimateAfterEntry(
   w: World, regionId: number, typeId: string, methodId: string, wages: Record<Skill, number>, levels = 1,
@@ -409,7 +409,7 @@ export function estimateAfterEntry(
   const m = getMethod(typeId, methodId);
   const o = marketOutlook(w);
   const v = valueMethod(w, o, r, { ...owner, wages }, typeId, m, levels);
-  const g = GOOD_IDS.find((x) => (m.outputs[x] ?? 0) > 0);
+  const g = mainOutput(typeId, methodId);
   const before = g ? o.price(g, 0, 0, true, regionId) : 0;
   const after = g ? o.price(g, (m.outputs[g] ?? 0) * levels, 0, true, regionId) : 0;
   const per = (x: number) => x / levels;

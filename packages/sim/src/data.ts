@@ -221,6 +221,9 @@ export function industryOf(typeId: string, methodId?: string): Industry | null {
 // - 기본 방식도 공구를 10~30 쓴다 (빅토리아3 광산 기본 방식 Picks and Shovels가 공구를 쓴다, VIC3_REFERENCE "생산 방식의 공구"). 지금은 모두 10이다:
 //   기준 임금 재계산(2026-11-01)으로 레벨당 매출이 약 0.35배가 되어 광산 공구 30(300)이 1차 원료 상한 5%를 넘었다 (그 전 광산 30, 벌목은 시작 공구 공급 때문에 10).
 //   목공구 공방만 0: 공구로 공구를 만들면 시작이 막힌다). 소작지는 공구를 내지 않는다 (2026-10-23 사용자 결정, SUBSISTENCE).
+// - 혼합 방식 (2026-11-05 사용자, 산출이 둘인 방식 = 사치품 방식): 일반품과 사치품을 양의 비율대로 함께 내고, 윗단계일수록 사치품 쪽으로 간다.
+//   기본가 이익은 같은 기술의 일반 방식과 같게 (±10%), 원료/매출은 일반(가공)과 사치품(숙련) 범위를 값 비중으로 섞은 범위 안.
+//   산출은 사치품을 먼저 적는다: 사다리(첫 산출 상품)가 일반 방식과 갈린다 (lab/metrics.ts methodTier, cli/methods_audit.ts)
 // - 숫자는 둥글게: 일자리 10 단위(합 50 단위), 1,000 이상인 양은 50 단위, 그 아래는 10 단위.
 // 공사 포인트 = 기본 방식 하루 이익 × 0.15 (50 단위). 목조 건설 포인트당 약 4,560이라 기본 방식은 약 1.9년에 회수한다.
 // 기준 임금 재계산(2026-11-01, 기본 임금 약 0.35배): cli/rebasewage.ts 로 일꾼은 그대로 두고 원료·산출을 약 0.35배로 다시 셌다 (방식 36개, 공사 포인트 15곳).
@@ -318,8 +321,8 @@ export const BUILDING_TYPES: BuildingTypeDef[] = [
       m({ id: 'textile_hand', name: '손베틀', nameEn: 'Handlooms', tech: 'spinning', workers: jobs(270, 30), inputs: { tools: 10, fiber: 930 }, outputs: { cloth: 640 } }),
       m({ id: 'textile_spin', name: '방적기', nameEn: 'Spinning jennies', tech: 'ironworking', workers: jobs(140, 60), inputs: { tools: 20, fiber: 1000 }, outputs: { cloth: 760 } }),
       m({ id: 'textile_steam', name: '증기 직기', nameEn: 'Power looms', tech: 'power_loom', workers: jobs(80, 50, 20), inputs: { tools: 20, fuel: 30, fiber: 1650 }, outputs: { cloth: 1250 } }),
-      m({ id: 'textile_tailor', name: '맞춤 재단', nameEn: 'Bespoke tailoring', tech: 'spinning', industry: 'luxury', workers: jobs(180, 120), inputs: { tools: 20, fiber: 200 }, outputs: { luxury_cloth: 80 } }),
-      m({ id: 'textile_tailor_steam', name: '증기 재단', nameEn: 'Steam tailoring', tech: 'power_loom', industry: 'luxury', workers: jobs(80, 100, 20), inputs: { tools: 20, fuel: 20, fiber: 300 }, outputs: { luxury_cloth: 100 } }),
+      m({ id: 'textile_tailor', name: '맞춤 재단', nameEn: 'Bespoke tailoring', tech: 'spinning', industry: 'luxury', workers: jobs(180, 120), inputs: { tools: 20, fiber: 500 }, outputs: { luxury_cloth: 60, cloth: 240 } }),
+      m({ id: 'textile_tailor_steam', name: '증기 재단', nameEn: 'Steam tailoring', tech: 'power_loom', industry: 'luxury', workers: jobs(80, 100, 20), inputs: { tools: 20, fuel: 20, fiber: 690 }, outputs: { luxury_cloth: 160, cloth: 160 } }),
     ],
   },
   {
@@ -344,8 +347,8 @@ export const BUILDING_TYPES: BuildingTypeDef[] = [
     methods: [
       m({ id: 'furniture_hand', name: '손가구', nameEn: 'Hand-made furniture', tech: 'guilds', workers: jobs(270, 30), inputs: { tools: 10, timber: 720, fiber: 180 }, outputs: { furniture: 470 } }),
       m({ id: 'furniture_tools', name: '공구 가구', nameEn: 'Furniture with tools', tech: 'ironworking', workers: jobs(140, 60), inputs: { tools: 20, timber: 890, fiber: 210 }, outputs: { furniture: 590 } }),
-      m({ id: 'furniture_luxury', name: '장인 가구', nameEn: 'Master cabinetmakers', tech: 'guilds', industry: 'luxury', workers: jobs(180, 120), inputs: { tools: 10, timber: 160, cloth: 30 }, outputs: { luxury_furniture: 60 } }),
-      m({ id: 'furniture_luxury_tools', name: '공구 장인 가구', nameEn: 'Cabinetmakers with tools', tech: 'ironworking', industry: 'luxury', workers: jobs(80, 100, 20), inputs: { tools: 20, timber: 150, cloth: 30 }, outputs: { luxury_furniture: 70 } }),
+      m({ id: 'furniture_luxury', name: '장인 가구', nameEn: 'Master cabinetmakers', tech: 'guilds', industry: 'luxury', workers: jobs(180, 120), inputs: { tools: 10, timber: 260, fiber: 40, cloth: 30 }, outputs: { luxury_furniture: 40, furniture: 160 } }),
+      m({ id: 'furniture_luxury_tools', name: '공구 장인 가구', nameEn: 'Cabinetmakers with tools', tech: 'ironworking', industry: 'luxury', workers: jobs(80, 100, 20), inputs: { tools: 20, timber: 350, fiber: 20, cloth: 30 }, outputs: { luxury_furniture: 80, furniture: 80 } }),
     ],
   },
   {

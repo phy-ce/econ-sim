@@ -1,6 +1,6 @@
 import { BUILDING_BY_ID, buildPointsOf, BUILDING_TYPES, EDUCATION_FLOOR, EDUCATION_RANGE, GOOD_IDS, GOODS, SKILL_DEFS, TECH_BY_ID, TICKS_PER_WEEK, TICKS_PER_YEAR, TRADING_POST, TUNE, getMethod, regionPerk, tradeEscrowPerLevel, tradeReserveOf } from './data';
 import { withEstimateCache, regionAvgWealth, regionPopulation, wageCostOf,
-  availableMethods, ownBuildingAt, builderOf, canBuildType, disbanded, kingdomGdp, paysDividend, paysShare, companyById, constructionEstimate, creditLimit, depositFree, efficiency, estimateMethod, harvestFactor, hasBuilder, isGovernment, regionById, wagesAt, researchableTechs, roomFor, sellsShares, slots, mainOutput, projectedSD,
+  availableMethods, ownBuildingAt, builderOf, canBuildType, disbanded, kingdomGdp, paysDividend, paysShare, companyById, constructionEstimate, creditLimit, depositFree, efficiency, estimateMethod, harvestFactor, hasBuilder, isGovernment, regionById, wagesAt, researchableTechs, roomFor, sellsShares, slots, mainOutput, methodSD, projectedSD,
   shareWage, collectionRatio, FLOW_ZERO,
 } from './economy';
 import { FLOW_EMA } from './market';
@@ -461,12 +461,6 @@ function chooseTaxLaw(w: World, c: Company) {
   }
 }
 
-/** 산출물 1단위당 이윤 (방식끼리 비교용) */
-function unitProfit(profit: number, m: MethodDef): number {
-  const out = GOOD_IDS.reduce((a, g) => a + (m.outputs[g] ?? 0), 0);
-  return out > 0 ? profit / out : profit;
-}
-
 /**
  * 투입재를 대륙 어딘가에서 실제로 구할 수 있는가: 투입재마다 남는 양이 필요의 INPUT_SUPPLY_MIN 이상.
  * 남는 양 = 대륙 공급 − 대륙 수요 (이동평균) + 이 건물 b 가 지금 방식으로 쓰는 양 (레벨 × 가동률, 바꾸면 풀린다. 꺼진 건물은 0)
@@ -582,7 +576,7 @@ function manageBuildings(w: World, c: Company, o: Outlook, pools: Map<string, nu
       continue;
     }
 
-    // 생산 방식: 산출 1단위당 이윤이 5% + 0.01 넘게 나은 방식 (3주 쿨다운, 투입재를 못 구해 멈췄으면 쿨다운 없이).
+    // 생산 방식: 레벨당 하루 손익이 5% + 0.01 넘게 나은 방식 (값이 다른 상품을 섞어 내는 방식이 있어 산출 단위로 나누지 않는다) (3주 쿨다운, 투입재를 못 구해 멈췄으면 쿨다운 없이).
     // 일손 기대(지금 재직자 포함)가 기준 미만이거나 공급이 필요의 50% 미만인 방식은 고르지 않는다.
     // 지금 방식이 반도 채워지지 않고 일손도 구할 수 없으면(understaffed), 손익이 낮아도 일손을 구할 수 있는 방식으로 바꾼다
     const starved = Object.keys(cur.inputs).length > 0 && Object.keys(cur.outputs).length > 0 && b.active && b.last.inputFill < STARVE_FILL && b.last.staffing > 0;
@@ -590,10 +584,10 @@ function manageBuildings(w: World, c: Company, o: Outlook, pools: Map<string, nu
     const staffable = (m: MethodDef) => laborAvailability(w, region, m, b.level, c.state, undefined, b) >= MIN_STAFFING();
     const understaffed = b.active && b.last.staffing < MIN_STAFFING() && !staffable(cur);
     if (usable.length > 1 && (starved || w.tick - b.lastSwitchTick >= SWITCH_COOLDOWN)) {
-      let best = { m: cur, v: starved || understaffed ? -Infinity : unitProfit(current.profit, cur) };
+      let best = { m: cur, v: starved || understaffed ? -Infinity : current.profit };
       for (const m of usable) {
         if (m.id === cur.id || !inputsAvailable(w, m, b.level, b) || !staffable(m)) continue;
-        const v = unitProfit(estimateMethod(w, b.regionId, b.typeId, m.id, wages, c.state).profit, m);
+        const v = estimateMethod(w, b.regionId, b.typeId, m.id, wages, c.state).profit;
         if (v > best.v * 1.05 + 0.01) best = { m, v };
       }
       if (best.m !== cur && !applyCommand(w, c.id, { type: 'setMethod', buildingId: b.id, methodId: best.m.id }) && aiTrace.on) {
@@ -1191,11 +1185,10 @@ function reserveLevels(w: World, c: Company, canStart: () => boolean, free: () =
     const fillR = cap > 0 ? res / cap : 0;
     const pGrow = TUNE.reserveGrowMax * clamp((fillR - TUNE.reserveGrowFrom) / Math.max(1e-9, 1 - TUNE.reserveGrowFrom), 0, 1);
     let rich = aiRand(w, 'grow', keyCompany(c.id), keyRegion(b.regionId), keyStr(b.typeId), keyStr(b.methodId), keyWeek(w.tick), keyIdx(idx)) < pGrow;
-    // 과잉 검사 (TUNE.aiGlutSD > 0, 오버홀 03 5-1): 그 지역 그 산출 상품(산출이 여럿이면 기본가 값이 가장 큰 것, mainOutput)의 예상 공급 ÷ 수요
+    // 과잉 검사 (TUNE.aiGlutSD > 0, 오버홀 03 5-1): 그 지역 그 방식 산출의 예상 공급 ÷ 수요 (산출이 여럿이면 기본가 값으로 가중 평균, methodSD)
     // (공사 중 레벨 산출 포함, projectedSD)가 임계를 넘으면 이번 주 증설 확률 0 (찬 주로 세지 않는다). aiRand 는 키 해시라 막아도 다른 난수가 밀리지 않는다
     if (rich && TUNE.aiGlutSD > 0) {
-      const g = mainOutput(b.typeId, b.methodId);
-      const sd = g ? projectedSD(w, b.regionId, g) : null;
+      const sd = methodSD(w, b.regionId, b.typeId, b.methodId);
       if (sd !== null && sd > TUNE.aiGlutSD) { rich = false; aiTrace.on?.(w, c, 'glutBlock', b.typeId, b.methodId, 0, undefined, b.regionId); }
     }
     // 새 건물(시작 건물은 0일에 생긴 것으로 본다)은 RAMP_WEEKS 동안 사람을 뽑으며 내는 적자를 세지 않는다
@@ -1226,21 +1219,19 @@ interface Pick { regionId: number; typeId: string; methodId: string; levels: num
 /**
  * 증설 위치 (AI 판단, 2026-11-01 마이크로 시제품 microB S5, 2026-11-02 기본): 유보 증설이 뽑힌 건물 b 의 1레벨을 지을 지역.
  * 후보 = 왕국 지역 중 그 종류 부지·땅(매장량, 기상 조건 없음)이 있고 일손이 되는 곳 (laborAvailability ≥ MIN_STAFFING: 직종마다 그 지역 구직 가능 인원 ÷ 필요,
- * 기술자·전문가는 자격자만 센다). 그중 산출 상품(mainOutput)의 지역 예상 공급 ÷ 수요(projectedSD, 과잉 검사와 같은 값)가 가장 낮은 곳, 같으면 b 의 지역, 그다음 지역 순서.
- * 수요가 없는 지역(projectedSD null)은 후보가 아니다. 후보가 없으면 b 의 지역 (끈 것과 같다).
+ * 기술자·전문가는 자격자만 센다). 그중 방식 산출의 지역 예상 공급 ÷ 수요(methodSD, 과잉 검사와 같은 값)가 가장 낮은 곳, 같으면 b 의 지역, 그다음 지역 순서.
+ * 수요가 없는 지역(methodSD null)은 후보가 아니다. 후보가 없으면 b 의 지역 (끈 것과 같다).
  * 같은 지역이면 b 를 늘리고, 다른 지역이면 그 지역의 같은 종류·방식 건물을 늘리거나 새로 짓는다 (start → ownBuildingAt).
  * 마이크로 시제품과 다른 점: 수요 없는 지역을 S/D 0 으로 보지 않고 뺀다, 같은 값이면 b 의 지역을 먼저 본다
  */
 function growRegion(w: World, c: Company, b: Building): number {
-  const g = mainOutput(b.typeId, b.methodId);
-  if (!g) return b.regionId;
   const m = getMethod(b.typeId, b.methodId), land = BUILDING_BY_ID[b.typeId].land;
   const own = ownRegions(w, c);
   let best = b.regionId, low = Infinity;
   for (const r of [...own.filter((x) => x.id === b.regionId), ...own.filter((x) => x.id !== b.regionId)]) {
     if (roomFor(w, r.id, b.typeId) < 1 || harvestFactor(w, r.id, land) < 1 || rebuildBlocked(w, r.id, b.typeId)) continue;
     if (laborAvailability(w, r, m, 1, c.state) < MIN_STAFFING()) continue;
-    const sd = projectedSD(w, r.id, g);
+    const sd = methodSD(w, r.id, b.typeId, b.methodId);
     if (sd !== null && sd < low) { low = sd; best = r.id; }
   }
   return best;
@@ -1265,24 +1256,25 @@ function fundFromReserve(w: World, c: Company, b: Building, regionId: number, ne
 
 /**
  * 마지막 공급자 지킴 (AI 판단, 2026-11-01 마이크로 시제품 microB S7, 2026-11-02 기본): 건물 b 의 남는 레벨(레벨 − 철거 대기)이 1 이하이고,
- * b 가 왕국에서 그 산출 상품(mainOutput)을 내는 마지막 건물이며 (자동 건물 제외, 남는 레벨 > 0 인 건물만 센다), 왕국의 다른 건물(자동 제외)이 그 상품을 원료로 쓰면 true.
+ * b 가 왕국에서 어떤 산출 상품을 내는 마지막 건물이며 (자동 건물 제외, 남는 레벨 > 0 인 건물만 센다), 왕국의 다른 건물(자동 제외)이 그 상품을 원료로 쓰면 true. 산출이 여럿이면 상품마다 본다.
  * AI 철거 경로(reserveLevels 유보 철거)는 이런 건물을 헐지 않는다 (적자여도).
  * 이유 (마이크로 기본 세계, 시드 1~8): 공방이 유보 0·적자로 헐리면 공구가 끊겨 공구를 쓰는 건물이 차례로 무너졌다.
  * 소작지(자동 건물)가 같은 상품을 내도 세지 않는다. 공사 중인 새 생산 건물도 세지 않는다
  */
 function keepLast(w: World, b: Building): boolean {
   if (b.level - (b.shrinking ?? 0) > 1) return false;
-  const g = mainOutput(b.typeId, b.methodId);
-  if (!g) return false;
   const kingdomId = regionById(w, b.regionId).kingdomId;
-  let used = false;
+  const goods = Object.keys(getMethod(b.typeId, b.methodId).outputs) as GoodId[];
+  const others = new Set<GoodId>(), used = new Set<GoodId>();
   for (const x of w.buildings) {
     if (x === b || x.level - (x.shrinking ?? 0) <= 0 || BUILDING_BY_ID[x.typeId].auto || regionById(w, x.regionId).kingdomId !== kingdomId) continue;
     const m = getMethod(x.typeId, x.methodId);
-    if ((m.outputs[g] ?? 0) > 0) return false;
-    if ((m.inputs[g] ?? 0) > 0) used = true;
+    for (const g of goods) {
+      if ((m.outputs[g] ?? 0) > 0) others.add(g);
+      if ((m.inputs[g] ?? 0) > 0) used.add(g);
+    }
   }
-  return used;
+  return goods.some((g) => used.has(g) && !others.has(g));
 }
 
 // ---------------------------------------------------------------- 넘침 퇴출 (TUNE.aiTrimSD > 0, 이슈 #11 F3, 진단 .tmp/wt/grain11/.tmp/grain11/RESULT.md 4장, 기본 0 = 끔)

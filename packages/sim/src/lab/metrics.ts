@@ -42,6 +42,9 @@ const UPPER = POP_CLASSES.map((c) => CLASS_DEFS[c].stratum === 'upper');
 const ERA4_COST = TECH_COST[TECH_COST.length - 1];
 const MAX_TIER = 4;
 
+/** 사치품을 내는 방식이 있는 건물 종류 (continentRow 의 lvM) */
+const MIXED_TYPES = new Set(BUILDING_TYPES.filter((t) => t.methods.some((m) => m.outputs.luxury_cloth || m.outputs.luxury_furniture)).map((t) => t.id));
+
 /** 방식 단계 (methods_audit.ts 의 사다리): 같은 건물에서 첫 산출 상품이 같은 방식들 중 몇 번째인가 (1부터). 건축사무소는 공사 포인트 사다리 */
 const TIER = new Map<string, number>();
 for (const t of BUILDING_TYPES) {
@@ -1097,7 +1100,13 @@ export class Collector {
     // 계층 이동 (w.mobility 의 한 해 증가, 천 명, 0 이 아닌 것만): 출발>도착. 왕국을 가리지 않는 기록이라 대륙 줄에만 낸다
     const mob: Record<string, number | null> = {};
     for (const [key, v] of Object.entries(w.mobility ?? {})) { const d = v - (this.mob0[key] ?? 0); if (d !== 0) mob[key] = sig(d / K); }
-    return { sd, sdMax, sdAvg, lo, hi, price, sup, dem, subSup, bldSup, tIn, tOut, hh, cap, capLv, capLvD, utilG, reg, sdSwing, sdSwingR, sdSwingRMax, sellG, margR, margR1: sig(r1 > 0 ? p1 / r1 / 0.2 : NaN), skim: sig(skim / M), mob, mflow };
+    // 사치품 방식이 있는 건물의 방식별 레벨 (연말), 상류층 1천 명이 하루에 산 사치품 양 (마지막 날, 고급 의복 + 고급 가구)
+    const lvM: Record<string, number | null> = {};
+    for (const b of w.buildings) if (MIXED_TYPES.has(b.typeId)) lvM[b.methodId] = (lvM[b.methodId] ?? 0) + b.level;
+    let luxQ = 0, upN = 0;
+    for (const r of w.regions) POP_CLASSES.forEach((c, i) => { const h = r.households[c]; if (UPPER[i] && h) luxQ += (h.consumed.luxury_cloth ?? 0) + (h.consumed.luxury_furniture ?? 0); });
+    for (const p of w.pops) if (UPPER[CI[p.prof]]) upN += p.size;
+    return { sd, sdMax, sdAvg, lo, hi, price, sup, dem, subSup, bldSup, tIn, tOut, hh, cap, capLv, capLvD, utilG, reg, sdSwing, sdSwingR, sdSwingRMax, sellG, margR, margR1: sig(r1 > 0 ? p1 / r1 / 0.2 : NaN), skim: sig(skim / M), mob, mflow, lvM, luxUp: sig(upN > 0 ? (luxQ / upN) * 1000 : NaN) };
   }
 }
 

@@ -29,6 +29,9 @@
 깨진 화면
 - **2-82**: pop 상세에 부 이동 표가 두 번 나온다 (`BuildingPops.tsx:36`·`:46`). `:46` 을 지운다. 그 밖은 없음 (코드 대조 기준).
 
+sim 변경 반영 (2026-11-05: wt-luxmix, 사용자 확인 전이라 main 에 없다)
+0. **2-91 혼합 방식 (새)**: 산출이 둘인 방식의 공급 ÷ 수요 미리보기를 상품마다.
+
 sim 변경 반영 (2026-11-05: wt-welfarefill)
 1. **2-89 복지 상한 (새)**: 정책 창·예산 미리보기 복지 줄에 상한 숫자, `welfareCapDaily` × 7, 라벨과 숫자만. 복지 내역의 '평활 차이' 를 "상한으로 줄인 몫" 으로.
 
@@ -427,6 +430,13 @@ sim 변경 (wt-research):
 
 ### 2-90. 저택 지분 값에 지대 (wt-manornav, DESIGN 9.3, DECISIONS 7-44, 사전 `manor-shares` 항목, main 합치기 전 사용자 확인 대기)
 - API·타입 변화 없음. `Building.nav` 를 그대로 읽으면 된다. 저택 지분 값이 약 1.1~1.6 높아져 지분 평가액도 그만큼 크게 보인다. 이 평가액에는 현금이 아닌 지대 몫이 들어 있어, 금고보다 클 수 있다. 화면 코드는 고칠 것이 없다.
+
+### 2-91. 혼합 방식: 산출이 둘인 방식 (wt-luxmix, DESIGN 혼합 방식, DECISIONS 7-52, 사전 `methods-rule`, sim 준비됨)
+- sim: `textile_tailor`·`textile_tailor_steam`·`furniture_luxury`·`furniture_luxury_tools` 는 이제 산출이 둘이다 (`outputs` 에 사치품과 일반품). 방식 id·이름은 그대로라 저장 파일은 그대로 읽힌다.
+- 고칠 곳: `supplyDemand.ts:7` `supplyDemandProjection` 은 `mainOutput` 하나만 보여 준다. 산출 상품마다 지금·+1·+5 레벨 값을 낸다 (`projectedSD(w, regionId, g, per)` 를 상품마다 부르면 된다). 한 줄에 합치려면 `methodSD` (기본가 가중)가 AI 가 보는 값이다.
+- 건설 미리보기의 `outputPriceChange` 는 이제 대표 산출(`mainOutput`, 기본가 값이 큰 쪽)의 값이다. 그 전에는 `GOOD_IDS` 순서의 첫 상품이었다. 화면 할 일 없음.
+- 그대로 되는 곳 (코드 대조): `CompanyPanel.tsx:65`, `FlowRow.tsx:19`, `MethodComparison.tsx:28`, `ResearchPanel.tsx:27` 는 산출을 상품마다 돈다.
+- 완료 기준: 방직 공장 건설 미리보기에서 맞춤 재단을 고르면 의복과 고급 의복 S/D 가 둘 다 보인다. typecheck.
 
 ## 3. sim 쪽 필요 사항 (Claude가 처리할 것, UI 작업자는 요청만)
 - **2-59 주 단위 수지 (요청됨, 2026-10-22):** `BuildingEcon`에 `week: { sales, tax, inputs, wages, profit }` (건물 `revenue`·`tax`·`inputCost`·`wageCost`의 이동평균 × 7, `profitEma`와 같은 기간). 들어오면 2-59-3 폭포 라벨을 `/주`로. (2026-11-02 wt-uiapi 보류: 지금 건물에 있는 이동평균은 `profitEma`·`firmEma`(왕실 생산 건물·건축사무소만) 뿐이라 매출·세금·원료비·임금 이동평균을 건물 상태에 새로 저장해야 한다. 읽기 전용이 아니고 골든이 바뀐다.)
