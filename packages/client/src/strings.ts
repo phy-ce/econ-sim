@@ -6,6 +6,7 @@ import { particle } from './format';
 type S = string;
 
 export const KO = {
+ constructionUI:{category:'분류',all:'전체',primary:'1차',processing:'가공',heavy:'중공업',luxury:'사치품',government:'정부',profit:'예상 수익',name:'이름',payback:'회수 기간',weekly:'주간 갱신 · 현재 왕실 방식 · 레벨당 하루 예상',noDeposit:'광맥 부족',levels:'현재 + 공사',manage:'건설 · 건물 관리'},
  inputRevenueRatio:'기준 원료비 / 매출',
  constructionFees:'공사 수수료',officeFeeFormula:(margin:S)=>`수수료 = 운영비 ÷ (1 − ${margin})`,
  researchBaseMargin:'기준 가격 이익률',
@@ -567,6 +568,7 @@ export const KO = {
 export type Dict = typeof KO;
 
 export const EN: Dict = {
+ constructionUI:{category:'Category',all:'All',primary:'Primary',processing:'Processing',heavy:'Heavy',luxury:'Luxury',government:'Government',profit:'Expected profit',name:'Name',payback:'Payback',weekly:'Weekly refresh · current Crown method · expected daily profit per level',noDeposit:'Insufficient deposits',levels:'Existing + queued',manage:'Construction · building management'},
  inputRevenueRatio:'Base inputs / sales',
  constructionFees:'Construction fees',officeFeeFormula:(margin:S)=>`Fees = operating costs ÷ (1 − ${margin})`,
  researchBaseMargin:'Margin at base prices',

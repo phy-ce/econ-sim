@@ -373,3 +373,29 @@ DetailWindow 독립 NavigationProvider/버튼, BuildingPops 및 ResourceInspecto
 - 원본 계측: C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/profile-windows.mjs, perf-world.json, perf-before-<all/buildings/pops/trends/construction/map>-<1/10>.json/.trace.json/.cpuprofile, perf-final-all-1.*, perf-verified-all-10.*, perf-verified-all-idle-10.*. 중간 after 파일은 기본 최적화만의 측정이며 최종과 구분.
 - 루트 npm.cmd run typecheck·클라이언트33파일84시험 통과. 1920×1028 헤드리스 스크린샷 확인: 같은 scratch의 perf-final-settled-en.png, perf-detached-live-en.png, perf-lazy-market-detail-ko-light.png, perf-lazy-market-detail-en-dark.png. 검색Lumber→닫기/재열기 보존, 지연 생성 상품 상세 진입, 모든 열린 주 창 본문403/scroll403. 주 창 숨김 상태에서 독립 소유 상세 world.tick152가 실제 세계152와 일치. 언어/테마 실제 상태KO/light·EN/dark 대조. 일반 사용자의 체감 확인은 별도.
 - 다음: 사용자 최신 순서2-92 건설 창 최종 검토·재설계 → 실제 가동 값 → 부 이동 중복 제거와0장. 2-55 작업은 아직 시작하지 않음.
+
+## 2026-11-06 2-92 최종 검토 · 구현 전 설계
+- 성능 개선 커밋2e9eba6. main에 병합된2-92 원문·목업D·UI_DESIGN을 대조. 목업3열은 영어 건물명/그림/숫자가 좁아420×560 주 창은2열 카드로 재설계, 상세는520×640 이동/크기 조절 서브윈도우(기존 workspace 경계 적용).
+- 지역 탭은 종류별 소유·규모·충원·손익 요약과 공통 관리 상세 입구만 남긴다. 인라인 공사/방식/조작 중복을 제거하고, 건설 카드와 지역 행은 같은 ConstructionDetail을 연다. 자동 기관은 짓기 카드에서 제외하고 지역 요약에서 같은 상세로 본다.
+- 상세는 전체/민영/왕실 구분, 전체에서는 왕실 대상임을 명시해 왕실만 명령. 민영/다른 왕국은 읽기 전용. 왕실 건물이 없을 때 신규+1/+5는 sim이 고르는 첫 사용 가능 방식, 있으면 현재 왕실 방식. 민간 방식이나 가장 수익 높은 방식을 건설 방식으로 대신 고르지 않는다.
+- 카테고리는 정해진6개 단일 드롭다운, 잠긴 카드도 열림(자물쇠+기술/땅/광맥 툴팁), 검색/가능 여부 필터 제거. 사치품은 해당 방식이 있는 종류도 포함; 운송·무역소는 임의로 정부에 넣지 않고 전체에서 표시. 카드(현재+공사)는 지역 전체, 툴팁에 왕실/민영 분리.
+- 약정금/무역소 사용 가능 금고·방식별 상한, 사무소 수수료/공사량, 학교 자리, 잠긴 방식의 기술을 보존. 공사 포인트/비용/기간은 상세에만. 상품마다 현재S/D·가격, +1/+5 수요 예측은 모든 짓기 UI에서 제거.
+- 카드 예상치는 실제 건설 방식1개만 계산(기존 모든 방식 최댓값 계산 제거). 무거운 전망은 주간 갱신하고 건물/방식/기술/대기열 변경 때 즉시 무효화, 툴팁에 주간 예상 표기. 상세 공사비·현재 가격·명령은 최신 세계를 읽는다. 정렬은 예상 수익/이름/회수 기간, 비양수 회수 기간 —. 왕실/민간 대기열·왕실 순서/정지/취소/지역 링크 유지. 키보드는 native select·button·Esc와 기존 창 탐색을 사용.
+- 2-91 혼합 산출도 이 공통 상세에서 함께 반영. 2-93 실제 가동 값은 다음 단위로 분리. 새 sim API 요청은 현재 없음.
+
+### 성능 재측정 정정 · sim 병합 조건 통일
+- 앞 절 전후 표는 측정 도중 eeb99e1 sim 병합을 가로질렀으므로 예비 결과로만 보관한다. 최종 비교는 sim tree8802b7d79987e09a41339ec9a2e19aa24ef154e5로 통일했다. 원본 UI는 git show 2e9eba6^의10개 파일을 scratch Vite load overlay(5208)로 읽고, 수정 UI는5199에서 실행했다. 작업 트리 되돌림/별도 sim 수정 없음. 같은 tick14 저장·EN/dark·12초·6창·스크롤/드래그 조건.
+- 1× 원본→수정: >50ms124→0개, 최대106.64→0ms, React8029.32→268.01ms, Layout64.86→46.68ms, HandlePostMessage38.53→42.94ms. 상태 전달14→13회.
+- 10× 원본→수정: >50ms35→0개, 최대176.58→0ms, React4548.16→236.12ms, Layout131.30→31.85ms, HandlePostMessage62.78→93.67ms. 상태 전달38→40회. 입력 종료 후0.5초 정착에는5개/합460ms/최대123ms가 남는다. 입력 중 개선과 정착 비용을 구분한다.
+- CDP 측정 멈춤 원인은 승인/샌드박스가 아니라 비활성 대상 탭의 Input.dispatchMouseEvent 응답 대기였다. Page.bringToFront 및 명령20초 제한을 추가하고 재실행 완료. trace 완료 resolver도 종료 명령 전에 등록하도록 수정.
+- 최종 비교 원본: 같은 scratch perf-baseline-all-1/10.*, perf-matched-all-1/10.*. 창별 기존 측정은 sim 조건이 달라 정량적인 최종 비교로 쓰지 않는다. 장기 저장과 배포 빌드 성능은 미측정.
+
+### 2-92 코드 대조 보정
+- 최신 commands.build는 기본 방식과 같은 건물만 찾아 증설한다. 따라서 기존 왕실 건물은 ID별 expand로 현재 방식을 보존하고, 여러 왕실 건물이 있으면 각 ID의 조작을 따로 둔다. 카드 전망 대상은 ID 오름차순 첫 왕실 건물로 고정; 최초 건설만 methodId 없는 build를 쓴다. sim 규칙 변경 없음.
+
+### 2-92 구현 완료 · 2-91 혼합 산출 동시 반영
+- 2열 카드·6분류 드롭다운·예상 수익/이름/회수 정렬·지역 공사 +건수. 막힌 카드도 상세 진입 가능, 기술/땅/광맥/약정금/동시공사 차단을 툴팁으로. 농지·산림·부지 배경 토큰은 양 테마에 적용. 기존 레벨+짓는 레벨은 지역 전체 합계, 툴팁 왕실/민영 분리.
+- ConstructionDetail 공통 상세520×640: 지역 종류별 요약과 건설 카드가 같은 본문을 연다. 지역 인라인 중복 BuildList/공사/조작 제거. 전체/민영/왕실, 건물ID별 왕실 제어, 민영·외국 읽기 전용. 새 건물 +1/+5는 방식 지정 없이 build, 기존은 정확한 ID expand. 잠긴 방식 기술·무역소 사용 가능 금고/약정금·사무소 공사 수수료/부하·학교 자리·개별 상세/소유권 경로 보존.
+- 전망은 첫 왕실 ID 현재 방식 또는 최초 사용 가능 방식1개만, 주간 캐시(구조/기술/공사 변경 시 무효화). 최대 수익 방식 오표시/전 방식 반복 전망 제거. 상세 비용/가격은 최신 세계. 현재 공급÷수요·가격을 각 산출 상품별로 표시, +1/+5 전망 표시 제거(혼합 산출 시험 포함).
+- 루트 typecheck·클라이언트34파일88시험 통과. CSS1920×1028 헤드리스 스크린샷 확인: C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/construction-final-ko-light.png, construction-final-en-dark.png, construction-builder-ko-light.png, construction-queue-ko-light.png, construction-private-en-dark.png, construction-region-common-en-dark.png. 주 창 본문403/scroll403, 상세491/scroll491. 왕실사무소1000 +1/+5→target1000/method build_manual, 정지·순서 변경, 민영 제어0개, 지역 공통 상세 진입 확인. SSR 외국 읽기 전용·지분/광맥·혼합 산출4개 회귀 추가. 실제 모든 기술 전환·특수 기관 모든 조합은 미검증.
+- 다음2-93 실제 가동, 이어2-82 부 이동 중복. sim 요청 없음.
