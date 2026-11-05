@@ -426,7 +426,7 @@ export const LAW_SWITCH = 1.2;
 export const LAW_COOLDOWN = TICKS_PER_YEAR;
 
 /** 왕국에서 소작농을 뺀 1인당 하루 소득 (incomeEma 합 ÷ 인원 합) */
-function perCapitaIncome(w: World, kingdomId: number): number {
+export function perCapitaIncome(w: World, kingdomId: number): number {
   let inc = 0, n = 0;
   for (const p of w.pops) {
     if (p.prof === 'peasant' || p.size <= 0 || regionById(w, p.regionId).kingdomId !== kingdomId) continue;

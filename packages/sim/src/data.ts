@@ -584,7 +584,7 @@ export const TUNE = {
   nobleChoice: 1,
   manorSellCap: 0.5,
   lawSteer: 1,
-  pollTax: 0.6, // 인두세: 소작농을 뺀 1인당 하루 (세금 수준 3단계 기준)
+  pollTax: 0.1, // 인두세: 소작농을 뺀 1인당 하루 (세금 수준 3단계 기준). 후보 비교는 DESIGN 11 `pollTax` 행
   incomeTax: 0.3,
   officeTargetDays: 30,
   officeUseFull: 0.9,

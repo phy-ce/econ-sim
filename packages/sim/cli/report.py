@@ -165,6 +165,14 @@ for f, (ko, desc) in FLOWS.items():
     for o, oko in (('manor', '저택'), ('finance', '금융가')):
         LABELS[f'flows.{f}.{o}'] = L(f'{oko}: {ko}', '소유 건물 흐름', '백만/년', desc)
 
+# 세법 비교 (2026-11-05-taxrates): AI 왕국 K2·K3 평균을 대륙 줄에 붙인 칸
+LABELS.update({
+    'aiPollLaw': L('인두세법 AI 왕국 수', 'AI 왕국 세법', '곳'), 'aiCollect': L('AI 징수율', 'AI 왕국 세법', '', '연평균'), 'aiAdmin': L('AI 행정청 레벨', 'AI 왕국 세법'),
+    'aiRev': L('AI 왕국당 세입', 'AI 왕국 세법', '백만/년'), 'aiPollSh': L('인두세 ÷ AI 1인 소득', 'AI 왕국 세법', '', '지금 세금 수준의 인두세 ÷ 소작농 뺀 1인당 하루 소득 (pollTaxIncomeCap 과 견준다)'),
+    'aiPci': L('AI 1인 소득', 'AI 왕국 세법', '/일', '소작농 뺀 1인당 하루 소득 (incomeEma)'), 'aiTaxStep': L('AI 세금 수준', 'AI 왕국 세법'),
+    'mktIncome': L('1인 시장 소득', '소득', '/일', '복지 뺀 소득 합 ÷ 인구 ÷ 360'), 'welfareY': L('복지 지급', '왕실', '백만/년'),
+})
+
 # 0b 측정 (cli/lab.ts, src/lab/metrics.ts): 정의는 metrics.ts 주석과 docs/overhaul/0B_SPECS.json
 LAB = {'solPeasAvg': ('소작농 생활수준 (연평균)', ''), 'solUnskAvg': ('노동자 생활수준 (연평균)', ''), 'solLower': ('하층 생활수준', ''), 'fulfil': ('하층 충족률', ''),
        'foodLow': ('하층 식량 충족', ''), 'grainAvg': ('곡물 가격비 (연평균)', ''), 'gdpPre': ('세전 총생산', '백만/년'), 'debtLimit': ('한도 대비 부채', ''),
@@ -194,7 +202,7 @@ LAB = {'solPeasAvg': ('소작농 생활수준 (연평균)', ''), 'solUnskAvg': (
        'lvOwn': ('민간 레벨 (주인 있는 레벨)', '레벨'), 'fbuyN': ('금융가 지분 사기 (귀족)', '백만/년'), 'fbuyO': ('금융가 지분 사기 (그 밖 계층)', '백만/년'),
        'mbuyN': ('저택 새 지분 사기', '백만/년')}
 for k, (nm, u) in LAB.items(): LABELS[k] = L(nm, '0b 측정', u)
-GROUPS = ['경제', '0b 측정', '생활수준', '소득', '인구', '계층 인구', '계층 노동 인구', '일자리', '임금', '돈', '돈 ÷ 총생산', '왕실', '연구', '건축사무소', '복지', '왕실 장부', '민간 장부',
+GROUPS = ['경제', 'AI 왕국 세법', '0b 측정', '생활수준', '소득', '인구', '계층 인구', '계층 노동 인구', '일자리', '임금', '돈', '돈 ÷ 총생산', '왕실', '연구', '건축사무소', '복지', '왕실 장부', '민간 장부',
           '소유 건물 흐름', '시장', '값 (기본가 대비)', '공급', '수요', '공급÷수요', '거래량', '가계 수요', '건물 레벨', 'AI 길', '짓고 허는 반복', '소유', '정부', '하급 귀족 일자리', '기타']
 # 옛 해마다 한 줄 진단 파일(.tmp/col/collapse.ts, 보고서 2026-10-22-collapse40·2026-10-30-0a-probe)에서만 뜻이 다른 이름.
 # cli/lab.ts 줄(src/lab/metrics.ts)의 peas 는 소작농 비율이고 소작농 수는 peasK 라서, peasK 가 있는 파일에는 쓰지 않는다 (finish)

@@ -9,7 +9,8 @@ import {
   FLOW_ZERO, builderOf, companyById, constructionEstimate, creditLimit, estimateMethod, harvestCondition, harvestFactor, isGovernment, isOwnerBuilding, kingdomGdp, landFree, paysDividend,
   quakeAt, quakeLostCells, slots, totalMoney, wagesAt,
 } from '../economy';
-import { kingdomLiteracy } from '../finance';
+import { perCapitaIncome } from '../ai';
+import { kingdomLiteracy, lawRevenue, taxRates } from '../finance';
 import { FLOW } from '../kingdoms';
 import { labourTable, subsistenceWage } from '../labor';
 import { PRICE_MAX, PRICE_MIN, basketCostAt, needSharesAt, postUsable } from '../market';
@@ -999,6 +1000,9 @@ export class Collector {
       // 저택 지분 고침 (wt-manor): 연말 금융가 자산 비율 (투자법 조건, 왕국만), 소유 건물이 가진 레벨 (금융가·저택), 민간 레벨,
       // 한 해 금융가 지분 사기 (백만, 귀족 / 그 밖 계층), 저택 새 지분 사기 (백만, 범위 안 저택이 판 것)
       ...(k ? { finRatio: sig(financeRatio(w, k.id)) } : {}), lvFin, lvMan, lvOwn,
+      // 세법 판단 (wt-taxrates, 왕국만, 연말): AI 가 보는 소작농 뺀 1인당 하루 소득, 지금 세금 수준의 인두세와 그 비율 (AI 상한 pollTaxIncomeCap 과 견준다), 세법마다 예상 세입 (징수율 전, 하루)
+      ...(k ? { pci: sig(perCapitaIncome(w, k.id)), pollRate: sig(taxRates(k, 'poll').poll), pollSh: sig(div(taxRates(k, 'poll').poll, perCapitaIncome(w, k.id)) ?? NaN),
+        lawRev: { land: sig(lawRevenue(w, k, 'land')), poll: sig(lawRevenue(w, k, 'poll')), income: sig(lawRevenue(w, k, 'income')) } } : {}),
       fbuyN: sig(buy('fbuy.noble.') / M), fbuyO: sig(buy('fbuy.other.') / M), mbuyN: sig(buy('mbuy.noble.') / M),
       // X08-H (왕국 단위 요약), 08 3.5 한계
       harvDays: a.harvDays, k4Share: sig(div(k4n, k4d) ?? NaN), lim,
