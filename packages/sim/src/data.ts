@@ -502,7 +502,7 @@ export function scaleBonus(level: number): number {
  * - govWageLevels: 국영 임금 수준 1~5단계의 배율. 국영 임금 = 기본 임금 × 왕국 임금 지수 × 이 배율
  * - researchBase, researchPerLiteracy: 주간 연구 포인트 = researchBase + researchPerLiteracy × 왕국 문해력(%, 인구 가중 평균). 돈은 들지 않는다 (finance.ts researchPoints)
  * - welfareLevels: 복지 수준 1~5단계의 목표 생활수준. 복지법이 덮는 pop 중 생활수준이 이보다 낮은 pop 의 소득을 목표 소득까지 채운다 (welfare.ts)
- * - welfareWeeks: (AI) 복지를 올리거나 켜는 조건: 국고 ≥ (복지를 뺀 주간 국정 지출 + 그 복지의 주간 예상액) × 이 주 수. 이 주 수의 절반 아래로 줄면서 국고가 줄면 내린다
+ * - welfareWeeks: (AI) 복지를 올리거나 켜는 조건: 국고 ≥ (복지를 뺀 주간 국정 지출 + 그 복지의 주간 예상액, 복지 상한을 넘지 않는다) × 이 주 수. 이 주 수의 절반 아래로 줄면서 국고가 줄면 내린다
  * - doneWageMax: 기술을 다 연 AI 왕국이 풂 조건에서 국영 임금을 올리는 상한 단계 (임금 지수 1 이하일 때만)
  * - treasuryLowWeeks, treasuryHighWeeks: AI 왕실은 국고가 주간 국정 지출의 low 주치보다 적으면 조이고 high 주치를 넘으면 푼다.
  *   왕실 공사(사무소 증설 포함)도 high 주치를 넘는 돈으로만 한다. high 39·52·78·104 비교 (세율 ×2, 20년 × 시드 1~4): 52는 78보다

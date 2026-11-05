@@ -173,9 +173,9 @@ export function welfareShortOf(k: Kingdom, law: WelfareLaw, step: number): numbe
 }
 
 /**
- * 그 법·단계의 주간 복지 예상액 = 하루 필요액(이동평균) × 7. 필요액은 지급 규칙(생활수준이 목표 아래인 pop, 그날 소득과 목표 소득의 차)대로 센다.
+ * 그 법·단계의 주간 복지 예상액 = min(하루 필요액(이동평균), 그 단계 하루 상한 welfareCapDaily) × 7. 필요액은 지급 규칙(생활수준이 목표 아래인 pop, 그날 소득과 목표 소득의 차)대로 센다.
  * 지금 법·단계면 실제 지급(현금이 모자라 줄인 몫 전)과 같고, 덮지 않는 무리는 복지를 받기 전 생활수준으로 센다.
- * TUNE.welfareCap 이 켜져 있으면 그 단계의 상한(welfareCapDaily × 7)을 넘지 않는다
+ * welfareCap 0 이면 상한 없이 필요액 × 7
  */
 export function welfareWeekly(k: Kingdom, law: WelfareLaw, step: number): number {
   return Math.min(welfareNeedOf(k, law, step), welfareCapDaily(k, step)) * TICKS_PER_WEEK;
