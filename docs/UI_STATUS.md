@@ -337,3 +337,8 @@ DetailWindow 독립 NavigationProvider/버튼, BuildingPops 및 ResourceInspecto
 - 지역 종류 행/상품 관련 건물 행에 demolish 그림24px + 대기 레벨 배지. 지도에는 지역의 철거 대기 레벨 합계, 확대해도 이름표와 같은 고정 표시 크기. 설명 문장 없이 숫자/그림, 정확한 철거 라벨 툴팁.
 - 루트 typecheck·클라이언트33파일84시험 통과. 1920×1028 헤드리스 스크린샷 확인: C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/nov5-demolition-en-dark.png, nov5-demolition-ko-light.png. 별도 검증 세계 벌목장2/농장3→지도5, 목록 아이콘 실제24px. 검증 저장 복원. 상품 관련 행 및 철거 주간 완료까지의 시간 경과는 미검증.
 - 막힘: SalvageLot.buildingId 미제공으로 건물별 회수 자재는 기존 sim 요청 유지. 연구 커밋0acd2a5. 다음2-62 공사 수수료 라벨/계산 툴팁.
+
+## 2026-11-05 2-62 공사 수수료 잔여 완료
+- ledgerLabels.buildFees·장부 툴팁을 모든 공사의 공사 수수료로 정정, 폐기 budgetLines.fees 제거. 건축사무소 개별/그룹 매출·폭포 라벨을 공사 수수료로, day.fee·officeMargin 계산 툴팁 추가. 재정 국영 사업 상세 매출에도 방식 이익률 식. 사무소 매출 양수면 목록 비용 막대 표시(정부 일반 예외와 분리).
+- 루트 typecheck·클라이언트33파일84시험 통과. 1920×1028 헤드리스 스크린샷 확인: C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/nov5-office-fees-ko-light.png, nov5-office-fees-en-dark.png. 수수료0/기본 방식20% 식 확인. 영문 긴 폭포 라벨은100px 칸으로 막대 겹침 해소. 양수 실제 수수료·재정 매출 툴팁 실제 표시·장부 전 항목은 화면 미검증(상수/필드 경로 코드 대조).
+- 철거 커밋d8c480d. 다음2-64 건설 카드 산업 유형.
