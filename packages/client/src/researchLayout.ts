@@ -1,4 +1,9 @@
 /** One row per prerequisite depth. Stable declaration-order ties. */
+export function prerequisitePath(techs:readonly {id:string;requires:readonly string[]}[],id:string){
+ const byId=new Map(techs.map(t=>[t.id,t])),path=new Set<string>();
+ const visit=(key:string)=>{if(path.has(key))return;path.add(key);for(const parent of byId.get(key)?.requires??[])visit(parent);};
+ visit(id);return path;
+}
 export function researchLayout<T extends {id:string;requires:readonly string[]}>(techs:readonly T[]) {
  const byId=new Map(techs.map(t=>[t.id,t])),depths=new Map<string,number>(),visiting=new Set<string>();
  const depth=(id:string):number=>{

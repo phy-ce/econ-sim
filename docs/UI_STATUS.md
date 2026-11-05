@@ -326,3 +326,9 @@ DetailWindow 독립 NavigationProvider/버튼, BuildingPops 및 ResourceInspecto
 - SectionStack 항목이 범위 전환으로 늘 때 기존 설정에 새 항목을 덧붙이도록 수정(세계→지역 전환 때 교역 탭 누락 해소).
 - 루트 typecheck·클라이언트33파일83시험 통과. 1920×1028 헤드리스 스크린샷 확인: C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/nov5-trade-en-dark.png, nov5-trade-ko-light.png, nov5-post-usable-ko-light.png. 복제 교역값buy1234.56/cut432.10/margin0.125, 막대74%/26%·높이8px/표시13% 확인. 실제 무역소1003 postUsable3443.8442→3.4k, 상한5000·약정금/L2500 API 대조. 검증 저장 복원. 건설 약정금 실제 납부/환급 및 영문 무역소 상세는 화면 미검증(표시 코드는 반영).
 - 2-32 커밋90a9826. 다음2-48 연구 진행·경로·링크.
+
+## 2026-11-05 2-48 研究 트리 잔여 완료
+- 노드 비용·남은 주·양수 진행 막대, 선택/hover/focus 기술의 모든 선행 경로 강조. 툴팁에 methodMarginAtBase·직종별 자리·투입→산출 레벨당 하루 수치. 법 해금 줄은 국가 법 탭으로 연결.
+- 휠 마우스 위치 확대50~150%, +/−·0맞춤, research-view 배율/스크롤 저장·복원. 처음 열 때 현재 연구 중앙. 진행 막대는 축소 배율에서도 약6px(53%에서 실측5.99px 반올림).
+- 루트 typecheck·클라이언트33파일84시험 통과(갈라진 선행 경로 합집합 회귀 포함). 1920×1028 헤드리스 스크린샷 확인: C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/nov5-research-ko-light.png, nov5-research-en-dark.png, nov5-research-path-ko.png, nov5-research-view-restored.png. 검증 세계 괴철로4500pt/진행2250/주20→113주·50%, 증기기관 선행 선5개, 휠110%·0맞춤53%·닫기/재열기53%/스크롤0 복원·법 링크→국가 법 탭 확인. 연구 상세 본문943/scroll943. 검증 저장 복원. 끝까지 실제 연구 완료/모든 노드 툴팁 실표시는 미검증.
+- 2-67 커밋494714b. 다음2-49 철거 아이콘.

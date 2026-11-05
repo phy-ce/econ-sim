@@ -158,3 +158,6 @@
 .ownership-browser .owner-holdings td small {position:static;display:block;line-height:1.5;margin-top:3px}
 .ownership-browser .system-table td {font-family:var(--sans)}
 .region-trade {display:grid;gap:8px;padding:6px;font-size:11px}.region-trade>div {display:flex;align-items:center;gap:8px}.region-trade>div>span:first-child {flex:0 0 105px}.region-trade .bar {height:8px;min-height:6px}.region-trade>div>b {margin-left:auto}
+.research-atlas .research-node {gap:4px}.research-atlas .research-node .bar {height:6px;min-height:6px;border-width:1px}.research-atlas .research-node.in-path {box-shadow:inset 0 0 0 1px var(--accent)}
+.research-unlocks>.entity-link {display:flex;justify-content:space-between;text-align:left;white-space:normal;font-size:11px}
+.research-atlas .research-node .bar {flex:0 0 6px}

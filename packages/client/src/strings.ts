@@ -6,6 +6,7 @@ import { particle } from './format';
 type S = string;
 
 export const KO = {
+ researchBaseMargin:'기준 가격 이익률',
  tradeUsable:'쓸 수 있는 금고',tradeReserveLevel:'금고 상한 / L',tradeEscrow:'약정금 / L',tradeEscrowHelp:'착공 시 별도로 묶고, 완공 시 무역소 금고로 옮깁니다. 취소하면 돌려받습니다.',tradeBought:'산 주문 / 일',tradeCut:'잘린 주문 / 일',tradeMargin:'기대 이익률',tradeFlow:'교역 주문',
  reserveRate:'적립',keepShare:'금고 유지',ownerReceiptsWeek:'받은 돈 / 주',ownerReceiptsWeekHelp:'배당·지대 수입의 하루 이동평균 × 7',holdingsTotal:'합계',
  perHeadDay:"1인 / 일",dailyRateLabel:"일 이자율",taxWeeklyFormula:(collection:S)=>`min(저축, 낼 세금) × ${collection} × 7`,targetIncomeLabel:"목표 소득",welfareGroupPoor:"소작농·실업자",welfareGroupWage:"임금 노동자",wageIndexLabel:"임금 지수",resourceSearch:"건물·지역·소유 검색",kingdomEconomy:"왕국 경제",kingdomCompare:"왕국 비교",
@@ -564,6 +565,7 @@ export const KO = {
 export type Dict = typeof KO;
 
 export const EN: Dict = {
+ researchBaseMargin:'Margin at base prices',
  tradeUsable:'Usable treasury',tradeReserveLevel:'Treasury cap / L',tradeEscrow:'Escrow / L',tradeEscrowHelp:'Set aside at construction start and transferred to the post treasury at completion. Refunded on cancellation.',tradeBought:'Orders bought / day',tradeCut:'Orders cut / day',tradeMargin:'Expected margin',tradeFlow:'Trade orders',
  reserveRate:'Set aside',keepShare:'Kept in treasury',ownerReceiptsWeek:'Receipts / week',ownerReceiptsWeekHelp:'Daily smoothed dividend and rent receipts × 7',holdingsTotal:'Total',
  perHeadDay:"Per head/day",dailyRateLabel:"Daily interest",taxWeeklyFormula:(collection)=>`min(savings, tax due) × ${collection} × 7`,targetIncomeLabel:"Target income",welfareGroupPoor:"Tenants / unemployed",welfareGroupWage:"Wage workers",wageIndexLabel:"Wage index",resourceSearch:"Search building, region or owner",kingdomEconomy:"Kingdom economy",kingdomCompare:"Kingdoms",
