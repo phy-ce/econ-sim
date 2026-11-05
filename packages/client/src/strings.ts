@@ -6,6 +6,19 @@ import { particle } from './format';
 type S = string;
 
 export const KO = {
+ designSystem:{
+  language:'언어',light:'밝은 테마',dark:'어두운 테마',supply:'공급',demand:'수요',title:'디자인 시스템',edition:'왕실 장부',draft:'검토 초안',sample:'샘플 데이터',foundations:'기초',components:'부품',composition:'조합',openGame:'게임 열기',
+  palette:'의미 색상',typography:'글자와 숫자',spacing:'간격',dimensions:'치수',surface:'종이',ink:'먹',primary:'주요 조작',brass:'강조',positive:'이익',negative:'손실',info:'정보',line:'구분선',
+  controls:'조작',selection:'선택과 입력',indicators:'상태와 막대',metrics:'핵심 수치',ledger:'장부',production:'투입과 산출',ownership:'소유권',
+  build:'건설',cancel:'취소',demolish:'철거',locked:'잠김',pause:'정지',resume:'재개',close:'닫기',back:'뒤로',forward:'앞으로',more:'더 보기',
+  defaultState:'기본',selected:'선택',disabled:'비활성',focus:'포커스',search:'건물 검색',category:'분류',all:'전체',primaryIndustry:'1차 산업',manufacturing:'가공',government:'정부',
+  crown:'왕실',private:'민영',manor:'저택',finance:'금융가',available:'건설 가능',needsTech:'인쇄술 필요',stopped:'가동 중지',empty:'—',
+  staffing:'충원',inputFill:'원료 충족',actualOutput:'실제 가동',efficiency:'효율',progress:'공사 진행',treasury:'금고',weeklyProfit:'주간 손익',taxCollection:'징수율',
+  good:'상품',price:'가격',supplyDemand:'공급 ÷ 수요',balance:'손익',perDay:'/ 일',perWeek:'/ 주',level:'레벨',workers:'인원',cost:'비용',duration:'공기',days:'일',queue:'대기열',
+  overview:'개요',buildings:'건물',population:'인구',methods:'방식',handFelling:'수작업 벌목',sawing:'제재',constructionOffice:'건축사무소',region:'동부 삼림',
+  display:'제목',body:'본문',label:'라벨',number:'숫자',mainWindow:'주 창',detailWindow:'상세 창',controlHeight:'조작 높이',rowHeight:'행 높이',iconSize:'그림',meterHeight:'막대',
+  completed:'완료',queued:'대기',active:'가동',utilization:'가동률',quantity:'수량',alerts:'알림',saved:'저장됨',sampleAction:(n:number)=>`공사 ${n}건`,
+ },
  politics:'정치',political:{group:'집단',clout:'영향력',approval:'승인',mood:'기분',members:'회원',voting:'투표법',pending:'바뀌면',status:{powerful:'힘셈',marginal:'소외'},moods:{angry:'격노',unhappy:'불만',neutral:'중립',happy:'만족',loyal:'충성'},parts:{stances:'법 입장',change:'법 바꾸기',sol:'생활수준'}},
  welfareCap:'상한',welfareCut:'상한으로 줄인 몫',
  actualOutput:'실제 가동',
@@ -569,6 +582,19 @@ export const KO = {
 export type Dict = typeof KO;
 
 export const EN: Dict = {
+ designSystem:{
+  language:'Language',light:'Light',dark:'Dark',supply:'Supply',demand:'Demand',title:'Design system',edition:'The Crown Ledger',draft:'Design proposal',sample:'Sample data',foundations:'Foundations',components:'Components',composition:'Composition',openGame:'Open game',
+  palette:'Semantic palette',typography:'Type & numerals',spacing:'Spacing',dimensions:'Dimensions',surface:'Paper',ink:'Ink',primary:'Primary action',brass:'Accent',positive:'Profit',negative:'Loss',info:'Information',line:'Divider',
+  controls:'Actions',selection:'Selection & input',indicators:'Status & meters',metrics:'Key figures',ledger:'Ledger',production:'Inputs & outputs',ownership:'Ownership',
+  build:'Build',cancel:'Cancel',demolish:'Demolish',locked:'Locked',pause:'Pause',resume:'Resume',close:'Close',back:'Back',forward:'Forward',more:'More',
+  defaultState:'Default',selected:'Selected',disabled:'Disabled',focus:'Focus',search:'Search buildings',category:'Category',all:'All',primaryIndustry:'Primary',manufacturing:'Processing',government:'Government',
+  crown:'Crown',private:'Private',manor:'Manor',finance:'Finance',available:'Available',needsTech:'Requires printing',stopped:'Stopped',empty:'—',
+  staffing:'Staffing',inputFill:'Input coverage',actualOutput:'Actual output rate',efficiency:'Efficiency',progress:'Construction',treasury:'Treasury',weeklyProfit:'Weekly balance',taxCollection:'Tax collection',
+  good:'Good',price:'Price',supplyDemand:'Supply ÷ demand',balance:'Balance',perDay:'/ day',perWeek:'/ week',level:'Levels',workers:'Workers',cost:'Cost',duration:'Time',days:'d',queue:'Queue',
+  overview:'Overview',buildings:'Buildings',population:'Population',methods:'Methods',handFelling:'Hand felling',sawing:'Sawing',constructionOffice:'Construction office',region:'Eastern Forest',
+  display:'Display',body:'Body',label:'Label',number:'Numerals',mainWindow:'Main window',detailWindow:'Detail window',controlHeight:'Controls',rowHeight:'Rows',iconSize:'Artwork',meterHeight:'Meters',
+  completed:'Complete',queued:'Queued',active:'Active',utilization:'Utilisation',quantity:'Quantity',alerts:'Alerts',saved:'Saved',sampleAction:(n:number)=>`${n} ${n===1?'project':'projects'}`,
+ },
  politics:'Politics',political:{group:'Group',clout:'Clout',approval:'Approval',mood:'Mood',members:'Members',voting:'Voting law',pending:'On change',status:{powerful:'Powerful',marginal:'Marginal'},moods:{angry:'Angry',unhappy:'Unhappy',neutral:'Neutral',happy:'Happy',loyal:'Loyal'},parts:{stances:'Law stances',change:'Law change',sol:'Living standard'}},
  welfareCap:'Cap',welfareCut:'Cut by cap',
  actualOutput:'Actual output rate',

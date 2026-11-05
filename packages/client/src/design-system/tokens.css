@@ -1,0 +1,29 @@
+/* Proposal 01. Semantic tokens; intentionally independent of the game's legacy CSS. */
+[data-ui-theme] {
+ --ds-bg:#edece5; --ds-surface:#fcfbf6; --ds-raised:#ffffff; --ds-sunken:#f3f2eb;
+ --ds-text:#202e36; --ds-muted:#5e6b70; --ds-line:#c8ceca; --ds-line-strong:#7b8c8b;
+ --ds-primary:#28564f; --ds-on-primary:#ffffff; --ds-primary-soft:#e2ece5;
+ --ds-brass:#80602b; --ds-brass-soft:#f3ead6; --ds-positive:#276447; --ds-positive-soft:#e5eee7;
+ --ds-negative:#a23e34; --ds-negative-soft:#f7e8e2; --ds-info:#315f83; --ds-info-soft:#e5edf2;
+ --ds-chrome:#202f39; --ds-on-chrome:#f7f3e8; --ds-focus:#27689a;
+ --ds-crown:#80602b; --ds-manor:#426758; --ds-finance:#526b87;
+ --ds-shadow:0 12px 32px #172c3520,0 2px 5px #172c350b;
+ --ds-font:'Noto Sans KR','Malgun Gothic',system-ui,sans-serif;
+ --ds-display:'Gowun Batang',Georgia,serif;
+ --ds-number:'Cascadia Mono','Consolas',ui-monospace,monospace;
+ --ds-space-1:4px; --ds-space-2:8px; --ds-space-3:12px; --ds-space-4:16px; --ds-space-6:24px; --ds-space-8:32px; --ds-space-12:48px;
+ --ds-radius:6px; --ds-control-sm:32px; --ds-control:36px; --ds-row:44px; --ds-icon:24px; --ds-meter:8px;
+ --ds-window-width:420px; --ds-window-height:560px; --ds-detail-width:520px; --ds-detail-height:640px;
+ color-scheme:light;
+}
+[data-ui-theme='dark'] {
+ --ds-bg:#121c23; --ds-surface:#1c2932; --ds-raised:#23343e; --ds-sunken:#17232c;
+ --ds-text:#edece2; --ds-muted:#aabbbf; --ds-line:#455963; --ds-line-strong:#6c848d;
+ --ds-primary:#9dc9b7; --ds-on-primary:#142d25; --ds-primary-soft:#28463f;
+ --ds-brass:#e0bd79; --ds-brass-soft:#413b2d; --ds-positive:#9dceb0; --ds-positive-soft:#223d33;
+ --ds-negative:#f1a497; --ds-negative-soft:#462f30; --ds-info:#a2c6e0; --ds-info-soft:#293e50;
+ --ds-chrome:#0e171e; --ds-on-chrome:#f1eee3; --ds-focus:#a6d5fa;
+ --ds-crown:#dfbc79; --ds-manor:#91bba7; --ds-finance:#9ab8dc;
+ --ds-shadow:0 12px 32px #0004,0 2px 5px #0003;
+ color-scheme:dark;
+}

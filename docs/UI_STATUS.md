@@ -448,3 +448,12 @@ DetailWindow 독립 NavigationProvider/버튼, BuildingPops 및 ResourceInspecto
 - 완료 판정 근거는 각 절의 typecheck·vitest·1920×1028 헤드리스 스크린샷. 마지막 코드 검증39파일95시험/루트 typecheck 통과. 기존 UI_WINDOWS·sim 임시 시험·기타 미커밋 파일은 보존. UI_CHANGES/UI_DONE/UI_DESIGN은 사용자 최신 편집 범위 밖이라 수정하지 않음; Claude가 완료 절 이동 시 위 근거 사용.
 - 막힘/대기: 2-59 세부 매출/원료/임금 주간 EMA 미제공, 2-49 SalvageLot에 buildingId 없음(types.ts344), 2-72 S3 인두세 부담·2-40 S6 사전, 오버홀 S1~S8/결정/1b 선행은 기존 대기 유지. 왕실 웃돈·지도 정점 범위·상단 칩/배치 결정은 사용자 결정 대기. 단위P는 Claude 작업. 빈 windowGeometry/windowLayout 파일은 삭제 금지 규칙 때문에 남김(호출0).
 - 남은 검증 범위: 기존0장 검증 줄의 전체 조합·기관 소멸/지분 매매·실제 주간 확정/법 전환 완료 사건·일반 Edge/Windows 배율, 각 절에 적은 미검증 조합. 현재 구현 가능한 코드 항목은 남지 않음.
+
+## 2026-11-06 사용자 요청 · 디자인 시스템 초안01
+- 시작 main ed9356a/log/status 대조, 기존 미커밋 UI_WINDOWS 및 sim/임시 파일 보존. 기존 UI는 필요한 부품 목록/그림/상품 정의를 참고하고, 구체적인 부품 모습은 새 제안으로 설계했다. 검토 주소 http://localhost:5199/design-system.html. 게임 화면 일괄 전환은 하지 않고 별도 HTML 진입점·CSS·상태로 구현.
+- 방향: 따뜻한 종이/먹색 남색/녹색 조작/황동 강조, 의미 색상 양 테마. 4px 간격계·1px 테두리·6px 모서리. 제목 세리프/본문 기존 한글 산세리프, 숫자는 픽셀 대신 고정폭 정렬 제안. 조작32/36px·장부행44px·막대8px, 주 창420×560/상세520×640 유지·창 머리40px 제안. 이 값/모양은 사용자 검토용이며 UI_DESIGN의 확정 규칙을 고치지 않음.
+- 기초: 실제 CSS 토큰의 팔레트/글자/간격/치수. 부품: 버튼 기본·선택·비활성·포커스, 입력/select/checkbox/선택탭, 배지, 정확/축약/빈 숫자, 가짜 이익 충전 없는 손익, 소유권 분할, 수치 막대·장부·투입/산출. 조합: 건설/상세/장부 창. 공통 DSButton/DSBadge/DSQuantity/DSMeter/DSChoice/DSSection/DSWindow를 실제로 사용. 숫자 최대2자리/0과—구분/100%초과숫자 유지, Intl formatter 재사용. 문구는 strings.ts 양 언어, 정적 그림과 방식별 recipe는 기존 정의에서 읽음.
+- 갤러리의 언어·테마·탭은 URL 상태, 게임 저장/환경값은 변경하지 않음(4개 localStorage 값 전후 일치), sim worker 생성0. 샘플 경제/공사값은 검토 데이터. 검색 입력·선택탭 방향키/포커스·액션 건수·카테고리·대기열 정지/취소·방식 선택·가동률/정지·창 닫기/재열기 조작. 실제 sim 명령/실제 창 드래그는 이 검토 화면 범위 밖. 상세 규칙/제안 근거는 packages/client/src/design-system/README.md.
+- 검증: 루트 npm.cmd run typecheck 통과, 클라이언트40파일98시험 통과(숫자 반올림/빈 값/100%초과·양 언어3시험 추가), npx.cmd vite build 통과(게임 index.html과 design-system.html 둘 다 생성). CSS1920×1028 헤드리스 스크린샷 확인: C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/ds-final-components-ko-light.png, ds-final-components-en-dark.png, ds-final-composition-ko-light.png, ds-final-composition-en-dark.png, ds-foundations-ko-light.png, ds-final-foundations-en-dark.png. 콘솔 오류0. 페이지1920/scroll1920, 창420×560·520×640 실측, 본문403/403·503/503 가로 넘침0.
+- 대비: 양 테마 본문12.53이상/보조글5.32이상/주요 조작8.01이상, 막대채움4.53이상 측정. 밝은 입력 테두리2.96은 색을 진하게 조정해3.52, 어두운 테두리3.26 확인. 클릭 공사0→1, 방향키 선택/포커스 이동, EN/dark 전환 후 입력/건수 유지, 가동정지0.00%→50% 재개47.77%, 대기열 정지/취소0건·닫기/재열기 확인.
+- 남은 것: 사용자 디자인 방향 검토. 차트/연구 트리/복잡한 소유권 탐색 등 전체 부품 확대와 실제 게임 적용은 초안 방향을 정한 뒤의 작업. 일반 브라우저 체감·Windows 배율은 미검증. sim 요청 없음, push 하지 않음.
