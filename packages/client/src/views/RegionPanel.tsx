@@ -1,3 +1,4 @@
+import {QuakeBadge} from './QuakeBadge';
 import {t as uiCopy} from '../i18n';
 import {marketPriceHistory} from '../marketScope';
 import {memo, useCallback} from 'react';
@@ -82,7 +83,7 @@ function RegionPanelView({ world, region, history, selectedGood, onSelectGood, o
         <div className="title-row">
           <span className="tile lg region-art"><Sprite64 id={headline} size={64} /></span>
           <h2>{regionName(r)}</h2>
-          <HarvestBadge world={world} regionId={r.id}/>
+          <HarvestBadge world={world} regionId={r.id}/><QuakeBadge world={world} regionId={r.id}/>
           {Object.entries(REGIONS.find((d) => d.id === r.id)?.perks ?? {}).length > 0 && (
             <span className="perks">
               {Object.entries(REGIONS.find((d) => d.id === r.id)!.perks).map(([t, v]) => (

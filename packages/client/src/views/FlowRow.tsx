@@ -1,3 +1,4 @@
+import {QuakeBadge} from './QuakeBadge';
 import {officeLoadFor} from '../officeLoad';
 import {BUILDING_BY_ID,GOOD_IDS,TUNE,crewOf,efficiencyParts,getMethod,harvestFactor,isOwnerBuilding,sellThrough,officeLoad,companyById} from '@econ/sim';
 import type {Building,GoodId,World} from '@econ/sim';
@@ -28,7 +29,7 @@ export function FlowRow({world,building:b,typeId=b?.typeId,methodId=b?.methodId,
  const margin=summary?(summary.rev>0?(summary.rev-summary.raw-summary.wage)/summary.rev:null):b&&b.last.revenue>0?(b.last.revenue-b.last.inputCost-b.last.wageCost)/b.last.revenue:null;
  return <div className={`flow-row${stopped?' flow-stopped':''}`} aria-label={`${T.hInputs} → ${T.hOutput}`}>
  {side(false)}<span aria-hidden="true">→</span><span className="flow-building"><BuildingSprite typeId={typeId} size={24}/><b>×<NumericValue value={levels} format="compact"/></b></span><span aria-hidden="true">→</span>
- {typeId==='subsistence'?<HarvestBadge world={world} regionId={regionId} typeId={typeId}/>:service?<span className="flow-service">{service.label}<strong><NumericValue value={service.value} format="compact"/></strong>{m.construction&&<small>{T.officeLoad}: {pct(load)}</small>}</span>:side(true)}
+ {typeId==='subsistence'?<span><HarvestBadge world={world} regionId={regionId} typeId={typeId}/><QuakeBadge world={world} regionId={regionId}/></span>:service?<span className="flow-service">{service.label}<strong><NumericValue value={service.value} format="compact"/></strong>{m.construction&&<small>{T.officeLoad}: {pct(load)}</small>}</span>:side(true)}
  {(b||summary)&&<span className={margin===null?'muted':margin<0?'neg':'pos'} data-help={T.margin}>{margin===null?'—':pct(margin)}</span>}
  </div>;
 }
