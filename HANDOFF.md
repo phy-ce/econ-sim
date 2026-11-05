@@ -9,6 +9,10 @@
 - 클라우드 세션(claude.ai/code)으로 이어서 할 수 있다. 규칙은 CLAUDE.md "클라우드 세션"을 본다.
 - 옛 세션 기록: `docs/log/` (2026-10-25 이전 HANDOFF 절은 `docs/log/HANDOFF_2026-10-18_to_10-25.md`, 날짜별 UI 기록도 여기). 다른 문서의 "HANDOFF 0-ind3"·"HANDOFF 0-aifix" 같은 옛 절 참조는 그 파일에 있다.
 
+## 0-1105-adminfill
+- 브랜치 wt-ironchain (main cca3017 에서). 왕실 징세 한도가 원료 부족을 못 보던 버그를 고쳤다: 하루 순서가 노동 → 세금 → 생산이고 노동 단계가 `b.last` 를 충족 1 로 새로 만들었다. `labor.ts` 가 어제 충족률을 넘긴다.
+- 마이크로 시드 1, 종이 없음 120일: 한도 1,210 → 0. 시험 `test/core/adminFill.test.ts`. 본 게임 10년 × 시드 1·2 숫자와 `fillEma` 를 쓰지 않은 이유는 DESIGN 9.1.
+
 ## 0-1105-batch4
 - 브랜치 wt-batch4 (main 71d3fa1 에서), wt-manornav·wt-luxmix 를 합침 (cead7be). 2026-11-05 사용자 답 "1. 네 2. 네 claude.md에 적기 3. 합치기": 혼합 방식 4:1 → 1:1 합침, 건물 숫자 예외를 CLAUDE.md 에 적음, 지대 52주 합침 (DECISIONS 7-44·7-52). premerge 전, main 에 합치지 않음.
 - wt-uiconstruct 도 합침 (46e9cf2, 문서만, sim 코드 그대로): UI_CHANGES 2-92 건설 창 다시 만들기 (건설 + 건물 관리 합침, 사용자 2026-11-05), 목업 `docs/mockups/construction-d.dc.html`. 화면 작업자가 다시 설계해서 넣는다. 2-91 의 산출별 미리보기는 2-92 10번 형태로 넣는다.
