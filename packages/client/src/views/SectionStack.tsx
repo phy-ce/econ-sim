@@ -30,6 +30,11 @@ export function SectionStack({ storageKey, items, revealId, revealKey, explorer=
       return [...result, ...defaults().filter(p => !result.some(i => i.id === p.id))];
     } catch { return defaults(); }
   });
+  const itemIds=items.map(i=>i.id).join('|');
+  useEffect(()=>setPrefs(previous=>{
+    const retained=previous.filter(p=>items.some(i=>i.id===p.id));
+    return [...retained,...defaults().filter(p=>!retained.some(i=>i.id===p.id))];
+  }),[storageKey,itemIds]);
   useEffect(() => {
     try { localStorage.setItem(`estera.sections.${storageKey}`, JSON.stringify(prefs)); } catch { /* Storage may be unavailable. */ }
   }, [prefs, storageKey]);

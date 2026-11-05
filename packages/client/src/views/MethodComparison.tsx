@@ -1,4 +1,5 @@
-import {BUILDING_BY_ID,GOOD_IDS,SKILLS,TUNE,estimateMethod,knowsTech,regionPerk,wagesAt} from '@econ/sim';
+import {BUILDING_BY_ID,GOOD_IDS,SKILLS,TUNE,estimateMethod,knowsTech,regionPerk,tradeReserveOf,wagesAt,methodMarginAtBase} from '@econ/sim';
+import {IndustryLabel} from './IndustryLabel';
 import type {Building,Company,MethodDef,World} from '@econ/sim';
 import {Lock} from 'lucide-react';
 import type {Game} from '../useGame';
@@ -21,15 +22,17 @@ export function MethodComparison({world,building:b,owner,game}:{world:World;buil
  return <details className="method-comparison"><summary>{methodName(current)} · ×{b.level}</summary><div className="method-columns"><table style={{minWidth:90+methods.length*110}}>
   <thead><tr><th>×{b.level}</th>{methods.map(m=>{const locked=!knowsTech(owner,m.tech);return <th key={m.id} tabIndex={locked?0:undefined} data-help={locked&&m.tech?techName(m.tech):undefined} className={m.id===b.methodId?'is-current':''}>
    <button disabled={locked||m.id===b.methodId} aria-pressed={m.id===b.methodId} data-help={locked&&m.tech?techName(m.tech):methodName(m)} onClick={()=>game.command({type:'setMethod',buildingId:b.id,methodId:m.id})}>{locked&&<Lock size={14}/>} {methodName(m)}</button>
-   {m.id!==b.methodId&&<small>{T.expDrop}</small>}
+   <IndustryLabel typeId={b.typeId} methodId={m.id}/>{m.id!==b.methodId&&<small>{T.expDrop}</small>}
   </th>;})}</tr></thead><tbody>
   {GOOD_IDS.filter(g=>methods.some(m=>m.inputs[g])).map(g=>row(`in-${g}`,<span><GoodSprite g={g} size={24}/>{T.hInputs} · {goodName(g)}</span>,m=>(m.inputs[g]??0)*b.level))}
   {GOOD_IDS.filter(g=>methods.some(m=>m.outputs[g])).map(g=>row(`out-${g}`,<span><GoodSprite g={g} size={24}/>{T.hOutput} · {goodName(g)}</span>,m=>(m.outputs[g]??0)*b.level*(1+regionPerk(b.regionId,b.typeId))))}
   {methods.some(m=>m.construction)&&row('points',T.buildPts,m=>(m.construction??0)*b.level)}
   {methods.some(m=>m.taxCapacity)&&row('tax',T.taxCapacity,m=>(m.taxCapacity??0)*b.level*TUNE.adminScale)}
   {methods.some(m=>m.seats)&&row('seats',T.schoolSeats,m=>(m.seats??0)*b.level)}
+  {b.typeId==='trading_post'&&row('trade-reserve',T.tradeReserveLevel,m=>tradeReserveOf(m.id),'money')}
   {SKILLS.filter(s=>methods.some(m=>m.workers[s])).map(s=>row(`job-${s}`,<span><ClassSprite c={s} size={24}/>{skillName(s)}</span>,m=>(m.workers[s]??0)*b.level))}
   {row('profit',`${T.system.profit} ${T.perDay}`,m=>estimates.get(m.id)!.profit*b.level,'money')}
   {row('margin',T.margin,m=>{const e=estimates.get(m.id)!;return e.revenue>0?e.profit/e.revenue:null;},'ratio')}
+  {row('input-share',T.inputRevenueRatio,m=>{const e=methodMarginAtBase(b.typeId,m.id);return e.revenue>0?e.input/e.revenue:null;},'ratio')}
  </tbody></table></div></details>;
 }

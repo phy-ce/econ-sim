@@ -6,7 +6,11 @@ import { particle } from './format';
 type S = string;
 
 export const KO = {
- reserveRate:'적립',keepShare:'금고 유지',
+ inputRevenueRatio:'기준 원료비 / 매출',
+ constructionFees:'공사 수수료',officeFeeFormula:(margin:S)=>`수수료 = 운영비 ÷ (1 − ${margin})`,
+ researchBaseMargin:'기준 가격 이익률',
+ tradeUsable:'쓸 수 있는 금고',tradeReserveLevel:'금고 상한 / L',tradeEscrow:'약정금 / L',tradeEscrowHelp:'착공 시 별도로 묶고, 완공 시 무역소 금고로 옮깁니다. 취소하면 돌려받습니다.',tradeBought:'산 주문 / 일',tradeCut:'잘린 주문 / 일',tradeMargin:'기대 이익률',tradeFlow:'교역 주문',
+ reserveRate:'적립',keepShare:'금고 유지',ownerReceiptsWeek:'받은 돈 / 주',ownerReceiptsWeekHelp:'배당·지대 수입의 하루 이동평균 × 7',holdingsTotal:'합계',
  perHeadDay:"1인 / 일",dailyRateLabel:"일 이자율",taxWeeklyFormula:(collection:S)=>`min(저축, 낼 세금) × ${collection} × 7`,targetIncomeLabel:"목표 소득",welfareGroupPoor:"소작농·실업자",welfareGroupWage:"임금 노동자",wageIndexLabel:"임금 지수",resourceSearch:"건물·지역·소유 검색",kingdomEconomy:"왕국 경제",kingdomCompare:"왕국 비교",
  kingdomSummary:"왕국 요약",weeklyGdp:"GDP / 주",reserveIncludedInPrivateCash:"민간 현금에 포함된 유보 자산. 별도로 더하지 않습니다.",
  assetsTitle:"저택·금융가 자산",assetsKingdoms:"왕국",assetsRegions:"지역",
@@ -306,7 +310,7 @@ export const KO = {
     "sales": "건물이 상품을 판매해 얻은 수입입니다.",
     "tax": "왕실이 실제 징수한 세금입니다. 행정 역량에 따라 부과액보다 적을 수 있습니다.",
     "mint": "주조로 생긴 수입입니다.",
-    "buildFees": "민간 공사에서 왕실이 받은 공사 수수료입니다.",
+    "buildFees": "건축사무소가 모든 공사(왕실 공사 포함)에서 받은 수수료입니다.",
     "wages": "직원에게 지급한 임금 지출입니다. 국영 임금 단계는 직종별 임금에 적용됩니다.",
     "inputs": "건물 운영에 사용한 원자재 지출입니다.",
     "research": "실제로 집행한 연구 지출입니다. 정책 단계는 연구비 수준을 바꿉니다.",
@@ -337,7 +341,7 @@ export const KO = {
   demolitionQueue:(n:number)=>`철거 중 ${n}레벨`, cancelDemolition:'철거 취소', salvage:'철거 자재', keepConstruction:'계속 건설', popList:'인구 상세', popRegion:'지역', popProfession:'직종', popWork:'일터', popSize:'인구', popFood:'식량', popNeeds:'소비', popIncome:'1인 소득 / 일', popKind:'1인 현물 / 일', popLiteracy:'문해력', popGrowth:'연 증감', allRegions:'모든 지역', allProfessions:'모든 직종', unemployedOnly:'실업만', inKindValue:'1인 현물 시장가 / 일', adjustFinance:'재정에서 조정', pollTax:'인두세', incomeTax:'소득세', loan:'대출', newConstruction:'신규', expansion:'증설', moveProjectUp:'공사 우선순위 올리기', moveProjectDown:'공사 우선순위 내리기', pauseProject:'공사 일시정지', resumeProject:'공사 재개', cancelSpent:(amount:string)=>`공사를 취소할까요? 지출 ${amount}은 돌려받지 못합니다.`, weeklyProfit: '주간 손익', foreignTerritory: '다른 왕국 영토',
   territory: '영토', mapLayers: '지도 표시',
   finance: '재정', weeklyAccounts: '주간 수지', receipts: '수입', expenses: '지출', capitalFlows: '자본 흐름', incomeTaxRates: '소득세율', lowerStratum: '하층', middleStratum: '중층', upperStratum: '상층', construct: '건설', kingdomQueue: '왕국 공사', mySummary: '왕국 요약', dailyCap: '일일 공사 상한', receivedToday: '오늘 받은 포인트', stage: '단계',
-  ledgerLabels: {sales:'판매',tax:'세금',mint:'주조',buildFees:'민간 공사 수수료',wages:'정부 임금',inputs:'국영 건물 원료',research:'연구',interest:'이자',dividends:'배당 지급',investment:'자본 유입',buildPaid:'공사비 지급'},
+  ledgerLabels: {sales:'판매',tax:'세금',mint:'주조',buildFees:'공사 수수료',wages:'정부 임금',inputs:'국영 건물 원료',research:'연구',interest:'이자',dividends:'배당 지급',investment:'자본 유입',buildPaid:'공사비 지급'},
 
   kingdomLabel: '왕국', stateOwner: '왕실', privateOwner: '민간', playerOwner: '플레이어', dividend: '배당', taxCollection: '세금 징수율', taxCapacity: '세금 역량', investmentPool: '저택·금융가 금고', annualGdp: 'GDP / 년', standardOfLiving: '생활수준', wealthLevel: '부', portClosed: '항구 폐쇄', ownership: '건물 소유', landlord: '지주', noBuildings: '건물 없음', noMatches: '검색 결과 없음',
 
@@ -350,7 +354,7 @@ export const KO = {
   treasury: '금고',
   loanLimit: '대출 / 한도',
   lastWeekPL: '지난주 손익',
-  budgetLines: {stateFirms:'국영 사업 손익',build:'왕실 공사',welfare:'복지',tax:'세금',tariffs:'관세',mint:'주조',fees:'민간 공사 수수료',wages:'정부 건물 인건비',goods:'정부 건물 물자',research:'연구',interest:'국채 이자'} as Record<string,string>,
+  budgetLines: {stateFirms:'국영 사업 손익',build:'왕실 공사',welfare:'복지',tax:'세금',tariffs:'관세',mint:'주조',wages:'정부 건물 인건비',goods:'정부 건물 물자',research:'연구',interest:'국채 이자'} as Record<string,string>,
   weeklyBudget: '주간 예산 (예상)', budgetNet: '순수지',
   speedGroup: '게임 속도',
   pause: '일시정지 (Space)',
@@ -563,7 +567,11 @@ export const KO = {
 export type Dict = typeof KO;
 
 export const EN: Dict = {
- reserveRate:'Set aside',keepShare:'Kept in treasury',
+ inputRevenueRatio:'Base inputs / sales',
+ constructionFees:'Construction fees',officeFeeFormula:(margin:S)=>`Fees = operating costs ÷ (1 − ${margin})`,
+ researchBaseMargin:'Margin at base prices',
+ tradeUsable:'Usable treasury',tradeReserveLevel:'Treasury cap / L',tradeEscrow:'Escrow / L',tradeEscrowHelp:'Set aside at construction start and transferred to the post treasury at completion. Refunded on cancellation.',tradeBought:'Orders bought / day',tradeCut:'Orders cut / day',tradeMargin:'Expected margin',tradeFlow:'Trade orders',
+ reserveRate:'Set aside',keepShare:'Kept in treasury',ownerReceiptsWeek:'Receipts / week',ownerReceiptsWeekHelp:'Daily smoothed dividend and rent receipts × 7',holdingsTotal:'Total',
  perHeadDay:"Per head/day",dailyRateLabel:"Daily interest",taxWeeklyFormula:(collection)=>`min(savings, tax due) × ${collection} × 7`,targetIncomeLabel:"Target income",welfareGroupPoor:"Tenants / unemployed",welfareGroupWage:"Wage workers",wageIndexLabel:"Wage index",resourceSearch:"Search building, region or owner",kingdomEconomy:"Kingdom economy",kingdomCompare:"Kingdoms",
  kingdomSummary:"Kingdom summary",weeklyGdp:"GDP / week",reserveIncludedInPrivateCash:"Reserves are included in private cash and are not added again.",
  assetsTitle:"Manor vs finance assets",assetsKingdoms:"Kingdoms",assetsRegions:"Regions",
@@ -863,7 +871,7 @@ export const EN: Dict = {
     "sales": "Revenue from building goods sales.",
     "tax": "Taxes actually collected by the crown; administrative capacity can limit collection.",
     "mint": "Income created by minting.",
-    "buildFees": "Construction fees received by the crown from private projects.",
+    "buildFees": "Construction fees the crown's offices received from all projects, including the crown's own.",
     "wages": "Wage payments to employees. The government wage policy affects wages by profession.",
     "inputs": "Spending on production inputs used by buildings.",
     "research": "Research spending actually executed. The policy level controls research funding.",
@@ -894,7 +902,7 @@ export const EN: Dict = {
   demolitionQueue:(n:number)=>`Demolishing ${n} levels`, cancelDemolition:'Cancel demolition', salvage:'Salvage', keepConstruction:'Keep construction', popList:'Population details', popRegion:'Region', popProfession:'Profession', popWork:'Workplace', popSize:'Population', popFood:'Food', popNeeds:'Needs', popIncome:'Income / person / day', popKind:'In kind / person / day', popLiteracy:'Literacy', popGrowth:'Annual growth', allRegions:'All regions', allProfessions:'All professions', unemployedOnly:'Unemployed only', inKindValue:'In-kind market value / person / day', adjustFinance:'Adjust in Finance', pollTax:'Poll tax', incomeTax:'Income tax', loan:'Loan', newConstruction:'New', expansion:'Expansion', moveProjectUp:'Raise construction priority', moveProjectDown:'Lower construction priority', pauseProject:'Pause construction', resumeProject:'Resume construction', cancelSpent:(amount:string)=>`Cancel construction? The ${amount} spent will not be refunded.`, weeklyProfit: 'Weekly profit', foreignTerritory: 'Foreign territory',
   territory: 'Territory', mapLayers: 'Map layers',
   finance: 'Finance', weeklyAccounts: 'Weekly accounts', receipts: 'Revenue', expenses: 'Expenses', capitalFlows: 'Capital flows', incomeTaxRates: 'Income tax', lowerStratum: 'Lower', middleStratum: 'Middle', upperStratum: 'Upper', construct: 'Build', kingdomQueue: 'Kingdom construction', mySummary: 'Kingdom summary', dailyCap: 'Daily construction cap', receivedToday: 'Points received today', stage: 'Stage',
-  ledgerLabels: {sales:'Sales',tax:'Taxes',mint:'Minting',buildFees:'Private construction fees',wages:'Government wages',inputs:'State building inputs',research:'Research',interest:'Interest',dividends:'Dividends paid',investment:'Capital inflow',buildPaid:'Construction paid'},
+  ledgerLabels: {sales:'Sales',tax:'Taxes',mint:'Minting',buildFees:'Construction fees',wages:'Government wages',inputs:'State building inputs',research:'Research',interest:'Interest',dividends:'Dividends paid',investment:'Capital inflow',buildPaid:'Construction paid'},
 
   kingdomLabel: 'Kingdom', stateOwner: 'Royal', privateOwner: 'Private', playerOwner: 'Player', dividend: 'Dividend', taxCollection: 'Tax collection', taxCapacity: 'Tax capacity', investmentPool: 'Owner treasuries', annualGdp: 'GDP / year', standardOfLiving: 'Living standard', wealthLevel: 'Wealth', portClosed: 'Port closed', ownership: 'Building ownership', landlord: 'Landlords', noBuildings: 'No buildings', noMatches: 'No results',
 
@@ -906,7 +914,7 @@ export const EN: Dict = {
   treasury: 'Treasury',
   loanLimit: 'Loans / limit',
   lastWeekPL: 'Last week',
-  budgetLines: {stateFirms:'State enterprise balance',build:'Crown construction',welfare:'Welfare',tax:'Taxes',tariffs:'Tariffs',mint:'Minting',fees:'Private construction fees',wages:'Government building staff',goods:'Government building supplies',research:'Research',interest:'Bond interest'} as Record<string,string>,
+  budgetLines: {stateFirms:'State enterprise balance',build:'Crown construction',welfare:'Welfare',tax:'Taxes',tariffs:'Tariffs',mint:'Minting',wages:'Government building staff',goods:'Government building supplies',research:'Research',interest:'Bond interest'} as Record<string,string>,
   weeklyBudget: 'Weekly budget (expected)', budgetNet: 'Net',
   speedGroup: 'Game speed',
   pause: 'Pause (Space)',

@@ -314,3 +314,36 @@ DetailWindow 독립 NavigationProvider/버튼, BuildingPops 및 ResourceInspecto
 - 공통 BuildingRoom으로 개별/그룹 상세에 종류별 땅·광맥 여유 숫자(landFree/depositFree, 공사 예약 포함). 왕국 대기열 각 회사 머리에 전체 건수/MAX_CONCURRENT_CONSTRUCTIONS(40), 행 지역 링크는 해당 지역 건물 탭을 연다. 미사용 myHouse/expandTen 양 언어 문자열 제거.
 - 루트 typecheck·클라이언트32파일82시험 통과. 1920×1028 헤드리스 스크린샷 확인: C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/nov5-room-ko-light.png, nov5-room-en-dark.png, nov5-queue-link-ko-light.png, nov5-queue-en-dark.png. 동부 삼림 산림 여유384.00=landFree384, 본문403/scroll403. 복제 세계 공사1건에서1/40·지역 링크 클릭→지역 창 건물 탭 확인, 검증 저장 복원. 광산 광맥 줄과 상한40건 화면은 미검증(동일 공통 함수/상수 코드 대조).
 - 2-59 커밋3cc4704. 다음2-32 보유 주간 이익·배당 표.
+
+## 2026-11-05 2-32 보유 주간 손익·배당 완료
+- OwnerHoldings 공통 표: 주간 이익×보유 몫 내림차순, 실제 건물 owners/ownerless 지급액, 보유 레벨·이익·배당 합계. 관계는 건물 이름 아래로 옮겨420px 안 네 열. 소작지별 지대 기록은 없어 배당 —. OwnerSummary 머리는 하루 수입 대신 profitEma×7 받은 돈/주, 계산 툴팁. BuildingEconomics의 이른 return 뒤 죽은 보유 표 제거.
+- 루트 typecheck·클라이언트33파일83시험 통과. 지분20%의 주간 이익140·실제 배당37.25를 별개로 확인하고 순서/합계 회귀 추가.
+- 1920×1028 헤드리스 스크린샷 확인: C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/nov5-holdings-ko-light.png, nov5-holdings-en-dark.png. 저택1050 보유4행·710레벨·주간 합−92.2k·실제 배당0, 본문403/scroll403. 좁은 표의 비율 숫자는 본문 글꼴로 가독성 보정. 기관 수입60.3k/주는 표의 보유 손익 합과 다른 배당·지대 수입임. 혼합 지역/양수 실제 배당 화면은 미검증(37.25 회귀로 지급액 경로 검증).
+- 2-42 커밋b39fb8c. 다음2-67 무역소·무역 흐름.
+
+## 2026-11-05 2-67 무역소·교역 표시 완료
+- 무역소 개별 상세 postUsable, 방식 비교/건설 방식의 tradeReserveOf, 공사비와 별도 tradeEscrowPerLevel 약정금(레벨당·환급 툴팁). 빈 상품 흐름 —. 지역 시장 전용 교역 항목에 Region.trade.buy/cut 두 막대·기대 이익률(총 주문0이면 —). 전역/왕국 수치를 임의 합산하지 않음.
+- SectionStack 항목이 범위 전환으로 늘 때 기존 설정에 새 항목을 덧붙이도록 수정(세계→지역 전환 때 교역 탭 누락 해소).
+- 루트 typecheck·클라이언트33파일83시험 통과. 1920×1028 헤드리스 스크린샷 확인: C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/nov5-trade-en-dark.png, nov5-trade-ko-light.png, nov5-post-usable-ko-light.png. 복제 교역값buy1234.56/cut432.10/margin0.125, 막대74%/26%·높이8px/표시13% 확인. 실제 무역소1003 postUsable3443.8442→3.4k, 상한5000·약정금/L2500 API 대조. 검증 저장 복원. 건설 약정금 실제 납부/환급 및 영문 무역소 상세는 화면 미검증(표시 코드는 반영).
+- 2-32 커밋90a9826. 다음2-48 연구 진행·경로·링크.
+
+## 2026-11-05 2-48 연구 트리 잔여 완료
+- 노드 비용·남은 주·양수 진행 막대, 선택/hover/focus 기술의 모든 선행 경로 강조. 툴팁에 methodMarginAtBase·직종별 자리·투입→산출 레벨당 하루 수치. 법 해금 줄은 국가 법 탭으로 연결.
+- 휠 마우스 위치 확대50~150%, +/−·0맞춤, research-view 배율/스크롤 저장·복원. 처음 열 때 현재 연구 중앙. 진행 막대는 축소 배율에서도 약6px(53%에서 실측5.99px 반올림).
+- 루트 typecheck·클라이언트33파일84시험 통과(갈라진 선행 경로 합집합 회귀 포함). 1920×1028 헤드리스 스크린샷 확인: C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/nov5-research-ko-light.png, nov5-research-en-dark.png, nov5-research-path-ko.png, nov5-research-view-restored.png. 검증 세계 괴철로4500pt/진행2250/주20→113주·50%, 증기기관 선행 선5개, 휠110%·0맞춤53%·닫기/재열기53%/스크롤0 복원·법 링크→국가 법 탭 확인. 연구 상세 본문943/scroll943. 검증 저장 복원. 끝까지 실제 연구 완료/모든 노드 툴팁 실표시는 미검증.
+- 2-67 커밋494714b. 다음2-49 철거 아이콘.
+
+## 2026-11-05 2-49 철거 표시 완료 · 회수 자재 막힘
+- 지역 종류 행/상품 관련 건물 행에 demolish 그림24px + 대기 레벨 배지. 지도에는 지역의 철거 대기 레벨 합계, 확대해도 이름표와 같은 고정 표시 크기. 설명 문장 없이 숫자/그림, 정확한 철거 라벨 툴팁.
+- 루트 typecheck·클라이언트33파일84시험 통과. 1920×1028 헤드리스 스크린샷 확인: C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/nov5-demolition-en-dark.png, nov5-demolition-ko-light.png. 별도 검증 세계 벌목장2/농장3→지도5, 목록 아이콘 실제24px. 검증 저장 복원. 상품 관련 행 및 철거 주간 완료까지의 시간 경과는 미검증.
+- 막힘: SalvageLot.buildingId 미제공으로 건물별 회수 자재는 기존 sim 요청 유지. 연구 커밋0acd2a5. 다음2-62 공사 수수료 라벨/계산 툴팁.
+
+## 2026-11-05 2-62 공사 수수료 잔여 완료
+- ledgerLabels.buildFees·장부 툴팁을 모든 공사의 공사 수수료로 정정, 폐기 budgetLines.fees 제거. 건축사무소 개별/그룹 매출·폭포 라벨을 공사 수수료로, day.fee·officeMargin 계산 툴팁 추가. 재정 국영 사업 상세 매출에도 방식 이익률 식. 사무소 매출 양수면 목록 비용 막대 표시(정부 일반 예외와 분리).
+- 루트 typecheck·클라이언트33파일84시험 통과. 1920×1028 헤드리스 스크린샷 확인: C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/nov5-office-fees-ko-light.png, nov5-office-fees-en-dark.png. 수수료0/기본 방식20% 식 확인. 영문 긴 폭포 라벨은100px 칸으로 막대 겹침 해소. 양수 실제 수수료·재정 매출 툴팁 실제 표시·장부 전 항목은 화면 미검증(상수/필드 경로 코드 대조).
+- 철거 커밋d8c480d. 다음2-64 건설 카드 산업 유형.
+
+## 2026-11-05 2-64 건설 산업 유형 완료
+- IndustryLabel은 sim industryOf/INDUSTRIES의 양 언어 이름을 읽음. 건설 목록·펼친 방식·열 방식 비교 머리에 표시, 해당 산업 없음은 숨김. 방식 비교에 methodMarginAtBase 기준 원료비/매출 비율 행 추가(매출0은 —).
+- 루트 typecheck·클라이언트33파일84시험 통과. 1920×1028 헤드리스 스크린샷 확인: C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/nov5-types-ko-light.png, nov5-types-en-dark.png. 방직 카드 기본/아래 방식 가공, 맞춤/고급 방식 숙련 분리 확인. 공사/실제 방식 전환 및 비율 행 전체 조합은 미검증(해당 행은 sim 순수 API를 읽음).
+- 2-62 커밋3d6e3c3. 다음2-55 금융가1좌 가치·자본가 필터.

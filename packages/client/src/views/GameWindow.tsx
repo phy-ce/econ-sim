@@ -43,7 +43,7 @@ function GameWindowView({id,game,mapRegionId,request,onOpenWindow,active=true}:{
  if(route.kind==='trends')return <BottomPanel onFinance={()=>go({kind:'state',tab:'budget'})} onGood={onGood} game={game} world={world} history={game.history} lastReadTick={game.lastReadTick} onRead={game.markRead} onJump={onRegion} kingdomId={route.kingdomId??world.companies.find(c=>c.id===route.companyId)?.kingdomId??null} onViewKingdom={onKingdom} sequence={route.kingdomId!==undefined||route.companyId!==undefined?sequence:undefined} onBuilding={onBuilding} onEvent={onEvent} popRequest={null}/>;
  if(!me)return null;
  if(route.kind==='state')return <StatePanel active={active} game={game} world={world} me={me} onBuilding={onBuilding} onResearch={techId=>go({kind:'research',techId})} requestedTab={route.tab} sequence={sequence}/>;
- if(route.kind==='research')return <ResearchPanel game={game} world={world} me={me} request={techRequest}/>;
+ if(route.kind==='research')return <ResearchPanel onPolicy={()=>go({kind:'state',tab:'laws'})} game={game} world={world} me={me} request={techRequest}/>;
  if(route.kind==='construction')return <ConstructionPanel onOpenRegion={onBuildings} game={game} world={world} me={me} regionId={region.id} onRegion={regionId=>go({kind:'construction',regionId})}/>;
  return null;
 }

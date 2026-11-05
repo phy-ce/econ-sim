@@ -151,3 +151,17 @@
 .strategy-panel .building-cost-bar .segbar {height:6px;gap:1px}
 .strategy-panel .group-metrics .building-cost-bar .bar {height:6px;min-height:6px;min-width:0;margin:0;flex-shrink:1}
 .building-cost-bar.loss::after {content:'';position:absolute;right:0;top:0;bottom:0;width:2px;background:var(--bad)}
+.ownership-browser .owner-holdings th:first-child,.ownership-browser .owner-holdings th:nth-child(2),.ownership-browser .owner-holdings th:nth-child(3) {width:auto}
+.owner-holdings {table-layout:fixed;width:100%}.owner-holdings th,.owner-holdings td {overflow-wrap:anywhere}.owner-holdings small {display:block;font-size:10px}.owner-holdings tfoot {border-top:2px solid var(--gold);font-weight:bold}
+.ownership-browser .owner-holdings th {white-space:normal;font-size:10px}
+.ownership-browser .owner-holdings td {white-space:nowrap;height:auto;vertical-align:middle}
+.ownership-browser .owner-holdings td small {position:static;display:block;line-height:1.5;margin-top:3px}
+.ownership-browser .system-table td {font-family:var(--sans)}
+.region-trade {display:grid;gap:8px;padding:6px;font-size:11px}.region-trade>div {display:flex;align-items:center;gap:8px}.region-trade>div>span:first-child {flex:0 0 105px}.region-trade .bar {height:8px;min-height:6px}.region-trade>div>b {margin-left:auto}
+.research-atlas .research-node {gap:4px}.research-atlas .research-node .bar {height:6px;min-height:6px;border-width:1px}.research-atlas .research-node.in-path {box-shadow:inset 0 0 0 1px var(--accent)}
+.research-unlocks>.entity-link {display:flex;justify-content:space-between;text-align:left;white-space:normal;font-size:11px}
+.research-atlas .research-node .bar {flex:0 0 6px}
+.strategy-panel .demolition-badge {display:inline-flex;align-items:center;gap:3px;color:var(--ink);font-size:11px;background:var(--chip);border:1px solid var(--gold);padding:0 3px}.strategy-panel .demolition-badge .spr {width:24px!important;height:24px!important;flex:none}
+.atlas-demolition rect {fill:var(--sheet);stroke:var(--gold);stroke-width:2}.atlas-demolition text {fill:var(--ink);font-size:24px;text-anchor:middle;font-family:var(--sans);font-weight:700}
+.group-detail-ledger .wf-row {grid-template-columns:100px minmax(0,1fr) auto}.group-detail-ledger .wf-label {overflow-wrap:anywhere}
+.industry-label {display:block;width:max-content;max-width:100%;font-size:10px;font-weight:400;margin:2px 0}

@@ -1,8 +1,9 @@
+import {OwnerHoldings} from './OwnerHoldings';
 import {t as uiCopy} from '../i18n';
 import {BuildingPops} from './BuildingPops';
 import {OwnerSummary} from './OwnerSummary';
 import {useState,type ReactNode} from 'react';
-import {holdingsOf,buildingEcon,isOwnerBuilding} from '@econ/sim';
+import {buildingEcon,isOwnerBuilding} from '@econ/sim';
 import type {World} from '@econ/sim';
 import {buildingName,regionName,className,useLang,useT} from '../i18n';
 import {NumericValue} from '../NumericValue';
@@ -17,7 +18,6 @@ export function OwnershipBrowser({world,children,initialPage=null}:{world:World;
  const page=nav.pages[nav.at],pop=typeof page==='object'&&page!==null&&'pop' in page?world.pops.find(p=>p.id===page.pop):undefined;
  const area=typeof page==='object'&&page!==null&&'region' in page?world.regions.find(r=>r.id===page.region):undefined;
  const id=typeof page==='number'?page:null,b=world.buildings.find(x=>x.id===id),region=b&&world.regions.find(x=>x.id===b.regionId);
- const holdings=b&&isOwnerBuilding(b.typeId)?holdingsOf(world,b):[];
  const finance=b?.typeId==='finance';
  const unitBased=b?usesOwnerUnits(b):false,unitStats=b&&unitBased?ownerUnitStats(world,b):null;
  const people=b?ownershipPeople(world,b):[];
@@ -35,7 +35,7 @@ export function OwnershipBrowser({world,children,initialPage=null}:{world:World;
  {isOwnerBuilding(b.typeId)?<OwnerSummary buildings={[b]}/>:<div className="explorer-facts"><span>{uiCopy().screenText['levels']}<b>{b.level}</b></span>{isOwnerBuilding(b.typeId)&&<span>{uiCopy().screenText['treasury']}<b><NumericValue value={b.cash??0} format="money"/></b></span>}<span>{uiCopy().screenText['weeklyIncomeProfit']}<b><NumericValue value={econ!.profitWeek} format="signedMoney"/></b></span></div>}
  {isOwnerBuilding(b.typeId)?<>
  {unitStats&&<div className="explorer-facts"><span>{T.ownerUnits}<b><NumericValue value={unitStats.units} format="two"/></b></span><span>{T.ownerUnitValue}<b>{unitStats.nav===undefined?'—':<NumericValue value={unitStats.nav} format="money"/>}</b></span><span>{T.ownerUnitWeekly}<b><NumericValue value={unitStats.weekly} format="money"/></b></span><span>{T.ownerUnitYield}<b>{unitStats.yield===null?'—':shareLabel(unitStats.yield)}</b></span></div>}
- <h4>{uiCopy().screenText['holdings']} · {holdings.length}</h4><table className="system-table"><thead><tr><th>{uiCopy().screenText['regionBuilding']}</th><th>{uiCopy().screenText['relation']}</th><th>L / %</th></tr></thead><tbody>{holdings.map(h=><tr key={h.building.id}><th><button className="entity-link" onClick={()=>go(h.building.id)}>{regionName(world.regions.find(r=>r.id===h.building.regionId)!)} · {buildingName(h.building.typeId)} ↗</button></th><td>{h.kind==='rent'?(uiCopy().screenText['rent']):(uiCopy().screenText['shares'])}</td><td><NumericValue value={h.building.level*h.share} format="compact"/> / {shareLabel(h.share)}</td></tr>)}</tbody></table>{!holdings.length&&<p>{uiCopy().screenText['noHoldings']}</p>}
+ <OwnerHoldings world={world} owner={b} onBuilding={go}/>
  <h4>{unitBased?(uiCopy().screenText['investors']):(uiCopy().screenText['nobles'])}</h4>
  <table className="system-table"><thead><tr><th>{uiCopy().screenText['regionClass']}</th><th>{uiCopy().screenText['population']}</th><th><span tabIndex={0} className="help-text" data-help={unitBased?(uiCopy().screenText['shareOfUnitsInThisFundNot']):(uiCopy().screenText['distributionWeightPopulationClassWeightNotLand'])}>{unitBased?(uiCopy().screenText['unitsShare']):(uiCopy().screenText['distributionShare'])}</span></th></tr></thead><tbody>{people.map(({p,weight})=><tr key={p.id}><th><button className="entity-link" onClick={()=>visit({pop:p.id})}>{regionName(world.regions.find(r=>r.id===p.regionId)!)} · {className(p.prof)} <small>#{p.id}</small> ↗</button></th><td><NumericValue value={p.size} format="compact"/></td><td>{unitBased&&<>{weight<.005?'<0.01':<NumericValue value={weight} format="two"/>} / </>}{shareLabel(total?weight/total:0)}</td></tr>)}</tbody></table>{!people.length&&<p>{uiCopy().screenText['noRegisteredRecipients']}</p>}
  {finance&&<><h4 data-help={uiCopy().screenText['popsEmployedByThisFundPopulationIncludes']} tabIndex={0}>{uiCopy().screenText['staff']}</h4><table className="system-table"><tbody>{world.pops.filter(p=>p.work===b.id&&p.size>0).map(p=><tr key={p.id}><th><button className="entity-link" onClick={()=>visit({pop:p.id})}>{className(p.prof)} #{p.id} ↗</button></th><td><NumericValue value={p.size} format="compact"/></td></tr>)}</tbody></table></>}
