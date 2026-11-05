@@ -8,6 +8,7 @@ import { isGovernment, crewOf, depositFree, harvestFactor,isOwnerBuilding,office
 import { NumericValue } from '../NumericValue';
 import { OwnerBadge } from './OwnerBadge';
 import { Workforce } from './Workforce';
+import {MethodComparison} from './MethodComparison';
 import {SupplyDemandPreview} from './SupplyDemand';
 import {sdText,supplyDemandProjection} from '../supplyDemand';
 // 상회 패널: 내 상회(조작 가능)와 다른 상회(읽기 전용). 시안 "내 상회 · 투입·산출·수지" 기준.
@@ -18,7 +19,7 @@ import {
   SKILLS, POP_CLASSES, TECHS, companyById, paysDividend, peasantSlots, availableMethods, canBuildType, constructionEstimate, creditLimit, estimateAfterEntry,
   estimateMethod, getMethod, hasBuilder, knowsTech, landFree, slots, wagesAt, regionById, researchableTechs,
 } from '@econ/sim';
-import type { Building, Company, GoodBag, GoodId, Region, Skill, PopClass, World } from '@econ/sim';
+import type { Building, Company, GoodId, Region, Skill, PopClass, World } from '@econ/sim';
 import { ChevronDown, X, Coins, Crown, ArrowUp, ArrowDown, Pause, Play } from 'lucide-react';
 import type { Game } from '../useGame';
 import { BuildingSprite, GoodSprite, Sprite64 } from '../sprites';
@@ -28,12 +29,6 @@ import { className, buildingName, companyName, goodName, landName, methodName, r
 
 const qty = (v: number) => (v < 10 ? one(v) : int(v));
 const spct = (v: number) => `${v >= 0 ? '+' : '−'}${Math.round(Math.abs(v) * 100)}%`;
-
-const Bag = ({ bag }: { bag: GoodBag }) => {
-  const items = GOOD_IDS.filter((g) => bag[g]);
-  if (items.length === 0) return <span className="muted">—</span>;
-  return <>{items.map((g) => <span key={g} className="bag-item"><GoodSprite g={g} /> {goodName(g)} <span className="pxnum">{qty(bag[g]!)}</span></span>)}</>;
-};
 
 // ---------------------------------------------------------------- 건물 한 줄의 수치
 
@@ -303,17 +298,7 @@ function Controls({ r, game, world, owner }: { r: Row; game: Game; world: World;
           onClick={() => game.command({ type: 'expand', buildingId: b.id, levels: 5 })}>+5</button>
       </span>
       {(b.shrinking??0)>0&&<button className="sm-btn" onClick={()=>game.command({type:'cancelDemolish',buildingId:b.id})}>{T.cancelDemolition}</button>}
-      <select value={b.methodId} aria-label={T.method} onChange={(e) => game.command({ type: 'setMethod', buildingId: b.id, methodId: e.target.value })}>
-        {type.methods.map((m) => {
-          const ok = knowsTech(owner, m.tech);
-          const est = estimateMethod(world, b.regionId, b.typeId, m.id, wagesAt(owner,b.typeId,world,b.regionId));
-          const label = !ok ? T.optNeedsTech(techName(m.tech!))
-            : m.construction ? T.optOffice(m.construction, money(est.inputCost + est.wageCost))
-            : T.optProfit(signedMoney(est.profit));
-          return <option key={m.id} value={m.id} disabled={!ok}>{methodName(m)} {label}</option>;
-        })}
-      </select>
-      <details><summary>{T.method} · 1 L</summary>{type.methods.map(m=><div key={m.id}><strong>{methodName(m)}</strong><FlowRow world={world} typeId={b.typeId} methodId={m.id} regionId={b.regionId}/></div>)}</details>
+      <MethodComparison world={world} building={b} owner={owner} game={game}/>
       {!(owner.state && isGovernment(b.typeId)) && <><label className="util">
         <span className="lbl">{T.utilisation}</span>
         <input type="range" min={10} max={100} step={10} value={Math.round(b.utilization * 100)} aria-label={T.utilisation}

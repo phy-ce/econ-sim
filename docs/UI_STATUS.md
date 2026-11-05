@@ -291,3 +291,9 @@ DetailWindow 독립 NavigationProvider/버튼, BuildingPops 및 ResourceInspecto
 - 루트 typecheck·클라이언트30파일79시험 통과. 방향 경계·무표시 구간 회귀 포함.
 - 1920×1028 스크린샷 확인: C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/nov5-wage-target-ko-light.png, nov5-wage-target-en-dark.png. 동부 삼림 노동자 시장3.17/목표3.04/아래3.04/위6.09/자리8.1k/오려는52.7k, 직접 API target3.044533609와 일치. 복제 세계 다음 날 시장3.173261066→3.160388320 하락으로 아래 화살표 일치. 본문403/scroll403. 주간 경계 갱신의 장기 화면 및 전 직종 다음 날 대조는 미검증.
 - 2-82 커밋7723ec9. 사용자 지정 선행 작업2-79/2-87/2-85/2-75/2-82/2-86 완료, 다음 0장5번 2-51 방식 비교 잔여부터.
+
+## 2026-11-05 2-51 잔여 완료
+- select/방식별 흐름 목록을 현재 방식 첫 열의 비교 표로 교체. 투입·산출·일자리·서비스·일간 손익·매출 기준 이익률, 다른 방식의 차이 칩·경험−50%·잠금 기술 툴팁. 열 머리 클릭으로 setMethod. 좁은 창은 표 안 가로 스크롤만 사용(본문403/scroll403). 건설 카드의 좁은 FlowRow 목록은 명세의 대체 배치 유지.
+- FlowRow 툴팁에 efficiencyParts 구성과 기상 배율, 레시피 숫자 소수2자리. 미사용 Bag/bag 및 optProfit/optOffice/optNeedsTech 문자열 정리.
+- 루트 typecheck·클라이언트31파일80시험 통과. 1920×1028 스크린샷 확인: C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/nov5-method-comparison-ko-light.png, nov5-method-comparison-en-dark.png, nov5-method-header-click-ko.png. 건축사무소20레벨/3방식/차이17칩, 별도 해금 검증에서 build_manual→build_scaffold 머리 클릭 및 경험1→0.5 확인. 검증용 저장 복원. 흐름 툴팁 효율1.2/경험1/규모1.2/특성1/인력0.41/기상1 대조. 다른 건물 전 방식 조합은 미검증.
+- 2-86 커밋ec66794. 사용자 추가 제보 '지도 확대 시 이상'을 다음 깨진 화면으로 먼저 재현/수정한 뒤 0장6번(2-59) 진행.

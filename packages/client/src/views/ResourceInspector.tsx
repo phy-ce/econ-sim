@@ -16,7 +16,7 @@ import { ListTools } from './ListTools';
 import { useId, useEffect } from 'react';
 import { ArrowDownToLine, ArrowUpFromLine, ArrowRight, Factory, Pause, ChevronRight } from 'lucide-react';
 import { TUNE, getMethod, companyById } from '@econ/sim';
-import type { Building, GoodBag, GoodId, Region, World } from '@econ/sim';
+import type { Building, GoodId, Region, World } from '@econ/sim';
 import { BuildingSprite, GoodSprite } from '../sprites';
 import { buildingName, goodName, regionName, methodName, useLang, useT } from '../i18n';
 import { compact, money, pct } from '../format';
@@ -32,10 +32,6 @@ export function BuildingInspector({ building: input, world, onGood, onCompany, g
   const T = useT();
   const method = getMethod(b.typeId, b.methodId);
   const owner = companyById(world, b.companyId);
-  const bag = (goods: GoodBag) => <div className="recipe-goods">{Object.entries(goods).map(([g, n]) =>
-    <button key={g} onClick={() => onGood(g as GoodId)} title={goodName(g as GoodId)}>
-      <GoodSprite g={g as GoodId} size={32} /><span>{goodName(g as GoodId)}<small><NumericValue value={(n ?? 0) * b.level} format="compact"/></small></span>
-    </button>)}{!Object.keys(goods).length && <span className="muted">—</span>}</div>;
   return <section className="building-inspector" aria-label={buildingName(b.typeId)}>
     <div className="inspector-heading"><BuildingSprite typeId={b.typeId} size={88} /><div><h3>{buildingName(b.typeId)} ×{b.level}</h3><p>{methodName(getMethod(b.typeId, b.methodId))}</p>
       <button className="link-btn" onClick={() => onCompany(b.companyId)}><OwnerBadge company={owner} world={world}/> <ChevronRight size={14} /></button></div></div>
