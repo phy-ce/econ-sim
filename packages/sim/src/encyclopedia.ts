@@ -263,7 +263,7 @@ export const ENCYCLOPEDIA: EncEntry[] = [
       tune('startPopLand', '농지는 원래 인구로 (1) / 줄인 인구로 (0)', 'Farmland from original (1) / scaled (0) population'),
     ],
     example: () => {
-      const def = REGIONS[1], plots = (s: number) => Math.round((def.plot * (1 + s * PLOT_JITTER)) / 10) * 10;
+      const def = REGIONS[3], plots = (s: number) => Math.round((def.plot * (1 + s * PLOT_JITTER)) / 10) * 10;
       return {
         inputs: [row(`${def.name} 부지`, `${def.nameEn} plots`, def.plot, 'level'), row('부지 흔들림', 'Plot jitter', PLOT_JITTER, 'pct')],
         steps: [row('가장 적을 때', 'Lowest', plots(-1), 'level'), row('가장 많을 때', 'Highest', plots(1), 'level')],

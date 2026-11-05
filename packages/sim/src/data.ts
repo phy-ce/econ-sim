@@ -521,7 +521,7 @@ export function scaleBonus(level: number): number {
  * - investUpper, investMiddle, investLower: 투자법을 전문가까지·기술자까지·노동자·농부까지 넓힐 수 있는 금융가 자산 비율
  * - financeWage, financeBonus, financeStaff: 금융가 전문가의 보장 임금(하루), 성과급(금융가가 받은 배당의 비율, 인원대로), 가진 레벨 1당 전문가 자리
  * - startLumber, startFiber: 시작 민간 벌목장·섬유 농장 레벨 (지역 인구 10만 명당). 소작지가 목재·섬유를 조금만 내서 건축사무소가 첫날부터 쓸 목재가 있어야 한다
- * - startPopScale, startPopLand: 비교용 시작 인구 배율 (world.ts regionStarts). 지역 시작 인구(계층마다)에 startPopScale 을 곱한다. 시작 생산 건물·부지·회사 시작 돈은 원래 인구로 센다.
+ * - startPopScale, startPopLand: 비교용 시작 인구 배율 (world.ts regionStarts). 지역 시작 인구(계층마다)에 startPopScale 을 곱한다. 시작 생산 건물·회사 시작 돈은 원래 인구로 센다 (부지는 인구와 상관없다).
  *   startPopLand 0 = 소작지(경작지)도 줄어든 소작 노동 인구로 센다, 1 = 원래 인구로 센다 (같은 땅에 사람만 적다). 행정청은 줄어든 인구로 센다 (지금 규칙)
  * - startWorkshop: 왕국마다 시작 민간 목공구 공방 레벨 (건축사무소가 있는 지역). 소작지가 공구를 내지 않아(7-25) 첫날 공구 공급원이 이것뿐이다
  * - rawFullWealth, rawCapWealth: 원자재로 의복·생활용품을 다 채울 수 있는 부 상한, 원래 상한(max)이 되는 부 (rawMax)
@@ -864,7 +864,7 @@ export function regionPerk(regionId: number, typeId: string): number {
 
 /**
  * 지역 티어 (발전 단계). 시작 인구·계층 구성·교육·경작지·시작 농장은 티어와 시드로 정한다 (world.ts regionStart).
- * 산림과 광맥 잠재량(veins)은 지역마다 고정(지형)이다. 공장 부지(plot)도 지역 정의 값이고 시드는 ±PLOT_JITTER 만 흔든다 (인구와 묶지 않는다). 광맥은 처음에 잠재량 × TUNE.prospectStart 만 알려져 있고 나머지는 탐광으로 찾는다 (economy.ts prospect). 비율은 총인구 대비, 땅은 인구 10만 명당 칸 수다.
+ * 산림과 광맥 잠재량(veins)은 지역마다 고정(지형)이다. 공장 부지(plot)도 지역 정의 값이고 시드는 ±PLOT_JITTER 만 흔든다 (인구와 묶지 않는다). 광맥은 처음에 잠재량 × TUNE.prospectStart 만 알려져 있고 나머지는 탐광으로 찾는다 (economy.ts prospect). 비율은 총인구 대비, farms 는 인구 10만 명당 레벨이다.
  * - pop: 인구 범위 / aristocrat·gentry·skilled·expert: 계층 비율 (나머지는 소작농) / education: 교육 접근도
  * - arableSlack: 소작농 노동 인구를 다 앉힐 칸 × 이 배율이 경작지 / farms: 시작 민간 곡물 농장 레벨
  * farms 는 1레벨이 일꾼 1,000명에서 약 500명이 될 때(2026-10-22) 두 배로 했다
