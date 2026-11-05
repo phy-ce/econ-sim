@@ -405,3 +405,7 @@ DetailWindow 독립 NavigationProvider/버튼, BuildingPops 및 ResourceInspecto
 - ConstructionDetail 건물ID 줄·BuildingEconomics 개별 상세·CompanyPanel 건물 줄에 ActualOutput 공통 표시. 숫자소수2자리·100% 초과 유지, 막대만100%에서 자름. 툴팁에 가동률/작업 인원/효율/원료/기상/사무소 부하. 멈춤은 과거 inputFill이 남아도0, 쉬는 사무소도0. 실시간 officeLoad를 읽으므로 마지막 생산 포인트를 역산한 수치와는 다를 수 있음.
 - 행정청은 finance.adminCapacityOf의 식과 대조: 단독 행정청 세계에서 표시비율×기본징세한도=공개 taxCapacity API(crew0.65/util0.8/fill0.4)로 시험. sim 함수 요청 없음. 원료0·정지·idle·일감0·기상·100% 초과 시험 포함.
 - 루트 typecheck·클라이언트35파일91시험 통과. 1920×1028 헤드리스 스크린샷 확인: C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/actual-admin-ko-light.png, actual-admin-en-dark.png. 행정청1001 실제 가동78.52%, 통합 줄/개별 상세 동일, 상세491/scroll491. 정지/원료0/100%초과는 자동 시험 확인(그 조합의 화면은 미검증). 다음2-82 중복 표.
+
+## 2026-11-06 2-82 부 이동 중복 수정
+- 실제 가동 커밋b6c8c4b. BuildingPops의 소득·세금 펼침 안에 다시 나오던 WealthDrift 제거. 상단 부 이동 표1개와 소득·세금 내역은 유지.
+- 루트 typecheck·클라이언트35파일91시험 통과. CSS1920×1028 헤드리스 스크린샷 확인: C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/drift-single-ko-light.png. 인구 표→첫 집단 상세, building-pops1/wealth-drivers1 실측. 다음0장2-94 기술 잠금.
