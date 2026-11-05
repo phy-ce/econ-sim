@@ -3,7 +3,7 @@ import { HarvestBadge } from './HarvestBadge';
 import { NumericValue } from '../NumericValue';
 import { regionLivingStandard } from '../systemMetrics';
 import { SortHeader } from './SortHeader';
-import { useState, useRef } from 'react';
+import { memo, useState, useRef } from 'react';
 import mapData from '../map/regions.json';
 import {MAP_FRAME,clampMapCamera,zoomMapCamera} from '../mapCamera';
 import '../map/atlas.css';
@@ -29,7 +29,7 @@ export function wealthColor(value:number,stops=WEALTH_STOPS):string{
  for(let i=1;i<stops.length;i++){const low=stops[i-1],high=stops[i];if(value<=high.value){const weight=(value-low.value)/(high.value-low.value)*100;return `color-mix(in oklab, ${low.color} ${(100-weight).toFixed(4)}%, ${high.color} ${weight.toFixed(4)}%)`;}}
  return stops.at(-1)!.color;
 }
-export function RegionMap({ world, selected, onSelect }: { world: World; selected: number; onSelect: (id: number) => void }) {
+function RegionMapView({ world, selected, onSelect }: { world: World; selected: number; onSelect: (id: number) => void }) {
   const [camera,setCamera]=useState({x:0,y:0,zoom:1});
   const drag=useRef<{x:number;y:number;cx:number;cy:number;scale:number;moved:boolean}|null>(null);
   const suppressClick=useRef(false);
@@ -102,3 +102,5 @@ export function RegionMap({ world, selected, onSelect }: { world: World; selecte
     </>
   );
 }
+
+export const RegionMap=memo(RegionMapView);
