@@ -422,3 +422,7 @@ DetailWindow 독립 NavigationProvider/버튼, BuildingPops 및 ResourceInspecto
 ## 2026-11-06 2-55 직종 필터 잔여 완료
 - 복지 상한 커밋0fc470c. 인구 표 직종 select에서 폐기 직종capitalist 제외, 과거 탐색 이력에 그 필터가 남았으면 전체로 복귀. sim 직종·실제 인구 자료는 변경하지 않음.
 - 루트 typecheck·클라이언트37파일93시험 통과. CSS1920×1028 헤드리스 스크린샷 확인: C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/professions-ko-light.png. option값은 전체/unskilled/farmer/skilled/expert/gentry/peasant/aristocrat, capitalist0개. 다음2-62 비용 막대 라벨.
+
+## 2026-11-06 2-62 비용 막대 라벨 잔여 완료
+- 직종 필터 커밋c50f91b. BuildingCostBar에서 day.fee>0인 매출 툴팁 라벨을 공사 수수료/Construction fees로 변경. 일반 생산은 기존 판매 라벨.
+- 루트 typecheck·클라이언트37파일93시험 통과. CSS1920×1028 헤드리스 스크린샷 확인: C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/cost-fees-ko-light.png. 일시정지된 검증 세계 사무소1000의 화면 복제값fee/revenue100, inputs10, wages20→공사 수수료100/이익70/70% 툴팁 확인(저장하지 않음). 다음2-83 재해 칩.
