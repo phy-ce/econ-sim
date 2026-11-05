@@ -836,7 +836,7 @@ export class Collector {
     // 오려는 사람 ÷ 자리. 자리 임금은 지역 시장 임금 (없으면 그 지역 고용 가중 임금, 고용이 없으면 직종 전체 임금)
     const lab = this.labourRows(w, inScope, wageOf);
     // 0b′ 5-1: 저택·금융가 금고 합, 남은 금고 공사 약정액 (약정 − 낸 공사비, finance.ts pledgeLeft 의 합), 행정청 인원·레벨
-    let vault = 0, pledge = 0, adminStaff = 0, adminLv = 0, adminSt = 0, manorCash = 0, manorNav = 0, manorN = 0;
+    let vault = 0, pledge = 0, adminStaff = 0, adminLv = 0, adminSt = 0, manorCash = 0, manorNav = 0, manorNavMin = Infinity, manorN = 0;
     // 저택 지분 고침 (wt-manor): 범위 안 소유 건물이 가진 레벨 (어느 지역 건물이든, 금융가·저택), 범위 안 건물의 주인 있는 레벨 (민간 레벨)
     let lvFin = 0, lvMan = 0, lvOwn = 0;
     {
@@ -860,8 +860,17 @@ export class Collector {
     for (const b of w.buildings) {
       if (!inScope(b.regionId)) continue;
       if (isOwnerBuilding(b.typeId)) vault += b.cash ?? 0;
-      if (b.typeId === 'manor') { manorCash += b.cash ?? 0; manorNav += b.nav ?? 1; manorN++; }
+      if (b.typeId === 'manor') { manorCash += b.cash ?? 0; manorNav += b.nav ?? 1; manorNavMin = Math.min(manorNavMin, b.nav ?? 1); manorN++; }
       if (b.typeId === 'admin') { adminLv += b.level; adminSt += b.last.staffing * b.level; for (const s of SKILLS) adminStaff += b.employed[s]; }
+    }
+    // 저택 지분 합과 그중 상급 귀족 몫 (범위 안 pop, wt-manornav)
+    let manorUnits = 0, manorUnitsHigh = 0;
+    {
+      const manorIds = new Set(w.buildings.filter((b) => b.typeId === 'manor').map((b) => b.id));
+      for (const p of w.pops) {
+        if (!p.fund || !inScope(p.regionId)) continue;
+        for (let j = 0; j < p.fund.id.length; j++) if (manorIds.has(p.fund.id[j])) { manorUnits += p.fund.u[j]; if (p.prof === 'aristocrat') manorUnitsHigh += p.fund.u[j]; }
+      }
     }
     for (const x of w.constructions) {
       if (!x.funders || !inScope(x.regionId)) continue;
@@ -998,7 +1007,9 @@ export class Collector {
       // 저택 지분 (wt-manor): 하급 귀족 실업 비율·생활수준, 상급 귀족 생활수준, 1인 하루 소득 (한 해 소득 ÷ 연말 인원 ÷ 360), 저택 금고 합 (백만)·지분 값 평균
       gJobless: sig(div(jobless[CI.gentry], n[CI.gentry]) ?? NaN), solGent: sig(div(sol[CI.gentry], n[CI.gentry]) ?? NaN), solArist: sig(div(sol[CI.aristocrat], n[CI.aristocrat]) ?? NaN),
       incGent: sig(div(clsInc(CI.gentry), n[CI.gentry] * TICKS_PER_YEAR) ?? NaN), incArist: sig(div(clsInc(CI.aristocrat), n[CI.aristocrat] * TICKS_PER_YEAR) ?? NaN),
-      manorCash: sig(manorCash / M), manorNav: sig(div(manorNav, manorN) ?? NaN),
+      manorCash: sig(manorCash / M), manorNav: sig(div(manorNav, manorN) ?? NaN), manorNavMin: sig(manorN ? manorNavMin : NaN),
+      // 저택 지분 중 상급 귀족이 가진 비율 (연말, wt-manornav: 새 발행이 누구에게 가는가)
+      manorHighSh: sig(div(manorUnitsHigh, manorUnits) ?? NaN),
       // 저택 지분 고침 (wt-manor): 연말 금융가 자산 비율 (투자법 조건, 왕국만), 소유 건물이 가진 레벨 (금융가·저택), 민간 레벨,
       // 한 해 금융가 지분 사기 (백만, 귀족 / 그 밖 계층), 저택 새 지분 사기 (백만, 범위 안 저택이 판 것)
       ...(k ? { finRatio: sig(financeRatio(w, k.id)) } : {}), lvFin, lvMan, lvOwn,

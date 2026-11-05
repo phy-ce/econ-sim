@@ -580,8 +580,9 @@ export const TUNE = {
   // 2026-11-02 기본 1 (20년 × 시드 1·2 × salt 0..3, wt-manor 743c8c6: 5·10·15·20년차 세전 총생산 평균 512/520/571/671 대 0 의 498/497/536/622, salt 띠는 겹침. 근거 DESIGN 11)
   manorInvestSplit: 1,
   // 부재 지주 몫 (2026-11-02 사용자 결정 "다른 지역 배당 디버프", DECISIONS 7-44): 저택·금융가가 자기 지역 밖 건물에서 받는 배당의 이 비율은 그 건물 지역의 저택으로 간다 (finance.ts payDividends). 0 = 끔
-  // 저택 지분 값에 지대를 넣는다 (2026-11-05 사용자 결정, MANOR_SHARES.md 2단계, DECISIONS 7-44): 자산 += 주간 지대 × manorNavRentWeeks. 0 = 끔. manorNavBuilds 1 = 짓고 있는 공사에 낸 돈도 자산이다 (finance.ts ownerAssets)
-  manorNavRentWeeks: 0,
+  // 저택 지분 값에 지대를 넣는다 (2026-11-05 사용자 결정, MANOR_SHARES.md 2단계, DECISIONS 7-44): 자산 += 주간 지대 × manorNavRentWeeks. 0 = 끔.
+  // 26·52·104 와 짓는 공사 넣기를 비교해 52 (근거 DESIGN 11, 보고서 2026-11-05-manornav). manorNavBuilds 1 = 짓고 있는 공사에 낸 돈도 자산이다 (finance.ts ownerAssets, 기본 끔: 비교에서 나아진 것이 없었다)
+  manorNavRentWeeks: 52,
   manorNavBuilds: 0,
   absenteeShare: 0, // 끔: manorShares 켬(97c1bc5) 뒤 10%·20% 다시 비교 안 함, DECISIONS 7-44 결정 대기 4
   // 저택 지분 고침 (AI 판단, wt-manor 2026-11-02, 진단 .tmp/manor-diag/RESULT.md: 지분을 켜면 금융가가 차가운 시작에 갇혀 투자법이 넓어지지 않는다). 0 = 끔 (4509ec3 전 동작, samecheck 같음).

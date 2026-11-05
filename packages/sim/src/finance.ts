@@ -577,12 +577,12 @@ export interface OwnerView { y: number; level: number }
 const viewCache = new WeakMap<World, { step: number; m: Map<number, OwnerView> }>();
 
 /**
- * 새 돈의 기대 수익률 (AI 판단, TUNE.nobleChoice 1, 하루(step)마다 처음 물을 때 정한다). 지분 값(세계 규칙)은 그대로 두고 귀족·소유 건물이 판단에만 쓴다.
+ * 새 돈의 기대 수익률 (AI 판단, TUNE.nobleChoice 1, 하루(step)마다 처음 물을 때 정한다). 지분 값(세계 규칙)과 따로, 귀족·소유 건물이 판단에만 쓴다.
  * - 새 레벨 수익률 r: 그 왕국 민간 건물(주인이 있는 레벨) 중 그 소유 건물이 좋아하는 종류(favours: 저택은 땅 건물, 금융가는 그 밖)의
  *   주간 배당 추정(profitEma × 7 × (1 − 준비금 몫) × 주인 레벨 ÷ 레벨) 합 ÷ (주인 레벨 × 1레벨 공사비) 합. 1레벨 공사비 평균이 level.
  * - 기대 수익률 = (받는 배당·지대 이동평균 × 7 + r × (금고 + 낸 공사비 + level)) × 주인 몫 ÷ (가진 레벨 값 + 금고 + 낸 공사비 + 저택은 지대 × RENT_ASSET_WEEKS + level).
  *   주인 몫 = 1 − 금고 몫 [금융가는 × (1 − 성과급)]. 금고와 짓고 있는 공사는 새 레벨 수익률로 벌 돈으로 센다. level 한 개를 미리 넣어 두어
- *   가진 것이 없는 금융가(차가운 시작)는 r 로 본다. 저택의 지대(소작지 수확 × rentShare × 7)는 RENT_ASSET_WEEKS 주치를 자산에 넣어, 지분 값에 지대가 빠져 수익률이 부풀어 보이는 것을 판단에서 뺀다
+ *   가진 것이 없는 금융가(차가운 시작)는 r 로 본다. 저택의 지대(소작지 수확 × rentShare × 7)는 지분 값과 같은 주 수(TUNE.manorNavRentWeeks, 0 이면 RENT_ASSET_WEEKS)를 자산에 넣는다. 자산을 부분별로 다시 더하므로 지분 값의 지대와 겹쳐 세지 않는다
  */
 export function ownerViews(w: World): Map<number, OwnerView> {
   const c = viewCache.get(w);

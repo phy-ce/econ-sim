@@ -425,6 +425,9 @@ sim 변경 (wt-research):
   4. 복지 내역 `drillWelfare`: 상한이 기본 켬이라 지역 줄 합(상한 전 필요액)이 줄 값보다 크게 많고, 그 차이가 '평활 차이' 로 보인다 (`FinancePanel.tsx:38`, 도움말이 이동평균 차이라고 말해 틀린 뜻이 된다). 복지 내역에서는 이 줄 이름을 "상한으로 줄인 몫"/"Cut by cap" 으로 바꾼다.
 - 완료 기준: 단계를 바꾸면 상한 숫자가 단계에 비례해 바뀌고, 지난주 복지가 상한을 넘지 않는다.
 
+### 2-90. 저택 지분 값에 지대 (wt-manornav, DESIGN 9.3, DECISIONS 7-44, 사전 `manor-shares` 항목, main 합치기 전 사용자 확인 대기)
+- API·타입 변화 없음. `Building.nav` 를 그대로 읽으면 된다. 저택 지분 값이 약 1.1~1.6 높아져 지분 평가액도 그만큼 크게 보인다. 이 평가액에는 현금이 아닌 지대 몫이 들어 있어, 금고보다 클 수 있다. 화면 코드는 고칠 것이 없다.
+
 ## 3. sim 쪽 필요 사항 (Claude가 처리할 것, UI 작업자는 요청만)
 - **2-59 주 단위 수지 (요청됨, 2026-10-22):** `BuildingEcon`에 `week: { sales, tax, inputs, wages, profit }` (건물 `revenue`·`tax`·`inputCost`·`wageCost`의 이동평균 × 7, `profitEma`와 같은 기간). 들어오면 2-59-3 폭포 라벨을 `/주`로. (2026-11-02 wt-uiapi 보류: 지금 건물에 있는 이동평균은 `profitEma`·`firmEma`(왕실 생산 건물·건축사무소만) 뿐이라 매출·세금·원료비·임금 이동평균을 건물 상태에 새로 저장해야 한다. 읽기 전용이 아니고 골든이 바뀐다.)
 - **2-49 (선택):** 회수 자재 lot에 `buildingId`를 넣고 `salvageOf(w, b)` export. (2026-11-02 wt-uiapi 보류: `SalvageLot` 에 저장 칸을 더해야 해 읽기 전용이 아니다.)

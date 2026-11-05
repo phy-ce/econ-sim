@@ -9,6 +9,13 @@
 - 클라우드 세션(claude.ai/code)으로 이어서 할 수 있다. 규칙은 CLAUDE.md "클라우드 세션"을 본다.
 - 옛 세션 기록: `docs/log/` (2026-10-25 이전 HANDOFF 절은 `docs/log/HANDOFF_2026-10-18_to_10-25.md`, 날짜별 UI 기록도 여기). 다른 문서의 "HANDOFF 0-ind3"·"HANDOFF 0-aifix" 같은 옛 절 참조는 그 파일에 있다.
 
+## 0-1105-manornav
+- 브랜치 wt-manornav (main 71d3fa1 에서), **합치지 않음: 플레이어가 보는 규칙이라 사용자가 먼저 본다**. 사용자 결정 2026-11-05, DECISIONS 7-44, DESIGN 9.3·11, 명세 `docs/overhaul/MANORNAV_SPECS.json`, 보고서 2026-11-05-manornav (대조 대 52, salt 0..3)·2026-11-05-manornav-cand (후보 8개, salt 0).
+- 규칙: 저택 지분 값 자산 += 주간 지대 × `manorNavRentWeeks` (52). `manorNavBuilds` (짓는 공사) 는 스위치만 두고 끔. AI `ownerViews` 는 같은 주 수를 쓴다 (자산을 부분별로 더해 겹치지 않음, 52 이면 AI 식은 전과 같다). 팔기·되사기는 여전히 `treasuryFree` 까지, `manorSellCap`·금고 목표는 돈 기준이라 그대로. 저장 형식 그대로.
+- 마이크로 (`microcheck --preset labor`, 5년 × 시드 1): 지분 값은 주 수만큼 오르고 화폐 어긋남 1e-15 대. 이 세계는 대조도 5년차에 귀족 소득이 0 이 되어 그 뒤는 볼 수 없다.
+- 결과와 약점은 DESIGN 11 `manorNavRentWeeks` 행. 1년차 상급 귀족 소득 약 20 의 대부분은 시작 금고를 돌려준 돈(시드 1 salt 0 에서 53.1 중 41.9)이고, 지분 묽어짐 때문이 아니다.
+- 원인 못 찾은 것: 명령 없는 플레이어 왕국의 금융가 자산 비율이 절반으로 낮다 (AI 판단 식은 같다). 투자법 기준 0.10 에 닿는 해가 늦다. 합치기 전 사용자에게 알린다.
+
 ## 0-1105-taxrates
 - 브랜치 wt-taxrates (main b39fb8c 에서, main 0e00385 병합), premerge 전이라 main 에 합치지 않음. 2026-11-05 사용자 승인 ("ㄱㄱ"). 이슈 #4, DECISIONS 7-50 (a).
 - 같은 브랜치에서 지금 기준 문서를 코드에 맞췄다 (CLAUDE, README, DESIGN, UI_DESIGN, UI_CHANGES 0·3장, DECISIONS 대기 표시). 코드는 바꾸지 않았다.

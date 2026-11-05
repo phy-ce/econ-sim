@@ -1,6 +1,22 @@
 {
  "reports": [
   {
+   "id": "2026-11-05-manornav-cand",
+   "title": "저택 지분 값 후보 8개",
+   "desc": "지대 0·26·52·104주 × 짓는 공사 끔·켬, 20년 × 시드 1·2 × salt 0 (wt-manornav babb810)",
+   "date": "2026-11-05",
+   "created": "2026-11-05T21:04:58",
+   "code": "623ac2c3"
+  },
+  {
+   "id": "2026-11-05-manornav",
+   "title": "저택 지분 값에 지대 52주",
+   "desc": "대조 대 지대 52주, 20년 × 시드 1·2 × salt 0..3 (wt-manornav, main 71d3fa1 위)",
+   "date": "2026-11-05",
+   "created": "2026-11-05T21:04:57",
+   "code": "a5ad1ebc"
+  },
+  {
    "id": "2026-11-05-taxrates",
    "title": "인두세 다시 고르기",
    "desc": "기준 임금 재계산 뒤 pollTax 0.6 / 0.1 / 0.2 / 0.3 비교. 20년 × 시드 1·2 × salt 0..3 (0.3 은 salt 0 만). main b39fb8c",
