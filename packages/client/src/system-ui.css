@@ -141,3 +141,4 @@
 .policy-classes {display:flex;flex-wrap:wrap;gap:6px;padding:6px 0}.policy-classes>span {display:inline-flex}.policy-detail .entity-link {display:inline-flex;align-items:center;gap:4px}
 .strategy-panel .wages>h3,.strategy-panel .wages>.system-facts {grid-column:1/-1}
 .regional-wage-table {table-layout:fixed;width:100%;min-width:0}.regional-wage-table th,.regional-wage-table td {padding:5px 3px;white-space:normal;font-size:10px}.regional-wage-table td .numeric-value {white-space:nowrap}.regional-wage-class {display:flex;align-items:center;gap:3px;text-align:left;overflow-wrap:anywhere}.regional-wage-class>.spr {flex-shrink:0}.regional-wage-idle {display:grid;gap:3px}.regional-wage-idle .bar {width:100%;min-width:0}
+.ownership-browser .system-table th:first-child {width:44%}.ownership-browser .system-table th:nth-child(2) {width:20%}.ownership-browser .system-table th:nth-child(3) {width:36%}.ownership-browser .system-table td {font-size:10px}

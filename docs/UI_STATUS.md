@@ -261,3 +261,9 @@ DetailWindow 독립 NavigationProvider/버튼, BuildingPops 및 ResourceInspecto
 - 검증: 루트 npm.cmd run typecheck 통과, 클라이언트26파일69시험 통과. 1920×1028 헤드리스 스크린샷 확인: C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/nov5-wages-ko-light.png, nov5-wages-en-dark.png. 최신 sim seed42·14일, 소작ƒ2.77/노동자ƒ3.17·52주ƒ3.42/하급 귀족 실업75%, 상세 본문403/scroll403. 표 하단은 내부 스크롤. AI 양수 웃돈 툴팁은 코드 대조만(해당 조건 화면 미검증).
 - 미완료 문서 이동은 하지 않고 이번부터 UI_STATUS만 갱신(사용자 최신 지시). 다음 깨진 화면/2-87 저택 지분 목록.
 - 39938d4: 2-79 커밋. 이어받은 지도 경계·강 연장·회색 협곡 연결 끝점 및 build-map의 경로 앵커 검사를 확인. build-map 재생성: 7지역/9이웃쌍/49,395bytes 통과. 1920×1028 스크린샷 C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/nov5-map-1920x1028.png 확인. 직전 루트 typecheck·클라이언트69시험 통과. 지도 전체 확대/모든 레이어는 미검증. UI_WINDOWS 문서는 수정 범위 밖이라 유지.
+
+## 2026-11-05 2-87 저택 지분 완료
+- manorShares 기본1에서 저택 주인 목록을 p.fund 지분 수로 집계(실업/다른 지역 보유자 포함). 0이면 옛 자리×계층 가중치 유지. 저택 머리에 지분 합·nav·지분당 주간 배당·주간 수익률, 상급 귀족 자리 라벨. pop 상세는 저택과 금융가를 함께 보유 수/총 보유 가치로 표시하며 외국 왕국 이름 표시.
+- ownerSummary 첫 시험은 임시 manorShares0 우회를 제거하고 기본 지분 규칙에서 상급 자리만 남는지 검사. 지분/자리 분리·옛 규칙 호환·외국 저택 가치 회귀 추가. 루트 typecheck 및 클라이언트26파일71시험 통과.
+- 1920×1028 헤드리스 스크린샷 확인: C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/nov5-manor-shares-ko.png, nov5-manor-owners-ko.png, nov5-manor-owners-en-dark.png, nov5-pop-manor-holdings-ko.png, nov5-pop-manor-holdings-en-dark.png. 저택1050 지분 합14,728,392.96(직접 fund 합 대조), 하급 귀족 보유자7행, pop1070의 저택·금융가14기관. 본문403/scroll403. 극소 지분0 대신 <0.01, 숫자 소수2자리. 실제 배당 지급/지분 매매 시간 경과는 미검증.
+- 이전 지도 커밋c0afa5c. 다음 2-85 건물/그룹 일꾼 1인 임금·웃돈.

@@ -6,6 +6,7 @@ import type {Building,World,PopClass,GoodId} from '@econ/sim';
 import {className,regionName,goodName,useLang} from '../i18n';
 import {NumericValue} from '../NumericValue';
 import {Bar} from '../ui';
+import {PopHoldings} from './PopHoldings';
 
 /** Scope by actual work IDs, never by a region-wide household aggregate. */
 export function BuildingPops({world,buildings,onGood,popIds}:{world:World;buildings:Building[];onGood:(id:GoodId)=>void;popIds?:number[]}){
@@ -40,6 +41,7 @@ export function BuildingPops({world,buildings,onGood,popIds}:{world:World;buildi
  <p>{uiCopy().screenText['populationGrowthAnnual']} {avg('growth').toFixed(2)}%</p>
  <details open><summary>{uiCopy().screenText['incomeAndTaxBreakdown']}</summary><table className="system-table"><tbody>{(['wages','dividends','rent','sales','welfare','other','tax'] as const).map(key=><tr key={key}><th tabIndex={0} data-help={uiCopy().screenText['cashReceivedByThisPopIDLast']}>{(uiCopy().screenLists.incomeLabels)[key]}</th><td>{rows.every(p=>p.incomeBreakdown!==undefined)?<NumericValue value={rows.reduce((n,p)=>n+(p.incomeBreakdown?.[key]??0),0)/divisor} format="money"/>:<span tabIndex={0} data-help={uiCopy().screenText['olderSaveAdvanceOneDayToRecord']}>—</span>}</td></tr>)}</tbody></table></details>
  <details><summary>{uiCopy().screenText['inKindGoods']} · {goods.length}</summary><table className="system-table"><tbody>{goods.map(({g,qty})=><tr key={g}><th><span>{goodName(g)}</span></th><td><NumericValue value={qty/divisor} format="compact"/></td><td data-help={uiCopy().screenText['valuedAtCurrentLocalPriceNotCash']}><NumericValue value={qty*region.market[g].price/divisor} format="money"/></td></tr>)}</tbody></table>{!goods.length&&<span>—</span>}</details>
+ <PopHoldings world={world} pops={rows}/>
  </>}
  </details>;
 }
