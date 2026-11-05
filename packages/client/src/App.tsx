@@ -27,12 +27,12 @@ import { dateParts, money, signedMoney } from './format';
 import { companyName, eventText, setLang, useLang, useT } from './i18n';
 import { RegionMap } from './views/RegionMap';
 import { RegionPanel } from './views/RegionPanel';
-import { Research, Projects } from './views/CompanyPanel';
+
 import { FinancePanel } from './views/FinancePanel';
 import { BottomPanel } from './views/BottomPanel';
 import { Notifications } from './views/Notifications';
 
-/** 1배 = 현실 1초에 게임 1시간 (하루 24초) */
+
 // 1배속 = 하루 0.96초 (1년 약 5.8분). 10배속은 디버그용
 const BASE_TPS = 25 / 24;
 const SPEEDS = [1, 2, 3, 4, 10].map((x) => ({ label: `${x}×`, tps: BASE_TPS * x }));

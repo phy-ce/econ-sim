@@ -430,3 +430,8 @@ DetailWindow 독립 NavigationProvider/버튼, BuildingPops 및 ResourceInspecto
 ## 2026-11-06 2-83 소작지 재해 칩 완료
 - 수수료 비용 막대 커밋b5d8da5. QuakeBadge: quakeAt 존재할 때만 경고 아이콘·손실%·남은 일수, quakeLabel 전체 툴팁/접근 이름. 지역 머리와 소작지 FlowRow의 HarvestBadge 옆, 양 테마 bad 토큰. 기본 quakeChance0은 숨김.
 - 루트 typecheck·클라이언트38파일94시험 통과. 재해1/0·양 언어 sim 라벨 대조 시험. CSS1920×1028 헤드리스 스크린샷 확인: C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/quake-head-ko-light.png, quake-head-en-dark.png, quake-flow-en-dark.png. 브라우저 모듈 복제 TUNE.quakeChance1/tick719/지역1: 홍수loss0.25/start529/end1609→−25%·890일, 툴팁소작지100칸. 저장/소스 변경 없이 reload로 원래0 복구. 실제 재해 발생/종료 사건의 시간 경과는 미검증. 다음 죽은 연구 코드 정리.
+
+## 2026-11-06 폐기 연구 코드·문자열 정리
+- 재해 칩 커밋d36f658. 쓰지 않는 CompanyPanel.Research·App import 제거. dailyBudget, 연구 지출 도움말/장부/예산 라벨의 폐기 키 제거. 정책 단계 도움말의 연구를 복지로 정정. App의 하루24초 옛 주석 제거, 현재 하루0.96초 주석 유지.
+- 루트 typecheck·클라이언트38파일94시험 통과. CSS1920×1028 헤드리스 스크린샷 확인: C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/research-cleanup-ko-light.png. 실제 ResearchPanel 진입·연구 목록/현재 연구·열리는 것 정상, 오류0.
+- 잔여: windowGeometry.ts/windowLayout.ts 빈 껍데기 파일은 사용자 파일 삭제 금지 규칙 때문에 유지(호출0, 기능 없음). 코드 정리는 완료, 파일 자체 제거는 하지 않음. 다음2-88 정치 탭.

@@ -19,8 +19,8 @@ import { ListTools } from './ListTools';
 import { useMemo, useState,useEffect } from 'react';
 import {
   BUILDING_BY_ID, BUILDING_TYPES, GOOD_IDS, MAX_CONCURRENT_CONSTRUCTIONS, TUNE, tradeEscrowPerLevel, tradeReserveOf,
-  SKILLS, POP_CLASSES, TECHS, companyById, paysDividend, peasantSlots, availableMethods, canBuildType, constructionEstimate, creditLimit, estimateAfterEntry,
-  estimateMethod, getMethod, hasBuilder, knowsTech, landFree, slots, wagesAt, regionById, researchableTechs,
+  SKILLS, POP_CLASSES, companyById, paysDividend, peasantSlots, availableMethods, canBuildType, constructionEstimate, creditLimit, estimateAfterEntry,
+  estimateMethod, getMethod, hasBuilder, knowsTech, landFree, slots, wagesAt, regionById,
 } from '@econ/sim';
 import type { Building, Company, GoodId, Region, Skill, PopClass, World } from '@econ/sim';
 import { ChevronDown, X, Coins, Crown, ArrowUp, ArrowDown, Pause, Play } from 'lucide-react';
@@ -446,40 +446,6 @@ function BuildCard({ bt, region, est, blockers, payback, game, world, me }: {
     </div>
   );
 }
-
-// ---------------------------------------------------------------- 연구
-
-export function Research({ game, me, onFinance }: { game: Game; me: Company; onFinance?:()=>void }) {
-  const T = useT();
-  const r = me.research;
-  const options = researchableTechs(me);
-  return (
-    <div className="research">
-      <div className="budget"><span className="budget-t"><span>{T.dailyBudget}</span><NumericValue value={r.points/7} format="int"/></span>{onFinance&&<button className="entity-link" onClick={onFinance}>{T.adjustFinance} ↗</button>}</div>
-      {[...new Set(TECHS.map(x=>x.cost))].sort((a,b)=>a-b).map((cost,index)=><section className="research-stage" key={cost}><h3>{T.stage} {index+1}</h3><ul className="techs">
-        {TECHS.filter(x=>x.cost===cost).map((x) => {
-          const known = r.known.includes(x.id);
-          const prog = (r.progress[x.id] ?? 0) / x.cost;
-          const can = options.includes(x.id);
-          const current = r.current === x.id;
-          return (
-            <li key={x.id} className={`tech ${known ? 'known' : can ? '' : 'locked'} ${current ? 'current' : ''}`}>
-              <div className="tech-main">
-                <strong>{techName(x.id)} <span className="pxnum small muted">ƒ<NumericValue value={x.cost} format="int"/> · {r.points>0?T.nDays(Math.ceil(Math.max(0,x.cost-(r.progress[x.id]??0))/(r.points/7))):'—'}</span></strong>
-                {x.requires.length > 0 && !known && <span className="lbl">← {x.requires.map(techName).join(', ')}</span>}
-                {!known && prog > 0 && <Bar value={prog} tone="accent" size="sm" label={T.progressOf(techName(x.id))} />}
-              </div>
-              {known ? <span className="tag-soft done">{T.done}</span>
-                : current ? <button className="sm-btn" onClick={() => game.command({ type: 'setResearch', techId: null })}>{T.stopResearch}</button>
-                : <button className="primary sm-btn" disabled={!can} onClick={() => game.command({ type: 'setResearch', techId: x.id })}>{T.research}</button>}
-            </li>
-          );
-        })}
-      </ul></section>)}
-    </div>
-  );
-}
-
 
 export function BuildingControls({building,game,world}:{building:Building;game:Game;world:World}) {
   const owner=companyById(world,building.companyId);
