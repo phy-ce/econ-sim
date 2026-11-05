@@ -320,3 +320,9 @@ DetailWindow 독립 NavigationProvider/버튼, BuildingPops 및 ResourceInspecto
 - 루트 typecheck·클라이언트33파일83시험 통과. 지분20%의 주간 이익140·실제 배당37.25를 별개로 확인하고 순서/합계 회귀 추가.
 - 1920×1028 헤드리스 스크린샷 확인: C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/nov5-holdings-ko-light.png, nov5-holdings-en-dark.png. 저택1050 보유4행·710레벨·주간 합−92.2k·실제 배당0, 본문403/scroll403. 좁은 표의 비율 숫자는 본문 글꼴로 가독성 보정. 기관 수입60.3k/주는 표의 보유 손익 합과 다른 배당·지대 수입임. 혼합 지역/양수 실제 배당 화면은 미검증(37.25 회귀로 지급액 경로 검증).
 - 2-42 커밋b39fb8c. 다음2-67 무역소·무역 흐름.
+
+## 2026-11-05 2-67 무역소·교역 표시 완료
+- 무역소 개별 상세 postUsable, 방식 비교/건설 방식의 tradeReserveOf, 공사비와 별도 tradeEscrowPerLevel 약정금(레벨당·환급 툴팁). 빈 상품 흐름 —. 지역 시장 전용 교역 항목에 Region.trade.buy/cut 두 막대·기대 이익률(총 주문0이면 —). 전역/왕국 수치를 임의 합산하지 않음.
+- SectionStack 항목이 범위 전환으로 늘 때 기존 설정에 새 항목을 덧붙이도록 수정(세계→지역 전환 때 교역 탭 누락 해소).
+- 루트 typecheck·클라이언트33파일83시험 통과. 1920×1028 헤드리스 스크린샷 확인: C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/nov5-trade-en-dark.png, nov5-trade-ko-light.png, nov5-post-usable-ko-light.png. 복제 교역값buy1234.56/cut432.10/margin0.125, 막대74%/26%·높이8px/표시13% 확인. 실제 무역소1003 postUsable3443.8442→3.4k, 상한5000·약정금/L2500 API 대조. 검증 저장 복원. 건설 약정금 실제 납부/환급 및 영문 무역소 상세는 화면 미검증(표시 코드는 반영).
+- 2-32 커밋90a9826. 다음2-48 연구 진행·경로·링크.

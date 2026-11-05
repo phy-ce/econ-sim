@@ -1,4 +1,4 @@
-import {BUILDING_BY_ID,GOOD_IDS,SKILLS,TUNE,estimateMethod,knowsTech,regionPerk,wagesAt} from '@econ/sim';
+import {BUILDING_BY_ID,GOOD_IDS,SKILLS,TUNE,estimateMethod,knowsTech,regionPerk,tradeReserveOf,wagesAt} from '@econ/sim';
 import type {Building,Company,MethodDef,World} from '@econ/sim';
 import {Lock} from 'lucide-react';
 import type {Game} from '../useGame';
@@ -28,6 +28,7 @@ export function MethodComparison({world,building:b,owner,game}:{world:World;buil
   {methods.some(m=>m.construction)&&row('points',T.buildPts,m=>(m.construction??0)*b.level)}
   {methods.some(m=>m.taxCapacity)&&row('tax',T.taxCapacity,m=>(m.taxCapacity??0)*b.level*TUNE.adminScale)}
   {methods.some(m=>m.seats)&&row('seats',T.schoolSeats,m=>(m.seats??0)*b.level)}
+  {b.typeId==='trading_post'&&row('trade-reserve',T.tradeReserveLevel,m=>tradeReserveOf(m.id),'money')}
   {SKILLS.filter(s=>methods.some(m=>m.workers[s])).map(s=>row(`job-${s}`,<span><ClassSprite c={s} size={24}/>{skillName(s)}</span>,m=>(m.workers[s]??0)*b.level))}
   {row('profit',`${T.system.profit} ${T.perDay}`,m=>estimates.get(m.id)!.profit*b.level,'money')}
   {row('margin',T.margin,m=>{const e=estimates.get(m.id)!;return e.revenue>0?e.profit/e.revenue:null;},'ratio')}

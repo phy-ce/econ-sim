@@ -15,7 +15,7 @@ import {sdText,supplyDemandProjection} from '../supplyDemand';
 import { ListTools } from './ListTools';
 import { useMemo, useState,useEffect } from 'react';
 import {
-  BUILDING_BY_ID, BUILDING_TYPES, GOOD_IDS, MAX_CONCURRENT_CONSTRUCTIONS, TUNE,
+  BUILDING_BY_ID, BUILDING_TYPES, GOOD_IDS, MAX_CONCURRENT_CONSTRUCTIONS, TUNE, tradeEscrowPerLevel, tradeReserveOf,
   SKILLS, POP_CLASSES, TECHS, companyById, paysDividend, peasantSlots, availableMethods, canBuildType, constructionEstimate, creditLimit, estimateAfterEntry,
   estimateMethod, getMethod, hasBuilder, knowsTech, landFree, slots, wagesAt, regionById, researchableTechs,
 } from '@econ/sim';
@@ -419,7 +419,7 @@ function BuildCard({ bt, region, est, blockers, payback, game, world, me }: {
             <div className="m-main">
               <strong>{methodName(m)}{!ok && <span className="tag-soft">{T.needsTechTag(techName(m.tech!))}</span>}</strong>
               <span className="m-line">{SKILLS.filter((s) => m.workers[s]).map((s) => <span key={s} className="bag-item"><i className="sw" style={{ background: SKILL_COLOR[s] }} />{skillName(s)} <span className="pxnum">{qty(m.workers[s]!)}</span></span>)}</span>
-              <FlowRow world={world} typeId={bt.id} methodId={m.id} regionId={region.id}/>
+              <FlowRow world={world} typeId={bt.id} methodId={m.id} regionId={region.id}/>{bt.id==='trading_post'&&<div>{T.tradeReserveLevel} <NumericValue value={tradeReserveOf(m.id)} format="money"/></div>}
             </div>
             {!m.construction && <div className={`m-est ${e.profit >= 0 ? 'pos' : 'neg'}`}><NumericValue value={e.profit} format="signedMoney"/><small>{T.perDay}</small></div>}
           </li>
@@ -429,7 +429,7 @@ function BuildCard({ bt, region, est, blockers, payback, game, world, me }: {
       <div className="build-foot">
         <dl className="kv">
           <div><dt>{T.cost}</dt><dd className="pxnum">{Number.isFinite(est.cost) ? money(est.cost) : '—'}</dd></div>
-          <div><dt>{T.duration}</dt><dd className="pxnum">{Number.isFinite(est.days) ? T.nDays(Math.ceil(est.days)) : '—'}</dd></div>
+          {bt.id==='trading_post'&&<div data-help={T.tradeEscrowHelp} tabIndex={0}><dt>{T.tradeEscrow}</dt><dd><NumericValue value={tradeEscrowPerLevel()} format="money"/></dd></div>}<div><dt>{T.duration}</dt><dd className="pxnum">{Number.isFinite(est.days) ? T.nDays(Math.ceil(est.days)) : '—'}</dd></div>
           <div><dt>{T.payback}</dt><dd className="pxnum">{payback ? (payback > 1800 ? T.fiveYearsPlus : T.nDays(payback)) : '—'}</dd></div>
           {already && <div><dt>{T.owned}</dt><dd className="pxnum">×{already.level}</dd></div>}
         </dl>

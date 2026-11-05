@@ -157,3 +157,4 @@
 .ownership-browser .owner-holdings td {white-space:nowrap;height:auto;vertical-align:middle}
 .ownership-browser .owner-holdings td small {position:static;display:block;line-height:1.5;margin-top:3px}
 .ownership-browser .system-table td {font-family:var(--sans)}
+.region-trade {display:grid;gap:8px;padding:6px;font-size:11px}.region-trade>div {display:flex;align-items:center;gap:8px}.region-trade>div>span:first-child {flex:0 0 105px}.region-trade .bar {height:8px;min-height:6px}.region-trade>div>b {margin-left:auto}
