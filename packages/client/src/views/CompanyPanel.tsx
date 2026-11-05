@@ -8,6 +8,8 @@ import { isGovernment, crewOf, depositFree, harvestFactor,isOwnerBuilding,office
 import { NumericValue } from '../NumericValue';
 import { OwnerBadge } from './OwnerBadge';
 import { Workforce } from './Workforce';
+import {SupplyDemandPreview} from './SupplyDemand';
+import {sdText,supplyDemandProjection} from '../supplyDemand';
 // 상회 패널: 내 상회(조작 가능)와 다른 상회(읽기 전용). 시안 "내 상회 · 투입·산출·수지" 기준.
 import { ListTools } from './ListTools';
 import { useMemo, useState,useEffect } from 'react';
@@ -287,15 +289,17 @@ function Controls({ r, game, world, owner }: { r: Row; game: Game; world: World;
   const rname = regionName(r.region);
   const free = Math.min(type.land ? landFree(world, b.regionId, type.land) : Infinity,type.deposit ? depositFree(world,b.regionId,type.deposit) : Infinity);
   const full=world.constructions.filter(k=>k.companyId===b.companyId).length>=MAX_CONCURRENT_CONSTRUCTIONS;
+  const sd=supplyDemandProjection(world,b.regionId,b.typeId,b.methodId);
+  const expandHelp=(levels:number)=>sd?`${T.supplyDemandRatio} ${sdText(sd.now)} → ${sdText(levels===1?sd.one:sd.five)}`:undefined;
   return (
     <div className="hctrl">
       <span className="stepper" role="group" aria-label={T.countOf(r.name)}>
         <button aria-label={T.demolishOne} title={T.demolishOne} disabled={r.queued>0||(b.shrinking??0)>=b.level}
           onClick={() => { if (b.level > 1 || confirm(T.confirmDemolish(rname, r.name))) game.command({ type: 'demolish', buildingId: b.id }); }}>−</button>
         <output>{b.level}{r.queued > 0 && <small>+{r.queued}</small>}</output>
-        <button aria-label={T.expandOne} title={free < 1 ? T.noLand : T.expandOne} disabled={full||free < 1||(b.shrinking??0)>0}
+        <button aria-label={T.expandOne} title={free < 1 ? T.noLand : T.expandOne} data-help={expandHelp(1)} disabled={full||free < 1||(b.shrinking??0)>0}
           onClick={() => game.command({ type: 'expand', buildingId: b.id })}>+</button>
-        <button aria-label={T.buildingGroups.expandFive} title={T.buildingGroups.expandFive} disabled={full||free < 5||(b.shrinking??0)>0}
+        <button aria-label={T.buildingGroups.expandFive} title={T.buildingGroups.expandFive} data-help={expandHelp(5)} disabled={full||free < 5||(b.shrinking??0)>0}
           onClick={() => game.command({ type: 'expand', buildingId: b.id, levels: 5 })}>+5</button>
       </span>
       {(b.shrinking??0)>0&&<button className="sm-btn" onClick={()=>game.command({type:'cancelDemolish',buildingId:b.id})}>{T.cancelDemolition}</button>}
@@ -436,6 +440,7 @@ function BuildCard({ bt, region, est, blockers, payback, game, world, me }: {
           </li>
         ))}
       </ul>
+      <SupplyDemandPreview world={world} regionId={region.id} typeId={bt.id} methodId={availableMethods(me,bt.id)[0]?.id}/>
       <div className="build-foot">
         <dl className="kv">
           <div><dt>{T.cost}</dt><dd className="pxnum">{Number.isFinite(est.cost) ? money(est.cost) : '—'}</dd></div>

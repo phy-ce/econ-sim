@@ -1,11 +1,13 @@
 import {t as uiCopy} from '../i18n';
+import {SupplyDemandBar} from './SupplyDemand';
+import {marketSD,sdText} from '../supplyDemand';
 import {SectionStack} from './SectionStack';
 import {ResourceInspector} from './ResourceInspector';
 import {SourceBreakdown} from './SourceBreakdown';
 import {memo} from 'react';
 import {useNavigationState} from '../NavigationHistory';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { GOOD_IDS, GOODS, playerCompany } from '@econ/sim';
+import { GOOD_IDS, GOODS, playerCompany,currentSD } from '@econ/sim';
 import type { GoodId, HistoryPoint, World } from '@econ/sim';
 import { Crosshair } from 'lucide-react';
 import type { Game } from '../useGame';
@@ -35,10 +37,11 @@ function MarketWindowView({world,game,scope,onScope,mapRegionId,history,good,onG
  const selectGood=(g:GoodId)=>{onGood(g);setResourceRequest(n=>(n??0)+1);};
  const [sort,setSort]=useNavigationState('views/MarketWindow.tsx:sort',{key:'volume',dir:-1});
  const market=marketOf(world,scope),members=scopeRegions(world,scope);
+ const sdValue=(g:GoodId)=>typeof scope==='number'?currentSD(world,scope,g):marketSD(market[g]);
  const goods=useMemo(()=>[...GOOD_IDS].sort((a,b)=>{
   if(sort.key==='name')return goodName(a).localeCompare(goodName(b),lang)*sort.dir;
-  const value=(g:GoodId)=>sort.key==='price'?market[g].price:sort.key==='ratio'?market[g].ratio:sort.key==='balance'?market[g].supplyEma-market[g].demandEma:market[g].price*(market[g].supplyEma+market[g].demandEma)/2;
-  return (value(a)-value(b))*sort.dir;
+  const value=(g:GoodId)=>sort.key==='price'?market[g].price:sort.key==='ratio'?market[g].ratio:sort.key==='balance'||sort.key==='sd'?sdValue(g):market[g].price*(market[g].supplyEma+market[g].demandEma)/2;
+  const av=value(a),bv=value(b);return av===null?(bv===null?0:1):bv===null?-1:(av-bv)*sort.dir;
  }),[world,scope,sort,lang]);
  const setSortKey=(key:string)=>setSort(s=>({key,dir:s.key===key?-s.dir:key==='name'?1:-1}));
  const prices=marketPriceHistory(history,members.map(r=>r.id),good);
@@ -54,7 +57,7 @@ function MarketWindowView({world,game,scope,onScope,mapRegionId,history,good,onG
   </div><button className="market-follow" aria-label={S.follow} data-help={S.follow} onClick={()=>onScope(mapRegionId)}><Crosshair size={15}/></button></div>
   <SectionStack explorer storageKey="market" revealId="resource" revealKey={resourceRequest} items={[
    {id:'prices',title:uiCopy().screenText['marketPrices'],height:174,content:<section className="market-ledger unified-market">
-   <div className="table-scroll"><table className="goods"><thead><tr>{[['name',T.colGood],['price',T.colPrice],['ratio',T.colRatio],['balance',T.colBalance],['volume',T.colValue]].map(([key,label])=><SortHeader key={key} label={label} active={sort.key===key} direction={sort.dir} onClick={()=>setSortKey(key)}/>)}</tr></thead><tbody>{goods.map(g=><tr key={g} className={good===g?'selected':''} tabIndex={0} aria-selected={good===g} onClick={()=>selectGood(g)} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();selectGood(g);}}}><td><span className="good-name"><GoodSprite g={g} size={24}/>{goodName(g)}</span></td><td><NumericValue value={market[g].price} format="money"/></td><td><PriceGauge ratio={market[g].ratio}/></td><td className={market[g].demandEma>1&&market[g].supplyEma<market[g].demandEma*.5?'neg strong':''}><NumericValue value={market[g].supplyEma} format="compact"/> / <NumericValue value={market[g].demandEma} format="compact"/></td><td><NumericValue value={market[g].price*(market[g].supplyEma+market[g].demandEma)/2} format="compactMoney"/></td></tr>)}</tbody></table></div>
+   <div className="table-scroll"><table className="goods"><thead><tr>{[['name',T.colGood],['price',T.colPrice],['ratio',T.colRatio],['sd',T.supplyDemandRatio],['volume',T.colValue]].map(([key,label])=><SortHeader key={key} label={label} active={sort.key===key} direction={sort.dir} onClick={()=>setSortKey(key)}/>)}</tr></thead><tbody>{goods.map(g=><tr key={g} className={good===g?'selected':''} tabIndex={0} aria-selected={good===g} onClick={()=>selectGood(g)} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();selectGood(g);}}}><td><span className="good-name"><GoodSprite g={g} size={24}/>{goodName(g)}</span></td><td><NumericValue value={market[g].price} format="money"/></td><td><PriceGauge ratio={market[g].ratio}/></td><td><span className="market-sd"><span>{sdText(sdValue(g))}</span><SupplyDemandBar now={sdValue(g)} compact/></span></td><td><NumericValue value={market[g].price*(market[g].supplyEma+market[g].demandEma)/2} format="compactMoney"/></td></tr>)}</tbody></table></div>
    </section>},
    {id:'resource',shortTitle:uiCopy().screenText['goodDetails'],title:uiCopy().screenText['selectedGoodBuildings'],height:290,content:members[0]?<ResourceInspector key={`${scope}-${good}`} world={world} game={game} region={members[0]} scopeRegions={members} scopeMarket={market[good]} scopeLabel={name(scope)} good={good} onGood={selectGood} onCompany={onCompany}/>:<span>—</span>},
    {id:'sources',shortTitle:uiCopy().screenText['supplyDemand'],title:uiCopy().screenText['supplyAndDemand'],height:210,content:<SourceBreakdown good={good} m={sourceMarket}/>},

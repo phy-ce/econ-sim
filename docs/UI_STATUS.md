@@ -273,3 +273,9 @@ DetailWindow 독립 NavigationProvider/버튼, BuildingPops 및 ResourceInspecto
 - 루트 typecheck 및 클라이언트27파일73시험 통과. AI 웃돈 실제 임금10/그룹 가중 평균17.5·배당 자리 제외 회귀 포함.
 - 1920×1028 헤드리스 스크린샷 확인: C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/nov5-workforce-group-en-dark.png, nov5-workforce-single-en-dark.png, nov5-workforce-single-ko-light.png. 별도 검증용 벌목장1013 노동자웃돈25%·기술자10%, wagesAt 노동자3.8548143→ƒ3.85, 그룹/개별 동일, 본문403/scroll403. 검증용 웃돈 저장 복원 후 런타임 오류0. AI 국영 웃돈/소작지 화면은 미검증(코드 대조).
 - 2-87 커밋c204774. 다음 2-75 공급÷수요, 2-82 부 이동, 2-86 목표 임금.
+
+## 2026-11-05 2-75 공급÷수요 완료
+- 건설 카드 기본 선택 가능 방식의 주 산출을 기준으로 지금/+1/+5를 sim currentSD/projectedSD에서 읽음(지역 산출 보정 포함). 0.25~4 로그 막대·0.5/1/2 눈금, 지금 채운 점/+1빈 원/+5빈 마름모, aiGlutSD 문턱 툴팁. 서비스 건물은 줄 없음. 증설+/+5 툴팁은 현재→예상 비율.
+- 시장 양 열을 비율+작은 로그 막대로 교체. 지역은 currentSD, 합산 범위는 합산 공급÷수요. 수요0은 —, 정렬은 비율이며 결측은 뒤. 비율의 크기에 좋음/나쁨 색 없음.
+- 루트 typecheck·클라이언트28파일76시험 통과(지역 보정·수요0·서비스·로그 위치 회귀). 1920×1028 스크린샷 확인: C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/nov5-sd-build-ko-light.png, nov5-sd-build-en-dark.png, nov5-sd-market-ko-light.png, nov5-sd-market-en-dark.png. 남부 습지 목재 지금0.28/+1 0.81/+5 2.91, sim 직접 호출0.2791536/0.8060579/2.9136748와 일치. 본문403/scroll403. 시장 내림차순2.13/2.03/1.15…/— 확인. 실제 짓기 실행과 전 상품/전 범위 조합은 미검증.
+- 2-85 커밋e70704e. 다음 2-82 부 이동→2-86 목표 임금→0장 잔여.
