@@ -6,6 +6,7 @@ import { particle } from './format';
 type S = string;
 
 export const KO = {
+ politics:'정치',political:{group:'집단',clout:'영향력',approval:'승인',mood:'기분',members:'회원',voting:'투표법',pending:'바뀌면',status:{powerful:'힘셈',marginal:'소외'},moods:{angry:'격노',unhappy:'불만',neutral:'중립',happy:'만족',loyal:'충성'},parts:{stances:'법 입장',change:'법 바꾸기',sol:'생활수준'}},
  welfareCap:'상한',welfareCut:'상한으로 줄인 몫',
  actualOutput:'실제 가동',
  constructionUI:{category:'분류',all:'전체',primary:'1차',processing:'가공',heavy:'중공업',luxury:'사치품',government:'정부',profit:'예상 수익',name:'이름',payback:'회수 기간',weekly:'주간 갱신 · 현재 왕실 방식 · 레벨당 하루 예상',noDeposit:'광맥 부족',levels:'현재 + 공사',manage:'건설 · 건물 관리'},
@@ -568,6 +569,7 @@ export const KO = {
 export type Dict = typeof KO;
 
 export const EN: Dict = {
+ politics:'Politics',political:{group:'Group',clout:'Clout',approval:'Approval',mood:'Mood',members:'Members',voting:'Voting law',pending:'On change',status:{powerful:'Powerful',marginal:'Marginal'},moods:{angry:'Angry',unhappy:'Unhappy',neutral:'Neutral',happy:'Happy',loyal:'Loyal'},parts:{stances:'Law stances',change:'Law change',sol:'Living standard'}},
  welfareCap:'Cap',welfareCut:'Cut by cap',
  actualOutput:'Actual output rate',
  constructionUI:{category:'Category',all:'All',primary:'Primary',processing:'Processing',heavy:'Heavy',luxury:'Luxury',government:'Government',profit:'Expected profit',name:'Name',payback:'Payback',weekly:'Weekly refresh · current Crown method · expected daily profit per level',noDeposit:'Insufficient deposits',levels:'Existing + queued',manage:'Construction · building management'},

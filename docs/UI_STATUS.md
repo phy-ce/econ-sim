@@ -435,3 +435,8 @@ DetailWindow 독립 NavigationProvider/버튼, BuildingPops 및 ResourceInspecto
 - 재해 칩 커밋d36f658. 쓰지 않는 CompanyPanel.Research·App import 제거. dailyBudget, 연구 지출 도움말/장부/예산 라벨의 폐기 키 제거. 정책 단계 도움말의 연구를 복지로 정정. App의 하루24초 옛 주석 제거, 현재 하루0.96초 주석 유지.
 - 루트 typecheck·클라이언트38파일94시험 통과. CSS1920×1028 헤드리스 스크린샷 확인: C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/research-cleanup-ko-light.png. 실제 ResearchPanel 진입·연구 목록/현재 연구·열리는 것 정상, 오류0.
 - 잔여: windowGeometry.ts/windowLayout.ts 빈 껍데기 파일은 사용자 파일 삭제 금지 규칙 때문에 유지(호출0, 기능 없음). 코드 정리는 완료, 파일 자체 제거는 하지 않음. 다음2-88 정치 탭.
+
+## 2026-11-06 2-88 읽기 전용 정치 탭 완료
+- 폐기 연구 정리 커밋8a96c26. 국가 창 예산/법/정치3탭, PoliticsPanel은 첫 선택 플레이어 왕국·왕국 선택 유지. interestGroups 순서6집단, 투표법 VOTING_NAMES, 영향력 막대/%/힘셈·소외 표식, 승인0중앙 ±IG_APPROVAL_CAP 막대·부호 한 자리, 기분·회원 수. 집단 펼침에 승인3요인·4법 입장·pending 있을 때 바뀌면 값.
+- 모든 표시 읽기 전용, game/command/lawChance 호출 없음. inactive 탭은 ActiveContent로 계산 생략, 같은 snapshot의 펼침 변경은 useMemo로 interestGroups 재계산 생략. 이름/회원 정확한 값은 툴팁. 양 언어·토큰/다크 모드.
+- 루트 typecheck·클라이언트39파일95시험 통과(6집단/양 언어/선택 왕국/세계 비변경 회귀). CSS1920×1028 헤드리스 스크린샷 확인: C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/politics-ko-light.png, politics-en-dark.png, politics-expanded-en-dark.png. 실제 왕국2 선택·지주 펼침/승인요인5+0+0·법 입장1/1/1/2, 6행, 주 창본문403/scroll403. 법 전환 중 pending·모든 기분 조합의 화면은 미검증.
