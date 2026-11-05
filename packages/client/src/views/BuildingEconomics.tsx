@@ -1,3 +1,4 @@
+import {ActualOutput} from './ActualOutput';
 import {officeFeeHelp} from '../officeFees';
 import {BuildingMetricBars} from './BuildingMetricBars';
 import {ReserveBar} from './ReserveBar';
@@ -19,7 +20,7 @@ export function BuildingEconomics({world,building:b,game,onBuilding,compact=fals
  if(isOwnerBuilding(b.typeId))return <><OwnerSummary buildings={[b]}/><OwnershipBar world={world} buildings={[b]}/></>;
  return <div className={`building-economics ${compact?'compact':''}`}>
   <OwnershipBar world={world} buildings={[b]}/>
-  <BuildingMetricBars profit={e.profitWeek} perLevel={e.profitWeekPerLevel}/>
+  <ActualOutput world={world} building={b}/><BuildingMetricBars profit={e.profitWeek} perLevel={e.profitWeekPerLevel}/>
   {e.hasReserve&&<ReserveBar value={e.reserve} cap={e.reserveCap} weekly={e.reserveWeek}/>}
   {!compact&&<>
    {industry&&<span className="tag-soft">{ko?INDUSTRIES[industry].name:INDUSTRIES[industry].nameEn}</span>}

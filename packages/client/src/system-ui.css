@@ -177,3 +177,4 @@
 .detail-window:has(.construction-detail) {width:520px;height:640px}
 .construction-detail .construction-building {border-top:1px solid var(--rule);padding:6px 0}.construction-building>.entity-link {white-space:normal;text-align:left;min-height:30px}.construction-crown {border-top:1px solid var(--gold);padding:6px 0}.construction-crown h3 {font-size:12px;margin:4px 0}
 .sd-current-row {display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:5px;align-items:center}.sd-current-row>span:first-child {display:flex;align-items:center;gap:4px;min-width:0}.sd-current-row>.sd-bar {grid-column:1/-1}.sd-current-row b {font-variant-numeric:tabular-nums}
+.actual-output {display:grid;grid-template-columns:auto minmax(30px,1fr) auto;gap:8px;align-items:center;min-height:26px;font-size:11px}.actual-output>b {font-variant-numeric:tabular-nums}.strategy-panel .actual-output .bar {min-height:8px;height:8px}

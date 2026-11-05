@@ -1,3 +1,4 @@
+import {ActualOutput} from './ActualOutput';
 import {buildBlockers as constructionBlockers} from '../constructionCatalogue';
 import {IndustryLabel} from './IndustryLabel';
 import {officeLoadFor} from '../officeLoad';
@@ -251,7 +252,7 @@ function BuildingRow({ r, game, world, owner, open, onToggle,onGood }: {onGood?:
         </span>
         <span className="hc-pl"><span className={`pl-badge pxnum ${good ? 'pos' : 'neg'}`}><NumericValue value={r.profit} format="signedCompactMoney"/></span><ChevronDown size={16} className={`chev ${open ? 'up' : ''}`} aria-hidden="true" /></span>
       </button>
-      <FlowRow world={world} building={b} onGood={onGood}/>
+      <ActualOutput world={world} building={b}/><FlowRow world={world} building={b} onGood={onGood}/>
       {open && (
         <div className="hdetail">
           {game && !BUILDING_BY_ID[b.typeId].auto && <Controls r={r} game={game} world={world} owner={owner} />}

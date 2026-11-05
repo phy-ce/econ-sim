@@ -399,3 +399,9 @@ DetailWindow 독립 NavigationProvider/버튼, BuildingPops 및 ResourceInspecto
 - 전망은 첫 왕실 ID 현재 방식 또는 최초 사용 가능 방식1개만, 주간 캐시(구조/기술/공사 변경 시 무효화). 최대 수익 방식 오표시/전 방식 반복 전망 제거. 상세 비용/가격은 최신 세계. 현재 공급÷수요·가격을 각 산출 상품별로 표시, +1/+5 전망 표시 제거(혼합 산출 시험 포함).
 - 루트 typecheck·클라이언트34파일88시험 통과. CSS1920×1028 헤드리스 스크린샷 확인: C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/construction-final-ko-light.png, construction-final-en-dark.png, construction-builder-ko-light.png, construction-queue-ko-light.png, construction-private-en-dark.png, construction-region-common-en-dark.png. 주 창 본문403/scroll403, 상세491/scroll491. 왕실사무소1000 +1/+5→target1000/method build_manual, 정지·순서 변경, 민영 제어0개, 지역 공통 상세 진입 확인. SSR 외국 읽기 전용·지분/광맥·혼합 산출4개 회귀 추가. 실제 모든 기술 전환·특수 기관 모든 조합은 미검증.
 - 다음2-93 실제 가동, 이어2-82 부 이동 중복. sim 요청 없음.
+
+## 2026-11-06 2-93 실제 가동 완료
+- 건설 통합 커밋49e1a63. actualOutputFactors 순수 클라이언트 계산: active && !idle일 때 가동률×crewOf×efficiency×last.inputFill×harvestFactor, 아니면0. 사무소는 officeLoad도 곱한다(일감이 없으면0%, 일부 일감이면 그 몫). 사무소 외에는 office계수1. 소유 기관(저택·금융가)은 기존 OwnerSummary만 표시.
+- ConstructionDetail 건물ID 줄·BuildingEconomics 개별 상세·CompanyPanel 건물 줄에 ActualOutput 공통 표시. 숫자소수2자리·100% 초과 유지, 막대만100%에서 자름. 툴팁에 가동률/작업 인원/효율/원료/기상/사무소 부하. 멈춤은 과거 inputFill이 남아도0, 쉬는 사무소도0. 실시간 officeLoad를 읽으므로 마지막 생산 포인트를 역산한 수치와는 다를 수 있음.
+- 행정청은 finance.adminCapacityOf의 식과 대조: 단독 행정청 세계에서 표시비율×기본징세한도=공개 taxCapacity API(crew0.65/util0.8/fill0.4)로 시험. sim 함수 요청 없음. 원료0·정지·idle·일감0·기상·100% 초과 시험 포함.
+- 루트 typecheck·클라이언트35파일91시험 통과. 1920×1028 헤드리스 스크린샷 확인: C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/actual-admin-ko-light.png, actual-admin-en-dark.png. 행정청1001 실제 가동78.52%, 통합 줄/개별 상세 동일, 상세491/scroll491. 정지/원료0/100%초과는 자동 시험 확인(그 조합의 화면은 미검증). 다음2-82 중복 표.

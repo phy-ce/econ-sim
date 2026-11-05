@@ -1,4 +1,5 @@
-﻿import {BUILDING_BY_ID,availableMethods,companyById,constructionEstimate,isOwnerBuilding,knowsTech,playerCompany,tradeEscrowPerLevel} from '@econ/sim';
+import {ActualOutput} from './ActualOutput';
+import {BUILDING_BY_ID,availableMethods,companyById,constructionEstimate,isOwnerBuilding,knowsTech,playerCompany,tradeEscrowPerLevel} from '@econ/sim';
 import type {GoodId,Region,World} from '@econ/sim';
 import {useNavigationState} from '../NavigationHistory';
 import {buildBlockers} from '../constructionCatalogue';
@@ -30,7 +31,7 @@ export function ConstructionDetail({world,game,region,typeId,onGood,onCompany,on
   <OwnershipBar world={world} buildings={items}/>{isOwnerBuilding(typeId)&&<OwnerSummary buildings={items}/>}
   {items.length>0?<GroupDetail world={world} buildings={items} game={game} onGood={onGood} onOwner={onOpenBuilding} showControls={false}/>:<BuildingRoom world={world} typeId={typeId} regionId={region.id}/>}
   {items.map(b=><div className="construction-building" key={b.id} data-building-id={b.id}><button className="entity-link" aria-expanded={inspect===b.id} onClick={()=>setInspect(inspect===b.id?null:b.id)}>{ownershipLabel(world,b)} · #{b.id} · ×{b.level} · {methodName(def.methods.find(m=>m.id===b.methodId)!)} ↗</button>
-   {b.companyId===me.id&&canManage&&<BuildingControls world={world} game={game} building={b}/>}
+   <ActualOutput world={world} building={b}/>{b.companyId===me.id&&canManage&&<BuildingControls world={world} game={game} building={b}/>}
   </div>)}
   {selected&&<BuildingInspector building={selected} world={world} onGood={onGood} onCompany={onCompany}/>}
   {view!=='private'&&canManage&&<section className="construction-crown"><h3>{S.state} · {buildingName(typeId)}</h3>
