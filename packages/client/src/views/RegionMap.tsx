@@ -5,6 +5,7 @@ import { regionLivingStandard } from '../systemMetrics';
 import { SortHeader } from './SortHeader';
 import { useState, useRef } from 'react';
 import mapData from '../map/regions.json';
+import {MAP_FRAME,clampMapCamera,zoomMapCamera} from '../mapCamera';
 import '../map/atlas.css';
 import { regionPopulation , regionAvgWealth } from '@econ/sim';
 import type { World } from '@econ/sim';
@@ -14,10 +15,10 @@ import { regionName, t, useLang, useT } from '../i18n';
 
 const PLAYER_ID = 100;
 
-const WIDTH=2896, HEIGHT=1504;
+const {width:WIDTH,height:HEIGHT}=MAP_FRAME;
 const geometry=new Map(mapData.regions.map(r=>[r.id,r]));
 const fallback=(id:number,index:number)=>{const x=600+(index%4)*220,y=220+Math.floor(index/4)*220;return {id,d:`M${x-70},${y}a70,70 0 1,0 140,0a70,70 0 1,0 -140,0`,label:[x,y],icon:[x,y-60],anchors:{rail:[x,y+30]}};};
-const clampCamera=(c:{x:number;y:number;zoom:number})=>({...c,x:Math.max(-WIDTH*.1,Math.min(WIDTH-WIDTH/c.zoom+WIDTH*.1,c.x)),y:Math.max(-HEIGHT*.1,Math.min(HEIGHT-HEIGHT/c.zoom+HEIGHT*.1,c.y))});
+const clampCamera=clampMapCamera;
 
 /** 지역 1인당 평균 부 → 4단계 색 (이름표는 그릴 때 언어에 맞춰 만든다) */
 export const WEALTH_STOPS=[{value:2,color:'#b8573b'},{value:5,color:'#d9a35b'},{value:7.5,color:'#a9b38a'},{value:11,color:'#5f8592'}];
@@ -32,7 +33,7 @@ export function RegionMap({ world, selected, onSelect }: { world: World; selecte
   const [camera,setCamera]=useState({x:0,y:0,zoom:1});
   const drag=useRef<{x:number;y:number;cx:number;cy:number;scale:number;moved:boolean}|null>(null);
   const suppressClick=useRef(false);
-  const zoom=(delta:number)=>setCamera(c=>{const next=Math.max(1,Math.min(3,c.zoom+delta));return clampCamera({x:c.x+WIDTH/2/c.zoom-WIDTH/2/next,y:c.y+HEIGHT/2/c.zoom-HEIGHT/2/next,zoom:next});});
+  const zoom=(delta:number,anchor?:{x:number;y:number})=>setCamera(c=>zoomMapCamera(c,delta,anchor));
   const T = useT();
   const ko = useLang() === 'ko';
   const [layer,setLayer]=useState<'kingdom'|'wealth'|'sol'>('kingdom');
@@ -52,21 +53,15 @@ export function RegionMap({ world, selected, onSelect }: { world: World; selecte
     <>
       <div className="map-title"><h2>{T.paneMap}</h2></div><div className="map-layers segmented" role="group" aria-label={T.mapLayers}>{(['kingdom','wealth','sol'] as const).map(id=><button key={id} aria-pressed={layer===id} onClick={()=>setLayer(id)}>{id==='kingdom'?T.territory:id==='wealth'?T.wealthLevel:T.standardOfLiving}</button>)}</div>
       <div className="map-camera-tools"><button aria-label={uiCopy().screenText['zoomOut']} onClick={()=>zoom(-.15)}>−</button><button aria-label={uiCopy().screenText['resetMapView']} onClick={()=>setCamera({x:0,y:0,zoom:1})}>{Math.round(camera.zoom*100)}%</button><button aria-label={uiCopy().screenText['zoomIn']} onClick={()=>zoom(.15)}>+</button></div>
-      <svg className="map atlas-map" viewBox={`${camera.x-680} ${camera.y-240} ${WIDTH/camera.zoom} ${HEIGHT/camera.zoom}`} role="group" aria-label={T.mapAria}
-       onWheel={e=>zoom(e.deltaY<0?.1:-.1)}
+      <svg className="map atlas-map" viewBox={`${camera.x+MAP_FRAME.x} ${camera.y+MAP_FRAME.y} ${WIDTH/camera.zoom} ${HEIGHT/camera.zoom}`} role="group" aria-label={T.mapAria}
+       onWheel={e=>{const matrix=e.currentTarget.getScreenCTM();const point=matrix?new DOMPoint(e.clientX,e.clientY).matrixTransform(matrix.inverse()):undefined;zoom(e.deltaY<0?.1:-.1,point);}}
        onPointerDown={e=>{if(e.button!==0)return;const box=e.currentTarget.getBoundingClientRect();suppressClick.current=false;drag.current={x:e.clientX,y:e.clientY,cx:camera.x,cy:camera.y,scale:Math.min(box.width/(WIDTH/camera.zoom),box.height/(HEIGHT/camera.zoom)),moved:false};}}
        onPointerMove={e=>{const d=drag.current;if(!d)return;const dx=e.clientX-d.x,dy=e.clientY-d.y;if(Math.hypot(dx,dy)>4){d.moved=true;suppressClick.current=true;e.currentTarget.setPointerCapture(e.pointerId);}if(d.moved)setCamera(c=>clampCamera({...c,x:d.cx-dx/d.scale,y:d.cy-dy/d.scale}));}}
        onPointerUp={()=>{drag.current=null;}} onPointerCancel={()=>{drag.current=null;}}
        tabIndex={0} onKeyDown={e=>{if(e.target!==e.currentTarget)return;const dirs:Record<string,[number,number]>={ArrowLeft:[-40,0],ArrowRight:[40,0],ArrowUp:[0,-40],ArrowDown:[0,40]};if(dirs[e.key]){e.preventDefault();const [x,y]=dirs[e.key];setCamera(c=>clampCamera({...c,x:c.x+x/c.zoom,y:c.y+y/c.zoom}));}}}>
         <rect className="atlas-ocean" x={-WIDTH} y={-HEIGHT} width={WIDTH*3} height={HEIGHT*3} fill="#93afb3"/>
-        <g pointerEvents="none">{[
-          [3,'M950,0L930,-150L1000,-300L975,-1504H1150V0Z'],
-          [6,'M1150,-1504H4432V400H1535V0H1150Z'],
-          [7,'M1535,400H4432V2528H1400V1023H1535Z'],
-          [5,'M950,1023H1400V2528H950Z'],
-          [4,'M510,1023L520,1090L450,1150L475,1220L380,1350L430,1460L300,1620L340,2528H950V1023Z'],
-        ].map(([id,d])=>{const r=world.regions.find(r=>r.id===id);return <g key={id}><path d={String(d)} fill="#eee4cc" className="atlas-base"/></g>;})}</g>
-        <image className="atlas-base" href={`${import.meta.env.BASE_URL}${mapData.image.light}`} x="0" y="0" width={1536} height={1024} preserveAspectRatio="none" pointerEvents="none"/>
+        <g pointerEvents="none">{mapData.regions.map(r=><path key={r.id} d={r.d} fill="#eee4cc" className="atlas-base"/>)}</g>
+        <image className="atlas-base" href={`${import.meta.env.BASE_URL}${mapData.image.light}`} x="0" y="0" width={1536} height={1024} clipPath="url(#atlas-land-water)" preserveAspectRatio="none" pointerEvents="none"/>
         <g className="atlas-data" style={{fillOpacity:layer==='kingdom'?.35:.55}} pointerEvents="none">{world.regions.map(r=><path key={r.id} d={shape(r.id).d} fill={regionColor(r)}/>)}</g>
         <g className="atlas-provinces" pointerEvents="none">{mapData.borders.map(b=><path key={`${b.a}-${b.b}`} d={b.d}/>)}</g>
         <g className="atlas-unclaimed" pointerEvents="none">{mapData.unclaimed.map(p=><path key={p.id} d={p.d} fill={p.id==='lake'?'#93afb3':'#c5bea9'}/>)}</g>

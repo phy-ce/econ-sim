@@ -1,6 +1,7 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { REGIONS } from '@econ/sim';
+import {extendPath,sharedBorderPath} from './map-extension';
 
 const source = new URL('../src/map/regions.svg', import.meta.url);
 const svg = readFileSync(source, 'utf8');
@@ -14,7 +15,12 @@ const regions = tags.filter(t=>t.id.startsWith('region-')).map(t=> {
  const label=t['data-label'].split(',').map(Number),icon=t['data-icon'].split(',').map(Number);
  return {id:Number(t.id.slice(7)),d:t.d,bbox:[Math.min(...xs),Math.min(...ys),Math.max(...xs)-Math.min(...xs),Math.max(...ys)-Math.min(...ys)],centroid:label,label,icon,anchors:{rail:[label[0],label[1]+30]}};
 });
-const borders=tags.filter(t=>t.id.startsWith('border-')).map(t=>({a:Number(t.id.split('-')[1]),b:Number(t.id.split('-')[2]),d:t.d}));
+const borders=tags.filter(t=>t.id.startsWith('border-')).map(t=>{
+ const a=Number(t.id.split('-')[1]),b=Number(t.id.split('-')[2]);
+ const d=sharedBorderPath(regions.find(r=>r.id===a)!.d,regions.find(r=>r.id===b)!.d);
+ if(!d)throw Error(`Missing shared border: ${a}-${b}`);
+ return {a,b,d};
+});
 const expected=REGIONS.flatMap(r=>r.neighbors.filter(n=>n>r.id).map(n=>`${r.id}-${n}`)).sort();
 const actual:string[]=[];
 for(const a of regions) for(const b of regions) if(a.id<b.id){
@@ -37,7 +43,7 @@ const data={viewBox:[0,0,1536,1024],image:{light:'assets/map/map-base.webp'},reg
  'M1420,310 C1396,347 1417,372 1388,405 S1399,445 1377,473 S1381,509 1362,541 S1369,585 1348,617 S1361,658 1345,692 S1366,736 1351,767 S1374,813 1369,849 S1406,899 1400,940 S1435,996 1444,1048 C1460,1100 1434,1170 1470,1230 S1492,1390 1510,1480 S1550,1750 1580,1900 S1640,2250 1690,2530',
  'M1236,543 C1269,555 1261,581 1298,590 S1331,595 1348,617',
  'M1483,568 C1460,589 1468,616 1431,632 S1374,656 1345,692'
- ],routes:[
+  ].map(extendPath),routes:[
  {a:1,b:2,d:'M590,250 C565,304 600,348 572,400 S535,495 560,565'},
  {a:1,b:3,d:'M590,250 C676,223 705,269 760,281 S854,311 915,380'},
  {a:2,b:3,d:'M560,565 C618,533 652,548 696,511 S759,460 804,439 S868,417 915,380'},

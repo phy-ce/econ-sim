@@ -297,3 +297,9 @@ DetailWindow 독립 NavigationProvider/버튼, BuildingPops 및 ResourceInspecto
 - FlowRow 툴팁에 efficiencyParts 구성과 기상 배율, 레시피 숫자 소수2자리. 미사용 Bag/bag 및 optProfit/optOffice/optNeedsTech 문자열 정리.
 - 루트 typecheck·클라이언트31파일80시험 통과. 1920×1028 스크린샷 확인: C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/nov5-method-comparison-ko-light.png, nov5-method-comparison-en-dark.png, nov5-method-header-click-ko.png. 건축사무소20레벨/3방식/차이17칩, 별도 해금 검증에서 build_manual→build_scaffold 머리 클릭 및 경험1→0.5 확인. 검증용 저장 복원. 흐름 툴팁 효율1.2/경험1/규모1.2/특성1/인력0.41/기상1 대조. 다른 건물 전 방식 조합은 미검증.
 - 2-86 커밋ec66794. 사용자 추가 제보 '지도 확대 시 이상'을 다음 깨진 화면으로 먼저 재현/수정한 뒤 0장6번(2-59) 진행.
+
+## 2026-11-05 지도 오른쪽 직선 경계·확대 수정
+- 오른쪽 연장 지형의 수평 경계를 완만한 지형 윤곽으로 수정. 지역 선은 수작업 지름길 대신 실제 공유 변에서 생성해 채움과 일치시킴. 원본 그림은 육지/호수 영역으로 잘라 직사각형 바다 배경 가장자리 제거. 지역7개·이웃9쌍 유지, build-map 검사 통과(43,829bytes).
+- 휠 확대 중심을 SVG 좌표로 변환한 마우스 위치에 고정. 같은 지점의 100→200% 화면 이동428.08px→0.80px, 200→300% 0.15px(좌표 반올림 포함). 버튼은 중앙 확대, 100~300% 제한/초기화 유지.
+- 루트 npm.cmd run typecheck·클라이언트32파일82시험 통과. 1920×1028 헤드리스 스크린샷 확인: C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/nov5-map-right-final-ko-light.png, nov5-map-right-final-en-dark.png, nov5-map-final-zoom200-ko-light.png, nov5-map-final-zoom300-ko-light.png. 오른쪽 경계와 300% 해안 확인. 전 영역 드래그/모든 지도 레이어 조합은 미검증.
+- 2-51 커밋2cc182d. 다음 0장6번 2-59 잔여.
