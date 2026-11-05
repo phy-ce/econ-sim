@@ -233,7 +233,7 @@ function BuildingRow({ r, game, world, owner, open, onToggle,onGood }: {onGood?:
   const { b } = r;
   const scale = Math.max(r.rev, r.raw + r.wage, 1);
   const good = r.profit >= 0;
-  if(isOwnerBuilding(b.typeId))return <article className="hrow"><button className="hrow-head" style={{gridTemplateColumns:'40px minmax(0,1fr) auto'}} aria-expanded={open} onClick={onToggle}><BuildingSprite typeId={b.typeId} size={40}/><strong>{r.name} ×{b.level}</strong><span><NumericValue value={b.cash??0} format="money"/></span></button><OwnerSummary buildings={[b]}/>{open&&<Workforce building={b}/>}</article>;
+  if(isOwnerBuilding(b.typeId))return <article className="hrow"><button className="hrow-head" style={{gridTemplateColumns:'40px minmax(0,1fr) auto'}} aria-expanded={open} onClick={onToggle}><BuildingSprite typeId={b.typeId} size={40}/><strong>{r.name} ×{b.level}</strong><span><NumericValue value={b.cash??0} format="money"/></span></button><OwnerSummary buildings={[b]}/>{open&&<Workforce building={b} world={world}/>}</article>;
   const marginText = r.margin === null ? '—' : spct(r.margin);
   return (
     <article className={`hrow ${open ? 'open' : ''} ${b.active ? '' : 'off'} ${b.unpaid ? 'alarm' : ''}`}>
@@ -259,7 +259,7 @@ function BuildingRow({ r, game, world, owner, open, onToggle,onGood }: {onGood?:
           <div className="hd-grid">
             <section className="hd-sec" aria-label={T.hStaff}>
               <h4 className="hd-h"><span>{T.hStaff}</span><span className="pxnum small"><NumericValue value={r.emp} format="int"/>/<NumericValue value={r.jobs} format="int"/></span></h4>
-              <Workforce building={b}/>
+              <Workforce building={b} world={world}/>
             </section>
 
             <section className="hd-sec" aria-label={T.hInputs}>

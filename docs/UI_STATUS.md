@@ -267,3 +267,9 @@ DetailWindow 독립 NavigationProvider/버튼, BuildingPops 및 ResourceInspecto
 - ownerSummary 첫 시험은 임시 manorShares0 우회를 제거하고 기본 지분 규칙에서 상급 자리만 남는지 검사. 지분/자리 분리·옛 규칙 호환·외국 저택 가치 회귀 추가. 루트 typecheck 및 클라이언트26파일71시험 통과.
 - 1920×1028 헤드리스 스크린샷 확인: C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/nov5-manor-shares-ko.png, nov5-manor-owners-ko.png, nov5-manor-owners-en-dark.png, nov5-pop-manor-holdings-ko.png, nov5-pop-manor-holdings-en-dark.png. 저택1050 지분 합14,728,392.96(직접 fund 합 대조), 하급 귀족 보유자7행, pop1070의 저택·금융가14기관. 본문403/scroll403. 극소 지분0 대신 <0.01, 숫자 소수2자리. 실제 배당 지급/지분 매매 시간 경과는 미검증.
 - 이전 지도 커밋c0afa5c. 다음 2-85 건물/그룹 일꾼 1인 임금·웃돈.
+
+## 2026-11-05 2-85 일꾼 1인 임금·웃돈 완료
+- Workforce에 world 전달, 건물/그룹 공통 WorkforceWage 사용. 실제 wagesAt 임금·정부 단계/웃돈 식, 중립 +% 칩(0.5% 이상), 배당 자리 —, 소작지 주간 소득. 그룹은 고용 가중 평균과 툴팁 최저~최고(고용0이면 자리 가중). 4열 격자는 해당 줄에만 적용.
+- 루트 typecheck 및 클라이언트27파일73시험 통과. AI 웃돈 실제 임금10/그룹 가중 평균17.5·배당 자리 제외 회귀 포함.
+- 1920×1028 헤드리스 스크린샷 확인: C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/nov5-workforce-group-en-dark.png, nov5-workforce-single-en-dark.png, nov5-workforce-single-ko-light.png. 별도 검증용 벌목장1013 노동자웃돈25%·기술자10%, wagesAt 노동자3.8548143→ƒ3.85, 그룹/개별 동일, 본문403/scroll403. 검증용 웃돈 저장 복원 후 런타임 오류0. AI 국영 웃돈/소작지 화면은 미검증(코드 대조).
+- 2-87 커밋c204774. 다음 2-75 공급÷수요, 2-82 부 이동, 2-86 목표 임금.
