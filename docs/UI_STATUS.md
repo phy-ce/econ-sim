@@ -253,3 +253,10 @@ DetailWindow 독립 NavigationProvider/버튼, BuildingPops 및 ResourceInspecto
 - 코드 완료: BudgetJobs는 marketWage가 있으면 시장 임금 × 단계만 표시하고, AI 국영 premium이 있으면 ×(1+웃돈) 추가. 지역 값이 없는 wageMarket0/옛 자료는 기본 임금 × 임금 지수 × 단계 식 유지. 화면 숫자는 소수2자리, 원래 계산값 불변.
 - 헤드리스 스크린샷 확인(1920×1080): C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/state-wage-regional-en-dark.png. 동부 삼림 행정청 하급 귀족700명, 1인ƒ4.00·Market wage4×Stage1. 직접 API 대조 perHead3.997182848716258/Region.stateWages4 → 표시값4.00 동일. AI 웃돈 및 지역 임금0 세계는 SSR 회귀만, 화면 미검증.
 - 클라이언트25파일66시험 통과(지역/웃돈식·옛 계산식 호환 포함). 루트 typecheck 통과. 이전 2-81 커밋9d61d99.
+- e152f49: 2-80·2-84 커밋. 2-79 지역 임금 표 구현 착수(소작 소득 export 준비됨).
+
+## 2026-11-05 main 0acc1a2 재개 · 2-79 완료
+- sim 변경 대조: 저택 지분 기본 켬, 지역 임금 단일 규칙·목표 임금 API, AI 국영 웃돈, 이익집단 읽기 계층, 싼 곡물 추가 소비/인구 증가 반영 확인. 이전 화면 검증을 최신 sim 검증으로 간주하지 않고 다시 실행.
+- 지역 개요에 임금 상세 추가: 직종7개·시장/52주 평균/국영/실업 표, 소작 1인 소득은 주간 갱신, 결측 —. 국영 값은 실제 Region.stateWages를 읽고 툴팁에 시장 임금×단계 및 존재하는 AI 웃돈 배율 표시. 왕실 조작 없음.
+- 검증: 루트 npm.cmd run typecheck 통과, 클라이언트26파일69시험 통과. 1920×1028 헤드리스 스크린샷 확인: C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/nov5-wages-ko-light.png, nov5-wages-en-dark.png. 최신 sim seed42·14일, 소작ƒ2.77/노동자ƒ3.17·52주ƒ3.42/하급 귀족 실업75%, 상세 본문403/scroll403. 표 하단은 내부 스크롤. AI 양수 웃돈 툴팁은 코드 대조만(해당 조건 화면 미검증).
+- 미완료 문서 이동은 하지 않고 이번부터 UI_STATUS만 갱신(사용자 최신 지시). 다음 깨진 화면/2-87 저택 지분 목록.

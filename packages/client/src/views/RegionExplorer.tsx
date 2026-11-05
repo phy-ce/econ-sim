@@ -11,6 +11,7 @@ import { HelpText } from '../TooltipLayer';
 import { ClassDonut } from './ClassDonut';
 import { RegionCircles } from './RegionCircles';
 import { DetailWindow } from './DetailWindow';
+import {RegionWages} from './RegionWages';
 
 export function RegionExplorer({world,region,onBuildings,onPops}:{world:World;region:Region;onBuildings:()=>void;onPops:(prof:PopClass)=>void}) {
  const T=useT(),ko=useLang()==='ko';
@@ -36,6 +37,7 @@ export function RegionExplorer({world,region,onBuildings,onPops}:{world:World;re
    <div className="explorer-facts"><span>{buildingName('school')}<b>{compact(groups.get('school')??0)} {T.ringLevels}</b></span></div>
    <button className="entity-link" onClick={()=>go({kind:'buildings',region:region.id})}>{uiCopy().screenText['schoolsRegionalBuildings']} ↗</button></>}</DetailExplorer>
   </DetailWindow>
+  {region.wages&&<DetailWindow title={T.regionalWages} summary={<NumericValue value={region.wages.unskilled} format="money"/>} help={T.marketWage}><RegionWages world={world} region={region}/></DetailWindow>}
   <div className="ledger-caption"><HelpText text={uiCopy().screenText['totalLevelsByBuildingTypeClickTo']}>{T.buildings} · {groups.size}</HelpText><small>{T.ringLevels} {compact(buildings.reduce((sum,b)=>sum+b.level,0))}</small></div>
   {[...groups].sort((a,b)=>b[1]-a[1]).map(([type,levels])=><div key={type}><button className="explorer-building" onClick={onBuildings} data-help={`${buildingName(type)} · ${levels} ${T.ringLevels}\n${T.ringOpenBuildings}`}><BuildingSprite typeId={type} size={26}/><span>{buildingName(type)}</span><b>{compact(levels)}</b><span aria-hidden="true"> ↗</span></button><OwnershipBar world={world} buildings={buildings.filter(b=>b.typeId===type)}/></div>)}
   {!buildings.length&&<p>{T.noBuildings}</p>}
