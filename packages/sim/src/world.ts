@@ -1,4 +1,4 @@
-import { BUILDING_BY_ID, GOOD_IDS, GOODS, REGIONS, SKILL_DEFS, SUBSISTENCE, TICKS_PER_WEEK, TIER_COUNTS, TIER_JITTER, TIERS, TRADING_POST, TUNE, WORKFORCE_RATIO, getMethod, lockedGoodsFor, tradeReserveOf } from './data';
+import { BUILDING_BY_ID, GOOD_IDS, GOODS, PLOT_JITTER, REGIONS, SKILL_DEFS, SUBSISTENCE, TICKS_PER_WEEK, TIER_COUNTS, TIER_JITTER, TIERS, TRADING_POST, TUNE, WORKFORCE_RATIO, getMethod, lockedGoodsFor, tradeReserveOf } from './data';
 import { collectionRatio, emptyJobs, knownVeins, isGovernment, newBuilding, paysDividend, slots, wageCostOf } from './economy';
 import { addFund, aggregateHouseholds, findPop, getPop, movePeople, workforce } from './pops';
 import { updateOwnership, updateSubsistence } from './production';
@@ -117,12 +117,13 @@ function newMarket(): Record<GoodId, MarketGood> {
 }
 
 /** 시드로 정한 지역 시작값: 티어, 인구(계층별), 교육, 경작지·부지 칸, 시작 농장 레벨 */
-interface RegionStart { tier: number; population: Record<PopClass, number>; education: number; arable: number; plot: number; farms: number; /** TUNE.startPopScale 을 곱하기 전 인구 (시작 생산 건물·부지·돈을 센다) */ people0: number }
+interface RegionStart { tier: number; population: Record<PopClass, number>; education: number; arable: number; plot: number; farms: number; /** TUNE.startPopScale 을 곱하기 전 인구 (시작 생산 건물·돈을 센다) */ people0: number }
 
 /**
  * 지역 티어를 시드로 배정하고(TIER_COUNTS, 각 왕국에 티어 2 이상 하나 이상), 티어 수치에 ±TIER_JITTER 를 준다.
+ * 공장 부지는 티어가 아니라 지역 정의 값(RegionDef.plot)에 ±PLOT_JITTER 를 주고 10칸 단위로 맞춘다
  * 경작지 = 소작농 노동 인구 ÷ 소작지 1칸 인원 × arableSlack + 시작 농장 칸
- * TUNE.startPopScale (비교용, 기본 1): 계층 인원은 인구 × 배율로 센다. 시작 농장·부지는 원래 인구로 센다. 경작지는 startPopLand 0 이면 줄어든 인구, 1 이면 원래 인구로 센다
+ * TUNE.startPopScale (비교용, 기본 1): 계층 인원은 인구 × 배율로 센다. 시작 농장은 원래 인구로 센다. 경작지는 startPopLand 0 이면 줄어든 인구, 1 이면 원래 인구로 센다
  */
 export function regionStarts(seed: number, owner: Record<number, number>): Map<number, RegionStart> {
   const rnd = seeded(seed * 104729 + 3);
@@ -137,10 +138,10 @@ export function regionStarts(seed: number, owner: Record<number, number>): Map<n
     const ok = KINGDOMS.every((k) => ids.some((id) => owner[id] === k.id && tierOf[id] <= 1));
     if (ok) break;
   }
-  const jit = () => 1 + (rnd() * 2 - 1) * TIER_JITTER;
+  const jit = (size = TIER_JITTER) => 1 + (rnd() * 2 - 1) * size;
   const out = new Map<number, RegionStart>();
-  for (const id of ids) {
-    const t = TIERS[tierOf[id]];
+  for (const def of REGIONS) {
+    const id = def.id, t = TIERS[tierOf[id]];
     const total = Math.round((t.pop[0] + rnd() * (t.pop[1] - t.pop[0])) / 1000) * 1000;
     const people = TUNE.startPopScale === 1 ? total : Math.round(total * TUNE.startPopScale);
     const ja = jit(), js = jit(), je = jit();
@@ -154,7 +155,7 @@ export function regionStarts(seed: number, owner: Record<number, number>): Map<n
     out.set(id, {
       tier: tierOf[id] + 1,
       population: { peasant, unskilled: 0, farmer: 0, skilled, expert, gentry, capitalist: 0, aristocrat },
-      education: Math.round(t.education * jit() * 100) / 100, arable, plot: Math.ceil((total / 100_000) * t.plot * jit()), farms, people0: total,
+      education: Math.round(t.education * jit() * 100) / 100, arable, plot: Math.round((def.plot * jit(PLOT_JITTER)) / 10) * 10, farms, people0: total,
     });
   }
   return out;
@@ -195,20 +196,19 @@ export function createWorld(seed = 1, opts: CreateWorldOptions = {}): World {
     history: [], events: [{ tick: 0, companyId: null, text: '대륙의 시장이 열렸습니다.', textEn: 'The markets of the continent are open.', kind: 'info' }], alertState: {},
   };
 
-  // 왕실은 자기 왕국에서 공장 부지가 가장 넓은 지역에 건축사무소를 갖고 시작한다 (민간 공사도 이곳이 맡는다).
-  // 행정청은 왕국 인구를 다 감당하는 레벨로 시작한다
+  // 왕국의 수도 = 인구가 가장 많은 지역 (원래 인구로 센다). 시작 건물은 일꾼이 찬 채 시작하므로 사람이 있는 곳에 둔다. 부지는 인구와 묶이지 않아 기준으로 쓰지 않는다
+  const capitalOf = (kingdomId: number) => regions.filter((r) => r.kingdomId === kingdomId).sort((a, b) => starts.get(b.id)!.people0 - starts.get(a.id)!.people0 || a.id - b.id)[0];
+  // 왕실은 수도에 건축사무소를 갖고 시작한다 (민간 공사도 이곳이 맡는다). 행정청은 왕국 인구를 다 감당하는 레벨로 시작한다
   for (const c of companies.filter((x) => x.state)) {
     const mine = regions.filter((r) => r.kingdomId === c.kingdomId);
-    const home = [...mine].sort((a, b) => b.land.plot - a.land.plot || a.id - b.id)[0];
-    w.buildings.push(newBuilding(w.nextId++, 'builder', home.id, c.id, 'build_manual', START_OFFICE_LEVELS, c.state));
+    const capital = capitalOf(c.kingdomId);
+    w.buildings.push(newBuilding(w.nextId++, 'builder', capital.id, c.id, 'build_manual', START_OFFICE_LEVELS, c.state));
     const people = mine.reduce((a, r) => a + Object.values(starts.get(r.id)!.population).reduce((x, y) => x + y, 0), 0);
     const admin = getMethod('admin', 'admin_hereditary');
-    w.buildings.push(newBuilding(w.nextId++, 'admin', home.id, c.id, admin.id, Math.max(1, Math.ceil((people * TUNE.adminStart) / (admin.taxCapacity! * TUNE.adminScale))), true));
-    // 학교 START_SCHOOL_LEVELS 레벨 (귀족 가정교사, 기술 없이 여는 방식): 왕국에서 인구가 가장 많은 지역. 문해력이 연구 속도를 정한다
-    const popOf = (r: Region) => starts.get(r.id)!.people0;
-    const capital = [...mine].sort((a, b) => popOf(b) - popOf(a) || a.id - b.id)[0];
+    w.buildings.push(newBuilding(w.nextId++, 'admin', capital.id, c.id, admin.id, Math.max(1, Math.ceil((people * TUNE.adminStart) / (admin.taxCapacity! * TUNE.adminScale))), true));
+    // 학교 START_SCHOOL_LEVELS 레벨 (귀족 가정교사, 기술 없이 여는 방식): 수도. 문해력이 연구 속도를 정한다
     w.buildings.push(newBuilding(w.nextId++, 'school', capital.id, c.id, 'school_tutor', START_SCHOOL_LEVELS, true));
-    // 무역소 START_TRADE_LEVELS 레벨: 같은 지역(인구가 가장 많은 지역), 그 왕국 민간 상회 것. 금고는 레벨 × 기본 유보액 (새 돈이 아니라 시작 세계의 돈이다)
+    // 무역소 START_TRADE_LEVELS 레벨: 수도, 그 왕국 민간 상회 것. 금고는 레벨 × 기본 유보액 (새 돈이 아니라 시작 세계의 돈이다)
     const firm = companies.find((x) => !x.state && x.kingdomId === c.kingdomId);
     if (firm && START_TRADE_LEVELS > 0) {
       const post = newBuilding(w.nextId++, TRADING_POST, capital.id, firm.id, BUILDING_BY_ID[TRADING_POST].methods[0].id, START_TRADE_LEVELS, false);
@@ -228,10 +228,10 @@ export function createWorld(seed = 1, opts: CreateWorldOptions = {}): World {
     const fiber = Math.round(people * TUNE.startFiber);
     if (firm && fiber > 0) { r.land.arable += fiber; w.buildings.push(newBuilding(w.nextId++, 'fiber_farm', r.id, firm.id, 'fiber_basic', fiber, false)); }
   }
-  // 시작 목공구 공방: 왕국마다 TUNE.startWorkshop 레벨, 건축사무소가 있는 지역(공장 부지가 가장 넓은 곳)의 민간 상회. 소작지가 공구를 내지 않아 첫날 공구는 이것뿐이다
+  // 시작 목공구 공방: 왕국마다 TUNE.startWorkshop 레벨, 수도의 민간 상회. 소작지가 공구를 내지 않아 첫날 공구는 이것뿐이다
   for (const k of KINGDOMS) {
-    const home = regions.filter((r) => r.kingdomId === k.id).sort((a, b) => b.land.plot - a.land.plot || a.id - b.id)[0];
-    if (home && TUNE.startWorkshop > 0) w.buildings.push(newBuilding(w.nextId++, 'workshop', home.id, k.firm.id, 'tools_wood', TUNE.startWorkshop, false));
+    const capital = capitalOf(k.id);
+    if (capital && TUNE.startWorkshop > 0) w.buildings.push(newBuilding(w.nextId++, 'workshop', capital.id, k.firm.id, 'tools_wood', TUNE.startWorkshop, false));
   }
   updateSubsistence(w);
   // 시작 민간 건물의 레벨은 그 지역 저택(땅 건물)이나 금융가(그 밖)의 것이다

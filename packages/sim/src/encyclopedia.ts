@@ -12,7 +12,7 @@ import {
   BUILDING_BY_ID, BUILDING_TYPES, CLASS_DEFS, CONSUMPTION_PER_CAPITA, DEPENDENT_CONSUMPTION, EDUCATION_FLOOR, EDUCATION_RANGE, GOODS, GOOD_IDS,
   HARVEST_KINDS, HARVEST_MAX_SEASONS, HARVEST_SEASON_DAYS, HARVEST_SPREAD, HARVEST_STEP, LAW_TECH, MAX_POINTS_PER_LEVEL_DAY, NEEDS, OWNERSHIP_SEATS,
   OWNER_SEATS_PER_LEVEL, REGIONS, STEP_PROFIT_MULT, BUILD_POINT_FACTOR, INDUSTRIES, INDUSTRY_SKILL_TOL, INDUSTRY_UPPER_INPUT_TOL, industryOf, SKILL_DEFS, SUBSISTENCE, tenantIncomeAtBase, tenantYield, TAX_PEOPLE_PER_LEVEL, TECHS, TECH_BY_ID, TECH_COST, TICKS_PER_WEEK, TICKS_PER_YEAR,
-  GATED_GOODS, NEED_LUXURY_FROM, NEED_STANDARD_FROM, TIERS, TIER_JITTER, TUNE, WORKFORCE_RATIO, getMethod, goodTechs, needsAt, rawMax, regionPerk, scaleBonus,
+  GATED_GOODS, NEED_LUXURY_FROM, NEED_STANDARD_FROM, PLOT_JITTER, TIER_JITTER, TUNE, WORKFORCE_RATIO, getMethod, goodTechs, needsAt, rawMax, regionPerk, scaleBonus,
   buildPointsOf, TRADING_POST, TRADE_STEP_MULT, TRADE_ESCROW_SHARE, tradeReserveOf,
 } from './data';
 import {
@@ -248,25 +248,26 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   },
   {
     id: 'start-state', category: 'basics', title: t('시작 상태', 'Starting state'),
-    rule: t('지역 티어가 인구·계층·교육·부지·농지를 정하고 ±{0} 흔든다. 민간 상회는 {1}으로 시작한다. 왕국마다 인구가 가장 많은 지역에 민간 무역소 {2}가 금고를 채운 채 있다. 은행은 없다.', 'Region tiers set population, classes, education, plots and farmland, jittered by ±{0}. Private houses start with {1}. Each kingdom\'s most populous region has a private trading post of {2} with a full vault. There is no bank.'),
+    rule: t('지역 티어가 인구·계층·교육·농지를 정하고 ±{0} 흔든다. 공장 부지는 지역마다 정해져 있고 ±{3}만 흔든다. 민간 상회는 {1}으로 시작한다. 왕국마다 인구가 가장 많은 지역이 수도다. 건축사무소·행정청·학교와 금고를 채운 민간 무역소 {2}가 그곳에 있다. 은행은 없다.', 'Region tiers set population, classes, education and farmland, jittered by ±{0}. Building plots are fixed per region, jittered by only ±{3}. Private houses start with {1}. Each kingdom\'s most populous region is its capital, with the construction office, administration, school and a private trading post of {2} with a full vault. There is no bank.'),
     params: [
       p('티어 흔들림', 'Tier jitter', () => TIER_JITTER, 'pct'), p('민간 상회 시작 현금', 'Private start cash', () => START_CASH, 'florin'),
       p('시작 무역소 (왕국마다)', 'Starting trading post (per kingdom)', () => START_TRADE_LEVELS, 'level'),
+      p('부지 흔들림', 'Plot jitter', () => PLOT_JITTER, 'pct'),
       tune('startTreasuryWeeks', '시작 국고 (정부 건물 운영비 주 수)', 'Start treasury (weeks of government upkeep)', 'week'),
       p('시작 건축사무소', 'Starting construction office', () => START_OFFICE_LEVELS, 'level'),
-      p('시작 학교 (왕실마다, 인구가 가장 많은 지역)', 'Starting school (per crown, most populous region)', () => START_SCHOOL_LEVELS, 'level'),
+      p('시작 학교 (왕실마다, 수도)', 'Starting school (per crown, capital)', () => START_SCHOOL_LEVELS, 'level'),
       p('시작 기술', 'Starting techs', () => START_TECHS.join(', ')),
       tune('startLumber', '시작 벌목장 (10만 명당)', 'Start lumber camps (per 100k)', 'level'), tune('startFiber', '시작 섬유 농장 (10만 명당)', 'Start fibre farms (per 100k)', 'level'),
-      tune('startWorkshop', '시작 목공구 공방 (왕국마다, 건축사무소 지역)', 'Start wooden-tool workshop (per kingdom, office region)', 'level'),
+      tune('startWorkshop', '시작 목공구 공방 (왕국마다, 수도)', 'Start wooden-tool workshop (per kingdom, capital)', 'level'),
       tune('startPopScale', '시작 인구 배율 (비교용, 건물·부지·돈은 그대로)', 'Starting population multiple (comparison; buildings, plots, money unchanged)', 'x'),
       tune('startPopLand', '농지는 원래 인구로 (1) / 줄인 인구로 (0)', 'Farmland from original (1) / scaled (0) population'),
     ],
     example: () => {
-      const tier = TIERS[0];
+      const def = REGIONS[3], plots = (s: number) => Math.round((def.plot * (1 + s * PLOT_JITTER)) / 10) * 10;
       return {
-        inputs: [row('티어 1 인구', 'Tier 1 population', `${tier.pop[0]}–${tier.pop[1]}`, 'people'), row('부지/10만 명', 'Plots per 100k', tier.plot)],
-        steps: [row('인구 110만이면 부지', 'Plots at 1.1M people', 11 * tier.plot)],
-        result: [row('부지 (흔들림 전)', 'Plots (before jitter)', 11 * tier.plot, 'level')],
+        inputs: [row(`${def.name} 부지`, `${def.nameEn} plots`, def.plot, 'level'), row('부지 흔들림', 'Plot jitter', PLOT_JITTER, 'pct')],
+        steps: [row('가장 적을 때', 'Lowest', plots(-1), 'level'), row('가장 많을 때', 'Highest', plots(1), 'level')],
+        result: [row('시드와 상관없는 범위', 'Range across seeds', `${plots(-1)}–${plots(1)}`, 'level')],
       };
     },
     live: { pick: [], run: (w) => ({ rows: w.regions.map((r) => ({ label: regionLabel(r), value: `T${r.tier ?? '-'} · ${Math.round(regionPeople(w, r.id)).toLocaleString()}` })) }) },

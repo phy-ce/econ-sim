@@ -767,7 +767,7 @@ function planResearch(w: World, c: Company, o: Outlook) {
 
 function planConstruction(w: World, c: Company, o: Outlook) {
   if (!hasBuilder(w, c)) {
-    const home = ownRegions(w, c).sort((a, b) => b.land.plot - a.land.plot)[0];
+    const home = ownRegions(w, c).sort((a, b) => regionPopulation(b) - regionPopulation(a))[0];
     if (home && !w.constructions.some((k) => k.companyId === c.id && k.typeId === 'builder')) applyCommand(w, c.id, { type: 'build', typeId: 'builder', regionId: home.id, levels: Math.min(OFFICE_BLOCK, MAX_LEVELS_PER_PROJECT) });
     return;
   }

@@ -194,9 +194,11 @@ export interface RegionDef {
   /** 해외 무역(수입·수출)이 가능한 개항장 */
   spaceport: boolean;
   neighbors: number[];
-  /** 산림 칸 수와 자원별 광맥 잠재량 (지형, 고정. 아직 못 찾은 것 포함). 농지·부지·인구·교육은 티어로 정한다 (data.ts TIERS) */
+  /** 산림 칸 수와 자원별 광맥 잠재량 (지형, 고정. 아직 못 찾은 것 포함). 농지·인구·교육은 티어로 정한다 (data.ts TIERS) */
   forest: number;
   veins: Record<DepositId, number>;
+  /** 공장 부지 칸 수 (지형. 인구와 묶지 않는다. 시작 세계에서 ±PLOT_JITTER 흔든다, world.ts regionStarts) */
+  plot: number;
   perks: Partial<Record<string, number>>;
 }
 
