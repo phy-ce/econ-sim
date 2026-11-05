@@ -279,3 +279,9 @@ DetailWindow 독립 NavigationProvider/버튼, BuildingPops 및 ResourceInspecto
 - 시장 양 열을 비율+작은 로그 막대로 교체. 지역은 currentSD, 합산 범위는 합산 공급÷수요. 수요0은 —, 정렬은 비율이며 결측은 뒤. 비율의 크기에 좋음/나쁨 색 없음.
 - 루트 typecheck·클라이언트28파일76시험 통과(지역 보정·수요0·서비스·로그 위치 회귀). 1920×1028 스크린샷 확인: C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/nov5-sd-build-ko-light.png, nov5-sd-build-en-dark.png, nov5-sd-market-ko-light.png, nov5-sd-market-en-dark.png. 남부 습지 목재 지금0.28/+1 0.81/+5 2.91, sim 직접 호출0.2791536/0.8060579/2.9136748와 일치. 본문403/scroll403. 시장 내림차순2.13/2.03/1.15…/— 확인. 실제 짓기 실행과 전 상품/전 범위 조합은 미검증.
 - 2-85 커밋e70704e. 다음 2-82 부 이동→2-86 목표 임금→0장 잔여.
+
+## 2026-11-05 2-82 부 이동 완료
+- pop별 wealthDrivers를 합쳐 소득·현물·저축 몫·합계·현재/다음 생활비 표시, 주간 부 변화는 인구 가중 평균. 돈은 기존 1인당/합계 토글을 따르고 부 변화와 저축/생활비 주 수는 나누지 않음. 상층/중층 저축 몫 —, 식 툴팁은 TUNE 버퍼/기간을 읽음. 부 이동 상세는 기본 닫힘.
+- 루트 typecheck·클라이언트29파일78시험 통과. 집계·인구 가중·세계 불변·1인당/합계·상층 제외 회귀 포함.
+- 1920×1028 스크린샷 확인: C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/nov5-wealth-drift-en-dark.png, nov5-wealth-total-en-dark.png, nov5-wealth-drift-ko-light.png. pop1069 소득/인0.06·현물/인0.63·합0.69·생활비0.66/다음0.90·저축0.5주, 총액 전환70.5k/772k/842.6k. 본문403/scroll403. 복제 세계 하루 진행 전 예측 주간0/실제0 대조. 비영 부 변화의 실제 다음 날 화면·상층 상세 화면은 미검증(집계/제외는 시험).
+- 2-75 커밋a4d3489. 다음 2-86 목표 임금.
