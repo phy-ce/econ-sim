@@ -1,4 +1,5 @@
 import {WorkforceWage} from './WorkforceWage';
+import {BuildingRoom} from './BuildingRoom';
 import {DemolitionProgress} from './DemolitionProgress';
 import {officeLoadFor} from '../officeLoad';
 import {FlowRow} from './FlowRow';
@@ -26,6 +27,7 @@ export function GroupDetail({world,buildings,game,onGood,onOwner,showControls}:{
  const officeRate=loadWeight?officeBuildings.reduce((n,b)=>n+b.level*officeLoadFor(world,b),0)/loadWeight:0;
  const methods=[...new Set(buildings.map(b=>b.methodId))];
  return <div className="group-detail-ledger">
+  {buildings[0]&&<BuildingRoom world={world} typeId={buildings[0].typeId} regionId={buildings[0].regionId}/>}
   <div className="system-tags">{methods.map(id=>{const b=buildings.find(b=>b.methodId===id)!;return <span key={id}>{methods.length>1?`${b.stateOwned?S.state:S.private} · `:''}{methodName(getMethod(b.typeId,id))}</span>;})}</div>
   {!allOwner&&<details><summary>{G.workforce} <NumericValue value={a.employed} format="compact"/> / <NumericValue value={a.jobs} format="compact"/></summary><div className="workforce-list workforce-with-wages">{a.staff.map(s=><div className="workforce-row" key={s.s}><span>{className(s.s)}</span><Bar value={s.jobs?s.emp/s.jobs:0} color={CLASS_COLOR[s.s]} label={className(s.s)}/><b><NumericValue value={s.emp} format="compact"/> / <NumericValue value={s.jobs} format="compact"/></b><WorkforceWage world={world} buildings={buildings} skill={s.s}/></div>)}</div></details>}
   {!allOwner&&buildings[0]&&<FlowRow world={world} typeId={buildings[0].typeId} methodId={buildings[0].methodId} regionId={buildings[0].regionId} levels={buildings.reduce((n,b)=>n+b.level,0)} onGood={onGood} summary={{...a,rev:econ.day.sales,raw:econ.day.inputs,wage:econ.day.wages,stopped:buildings.every(b=>!b.active||b.idle),...services,officeLoad:officeRate}}/>}

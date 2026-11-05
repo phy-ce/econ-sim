@@ -369,7 +369,6 @@ export const KO = {
   paneMap: '왕국 지도',
   paneRegion: '지역 상세',
   paneCompanyOf: (name: S) => `${name} 상세`,
-  myHouse: '내 상회',
   paneBottom: '추이와 상회 순위',
 
   // 토스트
@@ -533,7 +532,6 @@ export const KO = {
   demolishOne: '하나 철거',
   confirmDemolish: (region: S, b: S) => `${region} ${particle(b, '을', '를')} 철거?`,
   expandOne: '하나 증설',
-  expandTen: '10개 증설',
   method: '생산 방식',
   utilisation: '가동률',
   stop: '가동 중지',
@@ -927,7 +925,6 @@ export const EN: Dict = {
   paneMap: 'Kingdom map',
   paneRegion: 'Region details',
   paneCompanyOf: (name) => `${name} details`,
-  myHouse: 'My trading house',
   paneBottom: 'Trends and house rankings',
 
   saved: 'Game saved.',
@@ -1082,7 +1079,6 @@ export const EN: Dict = {
   demolishOne: 'Demolish one',
   confirmDemolish: (region, b) => `Demolish ${b.toLowerCase()} in ${region}?`,
   expandOne: 'Expand by one',
-  expandTen: 'Expand by 10',
   method: 'Production method',
   utilisation: 'Utilisation',
   stop: 'Stop',

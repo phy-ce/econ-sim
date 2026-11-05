@@ -309,3 +309,8 @@ DetailWindow 독립 NavigationProvider/버튼, BuildingPops 및 ResourceInspecto
 - 유보 툴팁 RESERVE_SHARE35%, 개별/그룹 주인 배당 툴팁 KEEP_SHARE20%/30%. 상세 충원은 buildingEcon.staffing, 그룹은 일자리 가중 평균(고용÷자리와 다른 평활 값 보존); 회귀에서0.77 확인.
 - 루트 typecheck·클라이언트32파일82시험 통과. 1920×1028 헤드리스 스크린샷 확인: C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/nov5-cost-bars-ko-light.png, nov5-cost-bars-en-dark.png. 동부 삼림 비용 막대4개 높이6px, 본문403/scroll403. 벌목장 매출22,021.14/원료1,078.55/임금25,740.51/손익−4,797.92 직접 API와 일치. 양수 이익 막대 및 배당 정렬 전 기관 조합은 화면 미검증.
 - 막힘: BuildingEcon.week 미제공으로 주간 폭포는 기존 sim 요청 유지, 하루 값을 주간으로 바꾸지 않음. 지도 수정 커밋ebac485. 다음2-42 상세 자원·대기열.
+
+## 2026-11-05 2-42 잔여 완료
+- 공통 BuildingRoom으로 개별/그룹 상세에 종류별 땅·광맥 여유 숫자(landFree/depositFree, 공사 예약 포함). 왕국 대기열 각 회사 머리에 전체 건수/MAX_CONCURRENT_CONSTRUCTIONS(40), 행 지역 링크는 해당 지역 건물 탭을 연다. 미사용 myHouse/expandTen 양 언어 문자열 제거.
+- 루트 typecheck·클라이언트32파일82시험 통과. 1920×1028 헤드리스 스크린샷 확인: C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/nov5-room-ko-light.png, nov5-room-en-dark.png, nov5-queue-link-ko-light.png, nov5-queue-en-dark.png. 동부 삼림 산림 여유384.00=landFree384, 본문403/scroll403. 복제 세계 공사1건에서1/40·지역 링크 클릭→지역 창 건물 탭 확인, 검증 저장 복원. 광산 광맥 줄과 상한40건 화면은 미검증(동일 공통 함수/상수 코드 대조).
+- 2-59 커밋3cc4704. 다음2-32 보유 주간 이익·배당 표.
