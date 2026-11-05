@@ -278,7 +278,7 @@ export interface Building {
   cash?: number;
   /** 왕실 건물의 민영화: 켜 두면 저택·금융가가 매주 1레벨씩 사 갈 수 있다 (ai.ts buyLevels) */
   privatize?: boolean;
-  /** 금융가 지분 1개 값 = (금고 + 가진 레벨의 공사비) ÷ 지분 수 (매주, finance.ts updateFunds) */
+  /** 금융가·저택 지분 1개 값 = (금고 + 가진 레벨의 공사비 [저택은 + 주간 지대 × TUNE.manorNavRentWeeks]) ÷ 지분 수 (매주, finance.ts updateFunds·updateManorShares) */
   nav?: number;
   /** 소작지: 일하는 소작농 (노동 인구) */
   tenants?: number;

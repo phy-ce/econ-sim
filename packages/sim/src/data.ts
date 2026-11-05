@@ -584,7 +584,7 @@ export const TUNE = {
   manorInvestSplit: 1,
   // 부재 지주 몫 (2026-11-02 사용자 결정 "다른 지역 배당 디버프", DECISIONS 7-44): 저택·금융가가 자기 지역 밖 건물에서 받는 배당의 이 비율은 그 건물 지역의 저택으로 간다 (finance.ts payDividends). 0 = 끔
   // 저택 지분 값에 지대를 넣는다 (2026-11-05 사용자 결정, MANOR_SHARES.md 2단계, DECISIONS 7-44): 자산 += 주간 지대 × manorNavRentWeeks. 0 = 끔.
-  // 26·52·104 와 짓는 공사 넣기를 비교해 52 (근거 DESIGN 11, 보고서 2026-11-05-manornav). manorNavBuilds 1 = 짓고 있는 공사에 낸 돈도 자산이다 (finance.ts ownerAssets, 기본 끔: 비교에서 나아진 것이 없었다)
+  // 26·52·104 와 짓는 공사 넣기를 비교해 52 (근거 DESIGN 11, 보고서 2026-11-05-manornav). manorNavBuilds 1 = 짓고 있는 공사에 낸 돈도 자산이다 (finance.ts ownerAssets, 기본 끔: 시드 2개 비교에서 뚜렷이 나아지지 않아 규칙을 늘리지 않는다)
   manorNavRentWeeks: 52,
   manorNavBuilds: 0,
   absenteeShare: 0, // 끔: manorShares 켬(97c1bc5) 뒤 10%·20% 다시 비교 안 함, DECISIONS 7-44 결정 대기 4
@@ -699,7 +699,7 @@ export const TUNE = {
   // 처음 값 0.25 (가득 차면 주에 25%, 근거 없음). 2026-11-02 사용자 "all 의 나머지를 넣어서" 로 1 (가득 차면 매주, 근거: DESIGN 11). 찬 주가 4주 이어질 때 늘리던 그 전 규칙(reserveGrowMax 0)은 wt-simplify 1-D 에서 지웠다
   reserveGrowMax: 1,
   reserveGrowFrom: 0.5,
-  // 유보 기준 증설의 과잉 검사 (오버홀 03 5-1, 0b′, AI 판단): > 0 이면 증설 전에 그 지역 그 산출 상품의 예상 공급 ÷ 수요(economy.ts projectedSD:
+  // 유보 기준 증설의 과잉 검사 (오버홀 03 5-1, 0b′, AI 판단): > 0 이면 증설 전에 그 지역 그 방식 산출의 예상 공급 ÷ 수요(economy.ts methodSD, 산출이 여럿이면 기본가 값 가중 평균. 상품마다 projectedSD:
   // 공급 이동평균 + 모든 회사의 공사 중 레벨 산출, ÷ 수요 이동평균)가 이 값을 넘는 주는 증설하지 않는다. 0 = 검사 없음 (그 전과 같음).
   // 후보 1.25 / 1.5 / 1.75 와 0 을 비교 중 (docs/overhaul/0BP_5-1_SPECS.json), 근거 없음
   aiGlutSD: 1.5,
@@ -711,7 +711,7 @@ export const TUNE = {
   // 다시 짓기 기다림 (이슈 #7, AI 판단, ai.ts rebuildBlocked): > 0 이면 AI 는 어느 AI 회사가 한 지역에서 한 생산 건물 종류(정부 건물·무역소 제외)의 철거를 명령한 뒤
   // 이 주 수 동안 그 지역에 그 종류를 짓지도 늘리지도 않는다 (Region.demoAt). 0 = 끔. 2026-11-02 기본 52 (wt-churn7, 후보 26·52·104, 근거: DESIGN 11)
   aiRebuildWait: 52,
-  // 넘침 퇴출 (2026-11-02 이슈 #11 F3, AI 판단, ai.ts trimExit): > 0 이면 매주 지역·상품마다 예상 공급 ÷ 수요(projectedSD, 증설 검사와 같은 값)가 이 값 이상이고,
+  // 넘침 퇴출 (2026-11-02 이슈 #11 F3, AI 판단, ai.ts trimExit): > 0 이면 매주 지역·상품마다 예상 공급 ÷ 수요(projectedSD, 산출이 하나인 방식은 증설 검사와 같은 값)가 이 값 이상이고,
   // 그 상품을 내는 AI 생산 건물 중 레벨당 손익이 가장 나쁜 것을 1레벨 헐어도 (그 레벨 산출을 공급에서, 그 일꾼 식구가 사던 양을 수요에서 뺀) 예상 공급 ÷ 수요가
   // 증설 문턱 aiGlutSD 이상이면 1레벨 헌다. 헌 뒤 TRIM_WAIT_WEEKS 주는 그 지역 그 상품을 다시 헐지 않는다. 0 = 끔 (그 전과 같음).
   // 끈 채로 둔다: 20년 × 시드 1·2 × salt 0..3 에서 aiGlutSD 1.2 와 함께 켜면 곡물 S/D 는 0.02~0.17 내려갔지만 0.9~1.25 안에 다 남지 않았고 20년차 세전 총생산이 절반이었다 (근거: DESIGN 11)

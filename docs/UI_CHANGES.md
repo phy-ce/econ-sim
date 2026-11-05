@@ -29,8 +29,11 @@
 깨진 화면
 - **2-82**: pop 상세에 부 이동 표가 두 번 나온다 (`BuildingPops.tsx:36`·`:46`). `:46` 을 지운다. 그 밖은 없음 (코드 대조 기준).
 
+건설 창
+- **2-92 건설 창 다시 만들기 (사용자 요청, 먼저)**: 건설 + 건물 관리 합침. 목업 `docs/mockups/construction-d.dc.html`, 검토 후 새로 만든다.
+
 sim 변경 반영 (2026-11-05: wt-luxmix, 사용자 결정으로 wt-batch4 에 합침)
-0. **2-91 혼합 방식 (새)**: 산출이 둘인 방식의 공급 ÷ 수요 미리보기를 상품마다.
+0. **2-91 혼합 방식 (새)**: 산출이 둘인 방식의 공급 ÷ 수요를 상품마다. 2-92 10번 형태(지금 S/D 와 값)로 넣는다.
 
 sim 변경 반영 (2026-11-05: wt-welfarefill)
 1. **2-89 복지 상한 (새)**: 정책 창·예산 미리보기 복지 줄에 상한 숫자, `welfareCapDaily` × 7, 라벨과 숫자만. 복지 내역의 '평활 차이' 를 "상한으로 줄인 몫" 으로.
@@ -45,9 +48,6 @@ sim 변경 반영 (2026-11-05: wt-welfarefill)
 
 sim 변경 반영 (wt-batch2: wt-ig 이익집단 읽기 전용 층, main 병합 뒤)
 6. **2-88 정치 창 (낮음)**: 왕국 이익집단 6줄 (영향력·승인·기분), 투표법 라벨. 읽기 전용, 효과 없음.
-
-건설 창
-- **2-92 건설 창 다시 만들기 (사용자 요청, 먼저)**: 건설 + 건물 관리 합침. 목업 `docs/mockups/construction-d.dc.html`, 검토 후 새로 만든다.
 
 sim 대기 · 결정 대기
 - **플레이어 왕실 국영 웃돈**: 사용자 결정 대기 (DECISIONS 7-42 결정 대기 1). (b)로 정해지면 새 절. 지금 할 일 없음.
@@ -436,10 +436,10 @@ sim 변경 (wt-research):
 
 ### 2-91. 혼합 방식: 산출이 둘인 방식 (wt-luxmix, DESIGN 혼합 방식, DECISIONS 7-52, 사전 `methods-rule`, sim 준비됨)
 - sim: `textile_tailor`·`textile_tailor_steam`·`furniture_luxury`·`furniture_luxury_tools` 는 이제 산출이 둘이다 (`outputs` 에 사치품과 일반품). 방식 id·이름은 그대로라 저장 파일은 그대로 읽힌다.
-- 고칠 곳: `supplyDemand.ts:7` `supplyDemandProjection` 은 `mainOutput` 하나만 보여 준다. 산출 상품마다 지금·+1·+5 레벨 값을 낸다 (`projectedSD(w, regionId, g, per)` 를 상품마다 부르면 된다). 한 줄에 합치려면 `methodSD` (기본가 가중)가 AI 가 보는 값이다.
+- 고칠 곳: `supplyDemand.ts:7` `supplyDemandProjection` 은 `mainOutput` 하나만 보여 준다. 산출 상품마다 한 줄로 지금 S/D (`currentSD(w, regionId, g)`) 와 값을 낸다. +1·+5 는 2-92 10번으로 뺀다. `methodSD` (기본가 가중)는 AI 가 보는 값이다.
 - 건설 미리보기의 `outputPriceChange` 는 이제 대표 산출(`mainOutput`, 기본가 값이 큰 쪽)의 값이다. 그 전에는 `GOOD_IDS` 순서의 첫 상품이었다. 화면 할 일 없음.
 - 그대로 되는 곳 (코드 대조): `CompanyPanel.tsx:65`, `FlowRow.tsx:19`, `MethodComparison.tsx:28`, `ResearchPanel.tsx:27` 는 산출을 상품마다 돈다.
-- 완료 기준: 방직 공장 건설 미리보기에서 맞춤 재단을 고르면 의복과 고급 의복 S/D 가 둘 다 보인다. typecheck.
+- 완료 기준: 맞춤 재단을 쓰는 방직 공장의 서브윈도우에서 의복과 고급 의복의 S/D 와 값이 줄마다 보인다 (2-92 10번). typecheck.
 ### 2-92. 건설 창 다시 만들기: 건설 + 건물 관리 합침 (사용자 2026-11-05)
 
 사용자: "방향성은 괜찮긴 한데, 화면 작업자가 최종적으로 검토할 부분을 검토하고 새로 만들어서 합치는 걸로 해". 목업은 그대로 옮기는 대상이 아니다. 화면 작업자가 지금 코드와 규칙(UI_DESIGN)을 보고 다시 설계해서 넣는다. 목업: `docs/mockups/construction-d.dc.html` (숫자는 가짜, 건물 그림 자리는 글자).

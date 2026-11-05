@@ -11,6 +11,9 @@
 
 ## 0-1105-batch4
 - 브랜치 wt-batch4 (main 71d3fa1 에서), wt-manornav·wt-luxmix 를 합침 (cead7be). 2026-11-05 사용자 답 "1. 네 2. 네 claude.md에 적기 3. 합치기": 혼합 방식 4:1 → 1:1 합침, 건물 숫자 예외를 CLAUDE.md 에 적음, 지대 52주 합침 (DECISIONS 7-44·7-52). premerge 전, main 에 합치지 않음.
+- wt-uiconstruct 도 합침 (46e9cf2, 문서만, sim 코드 그대로): UI_CHANGES 2-92 건설 창 다시 만들기 (건설 + 건물 관리 합침, 사용자 2026-11-05), 목업 `docs/mockups/construction-d.dc.html`. 화면 작업자가 다시 설계해서 넣는다. 2-91 의 산출별 미리보기는 2-92 10번 형태로 넣는다.
+- 혼합 방식 후보 표는 `docs/overhaul/LUXMIX_SPECS.json` (premerge 에서 남김). lowp 숫자는 DESIGN 11장 혼합 방식 비율 행에 적었다.
+- 남은 일 (premerge 에서 본 것, 고치지 않음): 사전 `fillText` 는 인자의 단위를 붙이는데 문구도 단위를 적는 곳이 여러 항목에 있다 (`ai-welfare` `{0}주`, `ai-reserve` `{0}주`·`{7}주` 등이 "26주주" 로 보인다). 이번에는 이 브랜치가 고친 `methods-rule`·`manor-shares` 만 고쳤다.
 - 충돌: HANDOFF, UI_CHANGES (둘 다 2-90 이라 혼합 방식을 2-91 로), 보고서 목록, golden.json. 모두 양쪽을 남겼다. 규칙 판 14, 골든 8cc34d1236c3acf5.
 - 함께 돌린 비교: 대조는 main 71d3fa1 코드에 관측 파일 `src/lab/metrics.ts` 만 바꾼 것, `docs/overhaul/BATCH4_SPECS.json`, 보고서 2026-11-05-batch4. 대조의 세전 총생산은 2026-11-05-manornav-cand 의 끔과 같았다.
 - 20년 × 시드 1·2 × salt 0 평균, 1·3·5·10·15·20년차, 대조 / 합침:

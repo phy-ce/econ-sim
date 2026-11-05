@@ -31,6 +31,10 @@ export const SWITCH_COOLDOWN = TICKS_PER_WEEK * 3;
 export const INPUT_SUPPLY_MIN = 0.5;
 /** 무역소 방식 바꾸기: 새 방식의 하루 손익이 지금보다 이 비율 넘게 커야 바꾼다 */
 export const SWITCH_MARGIN = 0.05;
+/** 생산 방식 바꾸기: 레벨당 하루 손익이 지금보다 이 비율 + SWITCH_FLOOR 넘게 커야 바꾼다 (근거 없음, DESIGN 11장) */
+export const SWITCH_GAIN = 0.05, SWITCH_FLOOR = 0.01;
+/** 행정청 방식 바꾸기: 한도 × 원료 충족이 지금보다 이 비율 넘게 커야 바꾼다 */
+export const ADMIN_SWITCH_GAIN = 0.1;
 /** 공사 하나의 레벨 수 후보 (큰 것부터). 1레벨이 일꾼 500명이 되어(2026-10-22) 1,000명 시절 [5, 2, 1]의 두 배 (1은 남는 땅 한 칸용) */
 export const CHUNKS = [10, 4, 2, 1];
 /** 사무소를 한 번에 늘리는 레벨: 지금 사무소의 1/4 (최소 4, 1,000명 시절 2의 두 배) */
@@ -571,12 +575,12 @@ function manageBuildings(w: World, c: Company, o: Outlook, pools: Map<string, nu
       const ema = b.fillEma ?? 1;
       const value = (m: MethodDef) => m.taxCapacity! * (Object.keys(m.inputs).length ? ema : 1);
       let best = cur;
-      for (const m of usable) if (m.taxCapacity && m.id !== cur.id && kingdomInputs(w, regionById(w, b.regionId).kingdomId, m, b.level) && value(m) > value(best) * 1.1) best = m;
+      for (const m of usable) if (m.taxCapacity && m.id !== cur.id && kingdomInputs(w, regionById(w, b.regionId).kingdomId, m, b.level) && value(m) > value(best) * (1 + ADMIN_SWITCH_GAIN)) best = m;
       if (best.id !== cur.id && w.tick - b.lastSwitchTick >= SWITCH_COOLDOWN) applyCommand(w, c.id, { type: 'setMethod', buildingId: b.id, methodId: best.id });
       continue;
     }
 
-    // 생산 방식: 레벨당 하루 손익이 5% + 0.01 넘게 나은 방식 (값이 다른 상품을 섞어 내는 방식이 있어 산출 단위로 나누지 않는다) (3주 쿨다운, 투입재를 못 구해 멈췄으면 쿨다운 없이).
+    // 생산 방식: 레벨당 하루 손익이 SWITCH_GAIN + SWITCH_FLOOR 넘게 나은 방식 (값이 다른 상품을 섞어 내는 방식이 있어 산출 단위로 나누지 않는다) (3주 쿨다운, 투입재를 못 구해 멈췄으면 쿨다운 없이).
     // 일손 기대(지금 재직자 포함)가 기준 미만이거나 공급이 필요의 50% 미만인 방식은 고르지 않는다.
     // 지금 방식이 반도 채워지지 않고 일손도 구할 수 없으면(understaffed), 손익이 낮아도 일손을 구할 수 있는 방식으로 바꾼다
     const starved = Object.keys(cur.inputs).length > 0 && Object.keys(cur.outputs).length > 0 && b.active && b.last.inputFill < STARVE_FILL && b.last.staffing > 0;
@@ -588,7 +592,7 @@ function manageBuildings(w: World, c: Company, o: Outlook, pools: Map<string, nu
       for (const m of usable) {
         if (m.id === cur.id || !inputsAvailable(w, m, b.level, b) || !staffable(m)) continue;
         const v = estimateMethod(w, b.regionId, b.typeId, m.id, wages, c.state).profit;
-        if (v > best.v * 1.05 + 0.01) best = { m, v };
+        if (v > best.v * (1 + SWITCH_GAIN) + SWITCH_FLOOR) best = { m, v };
       }
       if (best.m !== cur && !applyCommand(w, c.id, { type: 'setMethod', buildingId: b.id, methodId: best.m.id }) && aiTrace.on) {
         aiTrace.on(w, c, 'switchIn', b.typeId, best.m.id, b.level, o); aiTrace.on(w, c, 'switchOut', b.typeId, cur.id, -b.level, o);
@@ -1166,7 +1170,7 @@ function planTrials(w: World, c: Company, canStart: () => boolean, free: () => n
  * 유보 기준 증설·철거 (매주 배당 정산 뒤): 생산 건물마다 증설 확률이 뽑힌 주(Building.richWeeks)와
  * 바닥난 적자 주(유보 자산 0, 주간 손익 = profitEma × 7 < 0. 기상 조건이 걸린 주와 공사로 생긴 지(시작 건물은 0일부터) RAMP_WEEKS 주 안은 세지 않는다)를 센다.
  * 바닥난 적자가 TUNE.shrinkWeeks 주면 1레벨 철거 대기 (정부 건물·무역소의 철거 판단 reviewLevels 와 같은 주 수), 증설 확률(TUNE.reserveGrowMax, 아래)이 뽑히면 땅(매장량)이 있고 돈이 되면 1레벨 증설 (못 하면 다음 주에 다시 본다).
- * TUNE.aiGlutSD > 0 이면 증설 확률이 뽑혀도 그 지역 그 산출 상품의 예상 공급 ÷ 수요(projectedSD)가 그 값을 넘으면 그 주는 증설하지 않는다 (오버홀 03 5-1).
+ * TUNE.aiGlutSD > 0 이면 증설 확률이 뽑혀도 그 지역 그 방식 산출의 예상 공급 ÷ 수요(methodSD)가 그 값을 넘으면 그 주는 증설하지 않는다 (오버홀 03 5-1).
  * 증설 공사 중이거나 철거 중인 건물은 세지 않는다. 돈: 왕실은 새 공사에 쓸 수 있는 돈(freeCash), 민간은 저택·금융가 금고(공사 명령이 낼 곳을 고른다)
  */
 function reserveLevels(w: World, c: Company, canStart: () => boolean, free: () => number, start: (p: Pick, path: string) => boolean) {
@@ -1309,7 +1313,7 @@ function workerDemandPerLevel(w: World, b: Building, g: GoodId, popsAt: Map<numb
 /**
  * 넘침 퇴출 (TUNE.aiTrimSD > 0, 매주 runAi 앞에서, 회사 판단보다 먼저, 0일부터 TUNE.aiTrimFrom 주가 지난 뒤):
  * 지역·상품마다, 그 지역에서 그 상품(mainOutput)을 내는 AI 회사의 유보 기준 생산 건물이 있고 기다림(Region.trim)이 끝났고 그 묶음에 철거 대기가 없으면
- * 1) 예상 공급 ÷ 수요 sd = projectedSD (증설 과잉 검사와 같은 값: 공급 이동평균 + 공사 중 산출, ÷ 수요 이동평균) 가 aiTrimSD 이상이면
+ * 1) 예상 공급 ÷ 수요 sd = projectedSD (상품 하나의 값, 산출이 하나인 방식은 증설 과잉 검사 methodSD 와 같다: 공급 이동평균 + 공사 중 산출, ÷ 수요 이동평균) 가 aiTrimSD 이상이면
  * 2) 증설 공사 중·새 건물(RAMP_WEEKS 안)·마지막 공급자(keepLast)가 아닌 건물 중 레벨당 장기 손익이 가장 나쁜 b 를 고르고
  * 3) 1레벨을 헐 때 예상 (sd × D − o) ÷ (D − d) 가 증설 문턱 aiGlutSD (0 이면 1) 이상일 때만 1레벨 헌다.
  *    o = b 의 어제 g 산출 ÷ 레벨, d = 그 레벨 일꾼 식구가 사던 g (workerDemandPerLevel), D = 수요 이동평균.

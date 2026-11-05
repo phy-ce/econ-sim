@@ -601,7 +601,7 @@ export const FLOW_ZERO = 1e-6;
 /**
  * 예상 공급 ÷ 수요 (읽기 전용, 오버홀 03 5-1·6장): (지역 공급 이동평균 + 그 지역에서 g 를 내는 공사 중 레벨의 산출 + addOutput) ÷ 지역 수요 이동평균.
  * 공사 중 레벨의 산출 = 모든 회사의 공사(증설·신규)마다 레벨 수 × 그 방식의 g 산출 × (1 + 지역 특산 보너스), 사람을 다 뽑고 다 가동한다고 본다.
- * 수요 이동평균이 FLOW_ZERO 이하이면 null (S/D 를 정의하지 않는다). AI 증설 검사(ai.ts reserveLevels, TUNE.aiGlutSD)와
+ * 수요 이동평균이 FLOW_ZERO 이하이면 null (S/D 를 정의하지 않는다). AI 증설 검사(ai.ts reserveLevels, TUNE.aiGlutSD, methodSD 를 거쳐 상품마다)와
  * 건설 화면의 "레벨 +N 뒤 예상 공급 ÷ 수요"(addOutput = N × 레벨당 산출)가 같은 함수를 쓴다. 세계를 바꾸지 않는다
  */
 export function projectedSD(w: World, regionId: number, g: GoodId, addOutput = 0): number | null {

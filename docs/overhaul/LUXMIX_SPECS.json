@@ -1,0 +1,144 @@
+{
+ "about": "혼합 방식 비율 비교 (2026-11-05 wt-luxmix, DESIGN 11장 혼합 방식 비율 행, 보고서 2026-11-05-luxmix, DECISIONS 7-52). patches 의 값은 METHOD_PATCH 파일 내용이다 (cli/methodpatch.ts, 방식 id 마다 적은 칸을 통째로 바꾼다). 후보 하나를 JSON 파일로 저장해 METHOD_PATCH 로 넘기고 lab 을 돌린다. 이름: old = 'AI만' (aifix, 옛 산출 하나 방식 표 + 새 AI 판단), r41 = 4:1→1:1 (ea9ca28 data.ts 그대로라 빈 표), r31 = 3:1→1:1, r42 = 4:1→2:1, lowp = 이익을 옛 사치품 사다리에 둔 판 (시드 1·2 만, 보고서에 없음). 대조는 main 71d3fa1 코드를 patch 없이 돌린다. 20년 × salt 0, lowp 말고는 시드 1~4.",
+ "code": "wt-luxmix ea9ca28 (실행한 묶음은 커밋 전 작업 트리이고, ea9ca28 묶음과 다른 곳은 사전 글과 규칙 판 기록뿐이었다), 대조 main 71d3fa1",
+ "patches": {
+  "old": {
+   "textile_tailor": {
+    "inputs": {
+     "tools": 20,
+     "fiber": 200
+    },
+    "outputs": {
+     "luxury_cloth": 80
+    }
+   },
+   "textile_tailor_steam": {
+    "inputs": {
+     "tools": 20,
+     "fuel": 20,
+     "fiber": 300
+    },
+    "outputs": {
+     "luxury_cloth": 100
+    }
+   },
+   "furniture_luxury": {
+    "inputs": {
+     "tools": 10,
+     "timber": 160,
+     "cloth": 30
+    },
+    "outputs": {
+     "luxury_furniture": 60
+    }
+   },
+   "furniture_luxury_tools": {
+    "inputs": {
+     "tools": 20,
+     "timber": 150,
+     "cloth": 30
+    },
+    "outputs": {
+     "luxury_furniture": 70
+    }
+   }
+  },
+  "r41": {},
+  "r31": {
+   "textile_tailor": {
+    "inputs": {
+     "tools": 20,
+     "fiber": 520
+    },
+    "outputs": {
+     "luxury_cloth": 70,
+     "cloth": 210
+    }
+   },
+   "furniture_luxury": {
+    "inputs": {
+     "tools": 10,
+     "timber": 360,
+     "fiber": 30,
+     "cloth": 50
+    },
+    "outputs": {
+     "luxury_furniture": 50,
+     "furniture": 150
+    }
+   }
+  },
+  "r42": {
+   "textile_tailor_steam": {
+    "inputs": {
+     "tools": 20,
+     "fuel": 20,
+     "fiber": 850
+    },
+    "outputs": {
+     "luxury_cloth": 150,
+     "cloth": 300
+    }
+   },
+   "furniture_luxury_tools": {
+    "inputs": {
+     "tools": 20,
+     "timber": 430,
+     "fiber": 40,
+     "cloth": 30
+    },
+    "outputs": {
+     "luxury_furniture": 70,
+     "furniture": 140
+    }
+   }
+  },
+  "lowp": {
+   "textile_tailor": {
+    "inputs": {
+     "tools": 20,
+     "fiber": 350
+    },
+    "outputs": {
+     "luxury_cloth": 50,
+     "cloth": 200
+    }
+   },
+   "textile_tailor_steam": {
+    "inputs": {
+     "tools": 20,
+     "fuel": 20,
+     "fiber": 610
+    },
+    "outputs": {
+     "luxury_cloth": 100,
+     "cloth": 100
+    }
+   },
+   "furniture_luxury": {
+    "inputs": {
+     "tools": 10,
+     "timber": 320,
+     "fiber": 40,
+     "cloth": 40
+    },
+    "outputs": {
+     "luxury_furniture": 40,
+     "furniture": 160
+    }
+   },
+   "furniture_luxury_tools": {
+    "inputs": {
+     "tools": 20,
+     "timber": 200,
+     "fiber": 20,
+     "cloth": 20
+    },
+    "outputs": {
+     "luxury_furniture": 60,
+     "furniture": 60
+    }
+   }
+  }
+ }
+}
