@@ -1819,3 +1819,414 @@ Cells, top row left to right, then bottom row:
    - 데이터: `world.kingdoms.find(k => k.id === me.kingdomId).welfareLaw` (`WelfareLaw`), 법 이름은 `policyStatus(world, kingdomId).welfare`.
    - 문자열: 새 문자열 없음 (복지법 라벨·법 이름 재사용).
 
+## 2026-11-05 확인 (main 0e00385 클라이언트 코드 대조)
+- 코드를 읽어 판정했다. 스크린샷은 이 대조에서 다시 열지 않았고, 화면 작업자가 UI_STATUS 2026-11-05 기록에 적은 파일 이름을 옮겼다 (1920×1028 헤드리스, `C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/`). 적힌 것 밖은 화면 미검증.
+
+### 2-32 확인: 완료. `OwnerHoldings.tsx:7~9` 주간 이익 × 몫 내림차순·실제 배당, `:12` 열과 합계 행, `OwnerSummary.tsx:12` 머리 받은 돈/주 (`profitEma` × 7), `BuildingEconomics.tsx:19` 뒤의 죽은 표는 지웠다. 스크린샷 nov5-holdings-ko-light.png·nov5-holdings-en-dark.png. 화면 미검증: 혼합 지역, 양수 실제 배당 (지급액 경로는 `test/ownerHoldings.test.tsx`).
+
+### 2-32. 저택·금융가가 무엇을 가졌는지 (소유 관계 보기, 사용자 요청 2026-10-21)
+- **2026-11-02 반영 확인 (main 81494a1): 일부. 이 절에서 할 일은 이 줄뿐이다 (아래 본문은 참고):** 보유 표(`OwnershipBrowser.tsx:20`)에 주간 이익·주간 배당 열, 이익 정렬, 합계 행이 없다. 머리 "받은 돈 / 주"(지금 `OwnerSummary` 는 하루). `BuildingEconomics.tsx:28` 은 `:18` 의 이른 return 때문에 그려지지 않는 죽은 코드라 지운다.
+
+> 현재 상태 (2026-10-28): 부분 구현: 소유권 바·기관 링크·보유 건물·귀족/투자자 구성을 구현했다. 추가 탐색의 화면 검증은 미완료. UI_STATUS 참조.
+**문제:** 저택과 금융가가 어느 건물을 가지고 어디서 돈을 받는지 한눈에 들어오지 않는다.
+
+**sim 규칙 (지금 코드 기준, 바뀌면 이 절을 고친다)**
+- 지역마다 저택(`typeId 'manor'`) 하나, 금융가(`'finance'`) 하나가 자동으로 있다. 둘 다 그 왕국 민간 소유다.
+- 같은 지역의 건물 중
+  - 농지·산림·광산 땅을 쓰는 **민간** 건물 → 저택 소유 (`kind 'full'`, 배당 전부)
+  - 공장 부지(`land 'plot'`)를 쓰거나 땅을 쓰지 않는 **민간** 건물 → 금융가 소유 (`'full'`)
+  - **국영** 건물 중 민간 지분(`privateShare` > 0)이 있는 것 → 같은 땅 규칙으로 저택/금융가가 그 지분만큼 가진다 (`'share'`, `share` = 0..1)
+  - 지분이 없는 국영 건물 → 소유 건물 없음 (목록에 없다)
+  - 소작지(`subsistence`) → 저택이 지대를 받는다 (`'rent'`)
+- 저택·금융가가 받은 돈(배당·지대)의 저택 20%·금융가 30%(`KEEP_SHARE`)는 그 금고(`Building.cash`)에 남고, 나머지는 지분 주인에게 지분 수대로 간다 (저택 지분은 상급·하급 귀족만, `manorShares` 1 기본, 2-87. 금융가는 먼저 성과급 10% 를 전문가 직원에게). 지분 주인이 없으면 전부 금고로.
+- 하루 받은 돈의 이동평균은 소유 건물의 `profitEma`(하루 값)다.
+
+**API**
+- `holdingsOf(world, ownerBuilding): Holding[]` (index에서 export, 순수 함수)
+  - `Holding = { building: Building; kind: 'full' | 'share' | 'rent'; share: number }`
+- 거꾸로 (이 건물의 주인): `ownerBuildingOf(world, b, true)` → 저택/금융가 건물 또는 `undefined`. 국영이면 `b.privateShare`가 그 지분이다.
+
+**보여줄 곳**
+1. **소유 건물 창** (저택·금융가를 열었을 때, `ResourceInspector.tsx`의 `BuildingInspector`):
+   - 맨 위 한 줄: `받는 돈/주 = profitEma × 7`, `자리: 앉은 인원 / 자리 수` (하급 귀족 자리가 생기면 직종별 두 줄, 2-29).
+   - 그 아래 표 `holdingsOf` 한 행에 하나: 아이콘 · 건물 이름 · 레벨 · 종류 칩(`배당` / `지분 NN%` / `지대`) · 그 건물의 주간 이익(`profitEma × 7`, 지분이면 × share). 행을 누르면 그 건물로 간다.
+   - 정렬: 주간 이익 큰 순. 표 맨 아래 합계.
+2. **지역 패널** (2-42로 대체: 종류별 한 행 + 소유 비율 막대, 저택·금융가는 목록 맨 아래 두 행. 아래 원안은 쓰지 않는다) (`RegionPanel.tsx`): 건물 목록을 `저택` / `금융가` / `국영` 세 묶음으로 나눈다. 묶음 머리에 소유 건물 이름과 주간 수입, 그 아래 `holdingsOf` 건물들. 지분 없는 국영 건물은 `국영` 묶음. 소작지는 `저택` 묶음 맨 아래 한 줄(합친 레벨).
+3. **일반 건물 상세**: 소유 배지(2-1 `OwnerBadge`) 옆에 `→ 저택` 또는 `→ 금융가` 링크 칩 (`ownerBuildingOf(world, b, true)`). 국영이면서 지분이 있으면 `국영 · 저택 NN%`.
+4. 색: 저택과 금융가에 고정 색 두 개를 정해 칩·묶음 머리·지도 원에 같이 쓴다 (다크 모드에서도 구분).
+- 설명 문구 금지: 라벨·숫자·칩만.
+- 실제 배당 필드는 들어왔다: `buildingEcon(w, b).owners[].dividendWeek` (2-59). 3번 칩은 2-59-3 주인 표가 대신하고, 1번 표의 `배당/주` 열은 2-59-5. (원문) 들어올 변경: 건물 유보 자산(2-31)이 들어오면 배당은 "이익 − 유보 적립"이 된다. 그때 표의 주간 이익 열 옆에 실제 배당을 따로 줄 수 있게 sim에서 필드를 더하고 이 절을 고친다.
+
+### 2-42 확인: 완료. 상세 머리 땅·광맥 남은 수 `BuildingRoom.tsx:9~11` (`GroupDetail.tsx:31`, `ResourceInspector.tsx:40`), 대기열 건수/상한 `CompanyPanel.tsx:218`, 지역 링크 `:221` (`ConstructionPanel.tsx:14`, `GameWindow.tsx:47`), 문자열 `expandTen`·`myHouse` 없음 (grep 0건). 2-42-6 의 '그 종류 상세로 열기'는 지역 건물 탭 열기까지다 (11-02 남은 줄은 지역 링크만 요구). 건설 창 짓기 탭은 2-73 이 대신했다. 스크린샷 nov5-room-ko-light.png·nov5-room-en-dark.png·nov5-queue-link-ko-light.png·nov5-queue-en-dark.png. 화면 미검증: 광산 광맥 줄, 공사 상한까지 찬 화면.
+
+### 2-42. 지역 건물: 종류별 한 줄 + 전체/민영/국영 보기, 건설 통합 (사용자 요청 2026-10-21)
+- **2026-11-02 반영 확인 (main 81494a1): 일부. 이 절에서 할 일은 이 줄뿐이다 (아래 본문은 참고):** 2-42-1: 상세 머리에 땅·광맥 남은 수 없음. 2-42-5: 대기열 행의 지역이 글자뿐(`CompanyPanel.tsx:223`), 지역 링크와 "n/40" 합계 없음. 2-42-7: 안 쓰는 문자열 `expandTen`·`myHouse` (`strings.ts:528`·`:371`). 2-42-6 "건설 창은 대기열만"은 2-73(H, 건설 창 짓기 입구)이 대신했다 (지금 `ConstructionPanel.tsx:12` 짓기/대기열 탭이 맞다). 2-42-2~4 끝남.
+
+> 현재 상태 (2026-10-28): 부분 구현: 종류별 그룹/필터/공사 연결은 구현. [UI_BUILDING_GROUPS_2026-10-26](log/UI_BUILDING_GROUPS_2026-10-26.md) 및 UI_STATUS의 잔여 범위를 따른다.
+**사용자 말:** "지역 건물의 건물 부분에 민간/왕실의 소유가 처음부터 갈라져 있는데, 눌러서 세부에서 전체/민영/국영을 선택하고, 각각의 통계 및 전체나 국영에는 건설 등의 조작을 할 수 있도록. 지금은 건설이랑 전체 건설물이 분리되어 있는데 이걸 잘 통합."
+
+**지금 화면 (main `465062a`)**
+- 창: `App.tsx` 200 `industry` 창 = `RegionPanel mode='industry'`. 건설 창은 따로: `App.tsx` 203 `construction` = `Projects owner={me} projects={world.constructions}` (왕국 전체 공사, 왕실/민간 두 줄).
+- 지역 건물 창 (`RegionPanel.tsx` 174~198)
+  - 175: `T.construct` 버튼 → `BuildList`(`CompanyPanel.tsx` 486~520) 카드 격자를 펼친다. 카드를 누르면 `BuildCard`(522~558): 방식별 예상 이익, 공사비·기간·회수 기간, 이미 가진 레벨, 짓기(+1만).
+  - 176: 그 지역 공사가 있으면 `Projects`(287~305, 왕실/민간 두 줄, 순서·일시정지·취소는 왕실 공사만).
+  - 178: 고른 건물의 `BuildingInspector`(`ResourceInspector.tsx` 17~37). 조작은 35 `BuildingControls` → `Controls`(`CompanyPanel.tsx` 403~441, 593~596): −/+/+10, 철거 취소, 방식, 가동률, 정지. **플레이어 회사 건물일 때만** 나온다.
+  - 179: `ListTools` 정렬(규모·이름·소유 회사·가동률·손익)과 검색(건물 이름 + 회사 이름, 57~61).
+  - 182~196: 건물 칩 격자. **건물 하나 = 칩 하나**라 같은 종류가 왕실 칩과 민간 칩으로 처음부터 갈린다 (`OwnerBadge` 190, 테두리 색 189 = 회사 색).
+  - 123: 머리 문구 "모든 상회 · 건물 n개 · 총 n레벨".
+- sim 사실: 한 지역에서 한 회사는 한 종류의 건물을 하나만 가진다 (`commands.ts` 105 `build`가 있으면 그 건물 증설로 바뀐다). 왕국마다 회사는 왕실 하나와 민간 하나다 (1-1). 그래서 **지역 × 종류마다 건물은 많아야 둘**: 국영 `b`(회사 `state`, `b.stateOwned === true`)와 민영 `b`(그 왕국 민간 회사). 소작지·저택·금융가(`BUILDING_BY_ID[t].auto`)는 민영 하나뿐이다.
+
+**바꿀 구조 (한 창에서 보기·짓기·공사)**
+
+#### 2-42-1. 목록: 종류마다 한 줄
+- 행 = 그 지역에 건물이 있거나 공사가 있는 **종류**: `typeIds = union(world.buildings.filter(b => b.regionId === r.id).map(b => b.typeId), world.constructions.filter(k => k.regionId === r.id).map(k => k.typeId))`.
+- 칩 격자(182~196)를 행 목록으로 바꾼다 (`ResourceInspector`의 `industry-row` 모양에 가깝게). 한 행의 칸:
+
+| 칸 | 내용 | 값 |
+|---|---|---|
+| 그림 | `BuildingSprite` 48 | |
+| 이름 | `buildingName(t)` + `HarvestBadge` | |
+| 레벨 | `×{Σ level}` + 공사 중 `+{Σ k.levels ?? 1}`(주황 작은 숫자) + 철거 대기 `T.demolitionQueue(Σ shrinking)` | 두 건물 합 |
+| 소유 막대 | 가로 비율 막대 하나 (칸 나누기 아님), 너비 ∝ 레벨 | 2-35-0 몫 (아래) |
+| 고용 | `Σ emp / Σ jobs` 숫자 + 얇은 막대 | `rowOf` 합 |
+| 주간 이익 | **2-59-2가 대신한다** (`buildingEcon`: 소유 막대·수지 막대·주간 이익·레벨당·유보) | |
+| 공사 | 공사가 있으면 행 바닥에 2px 진행 막대 `Σ points / Σ required` | |
+
+- 소유 막대: **2-59-2가 대신한다** (`buildingEcon().owners`, 국가·저택·금융가 세 색). 아래 원안은 쓰지 않는다. (원안) 건물마다 레벨 × 몫을 더한다. 지금은 `royal`(국영 × `1 − privateShare`) · `stake`(국영 × `privateShare`) · `manor`/`finance`(민영 건물, `ownerBuildingOf(world, b, true)?.typeId`). 툴팁은 몫별 레벨과 %만. 국영만 있으면 왕실 색 한 칸 막대가 꽉 찬다.
+  - **DECISIONS 7-16 대비 (레벨 소유):** 막대는 "몫 키 → 레벨 수" 맵 하나만 받아 그리게 만든다 (`ownerLevels(world, buildings): Record<'royal'|'stake'|'manor'|'finance', number>` 를 client 함수 하나로). 7-16이 sim에 들어오면 `stake`가 없어지고 레벨마다 주인(국가 / 어느 지역의 저택·금융가)이 생긴다. 그때 이 함수만 sim의 레벨 주인 함수(3장)로 바꾸면 막대는 그대로 `국가 / 저택 / 금융가` 세 칸이 된다. 툴팁에 주인 지역 이름을 붙인다 (다른 지역 저택이 산 레벨).
+- 정렬 (`ListTools`): 규모(Σ level, 기본) · 이름 · 가동률(레벨 가중 평균, 2-42-3) · 고용률 · 주간 이익. `owner`(소유 회사) 정렬은 없앤다. 검색은 건물 이름만. 순서는 주마다만 다시 매긴다 (`House`처럼, 행이 뛰지 않게).
+- 소유 건물(저택·금융가)은 목록 맨 아래 가는 줄 아래 두 행. 누르면 2-32의 소유 건물 표(`holdingsOf`). **2-32 보여줄 곳 2번(지역 패널 세 묶음)은 이 절로 대체한다.**
+- 맨 아래 `+ 새 건물` 행 (2-42-5). 다른 왕국 지역(`r.kingdomId !== me.kingdomId`)이면 없다.
+- 머리 123: 문구 대신 `종류 {n} · 레벨 {Σ}` 라벨+숫자. 175~176(`T.construct` 버튼, `BuildList`, `Projects`)은 이 창에서 지운다 (2-42-4·5로 옮겨 감).
+
+#### 2-42-2. 상세: 전체 / 민영 / 국영
+- 행을 누르면 그 행 바로 아래(또는 지금 178 자리)에 상세가 열린다. 맨 위 segmented 버튼 셋: `전체` · `민영` · `국영`, 각 버튼에 레벨 수 작은 숫자. 레벨 0이고 공사도 없는 쪽은 `disabled` (안 숨긴다: 자리가 흔들리지 않게).
+  - 기본: `전체`. 단 `buildingRequest`(`App.tsx` 113 `openBuilding(id)`: 알림·통계에서 건물 하나를 열 때)로 왔으면 그 건물 쪽(국영/민영)으로 연다. `RegionPanel` 상태는 `buildingId` 대신 `{ typeId, view: 'all'|'private'|'state' }`.
+- 보기마다 건물 집합: `S = 국영 [b]`, `P = 민영 [b]`, `A = S ∪ P`.
+- 상세 내용 (지금 `BuildingInspector` 28~33을 "건물 집합"을 받게 고친다. 건물 하나면 지금 그대로):
+  1. 머리: 그림 · 이름 `×{Σ level}` · 방식 (2-42-3) · 소유 막대(2-42-1과 같은 것, `국영`·`민영` 보기에서도 그 집합 몫만) · 국영 보기에서 지분이 있으면 지금 30의 `T.privateEquity NN%`.
+  2. 지표 줄: 가동률 · 충원율 · 원료 충족 · 주간 이익 · (판매 건물이면) 유보 막대 (2-31).
+  3. 직종별 인력 (`Workforce`): 직종마다 `Σ emp / Σ jobs` 막대.
+  4. 투입 → 산출: 상품마다 `Σ cur / Σ max` (지금 `bag` 26은 `n × b.level` 기준량만 보인다. 기준량 `Σ (method.inputs[g] × b.level)`은 그대로 두고, 그 옆에 실제 충족 막대를 더한다).
+  5. 손익 줄 (**1번의 소유 막대·지분 칩, 2번의 주간 이익·유보 막대, 5번 손익은 2-59-3이 대신한다**): 수입 · 원료 · 임금 · 이익 (`rowOf`의 `rev`·`raw`·`wage`·`profit` 합, 하루 값) + 주간 이익 `Σ profitEma × 7`.
+  6. 공사 (2-42-4), 조작 (2-42-3).
+- 소유 배지 링크(30)는 `국영` 보기에서는 `OwnerBadge`(왕실), `민영`에서는 2-32 칩 `→ 저택/금융가`. `전체`에서는 소유 막대가 대신한다.
+
+#### 2-42-3. `전체` 합치는 규칙 (sim 필드 기준)
+- 건물마다 `rowOf(world, b)`(`CompanyPanel.tsx` 42~80)를 구하고 아래처럼 더한다. 함수 하나 `aggregateRows(rows: Row[])`로 만들어 `국영`·`민영`(건물 하나)도 같은 함수를 지나게 한다.
+
+| 값 | 합치는 법 |
+|---|---|
+| 레벨 | `Σ b.level`. 철거 대기 `Σ (b.shrinking ?? 0)`, 공사 중 `Σ queued` |
+| 직종별 고용·일자리 | 직종 `s`마다 `Σ emp`, `Σ jobs` (`rowOf.staff`) |
+| 충원율 | `Σ emp / Σ jobs` (일자리 가중) |
+| 가동률 | `Σ (b.level × (b.active && !b.idle ? b.utilization : 0)) / Σ b.level` (레벨 가중) |
+| 상품별 투입·산출 | 상품 `g`마다 `Σ cur`, `Σ max` (`rowOf.inputs/outputs`) |
+| 원료 충족 | `Σ_g Σ cur × price / Σ_g Σ max × price` (값 가중, 원료 없으면 1) |
+| 수입·원료·임금·이익 | 합. 이익률 = `Σ profit / Σ rev` (`Σ rev = 0`이면 "—") |
+| 주간 이익 | `Σ b.profitEma × 7` |
+| 유보 | `hasReserve(b)`인 건물만: `Σ (b.reserve ?? 0) / Σ reserveCap(b)` (막대는 100%에서 자른다) |
+| 방식 | 두 건물 방식이 같으면 `methodName` 하나, 다르면 칩 두 개 `국영 · 방식A` / `민영 · 방식B` |
+| 건설력·세수 역량·학교 자리 | 지금 33처럼 `method.x × b.level`의 합 |
+
+- 정부 건물(`isGovernment`)·학교·건축사무소는 국영만 있으니 `전체` = `국영`.
+
+#### 2-42-4. 조작: `전체`·`국영`은 왕실 건물을, `민영`은 보기만
+- 조작 대상은 늘 **플레이어 왕실 건물** `S[0]` (`b.companyId === me.id`). `전체`와 `국영`은 같은 조작 줄을 쓰고, 숫자 옆에 `왕실 ×{S[0].level}` 라벨을 붙여 무엇이 바뀌는지 보이게 한다. `민영`에는 조작 줄이 없다. 다른 왕국 지역이면 세 보기 모두 조작 없음.
+- 조작 줄 (지금 `Controls` 403~441을 고쳐 쓴다):
+
+| 조작 | 명령 (`types.ts` 575~594) | 막힘 |
+|---|---|---|
+| −1 | `{type:'demolish', buildingId, levels:1}` (마지막 레벨이면 지금처럼 confirm) | 증설 공사 중, `shrinking >= level` |
+| +1 / +5 | `{type:'expand', buildingId, levels:1|5}` (+10을 +5로 바꾼다) | `landFree(world, r.id, def.land) < n`, `def.deposit`이면 `depositFree(world, r.id, def.deposit) < n` (지금 `Controls`는 광맥을 안 본다), `shrinking > 0`, 공사 수 `>= MAX_CONCURRENT_CONSTRUCTIONS` |
+| 철거 취소 | `{type:'cancelDemolish', buildingId}` | `shrinking`이 있을 때만 보인다 |
+| 방식 | `{type:'setMethod', buildingId, methodId}`, 선택지 옆 `estimateMethod(...).profit` (지금 그대로) | 정부 건물 |
+| 가동률·정지 | `setUtilization`, `setActive` (지금 그대로) | 정부 건물은 없음 |
+| 민영화 켜기 | **sim 쪽 필요** (DECISIONS 7-16): `{type:'setPrivatize', buildingId, on}` + `Building.privatize?: boolean`. 들어오기 전에는 그리지 않는다 | 판매 건물만 (`sellsShares`) |
+
+- 왕실 건물이 아직 없을 때 (`S`가 비었는데 민영 건물만 있음): `국영`·`전체`의 조작 줄 자리에 짓기 줄 `+1` / `+5` → `{type:'build', typeId, regionId: r.id, levels}`. 옆에 2-42-5의 짓기 정보(공사비·기간·예상 이익).
+- 단추 툴팁: 막힌 이유는 지금 `buildBlockers`(475~484) 문자열을 그대로 툴팁에 (화면 문구 아님).
+
+#### 2-42-5. 공사를 같은 행·상세 안에
+- 행: 2-42-1의 `+n` 숫자와 바닥 진행 막대. 새로 짓는 종류(아직 건물 0)도 행이 생기고 레벨 칸은 `×0 +n`.
+- 상세의 공사 칸: `world.constructions.filter(k => k.regionId === r.id && k.typeId === t)`. 보기별로 `국영` = 왕실 공사(`companyById(k.companyId).state`), `민영` = 민간 공사, `전체` = 둘 다.
+  - 한 공사 한 줄 (지금 `Projects` 299 `article`을 컴포넌트 `ProjectRow`로 떼어 두 곳에서 같이 쓴다): `+{levels}` · 증설/신축 칩 · 진행 막대 `points / required` · `points / required pt` · `spent` · `ticksElapsed`일 · 일시정지 표시 · `capped` ◆.
+  - 순서 칸: `#{position + 1} / {own.length}` (`own` = 그 회사의 **왕국 전체** 공사 목록. 순서는 왕국 대기열 순서다).
+  - 왕실 공사만 단추: 위/아래 `moveConstruction index ±1`, `pauseConstruction`, `cancelConstruction`(지금 confirm 그대로). 민간 공사는 줄만.
+- `+ 새 건물` 행 (목록 맨 아래): 누르면 그 자리에 종류 고르기 목록이 펼쳐진다. 지금 `BuildList`(486~520)를 그대로 쓰되 **이 지역에 행이 없는 종류만** 보인다 (행이 있는 종류는 그 행 상세의 짓기·증설로). 카드 머리: 그림 · 이름 · 땅 `landName(land) landFree` 또는 광맥 `DEPOSIT_NAMES[deposit] depositFree` · 예상 이익/일(`estimateAfterEntry(world, r.id, t, m, me.wages).profit` 최대) · 회수 기간. 펼치면 `BuildCard`(522~558) 그대로 + 짓기 단추를 `+1` / `+5` 둘로 (`build` 명령의 `levels`). 짓고 나면 목록에 그 종류 행이 생기고 상세가 `국영`으로 열린다.
+- 상세 머리에도 땅·광맥 남은 칸을 숫자로 둔다 (`+5`가 왜 막혔는지 보인다).
+
+#### 2-42-6. 건설 창은 왕국 대기열 보기로 남긴다 (추천)
+- **추천: 건설 창(`App.tsx` 203)을 없애지 않고 "왕국 공사" 대기열 하나로 둔다.** 이유: 건축사무소 포인트는 왕국 대기열 순서대로 지역을 가리지 않고 나뉘고(`moveConstruction`은 회사 전체 순서를 바꾼다), 공사 상한 40건도 왕국 단위다. 지역 창만으로는 순서를 볼 수 없다. 짓기는 지역 창 한 곳에서만 한다.
+- 건설 창 제목 `T.construct` → `T.kingdomQueue`(있음, "왕국 공사"). 내용은 지금 `Projects`(왕실/민간 두 줄) 그대로 + 행마다 지역 이름 링크: 누르면 지역 건물 창이 그 지역·그 종류 상세(`국영` 또는 `민영`)로 열린다 (`App.tsx` 113 `openBuilding`과 같은 방식으로 `openType(regionId, typeId, view)`를 하나 더한다).
+- 위에 합계 한 줄: `공사 {왕실 건수} / 40` · 받는 포인트/일 (지금 header의 `receivedToday`).
+- 한 창으로 합치는 안(건설 창을 지우고 지역 창에 왕국 대기열 탭)은 지역 창이 두 일을 하게 되어 고르지 않았다.
+
+#### 2-42-7. 지울 것, 문자열
+- 지운다: `RegionPanel.tsx` 47 `buildingMenu`, 175~176, 182~196 칩 격자, 57~60의 회사 이름 검색·`owner` 정렬, 188 칩 `title`(`T.myHouse`). `Controls`의 +10 단추(`T.expandTen`). 다른 곳에서 안 쓰면 `T.expandTen`·`T.myHouse` 문자열도.
+- 더할 문자열 (ko / en):
+
+| 키 | ko | en |
+|---|---|---|
+| `viewAll` | 전체 | All |
+| `viewPrivate` | 민영 | Private |
+| `viewState` | 국영 | Crown |
+| `newBuilding` | + 새 건물 | + New building |
+| `expandFive` | 5레벨 증설 | Expand by 5 |
+| `buildFive` | +5 | +5 |
+| `ownership` | 소유 | Ownership |
+| `typesCount` | 종류 | Types |
+| `queuePosition` | 순서 | Queue |
+| `privatize` | 민영화 | Privatize (7-16이 sim에 들어온 뒤) |
+
+  - 2-35-8에서 더하는 것: `T.employment`·`T.reserve`. 있는 것: `T.weeklyProfit`, `T.expansion`, `T.newConstruction`, `T.kingdomQueue`, `T.demolitionQueue`, `T.cancelDemolition`, `T.cost`, `T.duration`, `T.payback`.
+- 화면 규칙: 설명 문구 없음 (라벨·숫자·막대·칩, 막힌 이유는 툴팁). 소유 막대는 칸 나누기가 아니라 비율 막대. 왕실·지분·저택·금융가 색은 2-35-0과 같고 다크 모드에서 구분된다. 숫자는 이동평균(`profitEma`)·주 단위.
+- sim 변경 없이 만들 수 있다 (민영화 단추와 레벨 주인 막대만 7-16 이후, 3장).
+
+### 2-48 확인: 완료. `ResearchPanel.tsx:68` 노드 비용·남은 주·진행 막대, `:53`·`:66`·`researchLayout.ts:2~6` 선행 경로 강조, `:62` 마우스 위치 휠 확대, `:64` `+`·`-`·`0` 키, `:49`·`:54` `research-view` 저장, `:27` 툴팁 이익률·일자리·투입→산출, `:34`·`GameWindow.tsx:46` 법 줄 → 국가 법 탭. 배치는 2-68, `?` 사전 링크는 2-40 (단위 G)이 대신한다. 스크린샷 nov5-research-ko-light.png·nov5-research-en-dark.png·nov5-research-path-ko.png·nov5-research-view-restored.png. 화면 미검증: 연구 완료까지의 시간 경과, 모든 노드 툴팁.
+
+### 2-48. 연구 트리: 선행 관계 그래프 + 무엇이 열리는지 (사용자 요청 2026-10-21)
+- **2026-11-02 반영 확인 (main 81494a1): 일부. 이 절에서 할 일은 이 줄뿐이다 (아래 본문은 참고):** 계통도 배치는 2-68이 대신했다. 남은 것: 노드에 연구 진행 막대·남은 주, 휠 확대·`0` 키·보기 저장, 마우스를 올린 노드의 선행 전체 경로 강조, 툴팁의 이익률·일자리·투입→산출, 법 줄 클릭 → 국가 창 법 탭. 현재 `ResearchPanel.tsx:49~54`.
+
+> 현재 상태 (2026-10-28): 부분 구현/감사 필요: ResearchPanel과 unlocksOf export 존재. 그래프 이동·확대 등 상세 목표와 대조한다.
+**사용자 말:** 단계 열이 아니라 진짜 트리. 노드에 비용·진행·상태, 선행 기술로 가는 선, 끌기·확대, 지금 연구 강조. 노드에 마우스를 올리면 정확히 무엇이 열리는지(방식: 건물·방식 이름, 레벨당 일자리·원료·산출, 이익률 / 새 건물 / 정책). 사전 항목으로 잇는다.
+
+**지금:** `CompanyPanel.tsx` 561~590 `Research`: 비용(`x.cost`)별 단계 열, 선행은 `← 이름` 글자(578), 버튼 `연구`/`중지`.
+
+**데이터 (sim에 이미 있음)**
+- `TECHS` (`data.ts` 87~110, 17개, `requires: string[]`), `me.research.{known, current, progress, budget}`, `researchableTechs(me)` (`economy.ts` 237).
+- 열리는 방식: `BUILDINGS`의 방식 중 `m.tech === techId` (`types.ts` 93). 레벨당 하루 값: `m.workers`(직종별 인원), `m.inputs`, `m.outputs`. 이익률: `methodMarginAtBase(typeId, m.id).margin` (`encyclopedia.ts` 125, index에서 export됨).
+- 새 건물: 그 종류의 방식이 모두 `tech`를 가지고 그중 하나가 이 기술 (`canBuildType`, `economy.ts` 233와 같은 뜻). 이미 다른 방식 기술을 알면 "새 건물" 표시 없이 방식만.
+- 정책 (2-56): `unlocksOf(techId).policies` (세법·투자법 선택지 id: `poll`·`income`·`upper`·`middle`·`lower`). 이름은 2-45-3·2-45-4 문자열. 빈 배열이면 줄을 그리지 않는다.
+- **sim 쪽 필요 (3장):** `unlocksOf(techId)` → `{ methods: { typeId, methodId }[]; buildings: string[]; policies: string[] }` 한 곳에서 셈하게 (사전과 같이 씀). 들어오기 전에는 위 규칙으로 client에서 셈해도 된다 (함수 하나로 두고 나중에 바꾼다).
+
+**그래프**
+- 배치 (client, 한 번 계산해 메모): 열 = 뿌리에서 가장 긴 선행 경로 길이(`requires` 없으면 0). 열 안 순서 = 선행 노드 세로 위치 평균(교차를 줄이는 barycenter 2회). 노드 160×56, 열 간격 80, 행 간격 16. 왼쪽 → 오른쪽.
+- 선: 선행 → 기술, SVG 곡선 (노드 뒤). 둘 다 앎 = 실선 muted, 그 밖 = 점선. 마우스를 올린 노드의 선행 경로 전체를 accent로.
+- 노드: 이름 · `ƒ비용` · 남은 일 수(`budget>0`일 때, 지금 578의 셈) · 진행 막대(`progress / cost`, 0이면 없음). 상태 넷:
+  | 상태 | 조건 | 모양 |
+  |---|---|---|
+  | 앎 | `known` | 채운 muted 배경, 체크 아이콘 |
+  | 연구 중 | `current` | accent 테두리 2px + 진행 막대 accent, 창을 열면 이 노드가 가운데 |
+  | 가능 | `researchableTechs` | 보통 |
+  | 잠김 | 그 밖 | 흐리게(opacity .5), 점선 테두리 |
+- 조작: 끌기 = 이동, 휠 = 확대(50~150%, 마우스 위치 기준), 머리 오른쪽 `맞춤` 버튼. 키보드: Tab으로 노드 이동(열 순서), Enter = 아래 동작, `+`/`-` 확대, `0` 맞춤. 위치·배율은 localStorage `research-view`.
+- 누르기: 노드를 고르면 창 아래 띠(고정 높이)에 그 기술의 열리는 것 목록 + 버튼 (`가능` → `연구`, `연구 중` → `중지`, 명령은 지금과 같은 `setResearch`). 노드 안에 버튼을 두지 않는다.
+- 맨 위 일일 연구비 줄(567)은 그대로.
+
+**올렸을 때 툴팁 (= 아래 띠와 같은 내용)**
+- 방식 한 줄씩: 건물 그림 · `건물 이름 · 방식 이름` · 이익률 `NN%` · 레벨당 일자리(직종 아이콘 + 인원) · 원료 → 산출 (상품 아이콘 + 하루 양). 숫자는 `NumericValue`. 같은 건물의 지금 방식보다 나은지 비교는 넣지 않는다.
+- 새 건물 줄: `새 건물` 칩 + 건물 이름.
+- 정책 줄: `정책` 칩 + 법 이름 (예 `정책 · 인두세`). 누르면 정책 창.
+- 오른쪽 위 `?` 링크: 규칙 사전 `encyclopedia/#tech` (항목 id `tech`, `encyclopedia.ts` 476). 방식 줄의 건물 이름 링크는 `#buildings`. 2-40처럼 지금은 단독 앱으로 새 탭.
+- 연구 창 기본 크기를 키운다 (`WindowWorkspace.tsx` 56 최소 너비 분기에 `research` 640).
+- 문자열: `fitView` 맞춤 / Fit, `newBuilding` 새 건물 / New building, `unlockPolicy` 정책 / Policy. 지울 것: `T.stage` (단계 머리, 569)를 다른 곳에서 안 쓰면.
+- sim 변경 없음 (unlocksOf는 있으면 좋음).
+
+### 2-51 확인: 완료. 열 방식 비교 `MethodComparison.tsx:12~38` (`CompanyPanel.tsx:302`, `<select>` 없음): 차이 칩 `:19`, 경험 −50% `:25`, 잠긴 열 `:18`·`:23~24`, 머리 클릭 `setMethod` `:24`. FlowRow 툴팁 효율·기상 `FlowRow.tsx:17~18`·`:25`. `Bag`·`bag` 없음 (grep 0건). 건설 카드는 명세의 좁을 때 대안 (`CompanyPanel.tsx:423` FlowRow 줄). 사전 패키지 '입력' 라벨은 화면 작업자 범위 밖이라 3장으로 넘겼다. 스크린샷 nov5-method-comparison-ko-light.png·nov5-method-comparison-en-dark.png·nov5-method-header-click-ko.png. 화면 미검증: 다른 건물의 방식 조합.
+
+### 2-51. 투입·산출 표시 다시 설계 (사용자 요청 2026-10-21: "투입·산출 지금 조잡함")
+- **2026-11-02 반영 확인 (main 81494a1): 일부. 이 절에서 할 일은 이 줄뿐이다 (아래 본문은 참고):** 열 방식 비교(차이 칩, `expDrop`, 잠긴 열, 머리 클릭으로 고르기) 없음: `CompanyPanel.tsx:302` 은 아직 `<select>`, `:312` 은 방식별 FlowRow 목록. FlowRow 툴팁에 `efficiencyParts`·기상 없음. 죽은 `Bag`(`CompanyPanel.tsx:30`)·`bag`(`ResourceInspector.tsx:35`). 사전 패키지 "입력" 라벨은 화면 작업자 범위 밖.
+**문제 (2026-10-21 main 기준).** 투입·산출이 여러 곳에서 서로 다른 모양·단위·분모로 나온다.
+
+| 곳 | file:line | 지금 | 문제 |
+|---|---|---|---|
+| 건물 상세 레시피 | `ResourceInspector.tsx` 24~27 `bag`, 33 `.recipe` | 방식 레시피 × 레벨 (`method.inputs[g] × b.level`), 아이콘 32 + 이름 + 숫자 | 실제 양이 아니다 (가동률·충원·기상·효율·원료 충족 무시). 단가·금액 없음. 원료 충족은 32행 지표 줄에 따로. 행정청·학교·사무소의 `service-output` 세 줄이 같은 칸에 섞인다 |
+| 상품 상세의 생산/소비 건물 | `ResourceInspector.tsx` 50~52·71 | `방식 × 레벨` + "기준 / 일" | 같은 이름의 양이 건물 상세·내 건물 표와 다르다 |
+| 내 건물 행 요약 | `CompanyPanel.tsx` 329~333 | 원료 막대 + 산출 막대 `cur/max` | 산출 분모 `outMax = 방식 × level × utilization`(66)은 충원·기상·효율을 빼서, 막대가 효율(경험·규모·지역 특성)과 충원을 섞어 보인다. 효율이 1을 넘으면 100%를 넘는다 |
+| 내 건물 펼침 표 | `CompanyPanel.tsx` 43~77 `rowOf`, 356~387 | 5열 표: 아이콘·이름·`qty/qty` 막대·`ƒ단가`·금액 | 투입 분모(56) = `방식 × run × crew` (기상 빠짐), 산출 분모 = `방식 × run` (충원 빠짐). 둘이 다른 기준. 사무소 줄은 단가 `—`, 금액 `ƒ0`. 세금 한도는 글 한 줄(368) |
+| 방식 고르기 | `CompanyPanel.tsx` 421~428 `<select>` | 옵션 글 `이름 +ƒ…/일` | 무엇이 들어가고 나오는지 비교할 수 없다. `estimateMethod`는 1레벨 값인데 그대로 보인다 |
+| 건설 카드 | `CompanyPanel.tsx` 24~28 `Bag`, 537 | 1레벨 레시피, 아이콘 16 인라인, `→` | 1레벨 값이라 건물 상세(×레벨)와 단위가 다르다. 단가 없음 |
+| 규칙 사전 | `packages/encyclopedia/src/components/ExampleView.tsx` 9~10, `strings.ts` 11 | 라벨 "입력" | 게임 라벨 "투입"과 다르다 |
+
+**바꿀 것: 컴포넌트 하나 `FlowRow` (새 파일 `views/FlowRow.tsx`)를 모든 곳에서 쓴다.**
+```
+[투입 아이콘 + 양]…  ─▶  [건물 아이콘 ×레벨]  ─▶  [산출 아이콘 + 양]…     이익률
+ ƒ단가 · 금액                                     ƒ단가 · 금액
+ ▔▔▔▔ 충족 막대                                    ▔▔▔▔ 판매 막대
+```
+- 칩 하나 = 상품 하나: 아이콘(상세 32 px, 행 24 px), 아래에 하루 양(굵게), 그 아래 `ƒ단가 · 금액`(작게), 맨 아래 3 px 막대. 투입은 왼쪽, 산출은 오른쪽, 가운데 건물 아이콘 + `×레벨`. 화살표 두 개만. "투입"/"산출" 글 머리는 넣지 않는다 (화살표 방향으로 읽힌다, 툴팁에만 `T.hInputs`·`T.hOutput`).
+- 오른쪽 끝에 이익률 칩 하나 (`pos`/`neg` 색). 손익 폭포(`Waterfall`)는 펼침 표에만 그대로 둔다.
+- 칩을 누르면 지금처럼 상품 상세(`onGood`)로 간다.
+- 상품이 없는 건물은 산출 칩 자리에 서비스 칩 하나: 행정청 = 세금 한도(`method.taxCapacity × b.level × TUNE.adminScale`, 아이콘 `admin`), 학교 = 자리(`method.seats × b.level`, 아이콘 `school`), 건축사무소 = 건설력(`b.last.points`/일, 아이콘 `builder`, 단가·금액 없음). 소작지는 산출 칩 대신 수확 칩(지금 `HarvestBadge`)만.
+- 저택·금융가(`BUILDING_BY_ID[typeId].ownership`)는 `FlowRow`를 그리지 않는다 (2-50).
+
+**숫자 (모두 그 건물 전체의 하루 값, 1레벨 값은 툴팁).**
+
+| 칸 | 값 | sim |
+|---|---|---|
+| 산출 양 | `b.last.output[g]` (오늘 실제. 가동률·충원·기상·충족·효율이 다 들어간 값) | `produce` (`production.ts` 133~150) |
+| 투입 양 | `method.inputs[g] × b.level × b.utilization × crewOf(b) × harvestFactor(w, b.regionId, BUILDING_BY_ID[b.typeId].land) × b.last.inputFill` (sim이 실제로 쓴 양과 같은 식) | `getMethod`, `crewOf`, `harvestFactor` (index export) |
+| 단가 | `regionById(w, b.regionId).market[g].price` | |
+| 금액 | 양 × 단가 (투입 `−`, 산출 `+`) | |
+| 투입 막대 | 묶음 전체에 `b.last.inputFill` 하나 (sim의 충족은 투입 중 가장 모자란 것 하나로 정해진다). 칩마다는 그 상품 시장의 구매 충족 `min(1, supplyEma / demandEma)`이 0.99 아래면 빨간 점 (무엇이 모자란지) | `MarketGood.supplyEma`·`demandEma` |
+| 산출 막대 | `sellThrough(region.market[g])` (그 지역 시장에서 팔리는 비율의 추정, AI 전망과 같은 값) | `sellThrough` (economy, index export) |
+| 이익률 | `(b.last.revenue − b.last.inputCost − b.last.wageCost) / b.last.revenue` (매출 0이면 `—`). `methods_audit`의 이익률(기본 방식 20%, 단계마다 레벨당 이익 2배)과 같은 정의. `estimateMethod().margin`(이익/비용)은 쓰지 않는다 | |
+| 툴팁 | 1레벨 레시피(`method.inputs[g]`/`outputs[g]`), 효율 `efficiencyParts(b)`(경험·규모·지역 특성), 기상 배율, 구매 충족·판매율 % | `efficiencyParts` |
+
+- **산출 막대에 `cur / max`를 쓰지 않는다.** "최대"는 효율 때문에 정의가 흔들린다. 덜 만드는 이유는 충원(인력 칸)·충족(투입 막대)·가동률(손잡이)에서 따로 보인다.
+- 건물이 멈췄거나(`!b.active`) 대기(`b.idle`)면 양 0, 칩을 흐리게, 막대 숨김.
+
+**반올림 (모든 곳 같게, `format.ts`).**
+- 양: `qty` 하나로. 1,000 이상은 `compact`(1.2천 / 1.2k), 그 아래는 유효 숫자 2자리 정수 (87.6 → 88).
+- 단가: 유효 숫자 2자리 `ƒ3.4`, `ƒ12`, `ƒ150` (지금 362·383의 `one`/`int` 혼용 정리). 금액: `money` compact.
+- 비율: 정수 %.
+- 값이 날마다 조금 흔들린다 (가격·충원 EMA). 주 단위 값이 필요해지면 sim 쪽 선택 요청 "건물 산출·투입 주간 평균"을 3장에 올린다 (지금은 하루 값으로 시작).
+
+**방식 비교 (`CompanyPanel.tsx` 421~428 `<select>` 대신).**
+- 방식 칩을 누르면 펼쳐지는 비교 칸: 방식마다 한 열, 지금 방식이 첫 열(테두리 강조). 줄: 투입 상품마다, 산출 상품마다, 직종별 일자리, 하루 손익, 이익률.
+- 값 = `estimateMethod(world, b.regionId, b.typeId, m.id, owner.wages, owner.state)` × `b.level` (만원 가동 추정, 효율 미포함). 모든 열이 같은 기준이라 비교용이다. 일자리 = `method.workers[s] × b.level`. 양 = 레시피 × `b.level` (산출은 `× (1 + regionPerk(regionId, typeId))`, `estimateMethod`와 같게). 이익률 = 손익 / 매출.
+- 지금 방식이 아닌 열은 차이를 칩으로: `+1.2천`(초록) / `−300`(빨강), 같으면 비움. 새로 생기는 상품 줄은 `+`, 없어지는 상품 줄은 `−`.
+- 바꾸면 경험이 절반이 된다 (`commands.ts` 118 `b.exp *= 0.5`): 다른 열 머리에 `경험 −50%` 칩.
+- 기술이 없는 방식은 열을 흐리게 + 자물쇠 + 기술 이름(툴팁). 열 머리 클릭 = `setMethod`.
+- 건설 카드(537)의 방식 목록도 같은 열 비교 (값 = `estimateAfterEntry`, 1레벨이라 머리에 `×1`). 좁으면 열 대신 `FlowRow` 축소판을 줄로 쌓는다.
+
+**고칠 곳:** `ResourceInspector.tsx` 24~27·33 (레시피 → `FlowRow`, 32의 원료 충족 지표는 투입 막대로 옮기고 지움), 71 (상품 상세의 양을 `b.last.output[g]` / 위 투입 식으로, "기준 / 일" → `T.colDaily`), `CompanyPanel.tsx` 43~77 `rowOf`(분모 정리, `Flow`에 `buyFill`·`sold` 추가), 329~333 (행 요약 = 24 px `FlowRow`), 356~387 (펼침 표 → 32 px `FlowRow`), 421~428 (방식 비교), 24~28·537 (건설 카드). 규칙 사전은 라벨만 `투입`/`산출`·`Inputs`/`Outputs`.
+**문자열 (툴팁·칩):** `expDrop` `경험 −50%` / `Experience −50%`, `sold` `판매` / `Sold`, `buyFill` `구매 충족` / `Bought`, `perLevel` `1레벨` / `Per level`. 표 머리가 없어지면 `T.colUnit`·`colDaily`, `<select>`를 없애면 `optProfit`·`optOffice`·`optNeedsTech`를 지운다.
+**다크 모드:** 막대는 지금 `tone="in"`/`"out"` 토큰, 빨간 점·차이 칩은 `--neg`/`--pos`. 아이콘은 2-52의 다크 모드 규칙.
+**지울 것:** `Bag`(24~28), `.recipe`·`.recipe-goods`·`.flow`·`.flow-q`·`.flow-rule`·`.service-output` CSS 중 안 쓰이는 것.
+- sim 변경 없음 (주간 평균 필드는 선택).
+
+### 2-64 확인: 완료. 건설 카드 라벨 `CompanyPanel.tsx:390`·`:421`, `IndustryLabel.tsx:3~6`, 방식 비교 머리 `MethodComparison.tsx:25`, 원료/매출 행 `:36` (`methodMarginAtBase`, 막대가 아니라 비율 숫자 행이다). 유형 칩(선택)은 하지 않았다. 스크린샷 nov5-types-ko-light.png·nov5-types-en-dark.png. 화면 미검증: 실제 방식 전환, 비율 행 조합.
+
+### 2-64. 산업 유형 라벨과 방식 숫자 (사용자 요청 2026-10-22, DESIGN 7.1, 브랜치 wt-ind2)
+- **2026-11-02 반영 확인 (main 81494a1): 일부. 이 절에서 할 일은 이 줄뿐이다 (아래 본문은 참고):** 건설 카드에 산업 유형 라벨 없음 (건물 상세에는 있음 `BuildingEconomics.tsx:24`). 방식 비교의 투입·매출 줄은 2-51 열 비교와 같이 한다. 유형 칩(선택)은 하지 않아도 된다.
+- 새 sim 값 (`data.ts`): 타입 `Industry = 'primary' | 'processing' | 'heavy' | 'luxury'`, `INDUSTRIES[id]` (`name` 한국어 1차 산업·가공·중공업·숙련, `nameEn` Primary·Processing·Heavy industry·Skilled crafts, 기본 일꾼 `workers`, 숙련 비율 `skillShare`, 원료/매출 범위 `inputShare`), `BuildingTypeDef.industry`, `MethodDef.industry`(방직·가구 공방의 사치품 방식만), 함수 `industryOf(typeId, methodId?)` (없으면 null: 소작지·저택·금융가·학교·건축사무소·행정청).
+- 화면 요청:
+  1. 건물 상세 머리와 건설 카드에 유형 라벨 한 칸 (`INDUSTRIES[industryOf(b.typeId, b.methodId)].name`). 방직·가구 공방은 방식에 따라 라벨이 바뀐다 (손베틀 = 가공, 맞춤 재단 = 숙련).
+  2. 방식 비교(2-51 열 비교)에 행 하나: 원료/매출 막대 (기본가 기준 원료비 ÷ 매출, 0~1). 사전 `methods-rule` live 가 같은 값을 쓴다 (`methodMarginAtBase(typeId, methodId)`의 `input / revenue`).
+  3. 지역 건물 목록·새 건물 목록에 유형으로 묶거나 거르는 칩 (선택, 급하지 않음).
+  설명 문구는 넣지 않는다 (규칙은 README·사전).
+- 바뀐 숫자: 가공·중공업·숙련 기본 방식 일꾼 300 (옛 400), 가공 공장 원료·산출 약 2배 (예: 식료품 곡물 1,300 → 2,600, 식료품 2,150 → 2,650), 벌목·광산 일꾼에 기술자 50, 1차 윗단계 일꾼 350·200. 공사 포인트: 식료품·가구·종이 250 → 300, 공방 200 → 300, 운송 200 → 350, 제철소 300 → 500, 기계 공장 300 → 550 (`buildPointsOf`). 화면이 숫자를 박아 두었으면 데이터에서 읽는다. 방식 id·기술 연결은 그대로.
+
+### 2-67 확인: 완료. 금고 막대·`postUsable` `BuildingEconomics.tsx:27`, `tradeReserveOf` `MethodComparison.tsx:32`·`CompanyPanel.tsx:423`, 약정금 줄 `CompanyPanel.tsx:433` (레벨당 값, 툴팁 `T.tradeEscrowHelp`), `Region.trade` 막대·이익률 `RegionTrade.tsx:7~15`·`MarketWindow.tsx:63`, 빈 흐름 — `FlowRow.tsx:26`. 클라이언트가 `traders` 를 읽는 곳은 없다 (grep 0건). 스크린샷 nov5-trade-ko-light.png·nov5-trade-en-dark.png·nov5-post-usable-ko-light.png. 화면 미검증: 약정금 실제 납부·환급, 영문 무역소 상세.
+
+### 2-67. 무역소 (사용자 승인 설계 2026-10-23, DESIGN 6 교역·8, 브랜치 wt-trade)
+- **2026-11-02 반영 확인 (main 81494a1): 일부. 이 절에서 할 일은 이 줄뿐이다 (아래 본문은 참고):** `postUsable` 줄, 건설 카드의 약정금 줄(`tradeEscrowPerLevel`), `tradeReserveOf` 행, 시장 창의 `Region.trade` 사고/끊김 막대·마진 (클라이언트가 `Region.trade` 를 읽지 않는다), 흐름이 없을 때 "–" 없음. 무역소 금고 대 `postCap` 막대는 됨 (`BuildingEconomics.tsx:26`).
+- 바뀐 sim:
+  - 상인(`w.traders.cash` 1억, `capital`)이 없어졌다. `w.traders.cash`·`capital`은 늘 0 (저장 모양 때문에 칸만 남았다). `world.ts TRADER_CAPITAL`은 지워지고 `START_TRADE_LEVELS`(왕국마다 시작 무역소 레벨)가 생겼다.
+  - 새 건물 `trading_post` (무역소, 공장 부지, 공사 포인트 `buildPointsOf('trading_post')`). 방식 셋: `trade_house` 상단 (하급 귀족 10·노동자 90), `trade_ledger` 장부 상회 (인쇄술, 하급 귀족 10·기술자 30·노동자 40), `trade_company` 무역 회사 (증기 철도, 전문가 10·기술자 20·노동자 20). 투입·산출 상품이 없다 (`industryOf` 는 null).
+  - 금고 `Building.cash` (저택·금융가와 같은 칸, 무역소에도 생긴다). 상한 = `postCap(b)` (`market.ts`, 레벨 × `tradeReserveOf(b.methodId)`, 기본 `TUNE.tradeReserve`, 방식 단계마다 ×`TRADE_STEP_MULT`). 상한을 넘는 돈은 그날 건물 매출(`b.last.revenue`)로 회사에 간다. 쓸 수 있는 금고 = `postUsable(b)` (금고 × 가동률 × 작업 인원).
+  - 공사: 무역소 공사는 레벨당 `tradeEscrowPerLevel()` 을 착공 때 따로 내서 `Construction.escrow`(낸 금고별 `escrowFrom`)에 묶는다. 완공되면 금고 시작 돈, 취소하면 돌려받는다. 무역소는 민영화하지 않는다 (`sellsShares` false).
+  - 지역 교역 기록 `Region.trade = { buy, cut, margin }` (하루 이동평균): 무역소가 산 주문액, 금고가 모자라 잘린 주문액(무역소가 없으면 내려던 주문 전부), 기대 이익률.
+  - 화물 `Shipment.post` = 산 무역소 id.
+  - `Kingdom.investmentPool`(저택·금융가 금고 사본)에는 무역소 금고가 들어가지 않는다. `MetricPoint.traders` = 무역소 금고 합 (이름은 그대로).
+- 화면 요청:
+  1. 건설 목록·건물 상세에 무역소가 보이는지 확인 (방식 셋, 투입·산출 칸이 비어 있다). 투입·산출이 비면 막대 대신 "–".
+  2. 무역소 상세: 금고 막대 `b.cash` / `postCap(b)` (숫자 둘), 그 아래 쓸 수 있는 금고 `postUsable(b)` 한 줄. 레벨당 유보액(`tradeReserveOf(b.methodId)`)은 방식 비교 행 하나.
+  3. 건설 카드의 공사비 칸: 무역소는 공사비 + 묶는 돈(`tradeEscrowPerLevel() × 레벨`)을 따로 한 줄.
+  4. 시장 창(지역): 교역 수요 막대 둘 (`Region.trade.buy` 산 주문, `cut` 잘린 주문) + 기대 이익률 숫자. 무역소가 없는 지역은 `buy` 0.
+  5. 상인 현금을 보이던 곳(통계의 `traders` 선 등)이 있으면 이름을 "무역소 금고"로.
+  설명 문구는 넣지 않는다 (규칙은 README·사전 `trade`·`trading-post`).
+
+### 2-75 확인: 완료. 건설 카드 지금·+1·+5 `CompanyPanel.tsx:429`·`supplyDemand.ts:6~10`, 로그 막대·눈금·AI 문턱 `SupplyDemand.tsx:7~13`, 줄 툴팁 `:19`, 증설 버튼 `CompanyPanel.tsx:288~298`, 시장 창 열·정렬 `MarketWindow.tsx:41`·`:44`·`:61`. 스크린샷 nov5-sd-build-ko-light.png·nov5-sd-build-en-dark.png·nov5-sd-market-ko-light.png·nov5-sd-market-en-dark.png (화면 작업자가 같은 날 sim 직접 호출 값과 대조했다고 기록). 화면 미검증: 실제 짓기 실행, 전 상품·전 범위 조합.
+
+### 2-75. 공급 ÷ 수요: 건설 카드의 지금·예상 값, 시장 창 열, AI 문턱 눈금 (오버홀 03 5-1·5-2·6장, sim 대기 풀림: main c952e65)
+- 2026-11-02 반영 확인 (main 81494a1): 안 됨. 클라이언트에 `projectedSD`·`currentSD`·`mainOutput` 호출이 없고 (grep 0건), 시장 창은 여전히 `balance` 정렬(`MarketWindow.tsx:40`)과 공급 / 수요 양 칸(`:57`)이다.
+- 줄 번호 (main 81494a1 기준, 본문의 옛 줄 번호 `:506`·`:532~`·`:56` 등은 이 줄로 읽는다): `projectedSD` `economy.ts:603`, `currentSD` `:619`, `mainOutput` `:628`, TUNE `aiGlutSD` `data.ts:677` (기본 1.5; `aiCutSD`·`aiDemoSD`·`aiExitWeeks` 는 2026-11-02 wt-simplify 1-G 에서 지웠다, DECISIONS 7-46). 클라이언트: `BuildCard` `CompanyPanel.tsx:418` (+5 짓기 버튼 `:452`), 지역 건물 +5 증설 버튼 `:299`, 시장 창 정렬 `MarketWindow.tsx:40`, 공급/수요 열 `:57`.
+- sim (원문: 브랜치 wt-0bp `cd97f1b` 기준으로 쓴 설명, 함수 뜻은 main 과 같다):
+  - `projectedSD(w, regionId, g, addOutput = 0): number | null` (`economy.ts:506`): (지역 공급 이동평균 `market[g].supplyEma` + 그 지역에서 g를 내는 모든 회사의 공사 중 레벨 산출 + `addOutput`) ÷ 지역 수요 이동평균 `demandEma`. 공사 중 레벨 산출 = 공사마다 레벨 수 × 그 방식의 g 산출 × (1 + `regionPerk(regionId, typeId)`). 수요 이동평균 ≤ `FLOW_ZERO`(1e-6)이면 `null`. 세계를 바꾸지 않는다. AI 증설 검사와 같은 함수다.
+  - `currentSD(w, regionId, g): number | null` (`:522`): `supplyEma ÷ demandEma` (공사 중 제외). 같은 `null` 규칙.
+  - `mainOutput(typeId, methodId): GoodId | null` (`:531`): 그 방식의 산출 중 기본가로 잰 값이 가장 큰 상품 (산출이 없으면 `null`).
+  - 단위: `supplyEma`·`demandEma`는 지역 합계 하루 양의 이동평균, S/D는 단위 없는 비율.
+  - 조정값 (`TUNE`, `data.ts:590~601`): `aiGlutSD` 1.5 = AI가 증설을 멈추는 예상 S/D.
+- 화면:
+  1. **건설 카드** (`BuildCard`, `CompanyPanel.tsx:532~`): 방식 목록 아래 한 줄 "공급 ÷ 수요". 상품 `g = mainOutput(bt.id, m.id)`, 방식 `m = availableMethods(me, bt.id)[0]` (`build` 명령이 방식을 안 주면 쓰는 것, `commands.ts:122`). `g`가 없으면 (학교·행정청·건축사무소 등) 줄을 그리지 않는다. 레벨당 산출 `per = getMethod(bt.id, m.id).outputs[g] × (1 + regionPerk(region.id, bt.id))`. 숫자 셋: 지금 `currentSD(world, region.id, g)`, +1 `projectedSD(world, region.id, g, per)`, +5 `projectedSD(world, region.id, g, 5 × per)` (카드의 짓기·+5 버튼과 같은 N). 소수 둘째 자리. `null`이면 "—".
+  2. **막대**: 위 숫자 옆에 로그 눈금 막대 하나 (0.25 ~ 4, 위치 = (log2(x) + 2) ÷ 4, 범위 밖은 끝에 붙임). 눈금 0.5 · 1 · 2 (가운데 1, 03 6장). 지금 값은 채운 점, +1·+5 뒤 값은 빈 점. 1보다 크고 작음에 좋음/나쁨 색을 쓰지 않는다 ("과잉" 같은 말도 쓰지 않는다, 03 6장).
+  3. **AI 문턱 눈금 (추천안)**: 같은 막대에 `TUNE.aiGlutSD` 눈금 하나 (> 0일 때). 눈금 툴팁은 라벨과 숫자만: "AI 증설 멈춤 1.50" / "AI stops expanding 1.50". 이유: 같은 지역의 AI가 언제 증설을 멈추는지는 플레이어의 짓기 판단 재료이고, 값은 사전(`ai-reserve`·`ai-construction` live)에 이미 공개된 AI 상수다. 09 3.4가 막는 것은 특정 시드에서 잰 레버 반응 부호이지 규칙 상수가 아니다. 반대하면 눈금을 빼고 숫자만 둔다 (사용자 결정 필요 없음으로 봄).
+  4. **줄 툴팁**: 공급 `supplyEma`, 수요 `demandEma` (하루 양, compact)와 지금·+1·+5 세 비율. 라벨과 숫자만. 공사 중 산출은 화면에서 다시 계산하지 않는다 (+N 값에 이미 들어 있다).
+  5. **지역 건물 증설 버튼** (`CompanyPanel.tsx:416~419`의 + / +5): `title`(툴팁)에 "공급 ÷ 수요 1.23 → 1.31". 상품 `mainOutput(b.typeId, b.methodId)`, 레벨당 산출은 `b.methodId` 기준으로 1.과 같다.
+  6. **시장 창 상품 줄 (추천안)**: `MarketWindow.tsx:56`의 `balance` 열(공급 − 수요, 양)을 "공급 ÷ 수요" 열로 바꾼다. 지역 범위는 `currentSD`, 왕국·세계 범위는 합산 시장(`marketScope.ts:16~19`)의 Σ`supplyEma` ÷ Σ`demandEma` (Σ수요 ≤ `FLOW_ZERO`면 "—"). 칸 = 숫자 + 작은 로그 막대(2.과 같은 눈금, AI 눈금 없음). 정렬 키 `balance` → 이 비율 (`MarketWindow.tsx:39`). 이유: 양의 차이는 상품끼리 견줄 수 없고, 03 6장이 기본 열을 "값과 공급 ÷ 수요"로 정했다. 지역 개요 시장 표(`RegionPanel.tsx:142` 공급 / 수요 숫자)는 그대로.
+- 보이지 않는 것: `Region.trim`·`demoAt`(AI 내부 셈), 증설이 막혔다는 표시.
+- 문자열: "공급 ÷ 수요"/"Supply ÷ demand", "지금"/"Now", "+1", "+5", "공급"/"Supply", "수요"/"Demand", 위 AI 눈금 하나.
+- 완료 기준: 카드의 세 숫자가 같은 날 `projectedSD`/`currentSD` 직접 호출 값과 같다 (소수 둘째 자리). 수요 0 상품은 "—". 다크 모드에서 점·눈금이 구분된다. 420×560에서 넘침 없음 (ko/en). typecheck.
+- 사용자 결정이 필요한 것: 없음 (3·6항은 추천안, 반대하면 바꾼다).
+
+### 2-79 확인: 완료. 창 `RegionExplorer.tsx:40` (`region.wages` 없으면 없다), 소작 1인 소득 주간 계산 `RegionWages.tsx:15`, 칸과 툴팁 `:22~24`, 표 `:25~36`, 국영 칸 식 `:28`. 스크린샷 nov5-wages-ko-light.png·nov5-wages-en-dark.png. 화면 미검증: AI 양수 웃돈 툴팁.
+
+### 2-79. 지역 시장 임금 표 (main c952e65, wt-labor 병합, DESIGN 7.3, DECISIONS 7-32·7-38, 사전 `market-wage`)
+- 2026-11-02 반영 확인 (main 81494a1): 안 됨 (커밋된 클라이언트에 지역 임금 표가 없다. `RegionExplorer.tsx:30~38` 은 인구·토지·교육 `DetailWindow` 셋뿐). 화면 작업자가 작업 중인 것으로 보인다 (커밋 전). 들어오면 아래 완료 기준으로 본다.
+- 2026-11-02 덧붙임: 소작 1인 소득 `subsistenceWage` 는 sim 준비됨 (index export, wt-sim2). 아래 2.는 그에 맞게 고쳤다 (옛 '그리지 않는다' 조건은 뺐다). 국영 칸 툴팁은 6., 시장 임금이 가는 쪽(목표 임금)은 2-86.
+- sim에서 바뀐 것: 지역 시장 임금 규칙 하나만 있다 (옛 스위치 `TUNE.wageMarket` 은 2026-11-02 wt-simplify 1-E 에서 지웠다). 지역마다 직종마다 시장 임금이 하나 있고, 그 지역의 모든 임금 건물(왕실 생산 건물 포함)이 그 값을 준다 (`labor.ts:481 updateMarketWages`, `economy.ts:367 wagesAt`). 회사 임금표를 움직이던 옛 AI 임금 판단(`adjustWages`)은 wt-simplify 1-E 에서 지웠다. (wt-wagelag 부터 AI 민간 상회 건물은 시장 임금 × (1 + `Company.aiPremium[지역 id].off[직종]`) 를 준다. 건물 임금을 보일 때는 `Region.wages` 가 아니라 `wagesAt(c, b.typeId, w, b.regionId)` 를 읽는다, 사전 `ai-wage-premium`).
+- 쓸 필드 (모두 1인 하루 ƒ, 지역 값):
+  - `Region.wages?: Record<Skill, number>` (`types.ts:532`): 지금 시장 임금. 날마다 맞는 임금 쪽으로 차이의 `wageTargetSpeed` 만큼 움직인다 (2026-11-02 wt-wagespeed, DESIGN 7.3 '목표 임금'; 그 전에는 하루 최대 ±0.25% `wageMarketRate`). 저장값은 반올림하지 않는다.
+  - `Region.wageAvg?: Record<Skill, number>` (`:534`): `wages`의 52주 이동평균 (`WAGE_AVG_DAYS` 364일, 날마다 1/364씩 다가감). AI 투자 판단 임금.
+  - `Region.stateWages?: Record<Skill, number>` (`:536`): 그 지역 정부 건물(행정청·건축사무소·학교)의 국영 임금 = `wages` × 국영 임금 단계 배율, 매주, 소수 둘째 자리로 저장 (`finance.ts:142~148`).
+  - 소작 1인 소득: `subsistenceWage(w, r)` (`labor.ts:93`). 소작농 1인 하루 소득 가치 (판매 대금 − 지대·토지세 + 쓴 현물, 기상 조건 포함). 노동자·농부 시작 임금과 고용 0 대체값의 기준 (× `switchPremium` 1.1). **sim 준비됨 (`subsistenceWage`, wt-sim2).**
+  - 실업: `regionUnemployment(world, r.id, s)` (`economy.ts:737`, 0~1, 노동 인구 기준).
+  - 세 `Region` 칸은 옛 저장의 첫날이면 없다 (`undefined`). (`wageMarket` 0 세계는 스위치를 지워 없어졌다, wt-simplify 1-E)
+- 지금 화면: 지역 시장 임금이 어디에도 없다. 지역 개요 칸(`RegionPanel.tsx:96~113`)에는 임금이 없고, 재정 창의 `Wages`(`CompanyPanel.tsx:326~349`)가 보이는 "시장임금"은 `marketWage(world, s, me.id)` (`economy.ts:727`) = 세계 전체(다른 왕국 포함) 회사들의 고용 가중 평균이라 어느 지역의 지급액도 아니다 (2-81).
+- 바꿀 것:
+  1. 지역 개요 원장 `RegionExplorer.tsx:35~38` (교육 `DetailWindow` 다음)에 `DetailWindow` 하나: 제목 "임금", 요약 `ƒ{r.wages.unskilled}` (노동자 시장 임금). `r.wages`가 없으면 이 창을 그리지 않는다. 다른 왕국 지역도 그대로 보인다 (읽기 전용).
+  2. 창 안 맨 위 칸 하나: "소작 1인 소득" `ƒ` 값. 툴팁: "노동자 ÷ 소작 x.xx" (`r.wages.unskilled ÷ 소작 1인 소득`). 값은 `subsistenceWage(world, r)` (index export).
+  3. 그 아래 표: 행 = `SKILLS` 순서 7개 (`ClassSprite` + 직종 이름), 열 = 시장 임금 `r.wages[s]` · 52주 평균 `r.wageAvg?.[s]` · 국영 `r.stateWages?.[s]` (없으면 "—") · 실업 (퍼센트 + `Bar tone="neg" size="sm"`). 정렬 없음. 칸마다 툴팁은 정확한 값 (`NumericValue`가 이미 한다).
+  4. 값 표시는 `NumericValue format="money"` (100 아래 소수 둘째 자리). 시장 임금과 52주 평균의 차이에 좋음/나쁨 색을 쓰지 않는다.
+  5. 소작 1인 소득은 가격·기상 조건에 따라 날마다 바뀐다. 화면은 주가 바뀔 때만 다시 센다 (`Math.floor(world.tick / 7)`을 키로 기억). 시장 임금 셋은 날마다 그대로 읽는다 (하루 변화가 작다).
+  6. (2026-11-02 wt-admin) 국영 칸 툴팁: 식 하나. `시장 임금 ƒa × 단계 b` 이고, 그 지역 왕실의 국영 웃돈 `p = companyById(world, kingdom.governmentId)?.statePremium?.[r.id]?.[s]` 가 > 0 이면 `× (1 + 웃돈 p)` 를 붙인다 (`BudgetJobs.tsx:12` 와 같은 꼴, 문자열 `T.marketWage`·`T.stage`·`T.wagePremium` 재사용). 단계 b = `TUNE.govWageLevels[kingdom.budget.wages − 1]` (`kingdom` = 그 지역의 왕국). `Region.stateWages` 는 이미 웃돈이 든 값이라 칸 숫자는 그대로 읽는다 (`types.ts:536`). 플레이어 왕실은 웃돈이 없다 (DECISIONS 7-42 결정 대기 1).
+- 문자열 (ko/en): "임금"/"Wages", "시장 임금"/"Market wage" (`T.marketWage` 재사용 가능), "52주 평균"/"52-week avg", "국영"/"State", "소작 1인 소득"/"Tenant income / head", "실업"/"Unemployment" (재사용), 툴팁 "노동자 ÷ 소작"/"Labourer ÷ tenant".
+- 빼는 것: 없음.
+- 완료 기준: 같은 날 표의 값이 `r.wages`·`r.wageAvg`·`r.stateWages`를 소수 둘째 자리로 반올림한 값과 같다. `Region.wages` 가 없으면 (옛 저장의 첫날) 창이 없다. 420×560 창에서 다섯 열이 넘치지 않는다 (ko/en). 다크 모드에서 실업 막대가 보인다. typecheck.
+- 사용자 결정: 필요 없음. 자리는 추천안이다: 지역 개요가 지역 사실을 모으는 곳이고 시장 임금은 지역 값이다. 노동 상세(`Workforce.tsx`)는 건물 하나의 일꾼 표라 지역 표를 넣을 자리가 아니다.
+
+### 2-85 확인: 완료. 일꾼 줄 임금 칸 `Workforce.tsx:20`, 값 `WorkforceWage.tsx:8~18`, 배당 자리 — `:13`·`:24`, 그룹 가중 평균·최저~최고 `:27`·`:29~30`, 웃돈 칩 `:31`, 네 칸 격자 `system-ui.css:145`, 그룹 줄 `GroupDetail.tsx:33`. 스크린샷 nov5-workforce-group-en-dark.png·nov5-workforce-single-en-dark.png·nov5-workforce-single-ko-light.png. 화면 미검증: AI 왕실 국영 웃돈, 소작지 줄.
+
+### 2-85. 건물 일꾼 줄의 1인 임금과 웃돈 (main 81494a1, wt-wagelag·wt-admin, DESIGN 7.3 '상회 웃돈'·'국영 웃돈', 9.2, 사전 `ai-wage-premium`·`ai-state-premium`)
+- sim에서 바뀐 것: 같은 지역 같은 직종이라도 건물마다 1인 임금이 다를 수 있다.
+  - AI 민간 상회 건물: 지역 시장 임금 × (1 + `Company.aiPremium[지역 id].off[직종]`) (`ai.ts adjustPremium`, 늘 켜짐: 스위치 `aiWagePremium` 은 wt-simplify 1-C 에서 지움, `types.ts:422`).
+  - 왕실 정부 건물(행정청·건축사무소·학교): `Region.stateWages[직종]` = 시장 임금 × 국영 임금 단계 배율 × (1 + `Company.statePremium[지역 id][직종]`) (AI 왕실만, `aiStatePremium` 1 기본, `finance.ts applyStateWages`, `types.ts:427`).
+  - 그 밖(왕실 생산 건물, 웃돈 없는 상회): 지역 시장 임금 `Region.wages[직종]`.
+  - 세 경우를 모두 내는 함수가 `wagesAt(c, typeId, w, regionId)` (`economy.ts:367~379`, index export). 건물 하나의 1인 하루 임금 = `wagesAt(companyById(world, b.companyId)!, b.typeId, world, b.regionId)[s]` (ƒ/일, 1인).
+- 지금 화면: 건물 하나의 1인 임금이 어디에도 없다. 일꾼 줄(`Workforce.tsx:15~19`)은 직종·충원 막대·인원/자리뿐이고, 건물 수지(`BuildingEconomics.tsx:25`)의 임금은 하루 합계(`e.day.wages`, 웃돈이 든 실제 지급액)다. 그래서 AI 상회가 웃돈으로 사람을 끌어가는 것이 보이지 않는다.
+- 바꿀 것:
+  1. `Workforce` 줄 끝에 1인 하루 임금 칸 하나 (`NumericValue format="money"`). 줄 격자 `workspace.css:168` 의 세 칸 → 네 칸 (`... auto auto`).
+     - 배당 자리(`paysShare(b, s)` 가 참, 동전 아이콘이 이미 붙는 줄): "—" (임금이 없다).
+     - 소작지 줄: `subsistenceWage(world, region)` (소작 1인 소득, 주마다 다시 셈: `Math.floor(world.tick / 7)` 키). 2-79 표의 "소작 1인 소득"과 같은 값.
+     - `Region.wages` 가 없는 세계(옛 저장의 첫날)는 `wagesAt` 이 회사 임금표를 돌려준다. 그대로 쓴다.
+  2. 웃돈 칩: 그 줄의 웃돈 `p` 가 0.005 이상이면 임금 옆에 `+{pct(p)}` 작은 칩 (라벨 없음, 툴팁만). 색은 중립(강조색 한 가지). 오르면 좋음/나쁨 색을 쓰지 않는다 (일꾼에게는 좋고 주인에게는 나쁘다).
+     - AI 민간 상회: `p = owner.aiPremium?.[b.regionId]?.off[s] ?? 0`.
+     - 왕실 정부 건물(`owner.state && isGovernment(b.typeId)`): `p = owner.statePremium?.[b.regionId]?.[s] ?? 0`.
+     - 그 밖: 칩 없음.
+  3. 임금 칸 툴팁: 식 하나 (`BudgetJobs.tsx:12` 와 같은 꼴, 소수 둘째 자리 `exactNumber`).
+     - 상회: `시장 임금 ƒa × (1 + 웃돈 p)` (웃돈이 0이면 `시장 임금 ƒa`).
+     - 정부 건물: `시장 임금 ƒa × 단계 b × (1 + 웃돈 p)` (b = `TUNE.govWageLevels[kingdom.budget.wages − 1]`, 그 건물 주인 왕국).
+     - a = `regionById(world, b.regionId).wages?.[s]`.
+  4. `Workforce` 는 지금 `building` 만 받는다. `world` 를 넘긴다 (호출처 `CompanyPanel.tsx:236`·`:262`, `ResourceInspector.tsx:44`). 그룹 상세의 일꾼 줄(`GroupDetail.tsx:29`, 같은 `workforce-row`)도 같은 칸을 쓰되, 건물마다 임금이 다르면 인원 가중 평균을 보이고 툴팁에 최저~최고.
+- 문자열 (ko/en): 새 문자열 없음 (`T.marketWage`, `T.wagePremium` "웃돈"/"Premium", `T.stage` 재사용). 줄 칸 머리가 없으므로 `aria-label` 에 "1인 임금"/"Wage / head" 하나 (새 문자열).
+- 빼는 것: 없음.
+- 완료 기준: 같은 날 일꾼 줄 숫자 = `wagesAt(...)[s]` 를 소수 둘째 자리로 반올림한 값. AI 왕국 상회 건물에 웃돈이 있는 지역에서 칩이 보이고 `aiPremium` 과 같은 %, 플레이어 왕실 건물에는 칩이 없다. 배당 자리는 "—". 420×560 창에서 넘침 없음 (ko/en), 다크 모드에서 칩이 구분된다. typecheck.
+- 사용자 결정: 필요 없음 (자리 추천안: 일꾼 줄이 직종별 줄이라 1인 임금이 그 줄의 값이다. 별도 표를 만들지 않는다).
+- sim 준비됨 (2026-11-02 wt-uiapi 확인, 새 export 필요 없음): `wagesAt` (`economy.ts:367`), `paysShare` (`economy.ts:478`), `isGovernment` (`economy.ts:350`), `companyById` (`economy.ts:860`), `regionById` (`economy.ts:16`) 는 `index.ts:3` `export * from './economy'` 로, `subsistenceWage` (`labor.ts:93`) 는 `index.ts:15` 로 나간다. 웃돈은 `Company.aiPremium`·`statePremium` (`types.ts`), 단계 배율은 `TUNE.govWageLevels` (`data.ts:627`).
+
+### 2-86 확인: 완료. 주 단위 조회 `RegionWages.tsx:16`, 방향 `:29`·`wageDirection.ts:1~3`, 툴팁 `:30`, 화살표 `:33`. 스크린샷 nov5-wage-target-ko-light.png·nov5-wage-target-en-dark.png. 화면 미검증: 주간 경계의 장기 화면, 전 직종 다음 날 대조.
+
+### 2-86. 시장 임금이 가는 쪽: 목표 임금 (main 81494a1, wt-wagespeed, DESIGN 7.3 '목표 임금', DECISIONS 7-43, 사전 `market-wage`, sim 준비됨)
+- sim에서 바뀐 것: 맞는 임금 규칙 하나 (옛 스위치 `TUNE.wageTarget` 은 2026-11-02 wt-simplify 1-E 에서 지웠다), `wageTargetSpeed` 0.1. 시장 임금은 날마다 목표 임금(맞는 임금) 쪽으로 차이의 10%씩 움직인다 (`labor.ts updateMarketWages` `:481~493`, 지역 하나의 셈은 `moveRegionWages` `:502~528`, wt-uiapi 에서 나눔). 목표 = 아래 끝(`startWage`: 한 칸 아래 직종 × `switchPremium`, 노동자·농부는 소작 1인 소득 × `switchPremium`)과 위 끝(바깥 소득 `outsideWage` × `TUNE.wageTargetSpan` 2 (기본, `data.ts:550`, 근거는 DESIGN 11장 `wageTargetSpan` 행), 기본 임금 × `MARKET_WAGE_RANGE` 위 끝 이하) 사이에서 오려는 사람이 자리를 채우는 가장 낮은 임금 (`clearingWage`, `:461`). 아래 끝은 최저임금이 아니다 (수렴값, 그 아래 임금도 둔다).
+- 지금 화면: 목표 임금이 어디에도 없다. 플레이어는 시장 임금이 오를지 내릴지 알 수 없다. 목표 임금과 자리·오려는 사람은 sim 안에서만 세고 저장하지 않는다 (화면은 아래 `marketWageTargets` 로 읽는다).
+- sim 준비됨 (2026-11-02 wt-uiapi): `marketWageTargets(w: World, regionId: number): Record<Skill, WageTarget> | null` (`labor.ts:537`, index `index.ts:15`, 타입 `WageTarget = { target; lo; hi; jobs; willing }` `labor.ts:496`, index `index.ts:16`). 세계를 바꾸지 않는다 (`updateMarketWages` 와 같은 `moveRegionWages` 를 지역 임금표 사본에 돌린다. 위 직종의 아래 끝은 아래 직종이 그날 움직인 뒤 값, `updateMarketWages` 와 같다. 시험 `test/core/wageTarget.test.ts:73`·`readonly.test.ts`, 골든 같음). 그 지역이 없어도 `null`. `updateMarketWages` 와 같은 식: `lo`·`hi` 는 위 아래·위 끝 (1인 하루 ƒ), `target` 은 `clearingWage` (자리가 없으면 `startWage`, 자격자가 없으면 지금 임금), `jobs` = 그 지역 채울 수 있는 자리 (명, 지역 합계), `willing` = 지금 시장 임금에서 오려는 사람 (명, 지역 합계, `labourTable` 의 `willing`). `Region.wages` 가 없어도 `null` (`wageMarket`·`wageTarget` 스위치는 2026-11-02 wt-simplify 1-E 에서 지웠다).
+- 화면 (sim이 들어온 뒤, 2-79 표 안):
+  1. 시장 임금 칸 숫자 옆 방향 아이콘 하나: `target > wage × 1.005` 이면 위 화살표, `target < wage × 0.995` 이면 아래 화살표, 그 사이는 없음 (lucide `ArrowUp`/`ArrowDown` 14px, 중립색. 좋음/나쁨 색 없음).
+  2. 시장 임금 칸 툴팁: `목표 ƒt · 아래 끝 ƒlo · 위 끝 ƒhi · 자리 n · 오려는 사람 m` (라벨과 숫자만, 돈은 소수 둘째 자리, 사람은 compact).
+  3. `marketWageTargets` 는 주가 바뀔 때만 다시 부른다 (`Math.floor(world.tick / 7)` 키, 지역 하나에 `labourTable` 한 번이라 무겁다). 목표는 자리 수에 따라 크게 뛸 수 있어 화살표가 날마다 깜빡이지 않게 한다. 시장 임금 숫자 자체는 2-79 대로 날마다 읽는다.
+- 이유 (추천안): 이 규칙에서 임금이 움직이는 까닭을 숫자 하나로 보여 주는 것이 목표 임금이다. 420×560 창에 2-79 의 다섯 열이 이미 차 있어 열을 늘리지 않고 아이콘 + 툴팁으로 둔다. 버린 안: "목표" 열 추가 (영어에서 넘침), 하루 이동량 표시 (= 0.1 × 차이라 목표와 겹친다).
+- 문자열 (ko/en): "목표"/"Target", "아래 끝"/"Low end", "위 끝"/"High end", "자리"/"Jobs", "오려는 사람"/"Willing". ("바닥"/"Floor" 는 쓰지 않는다: 최저임금으로 읽힌다.)
+- 빼는 것: 없음.
+- 완료 기준: 툴팁 목표가 같은 날 `marketWageTargets` 값과 소수 둘째 자리까지 같다. 화살표 방향이 다음 날 `r.wages[s]` 변화 부호와 같다 (차이 0.5% 넘을 때). `marketWageTargets` 가 `null` 이면 (그 지역이 없거나 `Region.wages` 가 없을 때) 화살표·툴팁 줄이 없다 (`wageMarket`·`wageTarget` 이 아니면 `null` 이던 경우는 wt-batch3 에서 두 스위치와 함께 없어졌다). typecheck.
+- 사용자 결정: 규칙은 2026-11-02 사용자가 확인했다 (DECISIONS 7-43). 위 끝 배율 `TUNE.wageTargetSpan`·속도 `wageTargetSpeed` 는 값 손잡이로 남는다 ( 2026-11-02 wt-span 비교에서 배율 1.5·3, 속도 0.2 모두 기본값보다 고르게 낫지 않아 2·0.1 그대로, DESIGN 11장 두 행, 보고서 2026-11-02-wagespan). 화면 설계는 규칙이 바뀌어도 같다 (목표·끝 값만 sim 이 준다). 7-42 결정 대기 1 이 (b) "플레이어 왕실에 정부 건물 지역 웃돈 손잡이"로 정해지면 그때 새 절을 쓴다.
+
+### 2-87 확인: 완료. 주인 목록 지분 무게 `ownershipPortfolio.ts:4~5`, 저택 머리 `:6~10`·`OwnershipBrowser.tsx:37`, pop 보유 지분 `PopHoldings.tsx:6~20`·`BuildingPops.tsx:49`, 자리 라벨 `OwnerSummary.tsx:13`, 임시 우회를 뺀 시험 `test/ownerSummary.test.tsx:12`. 4항(선택)은 2-79 표의 직종별 실업 `RegionWages.tsx:34` 로 볼 수 있다. 스크린샷 nov5-manor-shares-ko.png·nov5-manor-owners-ko.png·nov5-manor-owners-en-dark.png·nov5-pop-manor-holdings-ko.png·nov5-pop-manor-holdings-en-dark.png. 화면 미검증: 실제 배당 지급, 지분 매매의 시간 경과.
+
+### 2-87. 저택 지분 (wt-manor, DESIGN 9.3 `manorShares`·`absenteeShare`·`manorBuyScope`, 사전 `manor-shares`, DECISIONS 7-44)
+- sim 쪽 최소 수정 (2026-11-02, CLAUDE.md 예외: sim 기본값이 바뀌어 클라이언트 시험이 깨짐): `packages/client/test/ownerSummary.test.tsx:10~18` "marks the manor gentry position as receiving a share" 가 `TUNE.manorShares` 0 으로 돌게 했다 (기본 1 이면 하급 귀족이 저택에 앉지 않아 그 줄이 없다). 화면 작업자는 지분 표시(아래 1~4)를 넣을 때 이 시험을 지분 기준으로 바꾼다.
+- 상태: 2026-11-02 wt-manor 에서 `TUNE.manorShares` 기본 켬 (HANDOFF 0-1102h, DECISIONS 7-44, main 병합 뒤 적용). 0 으로 끄면 화면이 바꿀 것은 없다. 클라이언트 코드는 sim 작업자가 고치지 않았다.
+- sim:
+  - 저택 지분은 금융가 지분과 같은 `Pop.fund` (`{ id: number[]; u: number[] }`, 건물 id 오름차순) 에 든다. 저택 id 와 금융가 id 는 겹치지 않는다. 한 pop 이 여러 저택(다른 지역·다른 왕국 포함)과 금융가 지분을 함께 가질 수 있다.
+  - 저택 지분 값: `Building.nav` (저택에도 생긴다, 매주). 지분 주인 = 저택 id 지분이 0 보다 큰 pop (상급·하급 귀족, 되사기 전의 다른 직종이 잠깐 있을 수 있다). 저택에 앉은 pop 은 상급 귀족뿐이고, 앉은 자리는 몫과 상관없다.
+  - 하급 귀족은 저택에 앉지 않는다. 일자리가 없는 하급 귀족은 실업(`work === 0`)이고 배당으로 산다 (실업률에 들어간다).
+  - `TUNE.absenteeShare` > 0 이면 다른 지역 건물의 배당 일부가 그 건물 지역 저택으로 간다. `Building.payout.paid` 에 그 저택 id 줄이 생긴다 (배당 기록과 같은 모양).
+- 화면:
+  1. 저택 창 주인 목록 (`packages/client/src/ownershipPortfolio.ts:4 ownershipPeople`): 지금은 `b.typeId === 'finance'` 일 때만 지분 수를 쓰고 저택은 `p.work === b.id ? p.size * shareWeight(p.prof) : 0` 이다. `TUNE.manorShares` 가 켜져 있으면 저택도 금융가처럼 `p.fund` 의 지분 수를 무게로 쓴다 (`TUNE` 은 sim export). 끄면 지금 식 그대로.
+  2. 저택 창 머리 한 줄: 지분 합, 지분 값(`b.nav`), 지분 1개당 주간 배당 = max(0, `b.profitEma`) × 7 × (1 − `KEEP_SHARE.manor`) ÷ 지분 합 (= `finance.ts unitYield` × `b.nav`; `unitYield` 는 index 가 내보내지 않으므로 이 식으로 센다. 지분 합은 그 저택 id 의 `p.fund.u` 합, 사전 `manor-shares` live 의 지분 수와 같다). 라벨만, 설명 문구 없음.
+  3. pop 창(또는 계층 표)의 보유 지분: 저택 지분도 금융가 지분처럼 건물 이름·지역과 지분 수·값(지분 × nav)으로. 다른 왕국 저택이면 왕국 이름.
+  4. 실업 표에서 하급 귀족을 따로 볼 수 있게 (선택): 지분을 켜면 하급 귀족 실업률이 70~90% 로 보인다 (배당으로 산다). 실업률에는 하급 귀족을 그대로 넣는다 (DECISIONS 7-44 결정 2, 사용자 2026-11-02).
+  5. `OwnerSummary` 'nobleSeats' 라벨: 상급 귀족 자리만 남는다 (하급 귀족 자리 없음).
+- 문자열: "지분"/"Units", "지분 값"/"Unit value", "수익률"/"Yield" (이미 있으면 그것). 완료 기준: `TUNE.manorShares` 1 세계에서 저택 창 주인 목록의 무게 합 = 그 저택 id 의 `p.fund.u` 합, typecheck. 기본 켬이라 main 병합 뒤 1항 전에는 저택 주인 목록이 앉은 상급 귀족만 보인다 (하급 귀족 빠짐): 1항을 먼저 한다 (0장 깨진 화면).
