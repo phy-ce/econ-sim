@@ -314,3 +314,9 @@ DetailWindow 독립 NavigationProvider/버튼, BuildingPops 및 ResourceInspecto
 - 공통 BuildingRoom으로 개별/그룹 상세에 종류별 땅·광맥 여유 숫자(landFree/depositFree, 공사 예약 포함). 왕국 대기열 각 회사 머리에 전체 건수/MAX_CONCURRENT_CONSTRUCTIONS(40), 행 지역 링크는 해당 지역 건물 탭을 연다. 미사용 myHouse/expandTen 양 언어 문자열 제거.
 - 루트 typecheck·클라이언트32파일82시험 통과. 1920×1028 헤드리스 스크린샷 확인: C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/nov5-room-ko-light.png, nov5-room-en-dark.png, nov5-queue-link-ko-light.png, nov5-queue-en-dark.png. 동부 삼림 산림 여유384.00=landFree384, 본문403/scroll403. 복제 세계 공사1건에서1/40·지역 링크 클릭→지역 창 건물 탭 확인, 검증 저장 복원. 광산 광맥 줄과 상한40건 화면은 미검증(동일 공통 함수/상수 코드 대조).
 - 2-59 커밋3cc4704. 다음2-32 보유 주간 이익·배당 표.
+
+## 2026-11-05 2-32 보유 주간 손익·배당 완료
+- OwnerHoldings 공통 표: 주간 이익×보유 몫 내림차순, 실제 건물 owners/ownerless 지급액, 보유 레벨·이익·배당 합계. 관계는 건물 이름 아래로 옮겨420px 안 네 열. 소작지별 지대 기록은 없어 배당 —. OwnerSummary 머리는 하루 수입 대신 profitEma×7 받은 돈/주, 계산 툴팁. BuildingEconomics의 이른 return 뒤 죽은 보유 표 제거.
+- 루트 typecheck·클라이언트33파일83시험 통과. 지분20%의 주간 이익140·실제 배당37.25를 별개로 확인하고 순서/합계 회귀 추가.
+- 1920×1028 헤드리스 스크린샷 확인: C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/nov5-holdings-ko-light.png, nov5-holdings-en-dark.png. 저택1050 보유4행·710레벨·주간 합−92.2k·실제 배당0, 본문403/scroll403. 좁은 표의 비율 숫자는 본문 글꼴로 가독성 보정. 기관 수입60.3k/주는 표의 보유 손익 합과 다른 배당·지대 수입임. 혼합 지역/양수 실제 배당 화면은 미검증(37.25 회귀로 지급액 경로 검증).
+- 2-42 커밋b39fb8c. 다음2-67 무역소·무역 흐름.
