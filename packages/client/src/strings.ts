@@ -6,6 +6,7 @@ import { particle } from './format';
 type S = string;
 
 export const KO = {
+ inputRevenueRatio:'기준 원료비 / 매출',
  constructionFees:'공사 수수료',officeFeeFormula:(margin:S)=>`수수료 = 운영비 ÷ (1 − ${margin})`,
  researchBaseMargin:'기준 가격 이익률',
  tradeUsable:'쓸 수 있는 금고',tradeReserveLevel:'금고 상한 / L',tradeEscrow:'약정금 / L',tradeEscrowHelp:'착공 시 별도로 묶고, 완공 시 무역소 금고로 옮깁니다. 취소하면 돌려받습니다.',tradeBought:'산 주문 / 일',tradeCut:'잘린 주문 / 일',tradeMargin:'기대 이익률',tradeFlow:'교역 주문',
@@ -566,6 +567,7 @@ export const KO = {
 export type Dict = typeof KO;
 
 export const EN: Dict = {
+ inputRevenueRatio:'Base inputs / sales',
  constructionFees:'Construction fees',officeFeeFormula:(margin:S)=>`Fees = operating costs ÷ (1 − ${margin})`,
  researchBaseMargin:'Margin at base prices',
  tradeUsable:'Usable treasury',tradeReserveLevel:'Treasury cap / L',tradeEscrow:'Escrow / L',tradeEscrowHelp:'Set aside at construction start and transferred to the post treasury at completion. Refunded on cancellation.',tradeBought:'Orders bought / day',tradeCut:'Orders cut / day',tradeMargin:'Expected margin',tradeFlow:'Trade orders',

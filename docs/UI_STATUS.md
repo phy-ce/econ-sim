@@ -342,3 +342,8 @@ DetailWindow 독립 NavigationProvider/버튼, BuildingPops 및 ResourceInspecto
 - ledgerLabels.buildFees·장부 툴팁을 모든 공사의 공사 수수료로 정정, 폐기 budgetLines.fees 제거. 건축사무소 개별/그룹 매출·폭포 라벨을 공사 수수료로, day.fee·officeMargin 계산 툴팁 추가. 재정 국영 사업 상세 매출에도 방식 이익률 식. 사무소 매출 양수면 목록 비용 막대 표시(정부 일반 예외와 분리).
 - 루트 typecheck·클라이언트33파일84시험 통과. 1920×1028 헤드리스 스크린샷 확인: C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/nov5-office-fees-ko-light.png, nov5-office-fees-en-dark.png. 수수료0/기본 방식20% 식 확인. 영문 긴 폭포 라벨은100px 칸으로 막대 겹침 해소. 양수 실제 수수료·재정 매출 툴팁 실제 표시·장부 전 항목은 화면 미검증(상수/필드 경로 코드 대조).
 - 철거 커밋d8c480d. 다음2-64 건설 카드 산업 유형.
+
+## 2026-11-05 2-64 건설 산업 유형 완료
+- IndustryLabel은 sim industryOf/INDUSTRIES의 양 언어 이름을 읽음. 건설 목록·펼친 방식·열 방식 비교 머리에 표시, 해당 산업 없음은 숨김. 방식 비교에 methodMarginAtBase 기준 원료비/매출 비율 행 추가(매출0은 —).
+- 루트 typecheck·클라이언트33파일84시험 통과. 1920×1028 헤드리스 스크린샷 확인: C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/nov5-types-ko-light.png, nov5-types-en-dark.png. 방직 카드 기본/아래 방식 가공, 맞춤/고급 방식 숙련 분리 확인. 공사/실제 방식 전환 및 비율 행 전체 조합은 미검증(해당 행은 sim 순수 API를 읽음).
+- 2-62 커밋3d6e3c3. 다음2-55 금융가1좌 가치·자본가 필터.

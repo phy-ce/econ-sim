@@ -164,3 +164,4 @@
 .strategy-panel .demolition-badge {display:inline-flex;align-items:center;gap:3px;color:var(--ink);font-size:11px;background:var(--chip);border:1px solid var(--gold);padding:0 3px}.strategy-panel .demolition-badge .spr {width:24px!important;height:24px!important;flex:none}
 .atlas-demolition rect {fill:var(--sheet);stroke:var(--gold);stroke-width:2}.atlas-demolition text {fill:var(--ink);font-size:24px;text-anchor:middle;font-family:var(--sans);font-weight:700}
 .group-detail-ledger .wf-row {grid-template-columns:100px minmax(0,1fr) auto}.group-detail-ledger .wf-label {overflow-wrap:anywhere}
+.industry-label {display:block;width:max-content;max-width:100%;font-size:10px;font-weight:400;margin:2px 0}

@@ -1,3 +1,4 @@
+import {IndustryLabel} from './IndustryLabel';
 import {officeLoadFor} from '../officeLoad';
 import {KingdomTotals} from './KingdomTotals';
 import {KingdomMoney} from './KingdomMoney';
@@ -386,7 +387,7 @@ export function BuildList({ game, world, me, region, projects, includeTypes, exc
           <div key={bt.id} className={`cat ${isOpen ? 'open' : ''} ${blockers.length ? 'blocked' : ''}`}>
             <button className="cat-head" data-help={blockers.length?blockers.join(' · '):(uiCopy().screenText['inspectMethodsAndConstructionCost'])} aria-expanded={isOpen} onClick={() => setOpen(isOpen ? null : bt.id)}>
               <span className="tile md"><Sprite64 id={bt.id} size={40} /></span>
-              <span className="cat-name">{buildingName(bt.id)}{bt.land && <small className="muted">{landName(bt.land)} <span className="pxnum">{free}</span></small>}{!bt.land && <small className="muted">{bt.methods[0].seats ? <>{T.schoolSeats} <NumericValue value={bt.methods[0].seats} format="compact"/></> : bt.methods[0].taxCapacity ? <>{T.taxCapacity} <NumericValue value={bt.methods[0].taxCapacity*TUNE.adminScale} format="compact"/></> : null}</small>}</span>
+              <span className="cat-name">{buildingName(bt.id)}<IndustryLabel typeId={bt.id}/>{bt.land && <small className="muted">{landName(bt.land)} <span className="pxnum">{free}</span></small>}{!bt.land && <small className="muted">{bt.methods[0].seats ? <>{T.schoolSeats} <NumericValue value={bt.methods[0].seats} format="compact"/></> : bt.methods[0].taxCapacity ? <>{T.taxCapacity} <NumericValue value={bt.methods[0].taxCapacity*TUNE.adminScale} format="compact"/></> : null}</small>}</span>
               <span className="cat-figure">
                 {locked ? <span className="muted">{T.techNeeded}</span>
                   : free < 1 ? <span className="neg">{T.noLand}</span>
@@ -417,7 +418,7 @@ function BuildCard({ bt, region, est, blockers, payback, game, world, me }: {
         {rows.map(({ m, ok, est: e }) => (
           <li key={m.id} className={`method ${ok ? '' : 'locked'}`}>
             <div className="m-main">
-              <strong>{methodName(m)}{!ok && <span className="tag-soft">{T.needsTechTag(techName(m.tech!))}</span>}</strong>
+              <strong>{methodName(m)}<IndustryLabel typeId={bt.id} methodId={m.id}/>{!ok && <span className="tag-soft">{T.needsTechTag(techName(m.tech!))}</span>}</strong>
               <span className="m-line">{SKILLS.filter((s) => m.workers[s]).map((s) => <span key={s} className="bag-item"><i className="sw" style={{ background: SKILL_COLOR[s] }} />{skillName(s)} <span className="pxnum">{qty(m.workers[s]!)}</span></span>)}</span>
               <FlowRow world={world} typeId={bt.id} methodId={m.id} regionId={region.id}/>{bt.id==='trading_post'&&<div>{T.tradeReserveLevel} <NumericValue value={tradeReserveOf(m.id)} format="money"/></div>}
             </div>
