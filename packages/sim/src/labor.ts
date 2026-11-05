@@ -89,7 +89,7 @@ function slotsWith(b: Building, m: MethodDef | null, s: Skill): number {
 
 // ----------------------------------------------------------------
 
-/** 소작농 1인당 하루 소득 가치 (판매 대금에서 지대·토지세를 뺀 것 + 그날 쓴 현물, 기상 조건 포함, tenantIncomePerWorker). 노동자 일자리와 비교하는 기준 */
+/** 소작농 1인당 하루 소득 가치 (지대를 뗀 수확의 판매 대금 + 그날 쓴 현물 − 토지세, 기상 조건 포함, tenantIncomePerWorker). 노동자 일자리와 비교하는 기준 */
 export function subsistenceWage(w: World, r: Region): number {
   const b = w.buildings.find((x) => x.regionId === r.id && isSubsistence(x.typeId));
   const pop = b ? findPop(w, r.id, 'peasant', b.id) : undefined;
@@ -532,7 +532,7 @@ function moveRegionWages(w: World, r: Region, wages: Record<Skill, number>, loca
 }
 
 /**
- * 지역 시장 임금이 가는 쪽 (읽기 전용, 화면용 UI_CHANGES 2-86): 직종마다 updateMarketWages 가 지금 세계에서 다음에 움직일 목표.
+ * 지역 시장 임금이 가는 쪽 (읽기 전용, 화면용 UI_DONE 2-86): 직종마다 updateMarketWages 가 지금 세계에서 다음에 움직일 목표.
  * target = 맞는 임금 clearingWage (자리가 없으면 시작 임금 startWage 로 바로 간다, 자격자가 없으면 지금 임금), lo·hi = 아래 끝·위 끝,
  * jobs = 채울 수 있는 자리, willing = 지금 시장 임금에서 오려는 사람. 같은 셈(moveRegionWages)을 지역 임금표의 사본에 돌린다:
  * 위 직종의 아래 끝은 아래 직종이 그날 움직인 뒤 값이다 (updateMarketWages 와 같다).

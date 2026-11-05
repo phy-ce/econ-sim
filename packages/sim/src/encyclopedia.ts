@@ -12,7 +12,7 @@ import {
   BUILDING_BY_ID, BUILDING_TYPES, CLASS_DEFS, CONSUMPTION_PER_CAPITA, DEPENDENT_CONSUMPTION, EDUCATION_FLOOR, EDUCATION_RANGE, GOODS, GOOD_IDS,
   HARVEST_KINDS, HARVEST_MAX_SEASONS, HARVEST_SEASON_DAYS, HARVEST_SPREAD, HARVEST_STEP, LAW_TECH, MAX_POINTS_PER_LEVEL_DAY, NEEDS, OWNERSHIP_SEATS,
   OWNER_SEATS_PER_LEVEL, REGIONS, STEP_PROFIT_MULT, BUILD_POINT_FACTOR, INDUSTRIES, INDUSTRY_SKILL_TOL, INDUSTRY_UPPER_INPUT_TOL, industryOf, SKILL_DEFS, SUBSISTENCE, tenantIncomeAtBase, tenantYield, TAX_PEOPLE_PER_LEVEL, TECHS, TECH_BY_ID, TECH_COST, TICKS_PER_WEEK, TICKS_PER_YEAR,
-  TIERS, TIER_JITTER, TUNE, WORKFORCE_RATIO, getMethod, needsAt, rawMax, regionPerk, scaleBonus,
+  NEED_LUXURY_FROM, NEED_STANDARD_FROM, TIERS, TIER_JITTER, TUNE, WORKFORCE_RATIO, getMethod, needsAt, rawMax, regionPerk, scaleBonus,
   buildPointsOf, TRADING_POST, TRADE_STEP_MULT, TRADE_ESCROW_SHARE, tradeReserveOf,
 } from './data';
 import {
@@ -839,8 +839,8 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   },
   {
     id: 'needs', category: 'people', title: t('필요 묶음', 'Needs basket'),
-    rule: t('필요는 소비 단위 1의 하루 금액(기본가)이다. 부가 오를수록 묶음이 커진다. 식량과 기호품(술)을 합쳐 1.5 + 0.1 × 부(30까지)이고 그중 기호품이 {4} × 부(10까지)다. 난방·의복·생활용품은 0.1 × 부(10까지), 표준 의복·가정용품은 부 5부터, 고기는 8부터, 사치품은 10부터 생긴다.', 'Needs are the daily value (at base prices) per consumption unit. They grow with wealth: food plus intoxicants (liquor) 1.5 + 0.1 × W (to 30), of which intoxicants are {4} × W (to 10); heating/clothing/crude items 0.1 × W (to 10); standard clothing and household items from W 5, meat from 8, luxuries from 10.'),
-    params: [tune('luxuryLinear', '사치품 1차', 'Luxury linear'), tune('luxuryQuad', '사치품 2차', 'Luxury quadratic'), tune('meatLinear', '고기 1차', 'Meat linear'), tune('meatQuad', '고기 2차', 'Meat quadratic'), tune('intoxLinear', '기호품 1차', 'Intoxicants linear')],
+    rule: t('필요는 소비 단위 1의 하루 금액(기본가)이다. 묶음 합계는 부마다 정해져 있다. 식량은 {5} + {6} × 부(30까지)이고, 나머지 필요가 합계의 남은 몫을 비율대로 나눈다: 기호품(술)은 {4} × 부(10까지), 난방·의복·생활용품은 부 10까지 늘고 (난방은 그 뒤에도 천천히 는다), 표준 의복·가정용품은 부 {7}부터, 고기·사치품은 부 {8}부터 생긴다.', 'Needs are the daily value (at base prices) per consumption unit. The basket total is fixed for each wealth step. Food is {5} + {6} × W (to 30), and the other needs share the rest in proportion: intoxicants (liquor) {4} × W (to 10), heating, clothing and crude items grow to W 10 (heating keeps growing slowly after that), standard clothing and household items start at W {7}, meat and luxuries at W {8}.'),
+    params: [tune('luxuryLinear', '사치품 1차', 'Luxury linear'), tune('luxuryQuad', '사치품 2차', 'Luxury quadratic'), tune('meatLinear', '고기 1차', 'Meat linear'), tune('meatQuad', '고기 2차', 'Meat quadratic'), tune('intoxLinear', '기호품 1차', 'Intoxicants linear'), p('식량 시작', 'Food base', () => needsAt(0).nourishment), p('식량 1차', 'Food per wealth', () => r2(needsAt(1).nourishment - needsAt(0).nourishment)), p('표준 의복 시작 부', 'Standard goods from wealth', () => NEED_STANDARD_FROM), p('고기·사치품 시작 부', 'Meat and luxuries from wealth', () => NEED_LUXURY_FROM)],
     example: () => {
       const n = needsAt(5), units = 4 * CONSUMPTION_PER_CAPITA;
       const total = Object.values(n).reduce((a, x) => a + x, 0);
@@ -1049,20 +1049,20 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   },
   {
     id: 'rent-landtax', category: 'tenants', title: t('지대와 토지세', 'Rent and land tax'),
-    rule: t('지대: 수확의 {0}를 먼저 떼어 바로 시장에 팔고 대금은 그 지역 저택으로 간다. 소작농 부가 {1} 아래면 {2}만큼 덜 뗀다. 남은 수확에서 쓰고 남는 것을 팔면 토지세율 × 징수율은 국고로, 나머지는 소작농에게 간다.', 'Rent: {0} of the harvest is taken first and sold straight away; proceeds go to the regional manor. Below wealth {1}, {2} less is taken. Of what tenants sell from the rest, land-tax rate × collection goes to the treasury and the rest to tenants.'),
-    formula: 'rent = harvest × {0}; tenant = sales of (harvest − rent − own use) × (1 − landTax × collection)',
-    params: [tune('rentShare', '지대', 'Rent share', 'pct'), tune('patronWealth', '후원 부 문턱', 'Patronage wealth'), tune('patronShare', '돌려주는 지대', 'Returned rent', 'pct')],
+    rule: t('지대: 수확의 {0}를 먼저 떼어 바로 시장에 팔고 대금은 그 지역 저택으로 간다. 소작농 부가 {1} 아래면 {2}만큼 덜 뗀다. 남은 수확에서 쓰고 남는 것을 판 돈은 소작농 것이다. 토지세법이면 소작농 1인당 하루 {3} × 세금 수준 배율 × 징수율을 따로 낸다.', 'Rent: {0} of the harvest is taken first and sold straight away; proceeds go to the regional manor. Below wealth {1}, {2} less is taken. What tenants sell from the rest is theirs. Under the land-tax law each tenant separately pays {3} a day × tax-level multiplier × collection.'),
+    formula: 'rent = harvest × {0}; tenant = sales of (harvest − rent − own use); landTax = {3} × tax level × collection per tenant',
+    params: [tune('rentShare', '지대', 'Rent share', 'pct'), tune('patronWealth', '후원 부 문턱', 'Patronage wealth'), tune('patronShare', '돌려주는 지대', 'Returned rent', 'pct'), tune('landTax', '토지세', 'Land tax', 'florin')],
     live: {
       pick: ['region'], run: (w, ctx) => {
         const sh = harvestShares(w, regionOf(w, ctx));
-        return { bars: [bar(t('지대', 'Rent'), r4(sh.rent), 'pct', 1), bar(t('토지세', 'Land tax'), r4(sh.tax), 'pct', 1), bar(t('소작농 몫', 'Tenant share'), r4(Math.max(0, 1 - sh.rent - sh.tax)), 'pct', 1)] };
+        return { bars: [bar(t('지대', 'Rent'), r4(sh.rent), 'pct', 1), bar(t('소작농 몫', 'Tenant share'), r4(Math.max(0, 1 - sh.rent)), 'pct', 1)], rows: [row('토지세 (노동 인구 1명 하루)', 'Land tax (per worker, per day)', r2(sh.tax), 'florin')] };
       },
     },
     related: ['keep-what-they-use', 'tax-laws', 'owner-buildings'], seenIn: ['region', 'finance'], source: ['market.ts harvestShares'], design: ['4'],
   },
   {
     id: 'tenant-income', category: 'tenants', title: t('소작 수확 가치', 'Tenant income value'),
-    rule: t('소작농 1명의 하루 소득 = 판매분 × 현지 가격 × 팔리는 비율 × (1 − 지대 − 토지세) + 그날 쓴 현물의 시장가. 채용 순서, 시장 임금의 아래 끝과 AI 웃돈의 바깥 소득, 이주에서 소작농 소득으로 쓴다.', 'A tenant worker\'s daily income = sold produce × local price × sell-through × (1 − rent − land tax) + market value of goods used. It is the tenant income for hiring, the lower end of market wages and AI premiums, and migration.'),
+    rule: t('소작농 1명의 하루 소득 = 지대를 뗀 수확의 판매분 × 현지 가격 × 팔리는 비율 + 그날 쓴 현물의 시장가 − 1인당 토지세. 채용 순서, 시장 임금의 아래 끝과 AI 웃돈의 바깥 소득, 이주에서 소작농 소득으로 쓴다.', 'A tenant worker\'s daily income = produce sold from the harvest after rent × local price × sell-through + market value of goods used − land tax per head. It is the tenant income for hiring, the lower end of market wages and AI premiums, and migration.'),
     params: [],
     example: () => {
       const w = exampleWorld(), r = w.regions[0];
@@ -1193,7 +1193,7 @@ export const ENCYCLOPEDIA: EncEntry[] = [
     live: {
       pick: ['kingdom'], run: (w, ctx) => {
         const k = kingdomOfCtx(w, ctx), r = taxRates(k);
-        return { rows: [row('세법', 'Law', k.taxLaw), row('토지세', 'Land tax', r.land, 'pct'), row('인두세', 'Poll tax', r.poll, 'florin'), row('소득세', 'Income tax', r.income, 'pct')] };
+        return { rows: [row('세법', 'Law', k.taxLaw), row('토지세', 'Land tax', r.land, 'florin'), row('인두세', 'Poll tax', r.poll, 'florin'), row('소득세', 'Income tax', r.income, 'pct')] };
       },
     },
     related: ['tax-levels', 'collection', 'ai-tax-law', 'invest-law'], seenIn: ['finance'], source: ['finance.ts taxRates', 'finance.ts collectIncomeTax', 'policy.ts startLawChange'], design: ['9.1'],

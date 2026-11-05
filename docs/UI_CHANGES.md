@@ -47,7 +47,7 @@ sim 대기 · 결정 대기
 - **플레이어 왕실 국영 웃돈**: 사용자 결정 대기 (DECISIONS 7-42 결정 대기 1). (b)로 정해지면 새 절. 지금 할 일 없음.
 - **2-33 지도 정점 범위**: 결정 대기 (UI_STATUS). 연속 보간은 끝남.
 - **2-59 주간 폭포 / 2-49 회수 자재**: sim 대기 (3장).
-- **2-72 2항 인두세 부담**: 결정 대기 (05 C-2) + sim 대기 (S3).
+- **2-72 2항 인두세 부담**: sim 대기 (S3). 05 C-2 는 2026-11-05 `pollTax` 0.1 로 결정 (DECISIONS 7-50).
 - **2-40 규칙 사전**: 단위 G로 넘어감 (sim S6).
 
 오버홀 단위 대기 (09 7.2)
@@ -367,10 +367,10 @@ sim 변경 (wt-research):
 - 문자열: `econ.fee` 공사 수수료 / Construction fees, `econ.crownShare` 국고 몫 / To treasury.
 
 ### 2-72. 0b 결과에서 화면이 알아야 할 것: 복지 다이얼, 인두세 부담 (docs/overhaul/0B_RESULTS.md 2.4·2.9·2.10)
-- 2026-11-02: 1항(복지 다이얼 잠금)은 끝나 UI_DONE으로 옮겼다. 남은 것은 아래 2항(결정 대기)뿐이다.
-2. **인두세에는 플레이어 쪽 부담 상한이 없다 (결정 대기, 단위 F의 재료).**
-   - 사실: `setTaxLaw`는 기술 해금과 금융가 자산 비율만 본다 (`commands.ts:249~255`). 소득 대비 30% 상한(`pollTaxIncomeCap` 0.3)은 AI 판단에만 있다 (`ai.ts:343~344`). 0b (같은 조건, 인두세를 개발용으로 강제)에서 시드 1의 5년차 총생산이 13.6 (대조 101~122), 노동자 세금 ÷ 소득이 0.70~0.97까지 올랐다. 플레이어 왕국은 고정 연구 순서에서 5.7~6.3년차에 인두세를 열었다.
-   - 화면이 할 것: 지금은 없다. 단위 F(1차 효과 미리보기)의 "부담률" 줄(05 L-S1: 걷힘 ÷ 세금·복지 전 소득, 직종별)이 이 값을 보인다. 결정 대기: 05 C-2 (`pollTax` 세율 재교정 또는 "인두세는 소득의 30%까지" 정책 예외, 사용자 결정). sim 대기: S3 (3장).
+- 2026-11-02: 1항(복지 다이얼 잠금)은 끝나 UI_DONE으로 옮겼다. 남은 것은 아래 2항(sim 대기)뿐이다.
+2. **인두세에는 플레이어 쪽 부담 상한이 없다 (단위 F의 재료).**
+   - 사실: `setTaxLaw`는 기술 해금과 금융가 자산 비율만 본다 (`commands.ts:249~255`). 소득 대비 30% 상한(`pollTaxIncomeCap` 0.3)은 AI 판단에만 있다 (`ai.ts:447~448`). 0b (그때 `pollTax` 0.6, 인두세를 개발용으로 강제)에서 시드 1의 5년차 총생산이 13.6 (대조 101~122), 노동자 세금 ÷ 소득이 0.70~0.97까지 올랐다. 플레이어 왕국은 고정 연구 순서에서 5.7~6.3년차에 인두세를 열었다.
+   - 화면이 할 것: 지금은 없다. 단위 F(1차 효과 미리보기)의 "부담률" 줄(05 L-S1: 걷힘 ÷ 세금·복지 전 소득, 직종별)이 이 값을 보인다. 05 C-2 는 `pollTax` 0.1 로 결정됐다 (DECISIONS 7-50). sim 대기: S3 (3장).
    - 화면 쪽에서 미리 계산식을 만들지 않는다 (sim 함수가 생기면 그것을 읽는다).
 
 ### 2-82. 저축과 부 이동 (main c952e65, DESIGN 5장 부 이동, DECISIONS 7-37·7-38, sim 준비됨 (`wealthDrivers`, wt-sim2))
@@ -430,7 +430,7 @@ sim 변경 (wt-research):
 - **2-49 (선택):** 회수 자재 lot에 `buildingId`를 넣고 `salvageOf(w, b)` export. (2026-11-02 wt-uiapi 보류: `SalvageLot` 에 저장 칸을 더해야 해 읽기 전용이 아니다.)
 - **2-17 정리 (UI 반영 끝, 2026-10-21 확인):** 클라이언트가 `isDistressed`·`SEIZURE_WEEKS`·`DISTRESS_DEBT_RATIO`·`landlordJobs`·`setResearchBudget`·`MAX_RESEARCH_BUDGET`·`Company.distressWeeks`를 더 쓰지 않는다 (grep 0건). sim은 `compat.ts`의 이 껍데기를 지워도 된다. 100배 값 사본(2-27)은 2026-10-22 클라이언트 전환 완료. UI_DONE의 근거 참조.
 - **2-74 경보 키 (선택, 2026-11-01):** `GameEvent.key?: string` = `alertOnce`가 쓰는 키 (`economy.ts:906~915`, wt-batch2 86dcebc 줄 번호, 예 `unpaid:<건물 id>`). 없으면 화면이 회사·건물·지역·글로 키를 만든다. (2026-11-02 wt-uiapi 보류: 저장되는 `GameEvent` 에 칸을 더해야 해 읽기 전용이 아니다.)
-- **2-72·단위 F 인두세 부담 (2026-11-01):** S3 안에 직종별 부담률(걷힘 ÷ 세금·복지 전 소득, 05 L-S1)을 읽는 함수. 05 C-2 결정 뒤.
+- **2-72·단위 F 인두세 부담 (2026-11-01):** S3 안에 직종별 부담률(걷힘 ÷ 세금·복지 전 소득, 05 L-S1)을 읽는 함수.
 - **오버홀 1a·1b 선행 (09 7.1 S1~S8, 2026-11-01 옮김):** S1 몫의 장부(단위 D), S2 분해 체인(E), S3 1차 효과 미리보기·바닥 전후 값(F), S4 `GameEvent` 종류 코드·숫자 칸(L), S5 슬롯 메타(M), S6 사전 "처음 하는 법"·말단 항목 id 테스트(G), S7 출생·사망·순이주 월 지표(L), S8 노드 월 경계 기록(L). 정의는 09 7.1.
 - **2-51 사전 라벨 (2026-11-05):** `packages/encyclopedia/src/strings.ts:11` `inputs` 한국어 `입력` → `투입`. 사전 패키지는 화면 작업자 범위 밖이라 여기로 옮겼다 (2-51 은 UI_DONE).
 - 이미 export되는 것: `paysDividend`, `kingdomGdp`, `kingdomById`, `builderOf`, `companyById`, `peasantSlots`, `disbanded`, `slots`, `harvestCondition`, `harvestLabel`, `HARVEST_KINDS`, `taxRates`, `taxCapacity`, `holdingsOf`, `levelOwnersOf`, `buildingEcon` (2-59, wt-regionecon), `RESERVE_SHARE`, `KEEP_SHARE`, `budgetPreview`, `reserveCap`, `hasReserve`, `weeklyOutputValue`, `creditLimit`, `isGovernment`, `crewOf`, `wealthOf`, `literacyOf`, `educationOf`, `wagesAt`, `subsistenceWage`, `wealthDrivers`, `projectedSD`, `currentSD`, `mainOutput`, `quakeAt`, `quakeLabel`, `regionUnemployment`, `marketWageTargets`·`WageTarget` (2-86, wt-uiapi), `welfareCapDaily` (2-89), `interestGroups` (2-88)

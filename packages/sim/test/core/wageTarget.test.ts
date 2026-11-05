@@ -69,7 +69,7 @@ describe('맞는 임금 (clearingWage)', () => {
   });
 }
 
-// 목표 임금 읽기 (marketWageTargets, UI_CHANGES 2-86): 세계를 바꾸지 않고, 그 목표가 다음 updateMarketWages 가 움직이는 쪽과 같다
+// 목표 임금 읽기 (marketWageTargets, UI_DONE 2-86): 세계를 바꾸지 않고, 그 목표가 다음 updateMarketWages 가 움직이는 쪽과 같다
 describe('목표 임금 읽기 (marketWageTargets)', () => {
   it('세계를 바꾸지 않고, 다음 updateMarketWages 가 그 목표 쪽으로 wageTargetSpeed 만큼 움직인다', () => {
     const w = createWorld(1);

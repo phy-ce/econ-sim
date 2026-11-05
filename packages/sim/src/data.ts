@@ -477,8 +477,8 @@ export function scaleBonus(level: number): number {
  * - officeUseFull: 사무소 포인트 중 이 비율 이상을 공사에 실제로 쓰고 있어야 사무소를 늘린다
  * - startsPerWeek: AI 회사 하나가 한 주에 새로 넣는 공사 수 상한
  * - luxuryLinear, luxuryQuad: 사치품 필요 = linear × (부 − 6) + quad × (부 − 6)², 고급 의복·고급 가구가 반씩
- * - meatLinear, meatQuad: 고기 필요 = linear × (부 − 8) + quad × (부 − 8)²
- * - intoxLinear: 기호품(술) 필요 = intoxLinear × min(부, 10). 식량 필요는 같은 만큼 줄어 묶음 합은 그대로다
+ * - meatLinear, meatQuad: 고기 필요 = linear × (부 − 6) + quad × (부 − 6)²
+ * - intoxLinear: 기호품(술) 필요 = intoxLinear × min(부, 10). 식량에서 떼지 않고 따로 더한다 (묶음 합은 needsAt 의 total)
  * - shrinkWeeks: AI 철거까지 적자 주 수. 정부 건물·무역소는 마지막 레벨의 장기 손익이 이 주 수 동안 계속 마이너스면 철거를 시작하고(reviewLevels),
  *   유보 기준 생산 건물은 유보 자산 0·주간 적자가 이 주 수 이어지면 1레벨 헌다(reserveLevels). 둘 다 26이던 reserveShrinkWeeks 를 2026-11-02 wt-simplify 1-F 에서 합쳤다
  * - reserveWeeks: 건물 유보 자산 상한 = 레벨 × 지금 방식의 레벨당 주간 산출 가치(기본가) × 이 주 수. 이익의 35%를 여기까지 쌓고, 적자는 여기서 먼저 뺀다 (finance.ts settleReserve).
@@ -499,7 +499,7 @@ export function scaleBonus(level: number): number {
  *   실제 가치는 × (1 + 지역 문해력 부족 + 왕국 숙련 일자리 부족)이고, 목표(schoolTarget)까지의 자리만 센다 (ai.ts seatValue)
  * - schoolTarget: AI 왕실의 지역 문해력 목표. 학교 자리를 이 문해력에 닿을 만큼까지 짓는다 (기술자 자격 문턱 qualSkilledL 위여야 자격자가 나온다)
  * - schoolTaxMax: AI 왕실은 세금 수준이 이 단계 이하일 때만 새 학교를 짓는다 (운영비를 낼 세금 칸을 남긴다)
- * - govWageLevels: 국영 임금 수준 1~5단계의 배율. 국영 임금 = 기본 임금 × 왕국 임금 지수 × 이 배율
+ * - govWageLevels: 국영 임금 수준 1~5단계의 배율. 국영 임금 = 그 지역 시장 임금 × 이 배율 (AI 왕실은 × (1 + 국영 웃돈))
  * - researchBase, researchPerLiteracy: 주간 연구 포인트 = researchBase + researchPerLiteracy × 왕국 문해력(%, 인구 가중 평균). 돈은 들지 않는다 (finance.ts researchPoints)
  * - welfareLevels: 복지 수준 1~5단계의 목표 생활수준. 복지법이 덮는 pop 중 생활수준이 이보다 낮은 pop 의 소득을 목표 소득까지 채운다 (welfare.ts)
  * - welfareWeeks: (AI) 복지를 올리거나 켜는 조건: 국고 ≥ (복지를 뺀 주간 국정 지출 + 그 복지의 주간 예상액, 복지 상한을 넘지 않는다) × 이 주 수. 이 주 수의 절반 아래로 줄면서 국고가 줄면 내린다
@@ -593,7 +593,7 @@ export const TUNE = {
   luxuryQuad: 0.03,
   meatLinear: 0.3,
   meatQuad: 0.01,
-  intoxLinear: 0.1, // 기호품(술) 필요 = 이 값 × min(부, 10). 식량 필요에서 같은 만큼 뺀다 (DESIGN 11 "기호품", 재검증 필요 (조건 바뀜: 소작 산출 ×0.9, aiBuildNow 1, 2026-10-23))
+  intoxLinear: 0.1, // 기호품(술) 필요 = 이 값 × min(부, 10). 식량에서 떼지 않고 따로 더한다 (DESIGN 11 "기호품", 재검증 필요 (조건 바뀜: 소작 산출 ×0.9, aiBuildNow 1, 2026-10-23))
   qualSkilledL: 0.4,
   qualExpertL: 0.6,
   qualRate: 0.25,
@@ -803,8 +803,8 @@ export const HARVEST_KINDS: HarvestDef[] = [
 
 /**
  * 소작: 소작지 1칸(레벨)에서 일할 수 있는 소작농(노동 인구)과 노동 인구 1명당 하루 산출.
- * 한 줄 규칙: 소작농은 산출에서 식구가 그날 쓸 만큼 남기고 나머지를 판다 (market.ts splitHarvest). 지대는 수확의 5%(TUNE.rentShare)를 먼저 떼어 팔고 대금은 그 지역 저택으로, 판 돈 중 토지세율만큼은 세금 (DESIGN 4).
- * 산출 = 곡물 2.34, 술 0.225, 의복 0.2, 목재 0.2. 가구·공구·섬유는 내지 않는다. 배율 없이 이 값이 그대로 실제 산출이다 (기상 조건 배율만 곱한다).
+ * 한 줄 규칙: 소작농은 산출에서 식구가 그날 쓸 만큼 남기고 나머지를 판다 (market.ts splitHarvest). 지대는 수확의 5%(TUNE.rentShare)를 먼저 떼어 팔고 대금은 그 지역 저택으로, 판 돈은 소작농 것이고 토지세는 토지세법일 때 1인당 정액으로 따로 낸다 (DESIGN 4).
+ * 산출은 아래 output 값이다. 가구·공구·섬유는 내지 않는다. 배율 없이 이 값이 그대로 실제 산출이다 (기상 조건 배율만 곱한다).
  *   사용자 결정 (2026-10-23 "가구랑 공구는 산출없애고 목재는 0.2 의복은 0.2로 조정", DECISIONS 7-25): 그 전 실제 산출(기본 산출 × TUNE.tenantOutput 0.9)
  *   곡물 2.34·술 0.225·의복 0.09·목재 0.27·가구 0.072·공구 0.002에서 가구·공구를 없애고 의복·목재를 0.2로 바꿨다. 곡물·술은 그대로라 배율(tenantOutput)은 없앴다.
  *   비교 (main 41a40e6 대 이 값, 보고서 2026-10-23-tenantgoods, DESIGN 11 "소작 산출")는 결정 뒤에 본 결과다.
@@ -938,14 +938,18 @@ export function rawMax(max: number | undefined, wealth: number): number {
   return max + (1 - max) * Math.round(t * 10) / 10;
 }
 
+/** 표준 의복·가정용품, 고기·사치품 필요가 생기기 시작하는 부 (needsAt, 사전이 읽는다) */
+export const NEED_STANDARD_FROM = 3;
+export const NEED_LUXURY_FROM = 6;
+
 /**
  * 부 단계별 필요 묶음 (소비 단위 1의 하루 금액). 묶음 값은 대략 부 × 0.75.
- * 식량과 기호품(술)을 합치면 부 1에서 1.6, 부 5에서 2, 부 30까지 늘고 멈춘다. 그중 기호품은 TUNE.intoxLinear × 부(10까지)이고 나머지가 식량이다.
+ * 식량은 1.5 + 0.05 × 부(30까지), 기호품(술)은 TUNE.intoxLinear × 부(10까지)로 식량에서 떼지 않고 따로 더한다. 합계는 아래 total 이고, 식량 밖 필요가 비율대로 늘거나 줄어 합계를 맞춘다.
  * 난방·의복·생활용품은 부 10까지 늘고 멈춘다.
- * 표준 의복과 가정용품은 부 3부터 생기고, 가정용품은 부가 오를수록 더 빨리 는다. 고기와 사치품(고급 의복·고급 가구, 반씩)은 부 6부터 생긴다
+ * 표준 의복과 가정용품은 부 NEED_STANDARD_FROM 부터 생기고, 가정용품은 부가 오를수록 더 빨리 는다. 고기와 사치품(고급 의복·고급 가구, 반씩)은 부 NEED_LUXURY_FROM 부터 생긴다
  */
 export function needsAt(wealth: number): Record<NeedId, number> {
-  const L = wealth, up = Math.max(0, L - 3), rich = Math.max(0, L - 6), fed = Math.max(0, L - 6), over10 = Math.min(Math.max(L - 10, 0), 20);
+  const L = wealth, up = Math.max(0, L - NEED_STANDARD_FROM), rich = Math.max(0, L - NEED_LUXURY_FROM), fed = Math.max(0, L - NEED_LUXURY_FROM), over10 = Math.min(Math.max(L - 10, 0), 20);
   const out: Record<NeedId, number> = {
     // 2026-10-25 사용자 요청 (부가 오를 때 식량 외 수요가 너무 천천히 는다): 식량은 부 10 뒤 0.1 → 0.05씩, 술은 식량에서 떼지 않고 따로 더한다
     nourishment: 1.5 + 0.05 * Math.min(L, 10) + 0.05 * over10,

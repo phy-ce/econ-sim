@@ -31,7 +31,7 @@ const KINGDOMS = [
 export const START_SAVINGS: Record<PopClass, number> = { peasant: 5, unskilled: 20, farmer: 20, skilled: 100, expert: 300, gentry: 200, capitalist: 500, aristocrat: 500 };
 /** 처음부터 아는 기술: 손베틀·손가구·목공구 등 수공업 방식 */
 export const START_TECHS = ['spinning', 'guilds'];
-/** 왕실이 갖고 시작하는 건축사무소 레벨 (목조 2 × 20레벨 = 하루 약 40포인트. 공사 하나는 레벨당 하루 10포인트까지라 농장 1레벨(200점)은 약 20일).
+/** 왕실이 갖고 시작하는 건축사무소 레벨 (목조 건설. 공사 하나는 레벨당 하루 MAX_POINTS_PER_LEVEL_DAY 포인트까지).
  *  1레벨이 일꾼 500명이 되어 1,000명 시절 10레벨과 같은 인원·포인트 */
 export const START_OFFICE_LEVELS = 20;
 /** 왕실마다 시작 학교 레벨 (인구가 가장 많은 지역, 귀족 가정교사) */
@@ -277,7 +277,7 @@ export function createWorld(seed = 1, opts: CreateWorldOptions = {}): World {
       p.size = size; p.savings = size * START_SAVINGS[cls]; p.literacy = UPPER_LITERACY;
     }
   }
-  // 귀족은 저택, 자본가는 금융가에서 일하며 시작한다 (저택 상급 귀족 자리는 시작 귀족이 다 앉을 만큼에서 시작한다)
+  // 귀족은 저택에서 일하며 시작한다 (자본가 자리는 없다. 저택 상급 귀족 자리는 시작 귀족이 다 앉을 만큼에서 시작한다)
   for (const b of w.buildings) if (b.typeId === 'manor') delete b.nobleSeats;
   updateOwnership(w);
   for (const o of w.buildings.filter((x) => BUILDING_BY_ID[x.typeId].ownership)) {
@@ -314,7 +314,7 @@ export function createWorld(seed = 1, opts: CreateWorldOptions = {}): World {
     k.taxRatio = collectionRatio(taxCapacity(w, k.id), people);
   }
   // 시작 부: 하루 소득으로 감당할 수 있는 단계 (모든 pop 같은 규칙, 부 이동(updateWealth)과 같은 소득). 처음에는 아무도 현금 소득이 없다.
-  // 소작농의 소득은 판매 대금에서 지대·토지세를 뺀 것 + 그날 쓰는 현물의 시장가다 (affordableTenantWealth)
+  // 소작농의 소득은 지대를 뗀 수확의 판매 대금 + 그날 쓰는 현물의 시장가 − 토지세다 (affordableTenantWealth)
   for (const r of regions) {
     const subs = w.buildings.find((x) => x.regionId === r.id && x.typeId === 'subsistence');
     const tenants = subs ? findPop(w, r.id, 'peasant', subs.id) : undefined;

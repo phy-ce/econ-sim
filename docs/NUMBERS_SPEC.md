@@ -142,7 +142,7 @@
 ## 7. 다시 계산해야 하는 돈 상수
 아래 값은 숫자가 바뀌면 같이 맞춰야 한다. 모두 "새 GDP 대비 지금과 같은 비율"로 다시 잡는다.
 - 시작 저축과 소득(`START_SAVINGS`, `START_INCOME`), 기본 임금(`baseWage`)
-  - 기본 임금은 2026-11-01 사용자 결정으로 규칙이 됐다: 노동자·농부 = 기본가에서 소작농 1인 하루 소득 × AI 임금 바닥 배율(`wageOutside`), 0.5 단위 (3.5). 기술자·하급 귀족·전문가는 그 1.5·3·4배 (5.5·10.5·14). 건물 숫자는 이 임금으로 다시 셌다 (DESIGN 7.1, DECISIONS 7-31).
+  - 기본 임금은 2026-11-01 사용자 결정으로 규칙이 됐다: 노동자·농부 = 기본가에서 소작농 1인 하루 소득 × 기본 임금 배율(`wageOutside`), 0.5 단위. 다른 직종은 `BASE_WAGE_RATIO` 배 (값은 `data.ts ruleBaseWage`). 건물 숫자는 이 임금으로 다시 셌다 (DESIGN 7.1, DECISIONS 7-31).
 - 국고와 대출 한도(`START_CASH`, `BASE_CREDIT`), 주조량(`MINT_BASE`, `MINT_RATE`)
 - 기술 비용(`TECH_COST`)과 최대 연구비(`MAX_RESEARCH_BUDGET`)
 - 세금 역량, 학교 수용 인원(1레벨 500명 기준으로 ×20), 운송 운임(`RAIL_RATE`, `CARTAGE_RATE`)

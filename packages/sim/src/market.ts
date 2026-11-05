@@ -306,7 +306,7 @@ function bagOf(q: number[]): GoodBag {
 }
 
 /**
- * 소작농 노동 인구 1인당 하루 소득: 판매 대금(시장 판매율만큼) 중 지대·토지세(후원 포함)를 뺀 것 + 그날 쓴 현물의 시장가.
+ * 소작농 노동 인구 1인당 하루 소득: 지대(후원 포함)를 뗀 수확의 판매 대금(시장 판매율만큼) + 그날 쓴 현물의 시장가 − 1인당 토지세.
  * 쓰고 남아 버려지는 현물은 소득이 아니다
  */
 export function tenantIncomePerWorker(w: World, r: Region, wealth: number): number {
@@ -915,7 +915,7 @@ export const INVEST_RATE = 0.05;
  * 투자법 밖 계층은 저축을 그대로 들고 있는다. 소작농만 예외: 생활비와 세금의 TUNE.peasantKeepWeeks 주치를 넘는 저축은 그날 그 지역 저택 금고로 간다
  * (지분도 대가도 없다. 저택이 없는 지역이면 그 왕국에서 id 가 가장 작은 저택). TUNE.manorTargetMult > 0 이면 저택은 앉은 귀족의 몫이 목표에 못 미치는 만큼만 거둔다
  * (manorNeed, 소작농 인원 비율로 나눈다). 나머지는 소작농 저축에 남는다.
- * 세금은 걷는 쪽과 같은 계산(taxDue)이다: 토지 기반 세법이면 pop 이 현금으로 낼 세금은 없다.
+ * 세금은 걷는 쪽과 같은 계산(taxDue)이다: 토지세법이면 소작농은 1인당 정액을 현금으로 내고, 다른 pop 은 낼 세금이 없다.
  */
 function investSurplus(w: World, p: Pop, cashCost: number) {
   const daily = Math.max(0, cashCost) + taxDue(w, p);

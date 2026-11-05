@@ -5,14 +5,16 @@
 - 폴더: `C:\Users\phyju\Desktop\Coding_Desk\2026\estera economy sim`
 - 저장소: https://github.com/phy-ce/econ-sim (main). 검증된 병합마다 푸시한다(2026-10-19 사용자 지시).
 - 작업 규칙: `CLAUDE.md`. 경제 규칙 요약: `docs/DESIGN.md`. 빅토리아3 근거: `docs/VIC3_REFERENCE.md`.
-- 사용자 결정 대기: `docs/overhaul/12_DECISIONS_NEEDED.md`(Q1~Q20)와 `docs/DECISIONS.md`. 지금 답을 기다리는 것 (2026-11-05 정리): 0-1030 절 0b′ 의 "사용자 답 대기" 줄 (DECISIONS 7-28), `tenantSlack` (7-37, 끔으로 남음), 플레이어 왕실 국영 웃돈·하급 귀족 시작 임금 (7-42 결정 대기 1·2), 저택 지분 해석 확인과 부재 지주 몫 (7-44 결정 대기 3·4), 소작농을 실제로 올리는 규칙 (7-47 결정 대기 (남음), 상한 2 자체는 결정됨), 정산 소수 레벨 (7-48, 급하지 않음), 방식별 건물 (7-21). 결정이 끝나 목록에서 뺀 것: 7-41 (7-43 이 대신함), 7-43 (2026-11-02 사용자 확인), 7-49 (7-51 의 ⑦ 로 결정), 7-50 (2026-11-05 `pollTax` 0.1 승인), 7-51 (⑦ 기본 켬, 남은 약점은 그 절). 화면 작업자에게 넘길 것: `docs/UI_CHANGES.md` 맨 위 "0. 지금 할 일".
+- 사용자 결정 대기: `docs/overhaul/12_DECISIONS_NEEDED.md`(Q1~Q20)와 `docs/DECISIONS.md`. 지금 답을 기다리는 것 (2026-11-05 정리): 0-1030 절 0b′ 의 "사용자 답 대기" 줄 (DECISIONS 7-28), `tenantSlack` (7-37, 끔으로 남음), 플레이어 왕실 국영 웃돈·하급 귀족 시작 임금 (7-42 결정 대기 1·2), 저택 지분 해석 확인과 부재 지주 몫 (7-44 결정 대기 3·4), 소작농을 실제로 올리는 규칙 (7-47 결정 대기 (남음), 상한 2 자체는 결정됨), 정산 소수 레벨 (7-48, 급하지 않음), 방식별 건물 (7-21), 법이 열리는 속도 매핑 C (DECISIONS 7장 wt-lawpace 줄, 게임 길이 뒤). 결정이 끝나 목록에서 뺀 것: 7-41 (7-43 이 대신함), 7-43 (2026-11-02 사용자 확인), 7-49 (7-51 의 ⑦ 로 결정), 7-50 (2026-11-05 `pollTax` 0.1 승인), 7-51 (⑦ 기본 켬, 남은 약점은 그 절). 화면 작업자에게 넘길 것: `docs/UI_CHANGES.md` 맨 위 "0. 지금 할 일".
 - 클라우드 세션(claude.ai/code)으로 이어서 할 수 있다. 규칙은 CLAUDE.md "클라우드 세션"을 본다.
 - 옛 세션 기록: `docs/log/` (2026-10-25 이전 HANDOFF 절은 `docs/log/HANDOFF_2026-10-18_to_10-25.md`, 날짜별 UI 기록도 여기). 다른 문서의 "HANDOFF 0-ind3"·"HANDOFF 0-aifix" 같은 옛 절 참조는 그 파일에 있다.
 
 ## 0-1105-taxrates
 - 브랜치 wt-taxrates (main b39fb8c 에서, main 0e00385 병합), premerge 전이라 main 에 합치지 않음. 2026-11-05 사용자 승인 ("ㄱㄱ"). 이슈 #4, DECISIONS 7-50 (a).
 - 같은 브랜치에서 지금 기준 문서를 코드에 맞췄다 (CLAUDE, README, DESIGN, UI_DESIGN, UI_CHANGES 0·3장, DECISIONS 대기 표시). 코드는 바꾸지 않았다.
-- 바꾼 것: `pollTax` 0.6 → 0.1. `incomeTax` 0.3, `landTax` 그대로. lab 왕국 줄에 관측 칸 `pci`·`pollRate`·`pollSh`·`lawRev` 를 더했다 (`ai.ts perCapitaIncome` export). `cli/report.py` 에 AI 왕국 세법 이름표.
+- 화면 문서: main 0e00385 클라이언트 대조로 2-32·2-42·2-48·2-51·2-64·2-67·2-75·2-79·2-85·2-86·2-87 을 UI_DONE 으로 옮기고 0장을 다시 정렬, 깨진 화면 2-82 (`BuildingPops.tsx:36`·`:46` 부 이동 표 중복) 를 새로 넣었다.
+- premerge 검토로 사전 (`needs`·`rent-landtax`·`tenant-income`·`tax-laws`)·주석·문서를 코드에 맞췄다. 코드는 `data.ts` 에 `NEED_STANDARD_FROM`·`NEED_LUXURY_FROM` 상수를 빼낸 것뿐이고 동작은 같다.
+- 바꾼 것: `pollTax` 0.6 → 0.1. `incomeTax` 0.3, `landTax` 그대로. lab 왕국 줄에 관측 칸 `pci`·`pollRate`·`pollSh`·`lawRev` 를 더했다 (`ai.ts perCapitaIncome` export). `cli/report.py` 에 AI 왕국 세법 이름표. 골든 이력에 30fc80de7c9e75fb 를 더했다 (03f9bb0, 그때 머리 b39fb8c, premerge 전에 돌림. 합칠 때 premerge 마지막 `golden:update` 로 해시가 같은지 본다).
 - 결과 (20년 × 시드 1·2 × salt 0..3, 0.6 / 0.1): AI 왕국 첫 인두세 14년차 이후 또는 없음 / 5~6년차, 8~20년차 행정청이 준 왕국 15 / 0 (16곳 중), 징수율 최저 0.16 / 0.65, 20년차 세전 총생산 1,779 / 1,838, 노동자 생활수준 2.10 / 2.17. 보고서 2026-11-05-taxrates, 근거 DESIGN 11장 `pollTax` 행.
 - 약점: 총생산 차이는 대역 안, 세입이 세전 총생산의 약 4%, 20년차 실업 3.9% (0.6 은 2.3%), `incomeTax` 는 20년 안에 쓰이지 않아 고르지 못함 (40년 비교 필요), 플레이어 왕국 K1 은 방치라 토지세 세입이 7.4 → 1.2 로 준다.
 

@@ -54,9 +54,9 @@ UI_CHANGES 0장 순서를 따른다. 완료 처리 시 구현 근거와 실제 �
 | 1 소유권 탐색 | 구현됨, 화면 미검증 | views/OwnershipBrowser.tsx:13 독립 pages/at 이력, :14 이후 기관·팝·지역 이동. 혼합·극소 지분 및 기관 소멸의 실제 조작 검증 남음 |
 | 2 다른 서브윈도우 이력 | 부분 | views/PopTable.tsx:17 선택 상태 저장은 있으나 views/DetailWindow.tsx:8 자체 상태에는 탐색 이력이 없음. 모든 상세 창의 독립 이력 완료로 볼 수 없음 |
 | 3 / 2-50 기관 표시 | 구현됨, 경로 감사·화면 미검증 | views/OwnerSummary.tsx:6 공통 표시, views/RegionIndustry.tsx:56 그룹, views/BuildingEconomics.tsx:16 개별, views/OwnershipBrowser.tsx:33 기관에 적용 |
-| 4 / 2-51 투입·산출 | 완료 (2026-11-05 대조, UI_DONE) | views/ResourceInspector.tsx:38 방식 투입·산출 recipe 존재. 실제 양·단가·금액·판매 및 방식 비교를 합친 공통 UI는 이 경로에 없음 |
+| 4 / 2-51 투입·산출 | 완료 (2026-11-05 대조, UI_DONE) | UI_DONE 2-51 참조 (2026-11-01 대조: 그때 공통 UI 없음) |
 | 5 / 2-42·2-59 그룹 | 2-42 완료, 2-59 주간 폭포만 sim 대기 (2026-11-05 대조) | views/RegionIndustry.tsx:58 매출·원료·임금·이익 숫자 표시. 워터폴은 이 경로에 없음. 서비스 합계와 미지정 배당은 추가 대조 필요 |
-| 6 / 2-49 철거 | 회수 자재만 sim 대기 (2026-11-05 대조) | views/ResourceInspector.tsx:36 대기 레벨 막대, :76 목록 배지 구현. 일정·회수 자재는 이 표시 경로에 없음 |
+| 6 / 2-49 철거 | 회수 자재만 sim 대기 (2026-11-05 대조) | UI_CHANGES 2-49 참조 (2026-11-01 대조: 대기 레벨 막대 :36, 목록 배지 :76) |
 | 7 전체 화면 감사 | 부분 | views/ResearchPanel.tsx:15, views/PolicyPanel.tsx:12, views/FinancePanel.tsx:16 기존 화면·선택 상태 구현. 세부 요구 전체 충족 여부는 미판정 |
 | 8 실사용 환경 검증 | 없음 (이번 세션) | 1920×1080·영어·다크·Edge 배율 검증 수행 못 함 |
 
