@@ -1,16 +1,17 @@
-# 인수인계 (2026-11-02 기준)
+# 인수인계 (2026-11-05 기준)
 
 에스테라 왕국 경제 시뮬레이션. 빅토리아3의 경제 루프에서 영감을 받은 근세 왕국 경영 게임이다. 공개 배포가 목표다.
 
 - 폴더: `C:\Users\phyju\Desktop\Coding_Desk\2026\estera economy sim`
 - 저장소: https://github.com/phy-ce/econ-sim (main). 검증된 병합마다 푸시한다(2026-10-19 사용자 지시).
 - 작업 규칙: `CLAUDE.md`. 경제 규칙 요약: `docs/DESIGN.md`. 빅토리아3 근거: `docs/VIC3_REFERENCE.md`.
-- 사용자 결정 대기: `docs/overhaul/12_DECISIONS_NEEDED.md`(Q1~Q20)와 `docs/DECISIONS.md`. 지금 답을 기다리는 것은 아래 0-1030 절 0b′ 의 "사용자 답 대기" 줄, 0-1102 의 `tenantSlack` 메모, 0-1102e 의 플레이어 왕실 국영 웃돈·하급 귀족 시작 임금 (DECISIONS 7-42), 0-1102-fix10 의 정산 소수 레벨 (DECISIONS 7-48, 급하지 않음), 0-1102h 의 저택 지분 (DECISIONS 7-44: AI 고침과 함께 기본 켬, 정책 안 F3 는 만들지 않음, 부재 지주 몫은 결정 대기 4), 0-1102-admin4 의 토지세 기반이 사라지는데 인두세로 못 바꾸는 문제 (DECISIONS 7-50), 0-1102-grainrule 의 곡물 ⑦ 남은 약점 (S/D 1.1~1.2, 40년 뒤 인구 압력, AI 수요 전망이 더 사는 곡물을 모름, DECISIONS 7-51; 7-49 W1~W3 는 7-51 에서 ⑦ 로 결정), 0-1105-welfarefill 의 소작농을 실제로 올리는 규칙 (DECISIONS 7-47 결정 대기, 상한 2 자체는 결정됨) (0-1102f 의 목표 임금 규칙은 2026-11-02 사용자가 확인했다, DECISIONS 7-43). 화면 작업자에게 넘길 것: `docs/UI_CHANGES.md` 맨 위 "0. 지금 할 일".
+- 사용자 결정 대기: `docs/overhaul/12_DECISIONS_NEEDED.md`(Q1~Q20)와 `docs/DECISIONS.md`. 지금 답을 기다리는 것 (2026-11-05 정리): 0-1030 절 0b′ 의 "사용자 답 대기" 줄 (DECISIONS 7-28), `tenantSlack` (7-37, 끔으로 남음), 플레이어 왕실 국영 웃돈·하급 귀족 시작 임금 (7-42 결정 대기 1·2), 저택 지분 해석 확인과 부재 지주 몫 (7-44 결정 대기 3·4), 소작농을 실제로 올리는 규칙 (7-47 결정 대기 (남음), 상한 2 자체는 결정됨), 정산 소수 레벨 (7-48, 급하지 않음), 방식별 건물 (7-21). 결정이 끝나 목록에서 뺀 것: 7-41 (7-43 이 대신함), 7-43 (2026-11-02 사용자 확인), 7-49 (7-51 의 ⑦ 로 결정), 7-50 (2026-11-05 `pollTax` 0.1 승인), 7-51 (⑦ 기본 켬, 남은 약점은 그 절). 화면 작업자에게 넘길 것: `docs/UI_CHANGES.md` 맨 위 "0. 지금 할 일".
 - 클라우드 세션(claude.ai/code)으로 이어서 할 수 있다. 규칙은 CLAUDE.md "클라우드 세션"을 본다.
 - 옛 세션 기록: `docs/log/` (2026-10-25 이전 HANDOFF 절은 `docs/log/HANDOFF_2026-10-18_to_10-25.md`, 날짜별 UI 기록도 여기). 다른 문서의 "HANDOFF 0-ind3"·"HANDOFF 0-aifix" 같은 옛 절 참조는 그 파일에 있다.
 
 ## 0-1105-taxrates
-- 브랜치 wt-taxrates (main b39fb8c 에서), main 에 합치지 않음. 플레이어가 보는 숫자라 사용자 확인 대기. 이슈 #4, DECISIONS 7-50 (a).
+- 브랜치 wt-taxrates (main b39fb8c 에서, main 0e00385 병합), premerge 전이라 main 에 합치지 않음. 2026-11-05 사용자 승인 ("ㄱㄱ"). 이슈 #4, DECISIONS 7-50 (a).
+- 같은 브랜치에서 지금 기준 문서를 코드에 맞췄다 (CLAUDE, README, DESIGN, UI_DESIGN, UI_CHANGES 0·3장, DECISIONS 대기 표시). 코드는 바꾸지 않았다.
 - 바꾼 것: `pollTax` 0.6 → 0.1. `incomeTax` 0.3, `landTax` 그대로. lab 왕국 줄에 관측 칸 `pci`·`pollRate`·`pollSh`·`lawRev` 를 더했다 (`ai.ts perCapitaIncome` export). `cli/report.py` 에 AI 왕국 세법 이름표.
 - 결과 (20년 × 시드 1·2 × salt 0..3, 0.6 / 0.1): AI 왕국 첫 인두세 14년차 이후 또는 없음 / 5~6년차, 8~20년차 행정청이 준 왕국 15 / 0 (16곳 중), 징수율 최저 0.16 / 0.65, 20년차 세전 총생산 1,779 / 1,838, 노동자 생활수준 2.10 / 2.17. 보고서 2026-11-05-taxrates, 근거 DESIGN 11장 `pollTax` 행.
 - 약점: 총생산 차이는 대역 안, 세입이 세전 총생산의 약 4%, 20년차 실업 3.9% (0.6 은 2.3%), `incomeTax` 는 20년 안에 쓰이지 않아 고르지 못함 (40년 비교 필요), 플레이어 왕국 K1 은 방치라 토지세 세입이 7.4 → 1.2 로 준다.

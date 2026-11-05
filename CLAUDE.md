@@ -33,7 +33,7 @@
 - 플레이어에게 보이는 값은 소수 둘째 자리까지 (화면·사전에 표시할 때 반올림한다. 2026-10-22 사용자: 저장값을 반올림하라는 뜻이 아니었다). sim 안의 계산값은 반올림하지 않는다.
 - 최저임금, 곡물 최저가는 두지 않는다.
 - 건물·방식 숫자는 규칙으로 정한다 (2026-10-22): 기본가 ×1과 기본 임금에서 기본 방식 이익률 20%,
-  기본 임금은 실제 임금에서 식으로 정한다 (2026-11-01 사용자 결정): 노동자 = 모든 상품이 기본가일 때 소작농 1인 하루 소득 × AI 임금 바닥 배율(`wageOutside`), 0.5 단위. 다른 직종은 노동자에 직종 비율을 곱한다. 값은 문서에 옮겨 적지 않고 코드(`data.ts ruleBaseWage`)를 읽는다 (2026-11-01 사용자: md 에 고정 값을 두지 않는다, 감사가 확인).
+  기본 임금은 실제 임금에서 식으로 정한다 (2026-11-01 사용자 결정): 노동자 = 모든 상품이 기본가일 때 소작농 1인 하루 소득 × 기본 임금 배율(`wageOutside`), 0.5 단위. 다른 직종은 노동자에 직종 비율을 곱한다. 값은 문서에 옮겨 적지 않고 코드(`data.ts ruleBaseWage`)를 읽는다 (2026-11-01 사용자: md 에 고정 값을 두지 않는다, 감사가 확인).
   한 단계 오를 때마다 레벨당 이익 2배. 일꾼 수·숙련 비율·원료 비중은 산업 유형별 (`data.ts INDUSTRIES`: 1차 500명·원료 5% 이하, 가공 300명·원료 약 50%,
   중공업 300명·숙련 30%·원료 약 60%, 숙련(사치품) 300명·숙련 40%·원료 약 20%). 단계가 오르면 일꾼 합계는 줄고 숙련 비율·상위 원료(공구·석탄·철·기계)·산출은 는다.
   기본 방식도 공구 10~30 (목공구만 0). 공사 포인트 = 기본 방식 하루 이익 × 0.15 (50 단위). 전문가는 증기 시대·사치품 방식에만 레벨당 20명까지. 일자리 10 단위, 합은 되도록 50 단위이고 상황에 따라 10 단위 (2026-10-23 사용자), 양은 1,000 이상 50 단위·그 아래 10 단위.
@@ -61,8 +61,8 @@
   sim을 바꿀 때는 클라이언트가 쓰는 이름·타입을 되도록 그대로 둔다 (바꿔야 하면 화면용 사본을 남기고 UI_CHANGES에 적는다).
 
 ## 실행과 검증
-- `npm run typecheck`: sim + 클라이언트 (변경할 때마다)
-- `npm run test:core`: 화폐 보존·결정성(저장/불러오기)·범위만 (약 10초, 변경할 때마다)
+- `npm run typecheck`: sim + 클라이언트 + 사전 (변경할 때마다)
+- `npm run test:core`: 화폐 보존·결정성(저장/불러오기)·사전 등 core 시험 (약 1분, 변경할 때마다)
 - `cd packages/sim && npx vitest run`: 전체 테스트 (파일 병렬, 약 1~2분). 시험은 코드 문제(완주·화폐 보존·결정성·범위·공식)만 판정하고 경제 결과로는 실패하지 않는다 (2026-11-01 사용자). `npm run test:long`: 20년 시드 1·2, 해마다 지표를 `.tmp/test-data/long-<시드>.jsonl`에 남긴다 (`python cli/report.py <id> 파일`로 보고서, `LONG_DATA=0`으로 끈다)
 - `bash packages/sim/cli/sweep.sh out.jsonl '<TUNE JSON>' ...` → `python packages/sim/cli/sweepsum.py out.jsonl`:
   20년 × 시드 2개 비교 (packages/sim 에서 실행). `SEEDS="1 2 3"`, `YEARS=10`, `TIMING=1`(실행 시간) 로 바꾼다
@@ -70,13 +70,15 @@
   비교 실행을 하는 에이전트는 한 번에 하나만 띄우고, 한 묶음이 끝나기 전에 다음 묶음을 시작하지 않는다. premerge 는 비교 실행이 없을 때 돌린다
 - `bash packages/sim/cli/fast.sh <cli 파일> 인자`: tsx 대신 esbuild 로 묶어 실행 (같은 결과, 시작 2초·계산 10% 빠름)
 - 진단 CLI (`packages/sim/cli/`): popdiag(인구·착공), soldiag(하층 생활수준), treasury(국고 장부),
-  skilldiag(직종별 일자리·자격자), schooldiag(학교·교육), jobdiag(지역별 실업), perf(단계별 시간, `fast.sh perf.ts 2`)
-- 개발 서버 포트 5199.
+  skilldiag(직종별 일자리·자격자), schooldiag(학교·교육), jobdiag(지역별 실업), manordiag·settlediag(저택 지분·공사 정산), welfmon(복지),
+  graindiag(곡물), churndiag(짓고 허는 반복), igdiag(이익집단), perf(단계별 시간, `fast.sh perf.ts 2`)
+- 개발 서버: `cd packages/client && npx vite --port 5199` (`npm run dev` 는 설정 기본 5173).
 
 ## 구조 (packages/sim/src)
-data(상품·건물·기술·TUNE) · types · world(시작 상태) · tick(하루 순서) · pops(pop·자격·증감) · labor(고용·이주)
-· market(주문·체결·가격) · production(생산·공사·철거) · finance(세금·예산·배당·은행) · kingdoms · ai · outlook(AI 손익 전망)
-· commands(플레이어와 AI의 단일 명령 경로) · metrics · alerts · i18n
+data(상품·건물·기술·TUNE) · types · world(시작 상태) · tick(하루 순서) · pops(pop·자격·증감) · labor(고용·이주·시장 임금)
+· market(주문·체결·가격) · production(생산·공사·철거) · economy(건물·소유·임금 공용 규칙) · finance(세금·예산·배당·국채) · policy(법) · welfare(복지)
+· budget(예산 미리보기) · kingdoms · ai · outlook(AI 손익 전망) · staffing(AI 일손 셈) · interestGroups(읽기 전용 이익집단, sim 결과에 효과 없음)
+· commands(플레이어와 AI의 단일 명령 경로) · metrics · alerts · encyclopedia(규칙 사전 데이터) · i18n · lab(비교 실행) · save · rng
 
 ## 문서
 - `docs/DESIGN.md`: 지금 경제 규칙의 요약 (규칙을 바꾸면 같이 고친다)
@@ -94,6 +96,7 @@ data(상품·건물·기술·TUNE) · types · world(시작 상태) · tick(하�
 - main은 검증된 병합마다 바로 푸시한다 (2026-10-19 사용자 지시). 강제 푸시는 하지 않는다.
 - main에 합치기 전에 `premerge` 워크플로(`.claude/workflows/premerge.js`, args = 브랜치 이름)를 돌린다: 테스트 → 네 관점 검토(규칙 설명·사전이 코드와 같은가, 근거가 적혔는가, 없어진 것을 아직 설명하는 글, HANDOFF·UI_CHANGES·DECISIONS) → 브랜치에서 고침 → 다시 테스트. 결과가 ready일 때만 합친다.
 - 작업 브랜치는 `wt-<이름>`으로 만들고, 합치기 전 결과는 HANDOFF에 적는다. 클라우드 세션이 이어받을 브랜치는 origin에 올린다.
+- 커밋 메시지 등 git 글은 영어로 쓴다 (2026-11-05 사용자).
 - 꼬리말: `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`
 
 ## 클라우드 세션 (claude.ai/code, `claude --cloud`)

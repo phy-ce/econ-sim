@@ -23,7 +23,7 @@ UI는 양피지와 픽셀 아트 스타일의 대시보드이며, 한국어와 �
 npm install
 npm run dev          # 로컬에서 플레이 (http://localhost:5173)
 npm run build        # 클라이언트 프로덕션 빌드
-npm run typecheck    # 시뮬레이션과 클라이언트 타입 검사
+npm run typecheck    # 시뮬레이션, 클라이언트, 규칙 백과 타입 검사
 npm run test:core    # 화폐 보존, 결정성, 값 범위 테스트
 npm run test:long    # 시드 1, 2의 20년 실행
 npm test             # 전체 시뮬레이션 테스트
