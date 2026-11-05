@@ -285,3 +285,9 @@ DetailWindow 독립 NavigationProvider/버튼, BuildingPops 및 ResourceInspecto
 - 루트 typecheck·클라이언트29파일78시험 통과. 집계·인구 가중·세계 불변·1인당/합계·상층 제외 회귀 포함.
 - 1920×1028 스크린샷 확인: C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/nov5-wealth-drift-en-dark.png, nov5-wealth-total-en-dark.png, nov5-wealth-drift-ko-light.png. pop1069 소득/인0.06·현물/인0.63·합0.69·생활비0.66/다음0.90·저축0.5주, 총액 전환70.5k/772k/842.6k. 본문403/scroll403. 복제 세계 하루 진행 전 예측 주간0/실제0 대조. 비영 부 변화의 실제 다음 날 화면·상층 상세 화면은 미검증(집계/제외는 시험).
 - 2-75 커밋a4d3489. 다음 2-86 목표 임금.
+
+## 2026-11-05 2-86 목표 임금 완료
+- 지역 임금 창에서 marketWageTargets를 주간 키로 조회, 시장 값은 매일 읽음. ±0.5% 밖에서 중립 lucide 위/아래14px 화살표, 목표/아래끝/위끝/자리/오려는 사람은 임금 숫자 툴팁. 반환 null이면 목표 정보 없음. 기존 다섯 열 안에서 시장 칸만 넓힘.
+- 루트 typecheck·클라이언트30파일79시험 통과. 방향 경계·무표시 구간 회귀 포함.
+- 1920×1028 스크린샷 확인: C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/nov5-wage-target-ko-light.png, nov5-wage-target-en-dark.png. 동부 삼림 노동자 시장3.17/목표3.04/아래3.04/위6.09/자리8.1k/오려는52.7k, 직접 API target3.044533609와 일치. 복제 세계 다음 날 시장3.173261066→3.160388320 하락으로 아래 화살표 일치. 본문403/scroll403. 주간 경계 갱신의 장기 화면 및 전 직종 다음 날 대조는 미검증.
+- 2-82 커밋7723ec9. 사용자 지정 선행 작업2-79/2-87/2-85/2-75/2-82/2-86 완료, 다음 0장5번 2-51 방식 비교 잔여부터.
