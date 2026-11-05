@@ -26,7 +26,7 @@ const WAGE_CEIL_DIAG = 0.85;
 
 export type LabRow = Record<string, unknown>;
 
-/** 허브 상품 6개 (06 문서 6.6: 공구·석탄·목재·철·기계·종이) */
+/** 허브 상품 6개 (06 문서 6.6: 공구·석탄·목재·철·정밀 기기·종이) */
 export const HUB_GOODS: GoodId[] = ['tools', 'fuel', 'timber', 'metal', 'electronics', 'paper'];
 /** 필요 묶음 상품 (한계 K3, 08 3.5): NEEDS 선택지에 나오는 상품 */
 export const NEED_GOODS: GoodId[] = GOOD_IDS.filter((g) => NEEDS.some((n) => n.options.some((o) => o.good === g)));

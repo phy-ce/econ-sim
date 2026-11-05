@@ -102,7 +102,7 @@ const NEED_CAPPED = NEEDS.map((n) => n.options.filter((o) => o.max != null));
 /** 비중 한 칸: 상품 위치, 필요 단위, 비중, 그 단계의 가격 */
 interface Pick { gi: number; good: GoodId; units: number; share: number; price: number }
 interface NeedCache { prices: number[]; weights: number[] | null; one: Pick[] | null; byKey: Map<number | string, Pick[]> }
-interface RegionDay { r: Region; price: number[]; mg: MarketGood[]; needs: NeedCache[] }
+interface RegionDay { r: Region; price: number[]; mg: MarketGood[]; needs: NeedCache[]; locked: GoodId[] }
 const regionDayCache = new WeakMap<Region, RegionDay>();
 
 /** 지역별 표를 지금 가격에 맞춰 지역 id 위치에 담아 돌려준다 (regionById 처럼 같은 id 는 앞의 지역) */
@@ -111,10 +111,12 @@ function regionDays(w: World): RegionDay[] {
   for (const r of w.regions) {
     let d = regionDayCache.get(r);
     if (!d) {
-      d = { r, price: new Array(NG).fill(0), mg: [], needs: NEEDS.map((n) => ({ prices: n.options.map(() => NaN), weights: null, one: null, byKey: new Map() })) };
+      d = { r, price: new Array(NG).fill(0), mg: [], needs: NEEDS.map((n) => ({ prices: n.options.map(() => NaN), weights: null, one: null, byKey: new Map() })), locked: r.lockedGoods };
       regionDayCache.set(r, d);
     }
     for (let i = 0; i < NG; i++) { const mg = r.market[GOOD_IDS[i]]; d.mg[i] = mg; d.price[i] = mg.price; }
+    // 잠금이 바뀌면 비중을 다시 센다 (무게는 가격으로만 정해져 그대로 둔다)
+    if (d.locked !== r.lockedGoods) { d.locked = r.lockedGoods; for (const nc of d.needs) { nc.one = null; nc.byKey.clear(); } }
     for (let ni = 0; ni < NEED_COUNT; ni++) {
       const nc = d.needs[ni], opts = NEEDS[ni].options;
       let same = true;
@@ -140,24 +142,24 @@ function dayOf(days: RegionDay[], w: World, id: number): RegionDay {
 function pickOf(d: RegionDay, ni: number, wealth: number): Pick[] {
   const nc = d.needs[ni];
   const capped = NEED_CAPPED[ni];
-  if (capped.length === 0) return (nc.one ??= makePicks(nc, ni, wealth));
+  if (capped.length === 0) return (nc.one ??= makePicks(nc, ni, wealth, d.locked));
   const key = capped.length === 1 ? rawMax(capped[0].max, wealth) : capped.map((o) => rawMax(o.max, wealth)).join(',');
   let s = nc.byKey.get(key);
-  if (!s) nc.byKey.set(key, (s = makePicks(nc, ni, wealth)));
+  if (!s) nc.byKey.set(key, (s = makePicks(nc, ni, wealth, d.locked)));
   return s;
 }
 
-function makePicks(nc: NeedCache, ni: number, wealth: number): Pick[] {
+function makePicks(nc: NeedCache, ni: number, wealth: number, locked: readonly GoodId[]): Pick[] {
   const need = NEEDS[ni];
   // computeSplit(need, 가격, 상한) 과 같은 계산. 무게는 가격으로만 정해지므로 상한 키끼리 같이 쓴다
-  const share = splitShares((nc.weights ??= splitWeights(need, nc.prices)), need.options.map((o) => rawMax(o.max, wealth)));
+  const share = splitShares((nc.weights ??= splitWeights(need, nc.prices)), capsOf(need, wealth, locked));
   return need.options.map((o, i) => ({ gi: GOOD_INDEX[o.good], good: o.good, units: o.good === 'grain' ? o.units * grainEatMult(nc.prices[i]) : o.units, share: share[i], price: nc.prices[i] }));
 }
 
 /** basketCostAt 과 같은 값 (하루 표로) */
 function basketCostDay(d: RegionDay, size: number, wealth: number): number {
   const units = size * CONSUMPTION_PER_CAPITA;
-  const need = needsAt(wealth);
+  const need = needsAt(wealth, d.locked);
   let v = 0;
   for (let ni = 0; ni < NEED_COUNT; ni++) {
     const per = need[NEED_IDS[ni]];
@@ -233,7 +235,7 @@ export function harvest(w: World, book: Book) {
     if (TUNE.tenantSlack && r.tenantFill0 === undefined) { const f = tenantFill(w, b, pop); if (f !== null && f > 0) r.tenantFill0 = f; }
     // 기상 조건이 걸리면 수확이 그만큼 줄어든다 (economy.ts harvestFactor). 소작지 여유 배율 (끔이면 1)
     const out = harvestOutput(workforce(pop) * harvestFactor(w, r.id, 'arable') * tenantSlackMult(w, r, b, pop));
-    const { own, sell } = splitHarvest(pop.size, wealthOf(pop), GOOD_IDS.map((g) => (out[g] ?? 0) * (1 - rent)), grainEatMult(r.market.grain.price));
+    const { own, sell } = splitHarvest(pop.size, wealthOf(pop), GOOD_IDS.map((g) => (out[g] ?? 0) * (1 - rent)), grainEatMult(r.market.grain.price), r.lockedGoods);
     for (let i = 0; i < NG; i++) {
       const g = GOOD_IDS[i], q = out[g];
       if (!q) continue;
@@ -270,8 +272,8 @@ export function harvestShares(w: World, r: Region, wealth = WEALTH_MAX): { rent:
  * 소작지 수확 out(GOOD_IDS 순서)을 size 명, 부 wealth 인 소작농이 나누는 법 (현물 사용 순서·상한은 collectOrders 와 같다).
  * 그날 지금 부 단계로 쓸 만큼 쓰고(own) 나머지를 판다(sell). 수확이 필요보다 적으면 다 쓰고 팔지 않는다
  */
-export function splitHarvest(size: number, wealth: number, out: number[], gm = 1): { own: number[]; sell: number[] } {
-  const left = useOwnKind(size, wealth, out.slice(), gm);
+export function splitHarvest(size: number, wealth: number, out: number[], gm = 1, locked?: readonly GoodId[]): { own: number[]; sell: number[] } {
+  const left = useOwnKind(size, wealth, out.slice(), gm, locked);
   return { own: out.map((x, i) => Math.max(0, x - left[i])), sell: left.map((x) => Math.max(0, x)) };
 }
 
@@ -312,7 +314,7 @@ function bagOf(q: number[]): GoodBag {
 export function tenantIncomePerWorker(w: World, r: Region, wealth: number): number {
   const out = harvestOutput(harvestFactor(w, r.id, 'arable') * tenantSlackMult(w, r));
   const sh = harvestShares(w, r, wealth);
-  const { own, sell } = splitHarvest(1 / WORKFORCE_RATIO, wealth, GOOD_IDS.map((g) => (out[g] ?? 0) * (1 - sh.rent)), grainEatMult(r.market.grain.price));
+  const { own, sell } = splitHarvest(1 / WORKFORCE_RATIO, wealth, GOOD_IDS.map((g) => (out[g] ?? 0) * (1 - sh.rent)), grainEatMult(r.market.grain.price), r.lockedGoods);
   let v = 0;
   for (let i = 0; i < NG; i++) {
     const mg = r.market[GOOD_IDS[i]];
@@ -393,7 +395,7 @@ export function collectOrders(w: World, book: Book) {
     const wk = Math.round(L * 10);
     let memo = byWealth.get(wk);
     if (!memo) byWealth.set(wk, (memo = new Array(NEED_COUNT)));
-    const need = needsAt(L);
+    const need = needsAt(L, d.locked);
     const units0 = p.size * CONSUMPTION_PER_CAPITA;
     // 상품별 수량은 GOOD_IDS 순서 배열로 센다
     const goods: number[] = new Array(NG).fill(0);
@@ -477,7 +479,7 @@ const NEED_BY_ID = new Map(NEEDS.map((n) => [n.id, n]));
 /** 필요마다 상한(max)이 있는 선택지. 나머지 선택지의 상한은 늘 1 이다 */
 const CAPPED = new Map(NEEDS.map((n) => [n.id, n.options.filter((o) => o.max != null)]));
 /** 같은 지역·같은 가격·같은 상한이면 같은 결과라 재사용한다 (가격이 하나라도 바뀌면 다시 계산) */
-const splitCache = new WeakMap<Region, Map<NeedId, Map<number | string, { prices: number[]; split: Split }>>>();
+const splitCache = new WeakMap<Region, Map<NeedId, Map<number | string, { prices: number[]; split: Split; locked: GoodId[] }>>>();
 
 /** 그 지역 가격에서 부 wealth 인 pop 이 필요를 상품별로 나눠 사는 비중 (원자재 상한은 rawMax) */
 export function needSplit(r: Region, needId: NeedId, wealth = Infinity): Split {
@@ -490,18 +492,22 @@ export function needSplit(r: Region, needId: NeedId, wealth = Infinity): Split {
   let byNeed = byRegion.get(needId);
   if (!byNeed) byRegion.set(needId, (byNeed = new Map()));
   const hit = byNeed.get(key);
-  if (hit && samePrices(hit.prices, need, r)) return hit.split;
+  if (hit && hit.locked === r.lockedGoods && samePrices(hit.prices, need, r)) return hit.split;
   const prices = need.options.map((o) => r.market[o.good].price);
-  const caps = need.options.map((o) => rawMax(o.max, wealth));
-  const split = computeSplit(need, prices, caps);
-  byNeed.set(key, { prices, split });
+  const split = computeSplit(need, prices, capsOf(need, wealth, r.lockedGoods));
+  byNeed.set(key, { prices, split, locked: r.lockedGoods });
   return split;
 }
 
+/** 선택지마다 채울 수 있는 최대 비중: 상한(rawMax), 왕국이 못 만드는 상품은 0 */
+function capsOf(need: NeedDef, wealth: number, locked: readonly GoodId[]): number[] {
+  return need.options.map((o) => (locked.includes(o.good) ? 0 : rawMax(o.max, wealth)));
+}
+
 /** 선택지 가격(need.options 순서)이 prices 일 때 부 wealth 인 pop 의 선택지별 비중 (AI 전망용, 캐시 없음) */
-export function needSharesAt(needId: NeedId, prices: number[], wealth: number): number[] {
+export function needSharesAt(needId: NeedId, prices: number[], wealth: number, locked: readonly GoodId[] = []): number[] {
   const need = NEED_BY_ID.get(needId)!;
-  return splitShares(splitWeights(need, prices), need.options.map((o) => rawMax(o.max, wealth)));
+  return splitShares(splitWeights(need, prices), capsOf(need, wealth, locked));
 }
 
 function samePrices(prices: number[], need: NeedDef, r: Region): boolean {
@@ -1086,7 +1092,7 @@ function financeOf(w: World, regionId: number): Building | undefined {
 /** 그 부 단계의 하루 소비 묶음 비용 (지역 가격 기준) */
 export function basketCostAt(r: Region, size: number, wealth: number): number {
   const units = size * CONSUMPTION_PER_CAPITA;
-  const need = needsAt(wealth);
+  const need = needsAt(wealth, r.lockedGoods);
   let v = 0;
   for (const n of NEEDS) {
     const per = need[n.id];
@@ -1117,14 +1123,26 @@ function useKind(n: NeedDef, units: number, wealth: number, left: number[], gm =
 }
 
 /** size 명, 부 wealth 인 pop 이 현물 left(GOOD_IDS 순서) 로 오늘 필요를 채우고 남는 양 (left 를 그 양으로 바꿔 돌려준다) */
-function useOwnKind(size: number, wealth: number, left: number[], gm = 1): number[] {
+function useOwnKind(size: number, wealth: number, left: number[], gm = 1, locked?: readonly GoodId[]): number[] {
   const units0 = size * CONSUMPTION_PER_CAPITA;
-  const need = needsAt(wealth);
+  const need = needsAt(wealth, locked);
   for (const n of NEEDS) {
     const per = need[n.id];
     if (per) useKind(n, per * units0, wealth, left, gm);
   }
   return left;
+}
+
+/** 왕국 주민이 잠긴 상품 g 를 열면 하루에 살 양 (지금 부 기준, 대체재는 상한까지. AI 연구 판단 outlook.ts techValue) */
+export function lockedDemand(w: World, kingdomId: number, g: GoodId): number {
+  let q = 0;
+  for (const p of w.pops) {
+    const r = regionById(w, p.regionId);
+    if (r.kingdomId !== kingdomId || p.size < ABS_LIMITS.popMin) continue;
+    const L = wealthOf(p), need = needsAt(L, r.lockedGoods.filter((x) => x !== g));
+    for (const n of NEEDS) for (const o of n.options) if (o.good === g) q += need[n.id] * p.size * CONSUMPTION_PER_CAPITA * o.units * rawMax(o.max, L);
+  }
+  return q;
 }
 
 /** 하루 소득으로 감당할 수 있는 가장 높은 부 단계 (시작 부) */

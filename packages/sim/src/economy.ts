@@ -1,7 +1,7 @@
 import {
   ABS_LIMITS, BUILDING_BY_ID, BUILDING_TYPES, GOOD_IDS, GOODS, HARVEST_KINDS, HARVEST_MAX_SEASONS, HARVEST_SEASON_DAYS, HARVEST_SPREAD, HARVEST_STEP, LAW_TECH, LAND_NAMES, LAND_NAMES_EN,
   MAX_POINTS_PER_LEVEL_DAY, REGIONS, SKILL_DEFS, SUBSISTENCE, TECH_BY_ID, VEIN_NAMES, VEIN_NAMES_EN, getMethod, regionPerk, scaleBonus, TUNE,
-  buildPointsOf, TRADING_POST, TICKS_PER_YEAR,
+  buildPointsOf, TRADING_POST, TICKS_PER_YEAR, lockedGoodsFor,
 } from './data';
 import { regionNameEn } from './i18n';
 import { borderCost } from './kingdoms';
@@ -292,6 +292,16 @@ export function prospect(w: World) {
 
 export function knowsTech(c: Company, techId: string | undefined): boolean {
   return !techId || c.research.known.includes(techId);
+}
+
+/** 지역마다 그 왕국이 아직 못 만드는 수요 상품을 맞춘다 (매일 연구 다음, tick.ts). 바뀔 때만 새 배열을 넣는다 (market.ts 비중 캐시가 배열이 바뀐 것을 본다) */
+export function syncLockedGoods(w: World) {
+  for (const k of w.kingdoms) {
+    const gov = w.companies.find((c) => c.id === k.governmentId);
+    if (!gov) continue;
+    const locked = lockedGoodsFor(gov.research.known);
+    for (const r of w.regions) if (r.kingdomId === k.id && r.lockedGoods.join() !== locked.join()) r.lockedGoods = locked;
+  }
 }
 
 export function availableMethods(c: Company, typeId: string): MethodDef[] {

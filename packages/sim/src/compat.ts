@@ -1,4 +1,4 @@
-import { GOOD_IDS, TECH_BY_ID, TECH_COST } from './data';
+import { GOOD_IDS, TECH_BY_ID, TECH_COST, lockedGoodsFor } from './data';
 import { newMarketGood } from './world';
 import { writePool } from './round';
 import type { Building, Company, World } from './types';
@@ -112,6 +112,16 @@ export function migrateWorld(input: unknown): World | null {
     w.fund += w.traders.cash;
     w.traders.cash = 0;
     w.traders.capital = 0;
+  }
+  // 종이 공장이 인쇄술을 요구하기 전 저장 (판은 그대로): 공장이 있는 왕국은 방식을 잃지 않게 인쇄술을 준다. 주민 수요 잠금(Region.lockedGoods)은 아는 기술로 채운다
+  for (const b of w.buildings ?? []) {
+    if (b.typeId !== 'paper_mill') continue;
+    const k = w.regions.find((r) => r.id === b.regionId)?.kingdomId;
+    for (const c of w.companies) if (c.kingdomId === k && !c.research.known.includes('printing')) c.research.known.push('printing');
+  }
+  for (const r of w.regions ?? []) {
+    const gov = w.companies.find((c) => c.state && c.kingdomId === r.kingdomId);
+    r.lockedGoods ??= lockedGoodsFor(gov?.research.known ?? []);
   }
   const world = w as World;
   writePool(world);

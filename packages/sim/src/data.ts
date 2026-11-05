@@ -58,7 +58,7 @@ export const GOODS: Record<GoodId, GoodDef> = {
   metal: { id: 'metal', name: '철', nameEn: 'Iron', basePrice: 8 },
   tools: { id: 'tools', name: '공구', nameEn: 'Tools', basePrice: 10 },
   furniture: { id: 'furniture', name: '가구', nameEn: 'Furniture', basePrice: 8 },
-  electronics: { id: 'electronics', name: '기계', nameEn: 'Machinery', basePrice: 20 },
+  electronics: { id: 'electronics', name: '정밀 기기', nameEn: 'Precision instruments', basePrice: 20 },
   transport: { id: 'transport', name: '운송', nameEn: 'Transport', basePrice: 3, perishable: true },
   luxury_furniture: { id: 'luxury_furniture', name: '고급 가구', nameEn: 'Luxury furniture', basePrice: 40 },
   luxury_cloth: { id: 'luxury_cloth', name: '고급 의복', nameEn: 'Fine clothes', basePrice: 30 },
@@ -216,7 +216,7 @@ export function industryOf(typeId: string, methodId?: string): Industry | null {
 //   (일꾼 1차 500, 그 밖 300; 숙련 비율 ±5%p, 농부만 쓰는 농장·목장은 0; 원료/매출 범위 안).
 // - 한 단계 오를 때마다 레벨당 이익이 2배 (2단계 = 1단계 × 2, 3단계 × 4, ±10%). 윗단계 원료 비중은 유형 범위 ±10%p 안.
 // - 단계가 오를수록 일꾼 합계는 줄고 (1차 500 → 350 → 200, 가공 300 → 200 → 150, 중공업 300 → 200, 숙련 300 → 200),
-//   기술자·전문가 비율과 공구·철·석탄·기계 같은 상위 원료는 는다. 산출(레벨당)도 는다.
+//   기술자·전문가 비율과 공구·철·석탄·정밀 기기 같은 상위 원료는 는다. 산출(레벨당)도 는다.
 // - 전문가는 증기 시대 방식(증기기관이 선행인 기술)과 사치품 방식에만, 레벨당 20명까지 (대륙 전문가 약 1천 명, 거의 다 금융가에 있다).
 // - 기본 방식도 공구를 10~30 쓴다 (빅토리아3 광산 기본 방식 Picks and Shovels가 공구를 쓴다, VIC3_REFERENCE "생산 방식의 공구"). 지금은 모두 10이다:
 //   기준 임금 재계산(2026-11-01)으로 레벨당 매출이 약 0.35배가 되어 광산 공구 30(300)이 1차 원료 상한 5%를 넘었다 (그 전 광산 30, 벌목은 시작 공구 공급 때문에 10).
@@ -229,7 +229,7 @@ export function industryOf(typeId: string, methodId?: string): Industry | null {
 // 기준 임금 재계산(2026-11-01, 기본 임금 약 0.35배): cli/rebasewage.ts 로 일꾼은 그대로 두고 원료·산출을 약 0.35배로 다시 셌다 (방식 36개, 공사 포인트 15곳).
 // 공사 포인트가 약 0.35배가 되어 건축사무소 포인트(0.7·1.4·2.1)·원료, 레벨당 하루 최대 포인트(3.5), 학교·행정청·사무소 포인트도 0.35배로 맞췄다 (같은 사무소 레벨이 같은 건물 수를 짓게).
 // 계수 비교는 TUNE.buildCostMult 0.67·1·1.33(= 0.1·0.15·0.2)으로 했다: 시드 1·2에서 0.15가 가장 높고 1~4에서는 0.2가 높다 (DESIGN 11 "공사 포인트 계수", 값은 그대로).
-// 가공·중공업은 원료가 매출의 절반 이상이라 레벨당 매출과 이익이 커서 공사 포인트도 크다 (1차 50, 가공 100, 제철소·기계 공장 200).
+// 가공·중공업은 원료가 매출의 절반 이상이라 레벨당 매출과 이익이 커서 공사 포인트도 크다 (1차 50, 가공 100, 제철소·정밀 기기 공장 200).
 export const BUILDING_TYPES: BuildingTypeDef[] = [
   {
     // 빈 농지에 자동으로 생긴다. 소작농이 일하고, 산출은 소작농과 지주의 현물이 된다 (SUBSISTENCE 참고)
@@ -352,20 +352,20 @@ export const BUILDING_TYPES: BuildingTypeDef[] = [
     ],
   },
   {
-    // 목재를 눌러 종이를 낸다 (빅토리아3 Paper Mills, Pulp Pressing: 목재 30 → 종이 40). 전문 관료제 행정청이 쓴다. 기술 없이 지을 수 있다
+    // 목재를 눌러 종이를 낸다 (빅토리아3 Paper Mills, Pulp Pressing: 목재 30 → 종이 40). 전문 관료제 행정청과 가정용품 필요가 쓴다. 인쇄술이 있어야 짓는다 (사용자 2026-11-05)
     id: 'paper_mill', name: '종이 공장', nameEn: 'Paper mill', land: 'plot', buildPoints: 100, industry: 'processing',
     methods: [
-      m({ id: 'pulp_press', name: '펄프 압착', nameEn: 'Pulp pressing', workers: jobs(270, 30), inputs: { tools: 10, timber: 930 }, outputs: { paper: 960 } }),
+      m({ id: 'pulp_press', name: '펄프 압착', nameEn: 'Pulp pressing', tech: 'printing', workers: jobs(270, 30), inputs: { tools: 10, timber: 930 }, outputs: { paper: 960 } }),
     ],
   },
   {
-    id: 'fab', name: '기계 공장', nameEn: 'Machine works', land: 'plot', buildPoints: 200, industry: 'heavy',
+    id: 'fab', name: '정밀 기기 공장', nameEn: 'Instrument works', land: 'plot', buildPoints: 200, industry: 'heavy',
     methods: [
-      m({ id: 'machine_steam', name: '증기 기계 제작', nameEn: 'Steam engineering', tech: 'steam_engine', workers: jobs(210, 80, 10), inputs: { tools: 20, metal: 430, fuel: 160 }, outputs: { electronics: 340 } }),
+      m({ id: 'machine_steam', name: '증기 정밀 가공', nameEn: 'Steam engineering', tech: 'steam_engine', workers: jobs(210, 80, 10), inputs: { tools: 20, metal: 430, fuel: 160 }, outputs: { electronics: 340 } }),
     ],
   },
   {
-    // 짐마차는 말 먹이(곡물)와 마차(목재)를, 증기 철도는 공구 대신 기계와 석탄을 쓴다.
+    // 짐마차는 말 먹이(곡물)와 마차(목재)를, 증기 철도는 공구 대신 정밀 기기와 석탄을 쓴다.
     // 산업 유형 운송(100명, 2026-10-25): 옛 가공 300명 숫자(짐마차 270/30, 곡물 2,600·목재 1,300 → 운송 3,550)의 약 1/3
     id: 'railway', name: '운송 조합', nameEn: 'Carters\' guild', land: 'plot', buildPoints: 50, industry: 'transport',
     methods: [
@@ -483,6 +483,8 @@ export function scaleBonus(level: number): number {
  * - startsPerWeek: AI 회사 하나가 한 주에 새로 넣는 공사 수 상한
  * - luxuryLinear, luxuryQuad: 사치품 필요 = linear × (부 − 6) + quad × (부 − 6)², 고급 의복·고급 가구가 반씩
  * - meatLinear, meatQuad: 고기 필요 = linear × (부 − 6) + quad × (부 − 6)²
+ * - travelLinear: 이동 필요 = travelLinear × (부 − NEED_STANDARD_FROM). 왕국이 운송을 만들 기술을 열어야 생긴다 (needsAt, lockedGoodsFor)
+ * - instrumentShare: 정밀 기기 필요 = instrumentShare × 사치품 곡선 (고급 의복·고급 가구는 0.5 씩). 왕국이 정밀 기기를 만들 기술을 열어야 생긴다
  * - intoxLinear: 기호품(술) 필요 = intoxLinear × min(부, 10). 식량에서 떼지 않고 따로 더한다 (묶음 합은 needsAt 의 total)
  * - shrinkWeeks: AI 철거까지 적자 주 수. 정부 건물·무역소는 마지막 레벨의 장기 손익이 이 주 수 동안 계속 마이너스면 철거를 시작하고(reviewLevels),
  *   유보 기준 생산 건물은 유보 자산 0·주간 적자가 이 주 수 이어지면 1레벨 헌다(reserveLevels). 둘 다 26이던 reserveShrinkWeeks 를 2026-11-02 wt-simplify 1-F 에서 합쳤다
@@ -602,7 +604,9 @@ export const TUNE = {
   luxuryQuad: 0.03,
   meatLinear: 0.3,
   meatQuad: 0.01,
-  intoxLinear: 0.1, // 기호품(술) 필요 = 이 값 × min(부, 10). 식량에서 떼지 않고 따로 더한다 (DESIGN 11 "기호품", 재검증 필요 (조건 바뀜: 소작 산출 ×0.9, aiBuildNow 1, 2026-10-23))
+  travelLinear: 0.2, // 이동 필요 = 이 값 × (부 − NEED_STANDARD_FROM). 합계 안에서 나눈다 (DESIGN 11)
+  instrumentShare: 0.5, // 정밀 기기 필요 = 이 값 × 사치품 곡선. 합계 안에서 나눈다 (DESIGN 11)
+  intoxLinear: 0.1, // 기호품(술) 필요 = 이 값 × min(부, 10). 식량에서 떼지 않고 따로 더한다 (DESIGN 11 "기호품", 재검증 필요 (조건 바뀜: 소작 산출 ×0.9, aiBuildNow 1, 2026-10-23), 재검증 필요 (조건 바뀜: 2026-11-05 이동·정밀 기기가 묶음 몫을 나눠 갖는다, 5장))
   qualSkilledL: 0.4,
   qualExpertL: 0.6,
   qualRate: 0.25,
@@ -920,9 +924,10 @@ export const REGIONS: RegionDef[] = [
 /**
  * 필요. 필요량은 소비 단위 1의 하루 금액(기본가)이고, 상품 1개는 기본가만큼 채운다 (fill 을 주면 그만큼).
  * max: 그 상품이 채울 수 있는 최대 비중. appeal > 1 은 가공품(값이 내려가면 원자재 대신 돌아오는 수요)
+ * gated: 왕국이 그 상품을 만들 기술을 열어야 주민이 산다 (lockedGoodsFor)
  * 예외 하나: 곡물 1개는 식량 2를 채운다 (기본가 1). 곡물 기본가를 2에서 1로 내리면서 먹는 양은 그대로 두었다 (2026-10-25, DECISIONS 7-27)
  */
-const opt = (good: GoodId, extra: { max?: number; appeal?: number; fill?: number } = {}) => {
+const opt = (good: GoodId, extra: { max?: number; appeal?: number; fill?: number; gated?: boolean } = {}) => {
   const { fill, ...rest } = extra;
   return { good, units: 1 / (fill ?? GOODS[good].basePrice), ...rest };
 };
@@ -932,18 +937,38 @@ export const NEEDS: NeedDef[] = [
   { id: 'clothing', name: '의복', nameEn: 'Simple clothing', options: [opt('fiber', { max: 0.5 }), opt('cloth', { appeal: 2 })] },
   { id: 'standard_clothing', name: '표준 의복', nameEn: 'Standard clothing', options: [opt('cloth')] },
   { id: 'crude_items', name: '생활용품', nameEn: 'Crude items', options: [opt('timber', { max: 0.5 }), opt('furniture', { appeal: 2 })] },
-  { id: 'household', name: '가정용품', nameEn: 'Household items', options: [opt('furniture')] },
+  { id: 'household', name: '가정용품', nameEn: 'Household items', options: [opt('furniture'), opt('paper', { max: 0.5, gated: true })] },
   // 사치품은 고급 의복·고급 가구 두 필요로 나눈다 (2026-10-25 사용자 "이걸 합치면안되지"). 한 필요에 두면 대체 지수 10 때문에 싼 쪽이 거의 다 가져가,
   // 공급이 없는 쪽은 값이 상한에 붙고 수요가 0이 되어 AI가 짓지 않았다. 빅토리아3는 한 필요(Luxury Items)지만 상품마다 최대 몫 0.5·최소 0.1이 있다 (VIC3_REFERENCE)
   { id: 'fine_clothing', name: '고급 의복', nameEn: 'Fine clothing', options: [opt('luxury_cloth')] },
   { id: 'fine_furniture', name: '고급 가구', nameEn: 'Fine furniture', options: [opt('luxury_furniture')] },
+  { id: 'fine_instruments', name: '정밀 기기', nameEn: 'Precision instruments', options: [opt('electronics', { gated: true })] },
   { id: 'meat', name: '고기', nameEn: 'Meat', options: [opt('meat')] },
   { id: 'intoxicants', name: '기호품', nameEn: 'Intoxicants', options: [opt('liquor')] },
+  // 이동 필요: 빅토리아3 Free Movement (Transportation, 부 10부터, 표준 의복·가정용품과 같은 부. vic3.paradoxwikis.com/Needs)
+  { id: 'travel', name: '이동', nameEn: 'Free movement', options: [opt('transport', { gated: true })] },
 ];
 
+/** 상품을 내는 방식이 요구하는 기술 (건물 표에서 읽는다). 기술 없이 낼 수 있는 방식이 있으면 빈 배열 */
+export function goodTechs(g: GoodId): string[] {
+  const ways = BUILDING_TYPES.flatMap((t) => t.methods.filter((m) => (m.outputs[g] ?? 0) > 0));
+  return ways.some((m) => !m.tech) ? [] : [...new Set(ways.map((m) => m.tech!))];
+}
+/** 기술로 열리는 수요 상품 (NEEDS 의 gated 선택지) */
+export const GATED_GOODS: GoodId[] = [...new Set(NEEDS.flatMap((n) => n.options.filter((o) => o.gated).map((o) => o.good)))];
+/** 선택지가 다 gated 인 필요: 그 상품이 다 잠기면 필요가 통째로 없다 (needsAt) */
+const GATED_NEEDS = NEEDS.filter((n) => n.options.every((o) => o.gated));
 /**
- * 원자재로 채울 수 있는 필요의 최대 비율 (옵션의 max): 부 TUNE.rawFullWealth 이하면 100%, TUNE.rawCapWealth 이상이면 max,
- * 그 사이는 고르게 줄어든다. 가난할 때는 섬유·목재로 다 채우고, 잘살수록 의복·가구를 사야 한다. 0.1 단위로 끊는다
+ * 주민 수요 조건 (사용자 2026-11-05 "그 국가에서 그걸 생산할 수 있는 기술이 뚫려야 비로소 수요가 발생"): 왕국이 아는 기술(known)로 만들 수 없는 gated 상품.
+ * 잠긴 상품은 주민이 사지 않는다. 대체재면 다른 선택지가 몫을 맡고 (market.ts capsOf 상한 0), 혼자 채우는 필요는 없는 필요로 본다 (needsAt)
+ */
+export function lockedGoodsFor(known: readonly string[]): GoodId[] {
+  return GATED_GOODS.filter((g) => { const t = goodTechs(g); return t.length > 0 && !t.some((x) => known.includes(x)); });
+}
+
+/**
+ * 상한이 있는 선택지(섬유·목재·종이)로 채울 수 있는 필요의 최대 비율 (옵션의 max): 부 TUNE.rawFullWealth 이하면 100%, TUNE.rawCapWealth 이상이면 max,
+ * 그 사이는 고르게 줄어든다. 가난할 때는 섬유·목재·종이로 다 채우고, 잘살수록 의복·가구를 사야 한다. 0.1 단위로 끊는다
  */
 export function rawMax(max: number | undefined, wealth: number): number {
   if (max == null) return 1;
@@ -954,14 +979,17 @@ export function rawMax(max: number | undefined, wealth: number): number {
 /** 표준 의복·가정용품, 고기·사치품 필요가 생기기 시작하는 부 (needsAt, 사전이 읽는다) */
 export const NEED_STANDARD_FROM = 3;
 export const NEED_LUXURY_FROM = 6;
+const NO_LOCK: readonly GoodId[] = [];
 
 /**
  * 부 단계별 필요 묶음 (소비 단위 1의 하루 금액). 묶음 값은 대략 부 × 0.75.
  * 식량은 1.5 + 0.05 × 부(30까지), 기호품(술)은 TUNE.intoxLinear × 부(10까지)로 식량에서 떼지 않고 따로 더한다. 합계는 아래 total 이고, 식량 밖 필요가 비율대로 늘거나 줄어 합계를 맞춘다.
  * 난방·의복·생활용품은 부 10까지 늘고 멈춘다.
- * 표준 의복과 가정용품은 부 NEED_STANDARD_FROM 부터 생기고, 가정용품은 부가 오를수록 더 빨리 는다. 고기와 사치품(고급 의복·고급 가구, 반씩)은 부 NEED_LUXURY_FROM 부터 생긴다
+ * 표준 의복과 가정용품은 부 NEED_STANDARD_FROM 부터 생기고, 가정용품은 부가 오를수록 더 빨리 는다. 고기와 사치품(고급 의복·고급 가구, 반씩)은 부 NEED_LUXURY_FROM 부터 생긴다.
+ * 이동은 부 NEED_STANDARD_FROM 부터 부에 비례해 (TUNE.travelLinear), 정밀 기기는 부 NEED_LUXURY_FROM 부터 사치품 곡선의 TUNE.instrumentShare 로 는다.
+ * locked (왕국이 아직 못 만드는 상품, lockedGoodsFor) 로 다 잠긴 필요는 0 이고, 합계는 그대로라 나머지 필요가 그 몫을 나눠 갖는다
  */
-export function needsAt(wealth: number): Record<NeedId, number> {
+export function needsAt(wealth: number, locked: readonly GoodId[] = NO_LOCK): Record<NeedId, number> {
   const L = wealth, up = Math.max(0, L - NEED_STANDARD_FROM), rich = Math.max(0, L - NEED_LUXURY_FROM), fed = Math.max(0, L - NEED_LUXURY_FROM), over10 = Math.min(Math.max(L - 10, 0), 20);
   const out: Record<NeedId, number> = {
     // 2026-10-25 사용자 요청 (부가 오를 때 식량 외 수요가 너무 천천히 는다): 식량은 부 10 뒤 0.1 → 0.05씩, 술은 식량에서 떼지 않고 따로 더한다
@@ -977,8 +1005,11 @@ export function needsAt(wealth: number): Record<NeedId, number> {
     // 사치품 필요 (linear·quad 곡선)를 고급 의복과 고급 가구가 반씩 나눈다
     fine_clothing: 0.5 * (TUNE.luxuryLinear * rich + TUNE.luxuryQuad * rich * rich),
     fine_furniture: 0.5 * (TUNE.luxuryLinear * rich + TUNE.luxuryQuad * rich * rich),
+    fine_instruments: TUNE.instrumentShare * (TUNE.luxuryLinear * rich + TUNE.luxuryQuad * rich * rich),
+    travel: TUNE.travelLinear * up,
     meat: TUNE.meatLinear * fed + TUNE.meatQuad * fed * fed,
   };
+  if (locked.length) for (const n of GATED_NEEDS) if (n.options.every((o) => locked.includes(o.good))) out[n.id] = 0;
   // 묶음 합계는 부마다 정해져 있다 (2026-10-25 사용자 "그렇게 해봐": 합계는 그대로, 구성만 바꾼다). 합계 = 그 전(main) 곡선의 합.
   // 식량은 위 값 그대로 두고, 나머지 필요를 위 비율대로 늘리거나 줄여 합계를 맞춘다. 잘살수록 식량 몫이 줄고 나머지 몫이 는다
   const u5 = Math.max(0, L - 5), r10 = Math.max(0, L - 10), f8 = Math.max(0, L - 8);

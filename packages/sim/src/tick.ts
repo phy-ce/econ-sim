@@ -1,6 +1,6 @@
 import { EDUCATION_FLOOR, EDUCATION_RANGE, GOOD_IDS, TICKS_PER_WEEK, getMethod } from './data';
 import { roundAll, writePool } from './round';
-import { colonyPopulation, colonySol, prospect, totalMoney, unemploymentRate } from './economy';
+import { colonyPopulation, colonySol, prospect, syncLockedGoods, totalMoney, unemploymentRate } from './economy';
 import { runAi } from './ai';
 import { updateLaws } from './policy';
 import { payWelfare } from './welfare';
@@ -39,6 +39,7 @@ export function step(w: World, commands: QueuedCommand[] = []): string[] {
   updateMarketWages(w);
   chargeInterest(w);
   doResearch(w);
+  syncLockedGoods(w);
   laborMarket(w);
   resetMarkets(w);
   payWages(w);

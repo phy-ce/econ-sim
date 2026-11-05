@@ -2,7 +2,7 @@
 
 /**
  * 상품 id. 화면의 아이콘이 이 id에 묶여 있어서 id는 예전 것을 그대로 쓰고 이름만 바꾼다.
- * fuel = 석탄, food = 식료품, metal = 철, electronics = 기계
+ * fuel = 석탄, food = 식료품, metal = 철, electronics = 정밀 기기
  */
 export type GoodId =
   | 'grain' | 'fiber' | 'timber' | 'ore' | 'fuel'
@@ -167,14 +167,15 @@ export interface TechDef {
   requires: string[];
 }
 
-export type NeedId = 'nourishment' | 'heating' | 'clothing' | 'standard_clothing' | 'crude_items' | 'household' | 'fine_clothing' | 'fine_furniture' | 'meat' | 'intoxicants';
+export type NeedId = 'nourishment' | 'heating' | 'clothing' | 'standard_clothing' | 'crude_items' | 'household' | 'fine_clothing' | 'fine_furniture' | 'fine_instruments' | 'meat' | 'intoxicants' | 'travel';
 
 export interface NeedDef {
   id: NeedId;
   name: string;
   nameEn?: string;
   /** 필요 1단위(기본가 1어치)를 채우는 상품 수량. max: 그 상품이 채울 수 있는 최대 비중. appeal > 1: 가공품 */
-  options: { good: GoodId; units: number; max?: number; appeal?: number }[];
+  /** gated: 왕국이 그 상품을 만들 기술을 열어야 주민이 산다 (data.ts lockedGoodsFor) */
+  options: { good: GoodId; units: number; max?: number; appeal?: number; gated?: boolean }[];
 }
 
 export interface SkillDef {
@@ -501,6 +502,8 @@ export interface Region {
   spaceport: boolean;
   neighbors: number[];
   kingdomId: number;
+  /** 이 지역 왕국이 아직 만들 기술을 열지 못해 주민이 사지 않는 상품 (data.ts lockedGoodsFor, 매일 economy.ts syncLockedGoods 가 맞춘다) */
+  lockedGoods: GoodId[];
   /** ore 는 찾은 광맥(deposits)의 합이다 (화면용. 광산은 자원별 deposits 로 막힌다) */
   land: Record<LandType, number>;
   /** 찾은 광맥 레벨 수 (자원별). 잠재량(RegionDef.veins)까지 탐광으로 늘어난다 */
