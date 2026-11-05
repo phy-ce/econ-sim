@@ -1,5 +1,7 @@
 # Kingdom of Estera (econ-sim)
 
+**English** | [한국어](README.ko.md)
+
 **Play in the browser: https://phy-ce.github.io/econ-sim/** (built from `main` on every push)
 · Rules encyclopedia: https://phy-ce.github.io/econ-sim/encyclopedia/
 · Experiment reports: https://phy-ce.github.io/econ-sim/reports/
@@ -7,6 +9,13 @@
 A management game about the market economy of an early-modern continent. Three kingdoms (Estera, Belonia and Karten) share seven regions. You play the crown of Estera. Each kingdom has two companies: the crown (a state company whose cash is the treasury) and one private company that runs private buildings and decides what to build with the savings held by manors and financial districts. About five million simulated people work, eat, save, migrate and change jobs. The economic loop is inspired by Victoria 3, but the rules and numbers are this game's own. The currency is the florin (ƒ).
 
 The UI is a dashboard in a parchment and pixel-art style, in Korean and English. It shows labels, numbers and bars only. This README explains the rules.
+
+## Highlights
+
+- **Living economy:** about five million simulated people work, eat, save, migrate and change jobs across three kingdoms and seven regions.
+- **Same command path:** AI crowns and companies act through the same validated commands as the player.
+- **Tested simulation:** tests check money conservation, determinism (including save and load) and value ranges, and 20-year runs exercise long-term play.
+- **Open rules and data:** a rules encyclopedia reads its values from the code, and experiment reports compare rule variants across seeds.
 
 ## Running
 
