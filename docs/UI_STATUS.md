@@ -440,3 +440,11 @@ DetailWindow 독립 NavigationProvider/버튼, BuildingPops 및 ResourceInspecto
 - 폐기 연구 정리 커밋8a96c26. 국가 창 예산/법/정치3탭, PoliticsPanel은 첫 선택 플레이어 왕국·왕국 선택 유지. interestGroups 순서6집단, 투표법 VOTING_NAMES, 영향력 막대/%/힘셈·소외 표식, 승인0중앙 ±IG_APPROVAL_CAP 막대·부호 한 자리, 기분·회원 수. 집단 펼침에 승인3요인·4법 입장·pending 있을 때 바뀌면 값.
 - 모든 표시 읽기 전용, game/command/lawChance 호출 없음. inactive 탭은 ActiveContent로 계산 생략, 같은 snapshot의 펼침 변경은 useMemo로 interestGroups 재계산 생략. 이름/회원 정확한 값은 툴팁. 양 언어·토큰/다크 모드.
 - 루트 typecheck·클라이언트39파일95시험 통과(6집단/양 언어/선택 왕국/세계 비변경 회귀). CSS1920×1028 헤드리스 스크린샷 확인: C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/politics-ko-light.png, politics-en-dark.png, politics-expanded-en-dark.png. 실제 왕국2 선택·지주 펼침/승인요인5+0+0·법 입장1/1/1/2, 6행, 주 창본문403/scroll403. 법 전환 중 pending·모든 기분 조합의 화면은 미검증.
+
+## 2026-11-06 현재 작업 종료 상태 · 0장 구현 가능 항목 완료
+- 정치 탭 커밋b161ee8. 이번 순서: 성능2e9eba6 → 건설2-92/혼합2-91 49e1a63 → 실제 가동2-93 b6c8c4b → 중복2-82 3312f9a → 수요 잠금2-94 1b4b224 → 복지2-89 0fc470c → 직종2-55 c50f91b → 수수료2-62 b5d8da5 → 재해2-83 d36f658 → 정리8a96c26 → 정치2-88 b161ee8. 모두 main 로컬 커밋, push 하지 않음.
+- 최종 후측정: main b161ee8/sim tree3e5d0992004bf48ab67bc3cf83a6faf16f84c940(수요 잠금 병합 후), 같은 tick14 저장/EN/dark/1920×1028/6주창/각12초. 10× 스크롤·드래그 조작 구간 >50ms0개, React130.54ms/Layout17.22ms/HandlePostMessage59.65ms, 조작 종료 후0.5초2개/합144ms/최대83ms. 조작 없이 자동 갱신12초에는1개/55.92ms(React1173.19ms). 이전8802 sim과 조건이 달라 최종 후측정 수치를 직접 전후 비교하지 않는다. 같은 sim 전후 비교는 앞의 baseline/matched 정정 절 참조.
+- 최종 원본/스크린샷: C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/perf-completed-all-10.*, perf-completed-all-idle-10.* (.json/.trace.json/.cpuprofile/.png). 두 PNG 확인. 긴 작업이 완전히 사라진 것은 아니며, 큰 저장/배포 빌드는 미측정. 측정용5208서버만 종료,5199개발 서버 유지. 검증 브라우저 저장은 원본 tick14로 재로드, KR/light·위험 정지 켬 복구.
+- 완료 판정 근거는 각 절의 typecheck·vitest·1920×1028 헤드리스 스크린샷. 마지막 코드 검증39파일95시험/루트 typecheck 통과. 기존 UI_WINDOWS·sim 임시 시험·기타 미커밋 파일은 보존. UI_CHANGES/UI_DONE/UI_DESIGN은 사용자 최신 편집 범위 밖이라 수정하지 않음; Claude가 완료 절 이동 시 위 근거 사용.
+- 막힘/대기: 2-59 세부 매출/원료/임금 주간 EMA 미제공, 2-49 SalvageLot에 buildingId 없음(types.ts344), 2-72 S3 인두세 부담·2-40 S6 사전, 오버홀 S1~S8/결정/1b 선행은 기존 대기 유지. 왕실 웃돈·지도 정점 범위·상단 칩/배치 결정은 사용자 결정 대기. 단위P는 Claude 작업. 빈 windowGeometry/windowLayout 파일은 삭제 금지 규칙 때문에 남김(호출0).
+- 남은 검증 범위: 기존0장 검증 줄의 전체 조합·기관 소멸/지분 매매·실제 주간 확정/법 전환 완료 사건·일반 Edge/Windows 배율, 각 절에 적은 미검증 조합. 현재 구현 가능한 코드 항목은 남지 않음.
