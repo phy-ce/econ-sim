@@ -473,8 +473,8 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   },
   {
     id: 'methods-rule', category: 'production', title: t('건물 숫자 규칙', 'Building numbers rule'),
-    rule: t('기본 임금(노동자 {0})은 모든 상품이 기본가일 때 소작농 1인 하루 소득 {23} × 바깥 소득 배율 {22}를 0.5 단위로 둥글게 한 값이다 (기술자·전문가는 그 1.5·4배). 기본가와 기본 임금에서 기본 방식은 이익률 {3}, 한 단계 오를 때마다 레벨당 이익이 {4}다. 일꾼 수와 원료 비중은 산업 유형마다 다르다: 1차는 {5}명에 원료 {9} 이하, 가공은 {6}명에 원료 {10}, 중공업은 {7}명(기술자 {13})에 원료 {11}, 숙련(사치품)은 {8}명(기술자 {14})에 원료 {12}, 운송은 {20}명에 원료 {21}. 단계가 오르면 일꾼은 줄고 기술자·전문가 비율과 공구·석탄·철·기계 사용이 는다. 공사 포인트는 기본 방식 하루 이익 × {15}. 사치품 방식은 혼합 방식이다: 일반품과 사치품을 함께 내고 (첫 단계 일반품이 사치품의 {24}배, 윗단계 {25}배), 이익률 {3}·단계 {4} 대신 기본가 이익을 같은 기술의 일반 방식 근처에 두며, 원료는 숙련 {12}와 가공 {10}을 사치품 값 비중으로 섞은 범위다.',
-      'The labourer base wage ({0}) is the daily income of one tenant farmer at base prices for every good ({23}) × the outside income multiple {22}, rounded to 0.5 (skilled and experts get 1.5× and 4×). At base prices and wages the basic method has a {3} margin, and each step up multiplies profit per level by {4}. Headcount and input share depend on the industry type: primary {5} workers with inputs at most {9} of revenue, processing {6} workers with inputs {10}, heavy industry {7} workers ({13} skilled) with inputs {11}, skilled crafts (luxuries) {8} workers ({14} skilled) with inputs {12}, transport {20} workers with inputs {21}. Higher steps employ fewer people, a larger share of skilled workers and experts, and more tools, coal, iron and machinery. Construction points = basic daily profit × {15}. Luxury methods are mixed: they make normal and luxury goods together ({24}× as many normal goods as luxuries at the first step, {25}× at the upper step). Instead of the {3} margin and {4} step, their profit at base prices sits near the normal method of the same technology, and their input share is {12} and {10} blended by the luxury share of value.'),
+    rule: t('기본 임금(노동자 {0})은 모든 상품이 기본가일 때 소작농 1인 하루 소득 {23} × 바깥 소득 배율 {22}를 0.5 단위로 둥글게 한 값이다 (기술자·전문가는 그 1.5·4배). 기본가와 기본 임금에서 기본 방식은 이익률 {3}, 한 단계 오를 때마다 레벨당 이익이 {4}다. 일꾼 수와 원료 비중은 산업 유형마다 다르다: 1차는 {5}명에 원료 {9} 이하, 가공은 {6}명에 원료 {10}, 중공업은 {7}명(기술자 {13})에 원료 {11}, 숙련(사치품)은 {8}명(기술자 {14})에 원료 {12}, 운송은 {20}명에 원료 {21}. 단계가 오르면 일꾼은 줄고 기술자·전문가 비율과 공구·석탄·철·정밀 기기 사용이 는다. 공사 포인트는 기본 방식 하루 이익 × {15}. 사치품 방식은 혼합 방식이다: 일반품과 사치품을 함께 내고 (첫 단계 일반품이 사치품의 {24}배, 윗단계 {25}배), 이익률 {3}·단계 {4} 대신 기본가 이익을 같은 기술의 일반 방식 근처에 두며, 원료는 숙련 {12}와 가공 {10}을 사치품 값 비중으로 섞은 범위다.',
+      'The labourer base wage ({0}) is the daily income of one tenant farmer at base prices for every good ({23}) × the outside income multiple {22}, rounded to 0.5 (skilled and experts get 1.5× and 4×). At base prices and wages the basic method has a {3} margin, and each step up multiplies profit per level by {4}. Headcount and input share depend on the industry type: primary {5} workers with inputs at most {9} of revenue, processing {6} workers with inputs {10}, heavy industry {7} workers ({13} skilled) with inputs {11}, skilled crafts (luxuries) {8} workers ({14} skilled) with inputs {12}, transport {20} workers with inputs {21}. Higher steps employ fewer people, a larger share of skilled workers and experts, and more tools, coal, iron and precision instruments. Construction points = basic daily profit × {15}. Luxury methods are mixed: they make normal and luxury goods together ({24}× as many normal goods as luxuries at the first step, {25}× at the upper step). Instead of the {3} margin and {4} step, their profit at base prices sits near the normal method of the same technology, and their input share is {12} and {10} blended by the luxury share of value.'),
     formula: 'margin = (Σ out × base − Σ in × base − Σ jobs × baseWage) ÷ revenue; input share = Σ in × base ÷ revenue',
     params: [
       p('노동자 기본 임금', 'Labourer base wage', () => SKILL_DEFS.unskilled.baseWage, 'florin'), p('기술자 기본 임금', 'Skilled base wage', () => SKILL_DEFS.skilled.baseWage, 'florin'),
@@ -544,7 +544,7 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   },
   {
     id: 'tech', category: 'production', title: t('기술', 'Technology'),
-    rule: t('기술은 {0}개, 4단계다. 단계별 연구 포인트 {1} / {2} / {3} / {4}. 기술은 왕국 단위이고 민간 상회는 왕실 기술을 그대로 쓴다. 기술은 생산 방식과 함께 세법·투자법 선택지도 연다.', '{0} technologies in 4 tiers costing {1} / {2} / {3} / {4} research points. Technology is per kingdom; private houses use the crown\'s. Technologies also unlock tax and investment law options.'),
+    rule: t('기술은 {0}개, 4단계다. 단계별 연구 포인트 {1} / {2} / {3} / {4}. 기술은 왕국 단위이고 민간 상회는 왕실 기술을 그대로 쓴다. 기술은 생산 방식과 함께 세법·투자법 선택지와 주민 수요(운송·종이·정밀 기기)도 연다.', '{0} technologies in 4 tiers costing {1} / {2} / {3} / {4} research points. Technology is per kingdom; private houses use the crown\'s. Technologies also unlock tax and investment law options and resident demand for transport, paper and precision instruments.'),
     params: [p('기술 수', 'Techs', () => TECHS.length), p('1단계', 'Tier 1', () => TECH_COST[1], 'pt'), p('2단계', 'Tier 2', () => TECH_COST[2], 'pt'), p('3단계', 'Tier 3', () => TECH_COST[3], 'pt'), p('4단계', 'Tier 4', () => TECH_COST[4], 'pt')],
     live: {
       pick: ['kingdom'], run: (w, ctx) => {
@@ -557,7 +557,7 @@ export const ENCYCLOPEDIA: EncEntry[] = [
         };
       },
     },
-    related: ['research', 'ai-research', 'buildings'], seenIn: ['finance'], source: ['data.ts TECHS', 'finance.ts advanceResearch'], design: ['7.1'],
+    related: ['research', 'ai-research', 'buildings', 'needs'], seenIn: ['finance'], source: ['data.ts TECHS', 'finance.ts advanceResearch'], design: ['7.1'],
   },
   {
     id: 'harvest-conditions', category: 'production', title: t('기상 조건', 'Harvest conditions'),
@@ -864,7 +864,7 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   },
   {
     id: 'substitution', category: 'people', title: t('대체와 원자재 상한', 'Substitution and raw caps'),
-    rule: t('필요 하나를 여러 상품으로 채울 때 비중 ∝ (가장 싼 단위 비용 ÷ 그 상품 단위 비용)^{0}. 섬유·목재는 부 {1} 이하면 다 쓸 수 있고, 부 {2} 이상이면 절반까지만 쓴다.', 'When several goods fill a need, shares ∝ (cheapest unit cost ÷ this unit cost)^{0}. Fibre and timber can fill all of it up to wealth {1}, and only half from wealth {2}.'),
+    rule: t('필요 하나를 여러 상품으로 채울 때 비중 ∝ (가장 싼 단위 비용 ÷ 그 상품 단위 비용)^{0}. 섬유·목재·종이는 부 {1} 이하면 다 쓸 수 있고, 부 {2} 이상이면 절반까지만 쓴다.', 'When several goods fill a need, shares ∝ (cheapest unit cost ÷ this unit cost)^{0}. Fibre, timber and paper can fill all of it up to wealth {1}, and only half from wealth {2}.'),
     formula: 'share_i ∝ (min c ÷ c_i)^{0}',
     params: [p('대체 지수', 'Substitution exponent', () => SUBSTITUTION_EXP), tune('rawFullWealth', '원자재로 다 채우는 부', 'Raw fills all up to'), tune('rawCapWealth', '상한이 max가 되는 부', 'Raw cap reached at')],
     example: () => {

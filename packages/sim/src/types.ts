@@ -2,7 +2,7 @@
 
 /**
  * 상품 id. 화면의 아이콘이 이 id에 묶여 있어서 id는 예전 것을 그대로 쓰고 이름만 바꾼다.
- * fuel = 석탄, food = 식료품, metal = 철, electronics = 기계
+ * fuel = 석탄, food = 식료품, metal = 철, electronics = 정밀 기기
  */
 export type GoodId =
   | 'grain' | 'fiber' | 'timber' | 'ore' | 'fuel'

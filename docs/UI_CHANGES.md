@@ -487,8 +487,8 @@ sim 변경 (wt-research):
 
 운송·종이·정밀 기기는 왕국이 그 상품을 만들 기술을 연 뒤에야 주민이 산다. 공구는 주민이 사지 않는다. 화면이 고칠 것은 표시뿐이고 컴파일은 깨지지 않는다 (클라이언트는 `NeedId` 를 쓰지 않는다, 합친 뒤 main 에서 다시 확인).
 
-- 잠금: `Region.lockedGoods: GoodId[]` (그 지역 왕국이 아직 못 만드는 수요 상품). 시장 창의 상품 줄과 상품 상세에 잠금 아이콘. 툴팁은 여는 기술 이름 (`goodTechs(g)` → `TECH_BY_ID[x].name`). 본문에 설명 문구는 넣지 않는다.
-- 새 필요 둘: `travel` (이동 / Free movement), `fine_instruments` (정밀 기기 / Precision instruments). `NEEDS` 를 도는 표는 저절로 늘어난다. 잠긴 왕국의 pop 은 그 필요가 0 이므로 0 인 줄을 가리는 표는 그대로 둔다.
+- 잠금: `Region.lockedGoods: GoodId[]` (그 지역 왕국이 아직 못 만드는 수요 상품). 시장 창의 상품 줄과 상품 상세에 잠금 아이콘. 툴팁은 여는 기술 이름 (`goodTechs(g)` → `TECH_BY_ID[x].name`). 본문에 설명 문구는 넣지 않는다. 시장 범위가 지역이면 그 지역의 `lockedGoods`, `kingdom`·`world` 이면 플레이어 왕국 지역의 `lockedGoods` 로 표시한다. `goodTechs(g)` 는 여럿일 수 있어 (운송은 `wagonway`·`steam_rail`) 툴팁에는 이름을 다 적고, 영어 화면은 `nameEn` 을 쓴다.
+- 새 필요 둘: `travel` (이동 / Free movement), `fine_instruments` (정밀 기기 / Precision instruments). 화면에는 `NEEDS` 를 읽는 곳이 없어 (`packages/client/src` 검색) 이 항목으로 고칠 것은 없다.
 - 가정용품 선택지에 종이가 들어갔다 (`NEEDS` household, 상한 0.5).
 - 이름 변경: 상품 `electronics` 는 `정밀 기기 / Precision instruments`, 건물 `fab` 은 `정밀 기기 공장 / Instrument works`, 방식 `machine_steam` 은 `증기 정밀 가공`. id 는 그대로다. 화면 파일에 옛 이름을 적은 곳은 없다 (`기계` 검색, main eeb99e1 기준). 아이콘을 상품 이름으로 고른다면 바꿀 때 본다.
 - 종이 공장은 이제 인쇄술이 있어야 짓는다 (`pulp_press.tech = 'printing'`). 건설 목록과 기술 트리는 `canBuildType`·`unlocksOf` 를 읽으므로 저절로 맞다.

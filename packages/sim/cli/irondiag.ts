@@ -1,5 +1,5 @@
 // 철 체인 진단: bash cli/fast.sh irondiag.ts [seed] [years] [salt]   (TUNE 은 환경변수 TUNE='{"key":value}')
-// 해마다 왕국마다: 철 체인 기술을 연 해, 철광산·제철소·기계 공장 레벨, 광석·철·기계 공급·수요·값·값이 뜨거운 주,
+// 해마다 왕국마다: 철 체인 기술을 연 해, 철광산·제철소·정밀 기기 공장 레벨, 광석·철·정밀 기기 공급·수요·값·값이 뜨거운 주,
 // 잠재 방식: 기술이 열렸고 일손이 되고 지금 값으로 지금 방식보다 낫지만 투입재가 없어(inputsAvailable) 못 고르는 건물 레벨 합.
 // 공급 쪽: 그 왕국에서 철광산·제철소 1레벨을 지금 값으로 지을 때의 하루 손익 최대와, 지을 수 있는 지역 수.
 import { BUILDING_BY_ID, BUILDING_TYPES, GOODS, TICKS_PER_YEAR, getMethod, overrideTune } from '../src/data';
