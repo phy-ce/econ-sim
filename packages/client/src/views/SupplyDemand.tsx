@@ -1,8 +1,10 @@
-import {TUNE} from '@econ/sim';
+import {GoodSprite} from '../sprites';
+import {NumericValue} from '../NumericValue';
+import {TUNE,GOOD_IDS,currentSD,getMethod} from '@econ/sim';
 import type {World} from '@econ/sim';
 import {goodName,useT} from '../i18n';
 import {compact,exactNumber} from '../format';
-import {sdPosition,sdText,supplyDemandProjection} from '../supplyDemand';
+import {sdPosition,sdText} from '../supplyDemand';
 
 export function SupplyDemandBar({now,one,five,ai=false,compact=false}:{now:number|null;one?:number|null;five?:number|null;ai?:boolean;compact?:boolean}){
  const T=useT();
@@ -12,10 +14,8 @@ export function SupplyDemandBar({now,one,five,ai=false,compact=false}:{now:numbe
   {([['now',now],['one',one],['five',five]] as const).map(([kind,value])=>value!==null&&value!==undefined?<span key={kind} className={`sd-point sd-${kind}`} tabIndex={0} style={{left:`${sdPosition(value)*100}%`}} data-help={`${kind==='now'?T.sdNow:kind==='one'?'+1':'+5'}: ${sdText(value)}`}/>:null)}
  </span>;
 }
-export function SupplyDemandPreview({world,regionId,typeId,methodId}:{world:World;regionId:number;typeId:string;methodId?:string}){
- const T=useT(),values=methodId?supplyDemandProjection(world,regionId,typeId,methodId):null;
- if(!values)return null;
- const market=world.regions.find(r=>r.id===regionId)!.market[values.good];
- const help=`${goodName(values.good)}\n${T.supply}: ${compact(market.supplyEma)}\n${T.demand}: ${compact(market.demandEma)}\n${T.sdNow}: ${sdText(values.now)}\n+1: ${sdText(values.one)}\n+5: ${sdText(values.five)}`;
- return <div className="sd-preview" data-help={help}><span>{T.supplyDemandRatio} · {goodName(values.good)}</span><div className="sd-values"><span>{T.sdNow} <b>{sdText(values.now)}</b></span><span>+1 <b>{sdText(values.one)}</b></span><span>+5 <b>{sdText(values.five)}</b></span></div><SupplyDemandBar {...values} ai/></div>;
+export function SupplyDemandPreview({world,regionId,typeId,methodId,methodIds=methodId?[methodId]:[]}:{world:World;regionId:number;typeId:string;methodId?:string;methodIds?:string[]}){
+ const T=useT(),region=world.regions.find(r=>r.id===regionId);if(!region)return null;
+ const goods=GOOD_IDS.filter(g=>methodIds.some(id=>(getMethod(typeId,id).outputs[g]??0)>0));
+ return <div className="sd-preview">{goods.length>0&&<strong>{T.supplyDemandRatio}</strong>}{goods.map(g=>{const market=region.market[g],now=currentSD(world,regionId,g);return <div className="sd-current-row" key={g} data-help={`${T.supply}: ${exactNumber(market.supplyEma)}\n${T.demand}: ${exactNumber(market.demandEma)}`}><span><GoodSprite g={g} size={24}/>{goodName(g)}</span><b>{sdText(now)}</b><NumericValue value={market.price} format="money"/><SupplyDemandBar now={now}/></div>;})}</div>;
 }

@@ -1,3 +1,5 @@
+import {ActualOutput} from './ActualOutput';
+import {buildBlockers as constructionBlockers} from '../constructionCatalogue';
 import {IndustryLabel} from './IndustryLabel';
 import {officeLoadFor} from '../officeLoad';
 import {KingdomTotals} from './KingdomTotals';
@@ -11,7 +13,7 @@ import { OwnerBadge } from './OwnerBadge';
 import { Workforce } from './Workforce';
 import {MethodComparison} from './MethodComparison';
 import {SupplyDemandPreview} from './SupplyDemand';
-import {sdText,supplyDemandProjection} from '../supplyDemand';
+
 // 상회 패널: 내 상회(조작 가능)와 다른 상회(읽기 전용). 시안 "내 상회 · 투입·산출·수지" 기준.
 import { ListTools } from './ListTools';
 import { useMemo, useState,useEffect } from 'react';
@@ -250,7 +252,7 @@ function BuildingRow({ r, game, world, owner, open, onToggle,onGood }: {onGood?:
         </span>
         <span className="hc-pl"><span className={`pl-badge pxnum ${good ? 'pos' : 'neg'}`}><NumericValue value={r.profit} format="signedCompactMoney"/></span><ChevronDown size={16} className={`chev ${open ? 'up' : ''}`} aria-hidden="true" /></span>
       </button>
-      <FlowRow world={world} building={b} onGood={onGood}/>
+      <ActualOutput world={world} building={b}/><FlowRow world={world} building={b} onGood={onGood}/>
       {open && (
         <div className="hdetail">
           {game && !BUILDING_BY_ID[b.typeId].auto && <Controls r={r} game={game} world={world} owner={owner} />}
@@ -284,18 +286,17 @@ function Controls({ r, game, world, owner }: { r: Row; game: Game; world: World;
   const type = BUILDING_BY_ID[b.typeId];
   const rname = regionName(r.region);
   const free = Math.min(type.land ? landFree(world, b.regionId, type.land) : Infinity,type.deposit ? depositFree(world,b.regionId,type.deposit) : Infinity);
-  const full=world.constructions.filter(k=>k.companyId===b.companyId).length>=MAX_CONCURRENT_CONSTRUCTIONS;
-  const sd=supplyDemandProjection(world,b.regionId,b.typeId,b.methodId);
-  const expandHelp=(levels:number)=>sd?`${T.supplyDemandRatio} ${sdText(sd.now)} → ${sdText(levels===1?sd.one:sd.five)}`:undefined;
+  const oneBlocked=constructionBlockers(world,owner,r.region,b.typeId,1),fiveBlocked=constructionBlockers(world,owner,r.region,b.typeId,5);
+  const full=oneBlocked.length>0;
   return (
     <div className="hctrl">
       <span className="stepper" role="group" aria-label={T.countOf(r.name)}>
         <button aria-label={T.demolishOne} title={T.demolishOne} disabled={r.queued>0||(b.shrinking??0)>=b.level}
           onClick={() => { if (b.level > 1 || confirm(T.confirmDemolish(rname, r.name))) game.command({ type: 'demolish', buildingId: b.id }); }}>−</button>
         <output>{b.level}{r.queued > 0 && <small>+{r.queued}</small>}</output>
-        <button aria-label={T.expandOne} title={free < 1 ? T.noLand : T.expandOne} data-help={expandHelp(1)} disabled={full||free < 1||(b.shrinking??0)>0}
+        <button aria-label={T.expandOne} title={free < 1 ? T.noLand : T.expandOne} data-help={oneBlocked.join(' · ')} disabled={full||free < 1||(b.shrinking??0)>0}
           onClick={() => game.command({ type: 'expand', buildingId: b.id })}>+</button>
-        <button aria-label={T.buildingGroups.expandFive} title={T.buildingGroups.expandFive} data-help={expandHelp(5)} disabled={full||free < 5||(b.shrinking??0)>0}
+        <button aria-label={T.buildingGroups.expandFive} title={T.buildingGroups.expandFive} data-help={fiveBlocked.join(' · ')} disabled={fiveBlocked.length>0||free < 5||(b.shrinking??0)>0}
           onClick={() => game.command({ type: 'expand', buildingId: b.id, levels: 5 })}>+5</button>
       </span>
       {(b.shrinking??0)>0&&<button className="sm-btn" onClick={()=>game.command({type:'cancelDemolish',buildingId:b.id})}>{T.cancelDemolition}</button>}

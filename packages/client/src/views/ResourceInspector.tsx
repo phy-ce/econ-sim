@@ -1,3 +1,4 @@
+import {DemandLock} from './DemandLock';
 import {DemolitionBadge} from './DemolitionBadge';
 import {t as uiCopy} from '../i18n';
 import {ownershipLabel} from '../ownershipLabel';
@@ -46,8 +47,8 @@ export function BuildingInspector({ building: input, world, onGood, onCompany, g
   </section>;
 }
 
-export function ResourceInspector({ world, region, good, onGood, onCompany, game, scopeRegions, scopeMarket, scopeLabel }: {
-  scopeRegions?:Region[];scopeMarket?:Pick<Region['market'][GoodId],'price'|'supplyEma'|'demandEma'|'inventory'>;scopeLabel?:string;game?:Game; world: World; region: Region; good: GoodId; onGood: (g: GoodId) => void; onCompany: (id: number) => void;
+export function ResourceInspector({ world, region, good, onGood, onCompany, game, scopeRegions, scopeMarket, scopeLabel, demandRegionId }: {
+  demandRegionId?:number;scopeRegions?:Region[];scopeMarket?:Pick<Region['market'][GoodId],'price'|'supplyEma'|'demandEma'|'inventory'>;scopeLabel?:string;game?:Game; world: World; region: Region; good: GoodId; onGood: (g: GoodId) => void; onCompany: (id: number) => void;
 }) {
   const ko = useLang() === 'ko';
   const T = useT();
@@ -68,7 +69,7 @@ export function ResourceInspector({ world, region, good, onGood, onCompany, game
   const detail = rows.find(b => b.id === selected);
   const market = scopeMarket??region.market[good];
   return <section className="resource-inspector">
-    <div className="inspector-heading"><span className="resource-emblem"><GoodSprite g={good} size={48} /></span><div><span className="lbl">{scopeLabel??(uiCopy().screenText['selectedGoodLocalMarket'])}</span><h2>{goodName(good)}</h2></div><strong className="resource-price"><NumericValue value={market.price} format="money"/></strong></div>
+    <div className="inspector-heading"><span className="resource-emblem"><GoodSprite g={good} size={48} /></span><div><span className="lbl">{scopeLabel??(uiCopy().screenText['selectedGoodLocalMarket'])}</span><h2>{goodName(good)} <DemandLock world={world} good={good} regionId={scopeRegions?demandRegionId:region.id}/></h2></div><strong className="resource-price"><NumericValue value={market.price} format="money"/></strong></div>
     <div className="inspector-metrics"><span><ArrowUpFromLine size={16} /><HelpText text={T.help.supply}>{uiCopy().screenText['supply']}</HelpText><b><NumericValue value={market.supplyEma} format="compact"/></b></span><span><ArrowDownToLine size={16} /><HelpText text={T.help.demand}>{uiCopy().screenText['demand']}</HelpText><b><NumericValue value={market.demandEma} format="compact"/></b></span><span><HelpText text={T.help.inventory}>{uiCopy().screenText['inventory']}</HelpText><b><NumericValue value={market.inventory} format="compact"/></b></span></div>
     <div className="relation-tabs" role="group" aria-label={uiCopy().screenText['buildingRelationships']}>
       <button data-help={T.help.consumers} aria-pressed={side === 'inputs'} onClick={() => { setSide('inputs'); setSelected(null); }}><ArrowDownToLine size={18} />{uiCopy().screenText['consumers']}<b>{related('inputs').length}</b></button>

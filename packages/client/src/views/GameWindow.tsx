@@ -44,7 +44,7 @@ function GameWindowView({id,game,mapRegionId,request,onOpenWindow,active=true}:{
  if(!me)return null;
  if(route.kind==='state')return <StatePanel active={active} game={game} world={world} me={me} onBuilding={onBuilding} onResearch={techId=>go({kind:'research',techId})} requestedTab={route.tab} sequence={sequence}/>;
  if(route.kind==='research')return <ResearchPanel onPolicy={()=>go({kind:'state',tab:'laws'})} game={game} world={world} me={me} request={techRequest}/>;
- if(route.kind==='construction')return <ConstructionPanel onOpenRegion={onBuildings} game={game} world={world} me={me} regionId={region.id} onRegion={regionId=>go({kind:'construction',regionId})}/>;
+ if(route.kind==='construction')return <ConstructionPanel onGood={onGood} onCompany={onCompany} onOpenBuilding={onBuilding} onOpenRegion={onBuildings} game={game} world={world} me={me} regionId={region.id} onRegion={regionId=>go({kind:'construction',regionId})}/>;
  return null;
 }
 

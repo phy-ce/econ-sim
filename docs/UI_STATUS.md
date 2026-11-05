@@ -373,3 +373,56 @@ DetailWindow 독립 NavigationProvider/버튼, BuildingPops 및 ResourceInspecto
 - 원본 계측: C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/profile-windows.mjs, perf-world.json, perf-before-<all/buildings/pops/trends/construction/map>-<1/10>.json/.trace.json/.cpuprofile, perf-final-all-1.*, perf-verified-all-10.*, perf-verified-all-idle-10.*. 중간 after 파일은 기본 최적화만의 측정이며 최종과 구분.
 - 루트 npm.cmd run typecheck·클라이언트33파일84시험 통과. 1920×1028 헤드리스 스크린샷 확인: 같은 scratch의 perf-final-settled-en.png, perf-detached-live-en.png, perf-lazy-market-detail-ko-light.png, perf-lazy-market-detail-en-dark.png. 검색Lumber→닫기/재열기 보존, 지연 생성 상품 상세 진입, 모든 열린 주 창 본문403/scroll403. 주 창 숨김 상태에서 독립 소유 상세 world.tick152가 실제 세계152와 일치. 언어/테마 실제 상태KO/light·EN/dark 대조. 일반 사용자의 체감 확인은 별도.
 - 다음: 사용자 최신 순서2-92 건설 창 최종 검토·재설계 → 실제 가동 값 → 부 이동 중복 제거와0장. 2-55 작업은 아직 시작하지 않음.
+
+## 2026-11-06 2-92 최종 검토 · 구현 전 설계
+- 성능 개선 커밋2e9eba6. main에 병합된2-92 원문·목업D·UI_DESIGN을 대조. 목업3열은 영어 건물명/그림/숫자가 좁아420×560 주 창은2열 카드로 재설계, 상세는520×640 이동/크기 조절 서브윈도우(기존 workspace 경계 적용).
+- 지역 탭은 종류별 소유·규모·충원·손익 요약과 공통 관리 상세 입구만 남긴다. 인라인 공사/방식/조작 중복을 제거하고, 건설 카드와 지역 행은 같은 ConstructionDetail을 연다. 자동 기관은 짓기 카드에서 제외하고 지역 요약에서 같은 상세로 본다.
+- 상세는 전체/민영/왕실 구분, 전체에서는 왕실 대상임을 명시해 왕실만 명령. 민영/다른 왕국은 읽기 전용. 왕실 건물이 없을 때 신규+1/+5는 sim이 고르는 첫 사용 가능 방식, 있으면 현재 왕실 방식. 민간 방식이나 가장 수익 높은 방식을 건설 방식으로 대신 고르지 않는다.
+- 카테고리는 정해진6개 단일 드롭다운, 잠긴 카드도 열림(자물쇠+기술/땅/광맥 툴팁), 검색/가능 여부 필터 제거. 사치품은 해당 방식이 있는 종류도 포함; 운송·무역소는 임의로 정부에 넣지 않고 전체에서 표시. 카드(현재+공사)는 지역 전체, 툴팁에 왕실/민영 분리.
+- 약정금/무역소 사용 가능 금고·방식별 상한, 사무소 수수료/공사량, 학교 자리, 잠긴 방식의 기술을 보존. 공사 포인트/비용/기간은 상세에만. 상품마다 현재S/D·가격, +1/+5 수요 예측은 모든 짓기 UI에서 제거.
+- 카드 예상치는 실제 건설 방식1개만 계산(기존 모든 방식 최댓값 계산 제거). 무거운 전망은 주간 갱신하고 건물/방식/기술/대기열 변경 때 즉시 무효화, 툴팁에 주간 예상 표기. 상세 공사비·현재 가격·명령은 최신 세계를 읽는다. 정렬은 예상 수익/이름/회수 기간, 비양수 회수 기간 —. 왕실/민간 대기열·왕실 순서/정지/취소/지역 링크 유지. 키보드는 native select·button·Esc와 기존 창 탐색을 사용.
+- 2-91 혼합 산출도 이 공통 상세에서 함께 반영. 2-93 실제 가동 값은 다음 단위로 분리. 새 sim API 요청은 현재 없음.
+
+### 성능 재측정 정정 · sim 병합 조건 통일
+- 앞 절 전후 표는 측정 도중 eeb99e1 sim 병합을 가로질렀으므로 예비 결과로만 보관한다. 최종 비교는 sim tree8802b7d79987e09a41339ec9a2e19aa24ef154e5로 통일했다. 원본 UI는 git show 2e9eba6^의10개 파일을 scratch Vite load overlay(5208)로 읽고, 수정 UI는5199에서 실행했다. 작업 트리 되돌림/별도 sim 수정 없음. 같은 tick14 저장·EN/dark·12초·6창·스크롤/드래그 조건.
+- 1× 원본→수정: >50ms124→0개, 최대106.64→0ms, React8029.32→268.01ms, Layout64.86→46.68ms, HandlePostMessage38.53→42.94ms. 상태 전달14→13회.
+- 10× 원본→수정: >50ms35→0개, 최대176.58→0ms, React4548.16→236.12ms, Layout131.30→31.85ms, HandlePostMessage62.78→93.67ms. 상태 전달38→40회. 입력 종료 후0.5초 정착에는5개/합460ms/최대123ms가 남는다. 입력 중 개선과 정착 비용을 구분한다.
+- CDP 측정 멈춤 원인은 승인/샌드박스가 아니라 비활성 대상 탭의 Input.dispatchMouseEvent 응답 대기였다. Page.bringToFront 및 명령20초 제한을 추가하고 재실행 완료. trace 완료 resolver도 종료 명령 전에 등록하도록 수정.
+- 최종 비교 원본: 같은 scratch perf-baseline-all-1/10.*, perf-matched-all-1/10.*. 창별 기존 측정은 sim 조건이 달라 정량적인 최종 비교로 쓰지 않는다. 장기 저장과 배포 빌드 성능은 미측정.
+
+### 2-92 코드 대조 보정
+- 최신 commands.build는 기본 방식과 같은 건물만 찾아 증설한다. 따라서 기존 왕실 건물은 ID별 expand로 현재 방식을 보존하고, 여러 왕실 건물이 있으면 각 ID의 조작을 따로 둔다. 카드 전망 대상은 ID 오름차순 첫 왕실 건물로 고정; 최초 건설만 methodId 없는 build를 쓴다. sim 규칙 변경 없음.
+
+### 2-92 구현 완료 · 2-91 혼합 산출 동시 반영
+- 2열 카드·6분류 드롭다운·예상 수익/이름/회수 정렬·지역 공사 +건수. 막힌 카드도 상세 진입 가능, 기술/땅/광맥/약정금/동시공사 차단을 툴팁으로. 농지·산림·부지 배경 토큰은 양 테마에 적용. 기존 레벨+짓는 레벨은 지역 전체 합계, 툴팁 왕실/민영 분리.
+- ConstructionDetail 공통 상세520×640: 지역 종류별 요약과 건설 카드가 같은 본문을 연다. 지역 인라인 중복 BuildList/공사/조작 제거. 전체/민영/왕실, 건물ID별 왕실 제어, 민영·외국 읽기 전용. 새 건물 +1/+5는 방식 지정 없이 build, 기존은 정확한 ID expand. 잠긴 방식 기술·무역소 사용 가능 금고/약정금·사무소 공사 수수료/부하·학교 자리·개별 상세/소유권 경로 보존.
+- 전망은 첫 왕실 ID 현재 방식 또는 최초 사용 가능 방식1개만, 주간 캐시(구조/기술/공사 변경 시 무효화). 최대 수익 방식 오표시/전 방식 반복 전망 제거. 상세 비용/가격은 최신 세계. 현재 공급÷수요·가격을 각 산출 상품별로 표시, +1/+5 전망 표시 제거(혼합 산출 시험 포함).
+- 루트 typecheck·클라이언트34파일88시험 통과. CSS1920×1028 헤드리스 스크린샷 확인: C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/construction-final-ko-light.png, construction-final-en-dark.png, construction-builder-ko-light.png, construction-queue-ko-light.png, construction-private-en-dark.png, construction-region-common-en-dark.png. 주 창 본문403/scroll403, 상세491/scroll491. 왕실사무소1000 +1/+5→target1000/method build_manual, 정지·순서 변경, 민영 제어0개, 지역 공통 상세 진입 확인. SSR 외국 읽기 전용·지분/광맥·혼합 산출4개 회귀 추가. 실제 모든 기술 전환·특수 기관 모든 조합은 미검증.
+- 다음2-93 실제 가동, 이어2-82 부 이동 중복. sim 요청 없음.
+
+## 2026-11-06 2-93 실제 가동 완료
+- 건설 통합 커밋49e1a63. actualOutputFactors 순수 클라이언트 계산: active && !idle일 때 가동률×crewOf×efficiency×last.inputFill×harvestFactor, 아니면0. 사무소는 officeLoad도 곱한다(일감이 없으면0%, 일부 일감이면 그 몫). 사무소 외에는 office계수1. 소유 기관(저택·금융가)은 기존 OwnerSummary만 표시.
+- ConstructionDetail 건물ID 줄·BuildingEconomics 개별 상세·CompanyPanel 건물 줄에 ActualOutput 공통 표시. 숫자소수2자리·100% 초과 유지, 막대만100%에서 자름. 툴팁에 가동률/작업 인원/효율/원료/기상/사무소 부하. 멈춤은 과거 inputFill이 남아도0, 쉬는 사무소도0. 실시간 officeLoad를 읽으므로 마지막 생산 포인트를 역산한 수치와는 다를 수 있음.
+- 행정청은 finance.adminCapacityOf의 식과 대조: 단독 행정청 세계에서 표시비율×기본징세한도=공개 taxCapacity API(crew0.65/util0.8/fill0.4)로 시험. sim 함수 요청 없음. 원료0·정지·idle·일감0·기상·100% 초과 시험 포함.
+- 루트 typecheck·클라이언트35파일91시험 통과. 1920×1028 헤드리스 스크린샷 확인: C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/actual-admin-ko-light.png, actual-admin-en-dark.png. 행정청1001 실제 가동78.52%, 통합 줄/개별 상세 동일, 상세491/scroll491. 정지/원료0/100%초과는 자동 시험 확인(그 조합의 화면은 미검증). 다음2-82 중복 표.
+
+## 2026-11-06 2-82 부 이동 중복 수정
+- 실제 가동 커밋b6c8c4b. BuildingPops의 소득·세금 펼침 안에 다시 나오던 WealthDrift 제거. 상단 부 이동 표1개와 소득·세금 내역은 유지.
+- 루트 typecheck·클라이언트35파일91시험 통과. CSS1920×1028 헤드리스 스크린샷 확인: C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/drift-single-ko-light.png. 인구 표→첫 집단 상세, building-pops1/wealth-drivers1 실측. 다음0장2-94 기술 잠금.
+
+## 2026-11-06 2-94 기술로 열리는 수요 완료
+- 부 이동 중복 커밋3312f9a. DemandLock 공통 아이콘을 시장 상품 행·상품 상세에 적용. 지역 범위는 그 지역, 세계/왕국 범위는 플레이어 왕국 지역 lockedGoods. 툴팁은 goodTechs 전체 기술의 현 언어 이름, 문장 본문 없음. 기존 이름 함수로 정밀 기기/공장 새 이름 자동 반영. sim d795e52 병합 대조.
+- 루트 typecheck·클라이언트36파일92시험 통과. 지역과 플레이어 왕국의 잠금이 다른 경우 및 양 언어 복수 기술 시험. CSS1920×1028 헤드리스 스크린샷 확인: C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/demand-lock-ko-light.png, demand-detail-ko-light.png, demand-detail-en-dark.png. 운송/종이/정밀 기기3행 잠금, 운송 상세 잠금, 마찻길/증기철도 양 기술·본문403/scroll403 확인. 다음2-89 복지 상한.
+
+## 2026-11-06 2-89 복지 상한 완료
+- 수요 잠금 커밋1b4b224. WelfareCap 공통 표시를 예산 복지 단계 줄/복지 내역 줄·정책 복지 탭에 적용. welfareCapDaily×7, 단계 hover/focus 미리보기 화살표·버튼 툴팁의 단계별 주간 상한, Infinity 숨김. 설명 문장 추가 없음.
+- 복지 drill 차이를 상한으로 줄인 몫/Cut by cap으로 정정하고 평활 도움말 제거. 모든 상세 Σ가 행합+smoothing을 포함해 상단 drill.weekly와 맞도록 수정(기존 행합만 표시하던 누락).
+- 루트 typecheck·클라이언트37파일93시험 통과. 단계1→5 비례·무제한 숨김 회귀. CSS1920×1028 헤드리스 스크린샷 확인: C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/welfare-cap-en-dark.png, welfare-detail-en-dark.png, welfare-detail-ko-light.png, welfare-policy-ko-light.png. 별도 저장 lastBudget.revenue42000/구빈법: 상한1단계16800→5단계84000, 실제 단계5 명령 후84000, 툴팁84000, 본문403/scroll403, 복지Σ−33600=drill.weekly. 검증 저장 복원. 실제 주간 지출 확정까지 시간 경과는 미검증(sim API 그대로 읽음). 다음2-55 자본가 필터.
+
+## 2026-11-06 2-55 직종 필터 잔여 완료
+- 복지 상한 커밋0fc470c. 인구 표 직종 select에서 폐기 직종capitalist 제외, 과거 탐색 이력에 그 필터가 남았으면 전체로 복귀. sim 직종·실제 인구 자료는 변경하지 않음.
+- 루트 typecheck·클라이언트37파일93시험 통과. CSS1920×1028 헤드리스 스크린샷 확인: C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/professions-ko-light.png. option값은 전체/unskilled/farmer/skilled/expert/gentry/peasant/aristocrat, capitalist0개. 다음2-62 비용 막대 라벨.
+
+## 2026-11-06 2-62 비용 막대 라벨 잔여 완료
+- 직종 필터 커밋c50f91b. BuildingCostBar에서 day.fee>0인 매출 툴팁 라벨을 공사 수수료/Construction fees로 변경. 일반 생산은 기존 판매 라벨.
+- 루트 typecheck·클라이언트37파일93시험 통과. CSS1920×1028 헤드리스 스크린샷 확인: C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/cost-fees-ko-light.png. 일시정지된 검증 세계 사무소1000의 화면 복제값fee/revenue100, inputs10, wages20→공사 수수료100/이익70/70% 툴팁 확인(저장하지 않음). 다음2-83 재해 칩.

@@ -1,42 +1,28 @@
-import {DemolitionBadge} from './DemolitionBadge';
-import {ownershipLabel} from '../ownershipLabel';
-import {t as uiCopy} from '../i18n';
-import {DetailWindow} from './DetailWindow';
+﻿import {useEffect,useMemo} from 'react';
+import {BUILDING_BY_ID,isOwnerBuilding} from '@econ/sim';
+import type {GoodId,Region,World} from '@econ/sim';
+import type {Game} from '../useGame';
+import {buildingGroups} from '../buildingGroups';
+import {useNavigationState} from '../NavigationHistory';
+import {buildingName,regionName,useLang,useT} from '../i18n';
+import {NumericValue} from '../NumericValue';
+import {BuildingSprite} from '../sprites';
 import {BuildingMetricBars} from './BuildingMetricBars';
 import {BuildingCostBar} from './BuildingCostBar';
 import {ReserveBar} from './ReserveBar';
 import {OwnerSummary} from './OwnerSummary';
 import {OwnershipBar} from './OwnershipBar';
-import {useNavigationState} from '../NavigationHistory';
-import {GroupDetail} from './GroupDetail';
-import {useEffect,useMemo,useState,useRef} from 'react';
-import {BUILDING_BY_ID,isOwnerBuilding,playerCompany} from '@econ/sim';
-import type {GoodId,Region,World} from '@econ/sim';
-import type {Game} from '../useGame';
-import {buildingGroups,summarizeBuildings} from '../buildingGroups';
-import {buildingName,useLang,useT} from '../i18n';
-import {NumericValue} from '../NumericValue';
-import {BuildingSprite} from '../sprites';
-import {Bar} from '../ui';
-import {pct} from '../format';
-import {BuildList,Projects} from './CompanyPanel';
-import {BuildingInspector} from './ResourceInspector';
+import {DemolitionBadge} from './DemolitionBadge';
+import {DetailWindow} from './DetailWindow';
+import {ConstructionDetail} from './ConstructionDetail';
 import {ListTools} from './ListTools';
-type View='all'|'private'|'state';
-export function RegionIndustry({world,region,game,request,onGood,onCompany,onOpenBuilding}:{world:World;region:Region;game:Game;request?:{id:number;sequence:number}|null;onGood:(g:GoodId)=>void;onCompany:(id:number)=>void;onOpenBuilding?:(id:number)=>void}){
- const T=useT(),S=T.system,G=T.buildingGroups,lang=useLang(),me=playerCompany(world);
- const [selected,setSelected]=useNavigationState<string|null>('views/RegionIndustry.tsx:selected',null),[view,setView]=useNavigationState<View>('views/RegionIndustry.tsx:view','all'),[inspect,setInspect]=useNavigationState<number|null>('views/RegionIndustry.tsx:inspect',null),[build,setBuild]=useNavigationState('views/RegionIndustry.tsx:build',false);
+
+export function RegionIndustry({world,region,game,request,onGood,onCompany,onOpenBuilding=()=>{}}:{world:World;region:Region;game:Game;request?:{id:number;sequence:number}|null;onGood:(g:GoodId)=>void;onCompany:(id:number)=>void;onOpenBuilding?:(id:number)=>void}){
+ const T=useT(),S=T.system,G=T.buildingGroups,lang=useLang();
+ const [selected,setSelected]=useNavigationState<string|null>('region-industry:selected',null);
  const [search,setSearch]=useNavigationState('views/RegionIndustry.tsx:search',''),[sort,setSort]=useNavigationState('views/RegionIndustry.tsx:sort','level'),[direction,setDirection]=useNavigationState('views/RegionIndustry.tsx:direction',-1);
- const root=useRef<HTMLElement|null>(null);
- useEffect(()=>{if(inspect!==request?.id)return;const frame=requestAnimationFrame(()=>root.current?.querySelector(`[data-building-id="${inspect}"]`)?.scrollIntoView({block:'nearest'}));return()=>cancelAnimationFrame(frame);},[inspect,request?.sequence]);
- useEffect(()=>{setSelected(null);setInspect(null);setView('all');setBuild(false);},[region.id]);
- useEffect(()=>{const b=world.buildings.find(b=>b.id===request?.id&&b.regionId===region.id);if(b){setSelected(b.typeId);setView(b.stateOwned?'state':'private');setInspect(b.id);setSearch('');}},[request,region.id]);
- const seenProjects=useRef(new Set(world.constructions.map(c=>c.id)));
- useEffect(()=>{
-  const fresh=world.constructions.find(c=>!seenProjects.current.has(c.id)&&c.regionId===region.id&&c.companyId===me?.id);
-  seenProjects.current=new Set(world.constructions.map(c=>c.id));
-  if(fresh){setSelected(fresh.typeId);setView('state');setInspect(null);setBuild(false);setSearch('');}
- },[world.constructions,region.id,me?.id]);
+ useEffect(()=>setSelected(null),[region.id]);
+ useEffect(()=>{const b=world.buildings.find(b=>b.id===request?.id&&b.regionId===region.id);if(b){setSelected(b.typeId);setSearch('');}},[request,region.id]);
  const groups=buildingGroups(world,region.id),week=Math.floor(world.tick/7),typeKey=groups.map(g=>g.typeId).sort().join('|');
  const order=useMemo(()=>[...groups].sort((a,b)=>{
   const ownership=Number(isOwnerBuilding(a.typeId))-Number(isOwnerBuilding(b.typeId));if(ownership)return ownership;
@@ -44,31 +30,16 @@ export function RegionIndustry({world,region,game,request,onGood,onCompany,onOpe
   return (sort==='name'?buildingName(a.typeId).localeCompare(buildingName(b.typeId),lang):value(a)-value(b))*direction||a.typeId.localeCompare(b.typeId);
  }).map(g=>g.typeId),[region.id,week,typeKey,sort,direction,lang]);
  const filtered=order.map(id=>groups.find(g=>g.typeId===id)!).filter(g=>buildingName(g.typeId).toLocaleLowerCase().includes(search.toLocaleLowerCase()));
- const summary=(data:ReturnType<typeof summarizeBuildings>,typeId:string)=><div className="group-metrics">
-  {(typeId==='builder'||!BUILDING_BY_ID[typeId].stateOnly&&!BUILDING_BY_ID[typeId].methods.some(m=>m.construction))&&<BuildingCostBar econ={data.econ}/>}
-  <BuildingMetricBars employed={data.econ.employed} jobs={data.econ.jobs} profit={data.econ.profitWeek} perLevel={data.econ.profitWeekPerLevel}/>{data.econ.hasReserve&&<ReserveBar value={data.econ.reserve} cap={data.econ.reserveCap} weekly={data.econ.reserveWeek}/>}
- </div>;
- return <section ref={root} className="region-industry">
+ return <section className="region-industry">
   <div className="industry-total">{G.types} {groups.length} · L <NumericValue value={groups.reduce((n,g)=>n+g.levels,0)} format="compact"/></div>
   <ListTools placeholder={G.search} value={sort} onChange={setSort} direction={direction} onDirection={()=>setDirection(-direction)} search={search} onSearch={setSearch} count={filtered.length} options={[["level",G.levels],["name",G.name],["utilization",T.utilisation],["staffing",G.staffing],["profit",S.weekProfit],["perLevel",S.perLevel],["dividend",S.dividend]]}/>
-  {me&&region.kingdomId===me.kingdomId&&<DetailWindow title={G.newBuilding} help={uiCopy().screenText['searchBuildingsAvailabilityCostComparison']} open={build} onOpenChange={setBuild}><BuildList game={game} world={world} me={me} region={region} projects={world.constructions.filter(c=>c.companyId===me.id).length} excludeTypes={groups.map(g=>g.typeId)}/></DetailWindow>}
-  {filtered.map(g=>{
-   const open=selected===g.typeId,items=g.buildings.filter(b=>view==='all'||(view==='state'?b.stateOwned:!b.stateOwned));
-   const projects=g.projects.filter(c=>view==='all'||(view==='state')===!!world.companies.find(o=>o.id===c.companyId)?.state),data=summarizeBuildings(world,items);
-   const queued=g.projects.reduce((n,c)=>n+(c.levels??1),0),required=g.projects.reduce((n,c)=>n+c.required,0);
-   return <article key={g.typeId} className={`industry-group ${isOwnerBuilding(g.typeId)?'owner-group':''}`}>
-    <button className="industry-group-head" aria-expanded={open} onClick={()=>{setSelected(open?null:g.typeId);setView('all');setInspect(null);}}><BuildingSprite typeId={g.typeId} size={40}/><strong>{buildingName(g.typeId)}</strong><span>×{g.levels}{queued>0&&<small className="accent"> +{queued}</small>}{g.shrinking>0&&<DemolitionBadge levels={g.shrinking}/>}</span></button>
-    <OwnershipBar world={world} buildings={g.buildings}/>{isOwnerBuilding(g.typeId)?<OwnerSummary buildings={g.buildings}/>:summary(g,g.typeId)}{required>0&&<Bar value={g.projects.reduce((n,c)=>n+c.points,0)/required} label={T.construct}/>}
-    {open&&<div className="industry-group-detail"><div className="system-tabs">{(['all','private','state'] as const).map(v=>{const count=g.buildings.filter(b=>v==='all'||(v==='state')===b.stateOwned).reduce((n,b)=>n+b.level,0);const pending=g.projects.some(c=>v==='all'||(v==='state')===!!world.companies.find(o=>o.id===c.companyId)?.state);return <button key={v} aria-pressed={view===v} disabled={!count&&!pending} onClick={()=>{setView(v);setInspect(null);}}>{S[v]} <small>{count}</small></button>;})}</div>
-     <OwnershipBar world={world} buildings={items}/>{isOwnerBuilding(g.typeId)?<OwnerSummary buildings={items}/>:<>{summary(data,g.typeId)}<div className="system-facts"><span>{T.utilisation}<b>{pct(data.utilization)}</b></span>{[[g.typeId==='builder'?T.constructionFees:S.sales,data.econ.day.sales],[S.inputs,-data.econ.day.inputs],[T.wages,-data.econ.day.wages],[S.profit,data.econ.day.profit]].map(([label,value])=><span key={label}>{label} / {S.day}<b><NumericValue value={Number(value)} format="signedMoney"/></b></span>)}</div></>}
-     <GroupDetail world={world} buildings={items} game={game} onGood={onGood} onOwner={id=>onOpenBuilding?.(id)} showControls={view!=='private'&&region.kingdomId===me?.kingdomId}/>
-     {items.map(b=><div key={b.id} data-building-id={b.id}><button className="entity-link" aria-expanded={inspect===b.id} onClick={()=>setInspect(inspect===b.id?null:b.id)}>{ownershipLabel(world,b)} ×{b.level} ↗</button>{inspect===b.id&&<BuildingInspector game={game} building={b} world={world} onGood={onGood} onCompany={onCompany}/>}</div>)}
-     {me&&projects.length>0&&<Projects game={game} world={world} owner={world.companies.find(c=>c.kingdomId===region.kingdomId&&c.state)??me} projects={projects} regionId={region.id}/>}
-     {me&&region.kingdomId===me.kingdomId&&view!=='private'&&!g.buildings.some(b=>b.companyId===me.id)&&<BuildList game={game} world={world} me={me} region={region} projects={world.constructions.filter(c=>c.companyId===me.id).length} includeTypes={[g.typeId]}/>}
-    </div>}
-   </article>;
-  })}
-  {!filtered.length&&<p className="empty">{T.noMatches}</p>}
-
+  {filtered.map(g=><article key={g.typeId} className={`industry-group ${isOwnerBuilding(g.typeId)?'owner-group':''}`}>
+   <button className="industry-group-head" aria-haspopup="dialog" aria-expanded={selected===g.typeId} onClick={()=>setSelected(g.typeId)}><BuildingSprite typeId={g.typeId} size={40}/><strong>{buildingName(g.typeId)}</strong><span>×{g.levels}{g.projects.length>0&&<small className="accent"> +{g.projects.reduce((n,c)=>n+(c.levels??1),0)}</small>}{g.shrinking>0&&<DemolitionBadge levels={g.shrinking}/>}</span></button>
+   <OwnershipBar world={world} buildings={g.buildings}/>{isOwnerBuilding(g.typeId)?<OwnerSummary buildings={g.buildings}/>:<div className="group-metrics">
+    {(g.typeId==='builder'||!BUILDING_BY_ID[g.typeId].stateOnly&&!BUILDING_BY_ID[g.typeId].methods.some(m=>m.construction))&&<BuildingCostBar econ={g.econ}/>}
+    <BuildingMetricBars employed={g.econ.employed} jobs={g.econ.jobs} profit={g.econ.profitWeek} perLevel={g.econ.profitWeekPerLevel}/>{g.econ.hasReserve&&<ReserveBar value={g.econ.reserve} cap={g.econ.reserveCap} weekly={g.econ.reserveWeek}/>}
+   </div>}
+  </article>)}
+  <DetailWindow hideTrigger title={selected?`${buildingName(selected)} · ${regionName(region)}`:T.constructionUI.manage} help={T.constructionUI.manage} open={selected!==null} onOpenChange={open=>{if(!open)setSelected(null);}}>{selected&&<ConstructionDetail key={`${region.id}:${selected}`} world={world} game={game} region={region} typeId={selected} initialBuildingId={request?.id} onGood={onGood} onCompany={onCompany} onOpenBuilding={onOpenBuilding}/>}</DetailWindow>
  </section>;
 }
