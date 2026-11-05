@@ -347,3 +347,29 @@ DetailWindow 독립 NavigationProvider/버튼, BuildingPops 및 ResourceInspecto
 - IndustryLabel은 sim industryOf/INDUSTRIES의 양 언어 이름을 읽음. 건설 목록·펼친 방식·열 방식 비교 머리에 표시, 해당 산업 없음은 숨김. 방식 비교에 methodMarginAtBase 기준 원료비/매출 비율 행 추가(매출0은 —).
 - 루트 typecheck·클라이언트33파일84시험 통과. 1920×1028 헤드리스 스크린샷 확인: C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/nov5-types-ko-light.png, nov5-types-en-dark.png. 방직 카드 기본/아래 방식 가공, 맞춤/고급 방식 숙련 분리 확인. 공사/실제 방식 전환 및 비율 행 전체 조합은 미검증(해당 행은 sim 순수 API를 읽음).
 - 2-62 커밋3d6e3c3. 다음2-55 금융가1좌 가치·자본가 필터.
+
+## 2026-11-06 최우선 창 버벅임 · 측정과 1차 개선
+- 시작 main cca3017, git log/status 대조. 클라이언트 미커밋 없음에서 시작(기존 UI_WINDOWS와 기타 임시 파일 보존). sim·worker 프로토콜은 변경하지 않음.
+- 조건: 로컬 헤드리스 Edge Chromium CDP Tracing + V8 CPU Profiler, Vite 개발 빌드, CSS1920×1028. 같은 저장(tick14/83pops/56건물, SHA256 앞12자리9ca39450bfd5)을 매번 다시 불러옴. 각12초, 창 본문 휠 스크롤·제목 드래그를 순차 반복. 속도1×/10×. 테스트/타입 검사와 겹친 첫 후측정은 버리고 다시 측정. 배포 빌드·장기/큰 저장·실제 Windows 배율은 미측정.
+- 전측정: 닫힌 창도 전부 렌더, 비활성 탐색 탭도 계산. 1×에서는 hour120회/12초가 창 전체를 갱신. 10× 다중 창 CPU 표본 React5919.92ms, exactNumber1236.48ms(매 호출 Intl.NumberFormat 생성). 메시지 handler7.60ms, HandlePostMessage80.24ms, Layout154.92ms. 순수 역직렬화 전용 trace event는 없어서 분리 못 함; HandlePostMessage는 역직렬화+브라우저 전달+handler를 합한 상한이며, React가 주된 비용.
+
+|창 단독|전 1× >50ms 작업|전 10× >50ms 작업|기본 수정 중간 10× >50ms 작업|
+|---|---:|---:|---:|
+|건물 목록|122|35|0|
+|인구 표|45|35|0|
+|통계 차트|121|36|1 (69.03ms)|
+|건설 목록|111|34|0|
+|모두 닫음|미측정|36|0|
+
+- 변경: ActiveContent는 첫 열림에만 생성, 닫힌 창/비활성 탭은 기존 상태·스크롤을 보존하며 새 snapshot 재조정 생략. 열린 독립 DetailWindow는 부모가 숨겨져도 보이는 상세로 등록해 최신 세계를 계속 받음. App의 시각/토스트 변경은 windowGame을 바꾸지 않음. 지도 callback/memo, 숫자/아틀라스 그림 memo, exactNumber 포맷터 재사용. SSR 시장 시험은 미방문 상세를 선행 렌더하지 않는 기대값으로 변경.
+- 제목 드래그·휠/스크롤 중에는 창 본문 snapshot을 유지하고 마지막 입력200ms 뒤 최신 상태로 갱신. 상단 시각·위험 정지는 즉시 유지. 명령·세이브는 worker의 최신 세계를 사용. 입력 중 값이 잠시 고정되는 것은 이 개선의 의도한 동작.
+
+|주 창6개 조작|전 >50ms 작업/최대|최종 조작 구간 >50ms 작업|React 표본 전→후|Layout 전→후|
+|---|---|---:|---|---|
+|1×|123 / 173.81ms|0|8521.13→260.15ms|65.88→40.04ms|
+|10×|35 / 219.04ms|0|5919.92→121.66ms|154.92→17.21ms|
+
+- 한계까지 추가 측정: 10× 긴 입력을 끝내고0.5초 정착 구간에는3개/합222ms/최대94ms 작업. 6창을 열고 조작 없이 자동 갱신한12초에는5개/합288.96ms/최대66.89ms(React1433.60ms). 따라서 모든 상황의 긴 작업이 사라졌다고 판정하지 않음. 조작 후 금고DOM15,185,835.20이 최신 세계15,185,835.196...와 일치. 큰 표 가상화는 아직 도입하지 않았고, 남은 건설 목록 전망 계산은 다음2-92 재설계에서 함께 줄일 대상.
+- 원본 계측: C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/profile-windows.mjs, perf-world.json, perf-before-<all/buildings/pops/trends/construction/map>-<1/10>.json/.trace.json/.cpuprofile, perf-final-all-1.*, perf-verified-all-10.*, perf-verified-all-idle-10.*. 중간 after 파일은 기본 최적화만의 측정이며 최종과 구분.
+- 루트 npm.cmd run typecheck·클라이언트33파일84시험 통과. 1920×1028 헤드리스 스크린샷 확인: 같은 scratch의 perf-final-settled-en.png, perf-detached-live-en.png, perf-lazy-market-detail-ko-light.png, perf-lazy-market-detail-en-dark.png. 검색Lumber→닫기/재열기 보존, 지연 생성 상품 상세 진입, 모든 열린 주 창 본문403/scroll403. 주 창 숨김 상태에서 독립 소유 상세 world.tick152가 실제 세계152와 일치. 언어/테마 실제 상태KO/light·EN/dark 대조. 일반 사용자의 체감 확인은 별도.
+- 다음: 사용자 최신 순서2-92 건설 창 최종 검토·재설계 → 실제 가동 값 → 부 이동 중복 제거와0장. 2-55 작업은 아직 시작하지 않음.

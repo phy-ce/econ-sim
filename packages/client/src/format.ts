@@ -3,6 +3,7 @@ import { getLang } from './lang';
 const nf0 = new Intl.NumberFormat('ko-KR', { maximumFractionDigits: 0 });
 const nf1 = new Intl.NumberFormat('ko-KR', { maximumFractionDigits: 1, minimumFractionDigits: 1 });
 const nf2 = new Intl.NumberFormat('ko-KR', { maximumFractionDigits: 2, minimumFractionDigits: 2 });
+const nfExact = new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 });
 
 export const money = (v: number) => `${v < 0 ? "−" : ""}ƒ${moneyAmount(Math.abs(v))}`;
 export const signedMoney = (v: number) => `${v >= 0 ? '+' : '−'}ƒ${moneyAmount(Math.abs(v))}`;
@@ -31,7 +32,7 @@ export function compact(v:number):string {
   if(rounded>=1000&&unit<3){unit++;rounded=1;}
   return `${sign}${rounded}${units[unit]}`;
 }
-export const exactNumber=(v:number)=>Number.isFinite(v)?new Intl.NumberFormat('en-US',{maximumFractionDigits:2}).format(v):'—';
+export const exactNumber=(v:number)=>Number.isFinite(v)?nfExact.format(v):'—';
 export const compactMoney = money;
 export const signedCompactMoney = (v: number) => `${v >= 0 ? '+' : '−'}ƒ${moneyAmount(Math.abs(v))}`;
 

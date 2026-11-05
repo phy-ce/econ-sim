@@ -13,7 +13,7 @@ import type { PopRequest } from './views/PopTable';
 import { eventDestination } from './eventDestination';
 import { NumericValue } from './NumericValue';
 import { taxCollectionRatio } from './systemMetrics';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, useMemo } from 'react';
 import type { ReactNode } from 'react';
 import { Menu, Moon, Pause, SkipForward, Map, HardHat, Users, Package, Factory, Landmark, FlaskConical, ChartNoAxesCombined } from 'lucide-react';
 import { WindowWorkspace } from './views/WindowWorkspace';
@@ -65,18 +65,21 @@ function Popover({ button, label, children, className = '' }: { button: ReactNod
 
 export function App() {
   const game = useGame();
+  // Hour and toast messages only affect the chrome; window actions depend on these snapshots.
+  const windowGame=useMemo(()=>game,[game.world,game.history,game.constructionActivity,game.lastReadTick,game.speed,game.pauseReason,game.prefs]);
   const [langChosen,setLangChosen]=useState(hasStoredLang);
   const [opened, setOpened] = useState<WindowId[]>(['map']);
   const [revealRequest,setRevealRequest] = useState(0);
   const [screenRequest,setScreenRequest]=useState<ScreenRequest|null>(null);
   const openLinkedWindow=useCallback((route:ScreenRoute)=>{trace('window',{id:route.kind,action:'open'});setOpened(current=>[...current.filter(w=>w!==route.kind),route.kind]);setScreenRequest(p=>({target:route.kind,route,sequence:(p?.sequence??0)+1}));},[]);
-  const requestScreen=(target:WindowId,route:ScreenRoute)=>setScreenRequest(p=>({target,route,sequence:(p?.sequence??0)+1}));
-  const showWindow = (id: WindowId) => {trace('window',{id,action:'open'}); setOpened(current=>id==='map'?current:[...current.filter(w=>w!==id),id]); setRevealRequest(v=>v+1); };
+  const requestScreen=useCallback((target:WindowId,route:ScreenRoute)=>setScreenRequest(p=>({target,route,sequence:(p?.sequence??0)+1})),[]);
+  const showWindow = useCallback((id: WindowId) => {trace('window',{id,action:'open'}); setOpened(current=>id==='map'?current:[...current.filter(w=>w!==id),id]); setRevealRequest(v=>v+1); },[]);
   const [popRequest,setPopRequest]=useState<PopRequest|null>(null);
   const [buildingRequest,setBuildingRequest]=useState<{id:number;sequence:number}|null>(null);
   const [regionTabRequest,setRegionTabRequest]=useState({tab:'overview' as 'overview'|'industry',sequence:0});
   const showRegionBuildings=()=>{setRegionTabRequest(r=>({tab:'industry',sequence:r.sequence+1}));showWindow('region');};
   const [regionId, setRegionId] = useState(1);
+  const selectRegion = useCallback((id: number) => { requestScreen('region',{kind:'region',regionId:id}); setRegionId(id);setRegionTabRequest(r=>({tab:'overview',sequence:r.sequence+1})); showWindow('region'); },[requestScreen,showWindow]);
   const [good, setGood] = useState<GoodId>('food');
   const [theme, setTheme] = useState<'light' | 'dark'>(loadTheme);
   const { world } = game;
@@ -120,7 +123,7 @@ export function App() {
   const me = playerCompany(world);
   const region = regionById(world, regionId);
   const viewCompany = (id:number) => {const company=companyById(world,id);if(!company)return;requestScreen('trends',{kind:'trends',kingdomId:company.kingdomId});setPopRequest(null);showWindow('trends');};
-  const selectRegion = (id: number) => { requestScreen('region',{kind:'region',regionId:id}); setRegionId(id);setRegionTabRequest(r=>({tab:'overview',sequence:r.sequence+1})); showWindow('region'); };
+
   const openPops=(regionId:number,prof:PopClass)=>{setRegionId(regionId);setPopRequest(p=>({regionId,prof,sequence:(p?.sequence??0)+1}));showWindow('region');};
   const openBuilding=(id:number)=>{const b=world.buildings.find(b=>b.id===id);if(b){requestScreen('region',{kind:'region',regionId:b.regionId,buildingId:id});setRegionId(b.regionId);setBuildingRequest(p=>({id,sequence:(p?.sequence??0)+1}));showWindow('region');}};
   const openEvent=(event:GameEvent)=>{
@@ -210,7 +213,7 @@ export function App() {
 
       <WindowWorkspace opened={opened} onOpened={setOpened} windows={[
         {id:'map',title:T.paneMap,icon:<Map size={18}/>,content:<RegionMap world={world} selected={regionId} onSelect={selectRegion}/>},
-        ...([{id:'region',title:T.system.region,icon:<Users size={18}/>},{id:'market',title:T.market,icon:<Package size={18}/>},{id:'state',title:T.stateTitle,icon:<Landmark size={18}/>},{id:'research',title:T.research,icon:<FlaskConical size={18}/>},{id:'construction',title:T.construct,icon:<HardHat size={18}/>},{id:'trends',title:uiCopy().screenText['statistics'],icon:<ChartNoAxesCombined size={18}/>} ] as const).map(w=>({...w,content:<GameWindow id={w.id} active={opened.includes(w.id)} game={game} mapRegionId={regionId} request={screenRequest} onOpenWindow={openLinkedWindow}/>}))
+        ...([{id:'region',title:T.system.region,icon:<Users size={18}/>},{id:'market',title:T.market,icon:<Package size={18}/>},{id:'state',title:T.stateTitle,icon:<Landmark size={18}/>},{id:'research',title:T.research,icon:<FlaskConical size={18}/>},{id:'construction',title:T.construct,icon:<HardHat size={18}/>},{id:'trends',title:uiCopy().screenText['statistics'],icon:<ChartNoAxesCombined size={18}/>} ] as const).map(w=>({...w,content:<GameWindow id={w.id} active={opened.includes(w.id)} game={windowGame} mapRegionId={regionId} request={screenRequest} onOpenWindow={openLinkedWindow}/>}))
       ]}/>
 
 

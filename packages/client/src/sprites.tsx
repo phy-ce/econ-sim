@@ -1,14 +1,15 @@
+import {memo} from 'react';
 import type { CSSProperties } from 'react';
 import type { GoodId, PopClass } from '@econ/sim';
 import type { SPRITES } from './spriteData';
 import { spriteAsset, ATLAS_CELL, ATLAS_COLUMNS, ATLAS_ROWS } from './spriteAtlas';
 export type SpriteName = keyof typeof SPRITES | `region-${number}` | 'royal-crown' | 'private-purse' | 'drought' | 'flood' | 'wildfire' | 'demolish';
-function Art({id, family='general'}: {id:string;family?:'general'|'building'|'goods'}) {
+const Art=memo(function Art({id, family='general'}: {id:string;family?:'general'|'building'|'goods'}) {
   const a=spriteAsset(id,family);
   if (!a) return null;
   // Keep the complete cell, including all transparent padding.
   return <svg width={64} height={64} viewBox={`${a.x} ${a.y} ${ATLAS_CELL} ${ATLAS_CELL}`} overflow="hidden"><image href={`${import.meta.env.BASE_URL}assets/${a.file}?v=4`} width={ATLAS_COLUMNS*ATLAS_CELL} height={ATLAS_ROWS*ATLAS_CELL} style={{imageRendering:'auto'}}/></svg>;
-}
+});
 export function Sprite({name,size=24,label,className='',style}: {name:SpriteName;size?:number;label?:string;accent?:string;className?:string;style?:CSSProperties}) {
   return <svg className={`spr generated-sprite ${className}`} width={size} height={size} viewBox="0 0 64 64" role={label?'img':undefined} aria-label={label} aria-hidden={label?undefined:true} style={style}><Art id={name}/></svg>;
 }

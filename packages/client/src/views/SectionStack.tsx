@@ -1,3 +1,4 @@
+import {ActiveContent} from './ActiveContent';
 import {t as uiCopy} from '../i18n';
 import {useNavigationState} from '../NavigationHistory';
 import { useEffect, useId, useState, useRef, type ReactNode } from 'react';
@@ -58,7 +59,7 @@ export function SectionStack({ storageKey, items, revealId, revealKey, explorer=
         {prefs.map(p=>items.find(i=>i.id===p.id)).filter((item):item is Item=>!!item).map(item=><button key={item.id} aria-pressed={active===item.id} aria-controls={`${prefix}-detail`} data-help={item.title} onClick={()=>setSelected(item.id)}>{item.shortTitle??item.title}</button>)}
       </nav>
       <section className="explorer-detail" id={`${prefix}-detail`} aria-label={items.find(i=>i.id===active)?.title}>
-        {items.map(item=><div key={item.id} hidden={active!==item.id} data-section={item.id}><h3 className="explorer-heading">{item.title}</h3>{item.content}</div>)}
+        {items.map(item=><div key={item.id} hidden={active!==item.id} data-section={item.id}><h3 className="explorer-heading">{item.title}</h3><ActiveContent active={active===item.id}>{item.content}</ActiveContent></div>)}
       </section>
     </div>:<>
     <div className="section-settings"><button onClick={() => setPrefs(defaults())} title={uiCopy().screenText['resetSectionLayout']}><RotateCcw size={12}/></button></div>
@@ -75,7 +76,7 @@ export function SectionStack({ storageKey, items, revealId, revealKey, explorer=
           <button disabled={index === prefs.length - 1} aria-label={`${item.title} ${uiCopy().screenText['moveDown']}`} onClick={() => move(index, 1)}><ArrowDown size={13}/></button>
         </header>
         <div id={bodyId} hidden={p.collapsed}>
-          <div className="section-content" >{item.content}</div>
+          <div className="section-content" ><ActiveContent active={!p.collapsed}>{item.content}</ActiveContent></div>
         </div>
       </section>;
     })}</>}
