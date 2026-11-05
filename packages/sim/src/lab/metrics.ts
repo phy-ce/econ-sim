@@ -900,6 +900,8 @@ export class Collector {
         inc: sig(income / M), spend: sig(a.spend[ci] / M), tax: sig(get('tax') / M), dSav: sig((sav[ci] - a.sav0[ci]) / M),
         wages: sig(get('wages') / M), dividends: sig(get('dividends') / M), rent: sig(get('rent') / M), sales: sig(get('sales') / M), welfare: sig(get('welfare') / M), other: sig(get('other') / M),
         burden: sig(div(get('tax'), gross) ?? NaN), burdenDays: a.burdenDays[ci],
+        // 계층 순서 비교 (wt-manornav): 1인 하루 소득 (한 해 소득 ÷ 연말 인원 ÷ 360), 연말 평균 생활수준
+        pc: sig(div(income, n[ci] * TICKS_PER_YEAR) ?? NaN), sol: sig(div(sol[ci], n[ci]) ?? NaN),
       };
     });
     const ring = a.lowRing.reduce((s, [x, d]) => [s[0] + x, s[1] + d], [0, 0]);

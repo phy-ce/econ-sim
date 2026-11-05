@@ -1,0 +1,168 @@
+{
+ "about": "저택 지분 값에 지대·짓는 공사를 넣는 비교 (2026-11-05 사용자 결정, DECISIONS 7-44, wt-manornav). ctl = 끔. nN = 지대 × N주, b = 짓고 있는 공사에 낸 돈도 자산. 보통 게임 = 강제 법 없음. specs: 20년 × 시드 1·2 × salt 0. 돌리는 법 (packages/sim 에서): bash cli/lab.sh <out.jsonl> ../../docs/overhaul/MANORNAV_SPECS.json",
+ "code": "wt-manornav (main 71d3fa1 위)",
+ "specs": [
+  {
+   "item": "MANORNAV",
+   "name": "ctl",
+   "seed": 1,
+   "salt": 0,
+   "years": 20,
+   "tune": {}
+  },
+  {
+   "item": "MANORNAV",
+   "name": "ctl",
+   "seed": 2,
+   "salt": 0,
+   "years": 20,
+   "tune": {}
+  },
+  {
+   "item": "MANORNAV",
+   "name": "n26",
+   "seed": 1,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "manorNavRentWeeks": 26
+   }
+  },
+  {
+   "item": "MANORNAV",
+   "name": "n26",
+   "seed": 2,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "manorNavRentWeeks": 26
+   }
+  },
+  {
+   "item": "MANORNAV",
+   "name": "n52",
+   "seed": 1,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "manorNavRentWeeks": 52
+   }
+  },
+  {
+   "item": "MANORNAV",
+   "name": "n52",
+   "seed": 2,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "manorNavRentWeeks": 52
+   }
+  },
+  {
+   "item": "MANORNAV",
+   "name": "n104",
+   "seed": 1,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "manorNavRentWeeks": 104
+   }
+  },
+  {
+   "item": "MANORNAV",
+   "name": "n104",
+   "seed": 2,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "manorNavRentWeeks": 104
+   }
+  },
+  {
+   "item": "MANORNAV",
+   "name": "b0",
+   "seed": 1,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "manorNavBuilds": 1
+   }
+  },
+  {
+   "item": "MANORNAV",
+   "name": "b0",
+   "seed": 2,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "manorNavBuilds": 1
+   }
+  },
+  {
+   "item": "MANORNAV",
+   "name": "n26b",
+   "seed": 1,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "manorNavRentWeeks": 26,
+    "manorNavBuilds": 1
+   }
+  },
+  {
+   "item": "MANORNAV",
+   "name": "n26b",
+   "seed": 2,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "manorNavRentWeeks": 26,
+    "manorNavBuilds": 1
+   }
+  },
+  {
+   "item": "MANORNAV",
+   "name": "n52b",
+   "seed": 1,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "manorNavRentWeeks": 52,
+    "manorNavBuilds": 1
+   }
+  },
+  {
+   "item": "MANORNAV",
+   "name": "n52b",
+   "seed": 2,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "manorNavRentWeeks": 52,
+    "manorNavBuilds": 1
+   }
+  },
+  {
+   "item": "MANORNAV",
+   "name": "n104b",
+   "seed": 1,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "manorNavRentWeeks": 104,
+    "manorNavBuilds": 1
+   }
+  },
+  {
+   "item": "MANORNAV",
+   "name": "n104b",
+   "seed": 2,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "manorNavRentWeeks": 104,
+    "manorNavBuilds": 1
+   }
+  }
+ ]
+}

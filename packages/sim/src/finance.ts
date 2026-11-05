@@ -469,11 +469,40 @@ function payHolders(w: World, o: Building, amount: number, source: 'dividends' |
 
 type LevelsOf = Map<number, { typeId: string; n: number }[]>;
 
-/** 소유 건물 o 의 자산 = 금고 + 가진 레벨 × 그 건물 1레벨 공사비 추정 (지분 값의 분자). levelsOf = 소유 건물 id → 가진 레벨 */
-function ownerAssets(w: World, o: Building, levelsOf: LevelsOf): number {
+/** 저택 o 의 주간 지대 = 그 지역 소작지 수확 × 시장값 × rentShare × 7 (어제 수확으로 잰 주간 속도). 소작지가 없으면 0 */
+function manorRentWeek(w: World, o: Building): number {
+  const sub = w.buildings.find((x) => x.regionId === o.regionId && isSubsistence(x.typeId));
+  if (!sub) return 0;
+  const mk = regionById(w, o.regionId).market;
+  let rent = 0;
+  for (const [g, q] of Object.entries(sub.last.output)) rent += (q ?? 0) * mk[g as GoodId].price * TUNE.rentShare * TICKS_PER_WEEK;
+  return rent;
+}
+
+/** 소유 건물이 짓고 있는 공사에 이미 낸 돈 (약정 비율로 나눈 spent): 소유 건물 id → 금액 */
+function spentOnBuilds(w: World): Map<number, number> {
+  const spent = new Map<number, number>();
+  for (const k of w.constructions) {
+    if (!k.funders) continue;
+    let tot = 0;
+    for (const v of Object.values(k.funders)) tot += v;
+    if (tot > 0) for (const [id, v] of Object.entries(k.funders)) spent.set(Number(id), (spent.get(Number(id)) ?? 0) + (k.spent * v) / tot);
+  }
+  return spent;
+}
+
+/**
+ * 소유 건물 o 의 자산 = 금고 + 가진 레벨 × 그 건물 1레벨 공사비 추정 (지분 값의 분자). levelsOf = 소유 건물 id → 가진 레벨.
+ * 저택은 주간 지대 × TUNE.manorNavRentWeeks 를 더하고, TUNE.manorNavBuilds 1 이면 짓고 있는 공사에 낸 돈(spent)도 더한다 (둘 다 돈이 아니라 값이다)
+ */
+function ownerAssets(w: World, o: Building, levelsOf: LevelsOf, spent?: Map<number, number>): number {
   const firm = companyById(w, kingdomById(w, kingdomOf(w, o.regionId)).privateIds[0]);
   let assets = Math.max(0, o.cash ?? 0);
   if (firm) for (const x of levelsOf.get(o.id) ?? []) { const c = constructionEstimate(w, firm, x.typeId).cost; if (Number.isFinite(c)) assets += c * x.n; }
+  if (o.typeId === 'manor') {
+    if (TUNE.manorNavRentWeeks > 0) assets += manorRentWeek(w, o) * TUNE.manorNavRentWeeks;
+    if (TUNE.manorNavBuilds) assets += spent?.get(o.id) ?? 0;
+  }
   return assets;
 }
 
@@ -540,7 +569,7 @@ const stepNo = new WeakMap<World, number>();
 export function beginStep(w: World) { stepNo.set(w, (stepNo.get(w) ?? 0) + 1); }
 export const stepOf = (w: World): number => stepNo.get(w) ?? 0;
 
-/** 저택 지대를 자산으로 세는 주 수 (AI 판단 TUNE.nobleChoice, ownerViews: 지대 × 7 × 이 값을 저택 자산에 넣는다) */
+/** 저택 지대를 자산으로 세는 주 수 (AI 판단 TUNE.nobleChoice, ownerViews: 지대 × 7 × 이 값을 저택 자산에 넣는다). 지분 값이 지대를 세면(TUNE.manorNavRentWeeks > 0) 같은 주 수를 쓴다: AI 가 보는 값과 실제 지분 값이 어긋나지 않게 */
 export const RENT_ASSET_WEEKS = 52;
 
 /** 소유 건물 하나를 AI 가 보는 값 (TUNE.nobleChoice): 새 돈의 기대 주간 수익률 y, 좋아하는 종류 1레벨 공사비 평균 level */
@@ -592,14 +621,7 @@ export function ownerViews(w: World): Map<number, OwnerView> {
     a.lv += owned;
     acc.set(key, a);
   }
-  // 소유 건물이 짓고 있는 공사에 이미 낸 돈 (약정 비율로 나눈 spent)
-  const spent = new Map<number, number>();
-  for (const k of w.constructions) {
-    if (!k.funders) continue;
-    let tot = 0;
-    for (const v of Object.values(k.funders)) tot += v;
-    if (tot > 0) for (const [id, v] of Object.entries(k.funders)) spent.set(Number(id), (spent.get(Number(id)) ?? 0) + (k.spent * v) / tot);
-  }
+  const spent = spentOnBuilds(w);
   const m = new Map<number, OwnerView>();
   for (const o of w.buildings) {
     if (!isOwnerBuilding(o.typeId)) continue;
@@ -611,14 +633,10 @@ export function ownerViews(w: World): Map<number, OwnerView> {
     const level = a && a.lv > 0 ? a.cost / a.lv : b && b.lv > 0 ? b.cost / b.lv : 0;
     let lv = 0;
     for (const x of levelsOf.get(o.id) ?? []) { const cost = costOf(kid, x.typeId); if (Number.isFinite(cost)) lv += cost * x.n; }
-    let rent = 0;
-    if (manor) {
-      const sub = w.buildings.find((x) => x.regionId === o.regionId && isSubsistence(x.typeId));
-      if (sub) { const mk = regionById(w, o.regionId).market; for (const [g, q] of Object.entries(sub.last.output)) rent += (q ?? 0) * mk[g as GoodId].price * TUNE.rentShare * TICKS_PER_WEEK; }
-    }
+    const rent = manor ? manorRentWeek(w, o) : 0;
     const net = (1 - (KEEP_SHARE[o.typeId] ?? 0)) * (1 - (manor ? 0 : TUNE.financeBonus));
     const idle = Math.max(0, o.cash ?? 0) + (spent.get(o.id) ?? 0);
-    const value = lv + idle + rent * RENT_ASSET_WEEKS + level;
+    const value = lv + idle + rent * (TUNE.manorNavRentWeeks || RENT_ASSET_WEEKS) + level;
     const y = value > 0 ? ((Math.max(0, o.profitEma) * TICKS_PER_WEEK + r * (idle + level)) * net) / value : 0;
     m.set(o.id, { y, level });
   }
@@ -674,6 +692,7 @@ export function sellManorUnits(w: World, p: Pop, need: number) {
  * 지분이 하나도 없으면 그 지역 귀족에게 새로 발행하고, 지분 값을 다시 잰다
  */
 function updateManorShares(w: World, levelsOf: LevelsOf) {
+  const spent = TUNE.manorNavBuilds ? spentOnBuilds(w) : undefined;
   for (const o of w.buildings) {
     if (o.typeId !== 'manor') continue;
     const nav0 = Math.max(0.01, o.nav ?? 1);
@@ -692,7 +711,7 @@ function updateManorShares(w: World, levelsOf: LevelsOf) {
       }
       u += fundOf(p, o.id);
     }
-    const assets = ownerAssets(w, o, levelsOf);
+    const assets = ownerAssets(w, o, levelsOf, spent);
     if (!(u > 1e-9)) { issueManorUnits(w, o, assets); continue; }
     o.nav = Math.max(0.01, assets / u);
   }
