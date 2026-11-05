@@ -1,3 +1,4 @@
+import {DemolitionBadge} from './DemolitionBadge';
 import {ownershipLabel} from '../ownershipLabel';
 import {t as uiCopy} from '../i18n';
 import {DetailWindow} from './DetailWindow';
@@ -56,7 +57,7 @@ export function RegionIndustry({world,region,game,request,onGood,onCompany,onOpe
    const projects=g.projects.filter(c=>view==='all'||(view==='state')===!!world.companies.find(o=>o.id===c.companyId)?.state),data=summarizeBuildings(world,items);
    const queued=g.projects.reduce((n,c)=>n+(c.levels??1),0),required=g.projects.reduce((n,c)=>n+c.required,0);
    return <article key={g.typeId} className={`industry-group ${isOwnerBuilding(g.typeId)?'owner-group':''}`}>
-    <button className="industry-group-head" aria-expanded={open} onClick={()=>{setSelected(open?null:g.typeId);setView('all');setInspect(null);}}><BuildingSprite typeId={g.typeId} size={40}/><strong>{buildingName(g.typeId)}</strong><span>×{g.levels}{queued>0&&<small className="accent"> +{queued}</small>}{g.shrinking>0&&<small className="neg"> {T.demolitionQueue(g.shrinking)}</small>}</span></button>
+    <button className="industry-group-head" aria-expanded={open} onClick={()=>{setSelected(open?null:g.typeId);setView('all');setInspect(null);}}><BuildingSprite typeId={g.typeId} size={40}/><strong>{buildingName(g.typeId)}</strong><span>×{g.levels}{queued>0&&<small className="accent"> +{queued}</small>}{g.shrinking>0&&<DemolitionBadge levels={g.shrinking}/>}</span></button>
     <OwnershipBar world={world} buildings={g.buildings}/>{isOwnerBuilding(g.typeId)?<OwnerSummary buildings={g.buildings}/>:summary(g,g.typeId)}{required>0&&<Bar value={g.projects.reduce((n,c)=>n+c.points,0)/required} label={T.construct}/>}
     {open&&<div className="industry-group-detail"><div className="system-tabs">{(['all','private','state'] as const).map(v=>{const count=g.buildings.filter(b=>v==='all'||(v==='state')===b.stateOwned).reduce((n,b)=>n+b.level,0);const pending=g.projects.some(c=>v==='all'||(v==='state')===!!world.companies.find(o=>o.id===c.companyId)?.state);return <button key={v} aria-pressed={view===v} disabled={!count&&!pending} onClick={()=>{setView(v);setInspect(null);}}>{S[v]} <small>{count}</small></button>;})}</div>
      <OwnershipBar world={world} buildings={items}/>{isOwnerBuilding(g.typeId)?<OwnerSummary buildings={items}/>:<>{summary(data,g.typeId)}<div className="system-facts"><span>{T.utilisation}<b>{pct(data.utilization)}</b></span>{[[S.sales,data.econ.day.sales],[S.inputs,-data.econ.day.inputs],[T.wages,-data.econ.day.wages],[S.profit,data.econ.day.profit]].map(([label,value])=><span key={label}>{label} / {S.day}<b><NumericValue value={Number(value)} format="signedMoney"/></b></span>)}</div></>}

@@ -1,3 +1,4 @@
+import {DemolitionBadge} from './DemolitionBadge';
 import {t as uiCopy} from '../i18n';
 import {ownershipLabel} from '../ownershipLabel';
 import {DemolitionProgress} from './DemolitionProgress';
@@ -78,7 +79,7 @@ export function ResourceInspector({ world, region, good, onGood, onCompany, game
       const c = companyById(world,b.companyId);
       const stopped = !b.active || b.idle;
       return <button key={b.id} className="industry-row" aria-pressed={b.id === selected} onClick={() => setSelected(b.id === selected ? null : b.id)}>
-        <BuildingSprite typeId={b.typeId} size={64} /><span className="industry-name"><strong>{buildingName(b.typeId)}</strong><HarvestBadge world={world} regionId={b.regionId} typeId={b.typeId}/>{scopeRegions&&scopeRegions.length>1&&<small>{regionName(world.regions.find(r=>r.id===b.regionId)!)}</small>}<small>{ownershipLabel(world,b)} ×{b.level}</small>{(b.shrinking??0)>0&&<small className="demolition-badge">{T.demolitionQueue(b.shrinking!)}</small>}<small>{stopped ? <><Pause size={12} /> {uiCopy().screenText['pausedIdle']}</> : methodName(getMethod(b.typeId, b.methodId))}</small></span>
+        <BuildingSprite typeId={b.typeId} size={64} /><span className="industry-name"><strong>{buildingName(b.typeId)}</strong><HarvestBadge world={world} regionId={b.regionId} typeId={b.typeId}/>{scopeRegions&&scopeRegions.length>1&&<small>{regionName(world.regions.find(r=>r.id===b.regionId)!)}</small>}<small>{ownershipLabel(world,b)} ×{b.level}</small>{(b.shrinking??0)>0&&<DemolitionBadge levels={b.shrinking!}/>}<small>{stopped ? <><Pause size={12} /> {uiCopy().screenText['pausedIdle']}</> : methodName(getMethod(b.typeId, b.methodId))}</small></span>
         <span className="industry-amount"><NumericValue value={(rowOf(world,b)[side].find(f=>f.g===good)?.cur??0)} format="compact"/><small>{T.perDay}</small></span><ChevronRight size={16} />
       </button>;
     })}</div>

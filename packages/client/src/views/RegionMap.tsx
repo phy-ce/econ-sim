@@ -74,10 +74,11 @@ export function RegionMap({ world, selected, onSelect }: { world: World; selecte
           <title>{`${regionName(r)} · ${kingdomName(r.kingdomId)}\n${T.population} ${int(regionPopulation(r))} · ${T.standardOfLiving} ${regionLivingStandard(r).toFixed(1)}`}</title>
           <path d={shape(r.id).d} className="atlas-hit"/>
         </g>)}
-        {world.regions.map(r=>{const [x,y]=shape(r.id).label;const mine=world.buildings.filter(b=>b.regionId===r.id&&b.companyId===PLAYER_ID).reduce((n,b)=>n+b.level,0);return <g key={`l${r.id}`} className="map-label-g" transform={`translate(${x} ${y}) scale(${1/camera.zoom})`} aria-hidden="true">
+        {world.regions.map(r=>{const [x,y]=shape(r.id).label;const pending=world.buildings.filter(b=>b.regionId===r.id).reduce((n,b)=>n+(b.shrinking??0),0);const mine=world.buildings.filter(b=>b.regionId===r.id&&b.companyId===PLAYER_ID).reduce((n,b)=>n+b.level,0);return <g key={`l${r.id}`} className="map-label-g" transform={`translate(${x} ${y}) scale(${1/camera.zoom})`} aria-hidden="true">
           <SvgSprite name={`region-${r.id}`} x={-42} y={-90} size={84}/>
           <text x="0" y="0" className="atlas-label">{regionName(r)}</text>
           <text x="0" y="27" className="atlas-owner" fill={kingdomOf(r.kingdomId)?.color}>{['●','◆','▲'][world.kingdoms.findIndex(k=>k.id===r.kingdomId)]} {kingdomName(r.kingdomId)}{mine>0?` · ★ ${int(mine)}`:''}</text>
+          {pending>0&&<g className="atlas-demolition"><title>{T.demolitionQueue(pending)}</title><rect x={-52} y={34} width={104} height={44} rx={4}/><SvgSprite name="demolish" x={-50} y={32} size={48}/><text x={25} y={65}>{int(pending)}</text></g>}
         </g>;})}
       </svg>
       <div className="map-legend">
