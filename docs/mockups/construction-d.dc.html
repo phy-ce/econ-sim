@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>건설 창 D</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+button,select{font:inherit;color:inherit;cursor:pointer}
+button:disabled{opacity:.45;cursor:default}
+</style>
+</helmet>
+<div style="width:800px;height:560px;box-sizing:border-box;display:flex;gap:20px;align-items:flex-start;font-family:'Noto Sans KR',system-ui,sans-serif;font-size:12px;color:#2b2118">
+  <div style="width:420px;height:560px;flex:none;box-sizing:border-box;display:flex;flex-direction:column;background:#fbf6ea;border:1px solid #2b2118">
+    <div style="height:28px;flex:none;background:#2b2118;color:#fbf6ea;display:flex;align-items:center;padding:0 10px;font-weight:700;font-size:13px">건설</div>
+    <div style="flex:none;display:flex;align-items:center;gap:6px;padding:6px 10px;border-bottom:1px solid #d8c9ac">
+      <select aria-label="지역" value="{{region}}" onChange="{{onRegion}}" style="flex:1;min-width:0;height:28px;background:#f3ead8;border:1px solid #bda98a;font-weight:700">
+        <sc-for list="{{regions}}" as="o" hint-placeholder-count="3"><option value="{{o.i}}">{{o.label}}</option></sc-for>
+      </select>
+      <b style="color:#8a3b1f;min-width:24px;text-align:right">{{regionQ}}</b>
+      <span style="padding:3px 6px;background:#d5e3b8;border:1px solid #93a86c">농지 <b>{{freeLand}}</b></span>
+      <span style="padding:3px 6px;background:#ecd6b0;border:1px solid #bb9a63">부지 <b>{{freePlot}}</b></span>
+    </div>
+    <div style="flex:none;display:flex;gap:6px;padding:6px 10px;border-bottom:1px solid #d8c9ac;position:relative;z-index:5">
+      <button onClick="{{toggleCat}}" aria-haspopup="listbox" style="{{catBtn}}"><span>{{catLabel}}</span><span style="font-size:10px">▼</span></button>
+      <select aria-label="정렬" value="{{sort}}" onChange="{{onSort}}" style="height:30px;width:92px;background:#fbf6ea;border:1px solid #bda98a;font-size:11px">
+        <option value="p">예상 수익</option><option value="pay">회수 기간</option><option value="name">이름</option>
+      </select>
+      <button onClick="{{toQueue}}" style="{{queueBtn}}">대기열 {{queueCount}}/40</button>
+      <sc-if value="{{catOpen}}" hint-placeholder-val="{{false}}">
+        <div role="listbox" style="position:absolute;top:38px;left:10px;width:200px;background:#fbf6ea;border:1px solid #2b2118;box-shadow:3px 3px 0 #2b2118">
+          <sc-for list="{{cats}}" as="k" hint-placeholder-count="6"><button role="option" onClick="{{k.pick}}" style="{{k.style}}"><span>{{k.label}}</span><span style="color:#5a4a3a;font-weight:400">{{k.n}}</span></button></sc-for>
+        </div>
+      </sc-if>
+    </div>
+    <sc-if value="{{isCards}}" hint-placeholder-val="{{true}}">
+      <div style="flex:1;min-height:0;overflow-y:auto;padding:8px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-auto-rows:104px;gap:6px">
+        <sc-for list="{{cards}}" as="c" hint-placeholder-count="9">
+          <button onClick="{{c.pick}}" onMouseEnter="{{c.enter}}" onMouseLeave="{{c.leave}}" aria-label="{{c.aria}}" style="{{c.style}}">
+            <sc-if value="{{c.locked}}" hint-placeholder-val="{{false}}">
+              <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2b2118" stroke-width="2.4" style="position:absolute;top:5px;right:5px"><rect x="5" y="11" width="14" height="10"></rect><path d="M8 11V7a4 4 0 0 1 8 0v4"></path></svg>
+            </sc-if>
+            <span style="width:36px;height:36px;background:#fbf6ea;border:1px solid #8c7a5e;display:flex;align-items:center;justify-content:center;font-weight:700;color:#5a4a3a">{{c.ic}}</span>
+            <span style="font-weight:700;line-height:1.25">{{c.name}}</span>
+            <span style="font-size:11px;color:#3f3226">{{c.lv}}</span>
+            <span style="{{c.plStyle}}">{{c.pl}}</span>
+            <sc-if value="{{c.tip}}" hint-placeholder-val="{{false}}">
+              <span style="position:absolute;left:50%;bottom:4px;transform:translateX(-50%);white-space:nowrap;padding:3px 7px;background:#2b2118;color:#fbf6ea;font-size:11px;z-index:3">{{c.reason}}</span>
+            </sc-if>
+          </button>
+        </sc-for>
+      </div>
+    </sc-if>
+    <sc-if value="{{isQueue}}" hint-placeholder-val="{{false}}">
+      <div style="flex:1;min-height:0;overflow-y:auto">
+        <div style="padding:5px 10px;background:#f3ead8;font-weight:700;border-bottom:1px solid #d8c9ac">왕실 {{mineN}}</div>
+        <sc-for list="{{mine}}" as="q" hint-placeholder-count="2">
+          <div style="display:flex;align-items:center;gap:5px;padding:5px 10px;border-bottom:1px solid #ecdfc6">
+            <span style="width:16px;color:#5a4a3a">{{q.pos}}</span>
+            <span style="flex:1;min-width:0"><b>{{q.name}}</b> ×{{q.n}} <button onClick="{{q.go}}" style="background:none;border:0;padding:0;color:#8a3b1f;text-decoration:underline;font-size:11px">{{q.where}}</button>
+              <span style="display:block;height:5px;margin-top:3px;background:#ecdfc6"><span style="{{q.bar}}"></span></span></span>
+            <span style="color:#5a4a3a;width:36px;text-align:right">{{q.left}}</span>
+            <button onClick="{{q.pause}}" aria-label="정지" style="width:26px;height:26px;background:#fbf6ea;border:1px solid #bda98a">{{q.pauseIc}}</button>
+            <button onClick="{{q.up}}" aria-label="위로" style="width:26px;height:26px;background:#fbf6ea;border:1px solid #bda98a">↑</button>
+            <button onClick="{{q.down}}" aria-label="아래로" style="width:26px;height:26px;background:#fbf6ea;border:1px solid #bda98a">↓</button>
+            <button onClick="{{q.del}}" aria-label="취소" style="width:26px;height:26px;background:#fbf6ea;border:1px solid #a3341c;color:#a3341c">×</button>
+          </div>
+        </sc-for>
+        <div style="padding:5px 10px;background:#f3ead8;font-weight:700;border-bottom:1px solid #d8c9ac">민간 {{privN}}</div>
+        <sc-for list="{{priv}}" as="q" hint-placeholder-count="2">
+          <div style="display:flex;align-items:center;gap:6px;height:30px;padding:0 10px;border-bottom:1px solid #ecdfc6;color:#5a4a3a"><span style="flex:1">{{q.name}} ×{{q.n}} · {{q.where}}</span><span>{{q.left}}</span></div>
+        </sc-for>
+      </div>
+    </sc-if>
+  </div>
+  <sc-if value="{{showDetail}}" hint-placeholder-val="{{true}}">
+    <div style="width:360px;height:520px;flex:none;box-sizing:border-box;display:flex;flex-direction:column;background:#fbf6ea;border:1px solid #2b2118">
+      <div style="height:28px;flex:none;background:#5a4a3a;color:#fbf6ea;display:flex;align-items:center;padding:0 10px;font-weight:700;justify-content:space-between">
+        <span>{{d.name}} {{d.lv}} · {{d.where}}</span><button onClick="{{closeDetail}}" aria-label="닫기" style="background:none;border:0;color:#fbf6ea;font-size:14px">×</button>
+      </div>
+      <div style="flex:1;padding:10px;display:flex;flex-direction:column;gap:9px;min-height:0">
+        <sc-if value="{{d.locked}}" hint-placeholder-val="{{false}}"><div style="padding:5px 8px;background:#2b2118;color:#fbf6ea">{{d.reason}}</div></sc-if>
+        <div style="display:flex;flex-direction:column;gap:4px">
+          <span style="color:#5a4a3a;font-size:11px">방식</span>
+          <sc-for list="{{d.methods}}" as="m" hint-placeholder-count="3">
+            <button onClick="{{m.pick}}" disabled="{{m.off}}" title="{{m.hint}}" style="{{m.style}}"><span>{{m.n}}</span><span style="display:flex;gap:8px;align-items:center"><span>{{m.v}}</span><span style="font-size:11px;font-weight:700;color:#8a3b1f;width:26px;text-align:right">{{m.tag}}</span></span></button>
+          </sc-for>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 14px">
+          <span style="display:flex;justify-content:space-between"><span style="color:#5a4a3a">{{d.inN}}</span><b style="color:#a3341c">{{d.inV}}</b></span>
+          <span style="display:flex;justify-content:space-between"><span style="color:#5a4a3a">{{d.outN}}</span><b style="color:#2f6b4f">{{d.outV}}</b></span>
+          <span style="display:flex;justify-content:space-between"><span style="color:#5a4a3a">공사 포인트</span><b>{{d.pts}}</b></span>
+          <span style="display:flex;justify-content:space-between"><span style="color:#5a4a3a">회수</span><b>{{d.pay}}</b></span>
+        </div>
+        <div style="color:#5a4a3a">{{d.jobs}}</div>
+        <div style="display:flex;flex-direction:column;gap:3px">
+          <span style="color:#5a4a3a;font-size:11px">시장 (공급÷수요 · 값)</span>
+          <sc-for list="{{d.outs}}" as="o" hint-placeholder-count="1">
+            <span style="display:flex;justify-content:space-between"><span>{{o.g}}</span><span><b>{{o.sd}}</b> · {{o.price}}</span></span>
+          </sc-for>
+        </div>
+        <sc-if value="{{d.has}}" hint-placeholder-val="{{true}}">
+          <div style="display:flex;align-items:center;gap:8px">
+            <label style="flex:1;display:flex;align-items:center;gap:6px;color:#5a4a3a">가동률<input type="range" min="10" max="100" step="10" value="{{d.util}}" onChange="{{onUtil}}" style="flex:1;min-width:0;accent-color:#8a3b1f"><b style="color:#2b2118;width:34px;text-align:right">{{d.util}}%</b></label>
+            <button onClick="{{toggleStop}}" style="height:28px;padding:0 10px;background:#fbf6ea;border:1px solid #bda98a">{{d.stopLabel}}</button>
+          </div>
+        </sc-if>
+        <div style="margin-top:auto;display:flex;align-items:center;gap:6px">
+          <span style="flex:1;line-height:1.3"><b>{{d.cost}}</b><br><span style="color:#5a4a3a;font-size:11px">레벨당 · {{d.days}}일</span></span>
+          <button onClick="{{demolish}}" disabled="{{noDemo}}" aria-label="1레벨 철거" style="height:34px;width:38px;background:#fbf6ea;border:1px solid #a3341c;color:#a3341c;font-weight:700">−1</button>
+          <button onClick="{{build1}}" disabled="{{no1}}" style="height:34px;padding:0 14px;background:#8a3b1f;color:#fbf6ea;border:1px solid #2b2118;font-weight:700">+1 짓기</button>
+          <button onClick="{{build5}}" disabled="{{no5}}" style="height:34px;padding:0 10px;background:#fbf6ea;border:1px solid #2b2118;font-weight:700">+5</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":800,"height":560}}'>
+const REGIONS = [{ name: '남부 습지', land: 400, plot: 785, k: 1 }, { name: '동부 삼림', land: 620, plot: 410, k: 0.8 }, { name: '강변 평야', land: 900, plot: 300, k: 1.25 }];
+const J = (a, b) => '노동자 ' + a + (b ? ' · 기술자 ' + b : '');
+const B = [
+  { id: 'lumber', ind: '1차', ic: '벌', name: '벌목장', land: 'plot', cost: 178500, days: 15, pts: 300, s: 28, d: 100, per: 53, lv: [22, 8, 0], ms: [{ n: '손도끼', inN: '공구 10', inV: 126, outN: '목재 900', outV: 2200, p: 1200, j: J(400, 40) }, { n: '쇠도끼와 톱', inN: '공구 20', inV: 252, outN: '목재 1.3k', outV: 3200, p: 1900, j: J(280, 70) }, { n: '증기 제재', need: '증기 기관 필요', inN: '석탄 40', inV: 300, outN: '목재 2k', outV: 4900, p: 3100, j: J(160, 90) }] },
+  { id: 'farm', ind: '1차', ic: '농', name: '농장', land: 'land', cost: 177000, days: 12, pts: 250, s: 115, d: 100, per: 9, lv: [14, 3, 30], ms: [{ n: '쟁기', inN: '공구 10', inV: 126, outN: '곡물 1.6k', outV: 1600, p: 1200, j: J(450, 50) }, { n: '쇠 농기구', inN: '공구 20', inV: 252, outN: '곡물 2.2k', outV: 2200, p: 1500, j: J(350, 50) }] },
+  { id: 'fiber', ind: '1차', ic: '섬', name: '섬유 농장', land: 'land', cost: 91000, days: 12, pts: 150, s: 190, d: 100, per: 11, lv: [0, 0, 6], ms: [{ n: '면화', inN: '공구 10', inV: 126, outN: '섬유 1.1k', outV: 900, p: -381, j: J(450, 50) }] },
+  { id: 'mine', ind: '1차', ic: '철', name: '철광산', land: 'plot', noIn: { 0: '철광맥 없음', 2: '철광맥 없음' }, cost: 142000, days: 22, pts: 300, s: 145, d: 100, per: 13, lv: [0, 5, 0], ms: [{ n: '갱도', inN: '공구 20', inV: 252, outN: '철광석 500', outV: 700, p: -98, j: J(420, 80) }] },
+  { id: 'distill', ind: '가공', ic: '양', name: '양조장', land: 'plot', cost: 359000, days: 24, pts: 400, s: 80, d: 100, per: 18, lv: [2, 0, 1], ms: [{ n: '증류기', inN: '곡물 600', inV: 480, outN: '술 900', outV: 2700, p: 2900, j: J(240, 60) }] },
+  { id: 'textile', lux: true, ind: '가공', ic: '방', name: '방직 공장', land: 'plot', cost: 127000, days: 20, pts: 300, s: 130, d: 100, per: 12, lv: [3, 1, 0], ms: [{ n: '손베틀', inN: '섬유 930', inV: 930, outN: '의복 640', outV: 1600, p: 420, j: J(270, 30) }, { n: '맞춤 재단', inN: '섬유 200', inV: 200, outN: '의복·고급', outs: ['의복', '고급 의복'], outV: 1700, p: 760, j: J(180, 120) }] },
+  { id: 'furn', lux: true, ind: '가공', ic: '가', name: '가구 공방', land: 'plot', cost: 96000, days: 20, pts: 250, s: 160, d: 100, per: 15, lv: [0, 2, 0], ms: [{ n: '손가구', inN: '목재 720', inV: 720, outN: '가구 470', outV: 1100, p: 180, j: J(270, 30) }] },
+  { id: 'paper', ind: '가공', ic: '종', name: '종이 공장', land: 'plot', need: '제지술 필요', cost: 98000, days: 16, pts: 200, s: 60, d: 100, per: 20, lv: [0, 0, 0], ms: [{ n: '펄프', inN: '목재 30', inV: 60, outN: '종이 40', outV: 160, p: -259, j: J(120, 30) }] },
+  { id: 'smelter', ind: '중공업', ic: '제', name: '제련소', land: 'plot', need: '괴철로 필요', cost: 212000, days: 26, pts: 450, s: 70, d: 100, per: 16, lv: [0, 0, 0], ms: [{ n: '숯', inN: '철광석 500', inV: 700, outN: '철 300', outV: 2100, p: 880, j: J(210, 90) }] },
+  { id: 'workshop', ind: '중공업', ic: '공', name: '공방', land: 'plot', cost: 165000, days: 22, pts: 350, s: 95, d: 100, per: 15, lv: [1, 0, 2], ms: [{ n: '대장간', inN: '철 100', inV: 700, outN: '공구 200', outV: 2500, p: 1100, j: J(210, 90) }] },
+  { id: 'admin', ind: '정부', ic: '행', name: '행정청', land: 'none', cost: 120000, days: 30, pts: 200, s: 100, d: 100, per: 0, lv: [10, 0, 0], ms: [{ n: '세습 관료제', inN: '없음', inV: 0, outN: '세금 한도', outV: 900, p: 300, j: '하급 귀족 50' }] },
+  { id: 'office', ind: '정부', ic: '사', name: '건축사무소', land: 'none', cost: 150000, days: 20, pts: 250, s: 100, d: 100, per: 0, lv: [4, 1, 1], ms: [{ n: '목조 공법', inN: '목재 200', inV: 400, outN: '공사 포인트', outV: 800, p: 200, j: J(180, 20) }] },
+];
+const byId = (id) => B.find((x) => x.id === id);
+const money = (v) => 'ƒ' + (Math.abs(v) >= 1000 ? (Math.abs(v) / 1000).toFixed(1) + 'k' : Math.round(Math.abs(v)));
+const sgn = (v) => (v < 0 ? '−' : '+') + money(v);
+const pos = (sd) => Math.max(2, Math.min(96, 50 + Math.log2(sd) * 25));
+const BG = { land: '#d5e3b8', plot: '#ecd6b0', none: '#e2ddd3' }, BD = { land: '#93a86c', plot: '#bb9a63', none: '#a89f90' };
+class Component extends DCLogic {
+  state = { region: 0, sel: 'lumber', meth: { 'lumber:0': 1 }, lv: {}, util: {}, stop: {}, queue: [{ id: 1, b: 'lumber', r: 0, n: 2, done: 40 }, { id: 2, b: 'farm', r: 0, n: 2, done: 10 }, { id: 3, b: 'workshop', r: 1, n: 1, done: 0 }], priv: [{ b: 'farm', r: 2, n: 3, left: 21 }, { b: 'textile', r: 1, n: 1, left: 9 }], cat: '전체', catOpen: false, view: 'cards', sort: 'p', open: true, hover: null, nid: 4 };
+  level(b, r) { return this.state.lv[b.id + ':' + r] ?? b.lv[r]; }
+  queued(id, r) { return this.state.queue.filter((q) => q.b === id && q.r === r).reduce((a, q) => a + q.n, 0); }
+  sd(b, r, extra) { return ((b.s + (this.queued(b.id, r) + extra) * b.per) / b.d) * REGIONS[r].k; }
+  profit(b, m, r) { const sd = this.sd(b, r, 0); const f = sd > 1 ? Math.max(0.4, 1 - 0.5 * Math.log2(sd)) : Math.min(1.3, 1 + 0.3 * (1 - sd)); return m.p > 0 ? m.p * f : m.p; }
+  free(r, kind) { const used = this.state.queue.filter((q) => q.r === r && byId(q.b).land === kind).reduce((a, q) => a + q.n, 0); return REGIONS[r][kind] - used; }
+  cur(b, r) { const v = this.state.meth[b.id + ':' + r]; return v ?? 0; }
+  why(b, r) { if (b.need) return b.need; if (b.noIn && b.noIn[r]) return b.noIn[r]; if (b.land !== 'none' && this.free(r, b.land) < 1) return (b.land === 'land' ? '농지' : '부지') + ' 없음'; return ''; }
+  move(id, dir) { const q = [...this.state.queue]; const i = q.findIndex((x) => x.id === id), j = i + dir; if (j < 0 || j >= q.length) return; [q[i], q[j]] = [q[j], q[i]]; this.setState({ queue: q }); }
+  build(n) { const { sel, region, queue, nid } = this.state; this.setState({ queue: [...queue, { id: nid, b: sel, r: region, n, done: 0 }], nid: nid + 1 }); }
+  renderVals() {
+    const s = this.state, r = s.region, onCards = s.view === 'cards';
+    const inCat = (b, c) => c === '전체' || b.ind === c || (c === '사치품' && b.lux);
+    let list = B.filter((b) => inCat(b, s.cat)).map((b) => { const m = b.ms[this.cur(b, r)], p = this.profit(b, m, r); return { b, p, pay: p > 0 ? b.cost / p : Infinity, why: this.why(b, r) }; });
+    const key = { p: (x) => -x.p, pay: (x) => x.pay }[s.sort];
+    list.sort((a, c) => (a.why ? 1 : 0) - (c.why ? 1 : 0) || (s.sort === 'name' ? a.b.name.localeCompare(c.b.name, 'ko') : key(a) - key(c)));
+    const cards = list.map(({ b, p, why }) => { const q = this.queued(b.id, r), sel = s.open && b.id === s.sel, l = this.level(b, r);
+      return { ic: b.ic, name: b.name, lv: '(' + l + (q ? '+' + q : '') + ')', pl: why ? '—' : sgn(p), locked: !!why, reason: why, tip: s.hover === b.id && !!why, aria: b.name + (why ? ', ' + why : ''),
+        enter: () => this.setState({ hover: b.id }), leave: () => this.setState({ hover: null }), pick: () => this.setState({ sel: b.id, open: true }),
+        style: 'position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;padding:4px;background:' + BG[b.land] + ';border:' + (sel ? '2px solid #8a3b1f' : '1px solid ' + BD[b.land]) + (why ? ';filter:saturate(.45);color:#4d4235' : ''),
+        plStyle: 'font-weight:700;color:' + (why ? '#4d4235' : p >= 0 ? '#1f5a3e' : '#8f2a14') }; });
+    const b = byId(s.sel), key2 = b.id + ':' + r, mi = this.cur(b, r), m = b.ms[mi], why = this.why(b, r), p = this.profit(b, m, r), l = this.level(b, r), q = this.queued(b.id, r);
+    const mk = (sd, c) => 'position:absolute;top:0;width:6px;height:8px;background:' + c + ';left:' + pos(sd) + '%';
+    const sd0 = this.sd(b, r, 0), sd1 = this.sd(b, r, 1), sd5 = this.sd(b, r, 5), util = s.util[key2] ?? 100, stopped = !!s.stop[key2], fr = b.land === 'none' ? 99 : this.free(r, b.land);
+    const d = { name: b.name, lv: '(' + l + (q ? '+' + q : '') + ')', where: REGIONS[r].name, locked: !!why, reason: why, has: l > 0, util, stopLabel: stopped ? '다시 돌리기' : '멈춤', inN: m.inN, inV: '−' + money(m.inV), outN: m.outN, outV: '+' + money(m.outV), jobs: m.j, pts: b.pts, pay: p > 0 ? Math.round(b.cost / p) + '일' : '—', cost: money(b.cost), days: b.days,
+      outs: (m.outs ?? [m.outN.split(' ')[0]]).map((g, i) => { const v = sd0 * (i ? 0.7 : 1); return { g, sd: v.toFixed(2), price: '기본가 ×' + Math.max(0.25, Math.min(1.75, 1 + 0.75 * (1 - v))).toFixed(2) }; }),
+      methods: b.ms.map((x, i) => ({ n: x.n, v: x.need ? x.need : sgn(this.profit(b, x, r)), tag: i === mi ? '지금' : '', hint: x.need ?? '', off: !!x.need || l === 0, pick: () => this.setState({ meth: { ...s.meth, [key2]: i } }),
+        style: 'height:30px;padding:0 8px;display:flex;justify-content:space-between;align-items:center;' + (i === mi ? 'background:#f3e3bd;border:2px solid #8a3b1f;font-weight:700' : 'background:#fbf6ea;border:1px solid #bda98a;color:#5a4a3a') })) };
+    const cats = ['전체', '1차', '가공', '중공업', '사치품', '정부'].map((c) => ({ label: c, n: B.filter((x) => inCat(x, c)).length, pick: () => this.setState({ cat: c, catOpen: false, view: 'cards' }), style: 'width:100%;height:32px;padding:0 10px;display:flex;justify-content:space-between;align-items:center;border:0;border-bottom:1px solid #ecdfc6;' + (c === s.cat ? 'background:#f3e3bd;font-weight:700' : 'background:transparent') }));
+    const regQ = (i) => s.queue.filter((x) => x.r === i).reduce((a, x) => a + x.n, 0);
+    const mine = s.queue.map((x, i) => { const y = byId(x.b); return { pos: i + 1, name: y.name, n: x.n, where: REGIONS[x.r].name, left: x.paused ? '정지' : y.days * x.n + '일', pauseIc: x.paused ? '▶' : 'Ⅱ', bar: 'display:block;height:5px;background:' + (x.paused ? '#a89f90' : '#2f6b4f') + ';width:' + x.done + '%',
+      pause: () => this.setState({ queue: s.queue.map((z) => (z.id === x.id ? { ...z, paused: !z.paused } : z)) }), go: () => this.setState({ region: x.r, view: 'cards', sel: x.b, open: true }), up: () => this.move(x.id, -1), down: () => this.move(x.id, 1), del: () => this.setState({ queue: s.queue.filter((z) => z.id !== x.id) }) }; });
+    return { region: r, regions: REGIONS.map((x, i) => ({ i, label: x.name + (regQ(i) ? ' +' + regQ(i) : '') })), regionQ: regQ(r) ? '+' + regQ(r) : '', onRegion: (e) => this.setState({ region: Number(e.target.value) }),
+      freeLand: this.free(r, 'land'), freePlot: this.free(r, 'plot'), cats, catOpen: s.catOpen, catLabel: s.cat, sort: s.sort, onSort: (e) => this.setState({ sort: e.target.value }),
+      toggleCat: () => this.setState({ catOpen: !s.catOpen, view: 'cards' }), toQueue: () => this.setState({ view: onCards ? 'queue' : 'cards', catOpen: false }), queueCount: s.queue.length,
+      catBtn: 'flex:1;height:30px;padding:0 10px;display:flex;justify-content:space-between;align-items:center;font-weight:700;border:1px solid #2b2118;background:' + (onCards ? '#f3e3bd' : '#fbf6ea'), queueBtn: 'height:30px;padding:0 8px;border:1px solid #bda98a;font-size:11px;background:' + (onCards ? '#fbf6ea' : '#f3e3bd'),
+      isCards: onCards, isQueue: !onCards, showDetail: s.open && onCards, closeDetail: () => this.setState({ open: false }), cards, d, mine, mineN: mine.length,
+      priv: s.priv.map((x) => ({ name: byId(x.b).name, n: x.n, where: REGIONS[x.r].name, left: x.left + '일' })), privN: s.priv.length,
+      onUtil: (e) => this.setState({ util: { ...s.util, [key2]: Number(e.target.value) } }), toggleStop: () => this.setState({ stop: { ...s.stop, [key2]: !stopped } }),
+      demolish: () => this.setState({ lv: { ...s.lv, [key2]: l - 1 } }), noDemo: l < 1, build1: () => this.build(1), build5: () => this.build(5), no1: !!why, no5: !!why || fr < 5 };
+  }
+}
+</script>
+</body>
+</html>
