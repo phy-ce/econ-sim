@@ -418,7 +418,7 @@ export interface Company {
   weekStartCash: number;
   wageOffset: Record<Skill, number> | null;
   /**
-   * AI 민간 상회의 지역별 웃돈 (ai.ts adjustPremium): 지역 id → 직종별 웃돈 비율(off, 그 지역 임금 = 시장 임금 × (1 + off))과
+   * AI 회사의 지역별 웃돈 (민간 상회 ai.ts adjustPremium, 왕실 생산 건물 ai.ts crownPioneerPremium): 지역 id → 직종별 웃돈 비율(off, 그 지역 임금 = 시장 임금 × (1 + off))과
    * 지난 점검의 그 지역 고용·빈자리 (사람이 빠지는지 본다). 끄면 생기지 않는다
    */
   aiPremium?: Record<number, { off: Record<Skill, number>; emp: Record<Skill, number>; vac: Record<Skill, number> }>;
@@ -530,7 +530,7 @@ export interface Region {
    */
   trade?: { buy: number; cut: number; margin: number };
   /**
-   * 지역 시장 임금 (labor.ts updateMarketWages): 직종마다 하나. 이 지역의 모든 임금 건물(왕실 생산 건물 포함)이 이것을 준다 (AI 민간 상회는 × (1 + Company.aiPremium[지역].off), economy.ts wagesAt).
+   * 지역 시장 임금 (labor.ts updateMarketWages): 직종마다 하나. 이 지역의 모든 임금 건물(왕실 생산 건물 포함)이 이것을 준다 (AI 회사는 × (1 + Company.aiPremium[지역].off), economy.ts wagesAt).
    * 없으면 시작 임금 규칙(labor.ts startWage)으로 채운다 (18판 안에서 더한 칸이라 판을 올리지 않았다)
    */
   wages?: Record<Skill, number>;

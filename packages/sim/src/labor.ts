@@ -337,6 +337,8 @@ export function payWages(w: World) {
       const last = emptyStats();
       last.wageCost = paid;
       last.staffing = staffing;
+      // 세금은 생산 앞이라 그날 충족률이 아직 없다. 어제 값을 넘겨 행정청 한도(finance.ts adminCapacityOf)가 원료 부족을 본다 (produce 가 덮어쓴다)
+      last.inputFill = b.last.inputFill;
       b.last = last;
     }
   }

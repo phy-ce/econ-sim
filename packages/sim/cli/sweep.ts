@@ -281,7 +281,7 @@ aiTrace.on = (_w, _c, path, _t, _m, levels) => {
   else if (path === 'shrink') pathAcc.shrinkLv -= levels;
   else if (path === 'reserve') pathAcc.resLv += levels;
   else if (path === 'reserveShrink') pathAcc.resShLv -= levels;
-  else if (path === 'trial') pathAcc.trialLv += levels;
+  else if (path === 'trial' || path === 'latentTrial') pathAcc.trialLv += levels;
 };
 const t0 = performance.now();
 for (let d = 0; d < years * 360; d++) {

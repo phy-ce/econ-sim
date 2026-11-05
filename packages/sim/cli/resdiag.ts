@@ -9,7 +9,7 @@ const weeks = Number(process.argv[2] ?? 20), seed = Number(process.argv[3] ?? 1)
 overrideTune(JSON.parse(process.argv[4] ?? '{}'), 'cli/resdiag');
 const w = createWorld(seed);
 const ev: string[] = [];
-aiTrace.on = (_w, c, path, t, m, lv, _o, r) => { if (path === 'reserve' || path === 'reserveShrink' || path === 'trial') ev.push(`${path}:${c.state ? 's' : 'p'}:${t}/${m}${r != null ? '@' + r : ''}:${lv}`); };
+aiTrace.on = (_w, c, path, t, m, lv, _o, r) => { if (path === 'reserve' || path === 'reserveShrink' || path === 'trial' || path === 'latentTrial') ev.push(`${path}:${c.state ? 's' : 'p'}:${t}/${m}${r != null ? '@' + r : ''}:${lv}`); };
 for (let wk = 1; wk <= weeks; wk++) {
   for (let d = 0; d < TICKS_PER_WEEK; d++) step(w);
   const by = new Map<string, { n: number; lv: number; res: number; cap: number; prof: number; rich: number; broke: number; staff: number }>();

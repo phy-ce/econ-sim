@@ -9,6 +9,20 @@
 - 클라우드 세션(claude.ai/code)으로 이어서 할 수 있다. 규칙은 CLAUDE.md "클라우드 세션"을 본다.
 - 옛 세션 기록: `docs/log/` (2026-10-25 이전 HANDOFF 절은 `docs/log/HANDOFF_2026-10-18_to_10-25.md`, 날짜별 UI 기록도 여기). 다른 문서의 "HANDOFF 0-ind3"·"HANDOFF 0-aifix" 같은 옛 절 참조는 그 파일에 있다.
 
+## 0-1105-ironchain
+- 브랜치 wt-ironchain (main cca3017 에서), 사용자 결정으로 켜고 합치기로 함 (DECISIONS 7-53), premerge 진행 중. 철 체인 교착: 수요가 0 이면 값이 기본가에 머물러 새 투자가 안 켜지고, 원료가 없으면 방식 고르기가 그 방식을 빼서 수요가 안 생긴다. 뚫고 나면 기술자 부족(`ratioGate`), 순서 어긋남, 되돌리기가 차례로 막았다.
+- 규칙 (AI 판단, 세계 규칙 그대로): 열린 방식이 원료만 없어 막혔고 더 나으면 그 원료를 왕국이 짓는다. `aiLatentInput` 기본 3, DESIGN 10·11, 사전 `ai-reserve`, 시험 `test/core/latentInput.test.ts`, 진단 `cli/irondiag.ts`, 표 `cli/ironsum2.py`, 보고서 2026-11-05-ironchain.
+- 값 3 대 0, 20년 × 시드 1·2 × salt 0..3: 광산 8개 모두 3년차에 열림. 총생산 누계 1~10년 +6.3% (7/8), 16~20년 −1.7% (4/8), 20년 전체 +3.7% (4/8). 20년차 총생산 1,901 대 2,003, 생산 레벨 4,919 대 4,625.
+- 알려진 약점: 장기 총생산 이득은 안 보였고 표본 폭이 넓어졌다. 20년차 체인이 얇은 표본이 5개다 (광산 1~2레벨). 왕국 3 같은 철광맥 없는 왕국은 무역을 기다린다. 끄려면 `aiLatentInput` 0 (꺼진 값은 징세 고침 뒤와 80행 같음을 확인).
+- 값 3 으로 켜기로 했다 (DECISIONS 7-53). 값 1·2 분기는 비교 재현용으로 남았고, 지우는 일은 다음 일이다.
+- 남은 일: 막 바꾼 건축사무소는 `settling` 을 타지 않아 굶으면 바로 되돌아갈 수 있다 (`latentNeed` 는 사무소도 센다). 코드는 그대로 두고 DESIGN 10 에 적었다.
+- 클라이언트 시험은 worktree 에서 `@econ/sim` 이 메인 체크아웃을 가리켜 이 브랜치 sim 을 검증하지 않는다. 합친 뒤 main 에서 다시 본다.
+- UI_CHANGES 2-93 실제 가동 (사용자 2026-11-05) 을 더했다.
+
+## 0-1105-adminfill
+- 브랜치 wt-ironchain (main cca3017 에서). 왕실 징세 한도가 원료 부족을 못 보던 버그를 고쳤다: 하루 순서가 노동 → 세금 → 생산이고 노동 단계가 `b.last` 를 충족 1 로 새로 만들었다. `labor.ts` 가 어제 충족률을 넘긴다.
+- 마이크로 시드 1, 종이 없음 120일: 한도 1,210 → 0. 시험 `test/core/adminFill.test.ts`. 본 게임 10년 × 시드 1·2 숫자와 `fillEma` 를 쓰지 않은 이유는 DESIGN 9.1.
+
 ## 0-1105-batch4
 - 브랜치 wt-batch4 (main 71d3fa1 에서), wt-manornav·wt-luxmix 를 합침 (cead7be). 2026-11-05 사용자 답 "1. 네 2. 네 claude.md에 적기 3. 합치기": 혼합 방식 4:1 → 1:1 합침, 건물 숫자 예외를 CLAUDE.md 에 적음, 지대 52주 합침 (DECISIONS 7-44·7-52). premerge 전, main 에 합치지 않음.
 - wt-uiconstruct 도 합침 (46e9cf2, 문서만, sim 코드 그대로): UI_CHANGES 2-92 건설 창 다시 만들기 (건설 + 건물 관리 합침, 사용자 2026-11-05), 목업 `docs/mockups/construction-d.dc.html`. 화면 작업자가 다시 설계해서 넣는다. 2-91 의 산출별 미리보기는 2-92 10번 형태로 넣는다.
