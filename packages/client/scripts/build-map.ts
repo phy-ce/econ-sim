@@ -34,7 +34,7 @@ const data={viewBox:[0,0,1536,1024],image:{light:'assets/map/map-base.webp'},reg
  'M982,330 C956,356 966,378 934,395 S899,409 882,434 S852,450 837,471 S792,482 767,495 S727,499 703,515 S662,519 635,535 S593,542 563,556 S518,552 489,561 S434,552 403,542 L365,538',
  'M811,350 C833,378 815,399 836,421 S853,452 837,471',
  'M671,433 C692,457 673,473 689,490 S709,505 703,515',
- 'M1420,310 C1396,347 1417,372 1388,405 S1399,445 1377,473 S1381,509 1362,541 S1369,585 1348,617 S1361,658 1345,692 S1366,736 1351,767 S1374,813 1369,849 S1406,899 1400,940 S1435,996 1444,1048 L1465,1130',
+ 'M1420,310 C1396,347 1417,372 1388,405 S1399,445 1377,473 S1381,509 1362,541 S1369,585 1348,617 S1361,658 1345,692 S1366,736 1351,767 S1374,813 1369,849 S1406,899 1400,940 S1435,996 1444,1048 C1460,1100 1434,1170 1470,1230 S1492,1390 1510,1480 S1550,1750 1580,1900 S1640,2250 1690,2530',
  'M1236,543 C1269,555 1261,581 1298,590 S1331,595 1348,617',
  'M1483,568 C1460,589 1468,616 1431,632 S1374,656 1345,692'
  ],routes:[
@@ -45,10 +45,16 @@ const data={viewBox:[0,0,1536,1024],image:{light:'assets/map/map-base.webp'},reg
  {a:3,b:5,d:'M915,380 C945,432 925,465 966,497 S1012,562 1002,614 S1026,750 1070,820'},
  {a:3,b:6,d:'M915,380 C950,332 1014,337 1051,302 S1117,258 1174,280 S1269,292 1320,270'},
  {a:4,b:5,d:'M690,870 C761,849 815,881 866,863 S991,851 1070,820'},
- {a:5,b:7,d:'M1070,820 C1142,795 1151,734 1211,717 S1283,681 1360,650'},
- {a:6,b:7,d:'M1320,270 C1297,333 1334,376 1317,430 S1341,493 1330,544 S1339,613 1360,650'}
+ {a:5,b:7,d:'M1070,820 C1142,795 1151,734 1211,717 S1283,681 1390,670'},
+ {a:6,b:7,d:'M1320,270 C1297,333 1334,376 1317,430 S1341,493 1330,544 S1339,613 1390,670'}
  ]};
+// Every simulation connection must have a drawn route terminating at its actual anchors.
+if(JSON.stringify(data.routes.map(r=>`${r.a}-${r.b}`).sort())!==JSON.stringify(expected))throw Error('Route list differs from simulation');
+for(const route of data.routes){
+ const pts=coords(route.d),a=regions.find(r=>r.id===route.a)!,b=regions.find(r=>r.id===route.b)!;
+ if(pts[0].join(',')!==a.anchors.rail.join(',')||pts.at(-1)!.join(',')!==b.anchors.rail.join(','))throw Error(`Route misses anchor: ${route.a}-${route.b}`);
+}
 const output=JSON.stringify(data);
-if(output.length>200000)throw Error('Map JSON exceeds 200KB');
+if(output.length>100000)throw Error('Map JSON exceeds 100KB');
 writeFileSync(new URL('../src/map/regions.json',import.meta.url),output+'\n');
 console.log(`Map OK: ${regions.length} regions, ${actual.length} neighbor pairs, ${output.length} bytes (${fileURLToPath(source)})`);

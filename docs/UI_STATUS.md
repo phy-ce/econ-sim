@@ -253,3 +253,41 @@ DetailWindow 독립 NavigationProvider/버튼, BuildingPops 및 ResourceInspecto
 - 코드 완료: BudgetJobs는 marketWage가 있으면 시장 임금 × 단계만 표시하고, AI 국영 premium이 있으면 ×(1+웃돈) 추가. 지역 값이 없는 wageMarket0/옛 자료는 기본 임금 × 임금 지수 × 단계 식 유지. 화면 숫자는 소수2자리, 원래 계산값 불변.
 - 헤드리스 스크린샷 확인(1920×1080): C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/state-wage-regional-en-dark.png. 동부 삼림 행정청 하급 귀족700명, 1인ƒ4.00·Market wage4×Stage1. 직접 API 대조 perHead3.997182848716258/Region.stateWages4 → 표시값4.00 동일. AI 웃돈 및 지역 임금0 세계는 SSR 회귀만, 화면 미검증.
 - 클라이언트25파일66시험 통과(지역/웃돈식·옛 계산식 호환 포함). 루트 typecheck 통과. 이전 2-81 커밋9d61d99.
+- e152f49: 2-80·2-84 커밋. 2-79 지역 임금 표 구현 착수(소작 소득 export 준비됨).
+
+## 2026-11-05 main 0acc1a2 재개 · 2-79 완료
+- sim 변경 대조: 저택 지분 기본 켬, 지역 임금 단일 규칙·목표 임금 API, AI 국영 웃돈, 이익집단 읽기 계층, 싼 곡물 추가 소비/인구 증가 반영 확인. 이전 화면 검증을 최신 sim 검증으로 간주하지 않고 다시 실행.
+- 지역 개요에 임금 상세 추가: 직종7개·시장/52주 평균/국영/실업 표, 소작 1인 소득은 주간 갱신, 결측 —. 국영 값은 실제 Region.stateWages를 읽고 툴팁에 시장 임금×단계 및 존재하는 AI 웃돈 배율 표시. 왕실 조작 없음.
+- 검증: 루트 npm.cmd run typecheck 통과, 클라이언트26파일69시험 통과. 1920×1028 헤드리스 스크린샷 확인: C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/nov5-wages-ko-light.png, nov5-wages-en-dark.png. 최신 sim seed42·14일, 소작ƒ2.77/노동자ƒ3.17·52주ƒ3.42/하급 귀족 실업75%, 상세 본문403/scroll403. 표 하단은 내부 스크롤. AI 양수 웃돈 툴팁은 코드 대조만(해당 조건 화면 미검증).
+- 미완료 문서 이동은 하지 않고 이번부터 UI_STATUS만 갱신(사용자 최신 지시). 다음 깨진 화면/2-87 저택 지분 목록.
+- 39938d4: 2-79 커밋. 이어받은 지도 경계·강 연장·회색 협곡 연결 끝점 및 build-map의 경로 앵커 검사를 확인. build-map 재생성: 7지역/9이웃쌍/49,395bytes 통과. 1920×1028 스크린샷 C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/nov5-map-1920x1028.png 확인. 직전 루트 typecheck·클라이언트69시험 통과. 지도 전체 확대/모든 레이어는 미검증. UI_WINDOWS 문서는 수정 범위 밖이라 유지.
+
+## 2026-11-05 2-87 저택 지분 완료
+- manorShares 기본1에서 저택 주인 목록을 p.fund 지분 수로 집계(실업/다른 지역 보유자 포함). 0이면 옛 자리×계층 가중치 유지. 저택 머리에 지분 합·nav·지분당 주간 배당·주간 수익률, 상급 귀족 자리 라벨. pop 상세는 저택과 금융가를 함께 보유 수/총 보유 가치로 표시하며 외국 왕국 이름 표시.
+- ownerSummary 첫 시험은 임시 manorShares0 우회를 제거하고 기본 지분 규칙에서 상급 자리만 남는지 검사. 지분/자리 분리·옛 규칙 호환·외국 저택 가치 회귀 추가. 루트 typecheck 및 클라이언트26파일71시험 통과.
+- 1920×1028 헤드리스 스크린샷 확인: C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/nov5-manor-shares-ko.png, nov5-manor-owners-ko.png, nov5-manor-owners-en-dark.png, nov5-pop-manor-holdings-ko.png, nov5-pop-manor-holdings-en-dark.png. 저택1050 지분 합14,728,392.96(직접 fund 합 대조), 하급 귀족 보유자7행, pop1070의 저택·금융가14기관. 본문403/scroll403. 극소 지분0 대신 <0.01, 숫자 소수2자리. 실제 배당 지급/지분 매매 시간 경과는 미검증.
+- 이전 지도 커밋c0afa5c. 다음 2-85 건물/그룹 일꾼 1인 임금·웃돈.
+
+## 2026-11-05 2-85 일꾼 1인 임금·웃돈 완료
+- Workforce에 world 전달, 건물/그룹 공통 WorkforceWage 사용. 실제 wagesAt 임금·정부 단계/웃돈 식, 중립 +% 칩(0.5% 이상), 배당 자리 —, 소작지 주간 소득. 그룹은 고용 가중 평균과 툴팁 최저~최고(고용0이면 자리 가중). 4열 격자는 해당 줄에만 적용.
+- 루트 typecheck 및 클라이언트27파일73시험 통과. AI 웃돈 실제 임금10/그룹 가중 평균17.5·배당 자리 제외 회귀 포함.
+- 1920×1028 헤드리스 스크린샷 확인: C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/nov5-workforce-group-en-dark.png, nov5-workforce-single-en-dark.png, nov5-workforce-single-ko-light.png. 별도 검증용 벌목장1013 노동자웃돈25%·기술자10%, wagesAt 노동자3.8548143→ƒ3.85, 그룹/개별 동일, 본문403/scroll403. 검증용 웃돈 저장 복원 후 런타임 오류0. AI 국영 웃돈/소작지 화면은 미검증(코드 대조).
+- 2-87 커밋c204774. 다음 2-75 공급÷수요, 2-82 부 이동, 2-86 목표 임금.
+
+## 2026-11-05 2-75 공급÷수요 완료
+- 건설 카드 기본 선택 가능 방식의 주 산출을 기준으로 지금/+1/+5를 sim currentSD/projectedSD에서 읽음(지역 산출 보정 포함). 0.25~4 로그 막대·0.5/1/2 눈금, 지금 채운 점/+1빈 원/+5빈 마름모, aiGlutSD 문턱 툴팁. 서비스 건물은 줄 없음. 증설+/+5 툴팁은 현재→예상 비율.
+- 시장 양 열을 비율+작은 로그 막대로 교체. 지역은 currentSD, 합산 범위는 합산 공급÷수요. 수요0은 —, 정렬은 비율이며 결측은 뒤. 비율의 크기에 좋음/나쁨 색 없음.
+- 루트 typecheck·클라이언트28파일76시험 통과(지역 보정·수요0·서비스·로그 위치 회귀). 1920×1028 스크린샷 확인: C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/nov5-sd-build-ko-light.png, nov5-sd-build-en-dark.png, nov5-sd-market-ko-light.png, nov5-sd-market-en-dark.png. 남부 습지 목재 지금0.28/+1 0.81/+5 2.91, sim 직접 호출0.2791536/0.8060579/2.9136748와 일치. 본문403/scroll403. 시장 내림차순2.13/2.03/1.15…/— 확인. 실제 짓기 실행과 전 상품/전 범위 조합은 미검증.
+- 2-85 커밋e70704e. 다음 2-82 부 이동→2-86 목표 임금→0장 잔여.
+
+## 2026-11-05 2-82 부 이동 완료
+- pop별 wealthDrivers를 합쳐 소득·현물·저축 몫·합계·현재/다음 생활비 표시, 주간 부 변화는 인구 가중 평균. 돈은 기존 1인당/합계 토글을 따르고 부 변화와 저축/생활비 주 수는 나누지 않음. 상층/중층 저축 몫 —, 식 툴팁은 TUNE 버퍼/기간을 읽음. 부 이동 상세는 기본 닫힘.
+- 루트 typecheck·클라이언트29파일78시험 통과. 집계·인구 가중·세계 불변·1인당/합계·상층 제외 회귀 포함.
+- 1920×1028 스크린샷 확인: C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/nov5-wealth-drift-en-dark.png, nov5-wealth-total-en-dark.png, nov5-wealth-drift-ko-light.png. pop1069 소득/인0.06·현물/인0.63·합0.69·생활비0.66/다음0.90·저축0.5주, 총액 전환70.5k/772k/842.6k. 본문403/scroll403. 복제 세계 하루 진행 전 예측 주간0/실제0 대조. 비영 부 변화의 실제 다음 날 화면·상층 상세 화면은 미검증(집계/제외는 시험).
+- 2-75 커밋a4d3489. 다음 2-86 목표 임금.
+
+## 2026-11-05 2-86 목표 임금 완료
+- 지역 임금 창에서 marketWageTargets를 주간 키로 조회, 시장 값은 매일 읽음. ±0.5% 밖에서 중립 lucide 위/아래14px 화살표, 목표/아래끝/위끝/자리/오려는 사람은 임금 숫자 툴팁. 반환 null이면 목표 정보 없음. 기존 다섯 열 안에서 시장 칸만 넓힘.
+- 루트 typecheck·클라이언트30파일79시험 통과. 방향 경계·무표시 구간 회귀 포함.
+- 1920×1028 스크린샷 확인: C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/nov5-wage-target-ko-light.png, nov5-wage-target-en-dark.png. 동부 삼림 노동자 시장3.17/목표3.04/아래3.04/위6.09/자리8.1k/오려는52.7k, 직접 API target3.044533609와 일치. 복제 세계 다음 날 시장3.173261066→3.160388320 하락으로 아래 화살표 일치. 본문403/scroll403. 주간 경계 갱신의 장기 화면 및 전 직종 다음 날 대조는 미검증.
+- 2-82 커밋7723ec9. 사용자 지정 선행 작업2-79/2-87/2-85/2-75/2-82/2-86 완료, 다음 0장5번 2-51 방식 비교 잔여부터.
