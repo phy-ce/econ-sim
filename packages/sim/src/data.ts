@@ -863,59 +863,61 @@ export function regionPerk(regionId: number, typeId: string): number {
 // ---------------------------------------------------------------- 지역
 
 /**
- * 지역 티어 (발전 단계). 시작 인구·계층 구성·교육·부지·경작지·시작 농장은 티어와 시드로 정한다 (world.ts regionStart).
- * 산림과 광맥 잠재량(veins)은 지역마다 고정(지형)이다. 광맥은 처음에 잠재량 × TUNE.prospectStart 만 알려져 있고 나머지는 탐광으로 찾는다 (economy.ts prospect). 비율은 총인구 대비, 땅은 인구 10만 명당 칸 수다.
+ * 지역 티어 (발전 단계). 시작 인구·계층 구성·교육·경작지·시작 농장은 티어와 시드로 정한다 (world.ts regionStart).
+ * 산림과 광맥 잠재량(veins)은 지역마다 고정(지형)이다. 공장 부지(plot)도 지역 정의 값이고 시드는 ±PLOT_JITTER 만 흔든다 (인구와 묶지 않는다). 광맥은 처음에 잠재량 × TUNE.prospectStart 만 알려져 있고 나머지는 탐광으로 찾는다 (economy.ts prospect). 비율은 총인구 대비, 땅은 인구 10만 명당 칸 수다.
  * - pop: 인구 범위 / aristocrat·gentry·skilled·expert: 계층 비율 (나머지는 소작농) / education: 교육 접근도
- * - plot: 부지 칸 / arableSlack: 소작농 노동 인구를 다 앉힐 칸 × 이 배율이 경작지 / farms: 시작 민간 곡물 농장 레벨
- * plot·farms 는 1레벨이 일꾼 1,000명에서 약 500명이 될 때(2026-10-22) 두 배로 했다. 산업 유형 뒤 공장 1레벨은 300명이라 부지 일자리는 그보다 적다 (DESIGN 11 INDUSTRIES 약점)
+ * - arableSlack: 소작농 노동 인구를 다 앉힐 칸 × 이 배율이 경작지 / farms: 시작 민간 곡물 농장 레벨
+ * farms 는 1레벨이 일꾼 1,000명에서 약 500명이 될 때(2026-10-22) 두 배로 했다
  */
-export interface TierDef { pop: [number, number]; aristocrat: number; gentry: number; skilled: number; expert: number; education: number; plot: number; arableSlack: number; farms: number }
+export interface TierDef { pop: [number, number]; aristocrat: number; gentry: number; skilled: number; expert: number; education: number; arableSlack: number; farms: number }
 export const TIERS: TierDef[] = [
-  { pop: [1_000_000, 1_300_000], aristocrat: 0.007, gentry: 0.01, skilled: 0.12, expert: 0.01, education: 0.35, plot: 300, arableSlack: 1, farms: 0.6 },
-  { pop: [700_000, 1_000_000], aristocrat: 0.015, gentry: 0.015, skilled: 0.06, expert: 0.004, education: 0.25, plot: 160, arableSlack: 1.1, farms: 0.4 },
-  { pop: [400_000, 700_000], aristocrat: 0.02, gentry: 0.02, skilled: 0.03, expert: 0.001, education: 0.15, plot: 100, arableSlack: 1.2, farms: 0.2 },
-  { pop: [200_000, 400_000], aristocrat: 0.015, gentry: 0.015, skilled: 0.02, expert: 0, education: 0.1, plot: 80, arableSlack: 1.2, farms: 0 },
+  { pop: [1_000_000, 1_300_000], aristocrat: 0.007, gentry: 0.01, skilled: 0.12, expert: 0.01, education: 0.35, arableSlack: 1, farms: 0.6 },
+  { pop: [700_000, 1_000_000], aristocrat: 0.015, gentry: 0.015, skilled: 0.06, expert: 0.004, education: 0.25, arableSlack: 1.1, farms: 0.4 },
+  { pop: [400_000, 700_000], aristocrat: 0.02, gentry: 0.02, skilled: 0.03, expert: 0.001, education: 0.15, arableSlack: 1.2, farms: 0.2 },
+  { pop: [200_000, 400_000], aristocrat: 0.015, gentry: 0.015, skilled: 0.02, expert: 0, education: 0.1, arableSlack: 1.2, farms: 0 },
 ];
 /** 티어별 지역 수 (합 = 지역 수). 각 왕국은 티어 2 이상 지역을 하나 이상 갖는다 */
 export const TIER_COUNTS = [1, 2, 3, 1];
 /** 티어 수치에 시드로 주는 흔들림 (±) */
 export const TIER_JITTER = 0.15;
+/** 지역 공장 부지(RegionDef.plot)에 시드로 주는 흔들림 (±). 흔든 값은 10칸 단위로 맞춘다. 근거는 DESIGN 11 */
+export const PLOT_JITTER = 0.05;
 
 export const REGIONS: RegionDef[] = [
   {
     id: 1, name: '벨마르 항', nameEn: 'Port Belmar', spaceport: true, neighbors: [2, 3], perks: { foodplant: 0.1, textile: 0.1, workshop: 0.1 },
     description: '',
-    forest: cells(30), veins: { iron: 0, coal: 0 },
+    forest: cells(30), veins: { iron: 0, coal: 0 }, plot: 1500,
   },
   {
     id: 2, name: '강변 평야', nameEn: 'River Plain', spaceport: false, neighbors: [1, 3, 4], perks: { farm: 0.1, fiber_farm: 0.1 },
     description: '',
-    forest: cells(30), veins: { iron: 0, coal: 0 },
+    forest: cells(30), veins: { iron: 0, coal: 0 }, plot: 1700,
   },
   {
     id: 3, name: '중앙 고원', nameEn: 'Central Highlands', spaceport: false, neighbors: [1, 2, 5, 6], perks: { farm: 0.05, railway: 0.1 },
     description: '',
-    forest: cells(60), veins: { iron: cells(60), coal: cells(30) },
+    forest: cells(60), veins: { iron: cells(60), coal: cells(30) }, plot: 1100,
   },
   {
     id: 4, name: '남부 습지', nameEn: 'Southern Marshes', spaceport: false, neighbors: [2, 5], perks: { fiber_farm: 0.15 },
     description: '',
-    forest: cells(100), veins: { iron: 0, coal: 0 },
+    forest: cells(100), veins: { iron: 0, coal: 0 }, plot: 1000,
   },
   {
     id: 5, name: '동부 삼림', nameEn: 'Eastern Forest', spaceport: false, neighbors: [3, 4, 7], perks: { lumber: 0.1, furniture: 0.1 },
     description: '',
-    forest: cells(200), veins: { iron: 0, coal: cells(60) },
+    forest: cells(200), veins: { iron: 0, coal: cells(60) }, plot: 900,
   },
   {
     id: 6, name: '북부 광산지대', nameEn: 'Northern Mining District', spaceport: false, neighbors: [3, 7], perks: { mine: 0.1, coal_mine: 0.1, smelter: 0.1 },
     description: '',
-    forest: cells(30), veins: { iron: cells(200), coal: cells(150) },
+    forest: cells(30), veins: { iron: cells(200), coal: cells(150) }, plot: 1300,
   },
   {
     id: 7, name: '회색 협곡', nameEn: 'Grey Gorge', spaceport: false, neighbors: [5, 6], perks: { mine: 0.1 },
     description: '',
-    forest: cells(50), veins: { iron: cells(150), coal: cells(100) },
+    forest: cells(50), veins: { iron: cells(150), coal: cells(100) }, plot: 800,
   },
 ];
 
