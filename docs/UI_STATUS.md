@@ -260,3 +260,4 @@ DetailWindow 독립 NavigationProvider/버튼, BuildingPops 및 ResourceInspecto
 - 지역 개요에 임금 상세 추가: 직종7개·시장/52주 평균/국영/실업 표, 소작 1인 소득은 주간 갱신, 결측 —. 국영 값은 실제 Region.stateWages를 읽고 툴팁에 시장 임금×단계 및 존재하는 AI 웃돈 배율 표시. 왕실 조작 없음.
 - 검증: 루트 npm.cmd run typecheck 통과, 클라이언트26파일69시험 통과. 1920×1028 헤드리스 스크린샷 확인: C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/nov5-wages-ko-light.png, nov5-wages-en-dark.png. 최신 sim seed42·14일, 소작ƒ2.77/노동자ƒ3.17·52주ƒ3.42/하급 귀족 실업75%, 상세 본문403/scroll403. 표 하단은 내부 스크롤. AI 양수 웃돈 툴팁은 코드 대조만(해당 조건 화면 미검증).
 - 미완료 문서 이동은 하지 않고 이번부터 UI_STATUS만 갱신(사용자 최신 지시). 다음 깨진 화면/2-87 저택 지분 목록.
+- 39938d4: 2-79 커밋. 이어받은 지도 경계·강 연장·회색 협곡 연결 끝점 및 build-map의 경로 앵커 검사를 확인. build-map 재생성: 7지역/9이웃쌍/49,395bytes 통과. 1920×1028 스크린샷 C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/nov5-map-1920x1028.png 확인. 직전 루트 typecheck·클라이언트69시험 통과. 지도 전체 확대/모든 레이어는 미검증. UI_WINDOWS 문서는 수정 범위 밖이라 유지.
