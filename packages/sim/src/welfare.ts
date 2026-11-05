@@ -12,7 +12,7 @@ import { BUDGET_STEPS } from './types';
 //   (market.ts updateWealth) 목표 부 단계에 닿으려면 한 단계 위 묶음 비용만큼 벌어야 한다
 // - 그날 소득 = 그날 들어온 현금(임금·판매·배당, 세금을 뺀 것) + 먹고 쓴 현물의 시장가
 // - 왕실 현금이 모자라면 가진 현금만큼 같은 비율로 나눠 준다 (복지로 빚을 지지 않는다). 돈은 국고에서 pop 저축으로 옮겨 간다 (화폐 보존)
-// - TUNE.welfareCap > 0 (비교용, 기본 끔, DECISIONS 7-47) 이면 하루 지급 합도 지난주 세입 ÷ 7 × welfareCap × 단계 ÷ 5 를 넘지 않는다 (같은 비율로 줄인다)
+// - 하루 지급 합은 지난주 세입 ÷ 7 × TUNE.welfareCap × 단계 ÷ 5 를 넘지 않는다 (같은 비율로 줄인다, 이슈 #9, DECISIONS 7-47. welfareCap 0 이면 끔)
 // - TUNE.welfareFill 1 (비교용, 기본 0 = 끔, DECISIONS 7-47) 이면 돈이 필요보다 적은 날 같은 비율 대신 생활수준이 낮은 pop 부터 다 채운다 (rationWelfare)
 // - 덮는 무리: 'poor' 소작농과 일자리 없는 사람, 'wage' 임금 일자리에서 일하는 사람, 'universal' 둘 다. 상급·하급 귀족과 자본가는 받지 않는다
 
@@ -128,7 +128,7 @@ export function payWelfare(w: World) {
     if (total[ki] <= 0) return;
     const gov = companyById(w, k.governmentId);
     if (!gov) return;
-    // TUNE.welfareCap: 그날 상한(welfareCapDaily)을 넘으면 같은 비율로 줄인다. 끔이면 상한이 무한이라 지금 동작과 같다
+    // TUNE.welfareCap: 그날 상한(welfareCapDaily)을 넘으면 같은 비율로 줄인다. 값이 0 이면 상한이 무한이다
     const f = Math.min(1, Math.max(0, gov.cash) / total[ki], welfareCapDaily(k) / total[ki]);
     if (f <= 0) return;
     // TUNE.welfareFill: 모자란 날만 나누는 길이 달라진다. 하루 합은 같은 비율일 때와 같다 (f × 필요 합)
@@ -151,7 +151,7 @@ export function payWelfare(w: World) {
 
 /**
  * 하루 복지 상한 (TUNE.welfareCap, 이슈 #9): 지난주 세입(세금·관세·주조, lastBudget.revenue) ÷ 7 × welfareCap × 단계 ÷ 5.
- * welfareCap 0 (기본) 이면 무한 (상한 없음 = 지금 동작). 첫 주는 지난주 세입이 없어 0
+ * welfareCap 0 이면 무한 (상한 없음). 첫 주는 지난주 세입이 없어 0
  */
 export function welfareCapDaily(k: Kingdom, step: number = k.budget.welfare): number {
   if (!(TUNE.welfareCap > 0)) return Infinity;

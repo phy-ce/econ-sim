@@ -29,7 +29,7 @@ export type { BuildingEcon, OwnerShare } from './finance';
 export { privatizePrice } from './ai';
 export { INVEST_CLASSES, financeRatio, ownershipAssets, policyStatus, taxThreshold, investThreshold, lawUnlocked } from './policy';
 export type { AssetRow, LawOption, LawStatus, WelfareStatus } from './policy';
-export { welfareGroup, welfareCovers, welfareTarget, welfareIncome, welfareWeekly } from './welfare';
+export { welfareGroup, welfareCovers, welfareTarget, welfareIncome, welfareWeekly, welfareCapDaily } from './welfare';
 export type { WelfareGroup } from './welfare';
 export { budgetPreview, roundBudget, budgetLineRaw, budgetDrill, BUDGET_GROUPS, drillWages, drillStateFirms, drillGoods, drillTax, drillWelfare, drillInterest, drillTariffs, drillMint, drillBuild } from './budget';
 export type { BudgetPreview, BudgetLine, BudgetLineKey, BudgetGroup, BudgetGroupKey, BudgetDrill, BudgetDrillBase, WageDrill, WageDrillRow, WageDrillJob, FirmDrill, FirmDrillRow, GoodsDrill, GoodsDrillRow, GoodsDrillGood, TaxDrill, TaxDrillRow, WelfareDrill, WelfareDrillRow, InterestDrill, TariffDrill, MintDrill, BuildDrill } from './budget';

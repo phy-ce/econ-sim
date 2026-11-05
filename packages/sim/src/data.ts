@@ -629,9 +629,9 @@ export const TUNE = {
   researchPerLiteracy: 3, // 1·2·3 × 기술 값 ×1·×1.5 비교 (TECH_COST 주석, DESIGN 11)
   welfareLevels: [2, 2.5, 3, 3.5, 4],
   welfareWeeks: 40, // 26·39·52·78 (시드 1·2), 30·40·50 (시드 1~3) 비교: 40이 11~20년차 총생산·노동자 생활수준이 가장 높다. 30은 10년차 총생산이 1/3 줄고, 50은 40과 비슷하다
-  // 복지 예산 상한 (이슈 #9, DECISIONS 7-47, 비교용 스위치 · 기본 0 = 끔 = 지금 동작). 0보다 크면 하루 복지 지급 ≤ 지난주 세입 ÷ 7 × welfareCap × 복지 단계 ÷ 5
-  // (welfareCap 0.5 이면 단계마다 세입의 10%). 모자라면 같은 비율로 줄인다 (welfare.ts welfareCapDaily). 후보 0.25·0.5·1 비교는 DESIGN 11 `welfareCap` 행
-  welfareCap: 0,
+  // 복지 예산 상한 (이슈 #9, DECISIONS 7-47, 2026-11-05 사용자 결정 2). 하루 복지 지급 ≤ 지난주 세입 ÷ 7 × welfareCap × 복지 단계 ÷ 5
+  // (welfareCap 2 이면 단계마다 세입의 40%, 단계 5 = 세입의 200%). 모자라면 같은 비율로 줄인다 (welfare.ts welfareCapDaily). 0 = 끔. 후보 비교는 DESIGN 11 `welfareCap` 행
+  welfareCap: 2,
   // 복지 차례 채우기 (DECISIONS 7-47, 비교용 스위치 · 기본 0 = 끔 = 같은 비율). 1 이면 돈(상한·국고)이 필요보다 적은 날 생활수준이 낮은 pop 부터 다 채운다 (welfare.ts rationWelfare)
   welfareFill: 0,
   treasuryLowWeeks: 26,

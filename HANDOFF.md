@@ -5,7 +5,7 @@
 - 폴더: `C:\Users\phyju\Desktop\Coding_Desk\2026\estera economy sim`
 - 저장소: https://github.com/phy-ce/econ-sim (main). 검증된 병합마다 푸시한다(2026-10-19 사용자 지시).
 - 작업 규칙: `CLAUDE.md`. 경제 규칙 요약: `docs/DESIGN.md`. 빅토리아3 근거: `docs/VIC3_REFERENCE.md`.
-- 사용자 결정 대기: `docs/overhaul/12_DECISIONS_NEEDED.md`(Q1~Q20)와 `docs/DECISIONS.md`. 지금 답을 기다리는 것은 아래 0-1030 절 0b′ 의 "사용자 답 대기" 줄, 0-1102 의 `tenantSlack` 메모, 0-1102e 의 플레이어 왕실 국영 웃돈·하급 귀족 시작 임금 (DECISIONS 7-42), 0-1105-welfarefill 의 복지 상한·차례 채우기 (DECISIONS 7-47, 둘 다 기본 끔, 추천 상한 1 만), 0-1102-fix10 의 정산 소수 레벨 (DECISIONS 7-48, 급하지 않음), 0-1102h 의 저택 지분 (DECISIONS 7-44: AI 고침과 함께 기본 켬, 정책 안 F3 는 만들지 않음, 부재 지주 몫은 결정 대기 4), 0-1102-admin4 의 토지세 기반이 사라지는데 인두세로 못 바꾸는 문제 (DECISIONS 7-50), 0-1102-grainrule 의 곡물 ⑦ 남은 약점 (S/D 1.1~1.2, 40년 뒤 인구 압력, AI 수요 전망이 더 사는 곡물을 모름, DECISIONS 7-51; 7-49 W1~W3 는 7-51 에서 ⑦ 로 결정) (0-1102f 의 목표 임금 규칙은 2026-11-02 사용자가 확인했다, DECISIONS 7-43). 화면 작업자에게 넘길 것: `docs/UI_CHANGES.md` 맨 위 "0. 지금 할 일".
+- 사용자 결정 대기: `docs/overhaul/12_DECISIONS_NEEDED.md`(Q1~Q20)와 `docs/DECISIONS.md`. 지금 답을 기다리는 것은 아래 0-1030 절 0b′ 의 "사용자 답 대기" 줄, 0-1102 의 `tenantSlack` 메모, 0-1102e 의 플레이어 왕실 국영 웃돈·하급 귀족 시작 임금 (DECISIONS 7-42), 0-1102-fix10 의 정산 소수 레벨 (DECISIONS 7-48, 급하지 않음), 0-1102h 의 저택 지분 (DECISIONS 7-44: AI 고침과 함께 기본 켬, 정책 안 F3 는 만들지 않음, 부재 지주 몫은 결정 대기 4), 0-1102-admin4 의 토지세 기반이 사라지는데 인두세로 못 바꾸는 문제 (DECISIONS 7-50), 0-1102-grainrule 의 곡물 ⑦ 남은 약점 (S/D 1.1~1.2, 40년 뒤 인구 압력, AI 수요 전망이 더 사는 곡물을 모름, DECISIONS 7-51; 7-49 W1~W3 는 7-51 에서 ⑦ 로 결정) (0-1102f 의 목표 임금 규칙은 2026-11-02 사용자가 확인했다, DECISIONS 7-43). 화면 작업자에게 넘길 것: `docs/UI_CHANGES.md` 맨 위 "0. 지금 할 일".
 - 클라우드 세션(claude.ai/code)으로 이어서 할 수 있다. 규칙은 CLAUDE.md "클라우드 세션"을 본다.
 - 옛 세션 기록: `docs/log/` (2026-10-25 이전 HANDOFF 절은 `docs/log/HANDOFF_2026-10-18_to_10-25.md`, 날짜별 UI 기록도 여기). 다른 문서의 "HANDOFF 0-ind3"·"HANDOFF 0-aifix" 같은 옛 절 참조는 그 파일에 있다.
 
@@ -85,13 +85,15 @@
 - 검증: typecheck (sim + client + encyclopedia), test:core 24파일 81개. 골든 해시 c7fb7c00ef46d24c (`cli/golden.ts`) 가 이력 마지막(규칙 판 6) 과 같음. 클라이언트 코드는 고치지 않았다.
 
 ## 0-1105-welfarefill
-2026-11-05, 브랜치 `wt-welfarefill` (main 0acc1a2 에서), 사용자 결정 "생활수준이 가장 낮은 사람부터 채워보고". 합치지 않았다 (premerge 전).
-- 바뀐 것: `TUNE.welfareFill` (기본 0 = 끔, 골든 bba6036b92c386dd 같음), `welfare.ts rationWelfare`, 사전 `welfare` 항목, `cli/welfmon.ts` 칸 (식량·1.25 미만·인구·세전·복지 중 소작농 몫), `cli/report.py` 이름표. 상한 기준은 지난주 세입 그대로 (총생산 기준은 사용자가 뺐다, DECISIONS 7-47).
+2026-11-05, 브랜치 `wt-welfarefill` (main 0acc1a2 에서, main ec66794 를 합침 e7d0bcd), 사용자 결정 "생활수준이 가장 낮은 사람부터 채워보고", 뒤이어 "2단계로 하고 반영하자". 합치지 않았다 (premerge 전).
+- 바뀐 것: `TUNE.welfareCap` 기본 2 (아래 결정), `TUNE.welfareFill` (기본 0 = 끔, 그 커밋에서 골든 bba6036b92c386dd 같음), `welfare.ts rationWelfare`, 사전 `welfare` 항목, `cli/welfmon.ts` 칸 (식량·1.25 미만·인구·세전·복지 중 소작농 몫), `cli/report.py` 이름표. 상한 기준은 지난주 세입 그대로 (총생산 기준은 사용자가 뺐다, DECISIONS 7-47).
 - 규칙 한 줄: "복지 돈이 모자라면 생활수준이 가장 낮은 사람부터 다 채운다." 날마다 차례를 다시 정해 생활수준으로 잰 공통 높이는 저절로 생긴다. 소득으로 재는 물 채우기는 5년 × 시드 1 × 상한 0.5 에서 나은 점이 없어 뺐다 (커밋 안 함).
 - 숫자 (main 0acc1a2 + 브랜치 d8960db, `cli/welfmon.ts`, 플레이어 왕국 복지법 강제·단계 3·salt 0, 한 번에 한 프로세스): 5년 상한 없음·0.25·0.5·1 × 세 법 × 시드 1·2, 20년 상한 1. 소작농 생활수준 해 평균은 20년 실행에서 1.00~1.09 였다. 상한 1 은 20년 내내 빚 0, 20년차 국고 168~191 (복지 없음 229·282). 돈이 구빈법 필요의 1~11% 라 45만~111만 명 소작농 pop 이 문턱을 못 넘는다. 표는 DECISIONS 7-47, 해마다 값은 보고서 2026-11-05-welfarefill. 옛 상한 숫자 (main 9ba5acc) 에 재검증 줄을 달았다.
-- 남은 것: 사용자 결정 7-47 (2026-11-05 사용자: 국고보다 경제 규모가 중요하다. 총생산·인구 기준으로 다시 비교할 것. 그 전 추천: 상한 1 만 켠다. 소작농을 올리려면 pop 나누기나 목표 낮추기). 0.25·0.5 의 20년, salt 비교, 저택으로 빠지는 복지 몫은 재지 않았다.
-- 화면: 넘길 것 없음 (기본 끔). 켜면 상한 줄·`drillWelfare` 의 줄인 몫이 필요하다.
-- 검증: typecheck, test:core (새 시험: welfareFill 상한·돈 보존, 저장/불러오기, 차례), `cli/golden.ts` 같음. 전체 vitest 는 돌리지 않았다.
+- 결정 (2026-11-05 사용자 "2단계로 하고 반영하자", DECISIONS 7-47): `welfareCap` 기본 2, `welfareFill` 0. 한 줄: "복지는 하루에 지난주 세입의 단계 × 40% ÷ 7 까지만 쓴다" (단계 5 = 세입의 200%). 이슈 #9 를 닫는다. 골든 규칙 판 10 `2d253cdf9fd8586e` (전 판 9 `bba6036b92c386dd`, main 을 합친 e7d0bcd 위. 그 뒤 main 에 규칙이 더 들어오면 합칠 때 다시 돌린다).
+- 비교: 강제 법 20년 상한 1·2·3 은 `.tmp/fill/h/`, 기본 게임 끔·2 는 `.tmp/fill/d/default.jsonl` (`docs/overhaul/WELFARECAP_SPECS.json`), 보고서 2026-11-05-welfarefill. 상한 2 는 빚 0·연말 국고 11.8~19.1·복지 ÷ 세입 약 1.2, 상한 3 은 빚 ÷ 한도 최고 1.23~1.71. 기본 게임: AI 왕국이 복지법을 3~6년차에 켠다 (끔 12~17년차), 대륙 세전 시드 평균 12~16년차 5~10% 낮고 18~20년차 4~8% 높다, 빚 0. 사전 `welfare` 항목의 단계 수 자리표시가 `{3}` (welfareFill 을 가리켰다) 이던 것을 고쳤다.
+- 남은 것: 단계 5 강제 실행, 임금 보조 상한 2·3, salt 비교, 상한 3 총생산이 국채 돈 찍기인지, 0.25·0.5 의 20년, 저택으로 빠지는 복지 몫. 소작농을 실제로 올리려면 pop 나누기나 목표 낮추기 (DECISIONS 7-47 (e), 플레이어가 보는 규칙이 바뀌어 묻는다).
+- 화면: UI_CHANGES 2-89 (복지 상한 줄, 기본 켬이 되어 생겼다).
+- 검증: typecheck, test:core 29파일 106개, client vitest 30파일 79개, 골든 위와 같음. 기본값이 바뀌어 고친 시험은 없다. 전체 vitest·premerge 는 돌리지 않았다.
 
 ## 0-1102-welfare9
 2026-11-02, 브랜치 `wt-welfare9` (main 9ba5acc 에서), 이슈 #9 (복지법 하나가 왕실 국고를 비운다). wt-batch2 로 합침 (9effe91).
