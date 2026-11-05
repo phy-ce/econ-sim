@@ -627,7 +627,7 @@ export function currentSD(w: World, regionId: number, g: GoodId): number | null 
 
 /**
  * 예상 S/D 검사(오버홀 03 5-1)가 보는 방식의 산출 상품: 기본가로 잰 산출 값(양 × 기본가)이 가장 큰 상품 (같으면 outputs 에 먼저 나온 것).
- * 03 문서는 산출이 여럿인 방식을 정하지 않아 가장 큰 산출 하나로 정했다 (2026-10-30 데이터에는 산출이 둘 이상인 방식이 없다). 산출이 없으면 null
+ * 산출이 여럿인 방식(혼합 방식)의 대표 상품이다. 증설 검사는 산출 전부를 보는 methodSD 를 쓰고, 이 함수는 넘침 퇴출 묶음·화면 미리보기가 쓴다. 산출이 없으면 null
  */
 export function mainOutput(typeId: string, methodId: string): GoodId | null {
   let best: GoodId | null = null, v = -Infinity;
@@ -636,6 +636,21 @@ export function mainOutput(typeId: string, methodId: string): GoodId | null {
     if (q > 0 && x > v) { v = x; best = g; }
   }
   return best;
+}
+
+/**
+ * 방식의 예상 공급 ÷ 수요: 산출 상품마다 projectedSD 를 기본가 산출 값으로 가중 평균한다 (읽기 전용). 산출이 하나면 projectedSD 와 같다.
+ * 수요가 없는 상품(null)은 빼고 나머지로 평균한다. 전부 없거나 산출이 없으면 null. AI 증설 검사·증설 지역 고르기(ai.ts)가 쓴다
+ */
+export function methodSD(w: World, regionId: number, typeId: string, methodId: string): number | null {
+  let v = 0, sum = 0;
+  for (const [g, q] of Object.entries(getMethod(typeId, methodId).outputs) as [GoodId, number][]) {
+    const sd = q > 0 ? projectedSD(w, regionId, g) : null;
+    if (sd === null) continue;
+    const x = q * GOODS[g].basePrice;
+    v += x; sum += x * sd;
+  }
+  return v > 0 ? sum / v : null;
 }
 
 /** 가격 공식 (빅토리아3): 기본가 × (1 + 0.75 × clamp((구매 − 판매) / min(구매, 판매), ±1)) */

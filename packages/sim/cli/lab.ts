@@ -4,6 +4,7 @@
 // --index 는 그 순번 하나만, --list 는 "순번 이름 seed salt years optional" 줄만 낸다.
 // 줄: 해마다 {"y","seed","salt","run","k"(왕국 id 또는 "all"),...} 와 실행 끝에 {"run","seed","salt","control"(명세에 있으면),"log":[...],"ms"} 한 줄.
 import './lowprio';
+import './methodpatch';
 import { readFileSync, existsSync } from 'node:fs';
 import { runSpec } from '../src/lab/run';
 import type { LabSpec } from '../src/lab/run';

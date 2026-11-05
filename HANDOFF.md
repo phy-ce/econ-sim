@@ -9,6 +9,12 @@
 - 클라우드 세션(claude.ai/code)으로 이어서 할 수 있다. 규칙은 CLAUDE.md "클라우드 세션"을 본다.
 - 옛 세션 기록: `docs/log/` (2026-10-25 이전 HANDOFF 절은 `docs/log/HANDOFF_2026-10-18_to_10-25.md`, 날짜별 UI 기록도 여기). 다른 문서의 "HANDOFF 0-ind3"·"HANDOFF 0-aifix" 같은 옛 절 참조는 그 파일에 있다.
 
+## 0-1105-luxmix
+- 브랜치 wt-luxmix (main 71d3fa1 에서). 플레이어가 보는 규칙이라 main 에 합치지 않고 사용자 확인을 기다린다 (DECISIONS 7-52). premerge 전.
+- 바꾼 것: 맞춤 재단·증기 재단·장인 가구·공구 장인 가구를 혼합 산출로 (일반품:사치품 양 4:1 → 1:1, 이익은 같은 기술의 일반 방식과 같게). `ai.ts` 방식 비교를 레벨당 손익으로, 증설 검사·지역을 `methodSD` 로, `keepLast` 를 상품마다. `outlook.ts estimateAfterEntry` 는 `mainOutput`. audit 10번. 관측 칸 `lvM`·`luxUp`. `cli/methodpatch.ts` (METHOD_PATCH 로 방식 표를 바꿔 비교).
+- 결과 (20년 × 시드 1~4, 대조 / 고른 값): 20년차 총생산 1,690 / 2,060, 인구 594만 / 602만, 소작농 5.9% / 5.4%, 혼합 방식 레벨 (대조는 사치품 방식) 84 / 127, 6~20년차 고급 의복 S/D 0.68 / 0.83. 보고서 2026-11-05-luxmix.
+- 약점: 20년차 고급 의복 S/D 1.57, 상급 귀족 생활수준이 15·20년차에 대조보다 낮다, 시드 차가 크다 (대조 1,470~1,807). 화면은 UI_CHANGES 2-90.
+
 ## 0-1105-taxrates
 - 브랜치 wt-taxrates (main b39fb8c 에서, main 0e00385 병합), premerge 전이라 main 에 합치지 않음. 2026-11-05 사용자 승인 ("ㄱㄱ"). 이슈 #4, DECISIONS 7-50 (a).
 - 같은 브랜치에서 지금 기준 문서를 코드에 맞췄다 (CLAUDE, README, DESIGN, UI_DESIGN, UI_CHANGES 0·3장, DECISIONS 대기 표시). 코드는 바꾸지 않았다.

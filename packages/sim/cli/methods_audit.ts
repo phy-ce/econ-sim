@@ -10,6 +10,8 @@
 //  7. 산업 유형 (data.ts INDUSTRIES): 기본 방식 일꾼 합계 = 유형 값, 숙련(기술자+전문가) 비율 = 유형 값 ± INDUSTRY_SKILL_TOL
 //     (농부만 쓰는 농장·목장은 0), 원료비/매출이 유형 범위 안. 윗단계 원료비/매출은 유형 범위 ± INDUSTRY_UPPER_INPUT_TOL
 //  8. 공사 포인트 = 기본 방식(건물의 첫 방식) 하루 이익 × BUILD_POINT_FACTOR, 50 단위 (산업 유형이 있는 건물)
+// 10. 혼합 방식 (산출이 둘, 2026-11-05 사용자): 1·2·7(원료)은 대신 이렇게 본다. 기본가 이익 = 같은 건물·같은 기술의 일반 방식 이익 ± 10%,
+//     원료/매출 = 가공과 숙련 범위를 사치품 값 비중으로 섞은 범위 (+ INDUSTRY_UPPER_INPUT_TOL 은 윗단계만), 일반품:사치품 양의 비율은 단계가 오를수록 준다
 //  9. 기본 임금 = 규칙 값 (2026-11-01 사용자 결정): 기본가에서 소작농 1인 하루 소득 × TUNE.wageOutside × 직종 배율, 0.5 단위 (data.ts ruleBaseWage)
 // 무역소(trading_post)는 산출이 없어 이익·원료·산업 유형 규칙(1·2·5·7·8)과 상위 원료·산출 규칙을 보지 않는다 (정부 건물처럼 예외).
 // 둥근 수(6), 전문가(4), 단계가 오르면 일꾼 합계는 줄고 숙련 비율은 줄지 않는다(3의 앞부분)는 본다
@@ -33,6 +35,10 @@ const revOf = (m: MethodDef) => sum(m.outputs as Record<GoodId, number>, (g, q) 
 const advOf = (m: MethodDef) => ADVANCED.reduce((a, g) => a + (m.inputs[g] ?? 0) * GOODS[g].basePrice, 0);
 const headOf = (m: MethodDef) => sum(m.workers as Record<Skill, number>, (_s, n) => n);
 const skillShare = (m: MethodDef) => ((m.workers.skilled ?? 0) + (m.workers.expert ?? 0)) / Math.max(1, headOf(m));
+const mixedOf = (m: MethodDef) => Object.keys(m.outputs).length > 1;
+const luxValue = (m: MethodDef) => LUXURY.reduce((a, g) => a + (m.outputs[g] ?? 0) * GOODS[g].basePrice, 0);
+const luxQty = (m: MethodDef) => LUXURY.reduce((a, g) => a + (m.outputs[g] ?? 0), 0);
+const normalPerLux = (m: MethodDef) => (sum(m.outputs as Record<GoodId, number>, (_g, q) => q) - luxQty(m)) / luxQty(m);
 const pct = (x: number) => `${(x * 100).toFixed(1)}%`;
 
 let fails = 0;
@@ -102,6 +108,33 @@ for (const t of BUILDING_TYPES) {
       if (!isBuild && !ind) bad(`${tag}: 산업 유형이 없다`);
       const def = ind ? INDUSTRIES[ind] : null;
       const share = revOf(m) > 0 ? inputOf(m) / revOf(m) : 0;
+      // 10. 혼합 방식
+      if (mixedOf(m)) {
+        const peer = t.methods.find((x) => !mixedOf(x) && x.tech === m.tech);
+        const p = revOf(m) - wageOf(m) - inputOf(m);
+        if (!peer) bad(`${tag}: 같은 기술의 일반 방식이 없다`);
+        else {
+          const want = revOf(peer) - wageOf(peer) - inputOf(peer);
+          if (Math.abs(p / want - 1) > 0.1) bad(`${tag}: 이익 ${p} 가 ${peer.id} ${want} ± 10% 밖`);
+        }
+        const v = luxValue(m) / revOf(m), tol = k > 0 ? INDUSTRY_UPPER_INPUT_TOL : 0;
+        const mix = (i: 0 | 1) => v * INDUSTRIES.luxury.inputShare[i] + (1 - v) * INDUSTRIES.processing.inputShare[i];
+        if (share < mix(0) - tol - 1e-9 || share > mix(1) + tol + 1e-9) bad(`${tag}: 원료/매출 ${pct(share)} (섞은 범위 ${pct(mix(0) - tol)}~${pct(mix(1) + tol)})`);
+        if (k === 0) {
+          const tools = m.inputs.tools ?? 0;
+          if (tools < BASE_TOOLS[0] || tools > BASE_TOOLS[1]) bad(`${tag}: 공구 ${tools}`);
+          if (def && headOf(m) !== def.workers) bad(`${tag}: 일꾼 ${headOf(m)} ≠ ${def.name} ${def.workers}`);
+          if (def && Math.abs(skillShare(m) - def.skillShare) > INDUSTRY_SKILL_TOL + 1e-9) bad(`${tag}: 숙련 비율 ${pct(skillShare(m))}`);
+          return;
+        }
+        const below = ms[k - 1];
+        if (headOf(m) >= headOf(below)) bad(`${tag}: 일꾼 합계가 줄지 않았다`);
+        if (skillShare(m) < skillShare(below) - 1e-9) bad(`${tag}: 숙련 비율이 줄었다`);
+        if (advOf(m) <= advOf(below)) bad(`${tag}: 상위 원료 값이 늘지 않았다`);
+        if (revOf(m) <= revOf(below)) bad(`${tag}: 레벨당 산출 값이 늘지 않았다`);
+        if (normalPerLux(m) >= normalPerLux(below)) bad(`${tag}: 일반품:사치품 비율이 사치품 쪽으로 가지 않았다`);
+        return;
+      }
       if (k === 0) {
         // 5. 기본 방식 공구
         const tools = m.inputs.tools ?? 0;
