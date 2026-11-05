@@ -29,6 +29,9 @@
 깨진 화면
 - wt-batch2 main 병합 뒤: 2-87 1항 저택 주인 목록 (`manorShares` 기본 켬이라 하급 귀족이 빠지고 지분이 아니라 앉은 몫으로 보인다). 그 밖은 없음 (코드 대조 기준).
 
+sim 변경 반영 (2026-11-05: wt-welfarefill)
+0. **2-89 복지 상한 (새)**: 정책 창·예산 미리보기 복지 줄에 상한 숫자, `welfareCapDaily` × 7, 라벨과 숫자만. 복지 내역의 '평활 차이' 를 "상한으로 줄인 몫" 으로.
+
 sim 변경 반영 (오늘 병합: wt-wagelag·wt-admin·wt-wagespeed)
 1. **2-79 지역 시장 임금 표**: 지역 개요에 직종별 시장 임금·52주 평균·국영·실업 + 소작 1인 소득. 6항 국영 칸 툴팁(AI 국영 웃돈) 추가됨.
 2. **2-85 일꾼 줄 1인 임금·웃돈 (새)**: `Workforce` 줄에 `wagesAt` 1인 하루 임금, AI 상회·AI 왕실 정부 건물의 웃돈 칩 `+x%`.
@@ -813,6 +816,16 @@ sim 변경 (wt-research):
 - 넣지 않는 것 (단계 2 전): 법 버튼 옆 "바뀔 확률" 과 찬반 집단. `lawChance` 는 있지만 지금은 법이 확률로 바뀌지 않는다.
 - 문자열 (ko/en): "정치"/"Politics", "투표법"/"Voting law" (투표법 이름은 `VOTING_NAMES`), 집단 이름은 `IG_NAMES`, "영향력"/"Clout", "승인"/"Approval", "회원"/"Members", "힘셈"/"Powerful", "소외"/"Marginalised", "성남"/"Angry", "불만"/"Unhappy", "중립"/"Neutral", "만족"/"Happy", "충성"/"Loyal", "법 입장"/"Stances", "법 바꾸기"/"Law changes", "생활수준"/"Living standard", "바뀌면"/"If enacted".
 - 완료 기준: 왕국마다 영향력 % 합 100 (반올림 ±1). 승인 숫자 = `parts` 셋의 합을 ±20 으로 자른 값. 같은 날 사전 `interest-groups` live 값과 같다. typecheck.
+
+### 2-89. 복지 상한 (wt-welfarefill, DESIGN 9.5, DECISIONS 7-47, 사전 `welfare`, sim 준비됨, 이슈 #9)
+- 규칙: 복지는 하루에 지난주 세입의 단계 × 40% ÷ 7 까지만 쓴다 (`TUNE.welfareCap` 기본 2). 넘으면 받는 사람마다 같은 비율로 줄인다.
+- sim: `welfareCapDaily(k, step?)` (`packages/sim/src/welfare.ts`, 하루 상한. 끄면 `Infinity`, 첫 주는 0). 주간 값은 × 7. `welfareWeekly(k, law, step)` 은 이미 상한을 넘지 않으므로 미리보기 숫자는 저절로 바뀐다.
+- 화면 (라벨·숫자만, 설명 문구 없음):
+  1. 정책 창의 복지 줄과 예산 미리보기의 복지 줄에 "상한"/"Cap" 라벨 + 지금 단계의 주간 상한 숫자 (소수 둘째 자리까지).
+  2. 단계 1~5 버튼 툴팁에 그 단계의 주간 상한 (`welfareCapDaily(k, step)` × 7).
+  3. `Infinity` 면 상한 줄을 숨긴다.
+  4. 복지 내역 `drillWelfare`: 상한이 기본 켬이라 지역 줄 합(상한 전 필요액)이 줄 값보다 크게 많고, 그 차이가 '평활 차이' 로 보인다 (`FinancePanel.tsx:38`, 도움말이 이동평균 차이라고 말해 틀린 뜻이 된다). 복지 내역에서는 이 줄 이름을 "상한으로 줄인 몫"/"Cut by cap" 으로 바꾼다.
+- 완료 기준: 단계를 바꾸면 상한 숫자가 단계에 비례해 바뀌고, 지난주 복지가 상한을 넘지 않는다.
 
 ## 3. sim 쪽 필요 사항 (Claude가 처리할 것, UI 작업자는 요청만)
 - **2-59 주 단위 수지 (요청됨, 2026-10-22):** `BuildingEcon`에 `week: { sales, tax, inputs, wages, profit }` (건물 `revenue`·`tax`·`inputCost`·`wageCost`의 이동평균 × 7, `profitEma`와 같은 기간). 들어오면 2-59-3 폭포 라벨을 `/주`로. (2026-11-02 wt-uiapi 보류: 지금 건물에 있는 이동평균은 `profitEma`·`firmEma`(왕실 생산 건물·건축사무소만) 뿐이라 매출·세금·원료비·임금 이동평균을 건물 상태에 새로 저장해야 한다. 읽기 전용이 아니고 골든이 바뀐다.)

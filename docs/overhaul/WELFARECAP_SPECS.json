@@ -1,0 +1,50 @@
+{
+ "about": "복지 상한 기본 켬 확인 (이슈 #9, DECISIONS 7-47, wt-welfarefill). 보통 게임 = 강제 법 없음 (0B base 와 같은 조건: 플레이어 왕국은 명령 없음·연구 고정 순서, AI 왕국은 스스로 판단). cap0 = welfareCap 0 (끔), cap2 = welfareCap 2 (기본). 20년 × 시드 1·2 × salt 0. 돌리는 법 (packages/sim 에서): PAR=4 bash cli/lab.sh <out.jsonl> ../../docs/overhaul/WELFARECAP_SPECS.json",
+ "code": "wt-welfarefill e7d0bcd + welfareCap 기본 2",
+ "specs": [
+  {
+   "item": "WELFARECAP",
+   "name": "cap0",
+   "seed": 1,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "welfareCap": 0
+   },
+   "control": "cap0"
+  },
+  {
+   "item": "WELFARECAP",
+   "name": "cap0",
+   "seed": 2,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "welfareCap": 0
+   },
+   "control": "cap0"
+  },
+  {
+   "item": "WELFARECAP",
+   "name": "cap2",
+   "seed": 1,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "welfareCap": 2
+   },
+   "control": "cap0"
+  },
+  {
+   "item": "WELFARECAP",
+   "name": "cap2",
+   "seed": 2,
+   "salt": 0,
+   "years": 20,
+   "tune": {
+    "welfareCap": 2
+   },
+   "control": "cap0"
+  }
+ ]
+}

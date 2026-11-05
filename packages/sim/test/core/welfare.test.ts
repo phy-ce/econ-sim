@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { TUNE, applyCommandMsg, budgetPreview, createWorld, moneyIdentity, step, welfareCovers, welfareGroup } from '../../src/index';
-import type { World } from '../../src/index';
-import { payWelfare, welfareCapDaily, welfareWeekly } from '../../src/welfare';
+import type { Pop, World } from '../../src/index';
+import { payWelfare, rationWelfare, welfareCapDaily, welfareWeekly } from '../../src/welfare';
 import { firstDiff } from '../helpers';
 
 const runTo = (w: World, tick: number) => { while (w.tick < tick) step(w); };
@@ -92,6 +92,55 @@ describe('복지', () => {
     expect(line.byLevel).toHaveLength(5);
     expect(line.byLevel![4]).toBeLessThanOrEqual(line.byLevel![0]);
     expect(line.byLevel![4]).toBeLessThan(0);
+  });
+
+  describe('welfareFill', () => {
+    const withFill = <T,>(fn: () => T): T => {
+      const cap = TUNE.welfareCap, fill = TUNE.welfareFill;
+      try { TUNE.welfareCap = 0.5; TUNE.welfareFill = 1; return fn(); } finally { TUNE.welfareCap = cap; TUNE.welfareFill = fill; }
+    };
+
+    it('하루 합이 상한을 넘지 않고, 돈이 보존된다', () => withFill(() => {
+      const w = withWelfare(3, 'universal', 5);
+      const m0 = moneyIdentity(w);
+      let worst = 0, paidDays = 0;
+      for (let i = 0; i < 60; i++) {
+        const cap = new Map(w.kingdoms.map((k) => [k.id, welfareCapDaily(k)] as const));
+        step(w);
+        worst = Math.max(worst, Math.abs(moneyIdentity(w) - m0));
+        const paid = new Map<number, number>();
+        for (const p of w.pops) {
+          const kid = w.regions.find((r) => r.id === p.regionId)!.kingdomId;
+          paid.set(kid, (paid.get(kid) ?? 0) + (p.incomeBreakdown?.welfare ?? 0));
+        }
+        for (const k of w.kingdoms) {
+          const x = paid.get(k.id) ?? 0;
+          expect(x).toBeLessThanOrEqual(cap.get(k.id)! * (1 + 1e-9) + 1e-6);
+          if (x > 0) paidDays++;
+        }
+      }
+      expect(paidDays).toBeGreaterThan(0);
+      expect(worst).toBeLessThan(1e-3);
+    }));
+
+    it('저장/불러오기를 해도 같은 결과', () => withFill(() => {
+      const a = withWelfare(42, 'universal', 4);
+      runTo(a, 80);
+      const want = JSON.stringify(a);
+      let b = withWelfare(42, 'universal', 4);
+      runTo(b, 37);
+      b = reload(b);
+      runTo(b, 80);
+      const got = JSON.stringify(b);
+      if (got !== want) expect.fail(firstDiff(JSON.parse(got), JSON.parse(want)) ?? 'diff');
+    }));
+  });
+
+  it('rationWelfare: 생활수준이 낮은 pop 부터 다 채우고, 같으면 필요가 적은 pop 이 먼저다', () => {
+    const d = (id: number, sol: number, amt: number) => ({ p: { id, sol } as Pop, amt });
+    const due = [d(1, 2, 50), d(2, 1, 40), d(3, 1, 30), d(4, 3, 20)];
+    rationWelfare(due, 80);
+    expect(due.map((x) => x.amt)).toEqual([10, 40, 30, 0]);
   });
 
   it('welfareCap: 하루 지급이 지난주 세입 ÷ 7 × 값 × 단계 ÷ 5 를 넘지 않고, 돈이 보존된다', () => {

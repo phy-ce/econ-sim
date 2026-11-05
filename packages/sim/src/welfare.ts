@@ -12,7 +12,8 @@ import { BUDGET_STEPS } from './types';
 //   (market.ts updateWealth) 목표 부 단계에 닿으려면 한 단계 위 묶음 비용만큼 벌어야 한다
 // - 그날 소득 = 그날 들어온 현금(임금·판매·배당, 세금을 뺀 것) + 먹고 쓴 현물의 시장가
 // - 왕실 현금이 모자라면 가진 현금만큼 같은 비율로 나눠 준다 (복지로 빚을 지지 않는다). 돈은 국고에서 pop 저축으로 옮겨 간다 (화폐 보존)
-// - TUNE.welfareCap > 0 (비교용, 기본 끔, DECISIONS 7-47) 이면 하루 지급 합도 지난주 세입 ÷ 7 × welfareCap × 단계 ÷ 5 를 넘지 않는다 (같은 비율로 줄인다)
+// - 하루 지급 합은 지난주 세입 ÷ 7 × TUNE.welfareCap × 단계 ÷ 5 를 넘지 않는다 (같은 비율로 줄인다, 이슈 #9, DECISIONS 7-47. welfareCap 0 이면 끔)
+// - TUNE.welfareFill 1 (비교용, 기본 0 = 끔, DECISIONS 7-47) 이면 돈이 필요보다 적은 날 같은 비율 대신 생활수준이 낮은 pop 부터 다 채운다 (rationWelfare)
 // - 덮는 무리: 'poor' 소작농과 일자리 없는 사람, 'wage' 임금 일자리에서 일하는 사람, 'universal' 둘 다. 상급·하급 귀족과 자본가는 받지 않는다
 
 /** 복지를 받을 수 있는 무리: 'poor' 소작농·실업자, 'wage' 임금 일자리. 귀족·자본가는 null */
@@ -47,6 +48,21 @@ function dayIncome(p: Pop, r: Region): number {
 
 const STEPS = BUDGET_STEPS;
 
+/** 오늘 받을 pop: amt 모자란 돈 */
+interface Due { p: Pop; amt: number }
+
+/**
+ * 돈(money)이 필요 합보다 적은 날 amt 를 실제 지급액으로 바꾼다 (TUNE.welfareFill): 생활수준이 낮은 pop 부터 필요를 다 채운다.
+ * 생활수준이 같으면 필요가 적은 pop, 그다음 id 순서다. 차례는 날마다 다시 정하므로 맨 아래 pop 이 다음 pop 을 넘으면 돈이 그쪽으로 옮겨 간다
+ */
+export function rationWelfare(due: Due[], money: number) {
+  let left = money;
+  for (const d of [...due].sort((a, b) => a.p.sol - b.p.sol || a.amt - b.amt || a.p.id - b.p.id)) {
+    d.amt = Math.min(d.amt, left);
+    left -= d.amt;
+  }
+}
+
 /**
  * 매일: 복지를 주고, 무리·단계별 필요액(Kingdom.welfareNeed)을 갱신한다. 하루 소득 이동평균을 갱신하기 전에 부른다 (tick.ts)
  */
@@ -58,7 +74,7 @@ export function payWelfare(w: World) {
   const need = w.kingdoms.map(() => ({ poor: new Array(STEPS).fill(0), wage: new Array(STEPS).fill(0), poorShort: new Array(STEPS).fill(0), wageShort: new Array(STEPS).fill(0) }));
   // 화면 전용: 지역·무리별 필요액 ('지역|무리' → 단계별 [필요액, 모자란 사람])
   const needBy = w.kingdoms.map(() => new Map<string, { need: number[]; short: number[] }>());
-  const due: { p: Pop; amt: number }[][] = w.kingdoms.map(() => []);
+  const due: Due[][] = w.kingdoms.map(() => []);
   const total = new Array(nk).fill(0);
   const regionCost = new Map<number, number[]>();
   const regionOf = new Map(w.regions.map((r) => [r.id, r] as const));
@@ -112,12 +128,15 @@ export function payWelfare(w: World) {
     if (total[ki] <= 0) return;
     const gov = companyById(w, k.governmentId);
     if (!gov) return;
-    // TUNE.welfareCap: 그날 상한(welfareCapDaily)을 넘으면 같은 비율로 줄인다. 끔이면 상한이 무한이라 지금 동작과 같다
+    // TUNE.welfareCap: 그날 상한(welfareCapDaily)을 넘으면 같은 비율로 줄인다. 값이 0 이면 상한이 무한이다
     const f = Math.min(1, Math.max(0, gov.cash) / total[ki], welfareCapDaily(k) / total[ki]);
     if (f <= 0) return;
+    // TUNE.welfareFill: 모자란 날만 나누는 길이 달라진다. 하루 합은 같은 비율일 때와 같다 (f × 필요 합)
+    if (TUNE.welfareFill > 0 && f < 1) rationWelfare(due[ki], f * total[ki]);
+    else for (const d of due[ki]) d.amt *= f;
     let paid = 0;
-    for (const { p, amt } of due[ki]) {
-      const x = amt * f;
+    for (const { p, amt: x } of due[ki]) {
+      if (x <= 0) continue;
       p.savings += x;
       p.lastIncome += x; recordPopIncome(p, 'welfare', x);
       paid += x;
@@ -132,7 +151,7 @@ export function payWelfare(w: World) {
 
 /**
  * 하루 복지 상한 (TUNE.welfareCap, 이슈 #9): 지난주 세입(세금·관세·주조, lastBudget.revenue) ÷ 7 × welfareCap × 단계 ÷ 5.
- * welfareCap 0 (기본) 이면 무한 (상한 없음 = 지금 동작). 첫 주는 지난주 세입이 없어 0
+ * welfareCap 0 이면 무한 (상한 없음). 첫 주는 지난주 세입이 없어 0
  */
 export function welfareCapDaily(k: Kingdom, step: number = k.budget.welfare): number {
   if (!(TUNE.welfareCap > 0)) return Infinity;
@@ -154,9 +173,9 @@ export function welfareShortOf(k: Kingdom, law: WelfareLaw, step: number): numbe
 }
 
 /**
- * 그 법·단계의 주간 복지 예상액 = 하루 필요액(이동평균) × 7. 필요액은 지급 규칙(생활수준이 목표 아래인 pop, 그날 소득과 목표 소득의 차)대로 센다.
+ * 그 법·단계의 주간 복지 예상액 = min(하루 필요액(이동평균), 그 단계 하루 상한 welfareCapDaily) × 7. 필요액은 지급 규칙(생활수준이 목표 아래인 pop, 그날 소득과 목표 소득의 차)대로 센다.
  * 지금 법·단계면 실제 지급(현금이 모자라 줄인 몫 전)과 같고, 덮지 않는 무리는 복지를 받기 전 생활수준으로 센다.
- * TUNE.welfareCap 이 켜져 있으면 그 단계의 상한(welfareCapDaily × 7)을 넘지 않는다
+ * welfareCap 0 이면 상한 없이 필요액 × 7
  */
 export function welfareWeekly(k: Kingdom, law: WelfareLaw, step: number): number {
   return Math.min(welfareNeedOf(k, law, step), welfareCapDaily(k, step)) * TICKS_PER_WEEK;

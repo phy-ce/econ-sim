@@ -38,7 +38,7 @@ import {
 import { AI_JITTER, CHUNKS, INPUT_SUPPLY_MIN, MIXED_LEVELS, RAISE_FILL, RESERVE_STREAK, STARVE_FILL, TRIAL_PRICE, LAW_COOLDOWN, LAW_SWITCH, WELFARE_COOLDOWN, WELFARE_SWITCH, OFFICE_BLOCK, OFFICE_GROWTH, STAFFING_HORIZON, SWITCH_COOLDOWN, ADMIN_STAFFED, PREMIUM_MAX, PREMIUM_STEP, STATE_HIRE_PULL, TRIM_WAIT_WEEKS } from './ai';
 import { budgetPreview } from './budget';
 import { ownershipAssets } from './policy';
-import { welfareIncome, welfareTarget, welfareWeekly } from './welfare';
+import { welfareCapDaily, welfareIncome, welfareTarget, welfareWeekly } from './welfare';
 import {
   DEFAULT_VOTING_LAW, IG_APPROVAL_CAP, IG_CHANGE_CAP, IG_CHANGE_DAYS, IG_CHANGE_STEPS, IG_FUND_MAX, IG_FUND_WEIGHT, IG_LITERACY_MIN, IG_LITERACY_WEIGHT, IG_MARGINAL,
   IG_MOOD_AT, IG_POWERFUL, IG_SOL_CAP, IG_SOL_PER, IG_STANCE_CAP, LAW_CROWN_PER_STEP, LAW_OPPOSE_MULT, VOTE_MOD, VOTING_LAWS, VOTING_NAMES, interestGroups, lawChance,
@@ -1298,9 +1298,9 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   },
   {
     id: 'welfare', category: 'state', title: t('복지 (최저 생활수준 보장)', 'Welfare (minimum living standard)'),
-    rule: t('매일 왕실은 복지법이 덮는 pop 중 생활수준이 목표보다 낮은 pop 에게, 그날 소득이 목표 소득에 모자란 만큼을 준다. 목표 = 복지 단계의 생활수준. 목표 소득 = (목표 + 1) 부 단계 묶음의 하루 비용 (부는 소득이 다음 단계 묶음 비용을 넘어야 오른다). 복지법: 없음 / 구빈법(소작농·실업자) / 임금 보조(임금 일자리) / 보편 보장(귀족·자본가를 뺀 모두). 하나만, 바꾸는 데 {1}일. 국고 현금이 모자라면 가진 만큼 같은 비율로 준다 (복지로 빚을 지지 않는다). 상한 손잡이(지금 {2}, 0 = 끔)가 0보다 크면 하루 복지는 지난주 세입 ÷ 7 × 손잡이 × 단계 ÷ {3} 를 넘지 않고, 넘으면 같은 비율로 줄인다.', 'Each day the crown pays every covered pop whose living standard is below the target the amount its day\'s income falls short of the target income. Target = the welfare step\'s living standard. Target income = daily cost of the (target + 1) wealth basket (wealth only rises when income beats the next step\'s basket). Laws: none / poor laws (tenants and jobless) / wage subsidies (wage jobs) / universal (everyone but nobles and capitalists). One at a time, {1} days to change. If cash is short it pays what it has pro rata (no borrowing for welfare). If the cap knob (now {2}, 0 = off) is above 0, a day\'s welfare never exceeds last week\'s revenue ÷ 7 × knob × step ÷ {3}, cut pro rata.'),
-    formula: '지급 = max(0, 인구 × 목표 소득(1인) − (그날 현금 소득 + 현물 시장가))   (생활수준 < 목표인 대상 pop)\n하루 합 ≤ min(국고 현금, 지난주 세입 ÷ 7 × welfareCap × 단계 ÷ {3})   (welfareCap 0 이면 국고 현금만)',
-    params: [tune('welfareLevels', '목표 생활수준 (단계 1~5)', 'Target SoL (steps 1–5)'), tune('lawDays', '바꾸는 날 수', 'Change days', 'day'), tune('welfareCap', '복지 상한 (세입 비율 × 단계 ÷ 단계 수, 0 = 끔)', 'Welfare cap (revenue share × step ÷ steps, 0 = off)', 'x'), p('복지 단계 수', 'Welfare steps', () => BUDGET_STEPS)],
+    rule: t('매일 왕실은 복지법이 덮는 pop 중 생활수준이 목표보다 낮은 pop 에게, 그날 소득이 목표 소득에 모자란 만큼을 준다. 목표 = 복지 단계의 생활수준. 목표 소득 = (목표 + 1) 부 단계 묶음의 하루 비용 (부는 소득이 다음 단계 묶음 비용을 넘어야 오른다). 복지법: 없음 / 구빈법(소작농·실업자) / 임금 보조(임금 일자리) / 보편 보장(귀족·자본가를 뺀 모두). 하나만, 바꾸는 데 {1}일. 국고 현금이 모자라면 가진 만큼 같은 비율로 준다 (복지로 빚을 지지 않는다). 복지는 하루에 지난주 세입의 단계 × {5} ÷ 7 까지만 쓴다. 넘으면 같은 비율로 줄인다.', 'Each day the crown pays every covered pop whose living standard is below the target the amount its day\'s income falls short of the target income. Target = the welfare step\'s living standard. Target income = daily cost of the (target + 1) wealth basket (wealth only rises when income beats the next step\'s basket). Laws: none / poor laws (tenants and jobless) / wage subsidies (wage jobs) / universal (everyone but nobles and capitalists). One at a time, {1} days to change. If cash is short it pays what it has pro rata (no borrowing for welfare). A day\'s welfare never exceeds step × {5} of last week\'s revenue ÷ 7; above that it is cut pro rata.'),
+    formula: '지급 = max(0, 인구 × 목표 소득(1인) − (그날 현금 소득 + 현물 시장가))   (생활수준 < 목표인 대상 pop)\n하루 합 ≤ min(국고 현금, 지난주 세입 ÷ 7 × {2} × 단계 ÷ {4})\n모자라면 같은 비율로 줄인다. welfareFill 1 이면 생활수준이 낮은 pop 부터 다 채운다 (같으면 필요가 적은 pop 먼저)',
+    params: [tune('welfareLevels', '목표 생활수준 (단계 1~5)', 'Target SoL (steps 1–5)'), tune('lawDays', '바꾸는 날 수', 'Change days', 'day'), tune('welfareCap', '복지 상한 (세입 비율 × 단계 ÷ 단계 수, 0 = 끔)', 'Welfare cap (revenue share × step ÷ steps, 0 = off)', 'x'), tune('welfareFill', '차례 채우기 (1 = 돈이 모자라면 생활수준이 낮은 pop 부터, 0 = 같은 비율)', 'Lowest first (1 = when money is short, fill the lowest SoL first, 0 = same fraction)'), p('복지 단계 수', 'Welfare steps', () => BUDGET_STEPS), p('단계마다 세입 비율', 'Revenue share per step', () => `${Math.round(TUNE.welfareCap / BUDGET_STEPS * 100)}%`)],
     live: {
       pick: ['kingdom', 'region'], run: (w, ctx) => {
         const k = kingdomOfCtx(w, ctx), reg = w.regions.find((x) => x.id === ctx.regionId) ?? w.regions.find((x) => x.kingdomId === k.id)!;
@@ -1308,7 +1308,7 @@ export const ENCYCLOPEDIA: EncEntry[] = [
         return {
           rows: [row('복지법', 'Welfare law', `${k.welfareLaw}${k.lawChange?.welfare ? ' → ' + k.lawChange.welfare.to : ''}`), row('목표 생활수준', 'Target SoL', T),
             row('목표 소득 (1인 하루, 이 지역)', 'Target income (per head, this region)', r2(welfareIncome(reg, T)), 'florin'),
-            row('지난주 복지', 'Last week\'s welfare', Math.round(k.lastBudget?.welfare ?? 0), 'florin')],
+            row('지난주 복지', 'Last week\'s welfare', Math.round(k.lastBudget?.welfare ?? 0), 'florin'), row('이번 주 복지 상한', 'Welfare cap this week', Math.round(welfareCapDaily(k) * 7), 'florin')],
           bars: (['poor', 'wage', 'universal'] as const).map((l) => bar(t(l, l), -Math.round(welfareWeekly(k, l, k.budget.welfare)), 'florin')),
         };
       },
@@ -1386,7 +1386,7 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   },
   {
     id: 'ai-welfare', category: 'ai', title: t('복지 고르기', 'Choosing welfare'),
-    rule: t('조일 때는 복지를 가장 먼저 줄인다 (단계를 1까지, 빚이 있으면 그다음 복지법을 끈다). 감당 = 국고 ≥ (복지를 뺀 주간 지출 + 그 복지의 주간 예상액) × {0}주. 다른 손잡이를 움직이지 않은 점검에서, 법마다 감당할 수 있는 가장 높은 단계에서 목표 소득에 모자란 사람이 가장 많은 법을 켜고(단계 1부터) 한 칸씩 올린다. 다른 법이 {1}배 넘게 많이 도우면 바꾼다 (바꾼 뒤 {2}일은 안 바꾼다). 조이지 않아도 국고가 줄며 {0}주의 절반 아래면 한 칸 내린다.', 'When tight, welfare is cut first (step down to 1, then, if in debt, the law is switched off). Affordable = treasury ≥ (weekly spending without welfare + that welfare\'s weekly estimate) × {0} weeks. On a check where no other knob moved, the crown enables the law that helps the most people short of the target income at the highest step it can afford (starting at step 1) and raises one step at a time. It switches law when another helps more than {1}× as many (not again for {2} days). When not tight but falling below half of {0} weeks, it steps down.'),
+    rule: t('조일 때는 복지를 가장 먼저 줄인다 (단계를 1까지, 빚이 있으면 그다음 복지법을 끈다). 감당 = 국고 ≥ (복지를 뺀 주간 지출 + 그 복지의 주간 예상액, 복지 상한을 넘지 않는다) × {0}주. 다른 손잡이를 움직이지 않은 점검에서, 법마다 감당할 수 있는 가장 높은 단계에서 목표 소득에 모자란 사람이 가장 많은 법을 켜고(단계 1부터) 한 칸씩 올린다. 다른 법이 {1}배 넘게 많이 도우면 바꾼다 (바꾼 뒤 {2}일은 안 바꾼다). 조이지 않아도 국고가 줄며 {0}주의 절반 아래면 한 칸 내린다.', 'When tight, welfare is cut first (step down to 1, then, if in debt, the law is switched off). Affordable = treasury ≥ (weekly spending without welfare + that welfare\'s weekly estimate, never above the welfare cap) × {0} weeks. On a check where no other knob moved, the crown enables the law that helps the most people short of the target income at the highest step it can afford (starting at step 1) and raises one step at a time. It switches law when another helps more than {1}× as many (not again for {2} days). When not tight but falling below half of {0} weeks, it steps down.'),
     params: [tune('welfareWeeks', '복지 감당 주 수', 'Welfare cover weeks', 'week'), p('법 바꾸기 배수', 'Switch factor', () => WELFARE_SWITCH, 'x'), p('바꾼 뒤 쉬는 날', 'Cooldown', () => WELFARE_COOLDOWN, 'day')],
     related: ['welfare', 'ai-budget'], seenIn: ['finance'], source: ['ai.ts adjustBudget', 'ai.ts raiseWelfare', 'ai.ts cutWelfare'], design: ['10', '9.5'],
   },
