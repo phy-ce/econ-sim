@@ -413,3 +413,8 @@ DetailWindow 독립 NavigationProvider/버튼, BuildingPops 및 ResourceInspecto
 ## 2026-11-06 2-94 기술로 열리는 수요 완료
 - 부 이동 중복 커밋3312f9a. DemandLock 공통 아이콘을 시장 상품 행·상품 상세에 적용. 지역 범위는 그 지역, 세계/왕국 범위는 플레이어 왕국 지역 lockedGoods. 툴팁은 goodTechs 전체 기술의 현 언어 이름, 문장 본문 없음. 기존 이름 함수로 정밀 기기/공장 새 이름 자동 반영. sim d795e52 병합 대조.
 - 루트 typecheck·클라이언트36파일92시험 통과. 지역과 플레이어 왕국의 잠금이 다른 경우 및 양 언어 복수 기술 시험. CSS1920×1028 헤드리스 스크린샷 확인: C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/demand-lock-ko-light.png, demand-detail-ko-light.png, demand-detail-en-dark.png. 운송/종이/정밀 기기3행 잠금, 운송 상세 잠금, 마찻길/증기철도 양 기술·본문403/scroll403 확인. 다음2-89 복지 상한.
+
+## 2026-11-06 2-89 복지 상한 완료
+- 수요 잠금 커밋1b4b224. WelfareCap 공통 표시를 예산 복지 단계 줄/복지 내역 줄·정책 복지 탭에 적용. welfareCapDaily×7, 단계 hover/focus 미리보기 화살표·버튼 툴팁의 단계별 주간 상한, Infinity 숨김. 설명 문장 추가 없음.
+- 복지 drill 차이를 상한으로 줄인 몫/Cut by cap으로 정정하고 평활 도움말 제거. 모든 상세 Σ가 행합+smoothing을 포함해 상단 drill.weekly와 맞도록 수정(기존 행합만 표시하던 누락).
+- 루트 typecheck·클라이언트37파일93시험 통과. 단계1→5 비례·무제한 숨김 회귀. CSS1920×1028 헤드리스 스크린샷 확인: C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/welfare-cap-en-dark.png, welfare-detail-en-dark.png, welfare-detail-ko-light.png, welfare-policy-ko-light.png. 별도 저장 lastBudget.revenue42000/구빈법: 상한1단계16800→5단계84000, 실제 단계5 명령 후84000, 툴팁84000, 본문403/scroll403, 복지Σ−33600=drill.weekly. 검증 저장 복원. 실제 주간 지출 확정까지 시간 경과는 미검증(sim API 그대로 읽음). 다음2-55 자본가 필터.
