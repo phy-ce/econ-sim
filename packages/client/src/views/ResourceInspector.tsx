@@ -4,7 +4,7 @@ import {DemolitionProgress} from './DemolitionProgress';
 import {FlowRow} from './FlowRow';
 import {useNavigationState} from '../NavigationHistory';
 import { BuildingEconomics } from './BuildingEconomics';
-import { isOwnerBuilding } from '@econ/sim';
+import { buildingEcon, isOwnerBuilding } from '@econ/sim';
 import { HelpText } from '../TooltipLayer';
 import { HarvestBadge } from './HarvestBadge';
 import { NumericValue } from '../NumericValue';
@@ -30,13 +30,13 @@ export function BuildingInspector({ building: input, world, onGood, onCompany, g
   const b=world.buildings.find(b=>b.id===ownerId)??input;
   const ko = useLang() === 'ko';
   const T = useT();
-  const method = getMethod(b.typeId, b.methodId);
+  const method = getMethod(b.typeId, b.methodId),econ=buildingEcon(world,b);
   const owner = companyById(world, b.companyId);
   return <section className="building-inspector" aria-label={buildingName(b.typeId)}>
     <div className="inspector-heading"><BuildingSprite typeId={b.typeId} size={88} /><div><h3>{buildingName(b.typeId)} ×{b.level}</h3><p>{methodName(getMethod(b.typeId, b.methodId))}</p>
       <button className="link-btn" onClick={() => onCompany(b.companyId)}><OwnerBadge company={owner} world={world}/> <ChevronRight size={14} /></button></div></div>
     <DemolitionProgress world={world} building={b} game={game}/>
-    {!isOwnerBuilding(b.typeId)&&<div className="inspector-metrics">{!isOwnerBuilding(b.typeId)&&<span><HelpText text={T.help.utilization}>{uiCopy().screenText['utilization']}</HelpText><b>{b.active && !b.idle ? pct(b.utilization) : '0%'}</b></span>}<span><HelpText text={T.help.staffing}>{uiCopy().screenText['staffing236']}</HelpText><b>{pct(b.last.staffing)}</b></span>{!isOwnerBuilding(b.typeId)&&<span><HelpText text={T.help.inputFill}>{uiCopy().screenText['inputCoverage']}</HelpText><b>{pct(b.last.inputFill)}</b></span>}</div>}
+    {!isOwnerBuilding(b.typeId)&&<div className="inspector-metrics">{!isOwnerBuilding(b.typeId)&&<span><HelpText text={T.help.utilization}>{uiCopy().screenText['utilization']}</HelpText><b>{b.active && !b.idle ? pct(b.utilization) : '0%'}</b></span>}<span><HelpText text={T.help.staffing}>{uiCopy().screenText['staffing236']}</HelpText><b>{econ.jobs>0?pct(econ.staffing):'—'}</b></span>{!isOwnerBuilding(b.typeId)&&<span><HelpText text={T.help.inputFill}>{uiCopy().screenText['inputCoverage']}</HelpText><b>{pct(b.last.inputFill)}</b></span>}</div>}
     <BuildingEconomics world={world} building={b} game={game} onBuilding={setOwnerId}/>{!isOwnerBuilding(b.typeId)&&<><Workforce building={b} world={world}/><FlowRow world={world} building={b} onGood={onGood}/></>}
 
     {game&&<BuildingControls building={b} game={game} world={world}/>}

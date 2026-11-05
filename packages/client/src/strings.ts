@@ -6,6 +6,7 @@ import { particle } from './format';
 type S = string;
 
 export const KO = {
+ reserveRate:'적립',keepShare:'금고 유지',
  perHeadDay:"1인 / 일",dailyRateLabel:"일 이자율",taxWeeklyFormula:(collection:S)=>`min(저축, 낼 세금) × ${collection} × 7`,targetIncomeLabel:"목표 소득",welfareGroupPoor:"소작농·실업자",welfareGroupWage:"임금 노동자",wageIndexLabel:"임금 지수",resourceSearch:"건물·지역·소유 검색",kingdomEconomy:"왕국 경제",kingdomCompare:"왕국 비교",
  kingdomSummary:"왕국 요약",weeklyGdp:"GDP / 주",reserveIncludedInPrivateCash:"민간 현금에 포함된 유보 자산. 별도로 더하지 않습니다.",
  assetsTitle:"저택·금융가 자산",assetsKingdoms:"왕국",assetsRegions:"지역",
@@ -564,6 +565,7 @@ export const KO = {
 export type Dict = typeof KO;
 
 export const EN: Dict = {
+ reserveRate:'Set aside',keepShare:'Kept in treasury',
  perHeadDay:"Per head/day",dailyRateLabel:"Daily interest",taxWeeklyFormula:(collection)=>`min(savings, tax due) × ${collection} × 7`,targetIncomeLabel:"Target income",welfareGroupPoor:"Tenants / unemployed",welfareGroupWage:"Wage workers",wageIndexLabel:"Wage index",resourceSearch:"Search building, region or owner",kingdomEconomy:"Kingdom economy",kingdomCompare:"Kingdoms",
  kingdomSummary:"Kingdom summary",weeklyGdp:"GDP / week",reserveIncludedInPrivateCash:"Reserves are included in private cash and are not added again.",
  assetsTitle:"Manor vs finance assets",assetsKingdoms:"Kingdoms",assetsRegions:"Regions",

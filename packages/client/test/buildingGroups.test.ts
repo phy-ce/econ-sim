@@ -5,10 +5,10 @@ import {buildingGroups,sumEcon,summarizeBuildings} from '../src/buildingGroups';
 describe('building groups',()=>{
  it('combines ownership by owner ID and computes ratios from totals',()=>{
   const w=createWorld(42),base=buildingEcon(w,w.buildings[0]);
-  const a={...base,day:{sales:100,inputs:20,wages:30,profit:50,tax:0,fee:0},profitWeek:350,jobs:10,employed:5,owners:[{owner:'state' as const,levels:2,share:1,dividendWeek:10}]};
-  const b={...a,day:{sales:300,inputs:100,wages:100,profit:100,tax:0,fee:0},profitWeek:700,jobs:90,employed:90,owners:[{owner:'state' as const,levels:3,share:1,dividendWeek:20}]};
+  const a={...base,day:{sales:100,inputs:20,wages:30,profit:50,tax:0,fee:0},profitWeek:350,jobs:10,employed:5,staffing:.5,owners:[{owner:'state' as const,levels:2,share:1,dividendWeek:10}]};
+  const b={...a,day:{sales:300,inputs:100,wages:100,profit:100,tax:0,fee:0},profitWeek:700,jobs:90,employed:90,staffing:.8,owners:[{owner:'state' as const,levels:3,share:1,dividendWeek:20}]};
   const e=sumEcon([a,b],5);
-  expect(e.staffing).toBe(.95);expect(e.margin).toBe(.375);expect(e.profitWeekPerLevel).toBe(210);
+  expect(e.staffing).toBe(.77);expect(e.margin).toBe(.375);expect(e.profitWeekPerLevel).toBe(210);
   expect(e.owners).toEqual([{owner:'state',levels:5,share:1,dividendWeek:30}]);
  });
  it('keeps pending-only types and combines duplicate building types',()=>{

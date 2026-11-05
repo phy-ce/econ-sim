@@ -303,3 +303,9 @@ DetailWindow 독립 NavigationProvider/버튼, BuildingPops 및 ResourceInspecto
 - 휠 확대 중심을 SVG 좌표로 변환한 마우스 위치에 고정. 같은 지점의 100→200% 화면 이동428.08px→0.80px, 200→300% 0.15px(좌표 반올림 포함). 버튼은 중앙 확대, 100~300% 제한/초기화 유지.
 - 루트 npm.cmd run typecheck·클라이언트32파일82시험 통과. 1920×1028 헤드리스 스크린샷 확인: C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/nov5-map-right-final-ko-light.png, nov5-map-right-final-en-dark.png, nov5-map-final-zoom200-ko-light.png, nov5-map-final-zoom300-ko-light.png. 오른쪽 경계와 300% 해안 확인. 전 영역 드래그/모든 지도 레이어 조합은 미검증.
 - 2-51 커밋2cc182d. 다음 0장6번 2-59 잔여.
+
+## 2026-11-05 2-59 화면 잔여 완료 · 주간 폭포 막힘
+- 목록에 6px 원료/임금/양수 이익 SegBar, 적자 끝 띠, 정확한 일간 매출·비용·이익률 툴팁. 정부 건물/매출0은 생략. 기존24px 소유/수치 바 배치는 유지. 주간 레벨당 이익·실제 배당 정렬 추가(주간 순서 갱신).
+- 유보 툴팁 RESERVE_SHARE35%, 개별/그룹 주인 배당 툴팁 KEEP_SHARE20%/30%. 상세 충원은 buildingEcon.staffing, 그룹은 일자리 가중 평균(고용÷자리와 다른 평활 값 보존); 회귀에서0.77 확인.
+- 루트 typecheck·클라이언트32파일82시험 통과. 1920×1028 헤드리스 스크린샷 확인: C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/nov5-cost-bars-ko-light.png, nov5-cost-bars-en-dark.png. 동부 삼림 비용 막대4개 높이6px, 본문403/scroll403. 벌목장 매출22,021.14/원료1,078.55/임금25,740.51/손익−4,797.92 직접 API와 일치. 양수 이익 막대 및 배당 정렬 전 기관 조합은 화면 미검증.
+- 막힘: BuildingEcon.week 미제공으로 주간 폭포는 기존 sim 요청 유지, 하루 값을 주간으로 바꾸지 않음. 지도 수정 커밋ebac485. 다음2-42 상세 자원·대기열.

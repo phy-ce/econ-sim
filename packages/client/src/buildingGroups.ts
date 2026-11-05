@@ -11,7 +11,7 @@ export function sumEcon(econs:Econ[],levels:number):Econ {
   for(const [id,value] of Object.entries(e.ownerless))ownerless[Number(id)]=(ownerless[Number(id)]??0)+value;
  }
  const jobs=sum('jobs'),employed=sum('employed'),profitWeek=sum('profitWeek');
- return {day,margin:day.sales?day.profit/day.sales:null,profitWeek,profitWeekPerLevel:levels?profitWeek/levels:0,hasReserve:econs.some(e=>e.hasReserve),reserve:sum('reserve'),reserveCap:sum('reserveCap'),reserveWeek:sum('reserveWeek'),dividendsWeek:sum('dividendsWeek'),owners:[...owners.values()].map(o=>({...o,share:levels?o.levels/levels:0})),ownerless,jobs,employed,staffing:jobs?employed/jobs:0};
+ return {day,margin:day.sales?day.profit/day.sales:null,profitWeek,profitWeekPerLevel:levels?profitWeek/levels:0,hasReserve:econs.some(e=>e.hasReserve),reserve:sum('reserve'),reserveCap:sum('reserveCap'),reserveWeek:sum('reserveWeek'),dividendsWeek:sum('dividendsWeek'),owners:[...owners.values()].map(o=>({...o,share:levels?o.levels/levels:0})),ownerless,jobs,employed,staffing:jobs?econs.reduce((n,e)=>n+e.staffing*e.jobs,0)/jobs:0};
 }
 export function buildingGroups(world:World,regionId:number){
  const types=new Set([...world.buildings.filter(b=>b.regionId===regionId).map(b=>b.typeId),...world.constructions.filter(c=>c.regionId===regionId).map(c=>c.typeId)]);
