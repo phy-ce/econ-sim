@@ -3,14 +3,19 @@ export const meta = {
   description: 'Before merging a wt-* branch into main: tests, doc/rationale/stale-text review, fix on the branch, re-test',
   whenToUse: 'Every time a work branch is about to be merged into main (args: branch name, e.g. "wt-aifix", or {branch, worktree})',
   phases: [
-    { title: 'Gate', detail: 'typecheck, core + full tests, methods audit' },
-    { title: 'Review', detail: '4 lenses: design/encyclopedia, rationale, stale text, handoff/UI docs' },
+    { title: 'Scope', detail: 'size the checks to the diff: docs, value or full' },
+    { title: 'Gate', detail: 'typecheck and tests, as far as the scope needs' },
+    { title: 'Review', detail: 'lenses for the scope: design/encyclopedia, rationale, stale text, handoff/UI docs' },
     { title: 'Fix', detail: 'one agent applies the findings on the branch' },
     { title: 'Verify', detail: 'gate again' },
   ],
 }
 
-// 사용: Workflow({ name: 'premerge', args: 'wt-aifix' }) 또는 args: { branch: 'wt-aifix', worktree: '.tmp/wt/aifix' }
+// 사용: Workflow({ name: 'premerge', args: 'wt-aifix' }) 또는 args: { branch: 'wt-aifix', worktree: '.tmp/wt/aifix', scope: 'full' }
+// 범위는 diff 로 정한다 (scope 를 주면 그 값을 쓴다):
+//   docs  = 문서·보고서·.claude 만 바뀜. 전체 테스트 없음, handoff 검토만. DESIGN.md 가 바뀌면 사전 시험 때문에 test:core 를 돌린다
+//   value = sim 코드에서 기존 상수의 숫자만 바뀜. 전체 테스트, rationale 검토만
+//   full  = 그 밖 전부. 전체 테스트, 네 관점 검토
 const A = typeof args === 'string' ? { branch: args } : (args ?? {})
 if (!A.branch) throw new Error('args: branch name (wt-...) is required')
 const branch = A.branch
@@ -28,14 +33,34 @@ const GATE_SCHEMA = {
   },
   required: ['ok', 'failures'],
 }
-const gate = (phase) => agent(`${SAFETY}
+// level: 'core' = typecheck + test:core, 'full' = typecheck + 전체 (전체에 test/core 가 들어 있어 test:core 를 따로 돌리지 않는다)
+const gate = (phase, level) => agent(`${SAFETY}
 
 Run in the worktree, in order, and report each failure with its key error lines:
 1. npm run typecheck
-2. npm run test:core
-3. cd packages/sim && npx vitest run
-4. npx tsx packages/sim/cli/methods_audit.ts (only if building/method data changed in the diff)
+${level === 'full'
+    ? `2. cd packages/sim && npx vitest run
+3. npx tsx packages/sim/cli/methods_audit.ts (only if building/method data changed in the diff)`
+    : `2. npm run test:core`}
 ok = all passed. Do not fix anything.`, { label: `gate:${phase}`, phase, schema: GATE_SCHEMA })
+
+const SCOPE_SCHEMA = {
+  type: 'object',
+  properties: {
+    files: { type: 'array', items: { type: 'string' } },
+    valueOnly: { type: 'boolean' },
+  },
+  required: ['files', 'valueOnly'],
+}
+const FIX_SCHEMA = {
+  type: 'object',
+  properties: {
+    changed: { type: 'array', items: { type: 'string' }, description: 'files changed' },
+    logicChanged: { type: 'boolean', description: 'true if any change is more than text: docs, comments or encyclopedia wording' },
+    skipped: { type: 'array', items: { type: 'string' }, description: 'findings skipped and why' },
+  },
+  required: ['changed', 'logicChanged', 'skipped'],
+}
 
 const FINDINGS = {
   type: 'object',
@@ -76,12 +101,28 @@ const LENSES = [
   },
 ]
 
-phase('Gate')
-const g1 = await gate('Gate')
-if (!g1 || !g1.ok) return { branch, stage: 'gate', failures: g1?.failures ?? ['gate agent failed'] }
+phase('Scope')
+const sc = await agent(`${SAFETY}
+
+Report the change size. Read-only.
+files = the output of \`git diff --name-only main...${branch}\`, every path.
+valueOnly = true only if every changed line in code files (anything that is not .md, not under tools/reports/public/data, not under .claude) changes just the numeric literal of an existing constant in packages/sim/src. New keys, new branches, changed expressions, renames or changed tests make it false. If unsure, false.`, { label: 'scope', phase: 'Scope', effort: 'low', schema: SCOPE_SCHEMA })
+const files = sc?.files ?? []
+const isDoc = (f) => f.endsWith('.md') || f.startsWith('tools/reports/public/data/') || f.startsWith('.claude/')
+const auto = !files.length ? 'full' : files.every(isDoc) ? 'docs' : sc.valueOnly ? 'value' : 'full'
+const scope = A.scope ?? auto
+const gateLevel = scope !== 'docs' ? 'full' : files.includes('docs/DESIGN.md') ? 'core' : null
+const lenses = LENSES.filter((l) => scope === 'full' || l.key === (scope === 'docs' ? 'handoff' : 'rationale'))
+log(`scope ${scope}: ${files.length} files, gate ${gateLevel ?? 'none'}, lenses ${lenses.map((l) => l.key).join(', ')}`)
+
+if (gateLevel) {
+  phase('Gate')
+  const g1 = await gate('Gate', gateLevel)
+  if (!g1 || !g1.ok) return { branch, scope, stage: 'gate', failures: g1?.failures ?? ['gate agent failed'] }
+}
 
 phase('Review')
-const reviews = await parallel(LENSES.map((l) => () =>
+const reviews = await parallel(lenses.map((l) => () =>
   agent(`${SAFETY}
 
 You are reviewing before merge. Read-only: do not edit files.
@@ -89,20 +130,21 @@ ${l.prompt}
 Report only real problems with file, line and an exact fix. Empty list if none.`, { label: `review:${l.key}`, phase: 'Review', schema: FINDINGS })
     .then((r) => (r?.findings ?? []).map((f) => ({ ...f, lens: l.key })))))
 const findings = reviews.filter(Boolean).flat()
-log(`${findings.length} findings: ` + LENSES.map((l) => `${l.key} ${findings.filter((f) => f.lens === l.key).length}`).join(', '))
+log(`${findings.length} findings: ` + lenses.map((l) => `${l.key} ${findings.filter((f) => f.lens === l.key).length}`).join(', '))
 
 if (findings.length) {
   phase('Fix')
-  await agent(`${SAFETY}
+  const fx = await agent(`${SAFETY}
 
 Apply these review findings on the branch (docs, comments, encyclopedia text; code only where a finding says the code itself is wrong — then say so). Keep Korean style of surrounding text. If a finding is wrong, skip it and say why.
 Findings (JSON):
 ${JSON.stringify(findings, null, 1)}
-Then commit on ${branch} with explicit git add paths, message "Premerge fixes: ..." and footer "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>". Return what you changed and what you skipped.`, { label: 'fix', phase: 'Fix' })
+Then commit on ${branch} with explicit git add paths, message "Premerge fixes: ..." and footer "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>". Return what you changed and what you skipped.`, { label: 'fix', phase: 'Fix', schema: FIX_SCHEMA })
 
   phase('Verify')
-  const g2 = await gate('Verify')
-  if (!g2 || !g2.ok) return { branch, stage: 'verify', findings, failures: g2?.failures ?? ['gate agent failed'] }
+  // 글만 고쳤으면 typecheck + test:core (사전·DESIGN 시험 포함) 로 충분하다. 고친 내용을 모르면 전체를 돌린다
+  const g2 = await gate('Verify', !fx || fx.logicChanged ? 'full' : 'core')
+  if (!g2 || !g2.ok) return { branch, scope, stage: 'verify', findings, failures: g2?.failures ?? ['gate agent failed'] }
 }
 
-return { branch, stage: 'ready', findings }
+return { branch, scope, stage: 'ready', findings }
