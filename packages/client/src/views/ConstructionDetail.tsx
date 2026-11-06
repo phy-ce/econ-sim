@@ -1,4 +1,4 @@
-import {Button as UIButton} from '../ui/controls';
+﻿import {Button as UIButton} from '../ui/controls';
 import {ActualOutput} from './ActualOutput';
 import {BUILDING_BY_ID,availableMethods,companyById,constructionEstimate,isOwnerBuilding,knowsTech,playerCompany,tradeEscrowPerLevel} from '@econ/sim';
 import type {GoodId,Region,World} from '@econ/sim';
@@ -29,18 +29,20 @@ export function ConstructionDetail({world,game,region,typeId,onGood,onCompany,on
  const projects=world.constructions.filter(p=>p.regionId===region.id&&p.typeId===typeId&&(view==='all'||(view==='state')===!!companyById(world,p.companyId)?.state));
  return <section className="construction-detail">
   <nav className="system-tabs">{(['all','private','state'] as const).map(v=><UIButton key={v} aria-pressed={view===v} onClick={()=>{setView(v);setInspect(null);}}>{S[v]} <small>{all.filter(b=>v==='all'||(v==='state')===b.stateOwned).reduce((n,b)=>n+b.level,0)}</small></UIButton>)}</nav>
-  <OwnershipBar world={world} buildings={items}/>{isOwnerBuilding(typeId)&&<OwnerSummary buildings={items}/>}
+  <section className="construction-overview"><h3>{T.designSystem.overview}</h3><OwnershipBar world={world} buildings={items}/>{isOwnerBuilding(typeId)&&<OwnerSummary buildings={items}/>}
   {items.length>0?<GroupDetail world={world} buildings={items} game={game} onGood={onGood} onOwner={onOpenBuilding} showControls={false}/>:<BuildingRoom world={world} typeId={typeId} regionId={region.id}/>}
-  {items.map(b=><div className="construction-building" key={b.id} data-building-id={b.id}><UIButton className="entity-link" aria-expanded={inspect===b.id} onClick={()=>setInspect(inspect===b.id?null:b.id)}>{ownershipLabel(world,b)} · #{b.id} · ×{b.level} · {methodName(def.methods.find(m=>m.id===b.methodId)!)} ↗</UIButton>
-   <ActualOutput world={world} building={b}/>{b.companyId===me.id&&canManage&&<BuildingControls world={world} game={game} building={b}/>}
+  </section>
+  {items.length>0&&<details className="construction-management" open={inspect!==null}><summary>{T.designSystem.buildings}<span>{items.length}</span></summary>{items.map(b=><div className="construction-building" key={b.id} data-building-id={b.id}><UIButton className="entity-link" aria-expanded={inspect===b.id} onClick={()=>setInspect(inspect===b.id?null:b.id)}>{ownershipLabel(world,b)} · #{b.id} · ×{b.level} · {methodName(def.methods.find(m=>m.id===b.methodId)!)} ↗</UIButton>
+   <ActualOutput world={world} building={b}/>{inspect===b.id&&b.companyId===me.id&&canManage&&<BuildingControls world={world} game={game} building={b}/>}
   </div>)}
-  {selected&&<BuildingInspector building={selected} world={world} onGood={onGood} onCompany={onCompany}/>}
-  {view!=='private'&&canManage&&<section className="construction-crown"><h3>{S.state} · {buildingName(typeId)}</h3>
+  {selected&&<BuildingInspector building={selected} world={world} onGood={onGood} onCompany={onCompany}/>}</details>}
+  {view!=='private'&&canManage&&<section className="construction-crown"><h3>{T.construct}<small>{S.state}</small></h3>
    <div className="system-facts"><span>{T.cost} / L<b>{Number.isFinite(est.cost)?<NumericValue value={est.cost} format="money"/>:'—'}</b></span><span>{T.buildPts} / L<b><NumericValue value={est.required} format="two"/></b></span><span>{T.duration}<b>{Number.isFinite(est.days)?T.nDays(Math.ceil(est.days)):'—'}</b></span>{typeId==='trading_post'&&<span tabIndex={0} data-help={T.tradeEscrowHelp}>{T.tradeEscrow}<b><NumericValue value={tradeEscrowPerLevel()} format="money"/></b></span>}</div>
-   {!own.length&&<><div className="system-tags">{def.methods.map(m=><span key={m.id} data-help={!knowsTech(me,m.tech)&&m.tech?techName(m.tech):undefined} tabIndex={0}>{!knowsTech(me,m.tech)&&'🔒 '}{methodName(m)}</span>)}</div>{first&&<FlowRow world={world} typeId={typeId} methodId={first.id} regionId={region.id} onGood={onGood}/>}<div className="stepper" aria-label={`${S.state} · ${T.construct}`}>{[1,5].map(n=><UIButton key={n} disabled={buildBlockers(world,me,region,typeId,n).length>0} data-help={buildBlockers(world,me,region,typeId,n).join(' · ')} onClick={()=>game.command({type:'build',typeId,regionId:region.id,levels:n})}>+{n}</UIButton>)}</div></>}
+   {!own.length&&<><details className="construction-recipe"><summary>{T.flowBase}</summary><div className="system-tags">{def.methods.map(m=><span key={m.id} data-help={!knowsTech(me,m.tech)&&m.tech?techName(m.tech):undefined} tabIndex={0}>{!knowsTech(me,m.tech)&&'🔒 '}{methodName(m)}</span>)}</div>{first&&<FlowRow world={world} typeId={typeId} methodId={first.id} regionId={region.id} onGood={onGood}/>}</details><div className="stepper" aria-label={`${S.state} · ${T.construct}`}>{[1,5].map(n=><UIButton key={n} disabled={buildBlockers(world,me,region,typeId,n).length>0} data-help={buildBlockers(world,me,region,typeId,n).join(' · ')} onClick={()=>game.command({type:'build',typeId,regionId:region.id,levels:n})}>+{n}</UIButton>)}</div></>}
    {blockers.length>0&&<span className="tag-bad" tabIndex={0} data-help={blockers.join(' · ')}>🔒</span>}
   </section>}
-  <SupplyDemandPreview world={world} regionId={region.id} typeId={typeId} methodIds={items.length?[...new Set(items.map(b=>b.methodId))]:first?[first.id]:[]}/>
+  <details className="construction-market"><summary>{T.designSystem.supplyDemand}</summary><SupplyDemandPreview world={world} regionId={region.id} typeId={typeId} methodIds={items.length?[...new Set(items.map(b=>b.methodId))]:first?[first.id]:[]}/></details>
   {projects.length>0&&<Projects world={world} game={game} owner={owner} projects={projects} regionId={region.id} onRegion={onRegion}/>}
  </section>;
 }
+

@@ -504,3 +504,6 @@ DetailWindow 독립 NavigationProvider/버튼, BuildingPops 및 ResourceInspecto
 
 ### 기초 표현 실제 적용
 - 숫자의 픽셀 서체를 공통 Noto Sans KR/tabular numerals로 바꾸고 글자 간격0으로 통일. 본문14/이름13/보조12/주요값18px,4·8·12·16px 간격,48px 그림 셀,1px 구분선·4px 막대를 공통 역할 토큰으로 정의. 게임과 카탈로그에 함께 적용. 투입산출에 누적된 중복 보정 규칙을 제거하고 한 벌의 역할 기반 CSS로 재작성.1920×1028/390px 카탈로그 확인·넘침0, typecheck·120시험 통과. production-redesign-catalogue-ko-light.png 캡처 갱신.
+
+### 建設 상세 정보 계층 정리
+- 개요(소유/땅/생산/수지)·개별 건물 관리·건설 행동·시장 참고로 영역 분리. 건물 목록과 시세 참고는 접고 선택한 건물의 조작만 펼침. 건설 비용/공기/추가 단추는 배경 있는 행동 영역으로 묶고 기준 생산 방식은 별도 펼침. 기존 상세·명령·선택 이력 유지. 중복 큰 세로 여백 축소. typecheck/클라이언트120시험 통과.1920×1028 실제 섬유 농장·벨마르 항 확인: C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/construction-fibre-belmar.png (콘솔 오류0). sim 변경 없음.

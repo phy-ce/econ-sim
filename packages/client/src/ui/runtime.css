@@ -25,3 +25,18 @@ body.game-runtime{font-family:var(--gu-font);color:var(--gu-ink);background:var(
 .actual-output{display:block!important}.actual-output>.gu-fill{width:100%}
 
 .system-tabs.gu-segmented{display:flex;width:100%;padding:3px;background:var(--gu-soft);border:1px solid var(--gu-line)}.system-tabs.gu-segmented>button{font-size:var(--gu-compact-font);min-height:28px;flex:1;padding:4px 6px}.game-runtime .bar.gu-progress{height:var(--gu-bar-height)}.game-runtime .bar.gu-progress.sm{height:calc(var(--gu-bar-height) - 1px)}
+/* Construction detail: overview, per-building management, then an action area. */
+.construction-detail{display:flex;flex-direction:column;gap:16px;padding:8px}
+.construction-detail>.system-tabs{margin:0}
+.construction-detail h3{margin:0 0 12px;font-size:15px;font-weight:600;display:flex;align-items:baseline;justify-content:space-between}
+.construction-detail h3 small{font-size:12px;font-weight:400;color:var(--gu-muted)}
+.construction-overview{padding-bottom:4px}.construction-overview>.ownership-launch{margin-bottom:12px}
+.construction-detail>.construction-management,.construction-detail>.construction-market{border-top:1px solid var(--gu-line);padding-top:12px}
+.construction-detail>details>summary{display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer;list-style:none}.construction-detail>details>summary:before{content:'+';color:var(--gu-muted)}.construction-detail>details[open]>summary:before{content:'−'}.construction-detail>details>summary>span{margin-left:auto;color:var(--gu-muted);font-size:12px}
+.construction-detail .construction-building{margin-top:12px;padding:12px 0;border-top:1px solid var(--gu-line)}
+.construction-detail .construction-crown{padding:16px;background:var(--gu-soft);border:1px solid var(--gu-line);border-radius:var(--gu-control-radius)}
+.construction-crown>.system-facts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:0 0 12px}.construction-crown>.system-facts>span{font-size:12px}.construction-crown>.system-facts b{display:block;font-size:16px;margin-top:4px}
+.construction-recipe{margin:12px 0}.construction-recipe>summary{font-size:12px;color:var(--gu-muted);cursor:pointer}
+.construction-crown .stepper{display:flex;gap:8px;margin-top:12px}.construction-crown .stepper>button{flex:1;min-height:36px}
+.construction-detail .group-detail-ledger>.system-tags{margin:8px 0}.construction-detail .group-detail-ledger>details{padding:8px 0}.construction-detail .group-detail-ledger>.system-facts:empty{display:none}
+.construction-detail .group-detail-ledger{display:flex;flex-direction:column;gap:8px}.construction-detail .group-detail-ledger>details{margin:0;padding:0}.construction-detail .group-detail-ledger>details>summary{min-height:28px;padding:4px 0}.construction-detail .gu-production-diagram{margin:0;padding:8px 0}.construction-detail .group-detail-ledger>.system-tags{margin:0}.construction-detail .group-detail-ledger>.system-facts{margin:0;min-height:0}.construction-detail .group-detail-ledger>details:not([open]){height:auto}
