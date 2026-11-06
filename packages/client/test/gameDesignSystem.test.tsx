@@ -1,7 +1,7 @@
 import React from 'react';
 import {describe,it,expect} from 'vitest';
 import {renderToStaticMarkup} from 'react-dom/server';
-import {chartPoints,ConfirmDemolition,Figure,FillBar,GameUIProvider,HistoryChart,operationRate,OwnershipStrip} from '../src/foundations/game-ui';
+import {chartPoints,ConfirmDemolition,Figure,FillBar,GameUIProvider,HistoryChart,ledgerRowHeight,MarketLedger,operationRate,OwnershipStrip} from '../src/foundations/game-ui';
 import {ComponentExample,ConstructionWorkspace} from '../src/foundations/game-examples';
 import {componentInfo,groups,type ComponentId} from '../src/foundations/game-copy';
 import {dependencies} from '../src/foundations/game-catalogue';
@@ -24,6 +24,18 @@ describe('game design system',()=>{
   const html=renderToStaticMarkup(<FillBar label="Actual operation" value={1.18}/>);
   expect(html).toContain('width:100%');expect(html).toContain('118');
   expect(renderToStaticMarkup(<FillBar label="Missing" value={null}/>)).toContain('—');
+ });
+ it('keeps compact rows independent of hidden art and derives illustrated rows from the actual icon footprint',()=>{
+  expect(ledgerRowHeight(true,48,4,14)).toBe(32);
+  expect(ledgerRowHeight(false,32,12,18)).toBe(89);
+  const html=renderToStaticMarkup(<MarketLedger selected="timber" onSelect={()=>{}} compact={false} iconSize={32} rowPadding={12} textSize={18}/>);
+  expect(html).toContain('--gu-ledger-art:64px');expect(html).toContain('--gu-ledger-type:18px');
+ });
+ it('applies preview values through the same components without losing numeric constraints',()=>{
+  const html=renderToStaticMarkup(<ComponentExample id="quantity" settings={{amount:9999.123,compact:false}}/>);
+  expect(html).toContain('9,999.12');expect(html).not.toContain('9,999.123');
+  const chart=renderToStaticMarkup(<HistoryChart height={260}/>);
+  expect(chart).toContain('viewBox="0 0 520 260"');
  });
  it('does not invent ownership when the denominator is zero',()=>{
   const html=renderToStaticMarkup(<OwnershipStrip shares={{crown:0,manor:0,finance:0}} selected="crown" onSelect={()=>{}}/>);
