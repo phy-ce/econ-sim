@@ -1,6 +1,6 @@
 import {Input as UIInput,Select as UISelect} from './controls';
-import {ActionButton,FormattedValue,WindowSurface,WindowHeader,ProgressTrack,ShareTrack,ProductionLayout,LedgerTable} from './primitives';
-export {ActionButton,FormattedValue,WindowSurface,WindowHeader,ProgressTrack,ShareTrack,ProductionLayout,LedgerTable} from './primitives';
+import {ActionButton,FormattedValue,WindowSurface,WindowHeader,ProgressTrack,ShareTrack,ProductionLayout,LedgerTable,ProductionDiagram,ProductionItem} from './primitives';
+export {ActionButton,FormattedValue,WindowSurface,WindowHeader,ProgressTrack,ShareTrack,ProductionLayout,LedgerTable,ProductionDiagram,ProductionItem} from './primitives';
 import {DesignTokens,useCssTokens,useDesignTokens} from './tokens';
 import {createContext,forwardRef,useContext,useEffect,useRef,useState,type ButtonHTMLAttributes,type CSSProperties,type ReactNode} from 'react';
 import {ArrowLeft,ArrowRight,ArrowUpRight,Check,ChevronDown,ChevronRight,Crown,Landmark,Lock,Minus,Pause,Pin,Play,Plus,Search,Trash2,Wallet,X} from 'lucide-react';
@@ -55,8 +55,8 @@ export function OwnershipStrip({selected,onSelect,shares={crown:40,manor:45,fina
 export function ProductionFlow({type='lumber',methodId,iconSize:art}:{type?:string;methodId?:string;iconSize?:number}){
  const metrics=useDesignTokens(),iconSize=art??metrics.artSize/2;
  const {t,good,building}=useGameUI(),definition=BUILDING_BY_ID[type],method=definition.methods.find(m=>m.id===methodId)??definition.methods[0];
- const side=(output:boolean)=><div className="gu-flow-items"><span>{output?t.outputs:t.inputs}</span>{Object.entries(output?method.outputs:method.inputs).map(([id,amount])=><div key={id}><GoodSprite g={id as GoodId} size={24}/><span>{good(id as GoodId)}</span><Figure value={amount??null}/></div>)}</div>;
- return <ProductionLayout className="gu-flow" style={{'--gu-flow-art':`${iconSize*2}px`} as CSSProperties}>{side(false)}<ArrowRight size={18}/><div className="gu-flow-building"><BuildingSprite typeId={type} size={iconSize*2+8}/><strong>{building(type)}</strong><small>{t.perLevelDay}</small></div><ArrowRight size={18}/>{side(true)}</ProductionLayout>;
+ const side=(output:boolean)=>Object.entries(output?method.outputs:method.inputs).map(([id,amount])=><ProductionItem key={id} icon={<GoodSprite g={id as GoodId} size={iconSize}/>} name={good(id as GoodId)} quantity={<Figure value={amount??null}/>}/>);
+ return <ProductionDiagram className="gu-flow" style={{'--gu-flow-art':`${iconSize*2}px`} as CSSProperties} inputLabel={t.inputs} outputLabel={t.outputs} period={t.perLevelDay} inputs={side(false)} outputs={side(true)} building={<><BuildingSprite typeId={type} size={iconSize*2+8}/><strong>{building(type)}</strong><small>×1</small></>}/>;
 }
 export function operationRate({utilization,crew,efficiency,inputFill,harvest=1,stopped=false}:{utilization:number;crew:number;efficiency:number;inputFill:number;harvest?:number;stopped?:boolean}){return stopped?0:utilization*crew*efficiency*inputFill*harvest;}
 export function OperationBreakdown({utilization=1,crew=1,efficiency=1,inputFill=1,harvest,stopped=false,onUtilization,onStop}:{utilization?:number;crew?:number;efficiency?:number;inputFill?:number;harvest?:number;stopped?:boolean;onUtilization?:(value:number)=>void;onStop?:()=>void}){

@@ -1,1 +1,2 @@
-.flow-row{display:flex;align-items:center;gap:4px;max-width:100%;overflow-x:auto;padding:5px 0}.flow-chips{display:flex;gap:4px;flex:1;flex-wrap:wrap;min-width:0}.flow-chip{display:flex;flex-direction:column;align-items:center;gap:2px;min-width:60px;padding:3px;color:var(--ink);background:var(--sheet);border:1px solid var(--rule)}.flow-chip:disabled{opacity:1}.flow-chip small{font-size:10px;white-space:nowrap}.flow-chip .bar{width:100%}.flow-building,.flow-service{display:flex;flex-direction:column;align-items:center;font-size:11px}.flow-stopped{opacity:.55}
+﻿/* Stopped diagrams retain readable resource identity and values. */
+.flow-stopped .gu-production-art,.flow-stopped .gu-production-node>.spr{filter:grayscale(1)}

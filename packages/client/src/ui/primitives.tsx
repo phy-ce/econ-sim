@@ -16,3 +16,15 @@ export function ShareTrack({segments,total:denominator,selected,onSelect,label,c
 }
 export function ProductionLayout({className='',compact=false,...props}:HTMLAttributes<HTMLDivElement>&{compact?:boolean}){return <div {...props} className={`gu-production-layout ${compact?'gu-production-compact':''} ${className}`}/>;}
 export function LedgerTable({className='',...props}:TableHTMLAttributes<HTMLTableElement>){return <table {...props} className={`gu-table ${className}`}/>;}
+
+export function ProductionDiagram({inputLabel,outputLabel,period,inputs,outputs,building,footer,className='',...props}:{inputLabel:string;outputLabel:string;period:string;inputs:ReactNode;outputs:ReactNode;building:ReactNode;footer?:ReactNode}&HTMLAttributes<HTMLElement>){
+ return <section {...props} className={`gu-production-diagram ${className}`}>
+  <header><span>{inputLabel}</span><small>{period}</small><span>{outputLabel}</span></header>
+  <div className="gu-production-body"><div className="gu-production-side">{inputs}</div><div className="gu-production-node"><span aria-hidden="true">→</span><div>{building}</div><span aria-hidden="true">→</span></div><div className="gu-production-side">{outputs}</div></div>
+  {footer&&<footer>{footer}</footer>}
+ </section>;
+}
+export function ProductionItem({icon,name,quantity,detail,meter,onSelect,help,className=''}:{icon:ReactNode;name:string;quantity:ReactNode;detail?:ReactNode;meter?:ReactNode;onSelect?:()=>void;help?:string;className?:string}){
+ const content=<><span className="gu-production-art">{icon}</span><span className="gu-production-content"><span className="gu-production-name">{name}</span><strong className="gu-production-quantity">{quantity}</strong>{detail&&<small>{detail}</small>}</span>{meter&&<span className="gu-production-meter">{meter}</span>}</>;
+ return onSelect?<ActionButton className={`gu-production-item ${className}`} onClick={onSelect} data-help={help} aria-label={name}>{content}</ActionButton>:<div className={`gu-production-item ${className}`} data-help={help} tabIndex={help?0:undefined}>{content}</div>;
+}
