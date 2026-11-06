@@ -1,18 +1,18 @@
 /* 에스테라 왕국: 양피지·먹·도트 */
 :root {
   color-scheme: light;
-  --paper: #f3ead8;   /* 책상(바탕) */
-  --sheet: #fbf6ea;   /* 카드 종이 */
-  --ink: #2b2118;
-  --ink2: #5a4a3a;
-  --rule: #d8c9ad;
-  --grid: #e8dcc2;
-  --accent: #8a3b1f;
-  --gold: #a67c2e;
-  --good: #2f6b4f;
-  --bad: #a3341c;
-  --chip: #efe3c9;
-  --on-accent: #fff;
+  --paper: var(--gu-paper);   /* 책상(바탕) */
+  --sheet: var(--gu-sheet);   /* 카드 종이 */
+  --ink: var(--gu-ink);
+  --ink2: var(--gu-muted);
+  --rule: var(--gu-line);
+  --grid: var(--gu-soft);
+  --accent: var(--gu-action);
+  --gold: var(--gu-crown);
+  --good: var(--gu-positive);
+  --bad: var(--gu-negative);
+  --chip: var(--gu-soft);
+  --on-accent: var(--gu-on-action);
   --sea: rgba(157, 183, 189, 0.55);
   --sea-line: #6f8f96;
   /* 계층 색 (도넛·차트·표 공통) */
@@ -28,9 +28,9 @@
   --wf-wage: #dc9a80;
   --hatch: #cf7c5e;
 
-  --serif: 'Gowun Batang', 'Noto Serif KR', Georgia, serif;
-  --sans: 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif;
-  --pixel: 'Silkscreen', 'Noto Sans KR', monospace;
+  --serif: var(--gu-title);
+  --sans: var(--gu-font);
+  --pixel: var(--gu-number);
   --hard: 4px 4px 0 var(--ink);
   --hard-s: 3px 3px 0 var(--ink);
   --soft: 4px 4px 0 rgba(43, 33, 24, 0.14);
@@ -39,16 +39,16 @@
              radial-gradient(circle at 85% 90%, rgba(166, 124, 46, 0.10), transparent 50%);
 
   font-family: var(--sans);
-  font-size: 14px;
+  font-size: var(--gu-body-size);
   line-height: 1.5;
   font-variant-numeric: tabular-nums;
 }
 :root[data-theme="dark"] {
   --c-farmer: #a8be62;
   color-scheme: dark;
-  --paper: #1c1712; --sheet: #25201a; --ink: #efe5d2; --ink2: #bfae93; --rule: #4a3f31; --grid: #352c22;
-  --accent: #e08a5f; --gold: #d4a855; --good: #7cc29b; --bad: #ef8a6f; --chip: #2f281f;
-  --on-accent: #1c1712;
+  --paper: var(--gu-paper); --sheet: var(--gu-sheet); --ink: var(--gu-ink); --ink2: var(--gu-muted); --rule: var(--gu-line); --grid: var(--gu-soft);
+  --accent: var(--gu-action); --gold: var(--gu-crown); --good: var(--gu-positive); --bad: var(--gu-negative); --chip: var(--gu-soft);
+  --on-accent: var(--gu-on-action);
   --sea: rgba(70, 98, 104, 0.45); --sea-line: #5d7e85;
   --c-peasant: #e08a5f; --c-unskilled: #d9a85a; --c-skilled: #7cc29b; --c-expert: #b49ad6; --c-capitalist: #8fb0dc; --c-aristocrat: #cdbb9a;
   --wf-rev: #8fbf63; --wf-raw: #d9a85a; --wf-wage: #e3a58c; --hatch: #ef8a6f;

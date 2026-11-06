@@ -1,1 +1,1 @@
-:root{--manor-owner:#87601c;--finance-owner:#246f96;--unassigned-owner:#687078}:root[data-theme="dark"]{--manor-owner:#e0b86b;--finance-owner:#79bfe5;--unassigned-owner:#a3adb3}
+:root,:root[data-theme="dark"]{--royal-owner:var(--gu-crown);--manor-owner:var(--gu-manor);--finance-owner:var(--gu-finance);--unassigned-owner:var(--gu-muted)}

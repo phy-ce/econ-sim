@@ -1,3 +1,5 @@
+import {Segmented} from '../ui/components';
+import {Button as UIButton} from '../ui/controls';
 import {memo, useCallback} from 'react';
 import {useNavigationState} from '../NavigationHistory';
 import { useEffect, useState } from 'react';
@@ -14,7 +16,7 @@ function RegionWindowView(props:Omit<ComponentProps<typeof RegionPanel>,'mode'>&
  useEffect(()=>{if(props.buildingRequest)setTab('industry');},[props.buildingRequest]);
  useEffect(()=>{if(props.popRequest)setTab('population');},[props.popRequest]);
  const onViewBuildings=useCallback(()=>setTab('industry'),[setTab]);
- return <div className="system-panel unified-region"><nav className="system-tabs" aria-label={S.region}>{(['overview','population','industry'] as const).map(id=><button key={id} aria-pressed={tab===id} onClick={()=>setTab(id)}>{S[id]}</button>)}</nav>
+ return <div className="system-panel unified-region"><Segmented className="system-tabs" label={S.region} value={tab} onChange={value=>setTab(value as typeof tab)} options={(['overview','population','industry'] as const).map(id=>({id,label:S[id]}))}/>
   {tab==='population'?<><h2>{regionName(props.region)}</h2><PopTable world={props.world} fixedRegion={props.region.id} request={props.popRequest} onRegion={onRegion} onBuilding={props.onOpenBuilding}/></>:<RegionPanel {...props} mode={tab} onViewBuildings={onViewBuildings}/>}
  </div>;
 }

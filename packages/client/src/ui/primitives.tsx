@@ -1,0 +1,18 @@
+import {forwardRef,type ButtonHTMLAttributes,type CSSProperties,type HTMLAttributes,type ReactNode,type TableHTMLAttributes} from 'react';
+import {ArrowUpRight} from 'lucide-react';
+
+export const ActionButton=forwardRef<HTMLButtonElement,ButtonHTMLAttributes<HTMLButtonElement>&{kind?:'primary'|'secondary'|'navigation'|'danger'|'quiet'}>(function ActionButton({kind='secondary',children,className='',...props},ref){return <button type="button" ref={ref} {...props} className={`gu-button gu-button-${kind} ${className}`}>{children}{kind==='navigation'&&<ArrowUpRight size={16}/>}</button>;});
+export function FormattedValue({children,exact,help,focusable=false,className=''}:{children:ReactNode;exact:string;help?:string;focusable?:boolean;className?:string}){return <span className={`gu-figure ${className}`} data-help={help} aria-label={exact} tabIndex={focusable?0:undefined}>{children}</span>;}
+export const WindowSurface=forwardRef<HTMLElement,HTMLAttributes<HTMLElement>&{detail?:boolean}>(function WindowSurface({className='',detail=false,...props},ref){return <section {...props} ref={ref} className={`gu-window-surface ${detail?'gu-window-detail':''} ${className}`}/>;});
+export const WindowHeader=forwardRef<HTMLElement,HTMLAttributes<HTMLElement>>(function WindowHeader({className='',...props},ref){return <header {...props} ref={ref} className={`gu-window-header ${className}`}/>;});
+export function ProgressTrack({value,color='var(--gu-action)',label,className='',style,none=false,children,as:Tag='span',...props}:{value:number;color?:string;label?:string;className?:string;style?:CSSProperties;none?:boolean;children?:ReactNode;as?:'span'|'div'}&HTMLAttributes<HTMLElement>){
+ const fraction=Math.max(0,Math.min(1,Number.isFinite(value)?value:0));
+ return <Tag {...props} className={`gu-progress ${className}`} style={style} role={label?'meter':undefined} aria-label={label} aria-hidden={label?undefined:true} aria-valuemin={label?0:undefined} aria-valuemax={label?100:undefined} aria-valuenow={label?Math.round(fraction*100):undefined}>{!none&&<i style={{width:`${fraction*100}%`,background:color}}/>}{children}</Tag>;
+}
+export type ShareSegment={id:string;weight:number;content:ReactNode;label?:string;color?:string;className?:string};
+export function ShareTrack({segments,total:denominator,selected,onSelect,label,className='',fallback}:{segments:ShareSegment[];total?:number;selected?:string;onSelect?:(id:string)=>void;label?:string;className?:string;fallback?:ReactNode}){
+ const total=denominator??segments.reduce((sum,segment)=>sum+Math.max(0,segment.weight),0);
+ return <span className={`gu-share-track ${className}`} role={onSelect?'group':'img'} aria-label={label}>{!total&&fallback?fallback:segments.map(segment=>{const style={width:`${total?Math.max(0,segment.weight)/total*100:0}%`,background:segment.color} as CSSProperties;return onSelect?<ActionButton key={segment.id} className={`gu-share-segment ${segment.className??''}`} style={style} aria-pressed={segment.id===selected} aria-label={segment.label} onClick={()=>onSelect(segment.id)}>{segment.content}</ActionButton>:<span key={segment.id} className={`gu-share-segment ${segment.className??''}`} style={style}>{segment.content}</span>;})}</span>;
+}
+export function ProductionLayout({className='',compact=false,...props}:HTMLAttributes<HTMLDivElement>&{compact?:boolean}){return <div {...props} className={`gu-production-layout ${compact?'gu-production-compact':''} ${className}`}/>;}
+export function LedgerTable({className='',...props}:TableHTMLAttributes<HTMLTableElement>){return <table {...props} className={`gu-table ${className}`}/>;}

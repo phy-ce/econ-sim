@@ -1,3 +1,4 @@
+import {Button as UIButton} from '../ui/controls';
 // 지역 계층 도넛: 원 전체를 인구 / 부(인구×부 단계) / 하루 소득(현물 포함) 중 하나로 나눈다.
 // 디자인 기준: .tmp/classdesign/project/Main.dc.html
 import { useState } from 'react';
@@ -75,10 +76,10 @@ export function ClassDonut({ region: r, onViewPops }: { region: Region; onViewPo
       <div className="donut-top">
         <div className="pxseg" role="group" aria-label={T.donutPick}>
           {METRICS.map((m) => (
-            <button key={m.id} data-help={m.id==='pop'?T.help.classPop:m.id==='wealth'?T.help.classWealth:T.help.classIncome} aria-pressed={metric === m.id} onClick={() => setMetric(m.id)}>
+            <UIButton key={m.id} data-help={m.id==='pop'?T.help.classPop:m.id==='wealth'?T.help.classWealth:T.help.classIncome} aria-pressed={metric === m.id} onClick={() => setMetric(m.id)}>
               <svg width="16" height="16" viewBox="0 0 10 10" aria-hidden="true" shapeRendering="crispEdges"><path d={m.icon} fill="currentColor" /></svg>
               {txt(m, '')}
-            </button>
+            </UIButton>
           ))}
         </div>
       </div>
@@ -109,7 +110,7 @@ export function ClassDonut({ region: r, onViewPops }: { region: Region; onViewPo
             const on = x.c === sel;
             const share = x.v / total;
             return (
-              <button key={x.c} className={`dl-row ${on ? 'on' : ''}`} aria-pressed={on} data-help={explain(x.c)} onPointerEnter={()=>setHover(x.c)} onPointerLeave={()=>setHover(null)} onFocus={()=>setHover(x.c)} onBlur={()=>setHover(null)} onClick={() => {setSel(on ? null : x.c);onViewPops?.(x.c);}}>
+              <UIButton key={x.c} className={`dl-row ${on ? 'on' : ''}`} aria-pressed={on} data-help={explain(x.c)} onPointerEnter={()=>setHover(x.c)} onPointerLeave={()=>setHover(null)} onFocus={()=>setHover(x.c)} onBlur={()=>setHover(null)} onClick={() => {setSel(on ? null : x.c);onViewPops?.(x.c);}}>
                 <span className="dl-tile" style={{ color: CLASS_COLOR[x.c] }}><ClassSprite c={x.c} size={32} /></span>
                 <span className="dl-main">
                   <span className="dl-name">
@@ -124,7 +125,7 @@ export function ClassDonut({ region: r, onViewPops }: { region: Region; onViewPo
                 </span>
                 <span className="pxnum num">{show(x.v)}</span>
                 <span className="pxnum num strong">{share < 0.001 ? '<0.1%' : `${(share * 100).toFixed(1)}%`}</span>
-              </button>
+              </UIButton>
             );
           })}
         </div>

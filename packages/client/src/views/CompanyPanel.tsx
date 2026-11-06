@@ -1,3 +1,4 @@
+import {Button as UIButton,Input as UIInput,Select as UISelect} from '../ui/controls';
 import {ActualOutput} from './ActualOutput';
 import {buildBlockers as constructionBlockers} from '../constructionCatalogue';
 import {IndustryLabel} from './IndustryLabel';
@@ -126,9 +127,9 @@ export function House({ game, world, owner, mine, projects,onGood,hideSummary=fa
           <div className="hbar">
             <div className="fchips" role="group" aria-label={T.filterAria}>
               {filters.map(([id, label]) => (
-                <button key={id} aria-pressed={filter === id} onClick={() => setFilter(id)}>
+                <UIButton key={id} aria-pressed={filter === id} onClick={() => setFilter(id)}>
                   {label} <span className="pxnum">{rows.filter(tests[id]).length}</span>
-                </button>
+                </UIButton>
               ))}
             </div>
             <ListTools value={sort} onChange={v=>setSort(v as SortKey)} direction={direction} onDirection={()=>setDirection(-direction)} search={search} onSearch={setSearch} count={shown.length} options={uiCopy().screenLists.companySort}/>
@@ -220,7 +221,7 @@ export function Projects({game,world,owner,projects,regionId,onRegion}:{game?:Ga
     return <section className="construction-lane" key={String(state)}><header><OwnerBadge company={companies[0]} world={world}/><span className="pxnum">{world.constructions.filter(k=>ids.has(k.companyId)).length}/{MAX_CONCURRENT_CONSTRUCTIONS}</span><b title={T.receivedToday}>{entries?one(entries.reduce((sum,e)=>sum+e.points,0)):'—'} pt{T.perDay}</b></header>
       {lane.map((k,i)=>{
         const own=world.constructions.filter(x=>x.companyId===k.companyId),position=own.findIndex(x=>x.id===k.id);
-        return <article className={`project ${k.paused?'project-paused':''}`} key={k.id}><span className="pxnum">{position+1}/{own.length}</span><BuildingSprite typeId={k.typeId} size={64}/><div className="project-main"><div className="project-top"><strong>{buildingName(k.typeId)} +{k.levels??1} {k.paused&&<Pause size={14}/>}</strong><span className="lbl">{onRegion?<button className="entity-link" onClick={()=>onRegion(k.regionId)}>{regionName(regionById(world,k.regionId))} ↗</button>:regionName(regionById(world,k.regionId))} · {k.targetBuildingId?T.expansion:T.newConstruction}</span>{entries?.find(e=>e.id===k.id)?.capped&&<span title={T.dailyCap} aria-label={T.dailyCap}>◆</span>}</div><Bar value={k.points/k.required} label={T.projectProgress(buildingName(k.typeId))}/><span className="project-nums"><span><NumericValue value={k.points} format="one"/>/<NumericValue value={k.required} format="int"/> pt</span><span><NumericValue value={k.spent} format="money"/></span><span>{T.nDays(k.ticksElapsed)}</span></span></div>{game&&owner.isPlayer&&k.companyId===owner.id&&<div className="project-actions"><button className="icon-btn sm" title={T.moveProjectUp} aria-label={T.moveProjectUp} disabled={position<=0} onClick={()=>game.command({type:'moveConstruction',constructionId:k.id,index:position-1})}><ArrowUp size={14}/></button><button className="icon-btn sm" title={T.moveProjectDown} aria-label={T.moveProjectDown} disabled={position===own.length-1} onClick={()=>game.command({type:'moveConstruction',constructionId:k.id,index:position+1})}><ArrowDown size={14}/></button><button className="icon-btn sm" title={k.paused?T.resumeProject:T.pauseProject} aria-label={k.paused?T.resumeProject:T.pauseProject} onClick={()=>game.command({type:'pauseConstruction',constructionId:k.id,paused:!k.paused})}>{k.paused?<Play size={14}/>:<Pause size={14}/>}</button><button className="icon-btn sm" title={T.cancelProject} aria-label={T.cancelProjectOf(buildingName(k.typeId))} onClick={()=>setCancelId(k.id)}><X size={14}/></button></div>}{cancelId===k.id&&game&&<div className="project-confirm" role="alertdialog" aria-label={T.cancelProject} onKeyDown={e=>{if(e.key==='Escape')setCancelId(null);}}><p>{T.cancelSpent(money(k.spent))}</p><button autoFocus onClick={()=>setCancelId(null)}>{T.keepConstruction}</button><button onClick={()=>{game.command({type:'cancelConstruction',constructionId:k.id});setCancelId(null);}}>{T.cancelProject}</button></div>}</article>;
+        return <article className={`project ${k.paused?'project-paused':''}`} key={k.id}><span className="pxnum">{position+1}/{own.length}</span><BuildingSprite typeId={k.typeId} size={64}/><div className="project-main"><div className="project-top"><strong>{buildingName(k.typeId)} +{k.levels??1} {k.paused&&<Pause size={14}/>}</strong><span className="lbl">{onRegion?<UIButton className="entity-link" onClick={()=>onRegion(k.regionId)}>{regionName(regionById(world,k.regionId))} ↗</UIButton>:regionName(regionById(world,k.regionId))} · {k.targetBuildingId?T.expansion:T.newConstruction}</span>{entries?.find(e=>e.id===k.id)?.capped&&<span title={T.dailyCap} aria-label={T.dailyCap}>◆</span>}</div><Bar value={k.points/k.required} label={T.projectProgress(buildingName(k.typeId))}/><span className="project-nums"><span><NumericValue value={k.points} format="one"/>/<NumericValue value={k.required} format="int"/> pt</span><span><NumericValue value={k.spent} format="money"/></span><span>{T.nDays(k.ticksElapsed)}</span></span></div>{game&&owner.isPlayer&&k.companyId===owner.id&&<div className="project-actions"><UIButton className="icon-btn sm" title={T.moveProjectUp} aria-label={T.moveProjectUp} disabled={position<=0} onClick={()=>game.command({type:'moveConstruction',constructionId:k.id,index:position-1})}><ArrowUp size={14}/></UIButton><UIButton className="icon-btn sm" title={T.moveProjectDown} aria-label={T.moveProjectDown} disabled={position===own.length-1} onClick={()=>game.command({type:'moveConstruction',constructionId:k.id,index:position+1})}><ArrowDown size={14}/></UIButton><UIButton className="icon-btn sm" title={k.paused?T.resumeProject:T.pauseProject} aria-label={k.paused?T.resumeProject:T.pauseProject} onClick={()=>game.command({type:'pauseConstruction',constructionId:k.id,paused:!k.paused})}>{k.paused?<Play size={14}/>:<Pause size={14}/>}</UIButton><UIButton className="icon-btn sm" title={T.cancelProject} aria-label={T.cancelProjectOf(buildingName(k.typeId))} onClick={()=>setCancelId(k.id)}><X size={14}/></UIButton></div>}{cancelId===k.id&&game&&<div className="project-confirm" role="alertdialog" aria-label={T.cancelProject} onKeyDown={e=>{if(e.key==='Escape')setCancelId(null);}}><p>{T.cancelSpent(money(k.spent))}</p><UIButton autoFocus onClick={()=>setCancelId(null)}>{T.keepConstruction}</UIButton><UIButton onClick={()=>{game.command({type:'cancelConstruction',constructionId:k.id});setCancelId(null);}}>{T.cancelProject}</UIButton></div>}</article>;
       })}{!lane.length&&<span className="muted">—</span>}
     </section>;
   })}</div>;
@@ -233,11 +234,11 @@ function BuildingRow({ r, game, world, owner, open, onToggle,onGood }: {onGood?:
   const { b } = r;
   const scale = Math.max(r.rev, r.raw + r.wage, 1);
   const good = r.profit >= 0;
-  if(isOwnerBuilding(b.typeId))return <article className="hrow"><button className="hrow-head" style={{gridTemplateColumns:'40px minmax(0,1fr) auto'}} aria-expanded={open} onClick={onToggle}><BuildingSprite typeId={b.typeId} size={40}/><strong>{r.name} ×{b.level}</strong><span><NumericValue value={b.cash??0} format="money"/></span></button><OwnerSummary buildings={[b]}/>{open&&<Workforce building={b} world={world}/>}</article>;
+  if(isOwnerBuilding(b.typeId))return <article className="hrow"><UIButton className="hrow-head" style={{gridTemplateColumns:'40px minmax(0,1fr) auto'}} aria-expanded={open} onClick={onToggle}><BuildingSprite typeId={b.typeId} size={40}/><strong>{r.name} ×{b.level}</strong><span><NumericValue value={b.cash??0} format="money"/></span></UIButton><OwnerSummary buildings={[b]}/>{open&&<Workforce building={b} world={world}/>}</article>;
   const marginText = r.margin === null ? '—' : spct(r.margin);
   return (
     <article className={`hrow ${open ? 'open' : ''} ${b.active ? '' : 'off'} ${b.unpaid ? 'alarm' : ''}`}>
-      <button className="hrow-head" style={{gridTemplateColumns:'40px minmax(0,1fr) 90px auto'}} aria-expanded={open} onClick={onToggle}
+      <UIButton className="hrow-head" style={{gridTemplateColumns:'40px minmax(0,1fr) 90px auto'}} aria-expanded={open} onClick={onToggle}
         aria-label={T.rowAria(r.name, b.level, signedMoney(r.profit), marginText)}>
         <span className="tile md"><Sprite64 id={b.typeId} size={40} /></span>
         <span className="hc-name">
@@ -251,7 +252,7 @@ function BuildingRow({ r, game, world, owner, open, onToggle,onGood }: {onGood?:
           <span className="hc-sub"><span className="pxnum"><NumericValue value={r.emp} format="int"/>/<NumericValue value={r.jobs} format="int"/></span></span>
         </span>
         <span className="hc-pl"><span className={`pl-badge pxnum ${good ? 'pos' : 'neg'}`}><NumericValue value={r.profit} format="signedCompactMoney"/></span><ChevronDown size={16} className={`chev ${open ? 'up' : ''}`} aria-hidden="true" /></span>
-      </button>
+      </UIButton>
       <ActualOutput world={world} building={b}/><FlowRow world={world} building={b} onGood={onGood}/>
       {open && (
         <div className="hdetail">
@@ -291,23 +292,23 @@ function Controls({ r, game, world, owner }: { r: Row; game: Game; world: World;
   return (
     <div className="hctrl">
       <span className="stepper" role="group" aria-label={T.countOf(r.name)}>
-        <button aria-label={T.demolishOne} title={T.demolishOne} disabled={r.queued>0||(b.shrinking??0)>=b.level}
-          onClick={() => { if (b.level > 1 || confirm(T.confirmDemolish(rname, r.name))) game.command({ type: 'demolish', buildingId: b.id }); }}>−</button>
+        <UIButton aria-label={T.demolishOne} title={T.demolishOne} disabled={r.queued>0||(b.shrinking??0)>=b.level}
+          onClick={() => { if (b.level > 1 || confirm(T.confirmDemolish(rname, r.name))) game.command({ type: 'demolish', buildingId: b.id }); }}>−</UIButton>
         <output>{b.level}{r.queued > 0 && <small>+{r.queued}</small>}</output>
-        <button aria-label={T.expandOne} title={free < 1 ? T.noLand : T.expandOne} data-help={oneBlocked.join(' · ')} disabled={full||free < 1||(b.shrinking??0)>0}
-          onClick={() => game.command({ type: 'expand', buildingId: b.id })}>+</button>
-        <button aria-label={T.buildingGroups.expandFive} title={T.buildingGroups.expandFive} data-help={fiveBlocked.join(' · ')} disabled={fiveBlocked.length>0||free < 5||(b.shrinking??0)>0}
-          onClick={() => game.command({ type: 'expand', buildingId: b.id, levels: 5 })}>+5</button>
+        <UIButton aria-label={T.expandOne} title={free < 1 ? T.noLand : T.expandOne} data-help={oneBlocked.join(' · ')} disabled={full||free < 1||(b.shrinking??0)>0}
+          onClick={() => game.command({ type: 'expand', buildingId: b.id })}>+</UIButton>
+        <UIButton aria-label={T.buildingGroups.expandFive} title={T.buildingGroups.expandFive} data-help={fiveBlocked.join(' · ')} disabled={fiveBlocked.length>0||free < 5||(b.shrinking??0)>0}
+          onClick={() => game.command({ type: 'expand', buildingId: b.id, levels: 5 })}>+5</UIButton>
       </span>
-      {(b.shrinking??0)>0&&<button className="sm-btn" onClick={()=>game.command({type:'cancelDemolish',buildingId:b.id})}>{T.cancelDemolition}</button>}
+      {(b.shrinking??0)>0&&<UIButton className="sm-btn" onClick={()=>game.command({type:'cancelDemolish',buildingId:b.id})}>{T.cancelDemolition}</UIButton>}
       <MethodComparison world={world} building={b} owner={owner} game={game}/>
       {!(owner.state && isGovernment(b.typeId)) && <><label className="util">
         <span className="lbl">{T.utilisation}</span>
-        <input type="range" min={10} max={100} step={10} value={Math.round(b.utilization * 100)} aria-label={T.utilisation}
+        <UIInput type="range" min={10} max={100} step={10} value={Math.round(b.utilization * 100)} aria-label={T.utilisation}
           onChange={(e) => game.command({ type: 'setUtilization', buildingId: b.id, utilization: Number(e.target.value) / 100 })} />
         <output className="pxnum">{pct(b.utilization)}</output>
       </label>
-      <button className="sm-btn" onClick={() => game.command({ type: 'setActive', buildingId: b.id, active: !b.active })}>{b.active ? T.stop : T.resume}</button></>}
+      <UIButton className="sm-btn" onClick={() => game.command({ type: 'setActive', buildingId: b.id, active: !b.active })}>{b.active ? T.stop : T.resume}</UIButton></>}
     </div>
   );
 }
@@ -332,7 +333,7 @@ export function Wages({ game, world, me }: { game: Game; world: World; me: Compa
               <span className="wage-name"><i className="sw" style={{ background: SKILL_COLOR[s] }} />{skillName(s)}</span>
               <output className="wage-out"><span className="lbl">{T.wageAverage}</span> ƒ<NumericValue value={me.wages[s]} format="two"/> {!me.state&&<small className={offset >= 0 ? 'pos' : 'neg'}>{spct(offset)}</small>}</output>
             </div>
-            {!me.state&&<input type="range" min={-50} max={100} step={5} value={Math.round(offset * 100)}
+            {!me.state&&<UIInput type="range" min={-50} max={100} step={5} value={Math.round(offset * 100)}
               aria-label={T.wageAria(skillName(s))}
               onChange={(e) => game.command({ type: 'setWageOffset', skill: s, offset: Number(e.target.value) / 100 })} />}
             <div className="wage-meta">
@@ -371,9 +372,9 @@ export function BuildList({ game, world, me, region, projects, includeTypes, exc
   return (
    <div className="build-catalogue">
     <div className="catalogue-context"><strong>{regionName(region)}</strong><span>{uiCopy().screenText['available']} <b>{ready}</b> / {candidates.length}</span></div>
-    <div className="notice-filters" role="group" aria-label={uiCopy().screenText['constructionAvailability']}>{[['all',uiCopy().screenText['all']],['ready',uiCopy().screenText['available']],['blocked',uiCopy().screenText['unavailable']]].map(([id,label])=><button key={id} aria-pressed={filter===id} onClick={()=>setFilter(id)}>{label}</button>)}</div>
-    <div className="catalogue-tools"><input aria-label={uiCopy().screenText['searchBuildings']} placeholder={uiCopy().screenText['searchBuildings']} value={query} onChange={e=>setQuery(e.target.value)}/><select aria-label={uiCopy().screenText['sortBuildings']} value={sort} onChange={e=>setSort(e.target.value)}><option value="ready">{uiCopy().screenText['availability']}</option><option value="name">{uiCopy().screenText['name']}</option><option value="cost">{uiCopy().screenText['lowestCost']}</option></select></div>
-    {!shown.length&&<div className="catalogue-empty">{uiCopy().screenText['noMatchingBuildings']}<button onClick={()=>{setQuery('');setFilter('all');}}>{uiCopy().screenText['resetFilters']}</button></div>}
+    <div className="notice-filters" role="group" aria-label={uiCopy().screenText['constructionAvailability']}>{[['all',uiCopy().screenText['all']],['ready',uiCopy().screenText['available']],['blocked',uiCopy().screenText['unavailable']]].map(([id,label])=><UIButton key={id} aria-pressed={filter===id} onClick={()=>setFilter(id)}>{label}</UIButton>)}</div>
+    <div className="catalogue-tools"><UIInput aria-label={uiCopy().screenText['searchBuildings']} placeholder={uiCopy().screenText['searchBuildings']} value={query} onChange={e=>setQuery(e.target.value)}/><UISelect aria-label={uiCopy().screenText['sortBuildings']} value={sort} onChange={e=>setSort(e.target.value)}><option value="ready">{uiCopy().screenText['availability']}</option><option value="name">{uiCopy().screenText['name']}</option><option value="cost">{uiCopy().screenText['lowestCost']}</option></UISelect></div>
+    {!shown.length&&<div className="catalogue-empty">{uiCopy().screenText['noMatchingBuildings']}<UIButton onClick={()=>{setQuery('');setFilter('all');}}>{uiCopy().screenText['resetFilters']}</UIButton></div>}
     <div className="cat-grid">
       {shown.map(({bt,blockers}) => {
         const free = bt.land ? landFree(world, region.id, bt.land) : Infinity;
@@ -386,7 +387,7 @@ export function BuildList({ game, world, me, region, projects, includeTypes, exc
         const isOpen = open === bt.id;
         return (
           <div key={bt.id} className={`cat ${isOpen ? 'open' : ''} ${blockers.length ? 'blocked' : ''}`}>
-            <button className="cat-head" data-help={blockers.length?blockers.join(' · '):(uiCopy().screenText['inspectMethodsAndConstructionCost'])} aria-expanded={isOpen} onClick={() => setOpen(isOpen ? null : bt.id)}>
+            <UIButton className="cat-head" data-help={blockers.length?blockers.join(' · '):(uiCopy().screenText['inspectMethodsAndConstructionCost'])} aria-expanded={isOpen} onClick={() => setOpen(isOpen ? null : bt.id)}>
               <span className="tile md"><Sprite64 id={bt.id} size={40} /></span>
               <span className="cat-name">{buildingName(bt.id)}<IndustryLabel typeId={bt.id}/>{bt.land && <small className="muted">{landName(bt.land)} <span className="pxnum">{free}</span></small>}{!bt.land && <small className="muted">{bt.methods[0].seats ? <>{T.schoolSeats} <NumericValue value={bt.methods[0].seats} format="compact"/></> : bt.methods[0].taxCapacity ? <>{T.taxCapacity} <NumericValue value={bt.methods[0].taxCapacity*TUNE.adminScale} format="compact"/></> : null}</small>}</span>
               <span className="cat-figure">
@@ -396,7 +397,7 @@ export function BuildList({ game, world, me, region, projects, includeTypes, exc
                   : <span className={best!=null&&best>=0?'pos':'neg'}>{best==null?'—':<NumericValue value={best} format="signedCompactMoney"/>}<small>{uiCopy().screenText['estDay']}</small></span>}
                 {!locked && free >= 1 && !isOffice && <small className="muted">{payback ? `${T.payback} ${payback > 1800 ? T.fiveYearsPlus : T.nDays(payback)}` : '—'}</small>}
               </span>
-            </button>
+            </UIButton>
             {isOpen && <BuildCard bt={bt} region={region} est={est} blockers={blockers} payback={payback} game={game} world={world} me={me} />}
           </div>
         );
@@ -435,13 +436,13 @@ function BuildCard({ bt, region, est, blockers, payback, game, world, me }: {
           <div><dt>{T.payback}</dt><dd className="pxnum">{payback ? (payback > 1800 ? T.fiveYearsPlus : T.nDays(payback)) : '—'}</dd></div>
           {already && <div><dt>{T.owned}</dt><dd className="pxnum">×{already.level}</dd></div>}
         </dl>
-        <button className="primary" disabled={blockers.length > 0}
+        <UIButton className="primary" disabled={blockers.length > 0}
           onClick={() => game.command({ type: 'build', typeId: bt.id, regionId: region.id })}>
           {blockers.length > 0 ? T.blocked : already ? `${buildingName(bt.id)} +1` : T.buildIn(regionName(region))}
-        </button>
-        <button className="primary" aria-label={T.buildingGroups.expandFive} title={T.buildingGroups.expandFive}
+        </UIButton>
+        <UIButton className="primary" aria-label={T.buildingGroups.expandFive} title={T.buildingGroups.expandFive}
           disabled={blockers.length>0||(bt.land?landFree(world,region.id,bt.land):Infinity)<5||(bt.deposit?depositFree(world,region.id,bt.deposit):Infinity)<5}
-          onClick={()=>game.command({type:'build',typeId:bt.id,regionId:region.id,levels:5})}>+5</button>
+          onClick={()=>game.command({type:'build',typeId:bt.id,regionId:region.id,levels:5})}>+5</UIButton>
       </div>
     </div>
   );

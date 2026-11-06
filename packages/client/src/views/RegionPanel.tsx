@@ -1,3 +1,5 @@
+import {Button as UIButton} from '../ui/controls';
+import {LedgerTable as UITable} from '../ui/primitives';
 import {QuakeBadge} from './QuakeBadge';
 import {t as uiCopy} from '../i18n';
 import {marketPriceHistory} from '../marketScope';
@@ -113,21 +115,21 @@ function RegionPanelView({ world, region, history, selectedGood, onSelectGood, o
           <div className="stat"><span className="stat-label"><HelpText text={T.help.education}>{T.education}</HelpText></span><span className="stat-value">{pct(educationOf(r))}</span><Bar value={educationOf(r)} tone="pos" size="sm" label={T.education} /></div>
           <div className="stat"><span className="stat-label"><HelpText text={T.help.tenants}>{T.tenants}</HelpText></span><span className="stat-value accent">{pct(tenantShare)}</span><Bar value={tenantShare} tone="accent" size="sm" label={T.tenants} /></div>
         </div>}
-        {tab !== 'industry' && <button className="region-buildings-link" onClick={() => { if (onViewBuildings) onViewBuildings(); else setTab('industry'); }}><Factory size={15}/>{uiCopy().screenText['allRegionalBuildings']} <b>{allBuildings.length}</b></button>}
+        {tab !== 'industry' && <UIButton className="region-buildings-link" onClick={() => { if (onViewBuildings) onViewBuildings(); else setTab('industry'); }}><Factory size={15}/>{uiCopy().screenText['allRegionalBuildings']} <b>{allBuildings.length}</b></UIButton>}
 
       </header>
 
       {!mode && <nav className="region-tabs" aria-label={uiCopy().screenText['regionViews']}>
-        <button aria-pressed={tab === 'overview'} onClick={() => setTab('overview')}><Users size={18}/>{uiCopy().screenText['overview207']}</button>
-        <button aria-pressed={tab === 'market'} onClick={() => setTab('market')}><Package size={18}/>{T.market}</button>
-        <button aria-pressed={tab === 'industry'} onClick={() => setTab('industry')}><Factory size={18}/>{T.buildings}<span className="count-pill">{allBuildings.length}</span></button>
+        <UIButton aria-pressed={tab === 'overview'} onClick={() => setTab('overview')}><Users size={18}/>{uiCopy().screenText['overview207']}</UIButton>
+        <UIButton aria-pressed={tab === 'market'} onClick={() => setTab('market')}><Package size={18}/>{T.market}</UIButton>
+        <UIButton aria-pressed={tab === 'industry'} onClick={() => setTab('industry')}><Factory size={18}/>{T.buildings}<span className="count-pill">{allBuildings.length}</span></UIButton>
       </nav>}
       {tab === 'overview' && <RegionExplorer world={world} region={r} onBuildings={()=>{if(onViewBuildings)onViewBuildings();else setTab('industry');}} onPops={prof=>onViewPops?.(r.id,prof)}/>}
       {tab === 'market' && <section className="block market-workspace">
         <SectionStack explorer revealId="resource" revealKey={resourceRequest} storageKey="market" items={[{ id: 'prices', title: uiCopy().screenText['marketPrices'], height: 174, content: <section className="market-ledger unified-market">
 
         <div className="table-scroll">
-          <table className="goods">
+          <UITable className="goods">
             <thead><tr>
               {sortTh('name', T.colGood)}{sortTh('price', T.colPrice)}{sortTh('ratio', T.colRatio)}
               {sortTh('balance', T.colBalance)}{sortTh('value', T.colValue)}
@@ -148,7 +150,7 @@ function RegionPanelView({ world, region, history, selectedGood, onSelectGood, o
                 );
               })}
             </tbody>
-          </table>
+          </UITable>
         </div>
         </section>
         }, { id: 'resource', shortTitle:uiCopy().screenText['goodDetails'], title: uiCopy().screenText['selectedGoodBuildings'], height: 290, content: <ResourceInspector game={game} key={`${r.id}-${selectedGood}`} world={world} region={r} good={selectedGood} onGood={selectGood} onCompany={onViewCompany}/>

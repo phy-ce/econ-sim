@@ -1,3 +1,5 @@
+import {Segmented} from '../ui/components';
+import {Button as UIButton} from '../ui/controls';
 import {PoliticsPanel} from './PoliticsPanel';
 import {ActiveContent} from './ActiveContent';
 import {useEffect,useState} from 'react';
@@ -11,7 +13,7 @@ export function StatePanel({game,world,me,onBuilding,onResearch,requestedTab,seq
  const T=useT(),[tab,setTab]=useNavigationState<'budget'|'laws'|'politics'>('state:tab',requestedTab??'budget');
  const [domain,setDomain]=useState<{kind:'welfare';sequence:number}|null>(null);
  useEffect(()=>{if(requestedTab)setTab(requestedTab);},[requestedTab,sequence]);
- return <><nav className="system-tabs"><button aria-pressed={tab==='budget'} onClick={()=>setTab('budget')}>{T.stateBudget}</button><button aria-pressed={tab==='laws'} onClick={()=>setTab('laws')}>{T.stateLaws}</button><button aria-pressed={tab==='politics'} onClick={()=>setTab('politics')}>{T.politics}</button></nav>
+ return <><Segmented className="system-tabs" label={T.stateBudget} value={tab} onChange={value=>setTab(value as typeof tab)} options={[{id:'budget',label:T.stateBudget},{id:'laws',label:T.stateLaws},{id:'politics',label:T.politics}]}/>
  <div hidden={tab!=='budget'}><ActiveContent active={tab==='budget'}><FinancePanel active={active&&tab==='budget'} game={game} world={world} me={me} onBuilding={onBuilding} onPolicies={()=>{setTab('laws');setDomain(d=>({kind:'welfare',sequence:(d?.sequence??0)+1}));}}/></ActiveContent></div>
  <div hidden={tab!=='laws'}><ActiveContent active={tab==='laws'}><PolicyPanel game={game} world={world} kingdomId={me.kingdomId} onResearch={onResearch} domainRequest={domain}/></ActiveContent></div><div hidden={tab!=='politics'}><ActiveContent active={tab==='politics'}><PoliticsPanel world={world} kingdomId={me.kingdomId}/></ActiveContent></div></>;
 }

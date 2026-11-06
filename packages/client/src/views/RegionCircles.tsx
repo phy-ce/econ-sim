@@ -1,3 +1,4 @@
+import {Button as UIButton} from '../ui/controls';
 import { LAND_TYPES, landUsed,depositFree,DEPOSIT_NAMES,DEPOSIT_NAMES_EN } from '@econ/sim';
 import type { Region, World } from '@econ/sim';
 import { landName, useT,useLang } from '../i18n';
@@ -22,16 +23,16 @@ export function RegionCircles({world,region,onBuildings}:{world:World;region:Reg
   {LAND_TYPES.filter(l=>l!=='ore'&&region.land[l]>0).map(l=>{
    const used=landUsed(world,region.id,l),capacity=region.land[l],free=Math.max(0,capacity-used);
    const help=`${landName(l)}\n${T.ringUsed}: ${exactNumber(used)} / ${exactNumber(capacity)} (${pct(used/capacity)})\n${T.ringFree}: ${exactNumber(free)}\n${T.help.land}\n${T.ringOpenBuildings}`;
-   return <button key={l} className="land-ring-item" data-help={help} onClick={onBuildings}>
+   return <UIButton key={l} className="land-ring-item" data-help={help} onClick={onBuildings}>
     <Ring value={used/capacity} color={l==='arable'?'var(--good)':l==='plot'?'var(--accent)':'var(--gold)'} label={help} center={pct(used/capacity)}/>
     <strong>{landName(l)}</strong><small>{compact(used)} / {compact(capacity)}</small>
-   </button>;
+   </UIButton>;
   })}
- {(['iron','coal'] as const).filter(dep=>region.deposits[dep]>0).map(dep=>{const capacity=region.deposits[dep],used=capacity-depositFree(world,region.id,dep),label=ko?DEPOSIT_NAMES[dep]:DEPOSIT_NAMES_EN[dep];return <button key={dep} className="land-ring-item" data-help={`${label} · ${T.ringUsed}: ${exactNumber(used)} / ${exactNumber(capacity)}`} onClick={onBuildings}><Ring value={used/capacity} color="var(--gold)" label={label} center={pct(used/capacity)}/><strong>{label}</strong><small>{compact(used)} / {compact(capacity)}</small></button>;})}
- </div><button className="ownership-ring-row" data-help={ownerHelp} onClick={onBuildings}>
+ {(['iron','coal'] as const).filter(dep=>region.deposits[dep]>0).map(dep=>{const capacity=region.deposits[dep],used=capacity-depositFree(world,region.id,dep),label=ko?DEPOSIT_NAMES[dep]:DEPOSIT_NAMES_EN[dep];return <UIButton key={dep} className="land-ring-item" data-help={`${label} · ${T.ringUsed}: ${exactNumber(used)} / ${exactNumber(capacity)}`} onClick={onBuildings}><Ring value={used/capacity} color="var(--gold)" label={label} center={pct(used/capacity)}/><strong>{label}</strong><small>{compact(used)} / {compact(capacity)}</small></UIButton>;})}
+ </div><UIButton className="ownership-ring-row" data-help={ownerHelp} onClick={onBuildings}>
   <Ring value={total?royal/total:0} color="var(--royal-owner)" background={total?'var(--private-owner)':'var(--rule)'} label={ownerHelp} center={compact(total)}/>
   <span><strong>{T.ownership}</strong><small>{T.ringLevels}</small></span>
   <span><i style={{background:'var(--royal-owner)'}}/>{T.stateOwner}<b>{compact(royal)}</b></span>
   <span><i style={{background:'var(--private-owner)'}}/>{T.privateOwner}<b>{compact(privateLevels)}</b></span>
- </button></section>;
+ </UIButton></section>;
 }

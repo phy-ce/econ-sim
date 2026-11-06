@@ -1,0 +1,20 @@
+/* Single source for catalogue and running game. */
+
+:root,.gu-scope {
+ --gu-edge:#828877;
+ --gu-paper:#f7f0e3; --gu-sheet:#fffbf2; --gu-ink:#2a302e; --gu-muted:#686d62;
+ --gu-line:#c6c8b9; --gu-soft:#ecebdc; --gu-action:#36586b; --gu-on-action:#ffffff;
+ --gu-positive:#2f6549; --gu-negative:#9c4035; --gu-focus:#375bd4;
+ --gu-crown:#947039; --gu-manor:#536d4c; --gu-finance:#526d85; --gu-on-owner:#ffffff;
+ --gu-font:'Noto Sans KR',sans-serif; --gu-title:'Gowun Batang',serif; --gu-number:'Silkscreen','Noto Sans KR',monospace;
+ --gu-space-1:4px; --gu-space-2:8px; --gu-space-3:12px; --gu-space-4:16px; --gu-space-6:24px;
+ --gu-control:36px; --gu-row:32px; --gu-row-comfortable:56px;
+}
+:root[data-theme="dark"],:root[data-foundation-theme="dark"],.gu-scope[data-game-theme=dark] {
+ --gu-edge:#8b9983;
+ --gu-paper:#242c28; --gu-sheet:#2b352f; --gu-ink:#f2ecdf; --gu-muted:#bdc5b6;
+ --gu-line:#64705e; --gu-soft:#384339; --gu-action:#b1cfe0; --gu-on-action:#21323d;
+ --gu-positive:#afd3b5; --gu-negative:#f5b5a7; --gu-focus:#b9c9ff;
+ --gu-crown:#dfc08a; --gu-manor:#bed0a7; --gu-finance:#b6cede; --gu-on-owner:#242c28;
+}
+:root{--gu-window-width:420px;--gu-window-height:560px;--gu-detail-width:520px;--gu-detail-height:640px;--gu-number-size:14px;--gu-number-compact-size:12px;--gu-metric-number-size:20px;--gu-body-size:14px;--gu-compact-font:12px;--gu-control-radius:5px;--gu-control-icon:16px;--gu-bar-height:7px;--gu-art-size:48px;--gu-flow-gap:16px;--gu-flow-gap-compact:6px;--gu-window-shadow:0 6px 18px #18201814}

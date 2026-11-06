@@ -1,3 +1,4 @@
+import {Button as UIButton} from '../ui/controls';
 ﻿import {useEffect,useMemo} from 'react';
 import {BUILDING_BY_ID,isOwnerBuilding} from '@econ/sim';
 import type {GoodId,Region,World} from '@econ/sim';
@@ -34,7 +35,7 @@ export function RegionIndustry({world,region,game,request,onGood,onCompany,onOpe
   <div className="industry-total">{G.types} {groups.length} · L <NumericValue value={groups.reduce((n,g)=>n+g.levels,0)} format="compact"/></div>
   <ListTools placeholder={G.search} value={sort} onChange={setSort} direction={direction} onDirection={()=>setDirection(-direction)} search={search} onSearch={setSearch} count={filtered.length} options={[["level",G.levels],["name",G.name],["utilization",T.utilisation],["staffing",G.staffing],["profit",S.weekProfit],["perLevel",S.perLevel],["dividend",S.dividend]]}/>
   {filtered.map(g=><article key={g.typeId} className={`industry-group ${isOwnerBuilding(g.typeId)?'owner-group':''}`}>
-   <button className="industry-group-head" aria-haspopup="dialog" aria-expanded={selected===g.typeId} onClick={()=>setSelected(g.typeId)}><BuildingSprite typeId={g.typeId} size={40}/><strong>{buildingName(g.typeId)}</strong><span>×{g.levels}{g.projects.length>0&&<small className="accent"> +{g.projects.reduce((n,c)=>n+(c.levels??1),0)}</small>}{g.shrinking>0&&<DemolitionBadge levels={g.shrinking}/>}</span></button>
+   <UIButton className="industry-group-head" aria-haspopup="dialog" aria-expanded={selected===g.typeId} onClick={()=>setSelected(g.typeId)}><BuildingSprite typeId={g.typeId} size={40}/><strong>{buildingName(g.typeId)}</strong><span>×{g.levels}{g.projects.length>0&&<small className="accent"> +{g.projects.reduce((n,c)=>n+(c.levels??1),0)}</small>}{g.shrinking>0&&<DemolitionBadge levels={g.shrinking}/>}</span></UIButton>
    <OwnershipBar world={world} buildings={g.buildings}/>{isOwnerBuilding(g.typeId)?<OwnerSummary buildings={g.buildings}/>:<div className="group-metrics">
     {(g.typeId==='builder'||!BUILDING_BY_ID[g.typeId].stateOnly&&!BUILDING_BY_ID[g.typeId].methods.some(m=>m.construction))&&<BuildingCostBar econ={g.econ}/>}
     <BuildingMetricBars employed={g.econ.employed} jobs={g.econ.jobs} profit={g.econ.profitWeek} perLevel={g.econ.profitWeekPerLevel}/>{g.econ.hasReserve&&<ReserveBar value={g.econ.reserve} cap={g.econ.reserveCap} weekly={g.econ.reserveWeek}/>}

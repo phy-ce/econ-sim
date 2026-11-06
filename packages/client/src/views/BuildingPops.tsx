@@ -1,3 +1,5 @@
+import {Button as UIButton} from '../ui/controls';
+import {LedgerTable as UITable} from '../ui/primitives';
 import {t as uiCopy} from '../i18n';
 import {useId} from 'react';
 import {useNavigationState} from '../NavigationHistory';
@@ -27,25 +29,25 @@ export function BuildingPops({world,buildings,onGood,popIds}:{world:World;buildi
  const goods=GOOD_IDS.map(g=>({g,qty:rows.reduce((n,p)=>n+(p.inKind[g]??0),0)})).filter(x=>x.qty>0);
  if(!region)return null;
  return <details className="building-pops" open><summary>{uiCopy().screenText['popStatistics']} · <NumericValue value={pops.reduce((n,p)=>n+p.size,0)} format="compact"/></summary>
- <div className="system-tabs" role="group" aria-label={uiCopy().screenText['buildingPopProfession']}>{professions.map(c=><button key={c} aria-pressed={prof===c} onClick={()=>setSelected(c)}>{className(c)} ↗</button>)}</div>
+ <div className="system-tabs" role="group" aria-label={uiCopy().screenText['buildingPopProfession']}>{professions.map(c=><UIButton key={c} aria-pressed={prof===c} onClick={()=>setSelected(c)}>{className(c)} ↗</UIButton>)}</div>
  {!rows.length?<p className="muted">—</p>:<>
  <h4>{regionName(region)} · {className(prof)}</h4>
  <p className="muted" tabIndex={0} data-help={uiCopy().screenText['onlyTheSelectedPopulationGroupPopulationIncludes']}>{uiCopy().screenText['includesDependantsSelectedPops']}</p>
  <div className="system-facts"><span>{uiCopy().screenText['population']}<b><NumericValue value={size} format="compact"/></b></span><span>{uiCopy().screenText['groups']}<b>{rows.length}</b></span><span>{uiCopy().screenText['livingStandard']}<b>{avg('sol').toFixed(1)}</b></span><span>{uiCopy().screenText['wealthLevel']}<b>{avg('wealth').toFixed(1)}</b></span><span>{T.savingsCosts}<b>{drivers.savingsWeeks===null?'—':drivers.savingsWeeks.toFixed(1)} {T.system.weeks}</b></span></div>
- <div className="system-tabs"><button aria-pressed={!perHead} onClick={()=>setPerHead(false)}>{uiCopy().screenText['total']}</button><button aria-pressed={perHead} onClick={()=>setPerHead(true)}>{uiCopy().screenText['perCapita']}</button></div>
+ <div className="system-tabs"><UIButton aria-pressed={!perHead} onClick={()=>setPerHead(false)}>{uiCopy().screenText['total']}</UIButton><UIButton aria-pressed={perHead} onClick={()=>setPerHead(true)}>{uiCopy().screenText['perCapita']}</UIButton></div>
  <WealthDrift data={drivers} perHead={perHead}/>
- <table className="system-table"><tbody>{([
+ <UITable className="system-table"><tbody>{([
  [uiCopy().screenText['afterTaxCashIncomeDay'],sum('lastIncome')],
  [uiCopy().screenText['cashSpendingDay'],sum('lastSpend')],
  [uiCopy().screenText['cashBalanceDay'],sum('lastIncome')-sum('lastSpend')],
  [uiCopy().screenText['smoothedIncomeDay'],sum('incomeEma')],
  [uiCopy().screenText['savings'],sum('savings')],
- ] as [string,number][]).map(([name,value])=><tr key={name}><th tabIndex={0} data-help={uiCopy().screenText['lastSimulationValuesInKindGoodsAre']}>{name}</th><td><NumericValue value={value/divisor} format="money"/></td></tr>)}</tbody></table>
+ ] as [string,number][]).map(([name,value])=><tr key={name}><th tabIndex={0} data-help={uiCopy().screenText['lastSimulationValuesInKindGoodsAre']}>{name}</th><td><NumericValue value={value/divisor} format="money"/></td></tr>)}</tbody></UITable>
  {(['food','fulfillment','literacy'] as const).map(key=><div className="workforce-row" key={key}><span>{({food:uiCopy().screenText['food'],fulfillment:uiCopy().screenText['needs'],literacy:uiCopy().screenText['literacy']})[key]}</span><Bar value={avg(key)} label={key}/><b>{(avg(key)*100).toFixed(1)}%</b></div>)}
  <p>{uiCopy().screenText['populationGrowthAnnual']} {avg('growth').toFixed(2)}%</p>
  <details open><summary>{uiCopy().screenText['incomeAndTaxBreakdown']}</summary>
- <table className="system-table"><tbody>{(['wages','dividends','rent','sales','welfare','other','tax'] as const).map(key=><tr key={key}><th tabIndex={0} data-help={uiCopy().screenText['cashReceivedByThisPopIDLast']}>{(uiCopy().screenLists.incomeLabels)[key]}</th><td>{rows.every(p=>p.incomeBreakdown!==undefined)?<NumericValue value={rows.reduce((n,p)=>n+(p.incomeBreakdown?.[key]??0),0)/divisor} format="money"/>:<span tabIndex={0} data-help={uiCopy().screenText['olderSaveAdvanceOneDayToRecord']}>—</span>}</td></tr>)}</tbody></table></details>
- <details><summary>{uiCopy().screenText['inKindGoods']} · {goods.length}</summary><table className="system-table"><tbody>{goods.map(({g,qty})=><tr key={g}><th><span>{goodName(g)}</span></th><td><NumericValue value={qty/divisor} format="compact"/></td><td data-help={uiCopy().screenText['valuedAtCurrentLocalPriceNotCash']}><NumericValue value={qty*region.market[g].price/divisor} format="money"/></td></tr>)}</tbody></table>{!goods.length&&<span>—</span>}</details>
+ <UITable className="system-table"><tbody>{(['wages','dividends','rent','sales','welfare','other','tax'] as const).map(key=><tr key={key}><th tabIndex={0} data-help={uiCopy().screenText['cashReceivedByThisPopIDLast']}>{(uiCopy().screenLists.incomeLabels)[key]}</th><td>{rows.every(p=>p.incomeBreakdown!==undefined)?<NumericValue value={rows.reduce((n,p)=>n+(p.incomeBreakdown?.[key]??0),0)/divisor} format="money"/>:<span tabIndex={0} data-help={uiCopy().screenText['olderSaveAdvanceOneDayToRecord']}>—</span>}</td></tr>)}</tbody></UITable></details>
+ <details><summary>{uiCopy().screenText['inKindGoods']} · {goods.length}</summary><UITable className="system-table"><tbody>{goods.map(({g,qty})=><tr key={g}><th><span>{goodName(g)}</span></th><td><NumericValue value={qty/divisor} format="compact"/></td><td data-help={uiCopy().screenText['valuedAtCurrentLocalPriceNotCash']}><NumericValue value={qty*region.market[g].price/divisor} format="money"/></td></tr>)}</tbody></UITable>{!goods.length&&<span>—</span>}</details>
  <PopHoldings world={world} pops={rows}/>
  </>}
  </details>;

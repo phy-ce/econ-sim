@@ -1,3 +1,4 @@
+import {Button as UIButton} from './ui/controls';
 import {createContext,useContext,useMemo,useCallback,useRef,useState,useEffect,type ReactNode,type Dispatch,type SetStateAction} from 'react';
 type Snapshot=Record<string,unknown>;
 type Registry={values:Snapshot;setters:Map<string,(value:unknown)=>void>;past:Snapshot[];future:Snapshot[];pending:Snapshot|null;timer:ReturnType<typeof setTimeout>|null;restoring:boolean};
@@ -25,4 +26,4 @@ export function useNavigationState<T>(key:string,initial:T|(()=>T)):[T,Dispatch<
  const set:Dispatch<SetStateAction<T>>=useCallback(next=>apiRef.current.change(key,typeof next==='function'?(next as (old:T)=>T)(current.current):next),[key]);
  return [value,set];
 }
-export function NavigationButtons({ko}:{ko:boolean}){const api=useContext(Context);if(!api)return null;return <span className="window-navigation"><button aria-label={ko?'뒤로':'Back'} title={ko?'이전 화면':'Previous screen'} disabled={!api.canBack} onClick={e=>{e.stopPropagation();api.back();}}>←</button><button aria-label={ko?'앞으로':'Forward'} title={ko?'다음 화면':'Next screen'} disabled={!api.canForward} onClick={e=>{e.stopPropagation();api.forward();}}>→</button></span>;}
+export function NavigationButtons({ko}:{ko:boolean}){const api=useContext(Context);if(!api)return null;return <span className="window-navigation"><UIButton aria-label={ko?'뒤로':'Back'} title={ko?'이전 화면':'Previous screen'} disabled={!api.canBack} onClick={e=>{e.stopPropagation();api.back();}}>←</UIButton><UIButton aria-label={ko?'앞으로':'Forward'} title={ko?'다음 화면':'Next screen'} disabled={!api.canForward} onClick={e=>{e.stopPropagation();api.forward();}}>→</UIButton></span>;}

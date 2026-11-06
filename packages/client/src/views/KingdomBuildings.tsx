@@ -1,3 +1,4 @@
+import {Button as UIButton} from '../ui/controls';
 import {useMemo} from 'react';
 import {buildingEcon,isOwnerBuilding} from '@econ/sim';
 import type {World} from '@econ/sim';
@@ -29,11 +30,11 @@ export function KingdomBuildings({world,id,onBuilding}:{world:World;id:number;on
  const filters=[['all',T.system.all],['state',T.stateOwner],['manor',T.system.manor],['finance',T.system.finance]];
  const options:[string,string][]=[['profit',T.system.weekProfit],['levels',T.buildingGroups.levels],['name',T.buildingGroups.name],['region',T.popRegion],['staff',T.buildingGroups.staffing],['reserve',T.system.reserve]];
  return <div className="kingdom-buildings">
- <div className="fchips">{filters.map(([kind,label])=><button key={kind} aria-pressed={kind===filter} onClick={()=>setFilter(kind)}>{label} <NumericValue value={rows.filter(r=>matches(r,kind)).length} format="int"/></button>)}</div>
+ <div className="fchips">{filters.map(([kind,label])=><UIButton key={kind} aria-pressed={kind===filter} onClick={()=>setFilter(kind)}>{label} <NumericValue value={rows.filter(r=>matches(r,kind)).length} format="int"/></UIButton>)}</div>
  <ListTools value={sort} onChange={setSort} direction={direction} onDirection={()=>setDirection(-direction)} options={options} search={search} onSearch={setSearch} placeholder={T.buildingGroups.search} count={shown.length}/>
  {shown.length===0&&<span>—</span>}
  {shown.map(({b,e,region})=><article key={b.id} className="kingdom-building-row">
- <button className="kingdom-building-link" onClick={()=>onBuilding(b.id)}><BuildingSprite typeId={b.typeId} size={32}/><strong>{buildingName(b.typeId)} ×<NumericValue value={b.level} format="compact"/></strong><span>{regionName(region)} ↗</span></button>
+ <UIButton className="kingdom-building-link" onClick={()=>onBuilding(b.id)}><BuildingSprite typeId={b.typeId} size={32}/><strong>{buildingName(b.typeId)} ×<NumericValue value={b.level} format="compact"/></strong><span>{regionName(region)} ↗</span></UIButton>
  <OwnershipBar world={world} buildings={[b]}/>
  <div className="kingdom-building-facts"><span>{T.hStaff}<b><NumericValue value={e.employed} format="compact"/> / <NumericValue value={e.jobs} format="compact"/></b><Bar value={e.staffing} label={T.hStaff}/></span><span>{T.system.weekProfit}<b className={e.profitWeek<0?'neg':'pos'}><NumericValue value={e.profitWeek} format="signedMoney"/></b></span></div>
  {e.hasReserve?<ReserveBar value={e.reserve} cap={e.reserveCap} weekly={e.reserveWeek}/>:<span className="muted">{T.system.reserve} —</span>}

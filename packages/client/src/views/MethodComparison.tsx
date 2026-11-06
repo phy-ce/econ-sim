@@ -1,3 +1,5 @@
+import {Button as UIButton} from '../ui/controls';
+import {LedgerTable as UITable} from '../ui/primitives';
 import {BUILDING_BY_ID,GOOD_IDS,SKILLS,TUNE,estimateMethod,knowsTech,regionPerk,tradeReserveOf,wagesAt,methodMarginAtBase} from '@econ/sim';
 import {IndustryLabel} from './IndustryLabel';
 import type {Building,Company,MethodDef,World} from '@econ/sim';
@@ -19,9 +21,9 @@ export function MethodComparison({world,building:b,owner,game}:{world:World;buil
    {v===null?'—':quantity(v,format)}{m.id!==b.methodId&&Math.abs(delta)>1e-9&&<small className={`method-delta ${delta>0?'pos':'neg'}`}>{format==='money'?signedMoney(delta):`${delta>0?'+':'−'}${format==='ratio'?`${(Math.abs(delta)*100).toFixed(2)}%`:compact(Math.abs(delta))}`}</small>}
   </td>;})}</tr>;
  };
- return <details className="method-comparison"><summary>{methodName(current)} · ×{b.level}</summary><div className="method-columns"><table style={{minWidth:90+methods.length*110}}>
+ return <details className="method-comparison"><summary>{methodName(current)} · ×{b.level}</summary><div className="method-columns"><UITable style={{minWidth:90+methods.length*110}}>
   <thead><tr><th>×{b.level}</th>{methods.map(m=>{const locked=!knowsTech(owner,m.tech);return <th key={m.id} tabIndex={locked?0:undefined} data-help={locked&&m.tech?techName(m.tech):undefined} className={m.id===b.methodId?'is-current':''}>
-   <button disabled={locked||m.id===b.methodId} aria-pressed={m.id===b.methodId} data-help={locked&&m.tech?techName(m.tech):methodName(m)} onClick={()=>game.command({type:'setMethod',buildingId:b.id,methodId:m.id})}>{locked&&<Lock size={14}/>} {methodName(m)}</button>
+   <UIButton disabled={locked||m.id===b.methodId} aria-pressed={m.id===b.methodId} data-help={locked&&m.tech?techName(m.tech):methodName(m)} onClick={()=>game.command({type:'setMethod',buildingId:b.id,methodId:m.id})}>{locked&&<Lock size={14}/>} {methodName(m)}</UIButton>
    <IndustryLabel typeId={b.typeId} methodId={m.id}/>{m.id!==b.methodId&&<small>{T.expDrop}</small>}
   </th>;})}</tr></thead><tbody>
   {GOOD_IDS.filter(g=>methods.some(m=>m.inputs[g])).map(g=>row(`in-${g}`,<span><GoodSprite g={g} size={24}/>{T.hInputs} · {goodName(g)}</span>,m=>(m.inputs[g]??0)*b.level))}
@@ -34,5 +36,5 @@ export function MethodComparison({world,building:b,owner,game}:{world:World;buil
   {row('profit',`${T.system.profit} ${T.perDay}`,m=>estimates.get(m.id)!.profit*b.level,'money')}
   {row('margin',T.margin,m=>{const e=estimates.get(m.id)!;return e.revenue>0?e.profit/e.revenue:null;},'ratio')}
   {row('input-share',T.inputRevenueRatio,m=>{const e=methodMarginAtBase(b.typeId,m.id);return e.revenue>0?e.input/e.revenue:null;},'ratio')}
- </tbody></table></div></details>;
+ </tbody></UITable></div></details>;
 }

@@ -1,3 +1,4 @@
+import {Button as UIButton,Input as UIInput,Select as UISelect} from '../ui/controls';
 import {t as uiCopy} from '../i18n';
 import { ArrowUpRight, MapPin, Factory, Search, CheckCheck, Bell, X } from 'lucide-react';
 import { eventDestination } from '../eventDestination';
@@ -59,13 +60,13 @@ export function Notifications({ world, lastReadTick, onRead, onJump, onCompany, 
   return (
     <div className="notices">
       <div className="notice-toolbar">
-       <div className="notice-status"><span><Bell size={14}/><strong>{uiCopy().screenText['dispatches']}</strong><small>{matching.length}</small></span><button className="notice-read" disabled={!unread} data-help={uiCopy().screenText['markOwnAndSharedDispatchesAsRead']} onClick={onRead}><CheckCheck size={14}/>{uiCopy().screenText['markRead']}</button></div>
-       <div className="notice-filters" role="group" aria-label={T.newsFilter}>{([['mine',uiCopy().screenText['myKingdom']],['alerts',T.filterAlerts],['all',T.filterAll]] as const).map(([id,label])=><button key={id} aria-pressed={filter===id} onClick={()=>{setFilter(id);setLimit(40);}}>{label}<small>{counts[id]}</small></button>)}</div>
-       <div className="notice-search"><Search size={14}/><input aria-label={uiCopy().screenText['searchDispatches']} placeholder={uiCopy().screenText['searchNewsRegionsBuildings']} value={query} onChange={e=>{setQuery(e.target.value);setLimit(40);}}/>{query&&<button aria-label={uiCopy().screenText['clearSearch']} onClick={()=>setQuery('')}><X size={13}/></button>}</div>
-       <div className="notice-options"><button aria-pressed={onlyUnread} onClick={()=>{setOnlyUnread(v=>!v);setLimit(40);}}><i className="notice-unread-dot"/>{uiCopy().screenText['unreadOnly']}</button><select aria-label={uiCopy().screenText['sortDispatches']} value={sort} onChange={e=>{setSort(e.target.value);setLimit(40);}}><option value="recent">{uiCopy().screenText['newestFirst']}</option><option value="oldest">{uiCopy().screenText['oldestFirst']}</option><option value="priority">{uiCopy().screenText['priorityFirst']}</option></select></div>
+       <div className="notice-status"><span><Bell size={14}/><strong>{uiCopy().screenText['dispatches']}</strong><small>{matching.length}</small></span><UIButton className="notice-read" disabled={!unread} data-help={uiCopy().screenText['markOwnAndSharedDispatchesAsRead']} onClick={onRead}><CheckCheck size={14}/>{uiCopy().screenText['markRead']}</UIButton></div>
+       <div className="notice-filters" role="group" aria-label={T.newsFilter}>{([['mine',uiCopy().screenText['myKingdom']],['alerts',T.filterAlerts],['all',T.filterAll]] as const).map(([id,label])=><UIButton key={id} aria-pressed={filter===id} onClick={()=>{setFilter(id);setLimit(40);}}>{label}<small>{counts[id]}</small></UIButton>)}</div>
+       <div className="notice-search"><Search size={14}/><UIInput aria-label={uiCopy().screenText['searchDispatches']} placeholder={uiCopy().screenText['searchNewsRegionsBuildings']} value={query} onChange={e=>{setQuery(e.target.value);setLimit(40);}}/>{query&&<UIButton aria-label={uiCopy().screenText['clearSearch']} onClick={()=>setQuery('')}><X size={13}/></UIButton>}</div>
+       <div className="notice-options"><UIButton aria-pressed={onlyUnread} onClick={()=>{setOnlyUnread(v=>!v);setLimit(40);}}><i className="notice-unread-dot"/>{uiCopy().screenText['unreadOnly']}</UIButton><UISelect aria-label={uiCopy().screenText['sortDispatches']} value={sort} onChange={e=>{setSort(e.target.value);setLimit(40);}}><option value="recent">{uiCopy().screenText['newestFirst']}</option><option value="oldest">{uiCopy().screenText['oldestFirst']}</option><option value="priority">{uiCopy().screenText['priorityFirst']}</option></UISelect></div>
       </div>
       <ol className="events notice-timeline">
-        {events.length===0&&<li className="notice-empty"><Bell size={25}/><strong>{uiCopy().screenText['noDispatches']}</strong>{(query||onlyUnread||filter!=='all')&&<button onClick={reset}>{uiCopy().screenText['resetFilters']}</button>}</li>}
+        {events.length===0&&<li className="notice-empty"><Bell size={25}/><strong>{uiCopy().screenText['noDispatches']}</strong>{(query||onlyUnread||filter!=='all')&&<UIButton onClick={reset}>{uiCopy().screenText['resetFilters']}</UIButton>}</li>}
         {events.map((e, i) => {
           const c = e.companyId != null ? companyById(world, e.companyId) : undefined;
           const region=world.regions.find(r=>r.id===e.regionId);
@@ -77,19 +78,19 @@ export function Notifications({ world, lastReadTick, onRead, onJump, onCompany, 
             <Fragment key={`${e.tick}-${i}`} >{(i===0||events[i-1].tick!==e.tick)&&<li className="notice-date"><time>{shortDate(e.tick)}</time></li>}<li className={`ev ${k.cls} ${fresh ? 'fresh' : ''}`}>
               <span className="ev-icon"><Sprite name={k.sprite} size={28} label={k.label} /></span>
               <div className="ev-main">
-                {destination?<button className="ev-text event-link" onClick={()=>onEvent(e)}>{eventText(e)}<ArrowUpRight size={14} aria-hidden="true"/></button>:<span className="ev-text">{eventText(e)}</span>}
+                {destination?<UIButton className="ev-text event-link" onClick={()=>onEvent(e)}>{eventText(e)}<ArrowUpRight size={14} aria-hidden="true"/></UIButton>:<span className="ev-text">{eventText(e)}</span>}
                 <span className="ev-meta lbl">
                   <span className="notice-kind">{k.label}</span>{fresh&&<span className="notice-fresh">{uiCopy().screenText['unread']}</span>}
-                  {c && <button className="entity-link" onClick={()=>onCompany(c.id)} title={companyName(c)}><OwnerBadge company={c} world={world}/><ArrowUpRight size={12}/></button>}
-                  {region&&<button className="entity-link" onClick={()=>onJump(region.id)}><MapPin size={12}/>{regionName(region)}</button>}
-                  {building&&<button className="entity-link" onClick={()=>onEvent(e)}><Factory size={12}/>{buildingName(building.typeId)}</button>}
+                  {c && <UIButton className="entity-link" onClick={()=>onCompany(c.id)} title={companyName(c)}><OwnerBadge company={c} world={world}/><ArrowUpRight size={12}/></UIButton>}
+                  {region&&<UIButton className="entity-link" onClick={()=>onJump(region.id)}><MapPin size={12}/>{regionName(region)}</UIButton>}
+                  {building&&<UIButton className="entity-link" onClick={()=>onEvent(e)}><Factory size={12}/>{buildingName(building.typeId)}</UIButton>}
                 </span>
               </div>
             </li></Fragment>
           );
         })}
       </ol>
-      {matching.length>limit&&<button className="notice-more" onClick={()=>setLimit(n=>n+40)}>{uiCopy().screenText['showMore']} · {events.length} / {matching.length}</button>}
+      {matching.length>limit&&<UIButton className="notice-more" onClick={()=>setLimit(n=>n+40)}>{uiCopy().screenText['showMore']} · {events.length} / {matching.length}</UIButton>}
     </div>
   );
 }

@@ -1,3 +1,4 @@
+import {Button as UIButton,Input as UIInput} from './ui/controls';
 import {t as uiCopy} from './i18n';
 import {hasStoredLang,chooseLang} from './lang';
 import {LanguagePick} from './views/LanguagePick';
@@ -57,7 +58,7 @@ function Popover({ button, label, children, className = '' }: { button: ReactNod
   }, [open]);
   return (
     <div className={`popover ${className}`} ref={ref}>
-      <button className="icon-btn" aria-haspopup="true" aria-expanded={open} aria-label={label} title={label} onClick={() => setOpen(!open)}>{button}</button>
+      <UIButton className="icon-btn" aria-haspopup="true" aria-expanded={open} aria-label={label} title={label} onClick={() => setOpen(!open)}>{button}</UIButton>
       {open && <div className="popover-panel" role="dialog" aria-label={label}>{children(() => setOpen(false))}</div>}
     </div>
   );
@@ -156,7 +157,7 @@ export function App() {
 
         {me && (
           <div className="ledger">
-            <button className={`chip loan-chip ${debtRatio>=1?'bad':debtRatio>=.7?'warn':''}`} onClick={()=>openLinkedWindow({kind:'state',tab:'budget'})} aria-label={T.finance} data-help={`${T.system.netTreasury}\n${T.cash}: ${me.cash.toFixed(2)} · ${T.loan}: ${me.debt.toFixed(2)}`}><span className="chip-label"><Sprite name="coin" size={24}/>{T.treasury}</span><span className="chip-value"><span className={me.cash-me.debt<0?'neg':undefined}><NumericValue value={me.cash-me.debt} format="money"/></span> / <NumericValue value={limit} format="money"/></span></button>
+            <UIButton className={`chip loan-chip ${debtRatio>=1?'bad':debtRatio>=.7?'warn':''}`} onClick={()=>openLinkedWindow({kind:'state',tab:'budget'})} aria-label={T.finance} data-help={`${T.system.netTreasury}\n${T.cash}: ${me.cash.toFixed(2)} · ${T.loan}: ${me.debt.toFixed(2)}`}><span className="chip-label"><Sprite name="coin" size={24}/>{T.treasury}</span><span className="chip-value"><span className={me.cash-me.debt<0?'neg':undefined}><NumericValue value={me.cash-me.debt} format="money"/></span> / <NumericValue value={limit} format="money"/></span></UIButton>
             <dl className={`chip ${me.lastWeekProfit >= 0 ? 'good' : 'bad'}`}><dt>{T.lastWeekPL}</dt><dd><NumericValue value={me.lastWeekProfit} format="signedMoney"/></dd></dl>
             <dl className={`chip ${collection < .8 ? 'warn' : ''}`}><dt>{T.taxCollection}</dt><dd>{Math.round(collection*100)}%</dd><Bar value={collection} tone={collection < .8 ? 'gold' : 'pos'} size="sm" label={T.taxCollection}/></dl>
           </div>
@@ -164,16 +165,16 @@ export function App() {
 
         <div className="controls">
           <div className="segmented" role="group" aria-label={T.speedGroup}>
-            <button className="seg-play" aria-pressed={!running} aria-label={T.pause} title={T.pause}
-              onClick={() => game.setSpeed(0)}><Pause size={16} strokeWidth={2.4} aria-hidden="true" /></button>
+            <UIButton className="seg-play" aria-pressed={!running} aria-label={T.pause} title={T.pause}
+              onClick={() => game.setSpeed(0)}><Pause size={16} strokeWidth={2.4} aria-hidden="true" /></UIButton>
             {SPEEDS.map((s) => (
-              <button key={s.tps} aria-pressed={game.speed === s.tps} onClick={() => game.setSpeed(s.tps)} title={`${s.label} (${SPEEDS.indexOf(s) + 1})`}>{s.label}</button>
+              <UIButton key={s.tps} aria-pressed={game.speed === s.tps} onClick={() => game.setSpeed(s.tps)} title={`${s.label} (${SPEEDS.indexOf(s) + 1})`}>{s.label}</UIButton>
             ))}
-            <button onClick={game.stepOnce} disabled={running} title={T.stepDay} aria-label={T.stepDay}><SkipForward size={14} aria-hidden="true" /></button>
+            <UIButton onClick={game.stepOnce} disabled={running} title={T.stepDay} aria-label={T.stepDay}><SkipForward size={14} aria-hidden="true" /></UIButton>
           </div>
 
-          <div className="segmented"><button onClick={()=>game.runUntilYearEnd(game.speed||4*BASE_TPS)}>▸ {T.yearEnd}</button><Popover label={T.destination} button={<>▾</>}>{close=><button onClick={()=>{game.runUntilYearEnd(game.speed||4*BASE_TPS);close();}}>{T.yearEnd}</button>}</Popover></div>
-          {!running&&<button className="pause-reason" onClick={()=>{if(game.pauseReason.event)openEvent(game.pauseReason.event);}} disabled={!game.pauseReason.event}>{game.pauseReason.kind==='danger'?T.reasonDanger:game.pauseReason.kind==='yearEnd'?`${T.reasonReached} · ${T.yearEnd}`:T.pause}</button>}
+          <div className="segmented"><UIButton onClick={()=>game.runUntilYearEnd(game.speed||4*BASE_TPS)}>▸ {T.yearEnd}</UIButton><Popover label={T.destination} button={<>▾</>}>{close=><UIButton onClick={()=>{game.runUntilYearEnd(game.speed||4*BASE_TPS);close();}}>{T.yearEnd}</UIButton>}</Popover></div>
+          {!running&&<UIButton className="pause-reason" onClick={()=>{if(game.pauseReason.event)openEvent(game.pauseReason.event);}} disabled={!game.pauseReason.event}>{game.pauseReason.kind==='danger'?T.reasonDanger:game.pauseReason.kind==='yearEnd'?`${T.reasonReached} · ${T.yearEnd}`:T.pause}</UIButton>}
           <Popover label={T.notifications(unread)} className="bell"
             button={<><Sprite name="bell" size={20} />{unread > 0 && <span className="badge">{unread > 99 ? '99+' : unread}</span>}</>}>
             {(close) => (
@@ -186,23 +187,23 @@ export function App() {
           <Popover label={T.menu} button={<Menu size={18} aria-hidden="true" />}>
             {(close) => (
               <div className="menu"><TraceTools/>
-                <button onClick={() => { game.save(); close(); }}>{T.save}</button>
-                <button onClick={() => { game.load(); close(); }}>{T.load}</button>
-                <button onClick={() => { if (confirm(T.confirmNewGame)) { game.newGame(); } close(); }}>{T.newGame}</button>
+                <UIButton onClick={() => { game.save(); close(); }}>{T.save}</UIButton>
+                <UIButton onClick={() => { game.load(); close(); }}>{T.load}</UIButton>
+                <UIButton onClick={() => { if (confirm(T.confirmNewGame)) { game.newGame(); } close(); }}>{T.newGame}</UIButton>
                 <hr />
                 <label className="check">
-                  <input type="checkbox" checked={game.prefs.pauseOnDanger} onChange={(e) => game.setPrefs({ pauseOnDanger: e.target.checked })} />
+                  <UIInput type="checkbox" checked={game.prefs.pauseOnDanger} onChange={(e) => game.setPrefs({ pauseOnDanger: e.target.checked })} />
                   {T.pauseOnDanger}
                 </label>
-                <button onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>
+                <UIButton onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>
                   {theme === 'dark' ? <><Sprite name="sun" size={24} /> {T.dayTheme}</> : <><Moon size={14} aria-hidden="true" /> {T.nightTheme}</>}
-                </button>
+                </UIButton>
                 <hr />
                 <div className="lang-switch" role="group" aria-label={T.language}>
                   <span className="lbl">{T.language}</span>
                   <div className="segmented">
-                    <button aria-pressed={lang === 'ko'} lang="ko" onClick={() => setLang('ko')}>KO</button>
-                    <button aria-pressed={lang === 'en'} lang="en" onClick={() => setLang('en')}>EN</button>
+                    <UIButton aria-pressed={lang === 'ko'} lang="ko" onClick={() => setLang('ko')}>KO</UIButton>
+                    <UIButton aria-pressed={lang === 'en'} lang="en" onClick={() => setLang('en')}>EN</UIButton>
                   </div>
                 </div>
               </div>
@@ -220,7 +221,7 @@ export function App() {
       <div className="toasts" aria-live="polite">
         {game.toasts.map((t) => (
           <div key={t.id} className={`toast ${t.kind}`}>
-            {t.regionId ? <button className="event-link" onClick={()=>{selectRegion(t.regionId!);game.dismissToast(t.id);}}>{eventText(t)} ↗</button> : eventText(t)}
+            {t.regionId ? <UIButton className="event-link" onClick={()=>{selectRegion(t.regionId!);game.dismissToast(t.id);}}>{eventText(t)} ↗</UIButton> : eventText(t)}
           </div>
         ))}
       </div>

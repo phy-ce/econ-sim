@@ -1,3 +1,5 @@
+import {Button as UIButton} from '../ui/controls';
+import {LedgerTable as UITable} from '../ui/primitives';
 import {t as uiCopy} from '../i18n';
 import { HarvestBadge } from './HarvestBadge';
 import { NumericValue } from '../NumericValue';
@@ -51,8 +53,8 @@ function RegionMapView({ world, selected, onSelect }: { world: World; selected: 
 
   return (
     <>
-      <div className="map-title"><h2>{T.paneMap}</h2></div><div className="map-layers segmented" role="group" aria-label={T.mapLayers}>{(['kingdom','wealth','sol'] as const).map(id=><button key={id} aria-pressed={layer===id} onClick={()=>setLayer(id)}>{id==='kingdom'?T.territory:id==='wealth'?T.wealthLevel:T.standardOfLiving}</button>)}</div>
-      <div className="map-camera-tools"><button aria-label={uiCopy().screenText['zoomOut']} onClick={()=>zoom(-.15)}>−</button><button aria-label={uiCopy().screenText['resetMapView']} onClick={()=>setCamera({x:0,y:0,zoom:1})}>{Math.round(camera.zoom*100)}%</button><button aria-label={uiCopy().screenText['zoomIn']} onClick={()=>zoom(.15)}>+</button></div>
+      <div className="map-title"><h2>{T.paneMap}</h2></div><div className="map-layers segmented" role="group" aria-label={T.mapLayers}>{(['kingdom','wealth','sol'] as const).map(id=><UIButton key={id} aria-pressed={layer===id} onClick={()=>setLayer(id)}>{id==='kingdom'?T.territory:id==='wealth'?T.wealthLevel:T.standardOfLiving}</UIButton>)}</div>
+      <div className="map-camera-tools"><UIButton aria-label={uiCopy().screenText['zoomOut']} onClick={()=>zoom(-.15)}>−</UIButton><UIButton aria-label={uiCopy().screenText['resetMapView']} onClick={()=>setCamera({x:0,y:0,zoom:1})}>{Math.round(camera.zoom*100)}%</UIButton><UIButton aria-label={uiCopy().screenText['zoomIn']} onClick={()=>zoom(.15)}>+</UIButton></div>
       <svg className="map atlas-map" viewBox={`${camera.x+MAP_FRAME.x} ${camera.y+MAP_FRAME.y} ${WIDTH/camera.zoom} ${HEIGHT/camera.zoom}`} role="group" aria-label={T.mapAria}
        onWheel={e=>{const matrix=e.currentTarget.getScreenCTM();const point=matrix?new DOMPoint(e.clientX,e.clientY).matrixTransform(matrix.inverse()):undefined;zoom(e.deltaY<0?.1:-.1,point);}}
        onPointerDown={e=>{if(e.button!==0)return;const box=e.currentTarget.getBoundingClientRect();suppressClick.current=false;drag.current={x:e.clientX,y:e.clientY,cx:camera.x,cy:camera.y,scale:Math.min(box.width/(WIDTH/camera.zoom),box.height/(HEIGHT/camera.zoom)),moved:false};}}
@@ -93,12 +95,12 @@ function RegionMapView({ world, selected, onSelect }: { world: World; selected: 
           <span><Sprite name="m-wheat" size={24} /><Sprite name="m-tree" size={24} /><Sprite name="m-mine" size={24} /> {T.keyLand}</span>
         </div>
       </div>
-      <details className="map-directory"><summary>{uiCopy().screenText['regions']}</summary><table className="region-directory-table">
+      <details className="map-directory"><summary>{uiCopy().screenText['regions']}</summary><UITable className="region-directory-table">
         <thead><tr>{[['name',uiCopy().screenText['region']],['population',T.population],['wealth',T.wealthPerHead],['sol',T.standardOfLiving]].map(([key,label]) => <SortHeader key={key} label={label} active={sort===key} direction={direction} onClick={()=>{setSort(key);setDirection(sort===key?-direction:key==='name'?1:-1);}}/>)}</tr></thead>
         <tbody>{regions.map(r=><tr key={r.id} className={r.id===selected?'selected':''}>
-          <td><button className="name-link" aria-pressed={r.id===selected} onClick={()=>onSelect(r.id)}><span className="territory-marker" title={kingdomName(r.kingdomId)} style={{color:kingdomOf(r.kingdomId)?.color}}>{['●','◆','▲'][world.kingdoms.findIndex(k=>k.id===r.kingdomId)]}</span>{regionName(r)}</button><HarvestBadge world={world} regionId={r.id}/></td><td><NumericValue value={regionPopulation(r)} format="int"/></td><td>{regionAvgWealth(r).toFixed(1)}</td><td>{regionLivingStandard(r).toFixed(1)}</td>
+          <td><UIButton className="name-link" aria-pressed={r.id===selected} onClick={()=>onSelect(r.id)}><span className="territory-marker" title={kingdomName(r.kingdomId)} style={{color:kingdomOf(r.kingdomId)?.color}}>{['●','◆','▲'][world.kingdoms.findIndex(k=>k.id===r.kingdomId)]}</span>{regionName(r)}</UIButton><HarvestBadge world={world} regionId={r.id}/></td><td><NumericValue value={regionPopulation(r)} format="int"/></td><td>{regionAvgWealth(r).toFixed(1)}</td><td>{regionLivingStandard(r).toFixed(1)}</td>
         </tr>)}</tbody>
-      </table></details>
+      </UITable></details>
     </>
   );
 }

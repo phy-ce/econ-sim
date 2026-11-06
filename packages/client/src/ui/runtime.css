@@ -1,0 +1,27 @@
+@import './tokens.css';
+@import './components.css';
+
+/* Layout remains with the screens; all shared visual roles belong to the system. */
+body.game-runtime{font-family:var(--gu-font);color:var(--gu-ink);background:var(--gu-paper);font-size:var(--gu-body-size)}
+.gu-runtime-button{height:auto;min-height:var(--gu-control);font-size:var(--gu-body-size);box-shadow:none;border-width:1px;border-radius:var(--gu-control-radius);padding:6px 12px}
+.gu-runtime-button:active:not(:disabled){transform:translateY(1px)}
+.gu-runtime-button[aria-pressed=true]{box-shadow:inset 0 -2px var(--gu-action)}
+.gu-runtime-button.gu-button-quiet{background:transparent;border-color:transparent}
+.gu-runtime-button.gu-button-primary{color:var(--gu-on-action);background:var(--gu-action);border-color:var(--gu-action)}
+.gu-runtime-button.gu-button-danger{color:var(--gu-negative);border-color:var(--gu-negative)}
+.gu-runtime-button.mini,.gu-runtime-button.tiny,.gu-runtime-button.icon-btn,.gu-runtime-button.panel-close,.window-navigation .gu-runtime-button,.topbar .gu-runtime-button,.desktop-dock .gu-runtime-button{--gu-control:26px;font-size:var(--gu-compact-font);padding:2px 7px}
+.gu-runtime-button.entity-link,.gu-runtime-button.view-link,.gu-runtime-button.detail-launch,.gu-runtime-button.flow-chip{--gu-control:24px;min-height:24px;height:auto;padding:0;font-size:inherit}
+.gu-runtime-button.industry-row,.gu-runtime-button.b-chip,.gu-runtime-button.construction-card,.gu-runtime-button.construction-type-card{height:auto}
+.gu-runtime-button:disabled{opacity:.65;color:var(--gu-muted)}
+.strategy-panel.gu-window-surface{background:var(--gu-paper);border-color:var(--gu-line);box-shadow:var(--gu-window-shadow)}
+.strategy-panel .gu-window-header{background:var(--gu-soft);color:var(--gu-ink);border-bottom:1px solid var(--gu-line);opacity:1}
+.gu-window-header .gu-runtime-button{color:inherit}
+.detail-window.gu-window-surface{width:var(--gu-detail-width);height:var(--gu-detail-height)}
+.floating-workspace .window-body,.detail-window .window-body{overflow-x:auto}
+.gu-table{border-collapse:collapse;width:100%}
+.strategy-panel .gu-table{color:var(--gu-ink);font-size:var(--gu-compact-font)}
+.gu-table th,.gu-table td{border-color:var(--gu-line)}
+.gu-table:focus-visible{outline:2px solid var(--gu-focus);outline-offset:-2px}
+.actual-output{display:block!important}.actual-output>.gu-fill{width:100%}
+
+.system-tabs.gu-segmented{display:flex;width:100%;padding:3px;background:var(--gu-soft);border:1px solid var(--gu-line)}.system-tabs.gu-segmented>button{font-size:var(--gu-compact-font);min-height:28px;flex:1;padding:4px 6px}.game-runtime .bar.gu-progress{height:var(--gu-bar-height)}.game-runtime .bar.gu-progress.sm{height:calc(var(--gu-bar-height) - 1px)}
