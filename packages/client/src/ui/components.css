@@ -166,3 +166,15 @@
 .gu-production-meter>.bar{height:3px!important;border:0;border-radius:0;background:var(--gu-soft)}
 .gu-production-diagram>footer{border:0;padding-top:4px;margin-top:6px;font-size:11px}
 @container(max-width:440px){.gu-production-diagram>header,.gu-production-body{grid-template-columns:minmax(0,1fr) 88px minmax(0,1fr)}.gu-production-node{grid-template-columns:16px minmax(0,1fr) 16px}.gu-production-connector{width:16px}}
+/* Keep each column close to its content and align unequal lists at the top. */
+.gu-production-diagram{max-width:520px;padding:8px 0}
+.gu-production-diagram>header,.gu-production-body{grid-template-columns:minmax(0,1fr) 104px minmax(0,1fr);column-gap:8px}
+.gu-production-diagram>header{padding-bottom:8px}
+.gu-production-body{align-items:start}
+.gu-production-side{align-self:start;justify-content:flex-start;border-bottom:0;padding:0}
+.gu-production-node{margin-top:1px;padding-top:6px;grid-template-columns:20px minmax(0,1fr) 20px}
+.gu-production-node>div{padding:0;gap:3px}.gu-production-connector{width:20px}
+.gu-production-item,.gu-button.gu-production-item{min-height:64px;padding:7px 0;row-gap:4px;column-gap:6px}
+.gu-production-content{gap:1px}.gu-production-quantity{font-size:18px}
+.gu-production-node .spr{width:48px;height:48px}
+@container(max-width:440px){.gu-production-diagram>header,.gu-production-body{grid-template-columns:minmax(0,1fr) 80px minmax(0,1fr);column-gap:6px}.gu-production-node{grid-template-columns:12px minmax(0,1fr) 12px}.gu-production-connector{width:12px}.gu-production-item,.gu-button.gu-production-item{padding:7px 0}}

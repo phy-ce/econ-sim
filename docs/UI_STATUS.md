@@ -500,3 +500,4 @@ DetailWindow 독립 NavigationProvider/버튼, BuildingPops 및 ResourceInspecto
 
 ### 투입·산출 표현 재정리
 - 문자 화살표를 가는 SVG 연결선으로 교체하고, /일 표기를 작은 하루 기준/Daily 라벨로 정리. 자원 열의 위아래 경계·행 구분·수량 중심 서체를 통일하고 충족 막대를3px로 낮춤. 게임/카탈로그 공통 부품 적용. typecheck·120시험 통과,1920×1028 및390px 카탈로그 캡처 확인(기존 production-redesign-catalogue-ko-light.png 경로 갱신). 시각 방향은 사용자 검토 대상.
+- 간격 재조정: 부품 최대폭680→520px, 자원 행 최소80→64px, 열 사이8px로 축소. 원료 수가 달라도 건물과 산출을 첫 행 쪽에 정렬하고 산출 열의 불필요한 늘어남 제거.1920×1028/390px 카탈로그 스크린샷 갱신·가로 넘침0, typecheck/120시험 통과.
