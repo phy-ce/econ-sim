@@ -497,3 +497,6 @@ DetailWindow 독립 NavigationProvider/버튼, BuildingPops 및 ResourceInspecto
 - 게임 FlowRow와 카탈로그 ProductionFlow 모두 같은 두 공통 부품/CSS 사용. 복수 원료는 세로 목록으로 늘어나고 좁은 부품에서는 그림/이름/수량을 쌓는다. 카탈로그의 그림 크기·방법 조절도 새 레이아웃에 연결. 1920×1028에서 실적/기준 각491px 너비 가로 넘침0,390px 화면의 세 원료(석탄/목재/철) 방식에서도 부품·문서 가로 넘침0 확인. 상품 눌러 실제 시세 창 열림 확인.
 - 검증: 루트 typecheck 통과, 클라이언트44파일120시험 통과(실적 정밀도·단가 툴팁/기준과 클릭·막대 구분/정지0/소작농 상품 보존4시험 추가). 기존 SSR 경고는 그대로. 헤드리스 스크린샷 확인(1920×1028): C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/production-redesign-game-ko-light.png, production-redesign-game-en-dark.png, production-redesign-catalogue-ko-light.png, production-redesign-good-link.png;390×844는 production-redesign-catalogue-mobile-ko-light.png. 콘솔 예외0. 게임/미리보기 양쪽 적용, 기존 다른 변경 보존, 클라이언트·이 상태 문서만 로컬 커밋, push 없음.
 - 최종 눈 확인에서 기존 전역 단추 높이가 새 자원 행의 막대를 하단 경계 밖으로 밀어내는 것을 찾아 height:auto로 해제함. 행 실제 높이80→122.56px로 내용에 맞춰지고 막대가 행 안에 들어오는 것을 DOM으로 재확인. 3진입점 프로덕션 빌드도 통과.
+
+### 투입·산출 표현 재정리
+- 문자 화살표를 가는 SVG 연결선으로 교체하고, /일 표기를 작은 하루 기준/Daily 라벨로 정리. 자원 열의 위아래 경계·행 구분·수량 중심 서체를 통일하고 충족 막대를3px로 낮춤. 게임/카탈로그 공통 부품 적용. typecheck·120시험 통과,1920×1028 및390px 카탈로그 캡처 확인(기존 production-redesign-catalogue-ko-light.png 경로 갱신). 시각 방향은 사용자 검토 대상.

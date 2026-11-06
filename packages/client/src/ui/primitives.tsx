@@ -19,8 +19,8 @@ export function LedgerTable({className='',...props}:TableHTMLAttributes<HTMLTabl
 
 export function ProductionDiagram({inputLabel,outputLabel,period,inputs,outputs,building,footer,className='',...props}:{inputLabel:string;outputLabel:string;period:string;inputs:ReactNode;outputs:ReactNode;building:ReactNode;footer?:ReactNode}&HTMLAttributes<HTMLElement>){
  return <section {...props} className={`gu-production-diagram ${className}`}>
-  <header><span>{inputLabel}</span><small>{period}</small><span>{outputLabel}</span></header>
-  <div className="gu-production-body"><div className="gu-production-side">{inputs}</div><div className="gu-production-node"><span aria-hidden="true">→</span><div>{building}</div><span aria-hidden="true">→</span></div><div className="gu-production-side">{outputs}</div></div>
+  <header><span>{inputLabel}</span><small className="gu-production-period" aria-label={period}>{period.includes('일')?'하루 기준':'Daily'}</small><span>{outputLabel}</span></header>
+  <div className="gu-production-body"><div className="gu-production-side">{inputs}</div><div className="gu-production-node"><svg className="gu-production-connector" viewBox="0 0 32 12" aria-hidden="true"><path d="M1 6H29M25 2L29 6L25 10"/></svg><div>{building}</div><svg className="gu-production-connector" viewBox="0 0 32 12" aria-hidden="true"><path d="M1 6H29M25 2L29 6L25 10"/></svg></div><div className="gu-production-side">{outputs}</div></div>
   {footer&&<footer>{footer}</footer>}
  </section>;
 }

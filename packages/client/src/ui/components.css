@@ -149,3 +149,20 @@
 .gu-production-meter{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:3px 6px}.gu-production-meter>.bar{grid-column:1/-1;width:100%}.gu-production-meter>small{white-space:normal}.gu-production-meter>small:nth-child(2){white-space:nowrap}
 /* Content determines row height even inside legacy fixed-height button contexts. */
 .gu-production-item,.gu-button.gu-production-item{height:auto}
+/* Quiet framing: the building joins two resource ledgers. */
+.gu-production-diagram>header{position:relative;border:0;padding:0 0 12px;font-weight:500;font-size:12px;color:var(--gu-muted)}
+.gu-production-period{font-size:10px!important;letter-spacing:.02em;opacity:.8}
+.gu-production-body{grid-template-columns:minmax(0,1fr) 116px minmax(0,1fr);padding:0;align-items:center}
+.gu-production-diagram>header{grid-template-columns:minmax(0,1fr) 116px minmax(0,1fr)}
+.gu-production-side{border-top:1px solid var(--gu-line);border-bottom:1px solid var(--gu-line);padding:6px 0}
+.gu-production-node{grid-template-columns:24px minmax(0,1fr) 24px;gap:0}
+.gu-production-connector{width:24px;height:12px;fill:none;stroke:var(--gu-line);stroke-width:1.2;stroke-linecap:round;stroke-linejoin:round}
+.gu-production-node>div{gap:7px;padding:8px 0}.gu-production-node strong{font-size:11px;font-weight:400;color:var(--gu-muted)}
+.gu-production-node small{font-size:11px;color:var(--gu-muted)}
+.gu-production-item,.gu-button.gu-production-item{padding:10px 3px;border-radius:0;border-bottom-color:var(--gu-line);column-gap:8px}
+.gu-production-name{font-size:12px;color:var(--gu-muted);font-weight:400}
+.gu-production-quantity{font-size:20px;font-weight:500;letter-spacing:-.03em}
+.gu-production-meter{margin-top:4px;gap:5px 6px}.gu-production-meter>small{font-size:10px}
+.gu-production-meter>.bar{height:3px!important;border:0;border-radius:0;background:var(--gu-soft)}
+.gu-production-diagram>footer{border:0;padding-top:4px;margin-top:6px;font-size:11px}
+@container(max-width:440px){.gu-production-diagram>header,.gu-production-body{grid-template-columns:minmax(0,1fr) 88px minmax(0,1fr)}.gu-production-node{grid-template-columns:16px minmax(0,1fr) 16px}.gu-production-connector{width:16px}}
