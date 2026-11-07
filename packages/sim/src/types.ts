@@ -320,6 +320,7 @@ export interface Building {
    * 예산 미리보기의 국영 사업 손익 줄(budget.ts stateFirms)이 쓴다
    */
   firmEma?: { sales: number; inputs: number };
+  /** 쓰지 않는다 (2026-11-07 adjustOutput 로 바뀌며 끝남, 옛 저장용) */
   lossWeeks: number;
   /** 생산량 탐색: 가동률을 올리기 직전의 이익 이동평균 (production.ts adjustOutput). 올린 뒤에만 있다 */
   probeProfit?: number;

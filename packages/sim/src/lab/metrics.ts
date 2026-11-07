@@ -205,7 +205,7 @@ class Acc {
   soldV = 0; supV = 0;
   demoLv = 0; quickDemo = 0; startLv = 0; builtLv = 0; pledgeNew = 0;
   growStarts = 0; glutBlock = 0;
-  // 0b′ 5-2 감축('sdCut')·철거('sdDemo')는 2026-11-02 wt-simplify 1-G 에서 지운 길이라 이제 늘 0 (옛 결과 파일과 열을 맞추려고 남김). 가동률 올리기('utilUp', 모든 생산 건물), 적자 감축('lossCut') 횟수
+  // 0b′ 5-2 감축('sdCut')·철거('sdDemo')는 2026-11-02 wt-simplify 1-G 에서 지운 길이라 이제 늘 0 (옛 결과 파일과 열을 맞추려고 남김). 가동률 올리기('utilUp')·적자 감축('lossCut')은 2026-11-07 wt-autoutil 에서 지운 길이라 늘 0 (옛 결과 파일용)
   sdCut = 0; sdDemo = 0; utilUp = 0; lossCut = 0;
   // 0b′ A2·A3 철거·증설 판단('sellDemo'·'marginDemo'·'marginBlock'·'marginOk'): 1-G 에서 지운 길, 늘 0 (옛 결과 파일용)
   sellDemo = 0; marginDemo = 0; marginBlock = 0; marginOk = 0;
@@ -318,8 +318,7 @@ export class Collector {
 
   /**
    * ai.ts aiTrace 로 받는 AI 판단 기록 (run.ts 가 이어 준다): 유보 증설 착공('reserve', 레벨), 과잉 검사로 막힌 증설('glutBlock', 건물·주),
-   * 가동률 올리기('utilUp', 10%씩 한 번), 적자 감축('lossCut', 10%씩 한 번),
-   * (5-2 'sdCut'·'sdDemo', A2 'sellDemo', A3 'marginDemo'·'marginBlock'·'marginOk' 는 1-G 에서 지운 길이라 늘 0, 옛 결과 파일과 열을 맞추려고 받는다)
+   * (5-2 'sdCut'·'sdDemo', 'utilUp'·'lossCut', A2 'sellDemo', A3 'marginDemo'·'marginBlock'·'marginOk' 는 1-G 에서 지운 길이라 늘 0, 옛 결과 파일과 열을 맞추려고 받는다)
    * 넘침 퇴출 철거('trimDemo', 1레벨)·쉼('trimHold', 지역·상품·주)
    */
   trace(path: string, regionId: number | undefined, levels: number) {

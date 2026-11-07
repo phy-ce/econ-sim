@@ -93,7 +93,7 @@ export function runAi(w: World) {
     if (c.state) { chooseTaxLaw(w, c); adjustBudget(w, c); }
     // TUNE.aiStatePremium: 왕실은 정부 건물 일손이 모자라는 지역에 국영 임금 웃돈을 얹는다 (adjustStatePremium)
     if (c.state && TUNE.aiStatePremium) adjustStatePremium(w, c);
-    // 임금은 지역 시장 임금이 정한다 (labor.ts updateMarketWages). AI 는 자리(가동률·증설·철거)만 정한다.
+    // 임금은 지역 시장 임금이 정한다 (labor.ts updateMarketWages). AI 는 자리(증설·철거)만 정한다. 가동률은 건물이 정한다 (production.ts adjustOutput).
     // 민간 상회는 사람이 빠지는 지역에 웃돈을 얹는다 (adjustPremium)
     if (!c.state) adjustPremium(w, c);
     else if (TUNE.aiLatentInput >= 2 && !c.isPlayer) crownPioneerPremium(w, c);
@@ -507,10 +507,10 @@ function inputSpare(w: World, g: GoodId, b?: Building): number {
 /** 굶는 투입 충족: 이 값 미만이면 굶은 주로 센다 (TUNE.starveWeeks, 건축사무소 자재 바꾸기). 근거 없음 */
 export const STARVE_FILL = 0.5;
 
-/** 굶는 건물 (TUNE.starveWeeks): 투입 충족 < STARVE_FILL 이 그 주 수 이어졌다 */
-function starving(b: Building): boolean {
-  return TUNE.starveWeeks > 0 && (b.starvedWeeks ?? 0) >= TUNE.starveWeeks;
-}
+/** 꺼진 AI 건물을 다시 켜는 마진 문턱 (manageBuildings). 근거 없음 */
+export const RESTART_MARGIN = 0.05;
+/** 다시 켤 때의 가동률. 그 뒤로는 production.ts adjustOutput 이 움직인다. 근거 없음 */
+export const RESTART_UTILIZATION = 0.3;
 
 /** 행정청용: 그 왕국 시장들에 남는 투입재(공급 − 수요, 이동평균)가 이 방식 levels 레벨의 하루 필요의 절반 이상인가 */
 function kingdomInputs(w: World, kingdomId: number, m: MethodDef, levels: number): boolean {
@@ -631,9 +631,9 @@ function manageBuildings(w: World, c: Company, o: Outlook, pools: Map<string, nu
 
     if (!b.active) {
       b.pausedWeeks += 1;
-      if (current.margin > 0.05 && inputsAvailable(w, cur, b.level, b)) {
+      if (current.margin > RESTART_MARGIN && inputsAvailable(w, cur, b.level, b)) {
         applyCommand(w, c.id, { type: 'setActive', buildingId: b.id, active: true });
-        b.utilization = 0.3;
+        b.utilization = RESTART_UTILIZATION;
         b.lossWeeks = 0; b.profitEma = 0;
       }
       continue;
@@ -942,7 +942,7 @@ function officeEmpty(b: Building): number {
  * 건축사무소는 손익 대신 포인트 사용량과 일손으로 본다: 빈 레벨이 있거나 그 레벨을 빼도 쓰던 포인트를 다 낼 수 있으면 −1,
  * 아니면 +1 (마지막 1레벨은 남긴다)
  */
-function levelValue(w: World, c: Company, o: Outlook, b: Building, pointsPerDay: number, fill?: number): number {
+function levelValue(w: World, c: Company, o: Outlook, b: Building, pointsPerDay: number): number {
   const m = getMethod(b.typeId, b.methodId);
   if (m.construction) {
     const perLevel = m.construction * b.utilization * efficiency(b);
@@ -954,8 +954,8 @@ function levelValue(w: World, c: Company, o: Outlook, b: Building, pointsPerDay:
   // 무역소: 이 건물 전체 손익 − 한 레벨 적을 때의 손익
   if (b.typeId === TRADING_POST) return tradeValuation(w, c, r, m, b.level, b).profit - tradeValuation(w, c, r, m, b.level - 1, b).profit;
   // TUNE.aiAdminValue: 왕실 행정청은 마지막 한 칸이 아니라 평균으로 본다
-  if (TUNE.aiAdminValue && c.state && m.taxCapacity) return adminAverage(w, c, o, b, r, m, fill);
-  return valueMethod(w, o, r, c, b.typeId, m, 1, true, fill).profit;
+  if (TUNE.aiAdminValue && c.state && m.taxCapacity) return adminAverage(w, c, o, b, r, m);
+  return valueMethod(w, o, r, c, b.typeId, m, 1, true).profit;
 }
 
 /**
@@ -964,15 +964,15 @@ function levelValue(w: World, c: Company, o: Outlook, b: Building, pointsPerDay:
  * 마지막 한 칸(징수율 곡선의 끝 기울기)으로 보면 세금 수준을 내리거나 세금 기반이 줄 때 한 칸씩 계속 마이너스가 되어 행정청이 0 까지 줄었다.
  * 2 = 걷을 세금을 보통 세금 수준(3단계, 배율 1)으로 환산한다 (taxOwed ÷ 지금 세금 수준 배율)
  */
-function adminAverage(w: World, c: Company, o: Outlook, b: Building, r: Region, m: MethodDef, fill?: number): number {
+function adminAverage(w: World, c: Company, o: Outlook, b: Building, r: Region, m: MethodDef): number {
   const k = kingdomById(w, r.kingdomId);
-  const v = valueMethod(w, o, r, c, b.typeId, m, 1, true, fill);
+  const v = valueMethod(w, o, r, c, b.typeId, m, 1, true);
   const cost = (v.wageCost + v.inputCost) / v.utilization;
   const n = k.taxDue ?? 0, cap = k.taxCapacity ?? 0;
   if (!(n > 0)) return -cost;
   const perCap = cap > 1e-9 ? collectionRatio(cap, n) / cap : 1 / n;
   const owed = (k.taxOwed ?? 0) / (TUNE.aiAdminValue >= 2 ? Math.max(1e-9, budgetMult(k, 'tax')) : 1);
-  return owed * perCap * m.taxCapacity! * TUNE.adminScale * (1 + regionPerk(b.regionId, b.typeId)) * (fill ?? 1) - cost;
+  return owed * perCap * m.taxCapacity! * TUNE.adminScale * (1 + regionPerk(b.regionId, b.typeId)) - cost;
 }
 
 /** 왕실 행정청 레벨 (철거 대기 뺀 것, TUNE.aiAdminValue: 마지막 레벨은 남긴다) */
@@ -996,17 +996,15 @@ function reviewLevels(w: World, c: Company, o: Outlook, pointsPerDay: number) {
     // 생산 건물은 유보 자산으로 늘리고 줄인다 (reserveLevels)
     if (reserveRuled(b)) continue;
     if (w.constructions.some((k) => k.targetBuildingId === b.id)) { b.negWeeks = 0; delete b.staffPeak; continue; }
-    // 굶는 건물은 지금 투입 충족으로 잰다 (장기 전망은 투입을 다 산다고 본다)
-    const hungry = starving(b);
-    const v = levelValue(w, c, o, b, pointsPerDay, hungry ? b.last.inputFill : undefined);
+    const v = levelValue(w, c, o, b, pointsPerDay);
     if (b.shrinking) {
       if (v > 0 && !b.swap) b.shrinking = 0;
       delete b.staffPeak;
       continue;
     }
     b.swap = false;
-    // 적자를 유보 자산으로 메우는 동안은 철거 주 수를 세지 않는다 (굶는 건물은 센다)
-    const covered = b.profitEma < 0 && !!b.reserve && !hungry;
+    // 적자를 유보 자산으로 메우는 동안은 철거 주 수를 세지 않는다
+    const covered = b.profitEma < 0 && !!b.reserve;
     b.negWeeks = v < 0 && !covered ? (b.negWeeks ?? 0) + 1 : 0;
     const m = getMethod(b.typeId, b.methodId);
     if (!m.construction) {
@@ -1255,7 +1253,7 @@ function latentWants(w: World, c: Company, own: Region[], kingdom: Set<number>, 
   return out;
 }
 
-/** 잠재 수요 체인의 선구 건물: 왕국에서 혼자 내는 상품이 잠재 수요이거나 그 윗단이면, 소비자가 바꿀 때까지 적자여도 남기고 가동률을 깎지 않는다 */
+/** 잠재 수요 체인의 선구 건물: 왕국에서 혼자 내는 상품이 잠재 수요이거나 그 윗단이면, 소비자가 바꿀 때까지 적자여도 남긴다 */
 function latentPioneer(w: World, b: Building): boolean {
   if (!TUNE.aiLatentInput) return false;
   const k = regionById(w, b.regionId).kingdomId;

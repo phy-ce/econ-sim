@@ -741,11 +741,11 @@ export const TUNE = {
   startFiber: 0.4,
   startWorkshop: 3, // 1·2·3 비교 (DESIGN 11)
   warmupDays: 60, // 시작 전 시장 돌리기 일수 (tick.ts warmUp, DESIGN 11장). 0 = 끔
-  // 시작 인구 배율 (2026-11-01 사용자 "노동자 공급을 받아 주면서 임금을 유지할 만큼의 산업 성장이 일어나지 않는 것 같은데. 초기 인구를 좀 줄여볼까?", 비교용).
-  // 1 = 지금 세계 (비트 동일). 후보 0.75 / 0.5 × startPopLand 0 / 1 (docs/overhaul/POP_SPECS.json). 비교 중, 근거 없음
   outputWeeks: 8, // 생산량 탐색 주기 (주, production.ts adjustOutput, DESIGN 11장)
   outputStep: 0.1, // 한 번에 움직이는 가동률
   outputBand: 0.25, // 공급 ÷ 수요가 1 + 이 값을 넘으면 줄인다
+  // 시작 인구 배율 (2026-11-01 사용자 "노동자 공급을 받아 주면서 임금을 유지할 만큼의 산업 성장이 일어나지 않는 것 같은데. 초기 인구를 좀 줄여볼까?", 비교용).
+  // 1 = 지금 세계 (비트 동일). 후보 0.75 / 0.5 × startPopLand 0 / 1 (docs/overhaul/POP_SPECS.json). 비교 중, 근거 없음
   startPopScale: 1,
   startPopLand: 0,
   // AI 수정 비교 (2026-10-22, 기본값 = 지금 동작). crownGdpReserve: 왕실이 남길 국고 = 연간 총생산 × 이 비율 (0 = 지출 treasuryHighWeeks 주치)
@@ -756,7 +756,7 @@ export const TUNE = {
   pollTaxIncomeCap: 0.3,
   // 공사 포인트 배율 (회수 기간 손잡이, 2026-10-22). 모든 건물의 공사 포인트 = buildPoints × 이 값 (10 단위로 둥글게). 비용과 공사 일수가 같이 준다. 1·0.75·0.5 비교 (40년 × 시드 1~4): 0.75·0.5는 네 시드 중 둘이 무너져 1
   buildCostMult: 1,
-  // 투입 충족 < 0.5 가 이 주 수 이어진 생산 건물은 유보 자산이 있어도 적자면 가동률을 줄이고, 철거 판단에서도 유보 자산으로 메운다고 빼지 않는다 (0 = 끔)
+  // 0 보다 크면 투입 충족 < 0.5 인 주를 Building.starvedWeeks 로 센다 (ai.ts planTrials 가 RESERVE_STREAK 로 읽는다, 0 = 끔). 값의 크기는 더 쓰지 않는다 (DESIGN 11장)
   starveWeeks: 8,
   // 무역소 1레벨의 유보액 R (기본 방식, 장부 상회 2R, 무역 회사 4R). 금고가 이것을 넘으면 넘는 돈을 주인에게 보낸다.
   // 5,000: b1550a5 에서 상인(자본 1억)의 하루 교역 매입액을 20년 × 시드 1로 재어 1·5·10·20년차 평균 49,901 / 97,885 / 170,275 / 211,009 (네 해 평균 약 132,000)이었고,

@@ -10,7 +10,7 @@ import './lowprio';
 //   그 상품을 내는 AI 생산 건물(유보 기준): 레벨(방식별), 레벨 가중 가동률, 매출·원료비·인건비·이익 (b.last 합), 유보 ÷ 상한, 적자 연속 주 최대
 //   농부 시장 임금 ÷ 소작 1인 소득, 1레벨 손익분기 팔린 비율 (지금 값·임금에서 이익 = 0 이 되는 sold ÷ supply)
 //   지역별 예상 S/D(projectedSD, 과잉 검사가 보는 값)의 생산 레벨 가중 평균과 구간(< 1.2, 1.2~1.5, > 1.5)에 있는 생산 레벨 비율
-//   AI 판단 횟수 (aiTrace): 증설(reserve)·새 투자(trial)·과잉 막힘(glutBlock)·철거(reserveShrink·trimDemo)·가동률(lossCut·utilUp)
+//   AI 판단 횟수 (aiTrace): 증설(reserve)·새 투자(trial)·과잉 막힘(glutBlock)·철거(reserveShrink·trimDemo)
 import { writeFileSync, appendFileSync, mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { BUILDING_BY_ID, GOODS, TICKS_PER_WEEK, TICKS_PER_YEAR, TUNE, checkTuneKeys, getMethod } from '../src/data';
@@ -55,7 +55,7 @@ const w: World = FULL
   : createMicroWorld({ seed: SEED, aiSalt: SALT, people: [Number(arg('people', '400'))], ...(buildings ? { buildings } : {}), ...(typeScale ? { typeScale } : {}), ...(SLACK ? { arableSlack: Number(SLACK) } : {}) });
 
 // ---------------------------------------------------------------- AI 판단 세기
-const EV_KEYS = ['reserve', 'trial', 'latentTrial', 'glutBlock', 'reserveShrink', 'trimDemo', 'trimHold', 'trimStop', 'lossCut', 'utilUp', 'keepLast'];
+const EV_KEYS = ['reserve', 'trial', 'latentTrial', 'glutBlock', 'reserveShrink', 'trimDemo', 'trimHold', 'trimStop', 'keepLast'];
 let ev: Record<string, number> = {};
 const makesG = (typeId: string, methodId: string) => (getMethod(typeId, methodId).outputs[G] ?? 0) > 0;
 aiTrace.on = (_w, _c, path, typeId, methodId, levels) => {
@@ -184,13 +184,12 @@ function summarize(a: Acc) {
 }
 
 type Sum = ReturnType<typeof summarize>;
-const HEAD = 'S/D  S/Dema  값   팔림 | 소작지대 소작판매 농장 상인 | 현물  | 수요pop 수요bld | 레벨 최소 가동 마진  유보 손익분기σ 임금/소작 | 예상S/D <1.2 ~1.5 >1.5 공사중 | AI 증설 새투자 막힘 철거 가동↓';
+const HEAD = 'S/D  S/Dema  값   팔림 | 소작지대 소작판매 농장 상인 | 현물  | 수요pop 수요bld | 레벨 최소 가동 마진  유보 손익분기σ 임금/소작 | 예상S/D <1.2 ~1.5 >1.5 공사중 | AI 증설 새투자 막힘 철거';
 function line(label: string, s: Sum, e: Record<string, number>) {
   const farm = s.sBld[(Object.entries(s.sBld).sort((x, y) => y[1] - x[1])[0] ?? ['', 0])[0]] ?? 0;
   const dPop = Object.values(s.dPop).reduce((x, y) => x + y, 0), dBld = Object.values(s.dBld).reduce((x, y) => x + y, 0);
   const demo = (e.reserveShrink ?? 0) + (e.trimDemo ?? 0);
-  const cut = e.lossCut ?? 0;
-  return `${label} ${f(s.sd)} ${f(s.sdEma)} ${f(s.price)} ${f(s.soldR)} | ${k(s.sRent)} ${k(s.sSale)} ${k(farm)} ${k(s.sTrader)} | ${k(s.ownKind)} | ${k(dPop)} ${k(dBld)} | ${f(s.levels, 1)} ${f(s.lvMin, 0)} ${f(s.util)} ${f(s.margin)} ${f(s.resvFill)} ${f(s.beSigma)} ${f(s.wageRatio)} | ${f(s.psd)} ${s.band.map((x) => f(x)).join(' ')} ${f(s.pending, 1)} | ${e.reserve ?? 0} ${e.trial ?? 0} ${e.glutBlock ?? 0} ${demo} ${cut}`;
+  return `${label} ${f(s.sd)} ${f(s.sdEma)} ${f(s.price)} ${f(s.soldR)} | ${k(s.sRent)} ${k(s.sSale)} ${k(farm)} ${k(s.sTrader)} | ${k(s.ownKind)} | ${k(dPop)} ${k(dBld)} | ${f(s.levels, 1)} ${f(s.lvMin, 0)} ${f(s.util)} ${f(s.margin)} ${f(s.resvFill)} ${f(s.beSigma)} ${f(s.wageRatio)} | ${f(s.psd)} ${s.band.map((x) => f(x)).join(' ')} ${f(s.pending, 1)} | ${e.reserve ?? 0} ${e.trial ?? 0} ${e.glutBlock ?? 0} ${demo}`;
 }
 
 if (OUT) { mkdirSync(dirname(OUT), { recursive: true }); writeFileSync(OUT, ''); }

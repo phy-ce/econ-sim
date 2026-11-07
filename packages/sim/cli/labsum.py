@@ -370,8 +370,8 @@ CNAME = NAME | {'gdpPre': '세전 총생산', 'peasantIncome': '소작 1인 소�
                 'vault': '저택·금융가 금고', 'vaultG': '금고 해마다 증가율', 'pledge': '남은 금고 공사 약정', 'pledgeNew': '새 금고 약정', 'startLv': '착공 레벨',
                 'demoLv': '헐린 레벨', 'quickDemo': '52주 안 헐린 레벨', 'quickIdx': '짓고 부수기 지수', 'growStarts': '유보 증설 착공', 'glutBlock': '과잉 검사로 막힌 증설',
                 'adminStaff': '행정청 인원 (천)', 'sdCut': '5-2 가동률 감축 (번, 지움, 늘 0)', 'sdDemo': '5-2 철거 레벨 (지움, 늘 0)',
-                'utilUp': '가동률 올리기 (번)', 'capLvD.grain': '곡물 레벨 합 한 해 변화', 'sellDemo': 'A2 설비 철거 레벨 (지움, 늘 0)', 'marginDemo': 'A3 철거 레벨 (지움, 늘 0)',
-                'marginBlock': 'A3 가 막은 증설 (건물·주, 지움, 늘 0)', 'marginOk': 'A3 가 허용한 증설 (건물·주, 지움, 늘 0)', 'trimDemo': '넘침 퇴출 철거 레벨', 'trimStop': '넘침 퇴출 듣지 않아 쉼 (번)', 'lossCut': '적자 가동률 감축 (번)', 'skim': '저택 거둠', 'margR1': '실제 ÷ 설계 이익률 (기본 방식)'}
+                'utilUp': '가동률 올리기 (번, 지움, 늘 0)', 'capLvD.grain': '곡물 레벨 합 한 해 변화', 'sellDemo': 'A2 설비 철거 레벨 (지움, 늘 0)', 'marginDemo': 'A3 철거 레벨 (지움, 늘 0)',
+                'marginBlock': 'A3 가 막은 증설 (건물·주, 지움, 늘 0)', 'marginOk': 'A3 가 허용한 증설 (건물·주, 지움, 늘 0)', 'trimDemo': '넘침 퇴출 철거 레벨', 'trimStop': '넘침 퇴출 듣지 않아 쉼 (번)', 'lossCut': '적자 가동률 감축 (번, 지움, 늘 0)', 'skim': '저택 거둠', 'margR1': '실제 ÷ 설계 이익률 (기본 방식)'}
 
 
 def natural(name):

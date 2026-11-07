@@ -533,9 +533,11 @@ sim 변경 (wt-research):
 사용자: "내가 건물 가동률을 조정하는 시스템인데 없애고(관련 UI도 같이)".
 
 고칠 것:
-- `CompanyPanel.tsx:298` 의 가동률 슬라이더와 `setUtilization` 호출을 지운다. sim 은 이 명령을 거부한다.
+- `CompanyPanel.tsx:305~309` 의 가동률 슬라이더 `<label className="util">` 와 `setUtilization` 호출(`:308`)을 지운다. 같은 조건 안의 가동 중지 버튼(`:310`)은 남긴다. sim 은 이 명령을 거부한다.
+- `ui/components.tsx` `OperationBreakdown` 의 `onUtilization` 슬라이더(`:62~64`)와 이를 보여 주는 예시(`foundations/game-catalogue.ts:14`, `foundations/game-examples.tsx:18`·`:38`, `design-system/catalogue.tsx:47`)도 지운다. 멈춤 버튼(`onStop`)은 둔다.
 - 가동률 값 표시는 읽기 전용으로 둔다 (건물 창, 실제 가동 줄). 건물의 가동 중지 버튼은 그대로 둔다.
 - 슬라이더만 쓰던 문자열을 지운다.
+- 툴팁 `strings.ts:338`·`:914` 를 고친다. "설정한"·"Configured" 과 정부 건물 조작 제한 문장을 빼고, 건물이 스스로 정한 가동 비율로 쓴다.
 - 다 하면 3장에 "setUtilization 타입 지워도 됨" 을 적는다.
 
 ## 3. sim 쪽 필요 사항 (Claude가 처리할 것, UI 작업자는 요청만)
