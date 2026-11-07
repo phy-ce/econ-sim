@@ -524,8 +524,8 @@ sim 변경 (wt-research):
 사용자: 왕국 이름·철도·길·내 건물·주된 땅 범례가 필요 없으니 삭제한다.
 
 고칠 것:
-- `RegionMap.tsx:86` 의 `.map-legend` 블록을 지운다.
-- 그 블록만 쓰던 문자열(`strings.ts keyRail`·`keyMine`·`keyLand`)과 CSS(`strategy.css:53`·`:148`, `styles.css:250`)를 지운다.
+- `RegionMap.tsx:86` `.map-legend` 안의 `.kingdom-legend` 와 `.map-keys` 를 지운다. 생활수준·부 층의 색 눈금(`.scale-bar`, `.scale-ticks`)은 남긴다. 왕국 층에서는 범례 상자가 보이지 않는다.
+- 그것만 쓰던 문자열(`strings.ts keyRail`·`keyMine`·`keyLand`)과 CSS 를 지운다.
 - 지도 그림 자체(왕국 색, 철도, 내 건물 표시)는 그대로 둔다.
 
 ## 3. sim 쪽 필요 사항 (Claude가 처리할 것, UI 작업자는 요청만)
