@@ -746,6 +746,7 @@ export const TUNE = {
   autoOutput: 0, // 1 이면 건물이 공급 ÷ 수요를 보고 가동률을 스스로 정한다 (production.ts adjustOutput)
   outputWeeks: 4, // 생산량 탐색 주기 (주)
   outputStep: 0.1, // 한 번에 움직이는 가동률
+  aiGrowUtil: 0.9, // AI 증설: 가동률이 이 값 아래면 늘리지 않는다
   outputBand: 0.05, // 공급 ÷ 수요가 1 + 이 값을 넘으면 줄인다
   startPopScale: 1,
   startPopLand: 0,

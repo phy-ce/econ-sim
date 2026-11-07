@@ -1315,6 +1315,8 @@ function reserveLevels(w: World, c: Company, canStart: () => boolean, free: () =
     const fillR = cap > 0 ? res / cap : 0;
     const pGrow = TUNE.reserveGrowMax * clamp((fillR - TUNE.reserveGrowFrom) / Math.max(1e-9, 1 - TUNE.reserveGrowFrom), 0, 1);
     let rich = aiRand(w, 'grow', keyCompany(c.id), keyRegion(b.regionId), keyStr(b.typeId), keyStr(b.methodId), keyWeek(w.tick), keyIdx(idx)) < pGrow;
+    // TUNE.autoOutput: 있는 레벨을 다 돌리지 않는 건물은 늘리지 않는다
+    if (rich && TUNE.autoOutput && b.utilization < TUNE.aiGrowUtil) rich = false;
     // 과잉 검사 (TUNE.aiGlutSD > 0, 오버홀 03 5-1): 그 지역 그 방식 산출의 예상 공급 ÷ 수요 (산출이 여럿이면 기본가 값으로 가중 평균, methodSD)
     // (공사 중 레벨 산출 포함, projectedSD)가 임계를 넘으면 이번 주 증설 확률 0 (찬 주로 세지 않는다). aiRand 는 키 해시라 막아도 다른 난수가 밀리지 않는다
     if (rich && TUNE.aiGlutSD > 0) {
