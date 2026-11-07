@@ -32,7 +32,7 @@ export function step(w: World, commands: QueuedCommand[] = []): string[] {
     if (err) errors.push(err.text);
   }
 
-  // 틱이 음수면 시작 전 시장 돌리기다 (warmUp): 시장·임금·세금·배당만 돈다. 인구·건물·기술은 그대로 둔다
+  // 틱이 음수면 시작 전 시장 돌리기다 (warmUp): 시장·임금·세금·배당·왕실 예산(주조·이자·복지 포함)을 돌린다. 인구·건물·기술은 그대로 둔다
   const warm = w.tick < 0;
   if (!warm) {
     prospect(w);
@@ -91,11 +91,12 @@ export function step(w: World, commands: QueuedCommand[] = []): string[] {
  * 음수 틱에는 기상 조건·탐광이 없다 (economy.ts). 기록은 지운다
  */
 export function warmUp(w: World, days: number): World {
+  const kept = w.events.length;
   w.tick = -days;
   while (w.tick < 0) step(w);
   w.metrics = [];
   w.history = [];
-  w.events = w.events.filter((e) => e.tick >= 0);
+  w.events = w.events.slice(0, kept); // 마지막 날(틱 0)의 주간 알림도 돌리기의 사건이라 같이 지운다
   w.alertState = {};
   return w;
 }
