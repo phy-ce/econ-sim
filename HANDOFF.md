@@ -9,6 +9,9 @@
 - 클라우드 세션(claude.ai/code)으로 이어서 할 수 있다. 규칙은 CLAUDE.md "클라우드 세션"을 본다.
 - 옛 세션 기록: `docs/log/` (2026-10-25 이전 HANDOFF 절은 `docs/log/HANDOFF_2026-10-18_to_10-25.md`, 날짜별 UI 기록도 여기). 다른 문서의 "HANDOFF 0-ind3"·"HANDOFF 0-aifix" 같은 옛 절 참조는 그 파일에 있다.
 
+## 0-1107-windows
+- 창 크기 규격과 화면 기초 답을 문서에 넣었다 (DECISIONS 7-62, UI_CHANGES 2-100·2-101). 문서만. 사용자가 UI_CHANGES 를 본 뒤 Codex 에게 넘긴다. 남은 것: Q6 다시 묻기, 화면 문구 목록.
+
 ## 0-1107-uitidy
 - 브랜치 wt-uitidy (main 3f4e89a 에서), 문서만, sim·client 코드 안 바꿈. 합치기 전 (premerge 대기). Codex 인계 전 UI_CHANGES 정리.
 - 바뀐 것: 0장을 할 일 9줄 (2-95, 2-99, 2-98, 2-96, 2-92, 2-55, 2-82, 2-62, 2-61) + 대기 목록으로 다시 썼다. 1장은 DESIGN 을 가리키는 표로 바꿨다 (옛 원문은 UI_DONE). 3장은 packages/sim/src 와 대조했다.
