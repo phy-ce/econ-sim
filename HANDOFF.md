@@ -10,7 +10,7 @@
 - 옛 세션 기록: `docs/log/` (2026-10-25 이전 HANDOFF 절은 `docs/log/HANDOFF_2026-10-18_to_10-25.md`, 날짜별 UI 기록도 여기). 다른 문서의 "HANDOFF 0-ind3"·"HANDOFF 0-aifix" 같은 옛 절 참조는 그 파일에 있다.
 
 ## 0-1107-windows
-- 창 크기 규격과 화면 기초 답을 문서에 넣었다 (DECISIONS 7-62, UI_CHANGES 2-100·2-101). 문서만. 사용자가 UI_CHANGES 를 본 뒤 Codex 에게 넘긴다. 남은 것: Q6 다시 묻기, 화면 문구 목록.
+- 창 크기 규격과 화면 기초 답을 문서에 넣었다 (DECISIONS 7-62, UI_CHANGES 2-100·2-101). 문서만. 0장 순서는 2-101 툴팁이 맨 위다. 남은 것: 화면 문구 목록, 창 크기 승인.
 
 ## 0-1107-uitidy
 - 브랜치 wt-uitidy (main 3f4e89a 에서), 문서만, sim·client 코드 안 바꿈. 합치기 전 (premerge 대기). Codex 인계 전 UI_CHANGES 정리.
