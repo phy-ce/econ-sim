@@ -321,6 +321,8 @@ export interface Building {
    */
   firmEma?: { sales: number; inputs: number };
   lossWeeks: number;
+  /** 생산량 탐색: 가동률을 올리기 직전의 이익 이동평균 (production.ts adjustOutput). 올린 뒤에만 있다 */
+  probeProfit?: number;
   pausedWeeks: number;
   /** 철거 대기 레벨: 매주 1레벨씩 헐린다 */
   shrinking?: number;

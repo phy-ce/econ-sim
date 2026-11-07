@@ -11,7 +11,7 @@ import { beginStep, chargeInterest, collectIncomeTax, doResearch, updateFunds, m
 import { laborMarket, migrate, payWages, syncEmployment, updateMarketWages } from './labor';
 import { clearMarkets, collectOrders, harvest, newBook, resetMarkets, updatePrices } from './market';
 import { aggregateHouseholds, matchNobles, prunePops, toward, updateGrowth, updateLiteracy, updateQualifications } from './pops';
-import { advanceConstruction, produce, progressDemolition, updateIdleOffices, updateSubsistence } from './production';
+import { adjustOutput, advanceConstruction, produce, progressDemolition, updateIdleOffices, updateSubsistence } from './production';
 import { POP_CLASSES, SKILLS, educationOf, emptyLedger } from './types';
 import type { GoodId, HistoryPoint, PopClass, QueuedCommand, Skill, World } from './types';
 
@@ -123,6 +123,7 @@ function weekly(w: World) {
   for (const c of w.companies) payDividends(w, c);
   updateFunds(w);
   progressDemolition(w);
+  adjustOutput(w);
   if (w.tick > 0) runAi(w);
   weeklyBanking(w);
   weeklyAlerts(w);

@@ -641,6 +641,8 @@ function manageBuildings(w: World, c: Company, o: Outlook, pools: Map<string, nu
       }
       continue;
     }
+    // TUNE.autoOutput: 가동률은 건물이 스스로 정한다 (production.ts adjustOutput)
+    if (TUNE.autoOutput) continue;
     // 적자면 끄지 않고 가동률부터 줄인다 (4주마다 10%씩). 철거는 planConstruction 이 짓기와 같은 계산으로 정한다.
     // 기상 조건이 걸린 동안의 적자는 일시적이라 세지 않는다
     const cost = b.last.inputCost + b.last.wageCost;

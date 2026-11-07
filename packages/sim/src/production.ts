@@ -1,4 +1,4 @@
-import { BUILDING_BY_ID, buildPointsOf, GOODS, GOOD_IDS, TICKS_PER_WEEK, MAX_POINTS_PER_LEVEL_DAY, OWNER_SEATS_PER_LEVEL, OWNERSHIP_SEATS, TUNE, WORKFORCE_RATIO, getMethod } from './data';
+import { BUILDING_BY_ID, buildPointsOf, GOODS, GOOD_IDS, TICKS_PER_WEEK, TRADING_POST, MAX_POINTS_PER_LEVEL_DAY, OWNER_SEATS_PER_LEVEL, OWNERSHIP_SEATS, TUNE, WORKFORCE_RATIO, getMethod } from './data';
 import { addOwnerLevels, ownBuildingAt, builderOf, companyById, efficiency, harvestFactor, isBudgetFunded, isGovernment, landFree, logEvent, newBuilding, officeFeeMult, quakeAt, quakeLabel, quakeLostCells, regionById } from './economy';
 import { SKILLS } from './types';
 import { workforce } from './pops';
@@ -137,6 +137,40 @@ export function updateIdleOffices(w: World) {
     if (!getMethod(b.typeId, b.methodId).construction) continue;
     b.idle = !busy.has(b.companyId);
     if (b.idle) b.idleDays = (b.idleDays ?? 0) + 1; else if (b.idleDays) b.idleDays = 0;
+  }
+}
+
+/** 이 건물 산출의 공급 ÷ 수요 (지역 시장, 기본가로 가중). 수요가 없으면 큰 값 */
+function outputSD(w: World, b: Building): number | null {
+  const r = regionById(w, b.regionId);
+  let sum = 0, weight = 0;
+  for (const [g, q] of Object.entries(getMethod(b.typeId, b.methodId).outputs) as [GoodId, number][]) {
+    const mg = r.market[g], v = q * GOODS[g].basePrice;
+    sum += v * (mg.supplyEma / Math.max(1e-6, mg.demandEma));
+    weight += v;
+  }
+  return weight > 0 ? sum / weight : null;
+}
+
+/**
+ * 생산량 탐색 (TUNE.autoOutput): 파는 건물은 TUNE.outputWeeks 주마다 가동률을 TUNE.outputStep 씩 움직인다. 가동률이 고용·투입·산출을 함께 움직인다.
+ * 공급 ÷ 수요가 1 + TUNE.outputBand 를 넘거나, 적자이거나, 지난번에 올린 뒤 이익이 줄었으면 내린다.
+ * 공급이 수요보다 적고 원료가 있으면 올려 본다. 그 사이면 그대로 둔다
+ */
+export function adjustOutput(w: World) {
+  if (!TUNE.autoOutput || w.tick % (TUNE.outputWeeks * TICKS_PER_WEEK) !== 0) return;
+  for (const b of w.buildings) {
+    if (!b.active || BUILDING_BY_ID[b.typeId].auto || b.typeId === TRADING_POST) continue;
+    const sd = outputSD(w, b);
+    if (sd === null) continue;
+    const fell = b.probeProfit !== undefined && b.profitEma < b.probeProfit;
+    delete b.probeProfit;
+    if (sd > 1 + TUNE.outputBand || fell || (b.profitEma < 0 && !b.reserve)) {
+      b.utilization = Math.max(0.1, b.utilization - TUNE.outputStep);
+    } else if (sd < 1 && b.utilization < 1 && b.last.inputFill >= 0.9) {
+      b.probeProfit = b.profitEma;
+      b.utilization = Math.min(1, b.utilization + TUNE.outputStep);
+    }
   }
 }
 
