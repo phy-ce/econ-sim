@@ -35,6 +35,7 @@ main `3f4e89a`와 main 체크아웃의 커밋 안 한 클라이언트 변경을 
 지금 할 일 없음. 풀리면 위 목록으로 올린다.
 
 - **2-33 지도 정점 범위**: 사용자 결정 대기 (DECISIONS 7-61 결정 대기 1).
+- **2-96 글자 크기**: 사용자 답 대기 (DECISIONS 7-61 결정 대기 3).
 - **2-59 주간 폭포**: sim 대기 (3장 `BuildingEcon.week`).
 - **2-49 회수 자재**: sim 대기 (3장 `SalvageLot.buildingId`).
 - **2-72 인두세 부담**: sim 대기 (S3, 단위 F).
@@ -167,9 +168,9 @@ DESIGN에 없는 화면 규칙: 민간 회사 이름("XX 민간")은 화면에 �
 고칠 것 (2026-11-07 코드 대조):
 - 안 됨: `ui/tokens.css:9` 밝은 테마 `--gu-crown` `#947039` → `#826130`. 글자로 쓰면 대비가 커밋된 배경에서 종이 4.00·시트 4.39·`--gu-soft` 3.77 로 4.5 아래다 (`color: var(--gold)` 등 18곳). 바꾸면 5.01·5.49·4.72, 흰 글자를 얹은 왕실 표지는 5.67. 커밋 안 한 System 02 배경(`--es-panel`·`--es-subtle`)에서는 4.22·3.82 → 5.29·4.78 이다 (2026-11-07 계산).
 - 작업 중 (커밋 안 됨): `--gu-muted`. 커밋된 값은 `#686d62`이고 `--gu-soft` 위에서 4.42 다. 작업 트리 `ui/tokens.css:6`은 `var(--es-muted)` (`system-02/tokens.css:2`)로 바뀌어 `--es-subtle` 위 5.55 다. 이 토큰을 커밋하면 이 항목은 끝난다. 되돌리면 원래 명세대로 `#646a5f`로 한다 (4.64).
-- 안 됨: `.game-tooltip` 규칙이 둘이고 z-index 가 다르다 (`strategy.css:101` 10000, `ui/components.css:84` 1000). 하나만 남긴다.
+- 2-101 3번으로 옮겼다: `.game-tooltip` 규칙이 둘이고 z-index 가 다르다 (`strategy.css:101` 10000, `ui/components.css:84` 1000). `design-system/design-system.css:18` 의 `.ds-document` 규칙은 초안 문서용이라 2-96 범위 밖이다.
 
-손대지 않는 것: 어두운 테마(모든 조합 5.8 이상), 글자 크기 10~11px (Q4 답 대기), 숫자의 색 범위 (Q5 답 대기), 키보드 초점 (지도·표 행 모두 있음).
+손대지 않는 것: 어두운 테마(모든 조합 5.8 이상), 글자 크기 10~11px (Q4 의 크기 값 답 대기, DECISIONS 7-61 결정 대기 3), 숫자의 색 범위 (Q5: 유지), 키보드 초점 (지도·표 행 모두 있음).
 
 확인: 왕실 표지와 `--gold` 글자가 있는 창을 밝은 테마로 본다. 왕실·저택·금융 표지가 서로 구별되는지 본다.
 
@@ -205,6 +206,8 @@ sim은 `setUtilization`을 거부한다 (`commands.ts:178`). 지금 슬라이더
 
 원인: 서브창 토큰이 520×640 (`ui/tokens.css:21`, `ui/tokens.ts:3`)이라 주 창 420×560 보다 크다.
 
+크기 숫자는 에이전트가 정한 첫 값이고 사용자 승인 대기다 (DECISIONS 7-62, 근거 없음). 규격을 토큰으로 만드는 일은 지금 해도 된다. 값은 토큰 한 곳에서만 바꾸게 둔다.
+
 | 창 | 크기 | 쓰는 곳 |
 |---|---|---|
 | 주 창 | 420×560 | 지금 그대로 |
@@ -218,7 +221,7 @@ sim은 `setUtilization`을 거부한다 (`commands.ts:178`). 지금 슬라이더
 고칠 것:
 1. 토큰 `--gu-detail-width`·`--gu-detail-height` 를 서브창1~4 토큰으로 바꾸고, `DetailWindow` 에 크기 번호를 받는 속성을 둔다. 기본값은 서브창1 이다. 창 크기 숫자는 토큰에만 둔다.
 2. 크기는 고정이다. 플레이어가 크기를 바꾸지 않는다. 서브창에 크기 조절이 남아 있으면 지운다. 위치 이동은 그대로 둔다.
-3. 옛 크기 규칙을 지운다: `strategy.css:55`·`:82` (`.strategy-panel` 폭·높이, `.window-finance`, `.window-trends`), `:177` (`.detail-window` 420×460, 최소 크기). 재정·통계 창이 420 이 아닌 폭으로 뜨고 있으면 420 에 맞춘다.
+3. 옛 크기 규칙을 지운다: `strategy.css:55`·`:82` (`.strategy-panel` 폭·높이, `.window-finance`, `.window-trends`), `:177` (`.detail-window` 420×460, 최소 크기). 재정·통계 창이 420 이 아닌 폭으로 뜨고 있으면 420 에 맞춘다. 창별 덮어쓰기도 모두 지운다: `strategy.css:193`·`:202`·`:207`·`:218`·`:268`, `system-ui.css:83`·`:119`·`:177` (`.detail-window` 와 `.detail-window:has(...)` 의 폭·높이). 줄 번호는 커밋된 코드 기준이다. 커밋 안 한 작업 트리에서 `.detail-window` 를 찾아 다시 본다.
 4. 요소를 창에 맞춘다. 기준은 시세 창(`MarketWindow.tsx`)이다.
    - 맨 위에 범위나 대상을 고르는 줄 하나.
    - 내용은 제목이 있는 구역으로 나눈다 (`SectionStack`).
@@ -233,7 +236,7 @@ sim은 `setUtilization`을 거부한다 (`commands.ts:178`). 지금 슬라이더
 사용자: "기본 툴팁 대신 게임에 맞게 디자인된 툴팁을 사용".
 
 고칠 것:
-1. 브라우저 기본 툴팁을 뜨게 하는 `title` 속성을 모두 `data-help` 로 바꾼다 (`TooltipLayer.tsx`). `title=` 이 63곳이지만 창 제목 같은 컴포넌트 속성은 그대로 둔다. 예: `HarvestBadge.tsx:11`, `OwnerBadge.tsx:13`, `SourceBreakdown.tsx:61`, `App.tsx:168`.
+1. 브라우저 기본 툴팁을 뜨게 하는 `title` 속성을 모두 `data-help` 로 바꾼다 (`TooltipLayer.tsx`). `title=` 이 63곳이다. 바꿀 곳: DOM 까지 내려가 브라우저 툴팁을 띄우는 것. `UIButton` 처럼 DOM 으로 넘기는 컴포넌트를 포함한다. 예: `HarvestBadge.tsx:11`, `OwnerBadge.tsx:13`, `SourceBreakdown.tsx:61`, `App.tsx:168`. 그대로 둘 곳: 창 제목으로만 쓰는 컴포넌트 속성. 예: `<DetailWindow title=...>`, `<Side title=...>`.
 2. 아이콘만 있는 단추는 `aria-label` 과 `data-help` 를 함께 단다.
 3. 게임 툴팁 모양을 다듬는다. `.game-tooltip` 규칙을 하나로 합치고 (2-96), 색·테두리는 게임 창과 같은 토큰을 쓴다. `data-help` 글의 첫 줄은 제목처럼 굵게, `라벨: 값` 줄은 값을 오른쪽에 맞춘다. `data-help` 는 글자 속성 그대로 둔다.
 4. 중첩 툴팁은 쓰지 않는다 (2026-11-06 사용자).
