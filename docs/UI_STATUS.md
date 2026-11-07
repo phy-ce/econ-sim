@@ -512,3 +512,7 @@ DetailWindow 독립 NavigationProvider/버튼, BuildingPops 및 ResourceInspecto
 - ui-ux-pro-max의 Data-Dense + Drill-Down 기준을 기존 디자인 시스템에 적용. 구역 간격 16→8px, 건설 영역 패딩 16→10px, 토지 여유 라벨·값 한 줄 배치. 투입·산출 아이콘 크기는 유지하고 행 여백을 줄임.
 - 루트 typecheck, 클라이언트 44파일/120시험 통과. 1920×1028 한국어 밝음·영어 다크 헤드리스 확인. 스크린샷: C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/construction-density-final.png, construction-density-en-dark.png. 범위는 건설 상세창이며 전체 창 밀도 재설계는 아님.
 - UI_WINDOWS의 기존 지도 보정 기록도 사용자 요청에 따라 보존·커밋. 이번에 지도를 재검증한 것은 아님.
+
+### 2026-11-07 새 디자인 시스템 설계
+- 사용자 최신 요청으로 UI UX Pro Max 원격 저장소·SKILL 및 로컬 검색을 검토하고 packages/client/src/ui/ESTERA_SYSTEM_02.md 작성. 플레이 과제→정보 구조→다섯 밀도→시각 역할→컴포넌트 계층→건설 상세→전체 이행 계획 순서. 새 토큰 값·치수는 제안이며 실제 게임에는 미적용.
+- 설계 문서만 커밋. 이 단계의 타입·시험·스크린샷 검증은 없음. 2-95는 중단 시점의 클라이언트 변경을 미커밋 보존했으며 검증·시험 추가 미완료, 2-96은 대기. 새 설계 구현 전 별도 단위로 마무리할 계획.
