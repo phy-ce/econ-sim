@@ -12,7 +12,7 @@ describe('시작 전 시장 돌리기', () => {
     expect(b.constructions).toEqual([]);
     const size = (w: typeof a) => w.pops.reduce((s, p) => s + p.size, 0);
     expect(size(b)).toBeCloseTo(size(a), 6);
-    expect(b.companies.map((c) => c.known)).toEqual(a.companies.map((c) => c.known));
+    expect(b.companies.map((c) => c.research.known)).toEqual(a.companies.map((c) => c.research.known));
     expect(b.regions[0].market.grain.price).not.toBe(a.regions[0].market.grain.price);
     expect(Number.isFinite(totalMoney(b))).toBe(true);
   });
