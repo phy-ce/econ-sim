@@ -9,6 +9,9 @@
 - 클라우드 세션(claude.ai/code)으로 이어서 할 수 있다. 규칙은 CLAUDE.md "클라우드 세션"을 본다.
 - 옛 세션 기록: `docs/log/` (2026-10-25 이전 HANDOFF 절은 `docs/log/HANDOFF_2026-10-18_to_10-25.md`, 날짜별 UI 기록도 여기). 다른 문서의 "HANDOFF 0-ind3"·"HANDOFF 0-aifix" 같은 옛 절 참조는 그 파일에 있다.
 
+## 0-1107-finance
+- 금융가 성과급 10% → 2%, 보장 임금 20 → 14 (DECISIONS 7-59, 보고서 2026-11-07-finance). 시험 뒤 `npm run golden:update`.
+
 ## 0-1107-warmup
 - 시작 전 시장 돌리기 60일을 기본으로 켰다 (`warmupDays`, DECISIONS 7-57, 보고서 2026-11-07-warmup). 플레이어의 여러 레벨 공사는 1레벨 공사로 나눈다 (7-58). 시험 뒤 `npm run golden:update`.
 - 브랜치 wt-warmup, 합치기 전 (premerge 대기). https://phy-ce.github.io/econ-sim/reports/#2026-11-07-warmup2 (고친 코드), https://phy-ce.github.io/econ-sim/reports/#2026-11-07-warmup (고치기 전 코드)
