@@ -155,7 +155,7 @@ function outputSD(w: World, b: Building): number | null {
 /**
  * 생산량 탐색 (TUNE.autoOutput): 파는 건물은 TUNE.outputWeeks 주마다 가동률을 TUNE.outputStep 씩 움직인다. 가동률이 고용·투입·산출을 함께 움직인다.
  * 공급 ÷ 수요가 1 + TUNE.outputBand 를 넘거나, 적자이거나, 지난번에 올린 뒤 이익이 줄었으면 내린다.
- * 공급이 수요보다 적고 원료가 있으면 올려 본다. 그 사이면 그대로 둔다
+ * 그 밖에는 원료가 있으면 올려 본다: 수요는 고용과 임금이 늘어야 커지므로, 이익이 줄어들 때까지 먼저 늘린다
  */
 export function adjustOutput(w: World) {
   if (!TUNE.autoOutput || w.tick % (TUNE.outputWeeks * TICKS_PER_WEEK) !== 0) return;
@@ -167,7 +167,7 @@ export function adjustOutput(w: World) {
     delete b.probeProfit;
     if (sd > 1 + TUNE.outputBand || fell || (b.profitEma < 0 && !b.reserve)) {
       b.utilization = Math.max(0.1, b.utilization - TUNE.outputStep);
-    } else if (sd < 1 && b.utilization < 1 && b.last.inputFill >= 0.9) {
+    } else if (b.utilization < 1 && b.last.inputFill >= 0.9) {
       b.probeProfit = b.profitEma;
       b.utilization = Math.min(1, b.utilization + TUNE.outputStep);
     }
