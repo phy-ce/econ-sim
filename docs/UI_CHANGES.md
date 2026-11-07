@@ -32,14 +32,14 @@ main `3f4e89a`와 main 체크아웃의 커밋 안 한 클라이언트 변경을 
 ### 대기
 지금 할 일 없음. 풀리면 위 목록으로 올린다.
 
-- **2-33 지도 정점 범위**: 사용자 결정 대기.
+- **2-33 지도 정점 범위**: 사용자 결정 대기 (DECISIONS 7-61 결정 대기 1).
 - **2-59 주간 폭포**: sim 대기 (3장 `BuildingEcon.week`).
 - **2-49 회수 자재**: sim 대기 (3장 `SalvageLot.buildingId`).
 - **2-72 인두세 부담**: sim 대기 (S3, 단위 F).
 - **2-40 규칙 사전**: 단위 G로 넘어감 (sim S6).
-- **2-96 글자 크기·숫자 색 범위**: UI_FOUNDATIONS Q4·Q5 사용자 답 대기.
+- **2-96 글자 크기·숫자 색 범위**: UI_FOUNDATIONS Q4·Q5 사용자 답 대기 (DECISIONS 7-61 결정 대기 3).
 - **플레이어 왕실 국영 웃돈**: 사용자 결정 대기 (DECISIONS 7-42 결정 대기 1). (b)로 정해지면 새 절.
-- **빈 파일 `windowGeometry.ts`·`windowLayout.ts`**: 호출 0건이다. 파일 삭제 금지 규칙 때문에 남겨 두었다. 사용자 결정 대기.
+- **빈 파일 `windowGeometry.ts`·`windowLayout.ts`**: 호출 0건이다. 파일 삭제 금지 규칙 때문에 남겨 두었다. 사용자 결정 대기 (DECISIONS 7-61 결정 대기 2).
 
 오버홀 단위 (09 7.2):
 - A 상단 바 사람 칩 4: 칩 구성 04 S6·U11 결정, 단위 P의 상단 바 폭 실측 뒤.
@@ -124,7 +124,7 @@ DESIGN에 없는 화면 규칙: 민간 회사 이름("XX 민간")은 화면에 �
 | 자리 | 지금 | 명세 (ko / en) |
 |---|---|---|
 | `share` 칩 | `T.share` "비율" | 왕실 몫 / Crown share |
-| `wage` 행 | `S.wages` | 사무소 임금 몫 / (옛 절에 영어 없음) |
+| `wage` 행 | `S.wages` | 사무소 임금 몫 / Office wages |
 | `other` 행 | `S.other` | 자재·이익 몫 / Materials and margin |
 
 - `T.share`는 `ClassDonut.tsx:108`도 쓴다. 값을 바꾸지 말고 새 키를 더한다. `build` 칩과 행에만 쓴다.
@@ -176,7 +176,7 @@ DESIGN에 없는 화면 규칙: 민간 회사 이름("XX 민간")은 화면에 �
 고칠 것:
 - `RegionMap.tsx:86` `.map-legend` 안의 `.kingdom-legend`(`:87`)와 `.map-keys`(`:91~96`)를 지운다. 생활수준·부 층의 색 눈금(`.scale-bar`, `.scale-ticks`, `:88~90`)은 남긴다. 왕국 층에서는 범례 상자가 보이지 않는다.
 - 그것만 쓰던 문자열 `keyRail`·`keyMine`·`keyLand` (`strings.ts:468~470`·`:1037~1039`)를 지운다. `T.playerOwner`는 `OwnerBadge.tsx:12`도 쓰므로 남긴다.
-- 그것만 쓰던 CSS를 지운다: `.kingdom-legend` (`strategy.css:53`, `workspace.css:198`), `.map-keys` (`strategy.css:53`, `styles.css:255~256`), `.key-rail` (`styles.css:257`). `.map-legend` 규칙은 남긴다.
+- 그것만 쓰던 CSS를 지운다: `.kingdom-legend` (`strategy.css:53`, `workspace.css:198`), `.map-keys` (`strategy.css:53`, `styles.css:255~256`, `readability.css:3`: `.map-keys{font-size:10px}` 규칙과 묶음 선택자의 `.map-keys .spr` 만 지우고 `.topbar .chip .spr`·`.menu .spr`·`.strategy-panel .perks .spr` 는 남긴다), `.key-rail` (`styles.css:257`). `.map-legend` 규칙은 남긴다.
 - 지도 그림 자체(왕국 색, 철도, 내 건물 표시)는 그대로 둔다.
 
 ### 2-99. 가동률 조작 삭제 (사용자 2026-11-07, wt-autoutil, DESIGN 7.1, DECISIONS 7-60, sim 준비됨)
