@@ -507,3 +507,8 @@ DetailWindow 독립 NavigationProvider/버튼, BuildingPops 및 ResourceInspecto
 
 ### 建設 상세 정보 계층 정리
 - 개요(소유/땅/생산/수지)·개별 건물 관리·건설 행동·시장 참고로 영역 분리. 건물 목록과 시세 참고는 접고 선택한 건물의 조작만 펼침. 건설 비용/공기/추가 단추는 배경 있는 행동 영역으로 묶고 기준 생산 방식은 별도 펼침. 기존 상세·명령·선택 이력 유지. 중복 큰 세로 여백 축소. typecheck/클라이언트120시험 통과.1920×1028 실제 섬유 농장·벨마르 항 확인: C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/construction-fibre-belmar.png (콘솔 오류0). sim 변경 없음.
+
+### 2026-11-07 건설 상세창 밀도
+- ui-ux-pro-max의 Data-Dense + Drill-Down 기준을 기존 디자인 시스템에 적용. 구역 간격 16→8px, 건설 영역 패딩 16→10px, 토지 여유 라벨·값 한 줄 배치. 투입·산출 아이콘 크기는 유지하고 행 여백을 줄임.
+- 루트 typecheck, 클라이언트 44파일/120시험 통과. 1920×1028 한국어 밝음·영어 다크 헤드리스 확인. 스크린샷: C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/construction-density-final.png, construction-density-en-dark.png. 범위는 건설 상세창이며 전체 창 밀도 재설계는 아님.
+- UI_WINDOWS의 기존 지도 보정 기록도 사용자 요청에 따라 보존·커밋. 이번에 지도를 재검증한 것은 아님.

@@ -40,3 +40,25 @@ body.game-runtime{font-family:var(--gu-font);color:var(--gu-ink);background:var(
 .construction-crown .stepper{display:flex;gap:8px;margin-top:12px}.construction-crown .stepper>button{flex:1;min-height:36px}
 .construction-detail .group-detail-ledger>.system-tags{margin:8px 0}.construction-detail .group-detail-ledger>details{padding:8px 0}.construction-detail .group-detail-ledger>.system-facts:empty{display:none}
 .construction-detail .group-detail-ledger{display:flex;flex-direction:column;gap:8px}.construction-detail .group-detail-ledger>details{margin:0;padding:0}.construction-detail .group-detail-ledger>details>summary{min-height:28px;padding:4px 0}.construction-detail .gu-production-diagram{margin:0;padding:8px 0}.construction-detail .group-detail-ledger>.system-tags{margin:0}.construction-detail .group-detail-ledger>.system-facts{margin:0;min-height:0}.construction-detail .group-detail-ledger>details:not([open]){height:auto}
+/* Dense detail windows retain hierarchy through type and separators, not empty space. */
+.construction-detail{gap:8px;padding:4px}
+.construction-detail h3{font-size:13px;margin:0 0 6px}
+.construction-overview{padding-bottom:0}.construction-overview>.ownership-launch{margin-bottom:6px}
+.construction-detail .group-detail-ledger{gap:4px}
+.construction-detail .group-detail-ledger>details>summary{min-height:24px;padding:2px 0}
+.construction-detail .gu-production-diagram{padding:4px 0}
+.construction-detail .gu-production-diagram>header{padding-bottom:4px}
+.construction-detail .gu-production-item,.construction-detail .gu-button.gu-production-item{min-height:52px;padding:4px 0;column-gap:4px;row-gap:2px}
+.construction-detail .gu-production-content{gap:0}
+.construction-detail .gu-production-meter{padding-top:0;gap:2px}
+.construction-detail .gu-production-diagram>footer{margin-top:3px}
+.construction-detail .gu-production-node{padding-top:4px}.construction-detail .gu-production-node>div{gap:2px}
+.construction-detail>.construction-management,.construction-detail>.construction-market{padding-top:6px}
+.construction-detail>details>summary{font-size:13px;min-height:26px}
+.construction-detail .construction-building{margin-top:6px;padding:6px 0}
+.construction-detail .construction-crown{padding:10px}
+.construction-crown>.system-facts{gap:8px;margin-bottom:6px}.construction-crown>.system-facts b{margin-top:2px;font-size:15px}
+.construction-recipe{margin:6px 0}.construction-crown .stepper{margin-top:6px}
+.construction-detail .system-tags{gap:4px}.construction-detail .system-facts{padding:4px 0}
+.construction-detail .building-room>span{display:flex;align-items:baseline;gap:8px}
+.construction-detail .building-room b{display:inline;margin:0}
