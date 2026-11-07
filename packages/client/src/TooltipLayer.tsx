@@ -6,12 +6,21 @@ export function HelpText({text,children}:{text:string;children:ReactNode}) {
   return <span className="help-text" tabIndex={0} data-help={text}>{children}</span>;
 }
 
+/** Plain text only: a heading followed by prose or label/value lines. */
+export function TooltipContent({text}:{text:string}) {
+  const [heading,...lines]=text.split(/\r?\n/);
+  return <><strong className="game-tooltip-heading">{heading}</strong>{lines.map((line,index)=>{
+    const pair=/^([^:：]+)[:：]\s+(.+)$/.exec(line);
+    return pair?<div className="game-tooltip-pair" key={index}><span>{pair[1]}</span><span>{pair[2]}</span></div>:<div className="game-tooltip-line" key={index}>{line||'\u00a0'}</div>;
+  })}</>;
+}
+
 /** One viewport-level tooltip: scroll containers never clip explanations. */
 export function TooltipLayer() {
-  const [anchor,setAnchor]=useState<HTMLElement|null>(null);
+  const [anchor,setAnchor]=useState<HTMLElement|SVGElement|null>(null);
   const [position,setPosition]=useState({left:8,top:8});
   const tip=useRef<HTMLDivElement>(null);
-  const current=useRef<HTMLElement|null>(null);
+  const current=useRef<HTMLElement|SVGElement|null>(null);
   const timer=useRef<ReturnType<typeof setTimeout>>();
   useEffect(()=>{
     const clear=()=>{clearTimeout(timer.current);};
@@ -19,7 +28,7 @@ export function TooltipLayer() {
     const enter=(event:Event)=>{
       const target=event.target instanceof Element?event.target:null;
       if(target?.closest('#game-help-tooltip')){clear();return;}
-      const next=target?.closest<HTMLElement>('[data-help]')??null;
+      const next=target?.closest<HTMLElement|SVGElement>('[data-help]')??null;
       if(!next||!next.dataset.help)return;
       clear();if(next===current.current){if(event.type==='focusin')setAnchor(next);else timer.current=setTimeout(()=>setAnchor(next),280);return;}
       current.current=next;setAnchor(null);
@@ -52,5 +61,5 @@ export function TooltipLayer() {
     anchor.setAttribute('aria-describedby',[old,'game-help-tooltip'].filter(Boolean).join(' '));
     return()=>{if(old)anchor.setAttribute('aria-describedby',old);else anchor.removeAttribute('aria-describedby');};
   },[anchor]);
-  return anchor?createPortal(<div id="game-help-tooltip" ref={tip} role="tooltip" className="game-tooltip" style={position}>{anchor.dataset.help}</div>,document.body):null;
+  return anchor?createPortal(<div id="game-help-tooltip" ref={tip} role="tooltip" className="game-tooltip" style={position}><TooltipContent text={anchor.dataset.help??''}/></div>,document.body):null;
 }

@@ -54,7 +54,7 @@ function RegionMapView({ world, selected, onSelect }: { world: World; selected: 
   return (
     <>
       <div className="map-title"><h2>{T.paneMap}</h2></div><div className="map-layers segmented" role="group" aria-label={T.mapLayers}>{(['kingdom','wealth','sol'] as const).map(id=><UIButton key={id} aria-pressed={layer===id} onClick={()=>setLayer(id)}>{id==='kingdom'?T.territory:id==='wealth'?T.wealthLevel:T.standardOfLiving}</UIButton>)}</div>
-      <div className="map-camera-tools"><UIButton aria-label={uiCopy().screenText['zoomOut']} onClick={()=>zoom(-.15)}>−</UIButton><UIButton aria-label={uiCopy().screenText['resetMapView']} onClick={()=>setCamera({x:0,y:0,zoom:1})}>{Math.round(camera.zoom*100)}%</UIButton><UIButton aria-label={uiCopy().screenText['zoomIn']} onClick={()=>zoom(.15)}>+</UIButton></div>
+      <div className="map-camera-tools"><UIButton aria-label={uiCopy().screenText['zoomOut']} onClick={()=>zoom(-.15)} data-help={uiCopy().screenText['zoomOut']}>−</UIButton><UIButton aria-label={uiCopy().screenText['resetMapView']} onClick={()=>setCamera({x:0,y:0,zoom:1})} data-help={uiCopy().screenText['resetMapView']}>{Math.round(camera.zoom*100)}%</UIButton><UIButton aria-label={uiCopy().screenText['zoomIn']} onClick={()=>zoom(.15)} data-help={uiCopy().screenText['zoomIn']}>+</UIButton></div>
       <svg className="map atlas-map" viewBox={`${camera.x+MAP_FRAME.x} ${camera.y+MAP_FRAME.y} ${WIDTH/camera.zoom} ${HEIGHT/camera.zoom}`} role="group" aria-label={T.mapAria}
        onWheel={e=>{const matrix=e.currentTarget.getScreenCTM();const point=matrix?new DOMPoint(e.clientX,e.clientY).matrixTransform(matrix.inverse()):undefined;zoom(e.deltaY<0?.1:-.1,point);}}
        onPointerDown={e=>{if(e.button!==0)return;const box=e.currentTarget.getBoundingClientRect();suppressClick.current=false;drag.current={x:e.clientX,y:e.clientY,cx:camera.x,cy:camera.y,scale:Math.min(box.width/(WIDTH/camera.zoom),box.height/(HEIGHT/camera.zoom)),moved:false};}}
@@ -72,19 +72,19 @@ function RegionMapView({ world, selected, onSelect }: { world: World; selected: 
         <g clipPath="url(#atlas-land-water)" aria-hidden="true">{edges.map(([a,b])=>{const route=mapData.routes.find(r=>r.a===a&&r.b===b);if(!route)return null;return <g key={`${a}-${b}`} className={`atlas-route ${a===selected||b===selected?'is-selected':''}`}><path d={route.d} className="atlas-road-bed"/><path d={route.d} className="atlas-rail"/></g>;})}</g>
         {order.map(r=><g key={r.id} className={`map-cell ${selected===r.id?'selected':''}`} onClick={()=>{if(!suppressClick.current)onSelect(r.id);}} tabIndex={0} role="button" aria-pressed={selected===r.id}
           aria-label={`${kingdomName(r.kingdomId)} · ${T.mapCellAria(regionName(r),int(regionPopulation(r)),regionAvgWealth(r).toFixed(1),pct(r.households.peasant.population/Math.max(1,regionPopulation(r))))}`}
+          data-help={`${regionName(r)} · ${kingdomName(r.kingdomId)}\n${T.population}: ${int(regionPopulation(r))}\n${T.standardOfLiving}: ${regionLivingStandard(r).toFixed(1)}`}
           onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();onSelect(r.id);}}}>
-          <title>{`${regionName(r)} · ${kingdomName(r.kingdomId)}\n${T.population} ${int(regionPopulation(r))} · ${T.standardOfLiving} ${regionLivingStandard(r).toFixed(1)}`}</title>
           <path d={shape(r.id).d} className="atlas-hit"/>
         </g>)}
         {world.regions.map(r=>{const [x,y]=shape(r.id).label;const pending=world.buildings.filter(b=>b.regionId===r.id).reduce((n,b)=>n+(b.shrinking??0),0);const mine=world.buildings.filter(b=>b.regionId===r.id&&b.companyId===PLAYER_ID).reduce((n,b)=>n+b.level,0);return <g key={`l${r.id}`} className="map-label-g" transform={`translate(${x} ${y}) scale(${1/camera.zoom})`} aria-hidden="true">
           <SvgSprite name={`region-${r.id}`} x={-42} y={-90} size={84}/>
           <text x="0" y="0" className="atlas-label">{regionName(r)}</text>
           <text x="0" y="27" className="atlas-owner" fill={kingdomOf(r.kingdomId)?.color}>{['●','◆','▲'][world.kingdoms.findIndex(k=>k.id===r.kingdomId)]} {kingdomName(r.kingdomId)}{mine>0?` · ★ ${int(mine)}`:''}</text>
-          {pending>0&&<g className="atlas-demolition"><title>{T.demolitionQueue(pending)}</title><rect x={-52} y={34} width={104} height={44} rx={4}/><SvgSprite name="demolish" x={-50} y={32} size={48}/><text x={25} y={65}>{int(pending)}</text></g>}
+          {pending>0&&<g className="atlas-demolition" data-help={T.demolitionQueue(pending)}><rect x={-52} y={34} width={104} height={44} rx={4}/><SvgSprite name="demolish" x={-50} y={32} size={48}/><text x={25} y={65}>{int(pending)}</text></g>}
         </g>;})}
       </svg>
       <div className="map-legend">
-        <div className="kingdom-legend">{world.kingdoms.map((k,i)=><span key={k.id}><b style={{color:k.color}}>{['●','◆','▲'][i]}</b>{ko?k.name:k.nameEn}{world.companies.some(c=>c.kingdomId===k.id&&c.isPlayer)&&<strong title={T.playerOwner}>★</strong>}</span>)}</div>
+        <div className="kingdom-legend">{world.kingdoms.map((k,i)=><span key={k.id}><b style={{color:k.color}}>{['●','◆','▲'][i]}</b>{ko?k.name:k.nameEn}{world.companies.some(c=>c.kingdomId===k.id&&c.isPlayer)&&<strong data-help={T.playerOwner}>★</strong>}</span>)}</div>
         {layer!=='kingdom'&&<><span className="lbl">{layer==='sol'?T.standardOfLiving:T.wealthPerHead}</span>
         <div className="scale-bar" style={{background:'linear-gradient(90deg in oklab, #b8573b 0%, #d9a35b 33.333%, #a9b38a 61.111%, #5f8592 100%)'}}/>
         <div className="scale-ticks lbl">{WEALTH_STOPS.map((s,i) => <span key={s.color}>{i===0?'≤':i===WEALTH_STOPS.length-1?'≥':null}{s.value}</span>)}</div>
@@ -98,7 +98,7 @@ function RegionMapView({ world, selected, onSelect }: { world: World; selected: 
       <details className="map-directory"><summary>{uiCopy().screenText['regions']}</summary><UITable className="region-directory-table">
         <thead><tr>{[['name',uiCopy().screenText['region']],['population',T.population],['wealth',T.wealthPerHead],['sol',T.standardOfLiving]].map(([key,label]) => <SortHeader key={key} label={label} active={sort===key} direction={direction} onClick={()=>{setSort(key);setDirection(sort===key?-direction:key==='name'?1:-1);}}/>)}</tr></thead>
         <tbody>{regions.map(r=><tr key={r.id} className={r.id===selected?'selected':''}>
-          <td><UIButton className="name-link" aria-pressed={r.id===selected} onClick={()=>onSelect(r.id)}><span className="territory-marker" title={kingdomName(r.kingdomId)} style={{color:kingdomOf(r.kingdomId)?.color}}>{['●','◆','▲'][world.kingdoms.findIndex(k=>k.id===r.kingdomId)]}</span>{regionName(r)}</UIButton><HarvestBadge world={world} regionId={r.id}/></td><td><NumericValue value={regionPopulation(r)} format="int"/></td><td>{regionAvgWealth(r).toFixed(1)}</td><td>{regionLivingStandard(r).toFixed(1)}</td>
+          <td><UIButton className="name-link" aria-pressed={r.id===selected} onClick={()=>onSelect(r.id)}><span className="territory-marker" data-help={kingdomName(r.kingdomId)} style={{color:kingdomOf(r.kingdomId)?.color}}>{['●','◆','▲'][world.kingdoms.findIndex(k=>k.id===r.kingdomId)]}</span>{regionName(r)}</UIButton><HarvestBadge world={world} regionId={r.id}/></td><td><NumericValue value={regionPopulation(r)} format="int"/></td><td>{regionAvgWealth(r).toFixed(1)}</td><td>{regionLivingStandard(r).toFixed(1)}</td>
         </tr>)}</tbody>
       </UITable></details>
     </>

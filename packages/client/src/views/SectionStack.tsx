@@ -63,7 +63,7 @@ export function SectionStack({ storageKey, items, revealId, revealKey, explorer=
         {items.map(item=><div key={item.id} hidden={active!==item.id} data-section={item.id}><h3 className="explorer-heading">{item.title}</h3><ActiveContent active={active===item.id}>{item.content}</ActiveContent></div>)}
       </section>
     </div>:<>
-    <div className="section-settings"><UIButton onClick={() => setPrefs(defaults())} title={uiCopy().screenText['resetSectionLayout']}><RotateCcw size={12}/></UIButton></div>
+    <div className="section-settings"><UIButton onClick={() => setPrefs(defaults())} data-help={uiCopy().screenText['resetSectionLayout']} aria-label={uiCopy().screenText['resetSectionLayout']}><RotateCcw size={12}/></UIButton></div>
     {prefs.map((p, index) => {
       const item = items.find(i => i.id === p.id);
       if (!item) return null;
@@ -73,8 +73,8 @@ export function SectionStack({ storageKey, items, revealId, revealKey, explorer=
           <UIButton className="section-toggle" aria-expanded={!p.collapsed} aria-controls={bodyId} onClick={() => setPrefs(ps => ps.map(v => v.id === p.id ? { ...v, collapsed: !v.collapsed } : v))}>
             {p.collapsed ? <ChevronRight size={14}/> : <ChevronDown size={14}/>}<h3>{item.title}</h3>
           </UIButton>
-          <UIButton disabled={index === 0} aria-label={`${item.title} ${uiCopy().screenText['moveUp']}`} onClick={() => move(index, -1)}><ArrowUp size={13}/></UIButton>
-          <UIButton disabled={index === prefs.length - 1} aria-label={`${item.title} ${uiCopy().screenText['moveDown']}`} onClick={() => move(index, 1)}><ArrowDown size={13}/></UIButton>
+          <UIButton disabled={index === 0} aria-label={`${item.title} ${uiCopy().screenText['moveUp']}`} onClick={() => move(index, -1)} data-help={`${item.title} ${uiCopy().screenText['moveUp']}`}><ArrowUp size={13}/></UIButton>
+          <UIButton disabled={index === prefs.length - 1} aria-label={`${item.title} ${uiCopy().screenText['moveDown']}`} onClick={() => move(index, 1)} data-help={`${item.title} ${uiCopy().screenText['moveDown']}`}><ArrowDown size={13}/></UIButton>
         </header>
         <div id={bodyId} hidden={p.collapsed}>
           <div className="section-content" ><ActiveContent active={!p.collapsed}>{item.content}</ActiveContent></div>

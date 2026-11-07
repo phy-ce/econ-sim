@@ -58,7 +58,7 @@ function Popover({ button, label, children, className = '' }: { button: ReactNod
   }, [open]);
   return (
     <div className={`popover ${className}`} ref={ref}>
-      <UIButton className="icon-btn" aria-haspopup="true" aria-expanded={open} aria-label={label} title={label} onClick={() => setOpen(!open)}>{button}</UIButton>
+      <UIButton className="icon-btn" aria-haspopup="true" aria-expanded={open} aria-label={label} data-help={label} onClick={() => setOpen(!open)}>{button}</UIButton>
       {open && <div className="popover-panel" role="dialog" aria-label={label}>{children(() => setOpen(false))}</div>}
     </div>
   );
@@ -165,12 +165,12 @@ export function App() {
 
         <div className="controls">
           <div className="segmented" role="group" aria-label={T.speedGroup}>
-            <UIButton className="seg-play" aria-pressed={!running} aria-label={T.pause} title={T.pause}
+            <UIButton className="seg-play" aria-pressed={!running} aria-label={T.pause} data-help={T.pause}
               onClick={() => game.setSpeed(0)}><Pause size={16} strokeWidth={2.4} aria-hidden="true" /></UIButton>
             {SPEEDS.map((s) => (
-              <UIButton key={s.tps} aria-pressed={game.speed === s.tps} onClick={() => game.setSpeed(s.tps)} title={`${s.label} (${SPEEDS.indexOf(s) + 1})`}>{s.label}</UIButton>
+              <UIButton key={s.tps} aria-pressed={game.speed === s.tps} onClick={() => game.setSpeed(s.tps)} data-help={`${s.label} (${SPEEDS.indexOf(s) + 1})`} aria-label={`${s.label} (${SPEEDS.indexOf(s) + 1})`}>{s.label}</UIButton>
             ))}
-            <UIButton onClick={game.stepOnce} disabled={running} title={T.stepDay} aria-label={T.stepDay}><SkipForward size={14} aria-hidden="true" /></UIButton>
+            <UIButton onClick={game.stepOnce} disabled={running} data-help={T.stepDay} aria-label={T.stepDay}><SkipForward size={14} aria-hidden="true" /></UIButton>
           </div>
 
           <div className="segmented"><UIButton onClick={()=>game.runUntilYearEnd(game.speed||4*BASE_TPS)}>▸ {T.yearEnd}</UIButton><Popover label={T.destination} button={<>▾</>}>{close=><UIButton onClick={()=>{game.runUntilYearEnd(game.speed||4*BASE_TPS);close();}}>{T.yearEnd}</UIButton>}</Popover></div>

@@ -58,7 +58,7 @@ function Side({ title, by, side, extra }: { title: string; by: Record<string, nu
               <li key={r.key}>
                 <i className="src-sw" style={{ background: r.color }} aria-hidden="true" />
                 {r.icon}
-                <span className="src-name" title={r.label}>{r.label}</span>
+                <span className="src-name" data-help={r.label}>{r.label}</span>
                 <span className="pxnum num"><NumericValue value={r.v} format="compact"/></span>
                 <span className="pxnum num src-pct">{pct(r.v / total)}</span>
               </li>

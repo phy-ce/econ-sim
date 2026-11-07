@@ -10,7 +10,7 @@ export function OwnerBadge({ company, world }: { company?: Company; world: World
   const display=company.state?companyName(company):T.privateOwner;
   const kingdomLabel=kingdom?(ko?kingdom.name:kingdom.nameEn):'';
   const label = `${kingdomLabel} · ${display}${company.isPlayer ? ` · ${T.playerOwner}` : ''}`;
-  return <span className={`owner-badge ${company.state ? 'royal' : 'private'} ${company.isPlayer ? 'player' : ''}`} style={{ borderInlineStartColor: kingdom?.color ?? company.color }} title={label} aria-label={label}>
+  return <span className={`owner-badge ${company.state ? 'royal' : 'private'} ${company.isPlayer ? 'player' : ''}`} style={{ borderInlineStartColor: kingdom?.color ?? company.color }} data-help={label} aria-label={label}>
     <Icon size={14} aria-hidden="true"/><span>{display}</span>{company.isPlayer && <Star size={11} fill="currentColor" aria-hidden="true"/>}
   </span>;
 }

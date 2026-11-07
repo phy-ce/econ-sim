@@ -526,3 +526,13 @@ DetailWindow 독립 NavigationProvider/버튼, BuildingPops 및 ResourceInspecto
 - ui-ux-pro-max 재적용: 자동 Retro-Futurism 추천은 게임에 맞지 않아 제외, data-dense 명시 검색과 React/키보드 지침 사용. 표 라벨 12px·상품/값 14px, 작은 조작 영역 28px, 호버 전환과 reduced-motion, 문서 lang 전환·비율 막대 이름 보강. 768px 미리보기 가로 넘침 수정.
 - 375/768/1024/1440/1920px 페이지 가로 넘침 없음 확인. 밝음 텍스트/보조/버튼 대비 13.11/6.14/7.37, 어두움 12.78/8.11/9.09. 이는 세 역할 조합만 측정했으며 전체 접근성 인증은 아님. 이름 없는 버튼 0, 입력 focus outline 확인.
 - 루트 typecheck 및 클라이언트 44파일/120시험 통과. 헤드리스 캡처: C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/system02-audit-desktop.png, system02-audit-768-fixed.png, system02-audit-dark.png.
+
+### 2026-11-07 2-101 게임 툴팁 완료
+- 범위: main 25de4e1 이후 작업 트리에서 2-101만 처리. DOM/UIButton의 title을 data-help로 전환하고 아이콘 버튼에 aria-label과 도움말을 함께 둠. DetailWindow·Side 등 제목 전용 props는 유지. 지도 SVG title 두 곳도 data-help로 전환하고 TooltipLayer가 SVG 앵커를 받도록 타입을 맞춤.
+- 기존 data-help와 title이 함께 있던 확장 버튼은 설명을 합쳐 보존. TooltipContent는 문자열을 React 텍스트로만 그리며 첫 줄은 굵게, 이후 라벨: 값 줄은 flex로 오른쪽 정렬. 중첩 툴팁·표·Base UI는 추가하지 않음.
+- 스타일: strategy.css와 ui/components.css의 중복 및 초안 페이지의 덮어쓰기를 제거하고 ui/components.css 한 곳에 통합. 게임 창의 --gu-paper/ink/line/control-radius/window-shadow/font 토큰, z-index 10000, 화면 경계 안 배치 유지.
+- 검사: 루트 npm.cmd run typecheck 통과 (sim/client/encyclopedia). node node_modules/vitest/vitest.mjs run --root packages/client test/tooltip.test.tsx — 2개 통과 (제목·라벨/값·한 줄·HTML 이스케이프). TSX 구문 검사에서 남은 title props는 제목을 그리는 컴포넌트뿐이며 SVG title 없음.
+- 화면: 별도 헤드리스 Chrome, CSS viewport 1920×1028, 한국어/밝음과 영어/어두움. 시세 표 숫자, 상단 일시정지 아이콘, 인쇄술의 긴 설명(라벨/값 4행), 금고 도움말을 캡처하고 직접 확인. 첫 줄 강조·값 오른쪽 정렬·잘림 없음. 각 관측에서 tooltip 1개, DOM title 속성 0개, 경계 안 배치를 확인. Esc 닫기와 포커스 시 aria-describedby 연결도 통과. 실행 중 콘솔 오류 보고 없음.
+- 스크린샷 (저장소 루트 기준, 로컬 검증 파일): .tmp/ui-requests/2-101-ko-light-icon.png, .tmp/ui-requests/2-101-ko-light-number.png, .tmp/ui-requests/2-101-ko-light-long.png, .tmp/ui-requests/2-101-ko-light-pair.png, .tmp/ui-requests/2-101-en-dark-icon.png, .tmp/ui-requests/2-101-en-dark-number.png, .tmp/ui-requests/2-101-en-dark-long.png, .tmp/ui-requests/2-101-en-dark-pair.png. 측정값: .tmp/ui-requests/qa-results.json.
+- 한계: 스크린샷은 기존 미커밋 System 02/이익률 변경이 함께 있는 작업 트리 기준. 일반 Edge 최대화·Windows 배율과 모든 툴팁 조합은 화면 미검증. 브라우저 연결 도구는 host unavailable로 실패하여 문서의 헤드리스 검증 경로를 사용함.
+- 기존 2-95 등 미커밋 변경은 보존하고 커밋에서 제외. sim 수정 없음. 다음 절은 진행하지 않고 여기서 중지.

@@ -62,7 +62,7 @@ export function Notifications({ world, lastReadTick, onRead, onJump, onCompany, 
       <div className="notice-toolbar">
        <div className="notice-status"><span><Bell size={14}/><strong>{uiCopy().screenText['dispatches']}</strong><small>{matching.length}</small></span><UIButton className="notice-read" disabled={!unread} data-help={uiCopy().screenText['markOwnAndSharedDispatchesAsRead']} onClick={onRead}><CheckCheck size={14}/>{uiCopy().screenText['markRead']}</UIButton></div>
        <div className="notice-filters" role="group" aria-label={T.newsFilter}>{([['mine',uiCopy().screenText['myKingdom']],['alerts',T.filterAlerts],['all',T.filterAll]] as const).map(([id,label])=><UIButton key={id} aria-pressed={filter===id} onClick={()=>{setFilter(id);setLimit(40);}}>{label}<small>{counts[id]}</small></UIButton>)}</div>
-       <div className="notice-search"><Search size={14}/><UIInput aria-label={uiCopy().screenText['searchDispatches']} placeholder={uiCopy().screenText['searchNewsRegionsBuildings']} value={query} onChange={e=>{setQuery(e.target.value);setLimit(40);}}/>{query&&<UIButton aria-label={uiCopy().screenText['clearSearch']} onClick={()=>setQuery('')}><X size={13}/></UIButton>}</div>
+       <div className="notice-search"><Search size={14}/><UIInput aria-label={uiCopy().screenText['searchDispatches']} placeholder={uiCopy().screenText['searchNewsRegionsBuildings']} value={query} onChange={e=>{setQuery(e.target.value);setLimit(40);}}/>{query&&<UIButton aria-label={uiCopy().screenText['clearSearch']} onClick={()=>setQuery('')} data-help={uiCopy().screenText['clearSearch']}><X size={13}/></UIButton>}</div>
        <div className="notice-options"><UIButton aria-pressed={onlyUnread} onClick={()=>{setOnlyUnread(v=>!v);setLimit(40);}}><i className="notice-unread-dot"/>{uiCopy().screenText['unreadOnly']}</UIButton><UISelect aria-label={uiCopy().screenText['sortDispatches']} value={sort} onChange={e=>{setSort(e.target.value);setLimit(40);}}><option value="recent">{uiCopy().screenText['newestFirst']}</option><option value="oldest">{uiCopy().screenText['oldestFirst']}</option><option value="priority">{uiCopy().screenText['priorityFirst']}</option></UISelect></div>
       </div>
       <ol className="events notice-timeline">
@@ -81,7 +81,7 @@ export function Notifications({ world, lastReadTick, onRead, onJump, onCompany, 
                 {destination?<UIButton className="ev-text event-link" onClick={()=>onEvent(e)}>{eventText(e)}<ArrowUpRight size={14} aria-hidden="true"/></UIButton>:<span className="ev-text">{eventText(e)}</span>}
                 <span className="ev-meta lbl">
                   <span className="notice-kind">{k.label}</span>{fresh&&<span className="notice-fresh">{uiCopy().screenText['unread']}</span>}
-                  {c && <UIButton className="entity-link" onClick={()=>onCompany(c.id)} title={companyName(c)}><OwnerBadge company={c} world={world}/><ArrowUpRight size={12}/></UIButton>}
+                  {c && <UIButton className="entity-link" onClick={()=>onCompany(c.id)} data-help={companyName(c)} aria-label={companyName(c)}><OwnerBadge company={c} world={world}/><ArrowUpRight size={12}/></UIButton>}
                   {region&&<UIButton className="entity-link" onClick={()=>onJump(region.id)}><MapPin size={12}/>{regionName(region)}</UIButton>}
                   {building&&<UIButton className="entity-link" onClick={()=>onEvent(e)}><Factory size={12}/>{buildingName(building.typeId)}</UIButton>}
                 </span>

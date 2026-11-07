@@ -21,7 +21,7 @@ export function PoliticsPanel({world,kingdomId}:{world:World;kingdomId:number}){
    const name=lang==='ko'?g.name:g.nameEn,approval=Math.max(-1,Math.min(1,g.approval/IG_APPROVAL_CAP));
    return <article className="ig-entry" key={g.id}>
     <UIButton className="ig-columns ig-row" aria-expanded={open===g.id} onClick={()=>setOpen(open===g.id?null:g.id)} data-ig={g.id}>
-     <strong title={name}>{name}</strong><span className="ig-clout"><Bar value={g.clout} label={`${P.clout} ${pct(g.clout)}`}/><b>{pct(g.clout)}</b>{g.status!=='influential'&&<small className={g.status==='powerful'?'accent':'muted'}>{P.status[g.status]}</small>}</span>
+     <strong data-help={name}>{name}</strong><span className="ig-clout"><Bar value={g.clout} label={`${P.clout} ${pct(g.clout)}`}/><b>{pct(g.clout)}</b>{g.status!=='influential'&&<small className={g.status==='powerful'?'accent':'muted'}>{P.status[g.status]}</small>}</span>
      <span data-help={`${P.approval}: ${exactNumber(g.approval)} / ±${IG_APPROVAL_CAP}`}><span className="ig-approval-bar" role="img" aria-label={`${P.approval} ${signed(g.approval)}`}><i style={{left:`${approval<0?50+approval*50:50}%`,width:`${Math.abs(approval)*50}%`,background:approval<0?'var(--bad)':'var(--good)'}}/></span><b className={g.approval<0?'neg':g.approval>0?'pos':''}>{signed(g.approval)}</b></span>
      <span className={`ig-mood ${g.mood}`}>{P.moods[g.mood]}</span><NumericValue value={g.members} format="compact"/>
     </UIButton>

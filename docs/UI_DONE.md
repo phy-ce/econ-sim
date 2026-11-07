@@ -2684,3 +2684,20 @@ sim 변경 (wt-research):
 - 가정용품 선택지에 종이가 들어갔다 (`NEEDS` household, 상한 0.5).
 - 이름 변경: 상품 `electronics` 는 `정밀 기기 / Precision instruments`, 건물 `fab` 은 `정밀 기기 공장 / Instrument works`, 방식 `machine_steam` 은 `증기 정밀 가공`. id 는 그대로다. 화면 파일에 옛 이름을 적은 곳은 없다 (`기계` 검색, main eeb99e1 기준). 아이콘을 상품 이름으로 고른다면 바꿀 때 본다.
 - 종이 공장은 이제 인쇄술이 있어야 짓는다 (`pulp_press.tech = 'printing'`). 건설 목록과 기술 트리는 `canBuildType`·`unlocksOf` 를 읽으므로 저절로 맞다.
+
+## 2026-11-07 2-101 게임 툴팁
+
+### 2-101. 기본 툴팁 없애기 (사용자 2026-11-07, DECISIONS 7-62, sim 변경 없음)
+사용자: "기본 툴팁 대신 게임에 맞게 디자인된 툴팁을 사용".
+
+고칠 것:
+1. 브라우저 기본 툴팁을 뜨게 하는 `title` 속성을 모두 `data-help` 로 바꾼다 (`TooltipLayer.tsx`). `title=` 이 63곳이다. 바꿀 곳: DOM 까지 내려가 브라우저 툴팁을 띄우는 것. `UIButton` 처럼 DOM 으로 넘기는 컴포넌트를 포함한다. 예: `HarvestBadge.tsx:11`, `OwnerBadge.tsx:13`, `SourceBreakdown.tsx:61`, `App.tsx:168`. 그대로 둘 곳: 창 제목으로만 쓰는 컴포넌트 속성. 예: `<DetailWindow title=...>`, `<Side title=...>`.
+2. 아이콘만 있는 단추는 `aria-label` 과 `data-help` 를 함께 단다.
+3. 게임 툴팁 모양을 다듬는다. `.game-tooltip` 규칙을 하나로 합치고 (2-96), 색·테두리는 게임 창과 같은 토큰을 쓴다. `data-help` 글의 첫 줄은 제목처럼 굵게, `라벨: 값` 줄은 값을 오른쪽에 맞춘다. `data-help` 는 글자 속성 그대로 둔다.
+4. 중첩 툴팁은 쓰지 않는다 (2026-11-06 사용자).
+
+툴팁 안에 표를 넣는 일과 라이브러리(Base UI) 도입은 사용자 결정 대기다. 지금 하지 않는다.
+
+확인: 표 숫자, 아이콘 단추, 긴 설명 툴팁을 띄운 1920×1028 스크린샷을 찍고 파일 이름을 UI_STATUS 에 적는다.
+
+구현·확인: UI_STATUS의 2026-11-07 2-101 기록 참조. 한국어 밝음/영어 어두움에서 표 숫자·아이콘·긴 설명 및 라벨/값 정렬 확인, 타입 검사와 툴팁 시험 2개 통과. 일반 Edge 실환경과 모든 조합은 화면 미검증.
