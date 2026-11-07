@@ -516,3 +516,8 @@ DetailWindow 독립 NavigationProvider/버튼, BuildingPops 및 ResourceInspecto
 ### 2026-11-07 새 디자인 시스템 설계
 - 사용자 최신 요청으로 UI UX Pro Max 원격 저장소·SKILL 및 로컬 검색을 검토하고 packages/client/src/ui/ESTERA_SYSTEM_02.md 작성. 플레이 과제→정보 구조→다섯 밀도→시각 역할→컴포넌트 계층→건설 상세→전체 이행 계획 순서. 새 토큰 값·치수는 제안이며 실제 게임에는 미적용.
 - 설계 문서만 커밋. 이 단계의 타입·시험·스크린샷 검증은 없음. 2-95는 중단 시점의 클라이언트 변경을 미커밋 보존했으며 검증·시험 추가 미완료, 2-96은 대기. 새 설계 구현 전 별도 단위로 마무리할 계획.
+
+### 2026-11-07 System 02 실제 페이지
+- /system-02.html: 기초 표현·조작·경제 정보·작업 묶음과 건설 상세 미리보기. 기존 게임 화면은 새 시스템으로 교체하지 않음. 예시 데이터·건설 접수는 로컬 상태이며 실제 sim 명령이 아님.
+- KO/EN, 낮/밤, 행 28~48px·그림 24~40px 슬라이더, 정상/부족/정지/혼합 산출, 소유 필터, 수량·접수·초기화 동작 확인. 기존 상품 아틀라스 사용. 별도 Vite 빌드 진입점 추가.
+- 루트 typecheck·클라이언트 44파일 120시험 통과. 1920×1028 헤드리스 화면 확인, 가로 넘침 없음. C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/system02-light.png, system02-dark.png, system02-components.png. 모바일·전체 접근성 검증은 미완료.
