@@ -631,8 +631,8 @@ export const TUNE = {
   investUpper: 0.05,
   investMiddle: 0.1,
   investLower: 0.15,
-  financeWage: 20,
-  financeBonus: 0.1,
+  financeWage: 14, // 전문가 기본 임금과 같게 (2026-11-07 사용자, DESIGN 11장)
+  financeBonus: 0.02, // 2·5·10% 비교 (2026-11-07 사용자, DESIGN 11장)
   financeStaff: 1, // 가진 레벨 1당 전문가. 1레벨이 일꾼 1,000명에서 약 500명으로 줄어 2의 절반
   rawFullWealth: 5,
   rawCapWealth: 10,
