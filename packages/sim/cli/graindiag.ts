@@ -36,7 +36,7 @@ const OUT = arg('out', '');
 const YOUT = arg('yout', ''); // 해마다 한 줄 JSON (wt-grainrule)
 const TUNE_SET: Record<string, unknown> = JSON.parse(arg('tune', '{}'));
 const PRESET = arg('preset', '');
-if (PRESET === 'labor') TUNE_SET.shrinkWeeks ??= 1e9; // microcheck --preset labor 와 같다 (wt-simplify 1-F 뒤로 reserveShrinkWeeks 는 shrinkWeeks: 정부 건물·무역소 적자 철거도 멈춘다)
+if (PRESET === 'labor') { TUNE_SET.shrinkWeeks ??= 1e9; TUNE_SET.tradeShrinkWeeks ??= 1e9; } // microcheck --preset labor 와 같다 (wt-simplify 1-F 뒤로 reserveShrinkWeeks 는 shrinkWeeks. 두 키로 정부 건물·무역소 적자 철거도 멈춘다)
 const TYPESCALE_ARG = arg('typescale', PRESET === 'labor' ? 'workshop=0.15,textile=0.25,fiber_farm=0.25' : '');
 const typeScale = TYPESCALE_ARG ? Object.fromEntries(TYPESCALE_ARG.split(',').map((x) => { const [k, v] = x.split('='); return [k, Number(v)]; })) : undefined;
 const BUILD = arg('build', '');

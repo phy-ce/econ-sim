@@ -653,7 +653,7 @@ export const TUNE = {
   // 연구가 돈이 들지 않게 된 뒤 다시 3·4 비교 (40년 × 시드 1·2): 25~40년 총생산이 4에서 약 13% 높다 (DESIGN 11)
   doneWageMax: 4,
   startTreasuryWeeks: 26,
-  tradeShrinkWeeks: 52, // 무역소만: 교역 수요가 1~2년 주기로 출렁여 26주면 짓고 허는 반복이 된다 (이슈 #7, DESIGN 11장)
+  tradeShrinkWeeks: 52, // 무역소만: 26·52·104 비교에서 고른 값 (10년 × 시드 1·2·5, 이슈 #7, DESIGN 11장)
   shrinkWeeks: 26, // 유보 기준 철거도 이 값 (2026-10-25 사용자 "26주로 늘려서", 그 전 4주. 그때 reserveShrinkWeeks)
   reserveWeeks: 0.5,
   officeShrinkWeeks: 52, // 26주는 공사가 크게 줄고(10~20년차 하루 사용 포인트 69), 78주는 부지 몫과 40% 이상 지역이 늘어난다
