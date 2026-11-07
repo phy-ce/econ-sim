@@ -17,6 +17,6 @@
  --gu-positive:#afd3b5; --gu-negative:#f5b5a7; --gu-focus:#b9c9ff;
  --gu-crown:#dfc08a; --gu-manor:#bed0a7; --gu-finance:#b6cede; --gu-on-owner:#242c28;
 }
-:root{--gu-window-width:420px;--gu-window-height:560px;--gu-detail-width:520px;--gu-detail-height:640px;--gu-number-size:14px;--gu-number-compact-size:12px;--gu-metric-number-size:20px;--gu-body-size:14px;--gu-compact-font:12px;--gu-control-radius:5px;--gu-control-icon:16px;--gu-bar-height:7px;--gu-art-size:48px;--gu-flow-gap:16px;--gu-flow-gap-compact:6px;--gu-window-shadow:0 6px 18px #18201814}
+:root{--gu-window-width:420px;--gu-window-height:560px;--gu-detail-1-width:320px;--gu-detail-1-height:240px;--gu-detail-2-width:360px;--gu-detail-2-height:360px;--gu-detail-3-width:420px;--gu-detail-3-height:420px;--gu-detail-4-width:840px;--gu-detail-4-height:560px;--gu-number-size:14px;--gu-number-compact-size:12px;--gu-metric-number-size:20px;--gu-body-size:14px;--gu-compact-font:12px;--gu-control-radius:5px;--gu-control-icon:16px;--gu-bar-height:7px;--gu-art-size:48px;--gu-flow-gap:16px;--gu-flow-gap-compact:6px;--gu-window-shadow:0 6px 18px #18201814}
 /* Foundation roles: one scale for catalogue and game. */
 :root,.gu-scope{--gu-number:'Noto Sans KR',sans-serif;--gu-label-size:13px;--gu-support-size:12px;--gu-value-size:18px;--gu-leading:1.5;--gu-row-gap:8px;--gu-row-padding:8px;--gu-rule-width:1px;--gu-meter-thickness:4px;--gu-body-size:14px;--gu-number-size:14px;--gu-number-compact-size:13px;--gu-compact-font:13px;--gu-art-size:48px}

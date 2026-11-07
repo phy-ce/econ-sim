@@ -43,6 +43,6 @@ export function ConstructionPanel({world,game,me,regionId,onRegion,onOpenRegion,
    </UIButton>;
   })}</div></ActiveContent></div>
   <div hidden={tab!=='queue'}><ActiveContent active={tab==='queue'}><Projects game={game} world={world} owner={me} projects={projects} onRegion={onOpenRegion}/></ActiveContent></div>
-  <DetailWindow hideTrigger title={selected?`${buildingName(selected)} · ${regionName(region)}`:C.manage} help={C.manage} open={selected!==null} onOpenChange={open=>{if(!open)setSelected(null);}}>{selected&&<ConstructionDetail key={`${region.id}:${selected}`} world={world} game={game} region={region} typeId={selected} onGood={onGood} onCompany={onCompany} onOpenBuilding={onOpenBuilding} onRegion={onOpenRegion}/>}</DetailWindow>
+  <DetailWindow size={3} hideTrigger title={selected?`${buildingName(selected)} · ${regionName(region)}`:C.manage} help={C.manage} open={selected!==null} onOpenChange={open=>{if(!open)setSelected(null);}}>{selected&&<ConstructionDetail key={`${region.id}:${selected}`} world={world} game={game} region={region} typeId={selected} onGood={onGood} onCompany={onCompany} onOpenBuilding={onOpenBuilding} onRegion={onOpenRegion}/>}</DetailWindow>
  </section>;
 }

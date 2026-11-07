@@ -51,7 +51,7 @@ export function FinancePanel({game,world,me,onBuilding,onPolicies,active=true}:{
    </tbody>)}<tfoot><tr><th>{T.budgetNet}</th><td>{amount(preview.net,projectedNet)}</td></tr></tfoot>
   </UITable>
   <details><summary>{S.marketWages}</summary><Wages game={game} world={world} me={me}/></details>
-  {drill&&<DetailWindow title={`${label(drill.key)} · ${S.details}`} help={label(drill.key)} open hideTrigger onOpenChange={open=>{if(!open)setDetail(null);}}>
+  {drill&&<DetailWindow size={2} title={`${label(drill.key)} · ${S.details}`} help={label(drill.key)} open hideTrigger onOpenChange={open=>{if(!open)setDetail(null);}}>
    <div className="budget-detail-body">
     <b><NumericValue value={drill.weekly} format="signedMoney"/> / {S.week}</b>
     <div className="system-facts">

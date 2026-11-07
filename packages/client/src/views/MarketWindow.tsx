@@ -1,4 +1,4 @@
-import {Button as UIButton} from '../ui/controls';
+import {Button as UIButton,Select as UISelect} from '../ui/controls';
 import {LedgerTable as UITable} from '../ui/primitives';
 import {DemandLock} from './DemandLock';
 import {t as uiCopy} from '../i18n';
@@ -10,7 +10,7 @@ import {ResourceInspector} from './ResourceInspector';
 import {SourceBreakdown} from './SourceBreakdown';
 import {memo} from 'react';
 import {useNavigationState} from '../NavigationHistory';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { GOOD_IDS, GOODS, playerCompany,currentSD } from '@econ/sim';
 import type { GoodId, HistoryPoint, World } from '@econ/sim';
 import { Crosshair } from 'lucide-react';
@@ -32,7 +32,6 @@ export function useMarketScope(world:World|null) {
 }
 function MarketWindowView({world,game,scope,onScope,mapRegionId,history,good,onGood,onCompany,onBuildings}:{world:World;game:Game;scope:MarketScope;onScope:(s:MarketScope)=>void;mapRegionId:number;history:HistoryPoint[];good:GoodId;onGood:(g:GoodId)=>void;onCompany:(id:number)=>void;onBuildings:(regionId:number)=>void}) {
  const T=useT(),lang=useLang(),S=T.marketScope;
- const chips=useRef<HTMLDivElement>(null);
  const own=playerCompany(world)?.kingdomId;
  const regions=[...world.regions].sort((a,b)=>Number(b.kingdomId===own)-Number(a.kingdomId===own)||regionName(a).localeCompare(regionName(b),lang));
  const choices:MarketScope[]=['world','kingdom',...regions.map(r=>r.id)];
@@ -54,11 +53,7 @@ function MarketWindowView({world,game,scope,onScope,mapRegionId,history,good,onG
  const sourceMarket={inventory:market[good].inventory,demandByEma:sumSources('demandByEma'),supplyByEma:sumSources('supplyByEma')};
 
  return <div className="market-window">
-  <div className="market-scope-toolbar"><div className="market-scope-chips" ref={chips} role="radiogroup" aria-label={S.scope}>
-   {choices.map((s,i)=><UIButton key={s} role="radio" aria-checked={scope===s} tabIndex={scope===s?0:-1} onClick={()=>onScope(s)} onKeyDown={e=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(e.key))return;e.preventDefault();const next=e.key==='Home'?0:e.key==='End'?choices.length-1:(i+(e.key==='ArrowRight'?1:-1)+choices.length)%choices.length;onScope(choices[next]);const b=chips.current?.querySelectorAll<HTMLButtonElement>('button')[next];b?.focus();b?.scrollIntoView({block:'nearest',inline:'nearest'});}}>
-    {typeof s==='number'&&<i style={{background:world.kingdoms.find(k=>k.id===regions.find(r=>r.id===s)?.kingdomId)?.color}}/>}{name(s)}
-   </UIButton>)}
-  </div><UIButton className="market-follow" aria-label={S.follow} data-help={S.follow} onClick={()=>onScope(mapRegionId)}><Crosshair size={15}/></UIButton></div>
+  <div className="market-scope-toolbar"><UISelect className="market-scope-select" aria-label={S.scope} value={scope} onChange={e=>onScope(e.target.value==='world'||e.target.value==='kingdom'?e.target.value:Number(e.target.value))}>{choices.map(s=><option key={s} value={s}>{name(s)}</option>)}</UISelect><UIButton className="market-follow" aria-label={S.follow} data-help={S.follow} onClick={()=>onScope(mapRegionId)}><Crosshair size={15}/></UIButton></div>
   <SectionStack explorer storageKey="market" revealId="resource" revealKey={resourceRequest} items={[
    {id:'prices',title:uiCopy().screenText['marketPrices'],height:174,content:<section className="market-ledger unified-market">
    <div className="table-scroll"><UITable className="goods"><thead><tr>{[['name',T.colGood],['price',T.colPrice],['ratio',T.colRatio],['sd',T.supplyDemandRatio],['volume',T.colValue]].map(([key,label])=><SortHeader key={key} label={label} active={sort.key===key} direction={sort.dir} onClick={()=>setSortKey(key)}/>)}</tr></thead><tbody>{goods.map(g=><tr key={g} className={good===g?'selected':''} tabIndex={0} aria-selected={good===g} onClick={()=>selectGood(g)} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();selectGood(g);}}}><td><span className="good-name"><GoodSprite g={g} size={24}/>{goodName(g)}<DemandLock world={world} good={g} regionId={typeof scope==='number'?scope:undefined}/></span></td><td><NumericValue value={market[g].price} format="money"/></td><td><PriceGauge ratio={market[g].ratio}/></td><td><span className="market-sd"><span>{sdText(sdValue(g))}</span><SupplyDemandBar now={sdValue(g)} compact/></span></td><td><NumericValue value={market[g].price*(market[g].supplyEma+market[g].demandEma)/2} format="compactMoney"/></td></tr>)}</tbody></UITable></div>

@@ -41,6 +41,6 @@ export function RegionIndustry({world,region,game,request,onGood,onCompany,onOpe
     <BuildingMetricBars employed={g.econ.employed} jobs={g.econ.jobs} profit={g.econ.profitWeek} perLevel={g.econ.profitWeekPerLevel}/>{g.econ.hasReserve&&<ReserveBar value={g.econ.reserve} cap={g.econ.reserveCap} weekly={g.econ.reserveWeek}/>}
    </div>}
   </article>)}
-  <DetailWindow hideTrigger title={selected?`${buildingName(selected)} · ${regionName(region)}`:T.constructionUI.manage} help={T.constructionUI.manage} open={selected!==null} onOpenChange={open=>{if(!open)setSelected(null);}}>{selected&&<ConstructionDetail key={`${region.id}:${selected}`} world={world} game={game} region={region} typeId={selected} initialBuildingId={request?.id} onGood={onGood} onCompany={onCompany} onOpenBuilding={onOpenBuilding}/>}</DetailWindow>
+  <DetailWindow size={3} hideTrigger title={selected?`${buildingName(selected)} · ${regionName(region)}`:T.constructionUI.manage} help={T.constructionUI.manage} open={selected!==null} onOpenChange={open=>{if(!open)setSelected(null);}}>{selected&&<ConstructionDetail key={`${region.id}:${selected}`} world={world} game={game} region={region} typeId={selected} initialBuildingId={request?.id} onGood={onGood} onCompany={onCompany} onOpenBuilding={onOpenBuilding}/>}</DetailWindow>
  </section>;
 }

@@ -16,8 +16,8 @@ body.game-runtime{font-family:var(--gu-font);color:var(--gu-ink);background:var(
 .strategy-panel.gu-window-surface{background:var(--gu-paper);border-color:var(--gu-line);box-shadow:var(--gu-window-shadow)}
 .strategy-panel .gu-window-header{background:var(--gu-soft);color:var(--gu-ink);border-bottom:1px solid var(--gu-line);opacity:1}
 .gu-window-header .gu-runtime-button{color:inherit}
-.detail-window.gu-window-surface{width:var(--gu-detail-width);height:var(--gu-detail-height)}
-.floating-workspace .window-body,.detail-window .window-body{overflow-x:auto}
+.detail-window.gu-window-surface{min-width:0;min-height:0;resize:none}
+.floating-workspace .window-body,.detail-window .window-body{overflow-x:hidden;overflow-y:auto}
 .gu-table{border-collapse:collapse;width:100%}
 .strategy-panel .gu-table{color:var(--gu-ink);font-size:var(--gu-compact-font)}
 .gu-table th,.gu-table td{border-color:var(--gu-line)}
@@ -62,3 +62,24 @@ body.game-runtime{font-family:var(--gu-font);color:var(--gu-ink);background:var(
 .construction-detail .system-tags{gap:4px}.construction-detail .system-facts{padding:4px 0}
 .construction-detail .building-room>span{display:flex;align-items:baseline;gap:8px}
 .construction-detail .building-room b{display:inline;margin:0}
+
+/* Fixed window contents reflow vertically instead of widening the surface. */
+.market-scope-select{flex:1;min-width:0;max-width:100%;font-size:var(--gu-compact-font);min-height:28px}
+.strategy-panel .ownership-table th:first-child{width:43%}
+.strategy-panel .ownership-table th:nth-child(2){width:29%}
+.strategy-panel .ownership-table th:nth-child(3){width:28%}
+.strategy-panel .ownership-table td{white-space:normal}
+.strategy-panel .system-table th,.strategy-panel .system-table td{overflow-wrap:anywhere}
+.strategy-panel .regional-wage-table .regional-market-pay{flex-wrap:wrap;justify-content:flex-end}
+.strategy-panel .regional-wage-table .numeric-value{font-size:inherit}
+.strategy-panel .regional-wage-table th:first-child{width:auto}
+.strategy-panel .sort-label{overflow-wrap:anywhere;word-break:normal}
+.strategy-panel .ownership-ring-row{grid-template-columns:50px minmax(0,1fr) minmax(0,1fr) minmax(0,1fr)}
+.strategy-panel .ownership-ring-row span{overflow-wrap:anywhere}
+.strategy-panel .gauge-wrap{flex-wrap:wrap}
+.research-atlas-scroll{overflow-x:hidden;overflow-y:auto}
+
+.strategy-panel .ownership-ring-row span{white-space:normal}
+
+.strategy-panel .system-table th{white-space:normal}
+.strategy-panel .unified-market .good-name{display:flex;max-width:100%;overflow-wrap:anywhere}

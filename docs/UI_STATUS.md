@@ -536,3 +536,48 @@ DetailWindow 독립 NavigationProvider/버튼, BuildingPops 및 ResourceInspecto
 - 스크린샷 (저장소 루트 기준, 로컬 검증 파일): .tmp/ui-requests/2-101-ko-light-icon.png, .tmp/ui-requests/2-101-ko-light-number.png, .tmp/ui-requests/2-101-ko-light-long.png, .tmp/ui-requests/2-101-ko-light-pair.png, .tmp/ui-requests/2-101-en-dark-icon.png, .tmp/ui-requests/2-101-en-dark-number.png, .tmp/ui-requests/2-101-en-dark-long.png, .tmp/ui-requests/2-101-en-dark-pair.png. 측정값: .tmp/ui-requests/qa-results.json.
 - 한계: 스크린샷은 기존 미커밋 System 02/이익률 변경이 함께 있는 작업 트리 기준. 일반 Edge 최대화·Windows 배율과 모든 툴팁 조합은 화면 미검증. 브라우저 연결 도구는 host unavailable로 실패하여 문서의 헤드리스 검증 경로를 사용함.
 - 기존 2-95 등 미커밋 변경은 보존하고 커밋에서 제외. sim 수정 없음. 다음 절은 진행하지 않고 여기서 중지.
+
+### 2026-11-08 2-100 창 크기 규격
+- 주 창 420×560, 서브창1 320×240·2 360×360·3 420×420·4 840×560을 CSS 토큰 한 곳에 정의. DetailWindow size 기본값은 1. 교육·건물 지표·유보 자산=1, 인구·토지·임금·소유·재정=2, 건물 관리=3, 연구 계통도=4로 배정. 크기 숫자는 문서의 잠정값이며 사용자 최종 승인은 대기 상태다.
+- 옛 창 크기 및 :has 덮어쓰기와 크기 조절을 제거. 범위 선택은 시세 창 맨 위 한 줄로 배치하고, 표의 이름·열 머리·임금·소유 그림을 폭 안에 줄바꿈. 기존 구역 탐색/표 머리 정렬 유지. 연구 계통도는 확대율과 가용 폭에 따라 같은 깊이의 카드를 다음 줄로 배치하며 선행 기술은 후행 기술 위에 유지. 세로 스크롤 사용, 창을 키워 해결한 항목 없음.
+- 검사: 루트 npm.cmd run typecheck 통과 (sim/client/encyclopedia). node node_modules/vitest/vitest.mjs run --root packages/client test/researchLayout.test.ts test/windowGeometry.test.ts test/windowLayout.test.ts — 3파일 9개 통과.
+- 화면: 헤드리스 Chrome CSS viewport 1920×1028, 한국어 밝음/영어 어두움. 각 언어에서 주 창 6개, 서브창 11개, 지역 건물 탭 1개를 열어 총 36개 캡처. 전부 지정 크기, resize:none, 본문 scrollWidth=clientWidth, 관측된 가로 넘침 0. 시세 표·토지 소유·건물 관리·연구 계통도 등을 이미지로 직접 확인. 측정 파일 .tmp/ui-100/results.json.
+- 스크린샷 (저장소 루트 기준 로컬 검증 파일):
+  - .tmp/ui-100/ko-main-region.png
+  - .tmp/ui-100/ko-detail-population.png
+  - .tmp/ui-100/ko-detail-land.png
+  - .tmp/ui-100/ko-detail-education.png
+  - .tmp/ui-100/ko-detail-wages.png
+  - .tmp/ui-100/ko-detail-ownership.png
+  - .tmp/ui-100/ko-region-industry.png
+  - .tmp/ui-100/ko-detail-metric.png
+  - .tmp/ui-100/ko-detail-reserve.png
+  - .tmp/ui-100/ko-detail-industry.png
+  - .tmp/ui-100/ko-main-market.png
+  - .tmp/ui-100/ko-main-state.png
+  - .tmp/ui-100/ko-detail-finance.png
+  - .tmp/ui-100/ko-main-research.png
+  - .tmp/ui-100/ko-detail-research.png
+  - .tmp/ui-100/ko-main-construction.png
+  - .tmp/ui-100/ko-detail-building.png
+  - .tmp/ui-100/ko-main-trends.png
+  - .tmp/ui-100/en-main-region.png
+  - .tmp/ui-100/en-detail-population.png
+  - .tmp/ui-100/en-detail-land.png
+  - .tmp/ui-100/en-detail-education.png
+  - .tmp/ui-100/en-detail-wages.png
+  - .tmp/ui-100/en-detail-ownership.png
+  - .tmp/ui-100/en-region-industry.png
+  - .tmp/ui-100/en-detail-metric.png
+  - .tmp/ui-100/en-detail-reserve.png
+  - .tmp/ui-100/en-detail-industry.png
+  - .tmp/ui-100/en-main-market.png
+  - .tmp/ui-100/en-main-state.png
+  - .tmp/ui-100/en-detail-finance.png
+  - .tmp/ui-100/en-main-research.png
+  - .tmp/ui-100/en-detail-research.png
+  - .tmp/ui-100/en-main-construction.png
+  - .tmp/ui-100/en-detail-building.png
+  - .tmp/ui-100/en-main-trends.png
+- 한계: 기존 미커밋 System 02/이익률 변경이 함께 있는 작업 트리에서 캡처. 일반 Edge 최대화·Windows 배율·브라우저 확대와 모든 상세 탭/데이터 조합은 화면 미검증. 5199는 다른 앱이 사용 중이므로 client Vite 5200으로 검증. 기존 미커밋 변경을 보존하고 커밋에서 제외하며 sim 수정 없음.
+- 동작 확인: 서브창을 포인터로 (80, 50)px 이동한 뒤에도 360×360 유지. 시세 범위를 kingdom으로 바꾸면 저장 상태도 갱신. 연구 110% 확대 후 본문 폭/스크롤 폭 모두 544px로 가로 넘침 없음 (.tmp/ui-100/interactions.json).

@@ -23,7 +23,7 @@ export function RegionWages({world,region}:{world:World;region:Region}){
   <div className="system-facts"><span tabIndex={0} data-help={`${T.labourerTenantRatio}: ${relative===null?'—':exactNumber(relative)}`}>
    {T.tenantIncomeHead}<b>{amount(tenant)}</b>
   </span></div>
-  <UITable className="system-table regional-wage-table"><colgroup><col style={{width:'28%'}}/><col style={{width:'20%'}}/><col style={{width:'17%'}}/><col style={{width:'15%'}}/><col style={{width:'20%'}}/></colgroup>
+  <UITable className="system-table regional-wage-table"><colgroup><col style={{width:'23%'}}/><col style={{width:'20%'}}/><col style={{width:'19%'}}/><col style={{width:'19%'}}/><col style={{width:'19%'}}/></colgroup>
    <thead><tr><th>{T.popProfession}</th><th>{T.marketWage}</th><th>{T.regionalWageAverage}</th><th>{T.regionalWageState}</th><th>{T.unemployment}</th></tr></thead>
    <tbody>{SKILLS.map(skill=>{const idle=regionUnemployment(world,region.id,skill),premium=government?.statePremium?.[region.id]?.[skill]??0;
     const formula=kingdom?`${T.marketWage} ƒ${exactNumber(region.wages![skill])} × ${T.stage} ${exactNumber(TUNE.govWageLevels[kingdom.budget.wages-1])}${premium>0?` × (1 + ${T.wagePremium} ${exactNumber(premium)})`:''}`:undefined;

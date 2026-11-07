@@ -4,7 +4,7 @@ export function prerequisitePath(techs:readonly {id:string;requires:readonly str
  const visit=(key:string)=>{if(path.has(key))return;path.add(key);for(const parent of byId.get(key)?.requires??[])visit(parent);};
  visit(id);return path;
 }
-export function researchLayout<T extends {id:string;requires:readonly string[]}>(techs:readonly T[]) {
+export function researchLayout<T extends {id:string;requires:readonly string[]}>(techs:readonly T[],maxColumns=Infinity) {
  const byId=new Map(techs.map(t=>[t.id,t])),depths=new Map<string,number>(),visiting=new Set<string>();
  const depth=(id:string):number=>{
   if(depths.has(id))return depths.get(id)!;
@@ -15,12 +15,15 @@ export function researchLayout<T extends {id:string;requires:readonly string[]}>
  };
  const rows:T[][]=[];
  for(const t of techs)(rows[depth(t.id)]??=[]).push(t);
- const width=Math.max(1,...rows.map(row=>row.length))*204;
+ const columns=Math.max(1,Math.min(Math.floor(maxColumns),Math.max(1,...rows.map(row=>row.length))));
+ const width=columns*204;
  const positions=new Map<string,{x:number;y:number}>();
+ let rowOffset=0;
  for(let d=0;d<rows.length;d++){
   const mean=(t:T)=>t.requires.length?t.requires.reduce((n,id)=>n+positions.get(id)!.x,0)/t.requires.length:0;
   rows[d].sort((a,b)=>mean(a)-mean(b));
-  rows[d].forEach((t,i)=>positions.set(t.id,{x:(width-((rows[d].length-1)*204+188))/2+i*204,y:d*184}));
+  rows[d].forEach((t,i)=>{const count=Math.min(columns,rows[d].length-Math.floor(i/columns)*columns);positions.set(t.id,{x:(width-((count-1)*204+188))/2+(i%columns)*204,y:(rowOffset+Math.floor(i/columns))*184});});
+  rowOffset+=Math.ceil(rows[d].length/columns);
  }
- return {ordered:rows.flat(),positions,width,height:rows.length?((rows.length-1)*184+104):0};
+ return {ordered:rows.flat(),positions,width,height:rowOffset?((rowOffset-1)*184+104):0};
 }

@@ -1,7 +1,7 @@
 import {createContext,useContext,useEffect,useState} from 'react';
 
-export const tokenDefaults={windowWidth:420,windowHeight:560,detailWidth:520,detailHeight:640,controlHeight:36,corner:5,controlIcon:16,numberSize:14,compactNumberSize:12,metricNumberSize:20,bodySize:14,artSize:48,barHeight:7,rowHeight:32};
-const properties:Record<keyof typeof tokenDefaults,string>={windowWidth:'--gu-window-width',windowHeight:'--gu-window-height',detailWidth:'--gu-detail-width',detailHeight:'--gu-detail-height',controlHeight:'--gu-control',corner:'--gu-control-radius',controlIcon:'--gu-control-icon',numberSize:'--gu-number-size',compactNumberSize:'--gu-number-compact-size',metricNumberSize:'--gu-metric-number-size',bodySize:'--gu-body-size',artSize:'--gu-art-size',barHeight:'--gu-bar-height',rowHeight:'--gu-row'};
+export const tokenDefaults={windowWidth:420,windowHeight:560,controlHeight:36,corner:5,controlIcon:16,numberSize:14,compactNumberSize:12,metricNumberSize:20,bodySize:14,artSize:48,barHeight:7,rowHeight:32};
+const properties:Record<keyof typeof tokenDefaults,string>={windowWidth:'--gu-window-width',windowHeight:'--gu-window-height',controlHeight:'--gu-control',corner:'--gu-control-radius',controlIcon:'--gu-control-icon',numberSize:'--gu-number-size',compactNumberSize:'--gu-number-compact-size',metricNumberSize:'--gu-metric-number-size',bodySize:'--gu-body-size',artSize:'--gu-art-size',barHeight:'--gu-bar-height',rowHeight:'--gu-row'};
 export const DesignTokens=createContext(tokenDefaults);
 export const useDesignTokens=()=>useContext(DesignTokens);
 /** Numeric layout tokens are measured once, then on actual stylesheet/theme changes. */
