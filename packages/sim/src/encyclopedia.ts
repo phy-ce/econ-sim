@@ -46,6 +46,7 @@ import {
 import type { BudgetLineKey } from './budget';
 import { MAX_CONCURRENT_CONSTRUCTIONS, MAX_LEVELS_PER_PROJECT } from './commands';
 import { START_CASH, START_FIRM_CASH, START_OFFICE_LEVELS, START_SCHOOL_LEVELS, START_TECHS, START_TRADE_LEVELS, createWorld } from './world';
+import { warmUp } from './tick';
 import { regionNameEn } from './i18n';
 import { BUDGET_STEPS, POP_CLASSES, SKILLS, educationOf, literacyOf, wealthOf } from './types';
 import type { Building, Company, GoodId, Kingdom, PopClass, Region, Skill, World } from './types';
@@ -155,7 +156,7 @@ export function methodMarginAtBase(typeId: string, methodId: string) {
 let exWorld: World | null = null;
 /** 예시용 고정 세계 (시드 1, 첫날). 예시는 이 세계를 읽기만 한다 */
 export function exampleWorld(): World {
-  return (exWorld ??= createWorld(1));
+  return (exWorld ??= TUNE.warmupDays > 0 ? warmUp(createWorld(1), TUNE.warmupDays) : createWorld(1));
 }
 
 /** 예산 미리보기 줄 이름 */
@@ -248,11 +249,12 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   },
   {
     id: 'start-state', category: 'basics', title: t('시작 상태', 'Starting state'),
-    rule: t('지역 티어가 인구·계층·교육·농지를 정하고 ±{0} 흔든다. 공장 부지는 지역마다 정해져 있고 ±{3}만 흔든다. 민간 상회는 {1}으로 시작한다. 왕국마다 인구가 가장 많은 지역이 수도다. 건축사무소·행정청·학교와 금고를 채운 민간 무역소 {2}가 그곳에 있다. 은행은 없다.', 'Region tiers set population, classes, education and farmland, jittered by ±{0}. Building plots are fixed per region, jittered by only ±{3}. Private houses start with {1}. Each kingdom\'s most populous region is its capital, with the construction office, administration, school and a private trading post of {2} with a full vault. There is no bank.'),
+    rule: t('지역 티어가 인구·계층·교육·농지를 정하고 ±{0} 흔든다. 공장 부지는 지역마다 정해져 있고 ±{3}만 흔든다. 민간 상회는 {1}으로 시작한다. 왕국마다 인구가 가장 많은 지역이 수도다. 건축사무소·행정청·학교와 금고를 채운 민간 무역소 {2}가 그곳에 있다. 은행은 없다. 게임이 시작되기 전에 {4}일 동안 시장·임금·세금·배당·왕실 예산(주조·이자·복지 포함)을 돌린다. 그동안 인구·건물·기술은 그대로이고 AI와 기상 조건은 없다. 시작 돈은 돌리기 전 값이고, 첫날 금고는 그 뒤의 값이다.', 'Region tiers set population, classes, education and farmland, jittered by ±{0}. Building plots are fixed per region, jittered by only ±{3}. Private houses start with {1}. Each kingdom\'s most populous region is its capital, with the construction office, administration, school and a private trading post of {2} with a full vault. There is no bank. Before the game starts, markets, wages, taxes, dividends and the crown budget (minting, interest and welfare included) run for {4} days. Population, buildings and technology stay as they are, with no AI and no harvest conditions. Starting money is the value before this run; day-one balances are what remains after it.'),
     params: [
       p('티어 흔들림', 'Tier jitter', () => TIER_JITTER, 'pct'), p('민간 상회 시작 현금', 'Private start cash', () => START_CASH, 'florin'),
       p('시작 무역소 (왕국마다)', 'Starting trading post (per kingdom)', () => START_TRADE_LEVELS, 'level'),
       p('부지 흔들림', 'Plot jitter', () => PLOT_JITTER, 'pct'),
+      tune('warmupDays', '시작 전 일수', 'Days before the start', 'day'),
       tune('startTreasuryWeeks', '시작 국고 (정부 건물 운영비 주 수)', 'Start treasury (weeks of government upkeep)', 'week'),
       p('시작 건축사무소', 'Starting construction office', () => START_OFFICE_LEVELS, 'level'),
       p('시작 학교 (왕실마다, 수도)', 'Starting school (per crown, capital)', () => START_SCHOOL_LEVELS, 'level'),
@@ -271,7 +273,7 @@ export const ENCYCLOPEDIA: EncEntry[] = [
       };
     },
     live: { pick: [], run: (w) => ({ rows: w.regions.map((r) => ({ label: regionLabel(r), value: `T${r.tier ?? '-'} · ${Math.round(regionPeople(w, r.id)).toLocaleString()}` })) }) },
-    related: ['regions-kingdoms', 'tenant-farms', 'treasury'], seenIn: ['map', 'region'], source: ['world.ts', 'data.ts'], design: ['1'],
+    related: ['regions-kingdoms', 'tenant-farms', 'treasury', 'start-wealth'], seenIn: ['map', 'region'], source: ['world.ts', 'data.ts', 'tick.ts warmUp'], design: ['1'],
   },
   {
     id: 'day-order', category: 'basics', title: t('하루 순서', 'Order of a day'),
@@ -641,15 +643,15 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   },
   {
     id: 'land', category: 'construction', title: t('땅', 'Land'),
-    rule: t('1레벨 = 1칸. 농지·산림·광맥·공장 부지가 있다. 공사 중인 칸도 쓰인 것으로 센다. 행정청·학교는 땅을 쓰지 않는다. 동시 공사 {0}건, 한 건 1~{1}레벨.', 'One level = one cell of farmland, forest, veins or building plots. Cells under construction count as used. Administration and schools use no land. Up to {0} concurrent projects of 1–{1} levels.'),
-    params: [p('동시 공사', 'Concurrent projects', () => MAX_CONCURRENT_CONSTRUCTIONS), p('한 공사 최대 레벨', 'Max levels per project', () => MAX_LEVELS_PER_PROJECT, 'level')],
+    rule: t('1레벨 = 1칸. 농지·산림·광맥·공장 부지가 있다. 공사 중인 칸도 쓰인 것으로 센다. 행정청·학교는 땅을 쓰지 않는다. 동시 공사 {0}건. 한 명령은 1~{1}레벨이고, 플레이어의 여러 레벨은 1레벨 공사로 나뉘어 들어가며 막히면 들어간 만큼만 남는다.', 'One level = one cell of farmland, forest, veins or building plots. Cells under construction count as used. Administration and schools use no land. Up to {0} concurrent projects. One order covers 1–{1} levels; a player order is split into one-level projects, and if blocked only those already placed remain.'),
+    params: [p('동시 공사', 'Concurrent projects', () => MAX_CONCURRENT_CONSTRUCTIONS), p('한 명령 최대 레벨', 'Max levels per order', () => MAX_LEVELS_PER_PROJECT, 'level')],
     live: {
       pick: ['region'], run: (w, ctx) => {
         const r = regionOf(w, ctx);
         return { bars: (['arable', 'forest', 'ore', 'plot'] as const).map((l) => bar(t(l, l), landUsed(w, r.id, l), 'level', Math.max(1, landUsed(w, r.id, l) + landFree(w, r.id, l)))) };
       },
     },
-    related: ['forests-veins', 'tenant-farms', 'ai-swap'], seenIn: ['region'], source: ['economy.ts landFree'], design: ['8'],
+    related: ['forests-veins', 'tenant-farms', 'ai-swap'], seenIn: ['region'], source: ['economy.ts landFree', 'commands.ts startProjects'], design: ['8'],
   },
   {
     id: 'privatize', category: 'construction', title: t('레벨 주인과 민영화', 'Level owners and privatisation'),

@@ -5,11 +5,14 @@ export { splitKingdoms, START_CASH, START_TRADE_LEVELS, PLAYER_ID } from './worl
 import { createWorld as createBareWorld } from './world';
 import type { CreateWorldOptions } from './world';
 import { stampRules } from './save/rulesHash';
+import { TUNE } from './data';
+import { warmUp } from './tick';
 export { rulesHash, RULES_REV } from './save/rulesHash';
 export { aiRand, aiRandTrace, strKey } from './rng/aiRand';
 /** 새 세계 (world.ts) 에 지금 규칙 판·해시(config.rulesRev·rulesHash)를 단다. 규칙 식별은 저장 층(save/)의 일이라 sim 코어 대신 공개 통로에서 붙인다 */
 export function createWorld(seed = 1, opts: CreateWorldOptions = {}) {
-  return stampRules(createBareWorld(seed, opts));
+  const w = stampRules(createBareWorld(seed, opts));
+  return TUNE.warmupDays > 0 && opts.warm !== false ? warmUp(w, TUNE.warmupDays) : w;
 }
 export { postCap, postUsable, wealthDrivers } from './market';
 export { subsistenceWage, marketWageTargets } from './labor';

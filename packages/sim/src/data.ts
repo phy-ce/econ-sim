@@ -740,6 +740,7 @@ export const TUNE = {
   startLumber: 1.2, // 1레벨이 일꾼 500명이 되어 1,000명 시절 0.6·0.2의 두 배
   startFiber: 0.4,
   startWorkshop: 3, // 1·2·3 비교 (DESIGN 11)
+  warmupDays: 60, // 시작 전 시장 돌리기 일수 (tick.ts warmUp, DESIGN 11장). 0 = 끔
   // 시작 인구 배율 (2026-11-01 사용자 "노동자 공급을 받아 주면서 임금을 유지할 만큼의 산업 성장이 일어나지 않는 것 같은데. 초기 인구를 좀 줄여볼까?", 비교용).
   // 1 = 지금 세계 (비트 동일). 후보 0.75 / 0.5 × startPopLand 0 / 1 (docs/overhaul/POP_SPECS.json). 비교 중, 근거 없음
   startPopScale: 1,

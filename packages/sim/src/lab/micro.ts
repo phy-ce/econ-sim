@@ -184,7 +184,7 @@ export function createMicroWorld(opts: MicroOptions = {}): World {
 
   // 1) 본 게임 값으로 빌려 올 세계 (축소를 끈 표로)
   restoreMicroScale();
-  const base = createWorld(seed, { withPlayer: false, ai: opts.ai ?? true, aiSalt: opts.aiSalt ?? 0 });
+  const base = createWorld(seed, { withPlayer: false, ai: opts.ai ?? true, aiSalt: opts.aiSalt ?? 0, warm: false });
   const k0 = base.kingdoms[0];
   const mine = base.regions.filter((r) => r.kingdomId === k0.id);
   const fullPeople = peopleOf(base, mine.map((r) => r.id));

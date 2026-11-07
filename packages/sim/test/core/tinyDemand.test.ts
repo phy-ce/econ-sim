@@ -7,7 +7,7 @@ import { clearMarkets, collectOrders, newBook, resetMarkets } from '../../src/ma
 // (마이크로 세계 도구가 찾음, 2026-11-01). 같은 문턱으로 계획량도 0 으로 둔다.
 describe('아주 작은 가계 수요', () => {
   it('시장 수요에 넣지 않은 계획량은 돈을 내지 않는다', () => {
-    const w = createWorld(7, { withPlayer: false });
+    const w = createWorld(7, { withPlayer: false, warm: false });
     const r = w.regions[0];
     // 그 지역의 다른 수요를 모두 없앤다: 건물은 쉬게 하고, 다른 pop 은 소비하지 않는 크기로
     for (const b of w.buildings) b.active = false;
