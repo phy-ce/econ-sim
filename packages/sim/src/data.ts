@@ -743,11 +743,9 @@ export const TUNE = {
   warmupDays: 60, // 시작 전 시장 돌리기 일수 (tick.ts warmUp, DESIGN 11장). 0 = 끔
   // 시작 인구 배율 (2026-11-01 사용자 "노동자 공급을 받아 주면서 임금을 유지할 만큼의 산업 성장이 일어나지 않는 것 같은데. 초기 인구를 좀 줄여볼까?", 비교용).
   // 1 = 지금 세계 (비트 동일). 후보 0.75 / 0.5 × startPopLand 0 / 1 (docs/overhaul/POP_SPECS.json). 비교 중, 근거 없음
-  autoOutput: 0, // 1 이면 건물이 공급 ÷ 수요를 보고 가동률을 스스로 정한다 (production.ts adjustOutput)
-  outputWeeks: 4, // 생산량 탐색 주기 (주)
+  outputWeeks: 8, // 생산량 탐색 주기 (주, production.ts adjustOutput, DESIGN 11장)
   outputStep: 0.1, // 한 번에 움직이는 가동률
-  aiGrowUtil: 0.9, // AI 증설: 가동률이 이 값 아래면 늘리지 않는다
-  outputBand: 0.05, // 공급 ÷ 수요가 1 + 이 값을 넘으면 줄인다
+  outputBand: 0.25, // 공급 ÷ 수요가 1 + 이 값을 넘으면 줄인다
   startPopScale: 1,
   startPopLand: 0,
   // AI 수정 비교 (2026-10-22, 기본값 = 지금 동작). crownGdpReserve: 왕실이 남길 국고 = 연간 총생산 × 이 비율 (0 = 지출 treasuryHighWeeks 주치)

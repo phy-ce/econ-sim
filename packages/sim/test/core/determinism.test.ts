@@ -49,7 +49,7 @@ describe('결정성', () => {
     const b = w.buildings.find((x) => x.companyId === firm.id && x.active && !BUILDING_BY_ID[x.typeId].auto && !isGovernment(x.typeId))!;
     const cmds: QueuedCommand[] = [
       { actor: firm.id, cmd: { type: 'setWageOffset', skill: 'unskilled', offset: 0.123456 } },
-      { actor: firm.id, cmd: { type: 'setUtilization', buildingId: b.id, utilization: 0.3333333 } },
+      { actor: firm.id, cmd: { type: 'setActive', buildingId: b.id, active: false } },
     ];
     const a = reload(w), q = reload(w);
     for (const c of cmds) expect(applyCommandMsg(a, c.actor, c.cmd)).toBeNull();

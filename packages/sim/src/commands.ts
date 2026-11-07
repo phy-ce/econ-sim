@@ -174,15 +174,9 @@ function runCommand(w: World, actor: number, cmd: Command): CommandError | null 
       b.active = cmd.active;
       return null;
     }
-    case 'setUtilization': {
-      const b = ownBuilding(cmd.buildingId);
-      if (!b) return fail('소유한 건물이 아닙니다.', 'You do not own that building.');
-      if (BUILDING_BY_ID[b.typeId].auto) return autoError();
-      if (company.state && isGovernment(b.typeId)) return govRunError();
-      if (!Number.isFinite(cmd.utilization)) return fail('잘못된 가동률입니다.', 'Invalid utilisation.');
-      b.utilization = Math.min(1, Math.max(0.1, cmd.utilization));
-      return null;
-    }
+    // 화면 슬라이더를 지울 때까지 명령 이름만 남긴다 (UI_CHANGES 2-99)
+    case 'setUtilization':
+      return fail('가동률은 건물이 공급과 수요를 보고 스스로 정합니다.', 'Buildings set their own utilisation from supply and demand.');
     case 'demolish': {
       const b = ownBuilding(cmd.buildingId);
       if (!b) return fail('소유한 건물이 아닙니다.', 'You do not own that building.');

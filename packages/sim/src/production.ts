@@ -140,6 +140,9 @@ export function updateIdleOffices(w: World) {
   }
 }
 
+/** 투입 충족이 이 값 미만이면 가동률을 올리지 않는다 (올리면 더 모자란다). 근거 없음 */
+export const RAISE_FILL = 0.9;
+
 /** 이 건물 산출의 공급 ÷ 수요 (지역 시장, 기본가로 가중). 수요가 없으면 큰 값 */
 function outputSD(w: World, b: Building): number | null {
   const r = regionById(w, b.regionId);
@@ -153,12 +156,12 @@ function outputSD(w: World, b: Building): number | null {
 }
 
 /**
- * 생산량 탐색 (TUNE.autoOutput): 파는 건물은 TUNE.outputWeeks 주마다 가동률을 TUNE.outputStep 씩 움직인다. 가동률이 고용·투입·산출을 함께 움직인다.
+ * 생산량 탐색: 파는 건물은 TUNE.outputWeeks 주마다 가동률을 TUNE.outputStep 씩 움직인다. 가동률이 고용·투입·산출을 함께 움직인다.
  * 공급 ÷ 수요가 1 + TUNE.outputBand 를 넘거나, 적자이거나, 지난번에 올린 뒤 이익이 줄었으면 내린다.
  * 그 밖에는 원료가 있으면 올려 본다: 수요는 고용과 임금이 늘어야 커지므로, 이익이 줄어들 때까지 먼저 늘린다
  */
 export function adjustOutput(w: World) {
-  if (!TUNE.autoOutput || w.tick % (TUNE.outputWeeks * TICKS_PER_WEEK) !== 0) return;
+  if (w.tick % (TUNE.outputWeeks * TICKS_PER_WEEK) !== 0) return;
   for (const b of w.buildings) {
     if (!b.active || BUILDING_BY_ID[b.typeId].auto || b.typeId === TRADING_POST) continue;
     const sd = outputSD(w, b);
@@ -167,7 +170,7 @@ export function adjustOutput(w: World) {
     delete b.probeProfit;
     if (sd > 1 + TUNE.outputBand || fell || (b.profitEma < 0 && !b.reserve)) {
       b.utilization = Math.max(0.1, b.utilization - TUNE.outputStep);
-    } else if (b.utilization < 1 && b.last.inputFill >= 0.9) {
+    } else if (b.utilization < 1 && b.last.inputFill >= RAISE_FILL) {
       b.probeProfit = b.profitEma;
       b.utilization = Math.min(1, b.utilization + TUNE.outputStep);
     }

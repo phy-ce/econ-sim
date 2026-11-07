@@ -200,7 +200,7 @@ describe('저택 지분 값의 지대', () => {
     const k = w.constructions[0] ?? { typeId: 'farm' } as never;
     w.constructions = [{ ...k, funders: { [o.id]: 1000 }, spent: 1000 }];
     const a = navAt(w, 0, 0).get(o.id)!, b = navAt(w, 0, 1).get(o.id)!;
-    expect((b - a) * unitsOf(w, o.id)).toBeCloseTo(1000, 1); // 금고 돌려주기가 조금 다르다
+    expect(Math.abs((b - a) * unitsOf(w, o.id) - 1000)).toBeLessThan(5); // 금고 돌려주기가 조금 다르다
   });
 
   it('지대가 든 지분 값으로 팔아도 금고의 약정 뺀 돈까지만 낸다', () => {

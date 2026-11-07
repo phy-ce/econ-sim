@@ -9,6 +9,9 @@
 - 클라우드 세션(claude.ai/code)으로 이어서 할 수 있다. 규칙은 CLAUDE.md "클라우드 세션"을 본다.
 - 옛 세션 기록: `docs/log/` (2026-10-25 이전 HANDOFF 절은 `docs/log/HANDOFF_2026-10-18_to_10-25.md`, 날짜별 UI 기록도 여기). 다른 문서의 "HANDOFF 0-ind3"·"HANDOFF 0-aifix" 같은 옛 절 참조는 그 파일에 있다.
 
+## 0-1107-autooutput
+- 가동률을 건물이 스스로 정한다 (`adjustOutput`, DECISIONS 7-60, 보고서 2026-11-07-autooutput). 시험 뒤 `npm run golden:update`. 슬라이더 삭제는 UI_CHANGES 2-99. 화면이 지워지면 `setUtilization` 명령 타입을 지운다.
+
 ## 0-1107-finance
 - 금융가 성과급 10% → 2%, 보장 임금 20 → 14 (DECISIONS 7-59, 보고서 2026-11-07-finance). 시험 뒤 `npm run golden:update`. 임금 14 는 7-19 와, 성과급 2% 는 둥근 값 규칙과 어긋나 사용자 확인을 기다린다 (7-59 결정 대기).
 

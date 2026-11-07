@@ -30,12 +30,12 @@ import {
   birthRateAt, mortalityAt, workforce,
 } from './pops';
 import { HIRE_RATE, MARKET_WAGE_RANGE, MIGRATE_FULL, MIGRATE_MAX, MIGRATE_START, UNPAID_QUIT, WAGE_AVG_DAYS, subsistenceWage, switchShare } from './labor';
-import { CREW_RATE, EXP_GAIN, officeLoad } from './production';
+import { CREW_RATE, EXP_GAIN, RAISE_FILL, officeLoad } from './production';
 import {
   DAILY_INTEREST, KEEP_SHARE, TREASURY_RELEASE, MINT_BASE, MINT_RATE, RESERVE_SHARE, kingdomLiteracy, researchPoints, adminCapacityOf, reserveCap, taxCapacity, taxRates,
   weeklyOutputValue, RENT_ASSET_WEEKS,
 } from './finance';
-import { AI_JITTER, CHUNKS, INPUT_SUPPLY_MIN, MIXED_LEVELS, RAISE_FILL, RESERVE_STREAK, STARVE_FILL, TRIAL_PRICE, LAW_COOLDOWN, LAW_SWITCH, WELFARE_COOLDOWN, WELFARE_SWITCH, OFFICE_BLOCK, OFFICE_GROWTH, STAFFING_HORIZON, SWITCH_COOLDOWN, SWITCH_GAIN, SWITCH_FLOOR, ADMIN_SWITCH_GAIN, ADMIN_STAFFED, PREMIUM_MAX, PREMIUM_STEP, RAMP_WEEKS, STATE_HIRE_PULL, TRIM_WAIT_WEEKS } from './ai';
+import { AI_JITTER, CHUNKS, INPUT_SUPPLY_MIN, MIXED_LEVELS, RESERVE_STREAK, STARVE_FILL, TRIAL_PRICE, LAW_COOLDOWN, LAW_SWITCH, WELFARE_COOLDOWN, WELFARE_SWITCH, OFFICE_BLOCK, OFFICE_GROWTH, STAFFING_HORIZON, SWITCH_COOLDOWN, SWITCH_GAIN, SWITCH_FLOOR, ADMIN_SWITCH_GAIN, ADMIN_STAFFED, PREMIUM_MAX, PREMIUM_STEP, RAMP_WEEKS, STATE_HIRE_PULL, TRIM_WAIT_WEEKS } from './ai';
 import { budgetPreview } from './budget';
 import { ownershipAssets } from './policy';
 import { welfareCapDaily, welfareIncome, welfareTarget, welfareWeekly } from './welfare';
@@ -1406,10 +1406,10 @@ export const ENCYCLOPEDIA: EncEntry[] = [
     related: ['input-fill', 'admin-capacity', 'methods-rule'], seenIn: ['company'], source: ['ai.ts manageBuildings'], design: ['10'],
   },
   {
-    id: 'ai-utilization', category: 'ai', title: t('가동률', 'Utilisation'),
-    rule: t('유보 자산이 남아 있으면 줄이지 않는다 (투입 충족 < {2}가 {0}주 이어진 건물은 유보 자산이 있어도 줄인다, 0이면 끔). 4주 연속 크게 적자(마진 < −20%)면 −10% (최소 10%, 잠재 수요 체인의 선구 건물은 깎지 않는다), 마진 > 0이면 +10% ({0} > 0이면 투입 충족이 {1} 이상일 때만). 기상 조건 적자는 세지 않는다. 왕실 정부 건물은 늘 100%다.', 'No cuts while a reserve remains (a building whose input fill stayed under {2} for {0} weeks is cut even with a reserve; 0 = off). Four weeks of heavy losses (margin < −20%) cut 10% (min 10%, except pioneers of a latent-demand chain); positive margin adds 10% (with {0} > 0 only when input fill is at least {1}). Weather losses do not count. Crown government buildings stay at 100%.'),
-    params: [tune('starveWeeks', '굶은 주 수', 'Starved weeks', 'week'), p('올리는 투입 충족', 'Fill needed to raise', () => RAISE_FILL, 'pct'), p('굶는 투입 충족', 'Starving fill', () => STARVE_FILL, 'pct')],
-    related: ['reserves', 'profit', 'harvest-conditions', 'ai-reserve'], seenIn: ['company'], source: ['ai.ts manageBuildings', 'ai.ts latentPioneer'], design: ['10'],
+    id: 'ai-utilization', category: 'production', title: t('가동률', 'Utilisation'),
+    rule: t('파는 건물은 {0}주마다 가동률을 {1}씩 스스로 움직인다. 가동률이 고용·투입·산출을 함께 움직인다. 공급 ÷ 수요가 1 + {2}를 넘거나, 유보 자산 없이 적자이거나, 지난번에 올린 뒤 이익이 줄었으면 내린다. 그 밖에는 투입 충족이 {3} 이상이면 올려 본다. 가동률은 10%~100%다. 왕실 정부 건물·건축사무소·무역소는 늘 100%다.', 'Buildings that sell goods move their own utilisation by {1} every {0} weeks. Utilisation moves jobs, inputs and output together. It falls when supply ÷ demand is above 1 + {2}, when there is a loss with no reserve, or when profit fell after the last rise. Otherwise it tries a rise if input fill is at least {3}. Utilisation stays between 10% and 100%. Crown government buildings, construction offices and trading posts stay at 100%.'),
+    params: [tune('outputWeeks', '탐색 주기', 'Search period', 'week'), tune('outputStep', '한 번에 움직이는 양', 'Step', 'pct'), tune('outputBand', '공급 초과 허용', 'Oversupply allowed', 'pct'), p('올리는 투입 충족', 'Fill needed to raise', () => RAISE_FILL, 'pct')],
+    related: ['reserves', 'profit', 'ai-reserve'], seenIn: ['company'], source: ['production.ts adjustOutput'], design: ['7.1'],
   },
   {
     id: 'ai-research', category: 'ai', title: t('연구 고르기', 'Choosing research'),

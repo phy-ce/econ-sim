@@ -511,8 +511,6 @@ export const STARVE_FILL = 0.5;
 function starving(b: Building): boolean {
   return TUNE.starveWeeks > 0 && (b.starvedWeeks ?? 0) >= TUNE.starveWeeks;
 }
-/** TUNE.starveWeeks > 0: 투입 충족이 이 값 미만이면 가동률을 올리지 않는다 (올리면 더 모자란다). 근거 없음 */
-export const RAISE_FILL = 0.9;
 
 /** 행정청용: 그 왕국 시장들에 남는 투입재(공급 − 수요, 이동평균)가 이 방식 levels 레벨의 하루 필요의 절반 이상인가 */
 function kingdomInputs(w: World, kingdomId: number, m: MethodDef, levels: number): boolean {
@@ -565,7 +563,6 @@ function manageBuildings(w: World, c: Company, o: Outlook, pools: Map<string, nu
         if (best !== cur) { applyCommand(w, c.id, { type: 'setMethod', buildingId: b.id, methodId: best.id }); takeFromPool(w, r, best, b.level, c.state, pools, b); }
       }
       if (!b.active) applyCommand(w, c.id, { type: 'setActive', buildingId: b.id, active: true });
-      if (b.utilization < 1) applyCommand(w, c.id, { type: 'setUtilization', buildingId: b.id, utilization: 1 });
       continue;
     }
     const wages = wagesAt(c, b.typeId, w, b.regionId);
@@ -636,28 +633,10 @@ function manageBuildings(w: World, c: Company, o: Outlook, pools: Map<string, nu
       b.pausedWeeks += 1;
       if (current.margin > 0.05 && inputsAvailable(w, cur, b.level, b)) {
         applyCommand(w, c.id, { type: 'setActive', buildingId: b.id, active: true });
-        applyCommand(w, c.id, { type: 'setUtilization', buildingId: b.id, utilization: 0.3 });
+        b.utilization = 0.3;
         b.lossWeeks = 0; b.profitEma = 0;
       }
       continue;
-    }
-    // TUNE.autoOutput: 가동률은 건물이 스스로 정한다 (production.ts adjustOutput)
-    if (TUNE.autoOutput) continue;
-    // 적자면 끄지 않고 가동률부터 줄인다 (4주마다 10%씩). 철거는 planConstruction 이 짓기와 같은 계산으로 정한다.
-    // 기상 조건이 걸린 동안의 적자는 일시적이라 세지 않는다
-    const cost = b.last.inputCost + b.last.wageCost;
-    const actualMargin = cost > 0 ? (b.last.revenue - cost) / cost : 0;
-    // 유보 자산이 남아 있으면 적자를 거기서 메우고 가동률을 줄이지 않는다. 다만 굶는 건물(starving)은 유보 자산이 있어도 줄인다
-    const hungry = starving(b);
-    const bleeding = (hungry || !b.reserve) && harvestFactor(w, b.regionId, BUILDING_BY_ID[b.typeId].land) >= 1 && b.profitEma < 0 && (current.margin < -0.2 || actualMargin < -0.2) && !latentPioneer(w, b);
-    b.lossWeeks = bleeding ? b.lossWeeks + 1 : 0;
-    if (b.lossWeeks >= 4 && b.utilization > 0.1 + 1e-9) {
-      applyCommand(w, c.id, { type: 'setUtilization', buildingId: b.id, utilization: Math.max(0.1, b.utilization - 0.1) });
-      b.lossWeeks = 0;
-      aiTrace.on?.(w, c, 'lossCut', b.typeId, b.methodId, 0, undefined, b.regionId);
-    } else if (b.utilization < 1 && current.margin > 0 && !(TUNE.starveWeeks > 0 && b.last.inputFill < RAISE_FILL)) {
-      applyCommand(w, c.id, { type: 'setUtilization', buildingId: b.id, utilization: b.utilization + 0.1 });
-      aiTrace.on?.(w, c, 'utilUp', b.typeId, b.methodId, 0, undefined, b.regionId);
     }
   }
 }
@@ -1315,8 +1294,6 @@ function reserveLevels(w: World, c: Company, canStart: () => boolean, free: () =
     const fillR = cap > 0 ? res / cap : 0;
     const pGrow = TUNE.reserveGrowMax * clamp((fillR - TUNE.reserveGrowFrom) / Math.max(1e-9, 1 - TUNE.reserveGrowFrom), 0, 1);
     let rich = aiRand(w, 'grow', keyCompany(c.id), keyRegion(b.regionId), keyStr(b.typeId), keyStr(b.methodId), keyWeek(w.tick), keyIdx(idx)) < pGrow;
-    // TUNE.autoOutput: 있는 레벨을 다 돌리지 않는 건물은 늘리지 않는다
-    if (rich && TUNE.autoOutput && b.utilization < TUNE.aiGrowUtil) rich = false;
     // 과잉 검사 (TUNE.aiGlutSD > 0, 오버홀 03 5-1): 그 지역 그 방식 산출의 예상 공급 ÷ 수요 (산출이 여럿이면 기본가 값으로 가중 평균, methodSD)
     // (공사 중 레벨 산출 포함, projectedSD)가 임계를 넘으면 이번 주 증설 확률 0 (찬 주로 세지 않는다). aiRand 는 키 해시라 막아도 다른 난수가 밀리지 않는다
     if (rich && TUNE.aiGlutSD > 0) {
