@@ -33,7 +33,7 @@
 | 통계·소식 (`trends`) | 접고 순서를 바꾸는 구역들 (`SectionStack`): 경제 추이 9지표, 요약, 인구, 왕국 경제, 왕국 비교, 기상, 소식 |
 
 ### 2.3 서브윈도우 (`views/DetailWindow.tsx`)
-- 주 창 안 내용을 덮지 않는 비모달 창. `document.body` portal, 제목 드래그·Esc 닫기·닫을 때 연 버튼으로 포커스 복원. 크기는 고정이고 값은 토큰에 있다 (주 창보다 크지 않다, DECISIONS 7-62).
+- 주 창 안 내용을 덮지 않는 비모달 창. `document.body` portal, 제목 드래그·Esc 닫기·닫을 때 연 버튼으로 포커스 복원. 크기는 서브창1~4 로 고정이고 값은 토큰에 있다. 되도록 작은 번호를 쓴다 (UI_CHANGES 2-100, DECISIONS 7-62).
 - workspace 경계 안으로 위치·최대 크기를 맞춘다 (ResizeObserver).
 - 창마다 자기 탐색 이력(뒤로/앞으로)을 가진다 (`DetailWindow.tsx:21`, 2026-11-01).
 

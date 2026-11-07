@@ -208,11 +208,15 @@ sim은 `setUtilization`을 거부한다 (`commands.ts:178`). 지금 슬라이더
 | 창 | 크기 | 쓰는 곳 |
 |---|---|---|
 | 주 창 | 420×560 | 지금 그대로 |
-| 서브창 | 420×420 | 모든 `DetailWindow` |
-| 넓은 서브창 | 840×560 | 연구 계통도 하나만 |
+| 서브창1 | 320×240 | 짧은 내역: 유보 자산 (`ReserveBar.tsx:14`), 건물 지표 (`BuildingMetricBars.tsx:14`), 교육 (`RegionExplorer.tsx:36`) |
+| 서브창2 | 360×360 | 표나 그림 하나: 소유 (`OwnershipBar.tsx:35`), 인구 구성·토지·임금 (`RegionExplorer.tsx:32~41`), 재정 자세히 (`FinancePanel.tsx:54`) |
+| 서브창3 | 420×420 | 구역이 여럿: 건물 관리 (`ConstructionPanel.tsx:48`, `RegionIndustry.tsx:44`) |
+| 서브창4 | 840×560 | 연구 계통도 (`ResearchPanel.tsx:42`) 하나만 |
+
+사용자: "서브창을 몇 개로 나누고, 웬만하면 작은 쪽을 써. 서브창1 서브창2 이런 식으로 네이밍". 위 배정은 코드만 보고 정한 첫 배정이다. 되도록 작은 번호를 쓴다. 내용이 안 들어가면 먼저 줄이고, 그래도 안 되면 한 단계 위로 올린 뒤 UI_STATUS 에 적는다.
 
 고칠 것:
-1. 토큰 `--gu-detail-width`·`--gu-detail-height` 를 420·420 으로 바꾸고, 넓은 서브창 크기를 토큰으로 더한다. 창 크기 숫자는 토큰에만 둔다.
+1. 토큰 `--gu-detail-width`·`--gu-detail-height` 를 서브창1~4 토큰으로 바꾸고, `DetailWindow` 에 크기 번호를 받는 속성을 둔다. 기본값은 서브창1 이다. 창 크기 숫자는 토큰에만 둔다.
 2. 크기는 고정이다. 플레이어가 크기를 바꾸지 않는다. 서브창에 크기 조절이 남아 있으면 지운다. 위치 이동은 그대로 둔다.
 3. 옛 크기 규칙을 지운다: `strategy.css:55`·`:82` (`.strategy-panel` 폭·높이, `.window-finance`, `.window-trends`), `:177` (`.detail-window` 420×460, 최소 크기). 재정·통계 창이 420 이 아닌 폭으로 뜨고 있으면 420 에 맞춘다.
 4. 요소를 창에 맞춘다. 기준은 시세 창(`MarketWindow.tsx`)이다.
@@ -221,8 +225,7 @@ sim은 `setUtilization`을 거부한다 (`commands.ts:178`). 지금 슬라이더
    - 표는 왼쪽에 아이콘과 이름, 오른쪽에 숫자. 정렬은 표 머리로 한다.
    - 가로 스크롤은 없다. 세로 스크롤만 쓴다. 시세 표의 `table.goods{min-width:440px}` (`strategy.css:64`)가 420 창에서 넘치는지도 본다.
    - 내용이 넘치면 창을 키우지 않고 구역을 접거나 서브창으로 보낸다.
-5. 맞출 서브창: 건물 관리 (`ConstructionPanel.tsx:48`, `RegionIndustry.tsx:44`), 재정 자세히 (`FinancePanel.tsx:54`), 소유 (`OwnershipBar.tsx:35`), 인구 구성·토지·교육·임금 (`RegionExplorer.tsx:32~41`), 유보 자산 (`ReserveBar.tsx:14`), 건물 지표 (`BuildingMetricBars.tsx:14`).
-6. 어떤 서브창이 420×420 에 도저히 안 들어가면 크기를 늘리지 말고 UI_STATUS 에 적고 묻는다.
+5. 서브창3 에도 안 들어가는 창은 크기를 늘리지 말고 UI_STATUS 에 적고 묻는다.
 
 확인: 위 창을 하나씩 열어 1920×1028 스크린샷을 찍고 파일 이름을 UI_STATUS 에 적는다. 한국어·영어 모두 본다.
 
