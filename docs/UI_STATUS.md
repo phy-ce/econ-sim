@@ -521,3 +521,8 @@ DetailWindow 독립 NavigationProvider/버튼, BuildingPops 및 ResourceInspecto
 - /system-02.html: 기초 표현·조작·경제 정보·작업 묶음과 건설 상세 미리보기. 기존 게임 화면은 새 시스템으로 교체하지 않음. 예시 데이터·건설 접수는 로컬 상태이며 실제 sim 명령이 아님.
 - KO/EN, 낮/밤, 행 28~48px·그림 24~40px 슬라이더, 정상/부족/정지/혼합 산출, 소유 필터, 수량·접수·초기화 동작 확인. 기존 상품 아틀라스 사용. 별도 Vite 빌드 진입점 추가.
 - 루트 typecheck·클라이언트 44파일 120시험 통과. 1920×1028 헤드리스 화면 확인, 가로 넘침 없음. C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/system02-light.png, system02-dark.png, system02-components.png. 모바일·전체 접근성 검증은 미완료.
+
+### 2026-11-07 System 02 스킬 재점검
+- ui-ux-pro-max 재적용: 자동 Retro-Futurism 추천은 게임에 맞지 않아 제외, data-dense 명시 검색과 React/키보드 지침 사용. 표 라벨 12px·상품/값 14px, 작은 조작 영역 28px, 호버 전환과 reduced-motion, 문서 lang 전환·비율 막대 이름 보강. 768px 미리보기 가로 넘침 수정.
+- 375/768/1024/1440/1920px 페이지 가로 넘침 없음 확인. 밝음 텍스트/보조/버튼 대비 13.11/6.14/7.37, 어두움 12.78/8.11/9.09. 이는 세 역할 조합만 측정했으며 전체 접근성 인증은 아님. 이름 없는 버튼 0, 입력 focus outline 확인.
+- 루트 typecheck 및 클라이언트 44파일/120시험 통과. 헤드리스 캡처: C:/Users/phyju/AppData/Local/Temp/estera-ui-cdp/system02-audit-desktop.png, system02-audit-768-fixed.png, system02-audit-dark.png.
