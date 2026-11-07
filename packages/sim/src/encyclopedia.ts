@@ -1082,8 +1082,8 @@ export const ENCYCLOPEDIA: EncEntry[] = [
   },
   {
     id: 'start-wealth', category: 'tenants', title: t('소작농 시작 부', 'Tenants\' starting wealth'),
-    rule: t('소작농은 그 부 단계의 소작 수확 가치로 묶음을 살 수 있는 가장 높은 단계에서 시작한다.', 'Tenants start at the highest wealth step whose basket their tenant income can buy.'),
-    params: [],
+    rule: t('소작농은 그 부 단계의 소작 수확 가치로 묶음을 살 수 있는 가장 높은 단계에서 시작한다. 게임이 시작되기 전에 {0}일 동안 시장·임금·세금·배당만 돌린다. 그동안 인구·건물·기술은 그대로이고 AI와 기상 조건은 없다.', 'Tenants start at the highest wealth step whose basket their tenant income can buy. Before the game starts, markets, wages, taxes and dividends run for {0} days. Population, buildings and technology stay as they are, with no AI and no harvest conditions.'),
+    params: [tune('warmupDays', '시작 전 일수', 'Days before the start', 'day')],
     live: {
       pick: [], run: (w) => ({
         bars: w.regions.map((r) => {

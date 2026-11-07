@@ -742,6 +742,7 @@ export const TUNE = {
   startWorkshop: 3, // 1·2·3 비교 (DESIGN 11)
   // 시작 인구 배율 (2026-11-01 사용자 "노동자 공급을 받아 주면서 임금을 유지할 만큼의 산업 성장이 일어나지 않는 것 같은데. 초기 인구를 좀 줄여볼까?", 비교용).
   // 1 = 지금 세계 (비트 동일). 후보 0.75 / 0.5 × startPopLand 0 / 1 (docs/overhaul/POP_SPECS.json). 비교 중, 근거 없음
+  warmupDays: 60, // 시작 전 시장 돌리기 일수 (tick.ts warmUp, DESIGN 11장). 0 = 끔
   startPopScale: 1,
   startPopLand: 0,
   // AI 수정 비교 (2026-10-22, 기본값 = 지금 동작). crownGdpReserve: 왕실이 남길 국고 = 연간 총생산 × 이 비율 (0 = 지출 treasuryHighWeeks 주치)

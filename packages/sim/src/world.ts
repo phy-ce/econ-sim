@@ -45,6 +45,8 @@ export interface CreateWorldOptions {
   /** 플레이어 왕실의 시작 국고 (없으면 다른 왕실과 같은 규칙, startTreasury) */
   playerCash?: number;
   ai?: boolean;
+  /** false 면 시작 전 시장 돌리기(tick.ts warmUp)를 건너뛴다. 시작 세계를 그대로 읽는 곳(마이크로 세계)이 쓴다 */
+  warm?: boolean;
   /** AI 난수의 소금 (config.aiSalt, rng/aiRand.ts). 기본 0. 시작 세계는 이 칸 말고는 같다 */
   aiSalt?: number;
 }

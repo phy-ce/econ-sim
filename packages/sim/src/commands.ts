@@ -44,6 +44,14 @@ function runCommand(w: World, actor: number, cmd: Command): CommandError | null 
   };
   const autoError = () => fail('소작지는 빈 농지에 저절로 생기는 땅이라 손댈 수 없습니다.', 'Tenant farms form by themselves on free farmland and cannot be changed.');
 
+  // 플레이어가 여러 레벨을 지으면 1레벨 공사를 그 수만큼 넣는다 (한 건씩 취소·순서 변경). 막히면 거기서 멈추고 넣은 공사는 둔다. AI 는 덩어리 공사 하나다
+  const startProjects = (regionId: number, typeId: string, methodId: string, targetBuildingId: number | null, levels = 1) => {
+    const n = Math.floor(levels);
+    if (!company.isPlayer || !(n > 1) || n > MAX_LEVELS_PER_PROJECT) return startConstruction(regionId, typeId, methodId, targetBuildingId, levels);
+    const first = startConstruction(regionId, typeId, methodId, targetBuildingId, 1);
+    for (let i = 1; i < n && !first; i++) if (startConstruction(regionId, typeId, methodId, targetBuildingId, 1)) break;
+    return first;
+  };
   const startConstruction = (regionId: number, typeId: string, methodId: string, targetBuildingId: number | null, levelsIn = 1) => {
     const levels = Math.floor(levelsIn);
     if (!Number.isFinite(levels) || levels < 1 || levels > MAX_LEVELS_PER_PROJECT) return fail(`한 번에 1~${MAX_LEVELS_PER_PROJECT}레벨까지 지을 수 있습니다.`, `A project can build 1 to ${MAX_LEVELS_PER_PROJECT} levels.`);
@@ -120,13 +128,13 @@ function runCommand(w: World, actor: number, cmd: Command): CommandError | null 
       const methodId = cmd.methodId ?? usable[0].id;
       if (!usable.some((m) => m.id === methodId)) return fail('아직 쓸 수 없는 생산 방식입니다.', 'That production method is not available yet.');
       const existing = ownBuildingAt(w, actor, cmd.regionId, cmd.typeId, methodId);
-      if (existing) return startConstruction(existing.regionId, existing.typeId, existing.methodId, existing.id, cmd.levels);
-      return startConstruction(cmd.regionId, cmd.typeId, methodId, null, cmd.levels);
+      if (existing) return startProjects(existing.regionId, existing.typeId, existing.methodId, existing.id, cmd.levels);
+      return startProjects(cmd.regionId, cmd.typeId, methodId, null, cmd.levels);
     }
     case 'expand': {
       const b = ownBuilding(cmd.buildingId);
       if (!b) return fail('소유한 건물이 아닙니다.', 'You do not own that building.');
-      return startConstruction(b.regionId, b.typeId, b.methodId, b.id, cmd.levels);
+      return startProjects(b.regionId, b.typeId, b.methodId, b.id, cmd.levels);
     }
     case 'setMethod': {
       const b = ownBuilding(cmd.buildingId);

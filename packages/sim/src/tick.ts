@@ -32,13 +32,17 @@ export function step(w: World, commands: QueuedCommand[] = []): string[] {
     if (err) errors.push(err.text);
   }
 
-  prospect(w);
-  updateLaws(w);
+  // 틱이 음수면 시작 전 시장 돌리기다 (warmUp): 시장·임금·세금·배당만 돈다. 인구·건물·기술은 그대로 둔다
+  const warm = w.tick < 0;
+  if (!warm) {
+    prospect(w);
+    updateLaws(w);
+  }
   updateSubsistence(w);
-  updateIdleOffices(w);
+  if (!warm) updateIdleOffices(w);
   updateMarketWages(w);
   chargeInterest(w);
-  doResearch(w);
+  if (!warm) doResearch(w);
   syncLockedGoods(w);
   laborMarket(w);
   resetMarkets(w);
@@ -53,16 +57,20 @@ export function step(w: World, commands: QueuedCommand[] = []): string[] {
   advanceConstruction(w);
   updatePrices(w);
 
-  updateQualifications(w);
-  matchNobles(w);
-  updateGrowth(w);
-  migrate(w);
-  prunePops(w);
+  if (!warm) {
+    updateQualifications(w);
+    matchNobles(w);
+    updateGrowth(w);
+    migrate(w);
+    prunePops(w);
+  }
   syncEmployment(w);
   payWelfare(w);
   aggregateHouseholds(w);
-  updateEducation(w);
-  updateLiteracy(w);
+  if (!warm) {
+    updateEducation(w);
+    updateLiteracy(w);
+  }
 
   w.tick += 1;
   if (w.tick % TICKS_PER_WEEK === 0) weekly(w);
@@ -76,6 +84,20 @@ export function step(w: World, commands: QueuedCommand[] = []): string[] {
   // 화면 표시용 사본 (round.ts)
   writePool(w);
   return errors;
+}
+
+/**
+ * 시작 전 시장 돌리기: 틱 −days 에서 0 까지 시장만 돌려 가격·임금·소득·저축이 시작 세계에 맞는 값이 된 뒤 게임을 시작한다.
+ * 음수 틱에는 기상 조건·탐광이 없다 (economy.ts). 기록은 지운다
+ */
+export function warmUp(w: World, days: number): World {
+  w.tick = -days;
+  while (w.tick < 0) step(w);
+  w.metrics = [];
+  w.history = [];
+  w.events = w.events.filter((e) => e.tick >= 0);
+  w.alertState = {};
+  return w;
 }
 
 /** 교육 접근도(0..1)는 매일 학교가 감당하는 인구 비율을 향해 천천히 움직인다 (문해력과 같은 속도) */
@@ -101,7 +123,7 @@ function weekly(w: World) {
   for (const c of w.companies) payDividends(w, c);
   updateFunds(w);
   progressDemolition(w);
-  runAi(w);
+  if (w.tick > 0) runAi(w);
   weeklyBanking(w);
   weeklyAlerts(w);
   for (const c of w.companies) {
