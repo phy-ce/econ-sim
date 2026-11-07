@@ -5,7 +5,7 @@ import './lowprio';
 //   built  완공 레벨, demo 실제로 헐린 레벨 (주마다 progressDemolition 이 1레벨씩 헌다)
 //   quick2 지은 지 104주(2년) 안에 헐린 레벨, quick1 52주 안 (같은 (왕국, 지역, 종류)에서 가장 최근에 완공된 레벨과 짝짓는다: 후입선출)
 //   rebuild 같은 키에서 철거 명령 뒤 104주 안에 다시 착공한 레벨, cycle 짓기 → 헐기 → 짓기 (착공 → 104주 안 철거 명령 → 104주 안 다시 착공) 횟수
-// 헐린 레벨마다 원인 (철거 명령을 낸 AI 길, ai.ts aiTrace): reserveShrink 유보 규칙(reserveLevels), shrink reviewLevels(shrinkWeeks),
+// 헐린 레벨마다 원인 (철거 명령을 낸 AI 길, ai.ts aiTrace): reserveShrink 유보 규칙(reserveLevels), shrink reviewLevels(shrinkWeeks, 무역소는 tradeShrinkWeeks),
 //   officeShrink 건축사무소, schoolShrink 학교(빚), swap 땅 바꾸기(swapLand), sdDemo·sellDemo·marginDemo 팔리지 않음 (wt-simplify 1-G 에서 지운 길, 옛 결과 파일용), player 플레이어, untraced 길 없음.
 //   명령은 건물마다 줄(먼저 넣은 명령부터 헐린다)에 넣고, 취소(철거 대기 0)되면 줄 끝부터 지운다 (cancel).
 // 해마다 한 줄 (대륙 합): 위 수, 원인별·길별 레벨, 총생산(gdp, 백만/년), 민간·국영 레벨(lvPriv·lvState, 연말).

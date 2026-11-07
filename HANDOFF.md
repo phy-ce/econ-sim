@@ -9,6 +9,14 @@
 - 클라우드 세션(claude.ai/code)으로 이어서 할 수 있다. 규칙은 CLAUDE.md "클라우드 세션"을 본다.
 - 옛 세션 기록: `docs/log/` (2026-10-25 이전 HANDOFF 절은 `docs/log/HANDOFF_2026-10-18_to_10-25.md`, 날짜별 UI 기록도 여기). 다른 문서의 "HANDOFF 0-ind3"·"HANDOFF 0-aifix" 같은 옛 절 참조는 그 파일에 있다.
 
+## 0-1107-tradechurn
+- 브랜치 wt-tradechurn, 합치기 전 (premerge 대기). 무역소 철거까지 적자 주 수를 26 → 52 (`tradeShrinkWeeks`, 이슈 #7, DECISIONS 7-56, 보고서 2026-11-07-tradechurn, https://phy-ce.github.io/econ-sim/reports/#2026-11-07-tradechurn). AI 판단만 바뀌었고 플레이어 규칙은 같다.
+- 비교 (main 908793f, 10년 × 시드 1·2·5, salt 0, 플레이어 없음, 무역소만, 시드 1/2/5): 재착공 레벨 26주 96/95/136, 52주 29/74/57, 104주 22/4/11. 사이클 13/13/12, 2/2/1, 0/0/0. 10년 총생산 합 26주 8,213/8,101/7,537, 52주 8,531/8,659/8,234, 104주 8,149/8,269/7,457.
+- 약점: 시드 셋·10년만 봤고, 실행이 갈라져 총생산 차이를 이 값의 효과로 가를 수 없다. 전체 건물 재착공 합은 시드 1·2 에서 늘었다 (26주 539/450/450, 52주 674/525/380). 비교는 임시 손잡이로 했고 병합한 키로 다시 돌리지 않았다.
+- 마이크로 철거 끄기(`microcheck --preset labor`, `graindiag --preset labor`, `admindiag --micro`)는 `tradeShrinkWeeks` 도 1e9 로 둔다 (동작은 그 전과 같다).
+- 골든: premerge 마지막 단계에서 main 을 합친 상태로 `npm run golden:update` (브랜치에서 돌리지 않는다, cli/golden.ts).
+- 이슈 #7 은 열어 둔다: 생산 건물의 `reserveShrink` 반복이 남았다.
+
 ## 0-1106-plots
 - 브랜치 wt-plots, main 에 합침 (premerge ready). 사용자 지시 (DECISIONS 7-55): 부지를 인구와 묶지 않고 지역마다 다르게 두되, 시드로 크게 흔들리지 않게 한다.
 - 규칙: 지역 공장 부지 = `data.ts REGIONS` 의 `plot` × (1 ± `PLOT_JITTER`), 10칸 단위 (`world.ts regionStarts`). `TIERS` 의 `plot` 은 지웠다. 흔들림은 옛 부지 흔들림과 같은 난수 자리를 써서 시작 세계의 다른 값은 그대로다. DESIGN 1·11, 사전 `start-state`, README.

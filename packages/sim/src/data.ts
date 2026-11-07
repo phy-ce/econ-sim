@@ -486,7 +486,7 @@ export function scaleBonus(level: number): number {
  * - travelLinear: 이동 필요 = travelLinear × (부 − NEED_STANDARD_FROM). 왕국이 운송을 만들 기술을 열어야 생긴다 (needsAt, lockedGoodsFor)
  * - instrumentShare: 정밀 기기 필요 = instrumentShare × 사치품 곡선 (고급 의복·고급 가구는 0.5 씩). 왕국이 정밀 기기를 만들 기술을 열어야 생긴다
  * - intoxLinear: 기호품(술) 필요 = intoxLinear × min(부, 10). 식량에서 떼지 않고 따로 더한다 (묶음 합은 needsAt 의 total)
- * - shrinkWeeks: AI 철거까지 적자 주 수. 정부 건물·무역소는 마지막 레벨의 장기 손익이 이 주 수 동안 계속 마이너스면 철거를 시작하고(reviewLevels),
+ * - shrinkWeeks: AI 철거까지 적자 주 수. 정부 건물은 마지막 레벨의 장기 손익이 이 주 수 동안 계속 마이너스면 철거를 시작하고(reviewLevels, 무역소는 tradeShrinkWeeks),
  *   유보 기준 생산 건물은 유보 자산 0·주간 적자가 이 주 수 이어지면 1레벨 헌다(reserveLevels). 둘 다 26이던 reserveShrinkWeeks 를 2026-11-02 wt-simplify 1-F 에서 합쳤다
  * - reserveWeeks: 건물 유보 자산 상한 = 레벨 × 지금 방식의 레벨당 주간 산출 가치(기본가) × 이 주 수. 이익의 35%를 여기까지 쌓고, 적자는 여기서 먼저 뺀다 (finance.ts settleReserve).
  *   레벨당 고정 50,000(농지 0.5주, 공장 0.2~0.3주치)과 0.25·0.5·1·2·4주 비교 (10년 거름, 20년 × 시드 1·2·3): 0.5주가 산출 비례 중 20년차 연 총생산(2,580 / 1주 2,423 / 고정 2,745)·
@@ -653,6 +653,7 @@ export const TUNE = {
   // 연구가 돈이 들지 않게 된 뒤 다시 3·4 비교 (40년 × 시드 1·2): 25~40년 총생산이 4에서 약 13% 높다 (DESIGN 11)
   doneWageMax: 4,
   startTreasuryWeeks: 26,
+  tradeShrinkWeeks: 52, // 무역소만: 26·52·104 비교에서 고른 값 (10년 × 시드 1·2·5, 이슈 #7, DESIGN 11장)
   shrinkWeeks: 26, // 유보 기준 철거도 이 값 (2026-10-25 사용자 "26주로 늘려서", 그 전 4주. 그때 reserveShrinkWeeks)
   reserveWeeks: 0.5,
   officeShrinkWeeks: 52, // 26주는 공사가 크게 줄고(10~20년차 하루 사용 포인트 69), 78주는 부지 몫과 40% 이상 지역이 늘어난다

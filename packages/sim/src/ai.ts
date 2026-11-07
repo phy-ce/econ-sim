@@ -1002,7 +1002,7 @@ function adminLevels(w: World, c: Company): number {
 }
 
 /**
- * 철거 판단 (짓기와 같은 주, 같은 전망): 마지막 레벨 손익이 TUNE.shrinkWeeks 주 연속 마이너스면 레벨의 1/4(최소 1)을 철거 대기에 올린다.
+ * 철거 판단 (짓기와 같은 주, 같은 전망): 마지막 레벨 손익이 TUNE.shrinkWeeks 주(무역소는 TUNE.tradeShrinkWeeks 주) 연속 마이너스면 레벨의 1/4(최소 1)을 철거 대기에 올린다.
  * TUNE.aiAdminValue: 왕실 행정청은 마지막 한 칸 대신 평균 손익(adminAverage)으로 보고, 왕국의 마지막 행정청 레벨은 남긴다.
  * 건물이 적자를 유보 자산으로 메우는 동안은 세지 않는다 (유보 자산이 바닥나야 센다).
  * 건축사무소는 TUNE.officeShrinkWeeks 주를 보고, 그동안 한 번도 사람이 차지 않은 레벨(일하던 주의 최고 충원율 staffPeak 로 센다)과
@@ -1029,7 +1029,7 @@ function reviewLevels(w: World, c: Company, o: Outlook, pointsPerDay: number) {
     b.negWeeks = v < 0 && !covered ? (b.negWeeks ?? 0) + 1 : 0;
     const m = getMethod(b.typeId, b.methodId);
     if (!m.construction) {
-      if (b.negWeeks >= TUNE.shrinkWeeks) {
+      if (b.negWeeks >= (b.typeId === TRADING_POST ? TUNE.tradeShrinkWeeks : TUNE.shrinkWeeks)) {
         let n = Math.max(1, Math.round(b.level * 0.25));
         // TUNE.aiAdminValue: 왕국의 마지막 행정청 레벨은 남긴다 (세법이 바뀌어 세금 기반이 돌아올 때 0 에서 다시 짓지 않게)
         if (TUNE.aiAdminValue && c.state && m.taxCapacity) n = Math.min(n, adminLevels(w, c) - 1);
@@ -1293,7 +1293,7 @@ function latentPioneer(w: World, b: Building): boolean {
 /**
  * 유보 기준 증설·철거 (매주 배당 정산 뒤): 생산 건물마다 증설 확률이 뽑힌 주(Building.richWeeks)와
  * 바닥난 적자 주(유보 자산 0, 주간 손익 = profitEma × 7 < 0. 기상 조건이 걸린 주와 공사로 생긴 지(시작 건물은 0일부터) RAMP_WEEKS 주 안은 세지 않는다)를 센다.
- * 바닥난 적자가 TUNE.shrinkWeeks 주면 1레벨 철거 대기 (정부 건물·무역소의 철거 판단 reviewLevels 와 같은 주 수), 증설 확률(TUNE.reserveGrowMax, 아래)이 뽑히면 땅(매장량)이 있고 돈이 되면 1레벨 증설 (못 하면 다음 주에 다시 본다).
+ * 바닥난 적자가 TUNE.shrinkWeeks 주면 1레벨 철거 대기 (정부 건물의 철거 판단 reviewLevels 와 같은 주 수), 증설 확률(TUNE.reserveGrowMax, 아래)이 뽑히면 땅(매장량)이 있고 돈이 되면 1레벨 증설 (못 하면 다음 주에 다시 본다).
  * TUNE.aiGlutSD > 0 이면 증설 확률이 뽑혀도 그 지역 그 방식 산출의 예상 공급 ÷ 수요(methodSD)가 그 값을 넘으면 그 주는 증설하지 않는다 (오버홀 03 5-1).
  * 증설 공사 중이거나 철거 중인 건물은 세지 않는다. 돈: 왕실은 새 공사에 쓸 수 있는 돈(freeCash), 민간은 저택·금융가 금고(공사 명령이 낼 곳을 고른다)
  */
