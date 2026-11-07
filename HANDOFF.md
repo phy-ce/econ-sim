@@ -10,7 +10,7 @@
 - 옛 세션 기록: `docs/log/` (2026-10-25 이전 HANDOFF 절은 `docs/log/HANDOFF_2026-10-18_to_10-25.md`, 날짜별 UI 기록도 여기). 다른 문서의 "HANDOFF 0-ind3"·"HANDOFF 0-aifix" 같은 옛 절 참조는 그 파일에 있다.
 
 ## 0-1107-close
-- 2026-11-07 세션 마감. 개발 서버(5199)를 껐다. 2-101 툴팁은 Codex 가 끝냈다 (da789a3). 확인: 그 커밋만 있는 wt-uitidy 에서 typecheck 통과, `test/tooltip.test.tsx` 2개 통과, DOM 요소·UIButton 에 한 줄로 쓴 `title=` 없음 (grep). 화면은 Claude 가 다시 보지 않았고 Codex 스크린샷 기록(UI_STATUS)뿐이다.
+- 2026-11-07 세션 마감. 개발 서버(5199)를 껐다. 2-101 툴팁은 Codex 가 끝냈다 (da789a3). 확인: 그 커밋만 있는 wt-uitidy 에서 typecheck 통과, `test/tooltip.test.tsx` 2개 통과, DOM 요소·UIButton 에 한 줄로 쓴 `title=` 은 커밋된 코드에 한 곳 남았다 (`views/ConstructionPanel.tsx:41` `<strong title=`). main 체크아웃의 커밋 안 한 변경에는 없어서, 그 변경이 커밋되면 사라진다. 화면은 Claude 가 다시 보지 않았고 Codex 스크린샷 기록(UI_STATUS)뿐이다.
 - 다음: 사용자가 창 크기를 승인하면 2-100 을 Codex 에게 넘긴다 (UI_CHANGES 0장 1번). 화면 문구 목록을 만들어 승인을 받는다 (DECISIONS 7-62). 2-99 가 끝나면 `types.ts`·`commands.ts` 의 `setUtilization` 을 지운다.
 - main 체크아웃에 남겨 둔 것: Codex 의 커밋 안 한 클라이언트 변경 (2-95 등). 출처를 확인하지 않아 건드리지 않은 추적 안 된 파일: `.tmp_growtheq.jsonl`, `.tmp_growtheq1y.jsonl`, `docs/TECH_TREE_PROPOSAL.md`, `packages/sim/test/core/_wd.test.ts`.
 
@@ -18,7 +18,7 @@
 - 브랜치 wt-uitidy (main 007714c 에서), 문서만, sim·client 코드 안 바꿈. main 25de4e1 에 합침. 창 크기 규격 (주 창 420×560, 서브창1 320×240, 서브창2 360×360, 서브창3 420×420, 서브창4 840×560, 근거 없음, 사용자 승인 대기) 과 화면 기초 답을 문서에 넣었다 (DECISIONS 7-62, UI_CHANGES 2-100·2-101). 남은 것: 화면 문구 목록, 창 크기 승인, 툴팁 안의 표와 Base UI 결정, Q4 글자 크기 값.
 
 ## 0-1107-uitidy
-- 브랜치 wt-uitidy (main 3f4e89a 에서), 문서만, sim·client 코드 안 바꿈. main 25de4e1 에 합침. Codex 인계 전 UI_CHANGES 정리.
+- 브랜치 wt-uitidy (main 3f4e89a 에서), 문서만, sim·client 코드 안 바꿈. main 007714c 에 합침. Codex 인계 전 UI_CHANGES 정리.
 - 바뀐 것: 0장을 할 일 9줄 (2-95, 2-99, 2-98, 2-96, 2-92, 2-55, 2-82, 2-62, 2-61) + 대기 목록으로 다시 썼다. 1장은 DESIGN 을 가리키는 표로 바꿨다 (옛 원문은 UI_DONE). 3장은 packages/sim/src 와 대조했다.
 - 옮긴 절: 끝난 2-83·2-88·2-89·2-90·2-91·2-93·2-94 는 UI_DONE '2026-11-07 확인'으로. 일부만 된 2-33·2-40·2-49·2-55·2-59·2-61·2-62·2-72·2-82·2-92 는 남은 것만 UI_CHANGES 에 두고 원문은 UI_DONE 으로. 절 번호는 그대로다.
 - 판정 조건: 코드와 UI_STATUS 기록으로 판정했고 화면은 다시 보지 않았다. UI_DONE 줄 번호는 3f4e89a 기준, UI_CHANGES 줄 번호는 main 체크아웃의 커밋 안 한 작업 트리 기준이다.
@@ -26,7 +26,7 @@
 
 ## 0-1107-autooutput
 - 가동률을 건물이 스스로 정한다 (`adjustOutput`, DECISIONS 7-60, 보고서 2026-11-07-autooutput). 시험 뒤 `npm run golden:update`. 슬라이더 삭제는 UI_CHANGES 2-99. 화면이 지워지면 `setUtilization` 명령 타입을 지운다.
-- 브랜치 wt-autoutil, 합치기 전 (premerge 대기). https://phy-ce.github.io/econ-sim/reports/#2026-11-07-autooutput
+- 브랜치 wt-autoutil, main 에 합침 (a8a2c07). https://phy-ce.github.io/econ-sim/reports/#2026-11-07-autooutput
 - 규칙: `outputWeeks` 8, `outputStep` 0.1, `outputBand` 0.25. 10년, 플레이어 없음, 시드 1/2/5/42. 10년 총생산 합 기존 9,593/10,041/8,518/8,665, 새 규칙 10,412/10,350/8,705/8,981. 7개 상품 10년차 공급 ÷ 수요가 1 에서 벗어난 평균 기존 0.27/0.31/0.30/0.23, 새 규칙 0.14/0.15/0.16/0.15.
 - 기각: 공급이 수요보다 적을 때만 올리는 안 (폭 0.05 4,988/5,685, 시드 1·2). AI 증설을 90% 아래에서 막는 안 (9,005/8,396, 시드 1·2).
 - 코드 조건: 비교는 e04eccf 의 스위치 (`autoOutput` 1, `aiGrowUtil` 0) 로 돌렸고 스위치는 aaf2a5e 에서 지웠다. 스위치를 지운 코드로 시드 1 을 10년 다시 돌려 해마다 지표가 모두 같았다, 시드 2·5·42 는 다시 돌리지 않았다.
@@ -37,7 +37,7 @@
 
 ## 0-1107-warmup
 - 시작 전 시장 돌리기 60일을 기본으로 켰다 (`warmupDays`, DECISIONS 7-57, 보고서 2026-11-07-warmup). 플레이어의 여러 레벨 공사는 1레벨 공사로 나눈다 (7-58). 시험 뒤 `npm run golden:update`.
-- 브랜치 wt-warmup, 합치기 전 (premerge 대기). https://phy-ce.github.io/econ-sim/reports/#2026-11-07-warmup2 (고친 코드), https://phy-ce.github.io/econ-sim/reports/#2026-11-07-warmup (고치기 전 코드)
+- 브랜치 wt-warmup, main 에 합침 (2107307). https://phy-ce.github.io/econ-sim/reports/#2026-11-07-warmup2 (고친 코드), https://phy-ce.github.io/econ-sim/reports/#2026-11-07-warmup (고치기 전 코드)
 - 첫날 값 (212f434 + 마지막 날 사건 지우기, 틱 0, 플레이어 없음, 시드 1/2): 소작 소득 0일 3.11/3.11, 30일 2.81/2.81, 60일 2.70/2.70, 90일 2.67/2.66, 180일 2.69/2.68, 360일 2.74/2.72, 720일 2.73/2.64. 민간 현금 합(백만) 15/15, 12.45/12.28, 11.45/11.20, 10.18/9.83, 6.09/5.37, 2.94/3.01, 2.98/2.99.
 - 같은 코드 5년 × 시드 1·2 총생산 1·2·5년: 시드 1 344·569·994 (0일 297·335·889), 시드 2 456·689·982 (448·489·851). 1년차 건물 레벨 60일 450/488, 0일 427/480. 실행이 갈라져 이 차이를 값의 효과로 가를 수 없다.
 - 열린 문제: 시드 둘·5년만 봤다. 30·60·90 은 숫자로 가르지 못해 그 사이 값으로 골랐다. 귀족 생활수준은 60일 첫날 2.33 으로 3~5년차 값(0일 7.43~9.00)에 못 미친다. 고치기 전 코드로 적은 첫날 값 일부(60일 소득 2.63, 720일 곡물값 0.46~0.56)가 재현되지 않았고 이유는 확인 못 함. `+5` 는 동시 공사 상한 40건을 여덟 번이면 채운다. 남은 칸이 5 미만이면 화면의 +5 버튼은 꺼진 채다 (DECISIONS 7-58, UI 요청 없음).
@@ -76,7 +76,7 @@
 - 화면: 고칠 것 없음 (`TierDef.plot` 을 클라이언트가 쓰지 않는다, UI_CHANGES 안 고침).
 
 ## 0-1105-demand
-- 브랜치 wt-demand (main eeb99e1 에서), 합치기 전, premerge 안 돌림. 사용자 승인 설계 (DECISIONS 7-54): 운송·종이·정밀 기기는 왕국이 만들 기술을 연 뒤에야 주민이 산다. 공구는 주민 수요 없음. DESIGN 5·10·11, 사전 `needs`·연구 항목, UI_CHANGES 2-94, VIC3_REFERENCE "필요".
+- 브랜치 wt-demand (main eeb99e1 에서), main 에 합침 (d795e52). 사용자 승인 설계 (DECISIONS 7-54): 운송·종이·정밀 기기는 왕국이 만들 기술을 연 뒤에야 주민이 산다. 공구는 주민 수요 없음. DESIGN 5·10·11, 사전 `needs`·연구 항목, UI_CHANGES 2-94, VIC3_REFERENCE "필요".
 - 규칙: `NEEDS` 선택지의 `gated`, `data.ts goodTechs·lockedGoodsFor`, `Region.lockedGoods` (매일 `syncLockedGoods`). 잠기면 대체재는 상한 0, 혼자 채우는 필요는 0, 묶음 합계는 그대로. 저장 판은 18 그대로이고 불러올 때 채운다. 종이 공장이 있는 옛 왕국은 인쇄술을 받는다 (`compat.ts`).
 - AI: `techValue` 가 여는 주민 수요를 레벨 이윤으로 본다 (`market.ts lockedDemand`). 없으면 10년 × 시드 1·2 에서 마찻길을 아무도 안 열었다.
 - 마이크로 (`cli/demandmicro.ts`, 인구 2,000, 시드 1): 열기 전 잠긴 상품의 주민 수요가 생긴 날 0, 연 날 pop 마다 묶음 합계가 같고 부 3 이상만 이동, 부 6 이상만 정밀 기기가 생겼다. 철광맥을 주고 돌린 세계에서 정밀 기기 주민 수요를 따라 3년차 공장·제철소·철광산 1레벨이 6년차 철광산 8, 7년차 공장 6·제철소 3레벨로 늘었다. 약점: 8~11년차 공구가 끊겨 모든 상품 공급이 0 근처로 갔다. 이동·정밀 기기를 끈 실행(시드 1~3)에서도 공급 0 구간을 봐서 이 작은 세계의 문제로 보았으나 원인은 확인 못 함. 기준 코드로는 이 설정을 돌리지 않았다.
