@@ -11,7 +11,8 @@
 
 ## 0-1109-uinum
 - UI_CHANGES 의 남은 절 14개를 UI-1~UI-14 로 다시 매겼다 (사용자: "101번은 숫자가 너무 큰데 좀 정리해봐"). 0장 순서대로 1~9, 대기 10~14. 제목에 "옛 2-xx" 를 남겨 DECISIONS·UI_STATUS·HANDOFF 의 옛 번호로 찾을 수 있다. 끝난 절(UI_DONE)은 옛 번호 그대로다. 문서만.
-- 창 규격(옛 2-100)은 Codex 가 6fee17a 로 끝냈다 (UI_DONE). 확인: 그 커밋까지 있는 wt-uitidy 에서 typecheck 통과, `researchLayout`·`tooltip` 시험 8개 통과. 화면은 Claude 가 보지 않았다 (Codex 스크린샷 기록만, UI_STATUS 2026-11-08).
+- 창 규격(옛 2-100)은 Codex 가 6fee17a 로 끝냈다 (UI_DONE). 확인: 그 커밋까지 있는 wt-uitidy 에서 typecheck 통과, `researchLayout`·`tooltip` 시험 8개 통과 (Claude 가 wt-uitidy 에서 이 두 파일만 돌린 수다. UI_DONE 2-100 의 "관련 시험 9개" 는 Codex 가 고른 범위라 다르다). 화면은 Claude 가 보지 않았다 (Codex 스크린샷 기록만, UI_STATUS 2026-11-08).
+- 남은 것: 창 크기 숫자는 Codex 가 넣었지만 아직 잠정값이다. 사용자 승인 대기 (DECISIONS 7-62, UI_DONE 2-100 '구현·확인'). 다음: UI_CHANGES 0장 UI-1~UI-9 를 Codex 에게 넘긴다. UI-2(옛 2-99)가 끝나면 `types.ts`·`commands.ts` 의 `setUtilization` 을 지운다. 화면 문구 목록을 만들어 승인을 받는다 (DECISIONS 7-62).
 
 ## 0-1107-close
 - 2026-11-07 세션 마감. 개발 서버(5199)를 껐다. 2-101 툴팁은 Codex 가 끝냈다 (da789a3). 확인: 그 커밋만 있는 wt-uitidy 에서 typecheck 통과, `test/tooltip.test.tsx` 2개 통과, DOM 요소·UIButton 에 한 줄로 쓴 `title=` 은 커밋된 코드에 한 곳 남았다 (`views/ConstructionPanel.tsx:41` `<strong title=`). main 체크아웃의 커밋 안 한 변경에는 없어서, 그 변경이 커밋되면 사라진다. 화면은 Claude 가 다시 보지 않았고 Codex 스크린샷 기록(UI_STATUS)뿐이다.
