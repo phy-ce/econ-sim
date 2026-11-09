@@ -2,10 +2,10 @@
 
 :root,.gu-scope {
  --gu-edge:#828877;
- --gu-paper:#f7f0e3; --gu-sheet:#fffbf2; --gu-ink:#2a302e; --gu-muted:#686d62;
+ --gu-paper:#f7f0e3; --gu-sheet:#fffbf2; --gu-ink:#2a302e; --gu-muted:#646a5f;
  --gu-line:#c6c8b9; --gu-soft:#ecebdc; --gu-action:#36586b; --gu-on-action:#ffffff;
  --gu-positive:#2f6549; --gu-negative:#9c4035; --gu-focus:#375bd4;
- --gu-crown:#947039; --gu-manor:#536d4c; --gu-finance:#526d85; --gu-on-owner:#ffffff;
+ --gu-crown:#826130; --gu-manor:#536d4c; --gu-finance:#526d85; --gu-on-owner:#ffffff;
  --gu-font:'Noto Sans KR',sans-serif; --gu-title:'Gowun Batang',serif; --gu-number:'Silkscreen','Noto Sans KR',monospace;
  --gu-space-1:4px; --gu-space-2:8px; --gu-space-3:12px; --gu-space-4:16px; --gu-space-6:24px;
  --gu-control:36px; --gu-row:32px; --gu-row-comfortable:56px;

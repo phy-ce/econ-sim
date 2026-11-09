@@ -2790,3 +2790,20 @@ sim은 `setUtilization`을 거부한다 (`commands.ts:178`). 지금 슬라이더
 - 지도 그림 자체(왕국 색, 철도, 내 건물 표시)는 그대로 둔다.
 
 완료 근거: 왕국 이름/열쇠 범례와 전용 문자열·CSS 제거. 왕국 층은 범례 상자 없음, 부/생활수준 고정 색 눈금 유지. 루트 npm.cmd run typecheck 및 mapCamera 2개 통과. Chrome 1920×1028 한국어 밝음/영어 어두움 세 층 DOM 검증 및 캡처: .tmp/ui-nine-3-ko-kingdom.png, .tmp/ui-nine-3-ko-wealth.png, .tmp/ui-nine-3-ko-sol.png, .tmp/ui-nine-3-en-kingdom.png, .tmp/ui-nine-3-en-wealth.png, .tmp/ui-nine-3-en-sol.png. 한국어 부·영어 영토 이미지를 직접 확인. 실사용 Edge 화면 미검증.
+
+
+## 2026-11-09 UI-4
+
+### UI-4. 글자 대비와 툴팁 층 (옛 2-96, 2026-11-07, 사용자 요청으로 UI UX Pro Max 기준 점검, sim 변경 없음)
+게임 화면 코드만 재서 어긋난 것이다. 초안01(`design-system/`)과 기초 사이트(`foundations/`)는 빼고 쟀다. UI_FOUNDATIONS Q1~Q9 답을 기다리는 일이 아니다: 색의 역할은 그대로 두고 값만 진하게 한다.
+
+고칠 것 (2026-11-07 코드 대조):
+- 안 됨: `ui/tokens.css:9` 밝은 테마 `--gu-crown` `#947039` → `#826130`. 글자로 쓰면 대비가 커밋된 배경에서 종이 4.00·시트 4.39·`--gu-soft` 3.77 로 4.5 아래다 (`color: var(--gold)` 등 18곳). 바꾸면 5.01·5.49·4.72, 흰 글자를 얹은 왕실 표지는 5.67. 커밋 안 한 System 02 배경(`--es-panel`·`--es-subtle`)에서는 4.22·3.82 → 5.29·4.78 이다 (2026-11-07 계산).
+- 작업 중 (커밋 안 됨): `--gu-muted`. 커밋된 값은 `#686d62`이고 `--gu-soft` 위에서 4.42 다. 작업 트리 `ui/tokens.css:6`은 `var(--es-muted)` (`system-02/tokens.css:2`)로 바뀌어 `--es-subtle` 위 5.55 다. 이 토큰을 커밋하면 이 항목은 끝난다. 되돌리면 원래 명세대로 `#646a5f`로 한다 (4.64).
+- 툴팁 규칙 통합은 2-101에서 완료했다 (UI_DONE·UI_STATUS 2026-11-07).
+
+손대지 않는 것: 어두운 테마(모든 조합 5.8 이상), 글자 크기 10~11px (Q4 의 크기 값 답 대기, DECISIONS 7-61 결정 대기 3), 숫자의 색 범위 (Q5: 유지), 키보드 초점 (지도·표 행 모두 있음).
+
+확인: 왕실 표지와 `--gold` 글자가 있는 창을 밝은 테마로 본다. 왕실·저택·금융 표지가 서로 구별되는지 본다.
+
+완료 근거: 밝은 --gu-crown #826130. 커밋 기준 --gu-muted #646a5f 적용; 작업 트리의 기존 var(--es-muted) 연결은 보존하여 System 02 개편을 포함하지 않음. 대비 직접 계산: 종이 5.01, 시트 5.49, soft 4.72, 흰 글자 5.67, System 02 panel 5.29/subtle 4.78. muted는 커밋 기준 4.64, 작업 트리 5.55. 루트 npm.cmd run typecheck 및 gameDesignSystem 9개 통과. ownershipPop 기존 옛 저장 안내 기대 시험 1개 실패(현재 수입 기록이 있어 안내 없음), 나머지 3개 통과; 이번 CSS와 무관. .tmp/ui-nine-4-light-owners.png 밝은 테마 지역 건물·상단 금색 글자 확인. 모든 소유 표지 조합/실사용 Edge 화면 미검증. 어두운 테마·대기 중 글자 크기 변경 없음.

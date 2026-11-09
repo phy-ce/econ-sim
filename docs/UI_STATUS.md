@@ -593,3 +593,7 @@ DetailWindow 독립 NavigationProvider/버튼, BuildingPops 및 ResourceInspecto
 
 ### 2026-11-09 UI-3
 왕국 이름/열쇠 범례와 전용 문자열·CSS 제거. 왕국 층은 범례 상자 없음, 부/생활수준 고정 색 눈금 유지. 루트 npm.cmd run typecheck 및 mapCamera 2개 통과. Chrome 1920×1028 한국어 밝음/영어 어두움 세 층 DOM 검증 및 캡처: .tmp/ui-nine-3-ko-kingdom.png, .tmp/ui-nine-3-ko-wealth.png, .tmp/ui-nine-3-ko-sol.png, .tmp/ui-nine-3-en-kingdom.png, .tmp/ui-nine-3-en-wealth.png, .tmp/ui-nine-3-en-sol.png. 한국어 부·영어 영토 이미지를 직접 확인. 실사용 Edge 화면 미검증.
+
+
+### 2026-11-09 UI-4
+밝은 --gu-crown #826130. 커밋 기준 --gu-muted #646a5f 적용; 작업 트리의 기존 var(--es-muted) 연결은 보존하여 System 02 개편을 포함하지 않음. 대비 직접 계산: 종이 5.01, 시트 5.49, soft 4.72, 흰 글자 5.67, System 02 panel 5.29/subtle 4.78. muted는 커밋 기준 4.64, 작업 트리 5.55. 루트 npm.cmd run typecheck 및 gameDesignSystem 9개 통과. ownershipPop 기존 옛 저장 안내 기대 시험 1개 실패(현재 수입 기록이 있어 안내 없음), 나머지 3개 통과; 이번 CSS와 무관. .tmp/ui-nine-4-light-owners.png 밝은 테마 지역 건물·상단 금색 글자 확인. 모든 소유 표지 조합/실사용 Edge 화면 미검증. 어두운 테마·대기 중 글자 크기 변경 없음.
