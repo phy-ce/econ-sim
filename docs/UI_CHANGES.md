@@ -17,7 +17,6 @@
 main `3f4e89a`와 main 체크아웃의 커밋 안 한 클라이언트 변경을 코드로 대조했다. 줄 번호는 따로 적지 않으면 그 작업 트리 기준이다.
 
 ### 할 일 (위에서부터)
-3. **UI-3** (사용자 요청): 지도 범례의 왕국 이름과 열쇠 줄을 지운다. 부·생활수준 색 눈금은 남긴다.
 4. **UI-4** (사용자 요청): 밝은 테마 `--gu-crown`을 진하게 한다.
 5. **UI-5** (정리): `(22+2)` 표기를 지키고, 쓰지 않는 +1·+5 코드를 지운다.
 6. **UI-6** (정리): 계층 생활수준 차트 범례에서 자본가를 뺀다.
@@ -88,14 +87,6 @@ DESIGN에 없는 화면 규칙: 민간 회사 이름("XX 민간")은 화면에 �
 
 
 
-### UI-3. 지도 범례 삭제 (옛 2-98, 사용자 2026-11-07, sim 변경 없음)
-사용자: 왕국 이름·철도·길·내 건물·주된 땅 범례가 필요 없으니 삭제한다.
-
-고칠 것:
-- `RegionMap.tsx:86` `.map-legend` 안의 `.kingdom-legend`(`:87`)와 `.map-keys`(`:91~96`)를 지운다. 생활수준·부 층의 색 눈금(`.scale-bar`, `.scale-ticks`, `:88~90`)은 남긴다. 왕국 층에서는 범례 상자가 보이지 않는다.
-- 그것만 쓰던 문자열 `keyRail`·`keyMine`·`keyLand` (`strings.ts:468~470`·`:1037~1039`)를 지운다. `T.playerOwner`는 `OwnerBadge.tsx:12`도 쓰므로 남긴다.
-- 그것만 쓰던 CSS를 지운다: `.kingdom-legend` (`strategy.css:53`, `workspace.css:198`), `.map-keys` (`strategy.css:53`, `styles.css:255~256`, `readability.css:3`: `.map-keys{font-size:10px}` 규칙과 묶음 선택자의 `.map-keys .spr` 만 지우고 `.topbar .chip .spr`·`.menu .spr`·`.strategy-panel .perks .spr` 는 남긴다), `.key-rail` (`styles.css:257`). `.map-legend` 규칙은 남긴다.
-- 지도 그림 자체(왕국 색, 철도, 내 건물 표시)는 그대로 둔다.
 
 ### UI-4. 글자 대비와 툴팁 층 (옛 2-96, 2026-11-07, 사용자 요청으로 UI UX Pro Max 기준 점검, sim 변경 없음)
 게임 화면 코드만 재서 어긋난 것이다. 초안01(`design-system/`)과 기초 사이트(`foundations/`)는 빼고 쟀다. UI_FOUNDATIONS Q1~Q9 답을 기다리는 일이 아니다: 색의 역할은 그대로 두고 값만 진하게 한다.

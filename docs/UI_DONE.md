@@ -2776,3 +2776,17 @@ sim은 `setUtilization`을 거부한다 (`commands.ts:178`). 지금 슬라이더
 8. 다 하면 3장에 "setUtilization 타입 지워도 됨"을 적는다 (`types.ts:765`, `commands.ts:177~179`).
 
 완료 근거: 가동률 슬라이더·onUtilization 및 예시 조작 제거. 가동률 값과 onStop 기반 정지/재개 유지. utilization 툴팁 자동 결정 설명 변경. client src의 setUtilization/onUtilization 검색 0건. 루트 npm.cmd run typecheck, automaticOperation 2개·gameDesignSystem 9개 통과. sim 타입 제거 요청을 3장에 추가. 화면 미검증: 자동화의 건축사무소 선택 실패로 스크린샷 없음. CompanyPanel의 기존 System 02/건설 전용 개편은 커밋 제외.
+
+
+## 2026-11-09 UI-3
+
+### UI-3. 지도 범례 삭제 (옛 2-98, 사용자 2026-11-07, sim 변경 없음)
+사용자: 왕국 이름·철도·길·내 건물·주된 땅 범례가 필요 없으니 삭제한다.
+
+고칠 것:
+- `RegionMap.tsx:86` `.map-legend` 안의 `.kingdom-legend`(`:87`)와 `.map-keys`(`:91~96`)를 지운다. 생활수준·부 층의 색 눈금(`.scale-bar`, `.scale-ticks`, `:88~90`)은 남긴다. 왕국 층에서는 범례 상자가 보이지 않는다.
+- 그것만 쓰던 문자열 `keyRail`·`keyMine`·`keyLand` (`strings.ts:468~470`·`:1037~1039`)를 지운다. `T.playerOwner`는 `OwnerBadge.tsx:12`도 쓰므로 남긴다.
+- 그것만 쓰던 CSS를 지운다: `.kingdom-legend` (`strategy.css:53`, `workspace.css:198`), `.map-keys` (`strategy.css:53`, `styles.css:255~256`, `readability.css:3`: `.map-keys{font-size:10px}` 규칙과 묶음 선택자의 `.map-keys .spr` 만 지우고 `.topbar .chip .spr`·`.menu .spr`·`.strategy-panel .perks .spr` 는 남긴다), `.key-rail` (`styles.css:257`). `.map-legend` 규칙은 남긴다.
+- 지도 그림 자체(왕국 색, 철도, 내 건물 표시)는 그대로 둔다.
+
+완료 근거: 왕국 이름/열쇠 범례와 전용 문자열·CSS 제거. 왕국 층은 범례 상자 없음, 부/생활수준 고정 색 눈금 유지. 루트 npm.cmd run typecheck 및 mapCamera 2개 통과. Chrome 1920×1028 한국어 밝음/영어 어두움 세 층 DOM 검증 및 캡처: .tmp/ui-nine-3-ko-kingdom.png, .tmp/ui-nine-3-ko-wealth.png, .tmp/ui-nine-3-ko-sol.png, .tmp/ui-nine-3-en-kingdom.png, .tmp/ui-nine-3-en-wealth.png, .tmp/ui-nine-3-en-sol.png. 한국어 부·영어 영토 이미지를 직접 확인. 실사용 Edge 화면 미검증.

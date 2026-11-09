@@ -465,9 +465,6 @@ export const KO = {
   comfortable: (n: number) => `${n}+`,
   mapAria: '에스테라 왕국 지도',
   mapCellAria: (name: S, pop: S, wealth: S, tenants: S) => `${name}, 인구 ${pop}명, 1인당 부 ${wealth}, 소작농 ${tenants}`,
-  keyRail: '철도·길',
-  keyMine: '내 건물',
-  keyLand: '주된 땅',
 
   // 수요·공급 출처
   srcConsumption: (cls: S) => `${cls} 소비`,
@@ -1034,9 +1031,6 @@ export const EN: Dict = {
   comfortable: (n) => `${n}+`,
   mapAria: 'Map of the Kingdom of Estera',
   mapCellAria: (name, pop, wealth, tenants) => `${name}, population ${pop}, wealth per head ${wealth}, tenants ${tenants}`,
-  keyRail: 'Rail and roads',
-  keyMine: 'My buildings',
-  keyLand: 'Main land',
 
   srcConsumption: (cls) => `${cls} consumption`,
   srcInputs: (b) => `${b} inputs`,

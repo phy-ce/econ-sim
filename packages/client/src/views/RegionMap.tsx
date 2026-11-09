@@ -83,18 +83,11 @@ function RegionMapView({ world, selected, onSelect }: { world: World; selected: 
           {pending>0&&<g className="atlas-demolition" data-help={T.demolitionQueue(pending)}><rect x={-52} y={34} width={104} height={44} rx={4}/><SvgSprite name="demolish" x={-50} y={32} size={48}/><text x={25} y={65}>{int(pending)}</text></g>}
         </g>;})}
       </svg>
-      <div className="map-legend">
-        <div className="kingdom-legend">{world.kingdoms.map((k,i)=><span key={k.id}><b style={{color:k.color}}>{['●','◆','▲'][i]}</b>{ko?k.name:k.nameEn}{world.companies.some(c=>c.kingdomId===k.id&&c.isPlayer)&&<strong data-help={T.playerOwner}>★</strong>}</span>)}</div>
-        {layer!=='kingdom'&&<><span className="lbl">{layer==='sol'?T.standardOfLiving:T.wealthPerHead}</span>
+      {layer!=='kingdom'&&<div className="map-legend">
+        <span className="lbl">{layer==='sol'?T.standardOfLiving:T.wealthPerHead}</span>
         <div className="scale-bar" style={{background:'linear-gradient(90deg in oklab, #b8573b 0%, #d9a35b 33.333%, #a9b38a 61.111%, #5f8592 100%)'}}/>
         <div className="scale-ticks lbl">{WEALTH_STOPS.map((s,i) => <span key={s.color}>{i===0?'≤':i===WEALTH_STOPS.length-1?'≥':null}{s.value}</span>)}</div>
-        </>}<div className="map-keys lbl">
-          <span><i className="key-rail" /> {T.keyRail}</span>
-          <span>★ {T.keyMine}</span>
-          
-          <span><Sprite name="m-wheat" size={24} /><Sprite name="m-tree" size={24} /><Sprite name="m-mine" size={24} /> {T.keyLand}</span>
-        </div>
-      </div>
+      </div>}
       <details className="map-directory"><summary>{uiCopy().screenText['regions']}</summary><UITable className="region-directory-table">
         <thead><tr>{[['name',uiCopy().screenText['region']],['population',T.population],['wealth',T.wealthPerHead],['sol',T.standardOfLiving]].map(([key,label]) => <SortHeader key={key} label={label} active={sort===key} direction={direction} onClick={()=>{setSort(key);setDirection(sort===key?-direction:key==='name'?1:-1);}}/>)}</tr></thead>
         <tbody>{regions.map(r=><tr key={r.id} className={r.id===selected?'selected':''}>

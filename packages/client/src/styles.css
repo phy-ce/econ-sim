@@ -252,9 +252,9 @@ input[type="checkbox"] { accent-color: var(--accent); width: 16px; height: 16px;
 .scale-bar span { flex: 1; border-right: 1px solid var(--ink); }
 .scale-bar span:last-child { border-right: 0; }
 .scale-ticks { display: flex; justify-content: space-between; }
-.map-keys { display: flex; gap: 6px 14px; flex-wrap: wrap; align-items: center; }
-.map-keys span { display: inline-flex; align-items: center; gap: 5px; }
-.key-rail { width: 22px; border-top: 2px dashed var(--ink); opacity: 0.65; }
+
+
+
 .key-mine { display: inline-block; width: 14px; height: 11px; background: var(--accent); border: 1px solid var(--ink); }
 
 /* ---- 표 ---- */

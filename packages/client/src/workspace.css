@@ -195,7 +195,7 @@ html, body, #root { height:100%; overflow:hidden; }
 
 .map-layers {display:flex;margin-bottom:8px;width:100%}.map-layers button {flex:1;padding:5px 4px;font-size:11px}
 .kingdom-borders {pointer-events:none}.kingdom-symbol {font-size:4px;stroke:#fff5dc;stroke-width:.65;paint-order:stroke;stroke-linejoin:round}
-.kingdom-legend {display:flex;flex-wrap:wrap;gap:6px 12px;margin:6px 0}.kingdom-legend span {display:inline-flex;gap:4px;align-items:center;font-size:11px}.kingdom-legend b {font-size:18px;text-shadow:0 0 1px var(--ink)}
+
 .territory-marker {font-size:14px;margin-right:4px}.region-art.tile {width:66px;height:66px}.region-art .spr {width:64px;height:64px}
 .good-name>.spr {width:32px;height:32px}.topbar .crest .spr {width:64px;height:64px}.topbar .crest {width:64px}
 .construction-lanes {flex-direction:row;display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.construction-lane>header {flex-wrap:wrap}.construction-lane {border-color:var(--rule)}
