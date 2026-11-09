@@ -17,7 +17,6 @@
 main `3f4e89a`와 main 체크아웃의 커밋 안 한 클라이언트 변경을 코드로 대조했다. 줄 번호는 따로 적지 않으면 그 작업 트리 기준이다.
 
 ### 할 일 (위에서부터)
-2. **UI-2** (깨진 화면, 사용자 요청, sim 변경 반영): 가동률 슬라이더를 지운다. sim이 이 명령을 거부한다. 값과 멈춤 버튼은 남긴다.
 3. **UI-3** (사용자 요청): 지도 범례의 왕국 이름과 열쇠 줄을 지운다. 부·생활수준 색 눈금은 남긴다.
 4. **UI-4** (사용자 요청): 밝은 테마 `--gu-crown`을 진하게 한다.
 5. **UI-5** (정리): `(22+2)` 표기를 지키고, 쓰지 않는 +1·+5 코드를 지운다.
@@ -88,23 +87,6 @@ DESIGN에 없는 화면 규칙: 민간 회사 이름("XX 민간")은 화면에 �
 끝난 절은 UI_DONE으로 옮겼다. 줄인 절의 원문은 UI_DONE "2026-11-07 확인"에 있다.
 
 
-### UI-2. 가동률 조작 삭제 (옛 2-99, 사용자 2026-11-07, wt-autoutil, DESIGN 7.1, DECISIONS 7-60, sim 준비됨)
-사용자: "내가 건물 가동률을 조정하는 시스템인데 없애고(관련 UI도 같이)".
-
-sim은 `setUtilization`을 거부한다 (`commands.ts:178`). 지금 슬라이더를 움직이면 명령이 실패한다.
-
-고칠 것:
-1. `views/CompanyPanel.tsx:295~300` `<label className="util">`: 슬라이더 `UIInput`(`:297~298`, `setUtilization` 호출 `:298`)을 지운다. 라벨 `T.utilisation`(`:296`)과 값 `pct(b.utilization)`(`:299`)은 읽기 전용으로 남긴다. 같은 조건 안의 가동 중지 버튼(`:301`)은 그대로 둔다.
-2. `ui/components.tsx:62` `OperationBreakdown`: prop `onUtilization`을 지운다. 멈춤 버튼(`onStop`)은 `:64`의 `{onUtilization&&…}` 분기 안에 있다. 이 prop을 지우면 버튼도 사라지므로 버튼을 분기 밖으로 옮겨 `onStop`이 있을 때 보이게 한다. `gu-operation-controls` 안의 슬라이더 `label`만 지운다.
-3. 슬라이더를 보이는 예시를 지운다. 모두 표본 상태라 sim 명령을 부르지 않는다.
-   - `foundations/game-examples.tsx:18`·`:38` (상태 `:11` `utilizations`, `:25` `utilization`)
-   - `foundations/game-catalogue.ts:14` (props 표와 코드 예시)
-   - `design-system/catalogue.tsx:47` (`ds-utilization`, 상태 `:41`)
-4. 가동률 값 표시는 읽기 전용으로 둔다 (건물 창 `ResourceInspector.tsx:44`, 실제 가동 툴팁 `ActualOutput.tsx:10`). 건물의 가동 중지 버튼도 그대로 둔다.
-5. CSS: 슬라이더만 쓰던 `.util input` (`styles.css:583`)을 지운다. `.util`이 남는 값에 필요 없으면 `styles.css:582`·`:584`, `strategy.css:63`의 `.hctrl .util`도 지운다.
-6. 문자열: `T.utilisation`은 `ActualOutput.tsx:10`·`RegionIndustry.tsx:36`도 쓴다. 지우지 않는다. `ui/strings.ts`의 `utilization`도 `OperationBreakdown` 표가 쓴다.
-7. 툴팁 `strings.ts:338`·`:914`를 고친다. "설정한"·"Configured"와 정부 건물 조작 제한 문장을 빼고, 건물이 스스로 정한 가동 비율로 쓴다.
-8. 다 하면 3장에 "setUtilization 타입 지워도 됨"을 적는다 (`types.ts:765`, `commands.ts:177~179`).
 
 ### UI-3. 지도 범례 삭제 (옛 2-98, 사용자 2026-11-07, sim 변경 없음)
 사용자: 왕국 이름·철도·길·내 건물·주된 땅 범례가 필요 없으니 삭제한다.
@@ -196,3 +178,5 @@ sim은 `setUtilization`을 거부한다 (`commands.ts:178`). 지금 슬라이더
 - **UI-13·단위 F 인두세 부담 (2026-11-01):** S3 안에 직종별 부담률(걷힘 ÷ 세금·복지 전 소득, 05 L-S1)을 읽는 함수.
 - **오버홀 1a·1b 선행 (09 7.1 S1~S8, 2026-11-01 옮김):** S1 몫의 장부(단위 D), S2 분해 체인(E), S3 1차 효과 미리보기·바닥 전후 값(F), S4 `GameEvent` 종류 코드·숫자 칸(L), S5 슬롯 메타(M), S6 사전 "처음 하는 법"·말단 항목 id 테스트(G), S7 출생·사망·순이주 월 지표(L), S8 노드 월 경계 기록(L). 정의는 09 7.1.
 - **2-51 사전 라벨 (2026-11-05):** `packages/encyclopedia/src/strings.ts:11` `inputs` 한국어 `입력` → `투입`. 사전 패키지는 화면 작업자 범위 밖이라 여기로 옮겼다 (2-51 은 UI_DONE).
+
+- **UI-2 (2026-11-09):** 클라이언트 setUtilization 호출 제거. sim의 setUtilization 타입과 거부 분기(types.ts, commands.ts)는 지워도 됨.

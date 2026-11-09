@@ -2753,3 +2753,26 @@ sim 변경 (wt-research):
 기준: 매출 0.0001, 이익 −1,000,000 이면 `< −100%`. −100% 정확히는 `−100%`. 매출 0 이면 `—`. 툴팁은 줄여서 보인다. 막대 채움은 지금처럼 자른다.
 
 완료 근거: 루트 npm.cmd run typecheck 통과. client root 한정 marginText 3개·실제 FlowRow 손실 렌더링 1개 통과. 매출 0.0001/손실 1,000,000, −100% 경계·매출 0을 시험. Chrome headless 1920×1028 한국어 밝음/영어 어두움에서 그룹 매출 0.01·손실 1,000,000 주입 후 < −100% 및 줄 넘침 없음 확인: .tmp/ui-nine-1-ko-light.png, .tmp/ui-nine-1-en-dark.png. 그룹은 sim day 반올림 때문에 0.0001이 0이 되어 화면 시험에는 0.01 사용. 기존 productionDiagram 전체 시험의 고정 기대 가격 ƒ10은 현재 ƒ16.29와 달라 실패(이익률과 무관, 기존 타인 변경 보존). System 02 개편 부분은 커밋 제외. 실사용 Edge 화면 미검증.
+
+
+## 2026-11-09 UI-2
+
+### UI-2. 가동률 조작 삭제 (옛 2-99, 사용자 2026-11-07, wt-autoutil, DESIGN 7.1, DECISIONS 7-60, sim 준비됨)
+사용자: "내가 건물 가동률을 조정하는 시스템인데 없애고(관련 UI도 같이)".
+
+sim은 `setUtilization`을 거부한다 (`commands.ts:178`). 지금 슬라이더를 움직이면 명령이 실패한다.
+
+고칠 것:
+1. `views/CompanyPanel.tsx:295~300` `<label className="util">`: 슬라이더 `UIInput`(`:297~298`, `setUtilization` 호출 `:298`)을 지운다. 라벨 `T.utilisation`(`:296`)과 값 `pct(b.utilization)`(`:299`)은 읽기 전용으로 남긴다. 같은 조건 안의 가동 중지 버튼(`:301`)은 그대로 둔다.
+2. `ui/components.tsx:62` `OperationBreakdown`: prop `onUtilization`을 지운다. 멈춤 버튼(`onStop`)은 `:64`의 `{onUtilization&&…}` 분기 안에 있다. 이 prop을 지우면 버튼도 사라지므로 버튼을 분기 밖으로 옮겨 `onStop`이 있을 때 보이게 한다. `gu-operation-controls` 안의 슬라이더 `label`만 지운다.
+3. 슬라이더를 보이는 예시를 지운다. 모두 표본 상태라 sim 명령을 부르지 않는다.
+   - `foundations/game-examples.tsx:18`·`:38` (상태 `:11` `utilizations`, `:25` `utilization`)
+   - `foundations/game-catalogue.ts:14` (props 표와 코드 예시)
+   - `design-system/catalogue.tsx:47` (`ds-utilization`, 상태 `:41`)
+4. 가동률 값 표시는 읽기 전용으로 둔다 (건물 창 `ResourceInspector.tsx:44`, 실제 가동 툴팁 `ActualOutput.tsx:10`). 건물의 가동 중지 버튼도 그대로 둔다.
+5. CSS: 슬라이더만 쓰던 `.util input` (`styles.css:583`)을 지운다. `.util`이 남는 값에 필요 없으면 `styles.css:582`·`:584`, `strategy.css:63`의 `.hctrl .util`도 지운다.
+6. 문자열: `T.utilisation`은 `ActualOutput.tsx:10`·`RegionIndustry.tsx:36`도 쓴다. 지우지 않는다. `ui/strings.ts`의 `utilization`도 `OperationBreakdown` 표가 쓴다.
+7. 툴팁 `strings.ts:338`·`:914`를 고친다. "설정한"·"Configured"와 정부 건물 조작 제한 문장을 빼고, 건물이 스스로 정한 가동 비율로 쓴다.
+8. 다 하면 3장에 "setUtilization 타입 지워도 됨"을 적는다 (`types.ts:765`, `commands.ts:177~179`).
+
+완료 근거: 가동률 슬라이더·onUtilization 및 예시 조작 제거. 가동률 값과 onStop 기반 정지/재개 유지. utilization 툴팁 자동 결정 설명 변경. client src의 setUtilization/onUtilization 검색 0건. 루트 npm.cmd run typecheck, automaticOperation 2개·gameDesignSystem 9개 통과. sim 타입 제거 요청을 3장에 추가. 화면 미검증: 자동화의 건축사무소 선택 실패로 스크린샷 없음. CompanyPanel의 기존 System 02/건설 전용 개편은 커밋 제외.

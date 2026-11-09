@@ -580,7 +580,6 @@ table.goods tr.selected td:last-child { border-right: 2px solid var(--ink); }
 .hctrl { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding-bottom: 10px; border-bottom: 2px solid var(--ink); }
 .hctrl select { flex: 1 1 200px; min-width: 0; max-width: 100%; font-size: 13px; }
 .util { flex: 1 1 180px; display: flex; align-items: center; gap: 8px; min-width: 0; }
-.util input { flex: 1; min-width: 60px; }
 .util output { font-size: 12px; min-width: 38px; text-align: right; }
 .sm-btn { min-height: 32px; padding: 0 10px; font-size: 13px; }
 .hd-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }

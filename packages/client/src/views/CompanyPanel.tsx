@@ -302,12 +302,10 @@ function Controls({ r, game, world, owner }: { r: Row; game: Game; world: World;
       </span>
       {(b.shrinking??0)>0&&<UIButton className="sm-btn" onClick={()=>game.command({type:'cancelDemolish',buildingId:b.id})}>{T.cancelDemolition}</UIButton>}
       <MethodComparison world={world} building={b} owner={owner} game={game}/>
-      {!(owner.state && isGovernment(b.typeId)) && <><label className="util">
+      {!(owner.state && isGovernment(b.typeId)) && <><span className="util">
         <span className="lbl">{T.utilisation}</span>
-        <UIInput type="range" min={10} max={100} step={10} value={Math.round(b.utilization * 100)} aria-label={T.utilisation}
-          onChange={(e) => game.command({ type: 'setUtilization', buildingId: b.id, utilization: Number(e.target.value) / 100 })} />
         <output className="pxnum">{pct(b.utilization)}</output>
-      </label>
+      </span>
       <UIButton className="sm-btn" onClick={() => game.command({ type: 'setActive', buildingId: b.id, active: !b.active })}>{b.active ? T.stop : T.resume}</UIButton></>}
     </div>
   );

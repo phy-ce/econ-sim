@@ -585,3 +585,7 @@ DetailWindow 독립 NavigationProvider/버튼, BuildingPops 및 ResourceInspecto
 
 ### 2026-11-09 UI-1
 루트 npm.cmd run typecheck 통과. client root 한정 marginText 3개·실제 FlowRow 손실 렌더링 1개 통과. 매출 0.0001/손실 1,000,000, −100% 경계·매출 0을 시험. Chrome headless 1920×1028 한국어 밝음/영어 어두움에서 그룹 매출 0.01·손실 1,000,000 주입 후 < −100% 및 줄 넘침 없음 확인: .tmp/ui-nine-1-ko-light.png, .tmp/ui-nine-1-en-dark.png. 그룹은 sim day 반올림 때문에 0.0001이 0이 되어 화면 시험에는 0.01 사용. 기존 productionDiagram 전체 시험의 고정 기대 가격 ƒ10은 현재 ƒ16.29와 달라 실패(이익률과 무관, 기존 타인 변경 보존). System 02 개편 부분은 커밋 제외. 실사용 Edge 화면 미검증.
+
+
+### 2026-11-09 UI-2
+가동률 슬라이더·onUtilization 및 예시 조작 제거. 가동률 값과 onStop 기반 정지/재개 유지. utilization 툴팁 자동 결정 설명 변경. client src의 setUtilization/onUtilization 검색 0건. 루트 npm.cmd run typecheck, automaticOperation 2개·gameDesignSystem 9개 통과. sim 타입 제거 요청을 3장에 추가. 화면 미검증: 자동화의 건축사무소 선택 실패로 스크린샷 없음. CompanyPanel의 기존 System 02/건설 전용 개편은 커밋 제외.
