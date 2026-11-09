@@ -581,3 +581,7 @@ DetailWindow 독립 NavigationProvider/버튼, BuildingPops 및 ResourceInspecto
   - .tmp/ui-100/en-main-trends.png
 - 한계: 기존 미커밋 System 02/이익률 변경이 함께 있는 작업 트리에서 캡처. 일반 Edge 최대화·Windows 배율·브라우저 확대와 모든 상세 탭/데이터 조합은 화면 미검증. 5199는 다른 앱이 사용 중이므로 client Vite 5200으로 검증. 기존 미커밋 변경을 보존하고 커밋에서 제외하며 sim 수정 없음.
 - 동작 확인: 서브창을 포인터로 (80, 50)px 이동한 뒤에도 360×360 유지. 시세 범위를 kingdom으로 바꾸면 저장 상태도 갱신. 연구 110% 확대 후 본문 폭/스크롤 폭 모두 544px로 가로 넘침 없음 (.tmp/ui-100/interactions.json).
+
+
+### 2026-11-09 UI-1
+루트 npm.cmd run typecheck 통과. client root 한정 marginText 3개·실제 FlowRow 손실 렌더링 1개 통과. 매출 0.0001/손실 1,000,000, −100% 경계·매출 0을 시험. Chrome headless 1920×1028 한국어 밝음/영어 어두움에서 그룹 매출 0.01·손실 1,000,000 주입 후 < −100% 및 줄 넘침 없음 확인: .tmp/ui-nine-1-ko-light.png, .tmp/ui-nine-1-en-dark.png. 그룹은 sim day 반올림 때문에 0.0001이 0이 되어 화면 시험에는 0.01 사용. 기존 productionDiagram 전체 시험의 고정 기대 가격 ƒ10은 현재 ƒ16.29와 달라 실패(이익률과 무관, 기존 타인 변경 보존). System 02 개편 부분은 커밋 제외. 실사용 Edge 화면 미검증.

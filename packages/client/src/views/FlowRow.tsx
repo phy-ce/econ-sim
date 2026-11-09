@@ -7,7 +7,7 @@ import {BuildingSprite,GoodSprite} from '../sprites';
 import {NumericValue} from '../NumericValue';
 import {Bar} from '../ui';
 import {goodName,buildingName,useT} from '../i18n';
-import {exactNumber,pct} from '../format';
+import {marginText,exactNumber,pct} from '../format';
 import {HarvestBadge} from './HarvestBadge';
 import './flow-row.css';
 export type FlowSummary={inputs:{g:GoodId;cur:number;price:number;value:number}[];outputs:{g:GoodId;cur:number;price:number;value:number}[];inputFill:number;rev:number;raw:number;wage:number;stopped:boolean;points:number;tax:number;seats:number;officeLoad:number};
@@ -32,5 +32,5 @@ export function FlowRow({world,building:b,typeId=b?.typeId,methodId=b?.methodId,
  return <ProductionDiagram className={stopped?'flow-stopped':''} aria-label={T.buildingGroups.flows} inputLabel={T.hInputs} outputLabel={T.hOutput} period={[b||summary?T.flowActual:T.flowBase,T.perDay].join(' · ')}
  inputs={side(false)} outputs={service?<div className="gu-production-service"><span>{service.label}</span><strong><NumericValue value={service.value} format="compact"/></strong>{m.construction&&<small>{T.officeLoad}: {pct(load)}</small>}</div>:side(true)}
  building={<><BuildingSprite typeId={typeId} size={56}/><strong>{buildingName(typeId)}</strong><small>×<NumericValue value={levels} format="compact"/></small></>}
- footer={<>{stopped&&<span>{b?.idle?T.idle:T.stopped}</span>}{typeId==='subsistence'&&<span><HarvestBadge world={world} regionId={regionId} typeId={typeId}/><QuakeBadge world={world} regionId={regionId}/></span>}{(b||summary)&&<span className="gu-production-margin"><span>{T.margin}</span><strong className={margin===null?'muted':margin<0?'neg':'pos'}>{margin===null?'—':pct(margin)}</strong></span>}</>}/>;
+ footer={<>{stopped&&<span>{b?.idle?T.idle:T.stopped}</span>}{typeId==='subsistence'&&<span><HarvestBadge world={world} regionId={regionId} typeId={typeId}/><QuakeBadge world={world} regionId={regionId}/></span>}{(b||summary)&&<span className="gu-production-margin" tabIndex={0} data-help={marginText(margin,{detail:true})}><span>{T.margin}</span><strong className={margin===null?'muted':margin<0?'neg':'pos'}>{marginText(margin)}</strong></span>}</>}/>;
 }

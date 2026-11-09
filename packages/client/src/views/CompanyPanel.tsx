@@ -28,7 +28,7 @@ import { ChevronDown, X, Coins, Crown, ArrowUp, ArrowDown, Pause, Play } from 'l
 import type { Game } from '../useGame';
 import { BuildingSprite, GoodSprite, Sprite64 } from '../sprites';
 import { Bar, CLASS_COLOR, SKILL_COLOR, SegBar, Waterfall } from '../ui';
-import { compact, compactMoney, int, money, one, pct, signedCompactMoney, signedMoney, two } from '../format';
+import {marginText, compact, compactMoney, int, money, one, pct, signedCompactMoney, signedMoney, two } from '../format';
 import { className, buildingName, companyName, goodName, landName, methodName, regionName, skillName, t, techName, useLang, useT } from '../i18n';
 
 const qty = (v: number) => (v < 10 ? one(v) : int(v));
@@ -201,7 +201,7 @@ function Summary({ rows }: { rows: Row[] }) {
         <h3 className="htile-h">
           <span>{T.balance}</span>
           <span className="htile-pl"><span className={`pxnum ${profit >= 0 ? 'pos' : 'neg'}`}><NumericValue value={profit} format="signedMoney"/></span>
-            <span className="lbl">{T.margin} <b className={`pxnum ${profit >= 0 ? 'pos' : 'neg'}`}>{rev > 0 ? spct(profit / rev) : '—'}</b></span></span>
+            <span className="lbl" tabIndex={0} data-help={marginText(rev>0?profit/rev:null,{detail:true})}>{T.margin} <b className={`pxnum ${profit >= 0 ? 'pos' : 'neg'}`}>{marginText(rev>0?profit/rev:null,{signed:true})}</b></span></span>
         </h3>
         <Waterfall rev={rev} raw={raw} wage={wage} labels={[T.wfRev, T.wfRaw, T.wfWage, T.wfProfit]} />
       </section>
@@ -235,11 +235,11 @@ function BuildingRow({ r, game, world, owner, open, onToggle,onGood }: {onGood?:
   const scale = Math.max(r.rev, r.raw + r.wage, 1);
   const good = r.profit >= 0;
   if(isOwnerBuilding(b.typeId))return <article className="hrow"><UIButton className="hrow-head" style={{gridTemplateColumns:'40px minmax(0,1fr) auto'}} aria-expanded={open} onClick={onToggle}><BuildingSprite typeId={b.typeId} size={40}/><strong>{r.name} ×{b.level}</strong><span><NumericValue value={b.cash??0} format="money"/></span></UIButton><OwnerSummary buildings={[b]}/>{open&&<Workforce building={b} world={world}/>}</article>;
-  const marginText = r.margin === null ? '—' : spct(r.margin);
+  const marginLabel = marginText(r.margin,{signed:true});
   return (
     <article className={`hrow ${open ? 'open' : ''} ${b.active ? '' : 'off'} ${b.unpaid ? 'alarm' : ''}`}>
       <UIButton className="hrow-head" style={{gridTemplateColumns:'40px minmax(0,1fr) 90px auto'}} aria-expanded={open} onClick={onToggle}
-        aria-label={T.rowAria(r.name, b.level, signedMoney(r.profit), marginText)} data-help={T.rowAria(r.name, b.level, signedMoney(r.profit), marginText)}>
+        aria-label={T.rowAria(r.name, b.level, signedMoney(r.profit), marginLabel)} data-help={T.rowAria(r.name, b.level, signedMoney(r.profit), marginLabel)}>
         <span className="tile md"><Sprite64 id={b.typeId} size={40} /></span>
         <span className="hc-name">
           <span className="hc-title"><b>{r.name}</b> <span className="pxnum">×{b.level}</span>{r.queued > 0 && <span className="pxnum q">+{r.queued}</span>}</span>
@@ -271,7 +271,7 @@ function BuildingRow({ r, game, world, owner, open, onToggle,onGood }: {onGood?:
             <section className="hd-sec" aria-label={T.balance}>
               <h4 className="hd-h"><span>{T.balance}</span><span className={`pxnum ${good ? 'pos' : 'neg'}`}><NumericValue value={r.profit} format="signedMoney"/></span></h4>
               <Waterfall rev={r.rev} raw={r.raw} wage={r.wage} labels={[T.wfRev, T.wfRaw, T.wfWage, T.wfProfit]} />
-              <div className="margin-box"><span>{T.margin}</span><b className={`pxnum ${good ? 'pos' : 'neg'}`}>{marginText}</b></div>
+              <div className="margin-box" tabIndex={0} data-help={marginText(r.margin,{detail:true})}><span>{T.margin}</span><b className={`pxnum ${good ? 'pos' : 'neg'}`}>{marginLabel}</b></div>
             </section>
           </div>
         </div>

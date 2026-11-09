@@ -8,7 +8,7 @@ import type {Game} from '../useGame';
 import {goodName,methodName,skillName,techName,useT} from '../i18n';
 import {ClassSprite,GoodSprite} from '../sprites';
 import {NumericValue} from '../NumericValue';
-import {compact,signedMoney} from '../format';
+import {marginText,compact,signedMoney} from '../format';
 import type {ReactNode} from 'react';
 
 export function MethodComparison({world,building:b,owner,game}:{world:World;building:Building;owner:Company;game:Game}){
@@ -18,7 +18,7 @@ export function MethodComparison({world,building:b,owner,game}:{world:World;buil
  const quantity=(value:number,format:'count'|'money'|'ratio')=>format==='ratio'?`${(value*100).toFixed(2)}%`:<NumericValue value={value} format={format==='money'?'signedMoney':'compact'}/>;
  const row=(key:string,label:ReactNode,value:(m:MethodDef)=>number|null,format:'count'|'money'|'ratio'='count')=>{
   const base=value(current);return <tr key={key}><th>{label}</th>{methods.map(m=>{const v=value(m),delta=v!==null&&base!==null?v-base:0;return <td key={m.id} className={`${m.id===b.methodId?'is-current ':''}${!knowsTech(owner,m.tech)?'is-locked':''}`}>
-   {v===null?'—':quantity(v,format)}{m.id!==b.methodId&&Math.abs(delta)>1e-9&&<small className={`method-delta ${delta>0?'pos':'neg'}`}>{format==='money'?signedMoney(delta):`${delta>0?'+':'−'}${format==='ratio'?`${(Math.abs(delta)*100).toFixed(2)}%`:compact(Math.abs(delta))}`}</small>}
+   {v===null?'—':key==='margin'?<span tabIndex={0} data-help={marginText(v,{detail:true})}>{marginText(v,{decimals:2})}</span>:quantity(v,format)}{m.id!==b.methodId&&Math.abs(delta)>1e-9&&<small className={`method-delta ${delta>0?'pos':'neg'}`}>{format==='money'?signedMoney(delta):`${delta>0?'+':'−'}${format==='ratio'?`${compact(Math.abs(delta)*100)}%`:compact(Math.abs(delta))}`}</small>}
   </td>;})}</tr>;
  };
  return <details className="method-comparison"><summary>{methodName(current)} · ×{b.level}</summary><div className="method-columns"><UITable style={{minWidth:90+methods.length*110}}>

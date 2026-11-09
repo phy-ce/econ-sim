@@ -10,7 +10,7 @@ import type {Game} from '../useGame';
 import {useT,useLang,techName,buildingName,methodName,goodName,skillName} from '../i18n';
 import {NumericValue} from '../NumericValue';
 import {Bar} from '../ui';
-import {pct,compact,exactNumber} from '../format';
+import {marginText,pct,compact,exactNumber} from '../format';
 import {DetailWindow} from './DetailWindow';
 
 export function ResearchPanel({world,game,me,request,onPolicy}:{onPolicy?:()=>void;world:World;game:Game;me:Company;request?:{id:string;sequence:number}|null}){
@@ -25,7 +25,7 @@ export function ResearchPanel({world,game,me,request,onPolicy}:{onPolicy?:()=>vo
  const labels={known:uiCopy().screenText['known'],current:uiCopy().screenText['researching'],available:uiCopy().screenText['available210'],locked:uiCopy().screenText['locked']};
  const symbols={known:'✓',current:'◉',available:'○',locked:'◇'};
  const remaining=(id:string)=>{const t=TECHS.find(t=>t.id===id)!;return r.points>0?Math.ceil(Math.max(0,t.cost-(r.progress[id]??0))/r.points):null;};
- const hint=(id:string)=>{const u=unlocksOf(id);return [...new Set([...u.methods.map(({typeId,methodId})=>{const m=getMethod(typeId,methodId),margin=methodMarginAtBase(typeId,methodId);const goods=(output:boolean)=>GOOD_IDS.filter(g=>(output?m.outputs:m.inputs)[g]).map(g=>`${goodName(g)} ${exactNumber((output?m.outputs:m.inputs)[g]!)}`).join(' · ')||'—';return `${buildingName(typeId)} · ${methodName(m)}\n${T.researchBaseMargin}: ${margin.revenue>0?pct(margin.margin):'—'}\n${SKILLS.filter(s=>m.workers[s]).map(s=>`${skillName(s)} ${exactNumber(m.workers[s]!)}`).join(' · ')} / L\n${goods(false)} → ${goods(true)} / L ${T.perDay}`;}),...u.buildings.map(buildingName),...u.policies.map(id=>S[id])])].join('\n');};
+ const hint=(id:string)=>{const u=unlocksOf(id);return [...new Set([...u.methods.map(({typeId,methodId})=>{const m=getMethod(typeId,methodId),margin=methodMarginAtBase(typeId,methodId);const goods=(output:boolean)=>GOOD_IDS.filter(g=>(output?m.outputs:m.inputs)[g]).map(g=>`${goodName(g)} ${exactNumber((output?m.outputs:m.inputs)[g]!)}`).join(' · ')||'—';return `${buildingName(typeId)} · ${methodName(m)}\n${T.researchBaseMargin}: ${margin.revenue>0?marginText(margin.margin,{detail:true}):'—'}\n${SKILLS.filter(s=>m.workers[s]).map(s=>`${skillName(s)} ${exactNumber(m.workers[s]!)}`).join(' · ')} / L\n${goods(false)} → ${goods(true)} / L ${T.perDay}`;}),...u.buildings.map(buildingName),...u.policies.map(id=>S[id])])].join('\n');};
  const rows=TECHS.filter(t=>(filter==='all'||(filter==='available'?(status(t.id)==='available'||status(t.id)==='current'):status(t.id)===filter))&&techName(t.id).toLocaleLowerCase().includes(query.toLocaleLowerCase()));
  const pops=world.pops.filter(p=>world.regions.find(x=>x.id===p.regionId)?.kingdomId===me.kingdomId),n=pops.reduce((sum,p)=>sum+p.size,0),lit=n?pops.reduce((sum,p)=>sum+p.size*literacyOf(p),0)/n:0;
  const detail=<section className="research-dossier" aria-label={uiCopy().screenText['selectedTechnology']}>

@@ -32,4 +32,11 @@ describe('production diagram',()=>{
   const method=getMethod(b.typeId,b.methodId),html=renderToStaticMarkup(<FlowRow world={world} building={b}/>);
   for(const id of Object.keys(method.outputs) as (keyof typeof method.outputs)[])expect(html).toContain(goodName(id));
  });
+ it('caps extreme losses in the real game ledger',()=>{
+  setLang('en');const world=createWorld(42),b=world.buildings.find(b=>b.typeId==='farm')!;
+  b.last.revenue=.0001;b.last.inputCost=1e6;b.last.wageCost=0;
+  expect(renderToStaticMarkup(<FlowRow world={world} building={b}/>)).toContain('&lt; −100%');
+  b.last.revenue=0;
+  expect(renderToStaticMarkup(<FlowRow world={world} building={b}/>)).not.toContain('&lt; −100%');
+ });
 });

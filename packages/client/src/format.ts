@@ -12,6 +12,17 @@ export const one = (v: number) => Math.abs(v)>=1000?compact(v):nf1.format(v);
 export const two = (v: number) => Math.abs(v)>=1000?compact(v):nf2.format(v);
 export const pct = (v: number) => `${Math.round(v * 100)}%`;
 
+/** Presentation only: retain the raw ratio for calculations and sorting. */
+export function marginText(value:number|null|undefined, options:{signed?:boolean;decimals?:number;detail?:boolean}={}):string {
+  if(value==null||Number.isNaN(value)||value===Infinity)return '—';
+  if(value < -1&&!options.detail)return '< −100%';
+  if(!Number.isFinite(value))return '< −100%';
+  const percent=value*100;
+  if(!Number.isFinite(percent))return `${value.toExponential(2)} × 100%`;
+  if(options.detail&&Math.abs(percent)>=1000)return `${Math.abs(percent)>=1e15?percent.toExponential(2).replace('-', '−'):compact(percent)}%`;
+  return `${percent<0?'−':options.signed?'+':''}${Math.abs(percent).toFixed(options.decimals??0)}%`;
+}
+
 /** 한글 조사 선택: 받침이 있으면 with, 없으면 without (예: particle('농장', '을', '를') → '농장을') */
 export function particle(word: string, withBatchim: string, without: string): string {
   const code = word.charCodeAt(word.length - 1);
