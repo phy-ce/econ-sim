@@ -609,3 +609,7 @@ BottomPanel 공용 series에서 capitalist 제외하여 범례와 차트 선 모
 
 ### 2026-11-09 UI-7
 WealthDrift 합 행을 T.wealthTotal (합/Total)로 교체. 계산식 유지. 루트 npm.cmd run typecheck 및 wealthSummary 2개 통과. 실제 WealthDrift 컴포넌트+seed42 world를 별도 검증 페이지에 렌더링하여 한국어 밝음/영어 어두움 확인: .tmp/ui-nine-7-ko.png, .tmp/ui-nine-7-en.png. 영어 이미지 직접 확인. 검증 페이지는 커밋 제외. 게임 내 진입 경로·실사용 Edge 화면 미검증.
+
+
+### 2026-11-09 UI-8
+build 상세에만 새 문자열 buildCrownShare/buildOfficeWages/buildMaterialsMargin 적용. 기존 T.share·일반 wages/other 의미 유지. 루트 npm.cmd run typecheck 및 budgetPanel 2개·budgetJobs 2개 통과. 실제 FinancePanel+seed42 world 검증 페이지에서 왕실 공사 링크를 눌러 세 라벨 한국어 밝음/영어 어두움 확인: .tmp/ui-nine-8-ko.png, .tmp/ui-nine-8-en.png. 영어 이미지 직접 확인; 긴 Materials and margin도 행 안에 표시. 게임 내 진입 경로·실사용 Edge 화면 미검증.

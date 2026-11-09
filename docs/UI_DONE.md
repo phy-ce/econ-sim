@@ -2839,3 +2839,19 @@ sim은 `setUtilization`을 거부한다 (`commands.ts:178`). 지금 슬라이더
 - 남은 것: 합 행 라벨이 `Σ`다 (`WealthDrift.tsx:16`). 명세 문자열은 "합"/"Total"이다.
 
 완료 근거: WealthDrift 합 행을 T.wealthTotal (합/Total)로 교체. 계산식 유지. 루트 npm.cmd run typecheck 및 wealthSummary 2개 통과. 실제 WealthDrift 컴포넌트+seed42 world를 별도 검증 페이지에 렌더링하여 한국어 밝음/영어 어두움 확인: .tmp/ui-nine-7-ko.png, .tmp/ui-nine-7-en.png. 영어 이미지 직접 확인. 검증 페이지는 커밋 제외. 게임 내 진입 경로·실사용 Edge 화면 미검증.
+
+
+## 2026-11-09 UI-8
+
+### UI-8. 왕실 공사 자세히 보기 라벨 (옛 2-62, 사용자 요청 2026-10-22)
+장부 라벨·수수료 표시는 끝났다. `build` 자세히 보기(`FinancePanel.tsx:60`·`:70`)의 라벨만 명세와 다르다.
+
+| 자리 | 지금 | 명세 (ko / en) |
+|---|---|---|
+| `share` 칩 | `T.share` "비율" | 왕실 몫 / Crown share |
+| `wage` 행 | `S.wages` | 사무소 임금 몫 / Office wages |
+| `other` 행 | `S.other` | 자재·이익 몫 / Materials and margin |
+
+- `T.share`는 `ClassDonut.tsx:108`도 쓴다. 값을 바꾸지 말고 새 키를 더한다. `build` 칩과 행에만 쓴다.
+
+완료 근거: build 상세에만 새 문자열 buildCrownShare/buildOfficeWages/buildMaterialsMargin 적용. 기존 T.share·일반 wages/other 의미 유지. 루트 npm.cmd run typecheck 및 budgetPanel 2개·budgetJobs 2개 통과. 실제 FinancePanel+seed42 world 검증 페이지에서 왕실 공사 링크를 눌러 세 라벨 한국어 밝음/영어 어두움 확인: .tmp/ui-nine-8-ko.png, .tmp/ui-nine-8-en.png. 영어 이미지 직접 확인; 긴 Materials and margin도 행 안에 표시. 게임 내 진입 경로·실사용 Edge 화면 미검증.
