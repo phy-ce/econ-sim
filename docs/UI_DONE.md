@@ -2830,3 +2830,12 @@ sim은 `setUtilization`을 거부한다 (`commands.ts:178`). 지금 슬라이더
 - 코드로만 봤다. 범례가 실제로 어떻게 보이는지는 확인 못 함.
 
 완료 근거: BottomPanel 공용 series에서 capitalist 제외하여 범례와 차트 선 모두 같은 7계층을 사용. 루트 npm.cmd run typecheck 및 차트 포함 gameDesignSystem 9개 통과. Chrome 1920×1028 한국어 밝음/영어 어두움 범례 7계층·자본가 없음 DOM 확인 및 캡처: .tmp/ui-nine-6-ko-light.png, .tmp/ui-nine-6-en-dark.png. 한국어 이미지 직접 확인. 시작 상태라 이력이 없는 빈 차트였음; 이력이 쌓인 선 및 실사용 Edge 화면 미검증.
+
+
+## 2026-11-09 UI-7
+
+### UI-7. 부 이동 표 합 행 라벨 (옛 2-82, DESIGN 5장 부 이동, DECISIONS 7-37·7-38)
+부 이동 표와 중복 제거는 끝났다.
+- 남은 것: 합 행 라벨이 `Σ`다 (`WealthDrift.tsx:16`). 명세 문자열은 "합"/"Total"이다.
+
+완료 근거: WealthDrift 합 행을 T.wealthTotal (합/Total)로 교체. 계산식 유지. 루트 npm.cmd run typecheck 및 wealthSummary 2개 통과. 실제 WealthDrift 컴포넌트+seed42 world를 별도 검증 페이지에 렌더링하여 한국어 밝음/영어 어두움 확인: .tmp/ui-nine-7-ko.png, .tmp/ui-nine-7-en.png. 영어 이미지 직접 확인. 검증 페이지는 커밋 제외. 게임 내 진입 경로·실사용 Edge 화면 미검증.

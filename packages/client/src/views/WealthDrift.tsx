@@ -13,7 +13,7 @@ export function WealthDrift({data,perHead}:{data:ReturnType<typeof wealthSummary
   <tr><th>{T.wealthIncome}</th><td>{money(data.income)}</td></tr>
   <tr><th>{T.screenText.inKindGoods}</th><td>{money(data.inKind)}</td></tr>
   <tr><th tabIndex={0} data-help={savingsFormula}>{T.wealthFromSavings}</th><td>{data.hasSavingsIncome?money(data.fromSavings):'—'}</td></tr>
-  <tr><th>Σ</th><td>{money(data.income+data.inKind+data.fromSavings)}</td></tr>
+  <tr><th>{T.wealthTotal}</th><td>{money(data.income+data.inKind+data.fromSavings)}</td></tr>
   <tr><th>{T.wealthCostNow}</th><td>{money(data.costNow)}</td></tr>
   <tr><th>{T.wealthCostNext}</th><td>{money(data.costNext)}</td></tr>
   <tr><th>{T.wealthPerWeek}</th><td className={drift>0?'pos':drift<0?'neg':undefined}>{drift>=0?'+':'−'}{Math.abs(drift).toFixed(2)}</td></tr>
