@@ -2807,3 +2807,15 @@ sim은 `setUtilization`을 거부한다 (`commands.ts:178`). 지금 슬라이더
 확인: 왕실 표지와 `--gold` 글자가 있는 창을 밝은 테마로 본다. 왕실·저택·금융 표지가 서로 구별되는지 본다.
 
 완료 근거: 밝은 --gu-crown #826130. 커밋 기준 --gu-muted #646a5f 적용; 작업 트리의 기존 var(--es-muted) 연결은 보존하여 System 02 개편을 포함하지 않음. 대비 직접 계산: 종이 5.01, 시트 5.49, soft 4.72, 흰 글자 5.67, System 02 panel 5.29/subtle 4.78. muted는 커밋 기준 4.64, 작업 트리 5.55. 루트 npm.cmd run typecheck 및 gameDesignSystem 9개 통과. ownershipPop 기존 옛 저장 안내 기대 시험 1개 실패(현재 수입 기록이 있어 안내 없음), 나머지 3개 통과; 이번 CSS와 무관. .tmp/ui-nine-4-light-owners.png 밝은 테마 지역 건물·상단 금색 글자 확인. 모든 소유 표지 조합/실사용 Edge 화면 미검증. 어두운 테마·대기 중 글자 크기 변경 없음.
+
+
+## 2026-11-09 UI-5
+
+### UI-5. 건설 창 남은 정리 (옛 2-92, 사용자 2026-11-05)
+건설 창 합치기는 끝났다 (커밋 `49e1a63`). 가동률 조작은 UI-2가 대신한다.
+- 건물 이름 뒤 표기: 사용자가 정한 형태는 `(22+2)`다 (6번). 커밋된 코드는 이 형태다. 커밋 안 한 `ConstructionPanel.tsx:43`은 `×22 +2`로 바꾸고 있다. 사용자 결정 없이 바꾸지 않는다. 작업 중 (커밋 안 됨).
+- +1·+5는 뺐지만 코드가 남았다 (10번). 지운다.
+  - `supplyDemand.ts:6` `supplyDemandProjection`: 화면 호출 0건, 시험 `test/supplyDemand.test.ts:10`·`:12`·`:16`만 쓴다. 시험도 같이 고친다.
+  - `views/SupplyDemand.tsx:9` `SupplyDemandBar`의 `one`·`five` props와 `:14` 그리기: 넘기는 곳이 없다.
+
+완료 근거: 미사용 supplyDemandProjection 및 SupplyDemandBar one/five props·표시 제거, 시험도 현재 비율/0 수요/눈금 검증으로 정리. 루트 npm.cmd run typecheck 통과. supplyDemand 2개·constructionManagement 4개 통과(SSR useLayoutEffect 경고만 있음). git show HEAD의 ConstructionPanel은 ({기존 레벨}+{대기 레벨})로 (22+2) 형태 유지 확인. 타인의 작업 트리 ×22 +2 변경은 수정·스테이징하지 않음; 따라서 현재 작업 트리에는 기존 × 표기가 남지만 이번 커밋에는 포함되지 않음. 화면 미검증, 새 스크린샷 없음(미사용 코드 제거).

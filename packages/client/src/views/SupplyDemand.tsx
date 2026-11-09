@@ -6,12 +6,12 @@ import {goodName,useT} from '../i18n';
 import {compact,exactNumber} from '../format';
 import {sdPosition,sdText} from '../supplyDemand';
 
-export function SupplyDemandBar({now,one,five,ai=false,compact=false}:{now:number|null;one?:number|null;five?:number|null;ai?:boolean;compact?:boolean}){
+export function SupplyDemandBar({now,ai=false,compact=false}:{now:number|null;ai?:boolean;compact?:boolean}){
  const T=useT();
  return <span className={`sd-bar${compact?' sd-compact':''}`} role="img" aria-label={`${T.supplyDemandRatio}: ${sdText(now)}`}>
   {[.5,1,2].map(n=><span key={n} className="sd-tick" style={{left:`${sdPosition(n)*100}%`}} data-help={sdText(n)}><small>{n}</small></span>)}
   {ai&&TUNE.aiGlutSD>0&&<span className="sd-ai" tabIndex={0} style={{left:`${sdPosition(TUNE.aiGlutSD)*100}%`}} data-help={`${T.aiStopsExpanding} ${sdText(TUNE.aiGlutSD)}`}/>}
-  {([['now',now],['one',one],['five',five]] as const).map(([kind,value])=>value!==null&&value!==undefined?<span key={kind} className={`sd-point sd-${kind}`} tabIndex={0} style={{left:`${sdPosition(value)*100}%`}} data-help={`${kind==='now'?T.sdNow:kind==='one'?'+1':'+5'}: ${sdText(value)}`}/>:null)}
+  {now!==null&&<span className="sd-point sd-now" tabIndex={0} style={{left:`${sdPosition(now)*100}%`}} data-help={`${T.sdNow}: ${sdText(now)}`}/>}
  </span>;
 }
 export function SupplyDemandPreview({world,regionId,typeId,methodId,methodIds=methodId?[methodId]:[]}:{world:World;regionId:number;typeId:string;methodId?:string;methodIds?:string[]}){
