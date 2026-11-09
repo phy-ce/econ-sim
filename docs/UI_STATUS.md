@@ -601,3 +601,7 @@ DetailWindow 독립 NavigationProvider/버튼, BuildingPops 및 ResourceInspecto
 
 ### 2026-11-09 UI-5
 미사용 supplyDemandProjection 및 SupplyDemandBar one/five props·표시 제거, 시험도 현재 비율/0 수요/눈금 검증으로 정리. 루트 npm.cmd run typecheck 통과. supplyDemand 2개·constructionManagement 4개 통과(SSR useLayoutEffect 경고만 있음). git show HEAD의 ConstructionPanel은 ({기존 레벨}+{대기 레벨})로 (22+2) 형태 유지 확인. 타인의 작업 트리 ×22 +2 변경은 수정·스테이징하지 않음; 따라서 현재 작업 트리에는 기존 × 표기가 남지만 이번 커밋에는 포함되지 않음. 화면 미검증, 새 스크린샷 없음(미사용 코드 제거).
+
+
+### 2026-11-09 UI-6
+BottomPanel 공용 series에서 capitalist 제외하여 범례와 차트 선 모두 같은 7계층을 사용. 루트 npm.cmd run typecheck 및 차트 포함 gameDesignSystem 9개 통과. Chrome 1920×1028 한국어 밝음/영어 어두움 범례 7계층·자본가 없음 DOM 확인 및 캡처: .tmp/ui-nine-6-ko-light.png, .tmp/ui-nine-6-en-dark.png. 한국어 이미지 직접 확인. 시작 상태라 이력이 없는 빈 차트였음; 이력이 쌓인 선 및 실사용 Edge 화면 미검증.

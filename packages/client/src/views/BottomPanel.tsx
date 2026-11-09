@@ -28,7 +28,7 @@ function BottomPanelView({ world, history, lastReadTick, onRead, onJump, kingdom
   const viewed=world.kingdoms.find(k=>k.id===(kingdomId??me?.kingdomId));
   const onViewCompany=(id:number)=>{const company=companyById(world,id);if(company)onViewKingdom(company.kingdomId);};
   const wealthData = useMemo(() => history.map((p) => ({ tick: p.tick, ...p.sol })), [history]);
-  const series = POP_CLASSES.map((c) => ({ key: c, name: className(c), color: CLASS_COLOR[c] }));
+  const series = POP_CLASSES.filter(c=>c!=='capitalist').map((c) => ({ key: c, name: className(c), color: CLASS_COLOR[c] }));
 
   return (
     <SectionStack explorer revealId={popRequest?'pops':'kingdom'} revealKey={popRequest?.sequence??sequence??kingdomId} storageKey="trends-v2" items={[
