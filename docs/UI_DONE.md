@@ -2855,3 +2855,12 @@ sim은 `setUtilization`을 거부한다 (`commands.ts:178`). 지금 슬라이더
 - `T.share`는 `ClassDonut.tsx:108`도 쓴다. 값을 바꾸지 말고 새 키를 더한다. `build` 칩과 행에만 쓴다.
 
 완료 근거: build 상세에만 새 문자열 buildCrownShare/buildOfficeWages/buildMaterialsMargin 적용. 기존 T.share·일반 wages/other 의미 유지. 루트 npm.cmd run typecheck 및 budgetPanel 2개·budgetJobs 2개 통과. 실제 FinancePanel+seed42 world 검증 페이지에서 왕실 공사 링크를 눌러 세 라벨 한국어 밝음/영어 어두움 확인: .tmp/ui-nine-8-ko.png, .tmp/ui-nine-8-en.png. 영어 이미지 직접 확인; 긴 Materials and margin도 행 안에 표시. 게임 내 진입 경로·실사용 Edge 화면 미검증.
+
+
+## 2026-11-09 UI-9
+
+### UI-9. 연구는 돈 대신 문해력 포인트 (옛 2-61, 사용자 결정 2026-10-22, DECISIONS 7-20)
+연구 창과 옛 코드 정리는 끝났다.
+- 남은 것: `T.adjustFinance` (`strings.ts:357`·`:933`)를 부르는 곳이 없다. 지운다.
+
+완료 근거: 사용처 없는 adjustFinance 한국어/영어 키 제거. client src/test 검색 0건. 루트 npm.cmd run typecheck 및 researchPanel 3개·researchLayout 6개 통과(SSR useLayoutEffect 경고만 있음). 사용하지 않는 문자열 제거이므로 새 스크린샷 없음, 화면 미검증. UI-1~UI-9 절별 선별 커밋 완료 후 중단; UI-10 이후 작업 및 packages/sim 수정 없음.
