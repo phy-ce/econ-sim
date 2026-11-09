@@ -9,6 +9,10 @@
 - 클라우드 세션(claude.ai/code)으로 이어서 할 수 있다. 규칙은 CLAUDE.md "클라우드 세션"을 본다.
 - 옛 세션 기록: `docs/log/` (2026-10-25 이전 HANDOFF 절은 `docs/log/HANDOFF_2026-10-18_to_10-25.md`, 날짜별 UI 기록도 여기). 다른 문서의 "HANDOFF 0-ind3"·"HANDOFF 0-aifix" 같은 옛 절 참조는 그 파일에 있다.
 
+## 0-1109-stats
+- 통계 · 소식 창을 다시 만드는 명세를 썼다 (UI_CHANGES UI-15 통계 창, UI-16 소식 창). 틀은 사용자가 골랐다: 두 창, 통계는 맨 위 탭(경제/생활/재정/왕국 비교). 문서만.
+- Codex 의 UI-1~UI-9 커밋(2495d00..1f014e9)을 확인했다: 그 커밋까지 있는 wt-uitidy 에서 typecheck 통과, 클라이언트 시험 128개 중 3개 실패. 같은 3개가 e21ebd4 (작업 전)에서도 실패한다 (detached worktree `.tmp/wt/chk-e21`). UI-17 로 넘겼다.
+
 ## 0-1109-uinum
 - UI_CHANGES 의 남은 절 14개를 UI-1~UI-14 로 다시 매겼다 (사용자: "101번은 숫자가 너무 큰데 좀 정리해봐"). 0장 순서대로 1~9, 대기 10~14. 제목에 "옛 2-xx" 를 남겨 DECISIONS·UI_STATUS·HANDOFF 의 옛 번호로 찾을 수 있다. 끝난 절(UI_DONE)은 옛 번호 그대로다. 문서만.
 - 창 규격(옛 2-100)은 Codex 가 6fee17a 로 끝냈다 (UI_DONE). 확인: 그 커밋까지 있는 wt-uitidy 에서 typecheck 통과, `researchLayout`·`tooltip` 시험 8개 통과 (Claude 가 wt-uitidy 에서 이 두 파일만 돌린 수다. UI_DONE 2-100 의 "관련 시험 9개" 는 Codex 가 고른 범위라 다르다). 화면은 Claude 가 보지 않았다 (Codex 스크린샷 기록만, UI_STATUS 2026-11-08).
