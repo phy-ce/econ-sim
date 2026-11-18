@@ -16,9 +16,10 @@
 
 main `3f4e89a`와 main 체크아웃의 커밋 안 한 클라이언트 변경을 코드로 대조했다. 줄 번호는 따로 적지 않으면 그 작업 트리 기준이다.
 UI-15~UI-17 의 줄 번호는 커밋 1f014e9 (main 체크아웃의 커밋 안 한 변경 제외) 기준이다.
-UI-18·UI-19 (2026-11-18 추가)는 줄 번호 없이 창·기능 단위로 적었다.
+UI-18·UI-19 (2026-11-18 추가)는 줄 번호 없이 창·기능 단위로 적었다. UI-20 의 숫자는 HEAD 6e2f55c 와 조사 두 개(아래 절) 기준이다.
 
 ### 할 일 (위에서부터)
+0. **UI-20** (사용자 요청, 제일 먼저): CSS 를 역할별 파일로 다시 나눈다. 화면은 바뀌지 않는다. 먼저 main 체크아웃의 커밋 안 한 변경을 정리한다 (`.tmp/uncommitted-review.md`).
 1. **UI-15** (사용자 요청): 통계 · 소식 창을 통계 창과 소식 창 둘로 처음부터 다시 만든다. 통계 창은 맨 위 탭 하나(경제/생활/재정/왕국 비교)다.
 2. **UI-16** (사용자 요청): 소식을 따로 떼어 주 창 하나로 둔다.
 3. **UI-17** (정리): 커밋된 코드에서 실패하는 클라이언트 시험 3개를 고친다.
@@ -27,7 +28,7 @@ UI-18·UI-19 (2026-11-18 추가)는 줄 번호 없이 창·기능 단위로 적�
 
 UI-1~UI-9 는 끝났다 (2026-11-09, UI_DONE).
 
-새로 반영할 sim 변경은 없다 (UI-15~UI-19 모두 sim 변경 없음).
+새로 반영할 sim 변경은 없다 (UI-15~UI-20 모두 sim 변경 없음).
 
 ### 대기
 지금 할 일 없음. 풀리면 위 목록으로 올린다.
@@ -196,6 +197,38 @@ UI-15·UI-16 까지 끝낸 화면을 주 창 7개와 서브창마다 한국어 �
 - 쓰는 브라우저 기능의 타입 선언이 없으면 최소한의 선언만 더한다. 패키지는 설치하지 않는다.
 
 확인: 전환을 단 곳마다 동작을 보고, 기능을 끈 경우(함수가 없을 때)에도 바로 바뀌는지 시험이나 화면으로 본다.
+
+### UI-20. CSS 를 역할별로 다시 나누기 (사용자 2026-11-18, sim 변경 없음, 화면 변경 없음)
+사용자: CSS 가 시기별로 겹쳐 있다는 설명을 듣고 "제일 먼저 저걸 Codex 랑 같이 해결해야겠는데".
+
+조사 (2026-11-18, HEAD 6e2f55c):
+- 코드 조사 (Claude, 커밋된 본 게임 CSS): 클래스 265개가 두 파일 이상에 정의돼 있다. 같은 클래스의 같은 속성을 두 파일 이상이 정하는 곳이 484곳이다. 가장 많이 겹치는 짝은 `strategy.css`↔`workspace.css` 189, `strategy.css`↔`styles.css` 184, `styles.css`↔`workspace.css` 123. 예: `.bar` 는 7개 파일, `.window-body` 는 4개 파일이 속성 10개를 정한다.
+- 화면 조사 (Codex, `.tmp/css-runtime.md`, 84개 화면 상태, 한국어 밝음·영어 어두움): 규칙 2,309개 중 1,040개가 한 번이라도 요소에 맞았고 1,269개는 한 번도 맞지 않았다. `ui/components.css` 는 325개 중 32개만 맞았다. 마지막에 불러온 파일이 늘 이기지 않는다: `strategy.css` 의 긴 선택자(`.floating-workspace .strategy-panel.is-front` 등)가 `ui/runtime.css` 를 이긴다.
+- 불러오는 곳이 흩어져 있다: `main.tsx` 가 다섯 파일, `system-ui.css` 는 `FinancePanel.tsx` 가, `system-02/tokens.css` 는 두 번 (`ui/tokens.css` 와 `system-02/blocks.css` 에서) 불러온다. 본 게임이 초안 폴더의 `system-02/blocks.css` 에 기대고 있다.
+
+목표 짜임:
+```
+ui/index.css        @layer tokens, base, components, views; 와 아래 import 만. main.tsx 는 이 파일 하나만 불러온다.
+ui/tokens.css       값만 (색, 크기, 간격, 창 크기, 전환 시간). system-02/tokens.css 를 합친다.
+ui/base.css         reset, body, 글꼴, 기본 표·단추.
+ui/components.css   여러 창이 함께 쓰는 부품: 창 틀, 제목줄, 본문, 탭(segmented), 표, 정렬 머리, 막대, 칩, 링크, 툴팁, 배지.
+views/<창>.css      한 창만 쓰는 규칙 (시세, 지역, 국가, 연구, 건설, 통계, 지도, 재정 ...). 그 창 컴포넌트 옆에 둔다.
+```
+규칙:
+1. (요소, 속성) 하나는 파일 하나에서만 정한다. 같은 값을 두 번 쓰지 않는다.
+2. 덮어쓰기 순서는 `@layer` 로 정한다 (tokens → base → components → views). 이기려고 선택자를 길게 쓰지 않는다. `!important` 는 쓰지 않는다 (지금 있는 것은 이유를 UI_STATUS 에 적고 없앤다).
+3. 창 전용 CSS 는 그 창이 열릴 때만이 아니라 처음부터 같은 순서로 들어오게 한다 (지금 `system-ui.css` 처럼 재정 창을 열면 다른 창 모양이 바뀌는 일이 없게). `ui/index.css` 에서 `@import url(...) layer(views)` 로 모은다.
+4. 옛 파일 `styles.css`, `workspace.css`, `strategy.css`, `system-ui.css`, `readability.css`, `kingdom-economy.css`, `ownership-theme.css` 는 규칙을 다 옮기면 비운다. 빈 파일 삭제는 사용자에게 묻는다 (DECISIONS 7-61 과 같은 방식).
+5. 한 번도 맞지 않은 규칙은 바로 지우지 않는다. 코드에서 조합하는 클래스 이름(`gu-kingdom-${i}`, `edge-${dir}` 등), 의사 요소, 조사에서 열지 않은 상태(철거 중, 정지, 위험 사건, 첫 언어 고르기, 빈 차트)를 확인한 뒤 지운다. 지운 규칙 목록을 UI_STATUS 에 남긴다.
+6. `system-02/blocks.css` 에서 본 게임이 쓰는 부분은 `ui/components.css` 로 옮긴다. 초안 페이지(`design-system/`, `foundations/`, `system-02.html`)는 이 절의 범위가 아니다. 다만 그 페이지들이 본 게임 CSS 를 불러오면 빌드가 깨지지 않는지만 본다.
+
+진행 방법:
+- 시작 전: 커밋 안 한 변경 정리를 끝낸 뒤 기준 스크린샷을 찍는다 (조사 스크립트 `.tmp/css-runtime-audit.mjs` 의 84개 상태).
+- 옛 파일 하나씩 옮긴다. 한 파일을 옮길 때마다 같은 84개 상태를 다시 찍어 기준과 픽셀 비교한다. 다르면 고치거나, 다른 곳과 이유를 UI_STATUS 에 적는다. 화면이 달라지는 정리(겹침을 풀다 원래 어긋났던 값이 바로잡히는 경우)는 사용자 승인 뒤에 한다.
+- 파일 하나 = 커밋 하나. 매번 루트 `npm run typecheck`, 클라이언트 시험.
+- 끝나면 위 두 조사를 다시 돌려 겹친 (클래스, 속성) 수와 미매칭 규칙 수를 UI_STATUS 에 적는다.
+
+나눠 맡기: Claude 는 같은 때 ts 리팩토링(화면 변경 없음)을 한다. `views/CompanyPanel.tsx` 의 부품을 쓰는 창 옆으로 옮기고 긴 줄을 정리한다 (CLAUDE.md UI 분업 예외, 2026-11-18). 이 절에서 `CompanyPanel.tsx` 는 CSS import 줄 말고 고치지 않는다. 서로 고치는 파일이 겹치면 UI_STATUS 에 먼저 적는다.
 
 ## 3. sim 쪽 필요 사항 (Claude가 처리할 것, UI 작업자는 요청만)
 2026-11-07 `packages/sim/src`와 대조했다.
