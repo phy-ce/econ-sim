@@ -7,7 +7,7 @@
  --gu-line:var(--es-line); --gu-soft:var(--es-subtle); --gu-action:var(--es-action); --gu-on-action:var(--es-on-action);
  --gu-positive:var(--es-positive); --gu-negative:var(--es-negative); --gu-focus:var(--es-focus);
  --gu-crown:#826130; --gu-manor:#536d4c; --gu-finance:#526d85; --gu-on-owner:#ffffff;
- --gu-font:'Noto Sans KR',sans-serif; --gu-title:'Gowun Batang',serif; --gu-number:'Silkscreen','Noto Sans KR',monospace;
+ --gu-font:'Noto Sans KR',sans-serif; --gu-title:'Gowun Batang',serif;
  --gu-space-1:4px; --gu-space-2:8px; --gu-space-3:12px; --gu-space-4:16px; --gu-space-6:24px;
  --gu-control:36px; --gu-row:32px; --gu-row-comfortable:56px;
 }

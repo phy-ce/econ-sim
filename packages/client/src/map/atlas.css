@@ -4,7 +4,7 @@
 .atlas-data {mix-blend-mode:multiply}
 .atlas-provinces path {fill:none;stroke:#76674e;stroke-width:1.5}
 .atlas-unclaimed path {stroke:#81735a;stroke-width:1.5}
-.atlas-rivers path {fill:none;stroke:#789fae;stroke-width:2.5}
+.atlas-rivers path {fill:none}
 .atlas-rail {fill:none;stroke:#554d40;stroke-width:2;stroke-dasharray:7 5;opacity:.35;pointer-events:none}
 .atlas-hit {fill:transparent;stroke:transparent;stroke-width:4;pointer-events:all;vector-effect:non-scaling-stroke}
 .map-cell:hover .atlas-hit {fill:#ffffff25;stroke:#fff5dc;stroke-width:1.5}
