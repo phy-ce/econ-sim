@@ -1,0 +1,1866 @@
+[
+ {
+  "file": "ui/runtime.css",
+  "selector": ".construction-detail .gu-production-diagram",
+  "context": "",
+  "prop": "padding",
+  "value": "8px 0",
+  "why": "same file"
+ },
+ {
+  "file": "ui/runtime.css",
+  "selector": ".construction-detail .group-detail-ledger>details>summary",
+  "context": "",
+  "prop": "padding",
+  "value": "4px 0",
+  "why": "same file"
+ },
+ {
+  "file": "ui/runtime.css",
+  "selector": ".construction-detail .group-detail-ledger>details>summary",
+  "context": "",
+  "prop": "min-height",
+  "value": "28px",
+  "why": "same file"
+ },
+ {
+  "file": "ui/runtime.css",
+  "selector": ".construction-detail .group-detail-ledger",
+  "context": "",
+  "prop": "gap",
+  "value": "8px",
+  "why": "same file"
+ },
+ {
+  "file": "ui/runtime.css",
+  "selector": ".construction-detail .group-detail-ledger>details",
+  "context": "",
+  "prop": "padding",
+  "value": "8px 0",
+  "why": "same file"
+ },
+ {
+  "file": "ui/runtime.css",
+  "selector": ".construction-detail .group-detail-ledger>.system-tags",
+  "context": "",
+  "prop": "margin",
+  "value": "8px 0",
+  "why": "same file"
+ },
+ {
+  "file": "ui/runtime.css",
+  "selector": ".construction-crown .stepper",
+  "context": "",
+  "prop": "margin-top",
+  "value": "12px",
+  "why": "same file"
+ },
+ {
+  "file": "ui/runtime.css",
+  "selector": ".construction-recipe",
+  "context": "",
+  "prop": "margin",
+  "value": "12px 0",
+  "why": "same file"
+ },
+ {
+  "file": "ui/runtime.css",
+  "selector": ".construction-crown>.system-facts b",
+  "context": "",
+  "prop": "margin-top",
+  "value": "4px",
+  "why": "same file"
+ },
+ {
+  "file": "ui/runtime.css",
+  "selector": ".construction-crown>.system-facts b",
+  "context": "",
+  "prop": "font-size",
+  "value": "16px",
+  "why": "same file"
+ },
+ {
+  "file": "ui/runtime.css",
+  "selector": ".construction-crown>.system-facts",
+  "context": "",
+  "prop": "gap",
+  "value": "12px",
+  "why": "same file"
+ },
+ {
+  "file": "ui/runtime.css",
+  "selector": ".construction-detail .construction-crown",
+  "context": "",
+  "prop": "padding",
+  "value": "16px",
+  "why": "same file"
+ },
+ {
+  "file": "ui/runtime.css",
+  "selector": ".construction-detail .construction-building",
+  "context": "",
+  "prop": "padding",
+  "value": "12px 0",
+  "why": "same file"
+ },
+ {
+  "file": "ui/runtime.css",
+  "selector": ".construction-detail .construction-building",
+  "context": "",
+  "prop": "margin-top",
+  "value": "12px",
+  "why": "same file"
+ },
+ {
+  "file": "ui/runtime.css",
+  "selector": ".construction-detail>details>summary",
+  "context": "",
+  "prop": "font-size",
+  "value": "14px",
+  "why": "same file"
+ },
+ {
+  "file": "ui/runtime.css",
+  "selector": ".construction-detail>.construction-management,.construction-detail>.construction-market",
+  "context": "",
+  "prop": "padding-top",
+  "value": "12px",
+  "why": "same file"
+ },
+ {
+  "file": "ui/runtime.css",
+  "selector": ".construction-overview>.ownership-launch",
+  "context": "",
+  "prop": "margin-bottom",
+  "value": "12px",
+  "why": "same file"
+ },
+ {
+  "file": "ui/runtime.css",
+  "selector": ".construction-overview",
+  "context": "",
+  "prop": "padding-bottom",
+  "value": "4px",
+  "why": "same file"
+ },
+ {
+  "file": "ui/runtime.css",
+  "selector": ".construction-detail h3",
+  "context": "",
+  "prop": "font-size",
+  "value": "15px",
+  "why": "same file"
+ },
+ {
+  "file": "ui/runtime.css",
+  "selector": ".construction-detail h3",
+  "context": "",
+  "prop": "margin",
+  "value": "0 0 12px",
+  "why": "same file"
+ },
+ {
+  "file": "ui/runtime.css",
+  "selector": ".construction-detail",
+  "context": "",
+  "prop": "padding",
+  "value": "8px",
+  "why": "same file"
+ },
+ {
+  "file": "ui/runtime.css",
+  "selector": ".construction-detail",
+  "context": "",
+  "prop": "gap",
+  "value": "16px",
+  "why": "same file"
+ },
+ {
+  "file": "ui/components.css",
+  "selector": ".gu-window-surface",
+  "context": "",
+  "prop": "box-shadow",
+  "value": "var(--gu-window-shadow)",
+  "why": "same file"
+ },
+ {
+  "file": "ui/components.css",
+  "selector": ".gu-window-surface",
+  "context": "",
+  "prop": "border-radius",
+  "value": "var(--gu-control-radius)",
+  "why": "same file"
+ },
+ {
+  "file": "ui/components.css",
+  "selector": ".gu-type-examples>div>strong>.gu-figure",
+  "context": "",
+  "prop": "font-size",
+  "value": "16px",
+  "why": "same file"
+ },
+ {
+  "file": "ui/components.css",
+  "selector": ".gu-factor-grid .gu-figure small",
+  "context": "",
+  "prop": "font-size",
+  "value": "11px",
+  "why": "same file"
+ },
+ {
+  "file": "ui/components.css",
+  "selector": ".gu-factor-grid .gu-figure",
+  "context": "",
+  "prop": "font-size",
+  "value": "12px",
+  "why": "same file"
+ },
+ {
+  "file": "ui/components.css",
+  "selector": ".gu-ledger.is-compact tbody th>button",
+  "context": "",
+  "prop": "min-height",
+  "value": "var(--gu-row)",
+  "why": "same file"
+ },
+ {
+  "file": "ui/components.css",
+  "selector": ".gu-ledger .good-sprite",
+  "context": "",
+  "prop": "height",
+  "value": "48px",
+  "why": "same file"
+ },
+ {
+  "file": "ui/components.css",
+  "selector": ".gu-ledger .good-sprite",
+  "context": "",
+  "prop": "width",
+  "value": "48px",
+  "why": "same file"
+ },
+ {
+  "file": "ui/components.css",
+  "selector": ".gu-ledger tbody th>button",
+  "context": "",
+  "prop": "min-height",
+  "value": "var(--gu-row-comfortable)",
+  "why": "same file"
+ },
+ {
+  "file": "ui/components.css",
+  "selector": ".gu-figure",
+  "context": "",
+  "prop": "letter-spacing",
+  "value": "-.035em",
+  "why": "same file"
+ },
+ {
+  "file": "ui/components.css",
+  "selector": ".gu-figure",
+  "context": "",
+  "prop": "font-variant-numeric",
+  "value": "tabular-nums",
+  "why": "same file"
+ },
+ {
+  "file": "ui/tokens.css",
+  "selector": ":root,.gu-scope",
+  "context": "",
+  "prop": "--gu-number",
+  "value": "'Silkscreen','Noto Sans KR',monospace",
+  "why": "same file"
+ },
+ {
+  "file": "strategy.css",
+  "selector": ".floating-workspace .window-body,.detail-window .window-body",
+  "context": "",
+  "prop": "overflow-x",
+  "value": "hidden",
+  "why": "later ui/runtime.css"
+ },
+ {
+  "file": "strategy.css",
+  "selector": ".strategy-panel .legend",
+  "context": "",
+  "prop": "font-size",
+  "value": "10px",
+  "why": "later readability.css"
+ },
+ {
+  "file": "strategy.css",
+  "selector": ".strategy-panel .legend",
+  "context": "",
+  "prop": "gap",
+  "value": "2px 8px",
+  "why": "later readability.css"
+ },
+ {
+  "file": "strategy.css",
+  "selector": ".strategy-panel .ownership-ring-row",
+  "context": "",
+  "prop": "grid-template-columns",
+  "value": "54px minmax(75px,1fr) 1fr 1fr",
+  "why": "later ui/runtime.css"
+ },
+ {
+  "file": "strategy.css",
+  "selector": ".strategy-panel .policy-steps button",
+  "context": "",
+  "prop": "min-height",
+  "value": "24px",
+  "why": "same file"
+ },
+ {
+  "file": "strategy.css",
+  "selector": ".strategy-panel .policy-steps button",
+  "context": "",
+  "prop": "min-width",
+  "value": "23px",
+  "why": "same file"
+ },
+ {
+  "file": "strategy.css",
+  "selector": ".strategy-panel .hsum",
+  "context": "",
+  "prop": "grid-template-columns",
+  "value": "repeat(3,minmax(0,1fr))",
+  "why": "same file"
+ },
+ {
+  "file": "strategy.css",
+  "selector": ".strategy-panel .htile",
+  "context": "",
+  "prop": "padding",
+  "value": "3px 6px",
+  "why": "same file"
+ },
+ {
+  "file": "strategy.css",
+  "selector": ".strategy-panel .htile",
+  "context": "",
+  "prop": "border-right",
+  "value": "1px solid var(--rule)",
+  "why": "same file"
+ },
+ {
+  "file": "strategy.css",
+  "selector": ".strategy-panel .hsum",
+  "context": "",
+  "prop": "gap",
+  "value": "4px",
+  "why": "same file"
+ },
+ {
+  "file": "strategy.css",
+  "selector": ".strategy-panel .legend",
+  "context": "",
+  "prop": "gap",
+  "value": "3px",
+  "why": "later readability.css"
+ },
+ {
+  "file": "strategy.css",
+  "selector": ".strategy-panel .donut svg",
+  "context": "",
+  "prop": "max-height",
+  "value": "140px",
+  "why": "same file"
+ },
+ {
+  "file": "strategy.css",
+  "selector": ".strategy-panel .donut-grid",
+  "context": "",
+  "prop": "gap",
+  "value": "5px",
+  "why": "same file"
+ },
+ {
+  "file": "strategy.css",
+  "selector": ".strategy-panel .donut-grid",
+  "context": "",
+  "prop": "grid-template-columns",
+  "value": "110px 1fr",
+  "why": "same file"
+ },
+ {
+  "file": "strategy.css",
+  "selector": ".strategy-panel .pop-filters",
+  "context": "",
+  "prop": "gap",
+  "value": "4px",
+  "why": "same file"
+ },
+ {
+  "file": "strategy.css",
+  "selector": ".strategy-panel .pop-table",
+  "context": "",
+  "prop": "min-width",
+  "value": "1000px",
+  "why": "same file"
+ },
+ {
+  "file": "strategy.css",
+  "selector": ".strategy-panel .pop-table",
+  "context": "",
+  "prop": "font-size",
+  "value": "10px",
+  "why": "same file"
+ },
+ {
+  "file": "strategy.css",
+  "selector": ".strategy-panel table.goods",
+  "context": "",
+  "prop": "min-width",
+  "value": "0",
+  "why": "same file"
+ },
+ {
+  "file": "strategy.css",
+  "selector": ".strategy-panel .unified-market .good-name",
+  "context": "",
+  "prop": "font-size",
+  "value": "11px",
+  "why": "same file"
+ },
+ {
+  "file": "strategy.css",
+  "selector": ".strategy-panel .unified-market .good-name",
+  "context": "",
+  "prop": "min-height",
+  "value": "29px",
+  "why": "same file"
+ },
+ {
+  "file": "strategy.css",
+  "selector": ".strategy-panel .owner-badge",
+  "context": "",
+  "prop": "font-size",
+  "value": "10px",
+  "why": "same file"
+ },
+ {
+  "file": "strategy.css",
+  "selector": ".strategy-panel .title-row",
+  "context": "",
+  "prop": "gap",
+  "value": "5px",
+  "why": "same file"
+ },
+ {
+  "file": "strategy.css",
+  "selector": ".strategy-panel .pane-head",
+  "context": "",
+  "prop": "gap",
+  "value": "4px",
+  "why": "same file"
+ },
+ {
+  "file": "strategy.css",
+  "selector": ".strategy-panel .pane-head",
+  "context": "",
+  "prop": "padding",
+  "value": "0 0 5px",
+  "why": "same file"
+ },
+ {
+  "file": "strategy.css",
+  "selector": ".world-map .map-legend",
+  "context": "",
+  "prop": "bottom",
+  "value": "12px",
+  "why": "same file"
+ },
+ {
+  "file": "strategy.css",
+  "selector": ".world-map .map-legend",
+  "context": "",
+  "prop": "right",
+  "value": "18px",
+  "why": "same file"
+ },
+ {
+  "file": "strategy.css",
+  "selector": ".map-camera-tools",
+  "context": "",
+  "prop": "top",
+  "value": "48px",
+  "why": "same file"
+ },
+ {
+  "file": "strategy.css",
+  "selector": ".map-camera-tools",
+  "context": "",
+  "prop": "right",
+  "value": "18px",
+  "why": "same file"
+ },
+ {
+  "file": "strategy.css",
+  "selector": ".world-map .map-layers",
+  "context": "",
+  "prop": "right",
+  "value": "18px",
+  "why": "same file"
+ },
+ {
+  "file": "strategy.css",
+  "selector": ".world-map .map-layers",
+  "context": "",
+  "prop": "top",
+  "value": "12px",
+  "why": "same file"
+ },
+ {
+  "file": "strategy.css",
+  "selector": ".strategy-panel .explorer-building",
+  "context": "",
+  "prop": "padding",
+  "value": "3px 0",
+  "why": "same file"
+ },
+ {
+  "file": "strategy.css",
+  "selector": ".strategy-panel .explorer-building",
+  "context": "",
+  "prop": "gap",
+  "value": "6px",
+  "why": "same file"
+ },
+ {
+  "file": "strategy.css",
+  "selector": ".strategy-panel .explorer-heading",
+  "context": "",
+  "prop": "padding",
+  "value": "4px 0 7px",
+  "why": "same file"
+ },
+ {
+  "file": "strategy.css",
+  "selector": ".strategy-panel .explorer-rail button",
+  "context": "",
+  "prop": "border-left",
+  "value": "2px solid transparent",
+  "why": "same file"
+ },
+ {
+  "file": "strategy.css",
+  "selector": ".strategy-panel .explorer-rail button",
+  "context": "",
+  "prop": "padding",
+  "value": "5px",
+  "why": "same file"
+ },
+ {
+  "file": "strategy.css",
+  "selector": ".strategy-panel .explorer-rail button",
+  "context": "",
+  "prop": "min-height",
+  "value": "34px",
+  "why": "same file"
+ },
+ {
+  "file": "strategy.css",
+  "selector": ".strategy-panel .explorer-rail button",
+  "context": "",
+  "prop": "width",
+  "value": "100%",
+  "why": "same file"
+ },
+ {
+  "file": "strategy.css",
+  "selector": ".strategy-panel .explorer-rail button",
+  "context": "",
+  "prop": "justify-content",
+  "value": "space-between",
+  "why": "same file"
+ },
+ {
+  "file": "workspace.css",
+  "selector": ".bell .spr",
+  "context": "",
+  "prop": "height",
+  "value": "40px",
+  "why": "later strategy.css"
+ },
+ {
+  "file": "workspace.css",
+  "selector": ".bell .spr",
+  "context": "",
+  "prop": "width",
+  "value": "40px",
+  "why": "later strategy.css"
+ },
+ {
+  "file": "workspace.css",
+  "selector": ".bell .spr",
+  "context": "",
+  "prop": "height",
+  "value": "20px",
+  "why": "later strategy.css"
+ },
+ {
+  "file": "workspace.css",
+  "selector": ".bell .spr",
+  "context": "",
+  "prop": "width",
+  "value": "20px",
+  "why": "later strategy.css"
+ },
+ {
+  "file": "workspace.css",
+  "selector": ".brand-text .date",
+  "context": "",
+  "prop": "line-height",
+  "value": "1.15",
+  "why": "later strategy.css"
+ },
+ {
+  "file": "workspace.css",
+  "selector": ".brand-text",
+  "context": "",
+  "prop": "gap",
+  "value": "1px",
+  "why": "later strategy.css"
+ },
+ {
+  "file": "workspace.css",
+  "selector": ".topbar .ledger",
+  "context": "",
+  "prop": "align-items",
+  "value": "stretch",
+  "why": "later strategy.css"
+ },
+ {
+  "file": "workspace.css",
+  "selector": ".bell .spr",
+  "context": "",
+  "prop": "height",
+  "value": "56px",
+  "why": "later strategy.css"
+ },
+ {
+  "file": "workspace.css",
+  "selector": ".bell .spr",
+  "context": "",
+  "prop": "width",
+  "value": "56px",
+  "why": "later strategy.css"
+ },
+ {
+  "file": "workspace.css",
+  "selector": ".topbar .crest",
+  "context": "",
+  "prop": "width",
+  "value": "80px",
+  "why": "same file"
+ },
+ {
+  "file": "workspace.css",
+  "selector": ".topbar .crest .spr",
+  "context": "",
+  "prop": "height",
+  "value": "88px",
+  "why": "same file"
+ },
+ {
+  "file": "workspace.css",
+  "selector": ".topbar .crest .spr",
+  "context": "",
+  "prop": "width",
+  "value": "88px",
+  "why": "same file"
+ },
+ {
+  "file": "workspace.css",
+  "selector": ".construction-lanes",
+  "context": "",
+  "prop": "grid-template-columns",
+  "value": "repeat(2,minmax(0,1fr))",
+  "why": "same file"
+ },
+ {
+  "file": "workspace.css",
+  "selector": ".topbar .crest",
+  "context": "",
+  "prop": "width",
+  "value": "64px",
+  "why": "same file"
+ },
+ {
+  "file": "workspace.css",
+  "selector": ".topbar .crest .spr",
+  "context": "",
+  "prop": "height",
+  "value": "64px",
+  "why": "same file"
+ },
+ {
+  "file": "workspace.css",
+  "selector": ".topbar .crest .spr",
+  "context": "",
+  "prop": "width",
+  "value": "64px",
+  "why": "same file"
+ },
+ {
+  "file": "workspace.css",
+  "selector": ".region-art .spr",
+  "context": "",
+  "prop": "height",
+  "value": "64px",
+  "why": "same file"
+ },
+ {
+  "file": "workspace.css",
+  "selector": ".region-art .spr",
+  "context": "",
+  "prop": "width",
+  "value": "64px",
+  "why": "same file"
+ },
+ {
+  "file": "workspace.css",
+  "selector": ".region-art.tile",
+  "context": "",
+  "prop": "height",
+  "value": "66px",
+  "why": "same file"
+ },
+ {
+  "file": "workspace.css",
+  "selector": ".region-art.tile",
+  "context": "",
+  "prop": "width",
+  "value": "66px",
+  "why": "same file"
+ },
+ {
+  "file": "workspace.css",
+  "selector": ".construction-lanes",
+  "context": "",
+  "prop": "display",
+  "value": "grid",
+  "why": "same file"
+ },
+ {
+  "file": "workspace.css",
+  "selector": ".region-directory-table .th-sort",
+  "context": "",
+  "prop": "font-size",
+  "value": "10px",
+  "why": "same file"
+ },
+ {
+  "file": "workspace.css",
+  "selector": ".region-directory-table",
+  "context": "",
+  "prop": "font-size",
+  "value": "11px",
+  "why": "same file"
+ },
+ {
+  "file": "workspace.css",
+  "selector": ".building-inspector .inspector-heading > .spr",
+  "context": "",
+  "prop": "height",
+  "value": "56px",
+  "why": "same file"
+ },
+ {
+  "file": "workspace.css",
+  "selector": ".building-inspector .inspector-heading > .spr",
+  "context": "",
+  "prop": "width",
+  "value": "56px",
+  "why": "same file"
+ },
+ {
+  "file": "workspace.css",
+  "selector": ".industry-row>.spr",
+  "context": "",
+  "prop": "height",
+  "value": "44px",
+  "why": "same file"
+ },
+ {
+  "file": "workspace.css",
+  "selector": ".industry-row>.spr",
+  "context": "",
+  "prop": "width",
+  "value": "44px",
+  "why": "same file"
+ },
+ {
+  "file": "workspace.css",
+  "selector": ".industry-row",
+  "context": "",
+  "prop": "min-height",
+  "value": "48px",
+  "why": "same file"
+ },
+ {
+  "file": "workspace.css",
+  "selector": ".industry-row",
+  "context": "",
+  "prop": "grid-template-columns",
+  "value": "44px minmax(0,1fr) auto 14px",
+  "why": "same file"
+ },
+ {
+  "file": "workspace.css",
+  "selector": ".resource-emblem .spr",
+  "context": "",
+  "prop": "height",
+  "value": "36px",
+  "why": "same file"
+ },
+ {
+  "file": "workspace.css",
+  "selector": ".resource-emblem .spr",
+  "context": "",
+  "prop": "width",
+  "value": "36px",
+  "why": "same file"
+ },
+ {
+  "file": "workspace.css",
+  "selector": ".resource-emblem",
+  "context": "",
+  "prop": "width",
+  "value": "40px",
+  "why": "same file"
+ },
+ {
+  "file": "workspace.css",
+  "selector": ".resource-emblem",
+  "context": "",
+  "prop": "height",
+  "value": "40px",
+  "why": "same file"
+ },
+ {
+  "file": "workspace.css",
+  "selector": ".region-art .spr",
+  "context": "",
+  "prop": "height",
+  "value": "48px",
+  "why": "same file"
+ },
+ {
+  "file": "workspace.css",
+  "selector": ".region-art .spr",
+  "context": "",
+  "prop": "width",
+  "value": "48px",
+  "why": "same file"
+ },
+ {
+  "file": "workspace.css",
+  "selector": ".region-art.tile",
+  "context": "",
+  "prop": "height",
+  "value": "50px",
+  "why": "same file"
+ },
+ {
+  "file": "workspace.css",
+  "selector": ".region-art.tile",
+  "context": "",
+  "prop": "width",
+  "value": "50px",
+  "why": "same file"
+ },
+ {
+  "file": "workspace.css",
+  "selector": ".desktop-dock button",
+  "context": "",
+  "prop": "border-radius",
+  "value": "4px",
+  "why": "later strategy.css"
+ },
+ {
+  "file": "workspace.css",
+  "selector": ".desktop-dock button",
+  "context": "",
+  "prop": "padding",
+  "value": "0 14px",
+  "why": "later strategy.css"
+ },
+ {
+  "file": "workspace.css",
+  "selector": ".desktop-dock button",
+  "context": "",
+  "prop": "gap",
+  "value": "8px",
+  "why": "later strategy.css"
+ },
+ {
+  "file": "workspace.css",
+  "selector": ".desktop-dock button",
+  "context": "",
+  "prop": "min-height",
+  "value": "36px",
+  "why": "later strategy.css"
+ },
+ {
+  "file": "workspace.css",
+  "selector": ".desktop-dock",
+  "context": "",
+  "prop": "height",
+  "value": "52px",
+  "why": "later strategy.css"
+ },
+ {
+  "file": "workspace.css",
+  "selector": ".desktop-dock",
+  "context": "",
+  "prop": "padding",
+  "value": "6px 12px",
+  "why": "later strategy.css"
+ },
+ {
+  "file": "workspace.css",
+  "selector": ".desktop-dock",
+  "context": "",
+  "prop": "gap",
+  "value": "6px",
+  "why": "later strategy.css"
+ },
+ {
+  "file": "workspace.css",
+  "selector": ".topbar .crest .spr",
+  "context": "",
+  "prop": "height",
+  "value": "36px",
+  "why": "same file"
+ },
+ {
+  "file": "workspace.css",
+  "selector": ".topbar .crest .spr",
+  "context": "",
+  "prop": "width",
+  "value": "36px",
+  "why": "same file"
+ },
+ {
+  "file": "workspace.css",
+  "selector": ".topbar",
+  "context": "",
+  "prop": "gap",
+  "value": "8px 18px",
+  "why": "later strategy.css"
+ },
+ {
+  "file": "workspace.css",
+  "selector": ".topbar",
+  "context": "",
+  "prop": "padding",
+  "value": "8px 14px",
+  "why": "later strategy.css"
+ },
+ {
+  "file": "workspace.css",
+  "selector": ".b-chip-name",
+  "context": "",
+  "prop": "white-space",
+  "value": "normal",
+  "why": "same file"
+ },
+ {
+  "file": "workspace.css",
+  "selector": ".b-chip-icon",
+  "context": "",
+  "prop": "height",
+  "value": "50px",
+  "why": "same file"
+ },
+ {
+  "file": "workspace.css",
+  "selector": ".b-chip-icon",
+  "context": "",
+  "prop": "width",
+  "value": "50px",
+  "why": "same file"
+ },
+ {
+  "file": "workspace.css",
+  "selector": ".market-ledger",
+  "context": "",
+  "prop": "padding",
+  "value": "12px",
+  "why": "same file"
+ },
+ {
+  "file": "workspace.css",
+  "selector": ".recipe h4",
+  "context": "",
+  "prop": "margin-bottom",
+  "value": "8px",
+  "why": "same file"
+ },
+ {
+  "file": "workspace.css",
+  "selector": ".recipe",
+  "context": "",
+  "prop": "gap",
+  "value": "10px",
+  "why": "same file"
+ },
+ {
+  "file": "workspace.css",
+  "selector": ".building-inspector",
+  "context": "",
+  "prop": "gap",
+  "value": "14px",
+  "why": "same file"
+ },
+ {
+  "file": "workspace.css",
+  "selector": ".building-inspector",
+  "context": "",
+  "prop": "padding",
+  "value": "16px",
+  "why": "same file"
+ },
+ {
+  "file": "workspace.css",
+  "selector": ".inspector-empty",
+  "context": "",
+  "prop": "padding",
+  "value": "24px",
+  "why": "same file"
+ },
+ {
+  "file": "workspace.css",
+  "selector": ".industry-row",
+  "context": "",
+  "prop": "gap",
+  "value": "10px",
+  "why": "same file"
+ },
+ {
+  "file": "workspace.css",
+  "selector": ".industry-row",
+  "context": "",
+  "prop": "padding",
+  "value": "8px",
+  "why": "same file"
+ },
+ {
+  "file": "workspace.css",
+  "selector": ".industry-row",
+  "context": "",
+  "prop": "grid-template-columns",
+  "value": "64px minmax(0,1fr) auto 16px",
+  "why": "same file"
+ },
+ {
+  "file": "workspace.css",
+  "selector": ".industry-list",
+  "context": "",
+  "prop": "max-height",
+  "value": "420px",
+  "why": "same file"
+ },
+ {
+  "file": "workspace.css",
+  "selector": ".industry-list",
+  "context": "",
+  "prop": "gap",
+  "value": "6px",
+  "why": "same file"
+ },
+ {
+  "file": "workspace.css",
+  "selector": ".inspector-metrics b",
+  "context": "",
+  "prop": "font-size",
+  "value": "18px",
+  "why": "same file"
+ },
+ {
+  "file": "workspace.css",
+  "selector": ".inspector-metrics b",
+  "context": "",
+  "prop": "flex-basis",
+  "value": "100%",
+  "why": "same file"
+ },
+ {
+  "file": "workspace.css",
+  "selector": ".inspector-metrics > span",
+  "context": "",
+  "prop": "padding",
+  "value": "10px",
+  "why": "same file"
+ },
+ {
+  "file": "workspace.css",
+  "selector": ".inspector-metrics > span",
+  "context": "",
+  "prop": "gap",
+  "value": "5px",
+  "why": "same file"
+ },
+ {
+  "file": "workspace.css",
+  "selector": ".resource-price",
+  "context": "",
+  "prop": "font-size",
+  "value": "24px",
+  "why": "same file"
+ },
+ {
+  "file": "workspace.css",
+  "selector": ".resource-emblem",
+  "context": "",
+  "prop": "height",
+  "value": "64px",
+  "why": "same file"
+ },
+ {
+  "file": "workspace.css",
+  "selector": ".resource-emblem",
+  "context": "",
+  "prop": "width",
+  "value": "64px",
+  "why": "same file"
+ },
+ {
+  "file": "workspace.css",
+  "selector": ".stat-value",
+  "context": "",
+  "prop": "font-size",
+  "value": "20px",
+  "why": "same file"
+ },
+ {
+  "file": "workspace.css",
+  "selector": ".stat",
+  "context": "",
+  "prop": "padding",
+  "value": "8px",
+  "why": "same file"
+ },
+ {
+  "file": "workspace.css",
+  "selector": ".stats",
+  "context": "",
+  "prop": "gap",
+  "value": "12px",
+  "why": "same file"
+ },
+ {
+  "file": "workspace.css",
+  "selector": ".stats",
+  "context": "",
+  "prop": "grid-template-columns",
+  "value": "repeat(3,minmax(0,1fr))",
+  "why": "same file"
+ },
+ {
+  "file": "workspace.css",
+  "selector": ".pane-head",
+  "context": "",
+  "prop": "padding-bottom",
+  "value": "16px",
+  "why": "same file"
+ },
+ {
+  "file": "workspace.css",
+  "selector": ".topbar",
+  "context": "",
+  "prop": "padding",
+  "value": "12px 20px",
+  "why": "later strategy.css"
+ },
+ {
+  "file": "workspace.css",
+  "selector": ".topbar",
+  "context": "",
+  "prop": "gap",
+  "value": "12px 20px",
+  "why": "later strategy.css"
+ },
+ {
+  "file": "styles.css",
+  "selector": ".hlist",
+  "context": "",
+  "prop": "min-width",
+  "value": "0",
+  "why": "later workspace.css"
+ },
+ {
+  "file": "styles.css",
+  "selector": ".fchips button, .schips button",
+  "context": "",
+  "prop": "font-size",
+  "value": "13px",
+  "why": "later workspace.css"
+ },
+ {
+  "file": "styles.css",
+  "selector": ".fchips button, .schips button",
+  "context": "",
+  "prop": "padding",
+  "value": "0 10px",
+  "why": "later workspace.css"
+ },
+ {
+  "file": "styles.css",
+  "selector": ".fchips button, .schips button",
+  "context": "",
+  "prop": "min-height",
+  "value": "36px",
+  "why": "later workspace.css"
+ },
+ {
+  "file": "styles.css",
+  "selector": ".hbar",
+  "context": "",
+  "prop": "gap",
+  "value": "8px",
+  "why": "later workspace.css"
+ },
+ {
+  "file": "styles.css",
+  "selector": ".house",
+  "context": "",
+  "prop": "gap",
+  "value": "12px",
+  "why": "later workspace.css"
+ },
+ {
+  "file": "styles.css",
+  "selector": ".ev-meta",
+  "context": "",
+  "prop": "gap",
+  "value": "4px",
+  "why": "later workspace.css"
+ },
+ {
+  "file": "styles.css",
+  "selector": ".ev-icon",
+  "context": "",
+  "prop": "height",
+  "value": "30px",
+  "why": "later workspace.css"
+ },
+ {
+  "file": "styles.css",
+  "selector": ".ev-icon",
+  "context": "",
+  "prop": "width",
+  "value": "30px",
+  "why": "later workspace.css"
+ },
+ {
+  "file": "styles.css",
+  "selector": ".ev-icon",
+  "context": "",
+  "prop": "flex",
+  "value": "none",
+  "why": "later workspace.css"
+ },
+ {
+  "file": "styles.css",
+  "selector": ".notices",
+  "context": "",
+  "prop": "gap",
+  "value": "10px",
+  "why": "later strategy.css"
+ },
+ {
+  "file": "styles.css",
+  "selector": ".card-head",
+  "context": "",
+  "prop": "gap",
+  "value": "8px",
+  "why": "later workspace.css"
+ },
+ {
+  "file": "styles.css",
+  "selector": ".card-head",
+  "context": "",
+  "prop": "flex-wrap",
+  "value": "wrap",
+  "why": "later workspace.css"
+ },
+ {
+  "file": "styles.css",
+  "selector": ".cat-head",
+  "context": "",
+  "prop": "column-gap",
+  "value": "12px",
+  "why": "later workspace.css"
+ },
+ {
+  "file": "styles.css",
+  "selector": ".cat-head",
+  "context": "",
+  "prop": "grid-template-columns",
+  "value": "48px minmax(0, 1fr)",
+  "why": "later workspace.css"
+ },
+ {
+  "file": "styles.css",
+  "selector": ".cat-grid",
+  "context": "",
+  "prop": "grid-template-columns",
+  "value": "repeat(auto-fill, minmax(230px, 1fr))",
+  "why": "later workspace.css"
+ },
+ {
+  "file": "styles.css",
+  "selector": ".project-main",
+  "context": "",
+  "prop": "min-width",
+  "value": "0",
+  "why": "later workspace.css"
+ },
+ {
+  "file": "styles.css",
+  "selector": ".project-main",
+  "context": "",
+  "prop": "flex",
+  "value": "1",
+  "why": "later workspace.css"
+ },
+ {
+  "file": "styles.css",
+  "selector": ".project-nums",
+  "context": "",
+  "prop": "gap",
+  "value": "8px",
+  "why": "later workspace.css"
+ },
+ {
+  "file": "styles.css",
+  "selector": ".project-nums",
+  "context": "",
+  "prop": "justify-content",
+  "value": "space-between",
+  "why": "later workspace.css"
+ },
+ {
+  "file": "styles.css",
+  "selector": ".project-nums",
+  "context": "",
+  "prop": "display",
+  "value": "flex",
+  "why": "later workspace.css"
+ },
+ {
+  "file": "styles.css",
+  "selector": ".perks",
+  "context": "",
+  "prop": "gap",
+  "value": "6px",
+  "why": "later workspace.css"
+ },
+ {
+  "file": "styles.css",
+  "selector": ".perks",
+  "context": "",
+  "prop": "flex-basis",
+  "value": "100%",
+  "why": "later workspace.css"
+ },
+ {
+  "file": "styles.css",
+  "selector": ".tile.xs",
+  "context": "",
+  "prop": "height",
+  "value": "26px",
+  "why": "later workspace.css"
+ },
+ {
+  "file": "styles.css",
+  "selector": ".tile.xs",
+  "context": "",
+  "prop": "width",
+  "value": "26px",
+  "why": "later workspace.css"
+ },
+ {
+  "file": "styles.css",
+  "selector": ".dl-name b",
+  "context": "",
+  "prop": "font-size",
+  "value": "15px",
+  "why": "later workspace.css"
+ },
+ {
+  "file": "styles.css",
+  "selector": ".dl-name",
+  "context": "",
+  "prop": "white-space",
+  "value": "nowrap",
+  "why": "later workspace.css"
+ },
+ {
+  "file": "styles.css",
+  "selector": ".dl-head, .dl-row",
+  "context": "",
+  "prop": "gap",
+  "value": "10px",
+  "why": "later workspace.css"
+ },
+ {
+  "file": "styles.css",
+  "selector": ".dl-head, .dl-row",
+  "context": "",
+  "prop": "grid-template-columns",
+  "value": "40px minmax(0, 1fr) auto 52px",
+  "why": "later workspace.css"
+ },
+ {
+  "file": "styles.css",
+  "selector": ".b-chip-count",
+  "context": "",
+  "prop": "font-size",
+  "value": "14px",
+  "why": "later workspace.css"
+ },
+ {
+  "file": "styles.css",
+  "selector": ".b-chip-count",
+  "context": "",
+  "prop": "font-family",
+  "value": "var(--pixel)",
+  "why": "later workspace.css"
+ },
+ {
+  "file": "styles.css",
+  "selector": ".b-chip-name",
+  "context": "",
+  "prop": "white-space",
+  "value": "nowrap",
+  "why": "later workspace.css"
+ },
+ {
+  "file": "styles.css",
+  "selector": ".b-chip-icon",
+  "context": "",
+  "prop": "height",
+  "value": "26px",
+  "why": "later workspace.css"
+ },
+ {
+  "file": "styles.css",
+  "selector": ".b-chip-icon",
+  "context": "",
+  "prop": "width",
+  "value": "26px",
+  "why": "later workspace.css"
+ },
+ {
+  "file": "styles.css",
+  "selector": ".b-chip-icon",
+  "context": "",
+  "prop": "place-items",
+  "value": "center",
+  "why": "later workspace.css"
+ },
+ {
+  "file": "styles.css",
+  "selector": ".b-chip-icon",
+  "context": "",
+  "prop": "display",
+  "value": "grid",
+  "why": "later workspace.css"
+ },
+ {
+  "file": "styles.css",
+  "selector": ".b-chip",
+  "context": "",
+  "prop": "padding",
+  "value": "4px 8px",
+  "why": "later workspace.css"
+ },
+ {
+  "file": "styles.css",
+  "selector": ".b-chip",
+  "context": "",
+  "prop": "gap",
+  "value": "8px",
+  "why": "later workspace.css"
+ },
+ {
+  "file": "styles.css",
+  "selector": ".src-list",
+  "context": "",
+  "prop": "font-size",
+  "value": "13px",
+  "why": "later workspace.css"
+ },
+ {
+  "file": "styles.css",
+  "selector": ".src-cols",
+  "context": "",
+  "prop": "gap",
+  "value": "12px 16px",
+  "why": "later workspace.css"
+ },
+ {
+  "file": "styles.css",
+  "selector": ".src-break",
+  "context": "",
+  "prop": "gap",
+  "value": "10px",
+  "why": "later workspace.css"
+ },
+ {
+  "file": "styles.css",
+  "selector": ".src-break",
+  "context": "",
+  "prop": "padding",
+  "value": "10px",
+  "why": "later workspace.css"
+ },
+ {
+  "file": "styles.css",
+  "selector": ".price-chart",
+  "context": "",
+  "prop": "padding",
+  "value": "10px 10px 4px",
+  "why": "later workspace.css"
+ },
+ {
+  "file": "styles.css",
+  "selector": ".table-scroll",
+  "context": "",
+  "prop": "overflow-x",
+  "value": "auto",
+  "why": "later workspace.css"
+ },
+ {
+  "file": "styles.css",
+  "selector": ".tag-soft",
+  "context": "",
+  "prop": "font-size",
+  "value": "12px",
+  "why": "later workspace.css"
+ },
+ {
+  "file": "styles.css",
+  "selector": ".title-row",
+  "context": "",
+  "prop": "gap",
+  "value": "10px",
+  "why": "later workspace.css"
+ },
+ {
+  "file": "styles.css",
+  "selector": ".pane-head",
+  "context": "",
+  "prop": "gap",
+  "value": "12px",
+  "why": "later workspace.css"
+ },
+ {
+  "file": "styles.css",
+  "selector": ".pane",
+  "context": "",
+  "prop": "padding",
+  "value": "16px 18px",
+  "why": "later workspace.css"
+ },
+ {
+  "file": "styles.css",
+  "selector": ".card",
+  "context": "",
+  "prop": "box-shadow",
+  "value": "var(--soft)",
+  "why": "later workspace.css"
+ },
+ {
+  "file": "styles.css",
+  "selector": ".card",
+  "context": "",
+  "prop": "border-radius",
+  "value": "4px",
+  "why": "later workspace.css"
+ },
+ {
+  "file": "styles.css",
+  "selector": ".card",
+  "context": "",
+  "prop": "border",
+  "value": "2px solid var(--ink)",
+  "why": "later workspace.css"
+ },
+ {
+  "file": "styles.css",
+  "selector": ".board",
+  "context": "",
+  "prop": "grid-template-columns",
+  "value": "minmax(300px, 1fr) minmax(400px, 1.3fr) minmax(400px, 1.3fr)",
+  "why": "later workspace.css"
+ },
+ {
+  "file": "styles.css",
+  "selector": ".board",
+  "context": "",
+  "prop": "padding",
+  "value": "20px 24px 32px",
+  "why": "later workspace.css"
+ },
+ {
+  "file": "styles.css",
+  "selector": ".board",
+  "context": "",
+  "prop": "gap",
+  "value": "20px",
+  "why": "later workspace.css"
+ },
+ {
+  "file": "styles.css",
+  "selector": ".bell .badge",
+  "context": "",
+  "prop": "right",
+  "value": "-8px",
+  "why": "later workspace.css"
+ },
+ {
+  "file": "styles.css",
+  "selector": ".bell .badge",
+  "context": "",
+  "prop": "top",
+  "value": "-8px",
+  "why": "later workspace.css"
+ },
+ {
+  "file": "styles.css",
+  "selector": ".controls",
+  "context": "",
+  "prop": "gap",
+  "value": "12px",
+  "why": "later workspace.css"
+ },
+ {
+  "file": "styles.css",
+  "selector": ".chip dd",
+  "context": "",
+  "prop": "font-size",
+  "value": "clamp(14px, 1.25vw, 18px)",
+  "why": "later workspace.css"
+ },
+ {
+  "file": "styles.css",
+  "selector": ".chip",
+  "context": "",
+  "prop": "padding",
+  "value": "6px 12px",
+  "why": "later workspace.css"
+ },
+ {
+  "file": "styles.css",
+  "selector": ".chip",
+  "context": "",
+  "prop": "border",
+  "value": "2px solid var(--ink)",
+  "why": "later workspace.css"
+ },
+ {
+  "file": "styles.css",
+  "selector": ".ledger",
+  "context": "",
+  "prop": "gap",
+  "value": "10px",
+  "why": "later workspace.css"
+ },
+ {
+  "file": "styles.css",
+  "selector": ".date small",
+  "context": "",
+  "prop": "font-size",
+  "value": "0.7em",
+  "why": "later strategy.css"
+ },
+ {
+  "file": "styles.css",
+  "selector": ".date",
+  "context": "",
+  "prop": "white-space",
+  "value": "nowrap",
+  "why": "later workspace.css"
+ },
+ {
+  "file": "styles.css",
+  "selector": ".date",
+  "context": "",
+  "prop": "font-size",
+  "value": "clamp(19px, 1.9vw, 28px)",
+  "why": "later workspace.css"
+ },
+ {
+  "file": "styles.css",
+  "selector": ".brand-name",
+  "context": "",
+  "prop": "font-size",
+  "value": "13px",
+  "why": "later workspace.css"
+ },
+ {
+  "file": "styles.css",
+  "selector": ".topbar",
+  "context": "",
+  "prop": "border-bottom",
+  "value": "2px solid var(--ink)",
+  "why": "later workspace.css"
+ },
+ {
+  "file": "styles.css",
+  "selector": ".topbar",
+  "context": "",
+  "prop": "background",
+  "value": "var(--paper)",
+  "why": "later strategy.css"
+ },
+ {
+  "file": "styles.css",
+  "selector": ".topbar",
+  "context": "",
+  "prop": "padding",
+  "value": "14px 24px 12px",
+  "why": "later strategy.css"
+ },
+ {
+  "file": "styles.css",
+  "selector": ".topbar",
+  "context": "",
+  "prop": "gap",
+  "value": "12px 28px",
+  "why": "later strategy.css"
+ },
+ {
+  "file": "styles.css",
+  "selector": ".topbar",
+  "context": "",
+  "prop": "z-index",
+  "value": "20",
+  "why": "later strategy.css"
+ },
+ {
+  "file": "styles.css",
+  "selector": ".topbar",
+  "context": "",
+  "prop": "position",
+  "value": "sticky",
+  "why": "later workspace.css"
+ },
+ {
+  "file": "styles.css",
+  "selector": ".app",
+  "context": "",
+  "prop": "flex-direction",
+  "value": "column",
+  "why": "later strategy.css"
+ },
+ {
+  "file": "styles.css",
+  "selector": ".app",
+  "context": "",
+  "prop": "display",
+  "value": "flex",
+  "why": "later strategy.css"
+ },
+ {
+  "file": "styles.css",
+  "selector": ".app",
+  "context": "",
+  "prop": "min-height",
+  "value": "100vh",
+  "why": "later workspace.css"
+ },
+ {
+  "file": "styles.css",
+  "selector": ".stat-value",
+  "context": "",
+  "prop": "white-space",
+  "value": "nowrap",
+  "why": "later workspace.css"
+ },
+ {
+  "file": "styles.css",
+  "selector": ".stat-value",
+  "context": "",
+  "prop": "font-size",
+  "value": "22px",
+  "why": "later workspace.css"
+ },
+ {
+  "file": "styles.css",
+  "selector": ".stat-label",
+  "context": "",
+  "prop": "font-size",
+  "value": "12px",
+  "why": "later workspace.css"
+ },
+ {
+  "file": "styles.css",
+  "selector": ".stats",
+  "context": "",
+  "prop": "gap",
+  "value": "10px 14px",
+  "why": "later workspace.css"
+ },
+ {
+  "file": "styles.css",
+  "selector": ".stats",
+  "context": "",
+  "prop": "grid-template-columns",
+  "value": "repeat(auto-fit, minmax(92px, 1fr))",
+  "why": "later workspace.css"
+ },
+ {
+  "file": "map/atlas.css",
+  "selector": ".atlas-rivers path",
+  "context": "",
+  "prop": "stroke-width",
+  "value": "2.5",
+  "why": "same file"
+ },
+ {
+  "file": "map/atlas.css",
+  "selector": ".atlas-rivers path",
+  "context": "",
+  "prop": "stroke",
+  "value": "#789fae",
+  "why": "same file"
+ },
+ {
+  "file": "system-ui.css",
+  "selector": ".actual-output",
+  "context": "",
+  "prop": "display",
+  "value": "grid",
+  "why": "later ui/runtime.css"
+ },
+ {
+  "file": "system-ui.css",
+  "selector": ".construction-detail .construction-building",
+  "context": "",
+  "prop": "padding",
+  "value": "6px 0",
+  "why": "later ui/runtime.css"
+ },
+ {
+  "file": "system-ui.css",
+  "selector": ".construction-detail .construction-building",
+  "context": "",
+  "prop": "border-top",
+  "value": "1px solid var(--rule)",
+  "why": "later ui/runtime.css"
+ },
+ {
+  "file": "system-ui.css",
+  "selector": ".strategy-panel .system-tabs button",
+  "context": "",
+  "prop": "padding",
+  "value": "6px",
+  "why": "later strategy.css"
+ }
+]
