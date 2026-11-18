@@ -1,3 +1,4 @@
+import {MetricRow,SectionHeading} from '../system-02/blocks';
 import {Button as UIButton,Input as UIInput,Select as UISelect} from '../ui/controls';
 import {ActualOutput} from './ActualOutput';
 import {buildBlockers as constructionBlockers} from '../constructionCatalogue';
@@ -26,7 +27,7 @@ import {
 import type { Building, Company, GoodId, Region, Skill, PopClass, World } from '@econ/sim';
 import { ChevronDown, X, Coins, Crown, ArrowUp, ArrowDown, Pause, Play } from 'lucide-react';
 import type { Game } from '../useGame';
-import { BuildingSprite, GoodSprite, Sprite64 } from '../sprites';
+import { BuildingSprite, GoodSprite, Sprite64, ClassSprite } from '../sprites';
 import { Bar, CLASS_COLOR, SKILL_COLOR, SegBar, Waterfall } from '../ui';
 import {marginText, compact, compactMoney, int, money, one, pct, signedCompactMoney, signedMoney, two } from '../format';
 import { className, buildingName, companyName, goodName, landName, methodName, regionName, skillName, t, techName, useLang, useT } from '../i18n';
@@ -175,34 +176,23 @@ function Summary({ rows }: { rows: Row[] }) {
   return (
     <div className="hsum">
       <section className="htile" aria-label={T.hStaff}>
-        <h3 className="htile-h"><span>{T.hStaff}</span></h3>
+        <SectionHeading><span>{T.hStaff}</span></SectionHeading>
         {staff.map((x) => (
-          <div key={x.s} className="srow">
-            <span className="srow-l"><i className="sw" style={{ background: CLASS_COLOR[x.s] }} />{className(x.s)}</span>
-            <Bar value={x.emp / x.jobs} color={CLASS_COLOR[x.s]} vac label={className(x.s)} />
-            <span className="pxnum num"><NumericValue value={x.emp} format="compact"/>/<NumericValue value={x.jobs} format="compact"/></span>
-            <ShortBadge gap={x.jobs - x.emp} />
-          </div>
+          <MetricRow key={x.s} label={className(x.s)} icon={<ClassSprite c={x.s} size={24}/>} value={<><NumericValue value={x.emp} format="compact"/> / <NumericValue value={x.jobs} format="compact"/><ShortBadge gap={x.jobs-x.emp}/></>} track={<Bar value={x.emp/x.jobs} color={CLASS_COLOR[x.s]} vac label={className(x.s)}/>}/>
         ))}
       </section>
       <section className="htile" aria-label={T.fInput}>
-        <h3 className="htile-h"><span>{T.fInput}</span><span className={`pxnum ${shortList.length ? 'badge-bad' : 'badge-ok'}`}>{shortList.length}</span></h3>
+        <SectionHeading><span>{T.fInput}</span><span className={`pxnum ${shortList.length ? 'badge-bad' : 'badge-ok'}`}>{shortList.length}</span></SectionHeading>
         {shortList.map(([g, x]) => (
-          <div key={g} className="irow">
-            <span className="tile xs"><GoodSprite g={g} size={24} /></span>
-            <span className="irow-m">
-              <span className="irow-t"><b>{goodName(g)}</b><span className="pxnum">{qty(x.cur)}/{qty(x.max)}</span></span>
-              <Bar value={x.cur / x.max} tone="in" vac label={goodName(g)} />
-            </span>
-          </div>
+          <MetricRow key={g} label={goodName(g)} icon={<GoodSprite g={g} size={24}/>} value={<>{qty(x.cur)} / {qty(x.max)}</>} track={<Bar value={x.cur/x.max} tone="in" vac label={goodName(g)}/>}/>
         ))}
       </section>
       <section className="htile" aria-label={T.balance}>
-        <h3 className="htile-h">
+        <SectionHeading>
           <span>{T.balance}</span>
-          <span className="htile-pl"><span className={`pxnum ${profit >= 0 ? 'pos' : 'neg'}`}><NumericValue value={profit} format="signedMoney"/></span>
+          <span className="es-heading-value"><span className={`pxnum ${profit >= 0 ? 'pos' : 'neg'}`}><NumericValue value={profit} format="signedMoney"/></span>
             <span className="lbl" tabIndex={0} data-help={marginText(rev>0?profit/rev:null,{detail:true})}>{T.margin} <b className={`pxnum ${profit >= 0 ? 'pos' : 'neg'}`}>{marginText(rev>0?profit/rev:null,{signed:true})}</b></span></span>
-        </h3>
+        </SectionHeading>
         <Waterfall rev={rev} raw={raw} wage={wage} labels={[T.wfRev, T.wfRaw, T.wfWage, T.wfProfit]} />
       </section>
     </div>
@@ -281,7 +271,7 @@ function BuildingRow({ r, game, world, owner, open, onToggle,onGood }: {onGood?:
 }
 
 /** 내 건물 조작: 개수(−/+/+10), 생산 방식, 가동률, 가동 중지 */
-function Controls({ r, game, world, owner }: { r: Row; game: Game; world: World; owner: Company }) {
+function Controls({ r, game, world, owner, constructionOnly=false }: { r: Row; game: Game; world: World; owner: Company; constructionOnly?:boolean }) {
   const T = useT();
   const { b } = r;
   const type = BUILDING_BY_ID[b.typeId];
@@ -292,21 +282,21 @@ function Controls({ r, game, world, owner }: { r: Row; game: Game; world: World;
   return (
     <div className="hctrl">
       <span className="stepper" role="group" aria-label={T.countOf(r.name)}>
-        <UIButton aria-label={T.demolishOne} data-help={T.demolishOne} disabled={r.queued>0||(b.shrinking??0)>=b.level}
-          onClick={() => { if (b.level > 1 || confirm(T.confirmDemolish(rname, r.name))) game.command({ type: 'demolish', buildingId: b.id }); }}>−</UIButton>
+        {!constructionOnly&&<UIButton aria-label={T.demolishOne} data-help={T.demolishOne} disabled={r.queued>0||(b.shrinking??0)>=b.level}
+          onClick={() => { if (b.level > 1 || confirm(T.confirmDemolish(rname, r.name))) game.command({ type: 'demolish', buildingId: b.id }); }}>−</UIButton>}
         <output>{b.level}{r.queued > 0 && <small>+{r.queued}</small>}</output>
         <UIButton aria-label={T.expandOne}  data-help={[free < 1 ? T.noLand : T.expandOne,oneBlocked.join(' · ')].filter(Boolean).join('\n')} disabled={full||free < 1||(b.shrinking??0)>0}
           onClick={() => game.command({ type: 'expand', buildingId: b.id })}>+</UIButton>
         <UIButton aria-label={T.buildingGroups.expandFive}  data-help={[T.buildingGroups.expandFive,fiveBlocked.join(' · ')].filter(Boolean).join('\n')} disabled={fiveBlocked.length>0||free < 5||(b.shrinking??0)>0}
           onClick={() => game.command({ type: 'expand', buildingId: b.id, levels: 5 })}>+5</UIButton>
       </span>
-      {(b.shrinking??0)>0&&<UIButton className="sm-btn" onClick={()=>game.command({type:'cancelDemolish',buildingId:b.id})}>{T.cancelDemolition}</UIButton>}
+      {!constructionOnly&&<>{(b.shrinking??0)>0&&<UIButton className="sm-btn" onClick={()=>game.command({type:'cancelDemolish',buildingId:b.id})}>{T.cancelDemolition}</UIButton>}
       <MethodComparison world={world} building={b} owner={owner} game={game}/>
       {!(owner.state && isGovernment(b.typeId)) && <><span className="util">
         <span className="lbl">{T.utilisation}</span>
         <output className="pxnum">{pct(b.utilization)}</output>
       </span>
-      <UIButton className="sm-btn" onClick={() => game.command({ type: 'setActive', buildingId: b.id, active: !b.active })}>{b.active ? T.stop : T.resume}</UIButton></>}
+      <UIButton className="sm-btn" onClick={() => game.command({ type: 'setActive', buildingId: b.id, active: !b.active })}>{b.active ? T.stop : T.resume}</UIButton></>}</>}
     </div>
   );
 }
@@ -446,10 +436,10 @@ function BuildCard({ bt, region, est, blockers, payback, game, world, me }: {
   );
 }
 
-export function BuildingControls({building,game,world}:{building:Building;game:Game;world:World}) {
+export function BuildingControls({building,game,world,constructionOnly=false}:{building:Building;game:Game;world:World;constructionOnly?:boolean}) {
   const owner=companyById(world,building.companyId);
   if (!owner?.isPlayer || BUILDING_BY_ID[building.typeId].auto) return null;
-  return <Controls r={rowOf(world,building)} game={game} world={world} owner={owner}/>;
+  return <Controls r={rowOf(world,building)} game={game} world={world} owner={owner} constructionOnly={constructionOnly}/>;
 }
 export function KingdomSummary({world,government,onFinance,includePrivate=false}:{world:World;government:Company;onFinance?:()=>void;includePrivate?:boolean}){
  const T=useT(),regions=new Set(world.regions.filter(r=>r.kingdomId===government.kingdomId).map(r=>r.id));

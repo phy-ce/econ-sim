@@ -1,3 +1,4 @@
+import {BuildingChoice} from '../system-02/blocks';
 import {Segmented} from '../ui/components';
 import {Select as UISelect,Button as UIButton} from '../ui/controls';
 import {useMemo} from 'react';
@@ -37,10 +38,11 @@ export function ConstructionPanel({world,game,me,regionId,onRegion,onOpenRegion,
   <div className="construction-cards">{cards.map(bt=>{
    const blockers=buildBlockers(world,me,region,bt.id),estimate=forecast.get(bt.id)!;
    const buildings=world.buildings.filter(b=>b.regionId===region.id&&b.typeId===bt.id),queued=world.constructions.filter(p=>p.regionId===region.id&&p.typeId===bt.id).reduce((n,p)=>n+(p.levels??1),0);
-   return <UIButton className={`construction-card land-${bt.land??'none'}`} key={bt.id} aria-haspopup="dialog" aria-expanded={selected===bt.id} data-type-id={bt.id} data-help={blockers.length?blockers.join(' · '):C.weekly} onClick={()=>setSelected(bt.id)}>
-    <BuildingSprite typeId={bt.id} size={40}/><strong title={buildingName(bt.id)}>{buildingName(bt.id)}</strong><span className="construction-levels" data-help={`${C.levels}\n${T.system.state}: ${buildings.filter(b=>b.companyId===me.id).reduce((n,b)=>n+b.level,0)}\n${T.system.private}: ${buildings.filter(b=>b.companyId!==me.id).reduce((n,b)=>n+b.level,0)}`}>({buildings.reduce((n,b)=>n+b.level,0)}+{queued})</span>{blockers.length>0&&<Lock size={16} aria-label={T.blocked}/>}
-    <span className={estimate.profit!==null&&estimate.profit>=0?'pos':'neg'}>{estimate.profit===null?'—':<NumericValue value={estimate.profit} format="signedCompactMoney"/>}<small>{T.perDay}</small></span><span>{C.payback} {estimate.payback===null?'—':T.nDays(Math.ceil(estimate.payback))}</span>
-   </UIButton>;
+   return <BuildingChoice key={bt.id} className={`construction-card land-${bt.land??'none'}`} name={buildingName(bt.id)} typeId={bt.id} expanded={selected===bt.id} help={blockers.length?blockers.join(' · '):C.weekly} onSelect={()=>setSelected(bt.id)}
+    icon={<BuildingSprite typeId={bt.id} size={64}/>}
+    levels={<span className="construction-levels" data-help={`${C.levels}\n${T.system.state}: ${buildings.filter(b=>b.companyId===me.id).reduce((n,b)=>n+b.level,0)}\n${T.system.private}: ${buildings.filter(b=>b.companyId!==me.id).reduce((n,b)=>n+b.level,0)}`}>({buildings.reduce((n,b)=>n+b.level,0)}+{queued})</span>}
+    status={blockers.length>0?<Lock size={18} aria-label={T.blocked}/>:undefined}
+    metrics={<><span className={estimate.profit!==null&&estimate.profit>=0?'pos':'neg'}>{estimate.profit===null?'—':<NumericValue value={estimate.profit} format="signedCompactMoney"/>}<small>{T.perDay}</small></span><span><small>{C.payback}</small>{estimate.payback===null?'—':T.nDays(Math.ceil(estimate.payback))}</span></>}/>; 
   })}</div></ActiveContent></div>
   <div hidden={tab!=='queue'}><ActiveContent active={tab==='queue'}><Projects game={game} world={world} owner={me} projects={projects} onRegion={onOpenRegion}/></ActiveContent></div>
   <DetailWindow size={3} hideTrigger title={selected?`${buildingName(selected)} · ${regionName(region)}`:C.manage} help={C.manage} open={selected!==null} onOpenChange={open=>{if(!open)setSelected(null);}}>{selected&&<ConstructionDetail key={`${region.id}:${selected}`} world={world} game={game} region={region} typeId={selected} onGood={onGood} onCompany={onCompany} onOpenBuilding={onOpenBuilding} onRegion={onOpenRegion}/>}</DetailWindow>

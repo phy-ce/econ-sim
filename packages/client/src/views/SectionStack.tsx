@@ -1,3 +1,4 @@
+import {SectionHeading} from '../system-02/blocks';
 import {Button as UIButton} from '../ui/controls';
 import {ActiveContent} from './ActiveContent';
 import {t as uiCopy} from '../i18n';
@@ -60,7 +61,7 @@ export function SectionStack({ storageKey, items, revealId, revealKey, explorer=
         {prefs.map(p=>items.find(i=>i.id===p.id)).filter((item):item is Item=>!!item).map(item=><UIButton key={item.id} aria-pressed={active===item.id} aria-controls={`${prefix}-detail`} data-help={item.title} onClick={()=>setSelected(item.id)}>{item.shortTitle??item.title}</UIButton>)}
       </nav>
       <section className="explorer-detail" id={`${prefix}-detail`} aria-label={items.find(i=>i.id===active)?.title}>
-        {items.map(item=><div key={item.id} hidden={active!==item.id} data-section={item.id}><h3 className="explorer-heading">{item.title}</h3><ActiveContent active={active===item.id}>{item.content}</ActiveContent></div>)}
+        {items.map(item=><div key={item.id} hidden={active!==item.id} data-section={item.id}><SectionHeading className="explorer-heading">{item.title}</SectionHeading><ActiveContent active={active===item.id}>{item.content}</ActiveContent></div>)}
       </section>
     </div>:<>
     <div className="section-settings"><UIButton onClick={() => setPrefs(defaults())} data-help={uiCopy().screenText['resetSectionLayout']} aria-label={uiCopy().screenText['resetSectionLayout']}><RotateCcw size={12}/></UIButton></div>
