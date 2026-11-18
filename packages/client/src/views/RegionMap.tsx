@@ -8,7 +8,6 @@ import { SortHeader } from './SortHeader';
 import { memo, useState, useRef } from 'react';
 import mapData from '../map/regions.json';
 import {MAP_FRAME,clampMapCamera,zoomMapCamera} from '../mapCamera';
-import '../map/atlas.css';
 import { regionPopulation , regionAvgWealth } from '@econ/sim';
 import type { World } from '@econ/sim';
 import { Sprite, SvgSprite } from '../sprites';

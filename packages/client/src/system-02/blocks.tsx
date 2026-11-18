@@ -1,6 +1,5 @@
 import type {ReactNode} from 'react';
 import {ActionButton} from '../ui/primitives';
-import './blocks.css';
 
 export function BuildingChoice({name,icon,levels,status,metrics,onSelect,typeId,expanded,help,className=''}:{name:string;icon:ReactNode;levels:ReactNode;status?:ReactNode;metrics:ReactNode;onSelect:()=>void;typeId:string;expanded:boolean;help?:string;className?:string}){
  return <ActionButton className={`es-building-choice ${className}`} onClick={onSelect} aria-haspopup="dialog" aria-expanded={expanded} data-type-id={typeId} data-help={help}>

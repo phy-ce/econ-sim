@@ -2,7 +2,6 @@ import {ShareTrack} from '../ui/primitives';
 import {Button as UIButton} from '../ui/controls';
 import {LedgerTable as UITable} from '../ui/primitives';
 import {t as uiCopy} from '../i18n';
-import '../ownership-theme.css';
 import {OwnershipBrowser,shareLabel} from './OwnershipBrowser';
 import {buildingEcon,BUILDING_BY_ID} from '@econ/sim';
 import type {World,Building} from '@econ/sim';

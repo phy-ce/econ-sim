@@ -2,6 +2,7 @@ import React,{useState,useEffect} from 'react';
 import {createRoot} from 'react-dom/client';
 import {ArrowUpRight,ArrowLeft,ArrowRight,Plus,Minus,X,Sun,Moon,ChevronRight,Crown,House,Landmark,Check,Pause,Hammer,Wheat,Users,Coins,Package,Settings2} from 'lucide-react';
 import {GoodSprite} from '../sprites';
+import './blocks.css';
 import './system.css';
 import {ResourceRow,ResourceSection,MetricRow,SectionHeading} from './blocks';
 import {ActionButton,ProgressTrack} from '../ui/primitives';

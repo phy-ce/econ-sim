@@ -1,0 +1,16 @@
+/* 본 게임 CSS 의 유일한 진입점 (UI-20). main.tsx 만 이 파일을 불러온다.
+   순서가 곧 덮어쓰기 순서다. 1단계는 2026-11-18 까지 화면이 실제로 불러오던 순서를 그대로 옮겼다. */
+@import '../views/language-pick.css';
+@import '../system-02/blocks.css';
+@import '../kingdom-economy.css';
+@import '../views/flow-row.css';
+@import '../views/demolition.css';
+@import '../ownership-theme.css';
+@import '../views/sort-header.css';
+@import '../system-ui.css';
+@import '../map/atlas.css';
+@import '../styles.css';
+@import '../workspace.css';
+@import '../strategy.css';
+@import '../readability.css';
+@import './runtime.css';

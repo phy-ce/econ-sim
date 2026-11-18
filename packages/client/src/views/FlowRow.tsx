@@ -9,7 +9,6 @@ import {Bar} from '../ui';
 import {goodName,buildingName,useT} from '../i18n';
 import {marginText,exactNumber,pct} from '../format';
 import {HarvestBadge} from './HarvestBadge';
-import './flow-row.css';
 export type FlowSummary={inputs:{g:GoodId;cur:number;price:number;value:number}[];outputs:{g:GoodId;cur:number;price:number;value:number}[];inputFill:number;rev:number;raw:number;wage:number;stopped:boolean;points:number;tax:number;seats:number;officeLoad:number};
 export function FlowRow({world,building:b,typeId=b?.typeId,methodId=b?.methodId,regionId=b?.regionId,levels=b?.level??1,onGood,summary}:{world:World;summary?:FlowSummary;building?:Building;typeId?:string;methodId?:string;regionId?:number;levels?:number;onGood?:(g:GoodId)=>void}){
  const T=useT();if(!typeId||!methodId||regionId===undefined||isOwnerBuilding(typeId))return null;

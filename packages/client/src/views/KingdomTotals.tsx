@@ -5,7 +5,6 @@ import {kingdomStats} from '../kingdomStats';
 import {useT} from '../i18n';
 import {exactNumber,pct} from '../format';
 import {NumericValue} from '../NumericValue';
-import '../kingdom-economy.css';
 
 const colors={royal:'var(--royal-owner)',manor:'var(--manor-owner)',finance:'var(--finance-owner)',unassigned:'var(--unassigned-owner)'};
 export function KingdomTotals({world,id}:{world:World;id:number}){

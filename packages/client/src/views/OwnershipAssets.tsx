@@ -8,7 +8,6 @@ import {regionName,useLang,useT} from '../i18n';
 import {NumericValue} from '../NumericValue';
 import {TimeChart} from './Chart';
 import {pct,exactNumber} from '../format';
-import '../ownership-theme.css';
 export function OwnershipAssets({world}:{world:World}){
  const T=useT(),ko=useLang()==='ko',assets=ownershipAssets(world),own=playerCompany(world)?.kingdomId;
  const [scope,setScope]=useNavigationState<'kingdom'|'region'>('trends:asset-scope',()=>{try{return localStorage.getItem('trends-assets-scope')==='region'?'region':'kingdom';}catch{return 'kingdom';}});

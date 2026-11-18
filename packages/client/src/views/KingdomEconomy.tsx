@@ -1,7 +1,6 @@
 import {Button as UIButton} from '../ui/controls';
 import {LedgerTable as UITable} from '../ui/primitives';
 import type {GoodId,World} from '@econ/sim';
-import '../kingdom-economy.css';
 import {useNavigationState} from '../NavigationHistory';
 import {useLang,useT} from '../i18n';
 import {kingdomStats} from '../kingdomStats';

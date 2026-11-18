@@ -17,7 +17,6 @@ import {Bar} from '../ui';
 import {UsersRound} from 'lucide-react';
 import { buildingName, className, goodName, regionName, useT,useLang } from '../i18n';
 import { exactNumber } from '../format';
-import '../system-ui.css';
 const precisePct=(value:number)=>`${exactNumber(value*100)}%`;
 
 export function FinancePanel({game,world,me,onBuilding,onPolicies,active=true}:{active?:boolean;game:Game;world:World;me:Company;onBuilding?:(id:number)=>void;onPolicies?:()=>void}) {

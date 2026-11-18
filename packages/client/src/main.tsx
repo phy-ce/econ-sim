@@ -3,8 +3,6 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { TooltipLayer } from './TooltipLayer';
 import { App } from './App';
-import './styles.css';
-import './workspace.css';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
@@ -12,8 +10,6 @@ createRoot(document.getElementById('root')!).render(
   </StrictMode>,
 );
 
-import './strategy.css';
 
-import './readability.css';
 
-import './ui/runtime.css';
+import './ui/index.css';

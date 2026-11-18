@@ -4,7 +4,6 @@ import {Bar} from '../ui';
 import {NumericValue} from '../NumericValue';
 import {useT} from '../i18n';
 import type {Game} from '../useGame';
-import './demolition.css';
 export function DemolitionProgress({world,building:b,game}:{world:World;building:Building;game?:Game}){
  const T=useT(),pending=b.shrinking??0;if(!pending)return null;
  const days=7-world.tick%7;
