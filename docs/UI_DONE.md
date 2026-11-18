@@ -2864,3 +2864,13 @@ sim은 `setUtilization`을 거부한다 (`commands.ts:178`). 지금 슬라이더
 - 남은 것: `T.adjustFinance` (`strings.ts:357`·`:933`)를 부르는 곳이 없다. 지운다.
 
 완료 근거: 사용처 없는 adjustFinance 한국어/영어 키 제거. client src/test 검색 0건. 루트 npm.cmd run typecheck 및 researchPanel 3개·researchLayout 6개 통과(SSR useLayoutEffect 경고만 있음). 사용하지 않는 문자열 제거이므로 새 스크린샷 없음, 화면 미검증. UI-1~UI-9 절별 선별 커밋 완료 후 중단; UI-10 이후 작업 및 packages/sim 수정 없음.
+
+### UI-17. 실패하는 클라이언트 시험 3개 (2026-11-09 Claude 확인)
+main e21ebd4 와 1f014e9 의 커밋된 코드에서 `packages/client` 시험 128개 중 3개가 실패한다 (Codex 의 UI-1~UI-9 커밋 전후 같음):
+- `test/ownershipPop.test.tsx` "shows only the selected pop and after-tax income"
+- `test/ownerSummary.test.tsx` "shows the default share-based manor seats without a seated gentry row"
+- `test/productionDiagram.test.tsx` "names actual resource quantities and retains the unit price in the tooltip"
+
+main 체크아웃에 커밋 안 한 시험 변경(`ownershipPop.test.tsx`, `productionDiagram.test.tsx`)이 있다. 그것이 고침이면 검증해 커밋한다. 화면이 맞고 시험이 낡았으면 시험을 고치고, 화면이 틀렸으면 화면을 고친다. 어느 쪽인지 UI_STATUS 에 적는다.
+
+완료 근거 (2026-11-18 Claude): main 체크아웃의 커밋 안 한 클라이언트 변경(System 02 적용, 정렬 머리, 시험 기대값)을 커밋하자 클라이언트 시험 128개 → 130개 모두 통과 (7f3f52e, 98f9e1c, e5898ba, 3c5a4a7). 사용자가 System 02 화면을 골랐다 (DECISIONS 7-63).

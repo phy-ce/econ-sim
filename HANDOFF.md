@@ -9,6 +9,9 @@
 - 클라우드 세션(claude.ai/code)으로 이어서 할 수 있다. 규칙은 CLAUDE.md "클라우드 세션"을 본다.
 - 옛 세션 기록: `docs/log/` (2026-10-25 이전 HANDOFF 절은 `docs/log/HANDOFF_2026-10-18_to_10-25.md`, 날짜별 UI 기록도 여기). 다른 문서의 "HANDOFF 0-ind3"·"HANDOFF 0-aifix" 같은 옛 절 참조는 그 파일에 있다.
 
+## 0-1118-css2
+- 브랜치 wt-css (main 3c5a4a7 에서). UI-20 을 Claude 가 진행 (사용자 2026-11-18). 1~3단계 끝, 화면 변경 없음 (tools/cssv, 74개 상태). 다음: 화면에서 요소별로 이긴 선언을 재어 한 번도 이기지 못한 선언 찾기 → 역할별 파일·@layer. System 02 화면 채택은 DECISIONS 7-63. Codex 는 UI-15~UI-19 대기 (UI-20 뒤).
+
 ## 0-1118-css
 - 브랜치 wt-uitidy (main 6e2f55c 에서), 문서만. 사용자가 CSS 구조 정리를 맨 먼저 하기로 했다 (UI_CHANGES UI-20). 조사: Claude 코드 조사 (겹친 (클래스, 속성) 484곳), Codex 화면 조사 `.tmp/css-runtime.md` (규칙 2,309개 중 1,269개 미매칭). 순서: Codex 가 main 체크아웃의 커밋 안 한 변경을 정리 (결과는 Codex 가 `.tmp/uncommitted-review.md` 에 새로 쓴다, 아직 없음. 사용자 2026-11-18 결정) → UI-20 → UI-15~UI-19. 2026-11-18 에 main 체크아웃에서 커밋 안 한 클라이언트 파일: 고침 `system-02/main.tsx`, `system-02/system.css`, `ui/tokens.css`, `views/CompanyPanel.tsx`, `views/ConstructionDetail.tsx`, `views/ConstructionPanel.tsx`, `views/FlowRow.tsx`, `views/KingdomMoney.tsx`, `views/KingdomTotals.tsx`, `views/SectionStack.tsx`, `views/SortHeader.tsx`, `test/ownershipPop.test.tsx`, `test/productionDiagram.test.tsx`; 새 파일 `system-02/blocks.css`, `system-02/blocks.tsx`, `system-02/tokens.css`, `views/sort-header.css`, `test/sortHeader.test.tsx`, `.tmp-ui-nine/`, `.tmp-ui-prod/` (모두 `packages/client/` 아래, `src/` 생략).
 - CLAUDE.md UI 분업에 예외를 더했다 (사용자 2026-11-18): 화면이 바뀌지 않는 리팩토링은 Claude 가 직접 한다. 다음 Claude 일: `views/CompanyPanel.tsx` 부품을 쓰는 창 옆으로 옮기기 (쓰는 곳 없는 `BuildList` 삭제), 400자 넘는 줄 정리. 커밋 안 한 변경 정리가 끝난 뒤 시작한다.

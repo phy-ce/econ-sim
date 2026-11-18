@@ -19,14 +19,13 @@ UI-15~UI-17 의 줄 번호는 커밋 1f014e9 (main 체크아웃의 커밋 안 �
 UI-18·UI-19 (2026-11-18 추가)는 줄 번호 없이 창·기능 단위로 적었다. UI-20 의 숫자는 HEAD 6e2f55c 와 조사 두 개(아래 절) 기준이다.
 
 ### 할 일 (위에서부터)
-0. **UI-20** (사용자 요청, 제일 먼저): CSS 를 역할별 파일로 다시 나눈다. 화면은 바뀌지 않는다. 먼저 main 체크아웃의 커밋 안 한 변경을 정리한다 (Codex 가 정리 결과를 `.tmp/uncommitted-review.md` 에 새로 쓴다. 지금은 없다).
+0. **UI-20** (사용자 요청, 제일 먼저, Claude 진행 중): CSS 를 역할별 파일로 다시 나눈다. 화면은 바뀌지 않는다. 1~3단계 끝 (아래 절 "진행").
 1. **UI-15** (사용자 요청): 통계 · 소식 창을 통계 창과 소식 창 둘로 처음부터 다시 만든다. 통계 창은 맨 위 탭 하나(경제/생활/재정/왕국 비교)다.
 2. **UI-16** (사용자 요청): 소식을 따로 떼어 주 창 하나로 둔다.
-3. **UI-17** (정리): 커밋된 코드에서 실패하는 클라이언트 시험 3개를 고친다.
-4. **UI-18** (사용자 요청): 지금까지 한 화면 개선(툴팁, 창 크기, UI-1~UI-9, UI-15·UI-16)을 다시 보고 다듬는다.
-5. **UI-19** (사용자 요청): View Transition API 를 쓸 만한 곳에 쓴다.
+3. **UI-18** (사용자 요청): 지금까지 한 화면 개선(툴팁, 창 크기, UI-1~UI-9, UI-15·UI-16)을 다시 보고 다듬는다.
+4. **UI-19** (사용자 요청): View Transition API 를 쓸 만한 곳에 쓴다.
 
-UI-1~UI-9 는 끝났다 (2026-11-09, UI_DONE).
+UI-1~UI-9 는 끝났다 (2026-11-09, UI_DONE). UI-17 은 main 체크아웃의 커밋 안 한 변경을 커밋하며 풀렸다 (2026-11-18, 3c5a4a7 까지, 클라이언트 시험 130개 통과, UI_DONE).
 
 새로 반영할 sim 변경은 없다 (UI-15~UI-20 모두 sim 변경 없음).
 
@@ -156,14 +155,6 @@ DESIGN에 없는 화면 규칙: 민간 회사 이름("XX 민간")은 화면에 �
 
 확인: 한국어·영어 스크린샷, 안 읽음 배지가 읽으면 줄어드는지.
 
-### UI-17. 실패하는 클라이언트 시험 3개 (2026-11-09 Claude 확인)
-main e21ebd4 와 1f014e9 의 커밋된 코드에서 `packages/client` 시험 128개 중 3개가 실패한다 (Codex 의 UI-1~UI-9 커밋 전후 같음):
-- `test/ownershipPop.test.tsx` "shows only the selected pop and after-tax income"
-- `test/ownerSummary.test.tsx` "shows the default share-based manor seats without a seated gentry row"
-- `test/productionDiagram.test.tsx` "names actual resource quantities and retains the unit price in the tooltip"
-
-main 체크아웃에 커밋 안 한 시험 변경(`ownershipPop.test.tsx`, `productionDiagram.test.tsx`)이 있다. 그것이 고침이면 검증해 커밋한다. 화면이 맞고 시험이 낡았으면 시험을 고치고, 화면이 틀렸으면 화면을 고친다. 어느 쪽인지 UI_STATUS 에 적는다.
-
 ### UI-18. 화면 개선 다듬기 (사용자 2026-11-18, sim 변경 없음)
 사용자: "UI 개선 작업을 개선해봐".
 
@@ -228,7 +219,17 @@ views/<창>.css      한 창만 쓰는 규칙 (시세, 지역, 국가, 연구, �
 - 파일 하나 = 커밋 하나. 매번 루트 `npm run typecheck`, 클라이언트 시험.
 - 끝나면 위 두 조사를 다시 돌려 겹친 (클래스, 속성) 수와 미매칭 규칙 수를 UI_STATUS 에 적는다.
 
-나눠 맡기: Claude 는 같은 때 ts 리팩토링(화면 변경 없음)을 한다. `views/CompanyPanel.tsx` 의 부품을 쓰는 창 옆으로 옮기고 긴 줄을 정리한다 (CLAUDE.md UI 분업 예외, 2026-11-18). 이 절에서 `CompanyPanel.tsx` 는 CSS import 줄 말고 고치지 않는다. 서로 고치는 파일이 겹치면 UI_STATUS 에 먼저 적는다.
+나눠 맡기 (사용자 2026-11-18: "UI-20을 너가 중심으로 진행하고 codex한테 필요한 부분만 물어보는데, codex쪽 토큰좀 아껴봐"): Claude 가 진행한다. 화면이 바뀌지 않는 정리라 CLAUDE.md UI 분업 예외에 든다. Codex 에게는 필요한 것만 묻는다.
+
+검사 도구: `tools/cssv` (README). 시드를 고정하고 74개 화면 상태에서 모든 요소의 위치·크기와 계산된 스타일 전체, 픽셀을 바꾸기 전후로 비교한다. Codex 의 CDP 드라이버를 옮겨 왔다.
+
+진행 (2026-11-18, 브랜치 wt-css, 기준 main 3c5a4a7, 매 단계 74개 상태 모두 같음, 클라이언트 시험 130개 통과):
+1. 진입점 하나: `main.tsx` 는 `ui/index.css` 만 불러온다. 컴포넌트의 CSS import 를 지우고 브라우저가 쓰던 순서 그대로 `ui/index.css` 에 모았다. System 02 미리보기 페이지는 `blocks.css` 를 직접 불러온다.
+2. 죽은 규칙 251개 삭제 (약 18.5KB): 화면 조사에서 한 번도 맞지 않았고 클래스 이름이 코드 어디에도 없는 규칙. 조합 이름(`gu-kingdom-${i}` 등)과 라이브러리 클래스는 쓰는 것으로 봤다.
+3. 덮어써진 선언 233개 삭제: 같은 선택자·같은 @media 조건의 뒤 규칙이 같은 속성을 정하는 앞 선언. 공용 파일(`ui/components.css`, 토큰, `system-02/blocks.css`)은 같은 파일 안에서만.
+결과 (Claude 코드 조사, 같은 방법): 같은 클래스의 같은 속성을 두 파일 이상이 정하는 곳 484 → 423, 본 게임 규칙 약 2,300 → 약 1,960.
+
+다음: 선택자가 다른 겹침(423곳)은 요소마다 이기는 쪽이 달라 코드만으로 지울 수 없다. 화면에서 요소마다 실제로 이긴 선언을 재어 한 번도 이기지 못한 선언을 찾은 뒤, 역할별 파일로 옮기고 `@layer` 를 건다.
 
 ## 3. sim 쪽 필요 사항 (Claude가 처리할 것, UI 작업자는 요청만)
 2026-11-07 `packages/sim/src`와 대조했다.
