@@ -1,0 +1,7 @@
+/* Reserve the direction slot in every state: sorting must not reflow a table. */
+.th-sort.gu-button,.strategy-panel .th-sort.gu-button{display:grid;grid-template-columns:minmax(0,1fr) 12px;align-items:center;gap:2px;width:100%;max-width:100%;min-width:0;min-height:28px;padding:2px;border:0;background:transparent;box-shadow:none;text-align:inherit;white-space:normal;line-height:1.4}
+.th-sort .sort-label{min-width:0;word-break:keep-all;overflow-wrap:normal}
+.th-sort .sort-indicator{width:12px;height:12px;display:flex;align-items:center;justify-content:center}
+.strategy-panel .unified-market table.goods th{padding-inline:2px}
+.th-sort.gu-button:hover:not(:disabled){background:var(--gu-soft)}
+.th-sort.gu-button:focus-visible{outline:2px solid var(--gu-focus);outline-offset:-2px}
