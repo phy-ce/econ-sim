@@ -9,6 +9,9 @@
 - 클라우드 세션(claude.ai/code)으로 이어서 할 수 있다. 규칙은 CLAUDE.md "클라우드 세션"을 본다.
 - 옛 세션 기록: `docs/log/` (2026-10-25 이전 HANDOFF 절은 `docs/log/HANDOFF_2026-10-18_to_10-25.md`, 날짜별 UI 기록도 여기). 다른 문서의 "HANDOFF 0-ind3"·"HANDOFF 0-aifix" 같은 옛 절 참조는 그 파일에 있다.
 
+## 0-1118-uipolish
+- 브랜치 wt-uitidy (main c7ec123 에서), 문서만. UI_CHANGES 에 UI-18 (화면 개선 다듬기)·UI-19 (View Transition API) 를 더했다 (사용자 2026-11-18). Codex 가 다시 시작되어 UI-15~UI-17 은 2026-11-09 에 넘긴 뒤 아무 커밋도 없었다. UI-15~UI-19 를 다시 넘긴다.
+
 ## 0-1109-stats
 - 브랜치 wt-uitidy (main 1f014e9 에서), 문서만, sim·client 코드 안 바꿈.
 - UI-1~UI-9 가 화면에서 바꾼 것: UI-1 이익률 표기 상한, UI-2 가동률 조작 삭제, UI-3 지도 범례 삭제, UI-4 글자 대비와 툴팁 층, UI-5 건설 창 남은 정리, UI-6 자본가 숨기기, UI-7 부 이동 표 합 행 라벨, UI-8 왕실 공사 자세히 보기 라벨, UI-9 연구는 돈 대신 문해력 포인트 (UI_DONE). 통계 · 소식 창은 그 범위에 없었다 (그래서 사용자에게 바뀐 게 적어 보였다).
