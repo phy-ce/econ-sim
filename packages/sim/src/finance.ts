@@ -73,7 +73,7 @@ function advanceResearch(w: World, c: Company) {
     r.known.push(tech.id);
     r.current = null;
     logEvent(w, c.id, `기술 연구 완료: ${tech.name}. 보유 건물의 생산 방식에서 새 방식을 고를 수 있습니다.`,
-      { kind: 'info', en: `Research complete: ${techNameEn(tech.id)}. New production methods can now be chosen for your buildings.` });
+      { kind: 'info', topic: 'researchDone', en: `Research complete: ${techNameEn(tech.id)}. New production methods can now be chosen for your buildings.` });
   }
 }
 

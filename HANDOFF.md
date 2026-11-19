@@ -9,6 +9,17 @@
 - 클라우드 세션(claude.ai/code)으로 이어서 할 수 있다. 규칙은 CLAUDE.md "클라우드 세션"을 본다.
 - 옛 세션 기록: `docs/log/` (2026-10-25 이전 HANDOFF 절은 `docs/log/HANDOFF_2026-10-18_to_10-25.md`, 날짜별 UI 기록도 여기). 다른 문서의 "HANDOFF 0-ind3"·"HANDOFF 0-aifix" 같은 옛 절 참조는 그 파일에 있다.
 
+## 0-1120-alerts
+
+2026-11-20 사용자: "알림이 너무 많이 뜬다". 브랜치 wt-alerts, sim 만 바꿨다 (`alerts.ts`, `economy.ts alertOnce`, `commands.ts`, `production.ts`, `finance.ts`, `types.ts`).
+- 증설 착공·증설 완료 소식을 없앴다. 새 건물 착공·완공 소식은 남겼다.
+- 투입재 부족·일손 부족·투입재 가격 급등을 건물(가격은 지역·상품)마다 따로 내던 것을 회사마다 한 알림으로 묶었다. 나쁜 것부터 3개를 적고 나머지는 "외 N곳"이다. 가장 나쁜 건물을 가리킨다.
+- 상태 알림에 `GameEvent.key` 를 단다. 다음 주간 점검에서 그 조건이 풀렸으면 소식을 지우고 쿨다운도 지운다 (다시 걸리면 바로 알린다). 아직 걸려 있으면 마지막 소식의 글을 오늘 값으로 고친다. 기상 조건·광맥 같은 일회 소식은 지우지 않는다.
+- "공사가 잡혀 있지만 건축사무소가 없어 진행되지 않습니다"는 잘못 뜨던 알림이었다: 민간 공사는 왕실 사무소가 짓는데(`builderOf`) 회사 자기 사무소만 셌다. 이제 짓는 쪽(왕실)의 사무소를 보고, 민간 공사는 공사비를 낼 금고가 비어 멈춘 경우를 따로 알린다 ("공사 N건이 멈췄습니다: …").
+- 기아 알림은 늘 `warn` 이다. 식량 20% 아래에서 `danger` 였고, 화면의 "위험 알림에 멈춤"이 게임을 멈췄다 (사용자: "굶을 때 일시정지하는 것도 ㄴㄴ").
+- 연구 완료 소식에 `topic: 'researchDone'` 를 달았다. **화면 할 일 (UI-22 후보, Codex)**: 연구가 끝나면 게임을 멈추고 연구 창을 연다 (사용자 2026-11-20). main 체크아웃의 UI_CHANGES.md 에 Codex 의 커밋 안 한 변경이 있어, 그 변경을 커밋할 때 0장에 넣는다.
+- 확인: typecheck, test:core 124개, 새 시험 `test/core/alerts.test.ts` (묶기·풀리면 지우기). 1년 실행 (시드 42, 플레이어 조작 없음, main e6e29d3 대비): 전체 소식 581 → 239건, 플레이어(왕실) 소식 21 → 19건.
+
 ## 0-1120-tsref
 - 다음 Claude 일 (사용자 2026-11-20, DECISIONS 7-65): Codex 가 UI-19 까지 끝내면 UI-21 — Prettier 설치·클라이언트 전체 정리·`npm run typecheck` 에 정리 검사 넣기.
 - 브랜치 wt-tsref (main 9c0e5fb 에서, 2026-11-20), 클라이언트 리팩토링만 (화면 변경 없음, sim·sim API 변경 없음 → UI_CHANGES 할 일 없음). `views/CompanyPanel.tsx` 를 없애고 쓰는 부품을 새 파일로 나눴다 (`views/buildingRow.ts` rowOf, `ConstructionProjects.tsx` Projects, `BuildingControls.tsx`, `Wages.tsx`, `KingdomSummary.tsx`). 쓰는 곳 없던 `House`·`BuildList` 와 그 안 부품, 그것만 쓰던 CSS 규칙 81개(`cat*`, `hrow*` 등)를 지웠고, premerge 에서 `ui/parts.css` 에 남아 있던 같은 클래스(`cat*`·`hrow*`·`house`·`hc-*`·`hd-h`·`blockers`·`build-catalogue`) 규칙 19줄도 지웠다. 나머지 `company-panel.css` 규칙 52개는 CSS 4개(`wages.css`·`kingdom-summary.css`·`construction-projects.css`·`building-controls.css`)로 `ui/index.css` 같은 자리에 옮겼다. 확인: tools/cssv 74/74 같음, 클라이언트 시험 130, typecheck. 남은 것: 400자 넘는 줄 187줄은 저장소에 포매터(prettier 등)가 없어 정리하지 않았다 (설치는 사용자 승인 필요, DECISIONS 에 아직 항목 없음). Codex 에게: UI-15~UI-19 에서 CompanyPanel.tsx·company-panel.css 대신 새 파일을 본다.

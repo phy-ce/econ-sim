@@ -687,10 +687,12 @@ export interface GameEvent {
   kind: EventKind;
   regionId?: number;
   buildingId?: number;
-  /** 소식 종류 표시: 'lawChanged' 법이 바뀜, 'lawFailed' 법 바꾸기 실패 (정책 창으로 잇는다) */
+  /** 소식 종류 표시: 'lawChanged' 법이 바뀜, 'lawFailed' 법 바꾸기 실패 (정책 창으로 잇는다), 'researchDone' 연구 완료 */
   topic?: EventTopic;
+  /** 상태 알림의 키 (alerts.ts alertOnce). 그 상태가 풀리면 다음 주간 점검에서 이 소식을 지운다 */
+  key?: string;
 }
-export type EventTopic = 'lawChanged' | 'lawFailed';
+export type EventTopic = 'lawChanged' | 'lawFailed' | 'researchDone';
 
 export interface WorldConfig {
   ai: boolean;

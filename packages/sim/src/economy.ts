@@ -921,8 +921,21 @@ export function alertOnce(
   opts: { kind?: EventKind; regionId?: number; buildingId?: number; en?: string } = {},
 ): boolean {
   const last = w.alertState[key];
-  if (last !== undefined && w.tick - last < cooldown) return false;
+  if (last !== undefined && w.tick - last < cooldown) {
+    // 아직 걸려 있는 알림은 새로 내지 않고 마지막 소식의 글만 오늘 값으로 고친다 (묶은 목록이 바뀌어도 낡은 글이 남지 않게)
+    for (let i = w.events.length - 1; i >= 0; i--) {
+      const e = w.events[i];
+      if (e.key !== key) continue;
+      e.text = text;
+      if (opts.en) e.textEn = opts.en;
+      e.regionId = opts.regionId;
+      e.buildingId = opts.buildingId;
+      break;
+    }
+    return false;
+  }
   w.alertState[key] = w.tick;
   logEvent(w, companyId, text, opts);
+  w.events[w.events.length - 1].key = key;
   return true;
 }

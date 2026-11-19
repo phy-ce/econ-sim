@@ -112,8 +112,9 @@ function runCommand(w: World, actor: number, cmd: Command): CommandError | null 
     const key = `${typeId}|${company.state ? 's' : 'p'}`;
     starts[key] = (starts[key] ?? 0) + levels;
     const lv = levels > 1 ? ` ${levels}레벨` : '', lvEn = levels > 1 ? ` (${levels} levels)` : '';
-    logEvent(w, actor, `${region.name} ${def.name}${lv} ${targetBuildingId != null ? '증설' : '건설'} 착공`,
-      { regionId, en: `${targetBuildingId != null ? 'Expansion' : 'Construction'} started: ${buildingNameEn(typeId)} in ${regionNameEn(regionId)}${lvEn}` });
+    // 증설 착공은 소식에 남기지 않는다 (알림이 너무 많다, 2026-11-20 사용자). 새 건물 착공만 남긴다
+    if (targetBuildingId == null) logEvent(w, actor, `${region.name} ${def.name}${lv} 건설 착공`,
+      { regionId, en: `Construction started: ${buildingNameEn(typeId)} in ${regionNameEn(regionId)}${lvEn}` });
     return null;
   };
 

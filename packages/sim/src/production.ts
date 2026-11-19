@@ -414,8 +414,7 @@ export function advanceConstruction(w: World) {
       target.exp *= target.level / (target.level + add);
       if (!target.stateOwned) giveLevels(w, k, target, add);
       target.level += add;
-      logEvent(w, k.companyId, `${rname} ${def.name} 증설 완료 → ${target.level}레벨`,
-        { regionId: k.regionId, buildingId: target.id, en: `${regionNameEn(k.regionId)} ${buildingNameEn(k.typeId)} expanded to ${target.level} levels` });
+      // 증설 완료는 소식에 남기지 않는다 (2026-11-20 사용자)
     } else {
       const state = !!companyById(w, k.companyId)?.state;
       const b = newBuilding(w.nextId++, k.typeId, k.regionId, k.companyId, k.methodId, add, state);
