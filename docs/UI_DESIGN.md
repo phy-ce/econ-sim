@@ -46,10 +46,10 @@
 
 ## 4. 시각 규칙
 ### 4.1 테마와 색
-- 색은 `:root` 토큰으로 쓰고 다크 모드는 `:root[data-theme="dark"]`에서 다시 정한다 (`ui/base.css` 첫 규칙). 테마는 메뉴에서 고르고 `localStorage`에 남는다 (기본 낮, `App.tsx:43`).
+- 색은 `:root` 토큰으로 쓰고 다크 모드는 `:root[data-theme="dark"]`에서 다시 정한다 (`ui/base.css` 의 `:root` 와 `:root[data-theme="dark"]` 두 규칙). 테마는 메뉴에서 고르고 `localStorage`에 남는다 (기본 낮, `App.tsx:43`).
 - 낮: 양피지 바탕 `--paper #f3ead8`, 종이 `--sheet`, 먹 `--ink`, 강조 `--accent`, 금 `--gold`. 밤은 같은 이름의 어두운 값. 밤에는 그림 뒤에 양피지 받침을 깐다 (UI-20 전 `styles.css:85`, 지금은 역할별 파일로 옮겨졌다).
 - 색의 뜻: `--good`/`.pos` 초록 = 이익·흑자, `--bad`/`.neg` 빨강 = 손실·부족, `--gold` = 주의·유보 자산. 이익 막대는 초록/빨강/회색과 +/−를 같이 쓴다 (색만으로 뜻을 전하지 않는다).
-- 계층 색 토큰: `--c-peasant`, `--c-unskilled`, `--c-skilled`, `--c-expert`, `--c-capitalist`, `--c-aristocrat`, `--c-gentry` (`ui/base.css`). 도넛·차트·표·막대가 같은 색을 쓴다.
+- 계층 색 토큰: `--c-peasant`, `--c-unskilled`, `--c-skilled`, `--c-expert`, `--c-capitalist`, `--c-aristocrat`, `--c-gentry` (`ui/base.css`, `--c-gentry` 는 `ui/game-tokens.css`). 도넛·차트·표·막대가 같은 색을 쓴다.
 - 손익 폭포 색: `--wf-rev` 매출, `--wf-raw` 원료, `--wf-wage` 임금.
 - 왕국 색은 sim이 준다 (`world.ts` `color`: 에스테라 `#e11d48`, 벨로니아 `#3b82f6`, 카르텐 `#10b981` 등). 지도 왕국 레이어와 소유 배지 띠에 쓴다.
 
