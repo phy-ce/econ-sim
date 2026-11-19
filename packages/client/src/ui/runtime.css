@@ -1,7 +1,4 @@
-@import './tokens.css';
-@import './components.css';
-
-/* Layout remains with the screens; all shared visual roles belong to the system. */
+/* 공용 부품(ui/components.css)을 게임에 맞게 덮어쓰기. 공용 파일 뒤에 불러온다 (UI-20 5단계에서 역할별로 옮김). */
 body.game-runtime{font-family:var(--gu-font);color:var(--gu-ink);background:var(--gu-paper);font-size:var(--gu-body-size)}
 .gu-runtime-button{height:auto;min-height:var(--gu-control);font-size:var(--gu-body-size);box-shadow:none;border-width:1px;border-radius:var(--gu-control-radius);padding:6px 12px}
 .gu-runtime-button:active:not(:disabled){transform:translateY(1px)}
@@ -22,23 +19,38 @@ body.game-runtime{font-family:var(--gu-font);color:var(--gu-ink);background:var(
 .strategy-panel .gu-table{color:var(--gu-ink);font-size:var(--gu-compact-font)}
 .gu-table th,.gu-table td{border-color:var(--gu-line)}
 .gu-table:focus-visible{outline:2px solid var(--gu-focus);outline-offset:-2px}
-.actual-output{display:block!important}.actual-output>.gu-fill{width:100%}
-
-.system-tabs.gu-segmented{display:flex;width:100%;padding:3px;background:var(--gu-soft);border:1px solid var(--gu-line)}.system-tabs.gu-segmented>button{font-size:var(--gu-compact-font);min-height:28px;flex:1;padding:4px 6px}.game-runtime .bar.gu-progress{height:var(--gu-bar-height)}.game-runtime .bar.gu-progress.sm{height:calc(var(--gu-bar-height) - 1px)}
-/* Construction detail: overview, per-building management, then an action area. */
+.actual-output{display:block!important}
+.actual-output>.gu-fill{width:100%}
+.system-tabs.gu-segmented{display:flex;width:100%;padding:3px;background:var(--gu-soft);border:1px solid var(--gu-line)}
+.system-tabs.gu-segmented>button{font-size:var(--gu-compact-font);min-height:28px;flex:1;padding:4px 6px}
+.game-runtime .bar.gu-progress{height:var(--gu-bar-height)}
+.game-runtime .bar.gu-progress.sm{height:calc(var(--gu-bar-height) - 1px)}
 .construction-detail{display:flex;flex-direction:column}
 .construction-detail>.system-tabs{margin:0}
 .construction-detail h3 small{font-size:12px;font-weight:400;color:var(--gu-muted)}
 .construction-detail>.construction-management,.construction-detail>.construction-market{border-top:1px solid var(--gu-line)}
-.construction-detail>details>summary{display:flex;align-items:center;gap:8px;cursor:pointer;list-style:none}.construction-detail>details>summary:before{content:'+';color:var(--gu-muted)}.construction-detail>details[open]>summary:before{content:'−'}.construction-detail>details>summary>span{margin-left:auto;color:var(--gu-muted);font-size:12px}
+.construction-detail>details>summary{display:flex;align-items:center;gap:8px;cursor:pointer;list-style:none}
+.construction-detail>details>summary:before{content:'+';color:var(--gu-muted)}
+.construction-detail>details[open]>summary:before{content:'−'}
+.construction-detail>details>summary>span{margin-left:auto;color:var(--gu-muted);font-size:12px}
 .construction-detail .construction-building{border-top:1px solid var(--gu-line)}
 .construction-detail .construction-crown{background:var(--gu-soft);border:1px solid var(--gu-line);border-radius:var(--gu-control-radius)}
-.construction-crown>.system-facts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));margin:0 0 12px}.construction-crown>.system-facts>span{font-size:12px}.construction-crown>.system-facts b{display:block}.construction-recipe>summary{font-size:12px;color:var(--gu-muted);cursor:pointer}
-.construction-crown .stepper{display:flex;gap:8px}.construction-crown .stepper>button{flex:1;min-height:36px}.construction-detail .group-detail-ledger>.system-facts:empty{display:none}
-.construction-detail .group-detail-ledger{display:flex;flex-direction:column}.construction-detail .group-detail-ledger>details{margin:0;padding:0}.construction-detail .gu-production-diagram{margin:0}.construction-detail .group-detail-ledger>.system-tags{margin:0}.construction-detail .group-detail-ledger>.system-facts{margin:0;min-height:0}.construction-detail .group-detail-ledger>details:not([open]){height:auto}
-/* Dense detail windows retain hierarchy through type and separators, not empty space. */
+.construction-crown>.system-facts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));margin:0 0 12px}
+.construction-crown>.system-facts>span{font-size:12px}
+.construction-crown>.system-facts b{display:block}
+.construction-recipe>summary{font-size:12px;color:var(--gu-muted);cursor:pointer}
+.construction-crown .stepper{display:flex;gap:8px}
+.construction-crown .stepper>button{flex:1;min-height:36px}
+.construction-detail .group-detail-ledger>.system-facts:empty{display:none}
+.construction-detail .group-detail-ledger{display:flex;flex-direction:column}
+.construction-detail .group-detail-ledger>details{margin:0;padding:0}
+.construction-detail .gu-production-diagram{margin:0}
+.construction-detail .group-detail-ledger>.system-tags{margin:0}
+.construction-detail .group-detail-ledger>.system-facts{margin:0;min-height:0}
+.construction-detail .group-detail-ledger>details:not([open]){height:auto}
 .construction-detail{gap:8px;padding:4px}
-.construction-overview{padding-bottom:0}.construction-overview>.ownership-launch{margin-bottom:6px}
+.construction-overview{padding-bottom:0}
+.construction-overview>.ownership-launch{margin-bottom:6px}
 .construction-detail .group-detail-ledger{gap:4px}
 .construction-detail .group-detail-ledger>details>summary{min-height:24px;padding:2px 0}
 .construction-detail .gu-production-diagram{padding:4px 0}
@@ -47,18 +59,20 @@ body.game-runtime{font-family:var(--gu-font);color:var(--gu-ink);background:var(
 .construction-detail .gu-production-content{gap:0}
 .construction-detail .gu-production-meter{padding-top:0;gap:2px}
 .construction-detail .gu-production-diagram>footer{margin-top:3px}
-.construction-detail .gu-production-node{padding-top:4px}.construction-detail .gu-production-node>div{gap:2px}
+.construction-detail .gu-production-node{padding-top:4px}
+.construction-detail .gu-production-node>div{gap:2px}
 .construction-detail>.construction-management,.construction-detail>.construction-market{padding-top:6px}
 .construction-detail>details>summary{font-size:13px;min-height:26px}
 .construction-detail .construction-building{margin-top:6px;padding:6px 0}
 .construction-detail .construction-crown{padding:10px}
-.construction-crown>.system-facts{gap:8px;margin-bottom:6px}.construction-crown>.system-facts b{margin-top:2px;font-size:15px}
-.construction-recipe{margin:6px 0}.construction-crown .stepper{margin-top:6px}
-.construction-detail .system-tags{gap:4px}.construction-detail .system-facts{padding:4px 0}
+.construction-crown>.system-facts{gap:8px;margin-bottom:6px}
+.construction-crown>.system-facts b{margin-top:2px;font-size:15px}
+.construction-recipe{margin:6px 0}
+.construction-crown .stepper{margin-top:6px}
+.construction-detail .system-tags{gap:4px}
+.construction-detail .system-facts{padding:4px 0}
 .construction-detail .building-room>span{display:flex;align-items:baseline;gap:8px}
 .construction-detail .building-room b{display:inline;margin:0}
-
-/* Fixed window contents reflow vertically instead of widening the surface. */
 .market-scope-select{flex:1;min-width:0;max-width:100%;font-size:var(--gu-compact-font);min-height:28px}
 .strategy-panel .ownership-table th:first-child{width:43%}
 .strategy-panel .ownership-table th:nth-child(2){width:29%}
@@ -73,8 +87,6 @@ body.game-runtime{font-family:var(--gu-font);color:var(--gu-ink);background:var(
 .strategy-panel .ownership-ring-row span{overflow-wrap:anywhere}
 .strategy-panel .gauge-wrap{flex-wrap:wrap}
 .research-atlas-scroll{overflow-x:hidden;overflow-y:auto}
-
 .strategy-panel .ownership-ring-row span{white-space:normal}
-
 .strategy-panel .system-table th{white-space:normal}
 .strategy-panel .unified-market .good-name{display:flex;max-width:100%;overflow-wrap:anywhere}

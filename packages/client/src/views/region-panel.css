@@ -1,0 +1,38 @@
+/* region-panel 컴포넌트 (UI-20 5단계에서 역할별로 옮김). */
+.market-window .pane-head {display:none}
+.stat { display: flex; flex-direction: column; gap: 2px; }
+.stat-label { color: var(--ink2); letter-spacing: 0.02em; }
+.stat-value { line-height: 1.3; }
+.pane-head { display: flex; flex-direction: column; }
+.title-row { display: flex; }
+.region-art { align-self: center; }
+.perks { display: flex; flex-wrap: wrap; }
+.gauge-cell { width: 130px; }
+@media (max-width: 640px) {
+  .stat-value { font-size: 18px; }
+}
+.pane-head { border-bottom: 1px solid var(--rule); }
+.stat-value { overflow-wrap: anywhere; white-space: normal; }
+.market-workspace { gap: 18px; }
+.perks {flex-basis:auto;}
+@container (max-width:550px) { .stats {grid-template-columns:repeat(3,minmax(0,1fr));} }
+.window-body .stat {min-width:0;overflow-wrap:anywhere}
+.strategy-panel .explorer-region-head .region-buildings-link {display:none}
+.strategy-panel .explorer-region-head .region-stats {grid-template-columns:repeat(3,minmax(0,1fr))}
+.strategy-panel .explorer-region-head .region-stats>.stat:nth-child(n+4) {display:none}
+.strategy-panel .title-row h2 {font-size:16px}
+.strategy-panel .perks {gap:2px}
+.strategy-panel .stats,.strategy-panel .region-stats {display:grid}
+.strategy-panel .stat {border-radius:0;min-height:0}
+.strategy-panel .stats {line-height:1.25}
+.strategy-panel .pane-head .title-row {min-height:42px}
+.strategy-panel.window-market .region-stats {display:none}
+.strategy-panel .region-buildings-link {min-height:24px;padding:3px 5px;border:0;border-bottom:1px solid var(--rule);border-radius:0;font-size:10px}
+.strategy-panel .perks {margin:0}
+.strategy-panel .pane-head .title-row {flex-wrap:wrap}
+.strategy-panel .pane-head .title-row {align-items:center}
+.strategy-panel .region-buildings-link {margin-top:0}
+.strategy-panel .pane-head {padding:3px 0 5px;margin:0;gap:4px}
+.strategy-panel .title-row {gap:5px}
+.strategy-panel .region-stats {gap:2px;margin:3px 0}
+.strategy-panel .region-stats .stat {padding:3px 5px;background:none;border:0;border-right:1px solid var(--rule)}

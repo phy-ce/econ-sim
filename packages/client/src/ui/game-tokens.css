@@ -1,0 +1,6 @@
+/* 게임 전용 변수 (UI-20 5단계에서 역할별로 옮김). */
+:root,:root[data-theme="dark"]{--manor-owner:var(--gu-manor);--finance-owner:var(--gu-finance);--unassigned-owner:var(--gu-muted)}
+:root {--royal-owner:#a04438;--private-owner:#d1a842;}
+:root[data-theme="dark"] {--royal-owner:#e98879;--private-owner:#ecd17c;}
+:root {--c-gentry:#7661ac}
+:root[data-theme="dark"] {--c-gentry:#bda4ed}

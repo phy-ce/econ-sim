@@ -4,7 +4,7 @@ import type { CSSProperties } from 'react';
 import type { PopClass, Skill } from '@econ/sim';
 import { money, signedMoney } from './format';
 
-/** 계층 색: 차트·범례·표·지도 어디서나 같은 색 (styles.css 의 --c-* 토큰) */
+/** 계층 색: 차트·범례·표·지도 어디서나 같은 색 (ui/base.css 의 --c-* 토큰) */
 export const CLASS_COLOR: Record<PopClass, string> = {
   peasant: 'var(--c-peasant)', unskilled: 'var(--c-unskilled)', farmer: 'var(--c-farmer)', skilled: 'var(--c-skilled)',
   expert: 'var(--c-expert)', gentry: 'var(--c-gentry, #7c6fd6)', capitalist: 'var(--c-capitalist)', aristocrat: 'var(--c-aristocrat)',

@@ -1,0 +1,82 @@
+/* 태그 기본 모양 (클래스 없는 선택자) (UI-20 5단계에서 역할별로 옮김). */
+:root {
+  color-scheme: light;
+  --paper: var(--gu-paper);   /* 책상(바탕) */
+  --sheet: var(--gu-sheet);   /* 카드 종이 */
+  --ink: var(--gu-ink);
+  --ink2: var(--gu-muted);
+  --rule: var(--gu-line);
+  --grid: var(--gu-soft);
+  --accent: var(--gu-action);
+  --gold: var(--gu-crown);
+  --good: var(--gu-positive);
+  --bad: var(--gu-negative);
+  --chip: var(--gu-soft);
+  --on-accent: var(--gu-on-action);
+  --sea: rgba(157, 183, 189, 0.55);
+  --sea-line: #6f8f96;
+  /* 계층 색 (도넛·차트·표 공통) */
+  --c-peasant: #8a3b1f;
+  --c-unskilled: #c98a2e;
+  --c-farmer: #677b2f;
+  --c-skilled: #2f6b4f;
+  --c-expert: #6b4f8a;
+  --c-capitalist: #3d5f8a;
+  --c-aristocrat: #5a4a3a;
+  --wf-rev: #7fae55;
+  --wf-raw: #c98a2e;
+  --wf-wage: #dc9a80;
+  --hatch: #cf7c5e;
+
+  --serif: var(--gu-title);
+  --sans: var(--gu-font);
+  --pixel: var(--gu-number);
+  --hard: 4px 4px 0 var(--ink);
+  --hard-s: 3px 3px 0 var(--ink);
+  --soft: 4px 4px 0 rgba(43, 33, 24, 0.14);
+  --pop-shadow: 6px 6px 0 rgba(43, 33, 24, 0.25);
+  --page-bg: radial-gradient(circle at 20% 10%, rgba(255, 255, 255, 0.55), transparent 45%),
+             radial-gradient(circle at 85% 90%, rgba(166, 124, 46, 0.10), transparent 50%);
+
+  font-family: var(--sans);
+  font-size: var(--gu-body-size);
+  line-height: 1.5;
+  font-variant-numeric: tabular-nums;
+}
+:root[data-theme="dark"] {
+  --c-farmer: #a8be62;
+  color-scheme: dark;
+  --paper: var(--gu-paper); --sheet: var(--gu-sheet); --ink: var(--gu-ink); --ink2: var(--gu-muted); --rule: var(--gu-line); --grid: var(--gu-soft);
+  --accent: var(--gu-action); --gold: var(--gu-crown); --good: var(--gu-positive); --bad: var(--gu-negative); --chip: var(--gu-soft);
+  --on-accent: var(--gu-on-action);
+  --sea: rgba(70, 98, 104, 0.45); --sea-line: #5d7e85;
+  --c-peasant: #e08a5f; --c-unskilled: #d9a85a; --c-skilled: #7cc29b; --c-expert: #b49ad6; --c-capitalist: #8fb0dc; --c-aristocrat: #cdbb9a;
+  --wf-rev: #8fbf63; --wf-raw: #d9a85a; --wf-wage: #e3a58c; --hatch: #ef8a6f;
+  --soft: 4px 4px 0 rgba(0, 0, 0, 0.35);
+  --pop-shadow: 6px 6px 0 rgba(0, 0, 0, 0.5);
+  --page-bg: none;
+}
+* { box-sizing: border-box; }
+html { background: var(--paper); }
+body { margin: 0; background: var(--paper); background-image: var(--page-bg); background-attachment: fixed; min-height: 100vh; }
+button, select, input { font: inherit; color: inherit; }
+h2 { font-family: var(--serif); font-size: 20px; font-weight: 700; margin: 0; line-height: 1.2; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+h3 { font-weight: 700; color: var(--ink2); letter-spacing: 0.02em; display: flex; align-items: center; gap: 6px; }
+h4 { font-size: 16px; font-weight: 700; }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+button { cursor: pointer;
+}
+button:hover:not(:disabled) { background: var(--chip); }
+button:active:not(:disabled) { transform: translate(1px, 1px); }
+input[type="range"] { accent-color: var(--accent); width: 100%; margin: 4px 0; }
+input[type="checkbox"] { accent-color: var(--accent); width: 16px; height: 16px; }
+th { font-weight: 500; font-size: 12px; color: var(--ink2); text-align: right; border-bottom: 2px solid var(--ink); white-space: nowrap; }
+td { font-size: 14px; text-align: right; border-bottom: 1px dashed var(--rule); vertical-align: middle; white-space: nowrap; }
+td:not(:first-child) { font-family: var(--pixel); font-size: 13px; }
+tbody tr:last-child td { border-bottom: 0; }
+@media (max-width: 640px) {
+  td { font-size: 13px; padding: 6px 5px; }
+  td:not(:first-child) { font-size: 12px; }
+  th { padding: 6px 5px; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }

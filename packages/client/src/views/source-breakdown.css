@@ -1,0 +1,21 @@
+/* source-breakdown 컴포넌트 (UI-20 5단계에서 역할별로 옮김). */
+.src-break { display: flex; flex-direction: column; min-width: 0; }
+.src-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); }
+.src-side { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.src-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.src-bar { display: flex; height: 14px; border: 2px solid var(--ink); background: var(--grid); overflow: hidden; }
+.src-bar i { flex: 1 1 0; min-width: 2px; }
+.src-bar i:last-child { border-right: 0; }
+.src-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.src-list li { display: grid; align-items: center; }
+.src-sw { box-sizing: border-box; }
+.src-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.src-pct { color: var(--ink2); }
+.src-note { margin: 2px 0 0; }
+.src-break {gap:6px;}
+.src-cols {gap:10px;}
+.strategy-panel .src-list{font-size:12px;gap:4px}
+.strategy-panel .src-list li{grid-template-columns:10px 32px minmax(0,1fr) auto 38px;min-height:38px;gap:6px}
+.strategy-panel .src-sw{width:10px;height:10px;border:1px solid var(--ink)}
+.strategy-panel .src-bar{min-height:12px;border-width:1px}
+.strategy-panel .src-name{font-size:12px;line-height:1.3}

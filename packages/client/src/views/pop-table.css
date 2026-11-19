@@ -1,0 +1,24 @@
+/* pop-table 컴포넌트 (UI-20 5단계에서 역할별로 옮김). */
+.pop-directory {display:flex;flex-direction:column}
+.pop-filters {align-items:center}
+.pop-filters label {display:flex;align-items:center;gap:4px}
+.pop-table th,.pop-table td {text-align:right;border-bottom:1px solid var(--rule);font-variant-numeric:tabular-nums}
+.pop-table th:nth-child(-n+3),.pop-table td:nth-child(-n+3) {text-align:left;width:120px}
+.pop-table th {background:var(--sheet);position:sticky;top:0;z-index:1}
+.pop-table td {white-space:nowrap}
+.pop-table .pop-risk {background:color-mix(in srgb,var(--bad) 10%,var(--sheet));color:var(--bad)}
+.pop-risk td:first-child {box-shadow:inset 3px 0 var(--bad)}
+.pop-table td {line-height:1.3}
+.strategy-panel .explorer-detail .pop-directory {max-width:100%}
+.strategy-panel .pop-filters {padding-bottom:4px}
+.strategy-panel .pop-filters select {font-size:10px;padding:2px;min-height:23px}
+.strategy-panel .pop-filters label {font-size:10px}
+.strategy-panel .pop-directory,.strategy-panel .explorer-detail .pop-directory {height:auto;min-height:0;overflow:visible}
+.strategy-panel .pop-table {min-width:0;width:100%;table-layout:fixed}
+.strategy-panel .pop-table td,.strategy-panel .pop-table th {padding:3px 2px;overflow:hidden;text-overflow:ellipsis;font-size:11px}
+.strategy-panel .pop-table small {display:block;font-size:10px;color:var(--ink2)}
+.strategy-panel .pop-filters {display:flex;flex-wrap:wrap;gap:4px}
+.strategy-panel .pop-filters select {max-width:42%;min-width:0}
+.strategy-panel .pop-views {display:flex;margin:4px 0}
+.strategy-panel .pop-views button {font-size:11px;min-height:24px;padding:2px 8px}
+.strategy-panel .pop-table td:nth-child(2){min-width:28px}

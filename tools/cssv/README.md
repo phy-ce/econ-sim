@@ -19,3 +19,5 @@
    목록: `CSSV_WINS_IN=.tmp/cssv/wins/wins.json [CSSV_APPLY=1] node tools/cssv/cdp.mjs tools/cssv/neverwin.mjs`.
    지키는 것: 공용 파일은 건드리지 않는다. :hover·:focus 같은 상태 선택자와 그 밖의 의사 요소가 붙은 규칙, @container 안 규칙은 남긴다.
    @media·@supports 안 규칙이 이긴 경우는 그 규칙이 없는 환경도 따져, 진 쪽을 이긴 것으로 친다. 한 번도 맞지 않은 규칙은 이 단계에서 지우지 않는다.
+- `plan.mjs`: 규칙을 역할별 파일로 나누는 계획과 검사 (UI-20 5단계). 측정한 요소별 규칙 묶음에서 새 순서의 이긴 선언이 지금과 같은지 센다 (`--layers` 는 @layer 를 걸었을 때). `--apply` 로 파일을 쓴다 (옛 파일은 지우지 않는다).
+   `deadrules.mjs`·`dupdecl.mjs`·`neverwin.mjs`·`plan.mjs` 의 파일 목록은 5단계 전 파일 기준이다. 다시 쓰려면 `ui/index.css` 의 순서로 목록을 바꾼다.

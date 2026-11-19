@@ -1,0 +1,3 @@
+/* chart 컴포넌트 (UI-20 5단계에서 역할별로 옮김). */
+.chart-reference {display:flex;gap:5px;align-items:center;font-size:10px;color:var(--ink2)}
+.chart-reference i {width:18px;border-top:1px dashed}

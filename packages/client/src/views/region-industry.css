@@ -1,0 +1,9 @@
+/* region-industry 컴포넌트 (UI-20 5단계에서 역할별로 옮김). */
+.industry-total {font-size:11px;color:var(--ink2);margin-bottom:6px}
+.industry-group {border-bottom:1px solid var(--rule);padding:5px 0}
+.strategy-panel .industry-group-head {display:flex;align-items:center;gap:7px;width:100%;padding:2px 0;border:0;background:none;box-shadow:none;text-align:left;font-size:12px;min-height:40px}
+.industry-group-head strong {flex:1}
+.industry-group-head>span:last-child {font-variant-numeric:tabular-nums;text-align:right}
+.industry-group-head small {display:block;font-size:10px}
+.group-metrics {display:flex;flex-direction:column;gap:3px;margin:2px 0 4px 47px}
+.industry-group.owner-group {border-top:1px solid var(--gold)}

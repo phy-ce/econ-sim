@@ -40,11 +40,11 @@ walk(sheet.cssRules,false,false);
 const T=new Map();
 rules.forEach((r,idx)=>{if(r.unk)return;for(const p of r.parts){let els;try{els=document.querySelectorAll(p.q);}catch{continue;}
  for(const e of els){let t=T.get(e);if(!t){t={'':new Map(),before:new Map(),after:new Map()};T.set(e,t);}const m=t[p.pseudo];const o=m.get(idx);if(o===undefined||o<p.sp)m.set(idx,p.sp);}}});
-const wins=new Set(),matched=new Set();
+const wins=new Set(),matched=new Set(),sets=new Set();
 const decide=(entries)=>{entries.sort((x,y)=>x[1]-y[1]||x[0]-y[0]);const norm=new Map(),imp=new Map();
  for(const [idx] of entries)for(const [n,i] of rules[idx].lh)(i?imp:norm).set(n,idx);
  for(const [n,idx] of norm)if(!imp.has(n))wins.add(idx+'|'+n);for(const [n,idx] of imp)wins.add(idx+'|'+n);};
 for(const t of T.values())for(const k of ['','before','after']){const m=t[k];if(!m.size)continue;const all=[...m];for(const [idx] of all)matched.add(idx);
- decide(all.slice());decide(all.filter(([idx])=>!rules[idx].cond));}
-return {n:rules.length,meta:window.__csswMeta?null:rules.map(r=>[r.sel,r.keep?1:0,r.cond?1:0,r.unk?1:0,r.lh]),wins:[...wins],matched:[...matched]};
+ sets.add(all.map(([i,sp])=>i+':'+sp).sort().join(','));decide(all.slice());decide(all.filter(([idx])=>!rules[idx].cond));}
+return {n:rules.length,meta:window.__csswMeta?null:rules.map(r=>[r.sel,r.keep?1:0,r.cond?1:0,r.unk?1:0,r.lh]),wins:[...wins],matched:[...matched],sets:[...sets]};
 })()`;

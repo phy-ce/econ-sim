@@ -1,0 +1,73 @@
+/* region-map 컴포넌트 (UI-20 5단계에서 역할별로 옮김). */
+.atlas-demolition rect {fill:var(--sheet);stroke:var(--gold);stroke-width:2}
+.atlas-demolition text {fill:var(--ink);font-size:24px;text-anchor:middle;font-family:var(--sans);font-weight:700}
+.world-map .map.atlas-map {left:0;right:0;top:0;bottom:0;width:100%;height:100%;overflow:hidden}
+.atlas-data {mix-blend-mode:multiply}
+.atlas-provinces path {fill:none;stroke:#76674e}
+.atlas-unclaimed path {stroke:#81735a}
+.atlas-rivers path {fill:none}
+.atlas-rail {fill:none;pointer-events:none}
+.atlas-hit {fill:transparent;stroke:transparent;stroke-width:4;pointer-events:all;vector-effect:non-scaling-stroke}
+.map-cell:hover .atlas-hit {fill:#ffffff25;stroke:#fff5dc;stroke-width:1.5}
+.map-cell.selected .atlas-hit {stroke:#fff4c7;stroke-width:3;filter:drop-shadow(0 0 2px #58411e)}
+.map-cell:focus-visible {outline:none}
+.map-cell:focus-visible .atlas-hit {stroke:var(--accent);stroke-width:4;stroke-dasharray:7 4}
+.atlas-label {font:700 23px var(--serif);fill:#2b2118;text-anchor:middle;paint-order:stroke;stroke:#fff5dd;stroke-width:4px;stroke-linejoin:round}
+.atlas-owner {font:600 18px var(--sans);text-anchor:middle;paint-order:stroke;stroke:#fff5dd;stroke-width:3px;stroke-linejoin:round}
+:root[data-theme="dark"] .atlas-base {filter:brightness(.6) saturate(.8)}
+:root[data-theme="dark"] .atlas-data {mix-blend-mode:normal;fill-opacity:.42!important}
+:root[data-theme="dark"] .atlas-label {fill:#f8efd8;stroke:#272a27}
+:root[data-theme="dark"] .atlas-owner {stroke:#272a27}
+:root[data-theme="dark"] .atlas-ocean {fill:#58696b}
+.atlas-provinces path,.atlas-unclaimed path {stroke-width:1;stroke-linejoin:round;stroke-linecap:round}
+.atlas-rivers path {stroke:#508fa6;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.atlas-rivers path:nth-child(2),.atlas-rivers path:nth-child(3),.atlas-rivers path:nth-child(5),.atlas-rivers path:nth-child(6) {stroke-width:1.25}
+.atlas-route {opacity:.48;pointer-events:none}
+.atlas-road-bed {fill:none;stroke:#eee0c2;stroke-width:4;stroke-linejoin:round;stroke-linecap:round}
+.atlas-route .atlas-rail {stroke:#7c674c;stroke-width:1.2;stroke-dasharray:3 4;stroke-linecap:round;opacity:1}
+:root[data-theme="dark"] .atlas-road-bed {stroke:#6e6b56}
+:root[data-theme="dark"] .atlas-route .atlas-rail {stroke:#e2cda0}
+:root[data-theme="dark"] .atlas-rivers path {stroke:#70b5cb}
+.kingdom-borders path {stroke-linejoin:round;stroke-linecap:round;pointer-events:none}
+.map-title { justify-content: space-between; align-items: baseline; gap: 8px; }
+.map-cell { outline: none; }
+.rail { stroke: #2b2118; stroke-width: 0.5; stroke-dasharray: 1.75 1; opacity: 0.65; pointer-events: none; }
+.map-label-g { pointer-events: none; }
+.map-legend { display: flex; flex-direction: column; gap: 6px; }
+.scale-bar { display: flex; height: 12px; border: 2px solid var(--ink); }
+.scale-bar span { flex: 1; border-right: 1px solid var(--ink); }
+.scale-bar span:last-child { border-right: 0; }
+.scale-ticks { display: flex; justify-content: space-between; }
+.ranks .name-link { border: none; background: none; min-height: 32px; padding: 0; color: var(--accent); text-decoration: underline; text-underline-offset: 3px; justify-content: flex-start; font-size: 14px; }
+.ranks .name-link:hover:not(:disabled) { color: var(--ink); background: none; }
+.ranks tr.me .name-link { color: var(--ink); font-weight: 700; text-decoration: none; }
+.window-map .map-title {display:none;}
+.region-directory-table td,.region-directory-table th {padding:5px 4px;text-align:right;white-space:nowrap;}
+.region-directory-table td:first-child,.region-directory-table th:first-child {text-align:left;}
+.region-directory-table td {border-bottom:1px solid var(--rule);}
+.region-directory-table .name-link {display:flex;align-items:center;gap:4px;font-size:inherit;white-space:normal;text-align:left;}
+.region-directory-table i {width:7px;height:7px;flex:none;}
+.region-directory-table {font-size:10px;}
+.map-layers {display:flex}
+.map-layers button {flex:1}
+.kingdom-borders {pointer-events:none}
+.region-directory-table {table-layout:fixed}
+.region-directory-table th:first-child {width:40%}
+.region-directory-table th,.region-directory-table .th-sort {white-space:normal;overflow-wrap:anywhere}
+.region-directory-table td {font-family:var(--sans);padding:5px 3px}
+.region-directory-table .name-link {width:100%;min-width:0;padding:5px 2px;border:0;box-shadow:none;text-decoration:underline;text-underline-offset:3px}
+.world-map .map-cell {cursor:inherit}
+.world-map .map-title {display:none}
+.world-map .map-layers {position:absolute;z-index:2;width:265px;margin:0;background:var(--sheet);border:1px solid var(--rule)}
+.world-map .map-layers button {min-height:27px;padding:3px 8px;font:11px var(--sans)}
+.map-camera-tools {position:absolute;display:flex;gap:1px;z-index:2}
+.map-camera-tools button {min-height:26px;padding:2px 8px;font:11px var(--sans);border:1px solid var(--rule);box-shadow:none;background:var(--sheet)}
+.world-map .map-legend {position:absolute;z-index:2;width:310px;background:var(--sheet);padding:6px 10px;border-top:2px solid var(--gold);box-shadow:0 2px 12px #0002}
+.map-directory {position:absolute;z-index:3;background:var(--sheet);font-size:11px;box-shadow:0 2px 10px #0002}
+.map-directory summary {cursor:pointer;padding:6px 9px;border-bottom:1px solid var(--rule)}
+.map-directory:not([open]) {width:100px}
+.map-directory table {width:100%}
+.world-map .map-layers {left:50%;right:auto;transform:translateX(-50%);top:8px}
+.map-camera-tools {left:calc(50% + 150px);right:auto;top:8px}
+.world-map .map-legend {left:50%;right:auto;transform:translateX(-50%);bottom:8px;max-width:800px}
+.world-map .map-directory {left:50%;right:auto;transform:translateX(-50%);top:44px;bottom:auto;max-width:400px}

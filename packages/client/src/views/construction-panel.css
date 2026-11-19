@@ -1,0 +1,11 @@
+/* construction-panel 컴포넌트 (UI-20 5단계에서 역할별로 옮김). */
+.construction-region,.construction-filters {display:flex;align-items:center;gap:6px;margin-bottom:5px}
+.construction-region select {flex:1;min-width:0}
+.construction-region>b {color:var(--accent);font-variant-numeric:tabular-nums}
+.construction-filters select {min-width:0;max-width:55%;font-size:11px}
+.construction-cards {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.strategy-panel .construction-card {position:relative;align-items:center}
+.construction-card>strong {grid-column:2;grid-row:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.construction-card>svg:not(.spr) {position:absolute;right:5px;bottom:29px}
+.construction-card small {margin-left:3px;color:var(--ink2)}
+.construction-levels {grid-column:2;grid-row:2;font-variant-numeric:tabular-nums;color:var(--ink2)}
