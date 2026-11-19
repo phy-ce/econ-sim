@@ -10,6 +10,7 @@
 - 옛 세션 기록: `docs/log/` (2026-10-25 이전 HANDOFF 절은 `docs/log/HANDOFF_2026-10-18_to_10-25.md`, 날짜별 UI 기록도 여기). 다른 문서의 "HANDOFF 0-ind3"·"HANDOFF 0-aifix" 같은 옛 절 참조는 그 파일에 있다.
 
 ## 0-1120-tsref
+- 다음 Claude 일 (사용자 2026-11-20, DECISIONS 7-65): Codex 가 UI-19 까지 끝내면 UI-21 — Prettier 설치·클라이언트 전체 정리·`npm run typecheck` 에 정리 검사 넣기.
 - 브랜치 wt-tsref (main 9c0e5fb 에서, 2026-11-20), 클라이언트 리팩토링만 (화면 변경 없음, sim·sim API 변경 없음 → UI_CHANGES 할 일 없음). `views/CompanyPanel.tsx` 를 없애고 쓰는 부품을 새 파일로 나눴다 (`views/buildingRow.ts` rowOf, `ConstructionProjects.tsx` Projects, `BuildingControls.tsx`, `Wages.tsx`, `KingdomSummary.tsx`). 쓰는 곳 없던 `House`·`BuildList` 와 그 안 부품, 그것만 쓰던 CSS 규칙 81개(`cat*`, `hrow*` 등)를 지웠고, premerge 에서 `ui/parts.css` 에 남아 있던 같은 클래스(`cat*`·`hrow*`·`house`·`hc-*`·`hd-h`·`blockers`·`build-catalogue`) 규칙 19줄도 지웠다. 나머지 `company-panel.css` 규칙 52개는 CSS 4개(`wages.css`·`kingdom-summary.css`·`construction-projects.css`·`building-controls.css`)로 `ui/index.css` 같은 자리에 옮겼다. 확인: tools/cssv 74/74 같음, 클라이언트 시험 130, typecheck. 남은 것: 400자 넘는 줄 187줄은 저장소에 포매터(prettier 등)가 없어 정리하지 않았다 (설치는 사용자 승인 필요, DECISIONS 에 아직 항목 없음). Codex 에게: UI-15~UI-19 에서 CompanyPanel.tsx·company-panel.css 대신 새 파일을 본다.
 
 ## 0-1118-css2

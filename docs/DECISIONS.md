@@ -1250,3 +1250,9 @@ AI 노동자 임금 바닥 (기본값 0.03 · 2~6):
 ### 7-64. UI-20 에서 옛 CSS 파일 10개 삭제 (2026-11-20 wt-css, 결정됨)
 - UI-20 규칙 4 는 빈 옛 파일 삭제를 사용자에게 묻기로 했지만, 5단계(ef15eea)는 파일을 비우는 대신 지웠다: `styles.css`, `workspace.css`, `strategy.css`, `system-ui.css`, `readability.css`, `kingdom-economy.css`, `ownership-theme.css`, `map/atlas.css`, `views/flow-row.css`, `views/demolition.css` (모두 `packages/client/src/` 아래). 규칙은 역할별 파일로 옮겼고 tools/cssv 74/74 같음.
 - 결정 (2026-11-20 사용자): "삭제 승인, 합치기". 지운 채로 main 에 합친다.
+
+### 7-65. 코드 자동 정리 도구 Prettier (2026-11-20, 결정됨)
+- 사용자 2026-11-20: "Codex가 끝내면 너가 Prettier를 설치하고 한 번 전체 정리, 정리 검사를 시험에 넣기를 진행".
+- 이유: 클라이언트에 400자 넘는 줄이 187줄 있다 (main 9c0e5fb 조사). 읽기 어렵고, 글자 하나 고쳐도 줄 전체가 바뀐 것으로 나와 검토·충돌이 어렵다. 자동 정리 도구와 검사가 없어 AI 작업자가 쓸 때마다 길어졌다.
+- 할 일은 UI_CHANGES 0장 UI-21. Codex 의 UI-15~UI-19 가 끝난 뒤 한다 (같은 파일이 겹치지 않게). Prettier 는 개발용(devDependency)이라 게임 배포물에는 들어가지 않는다.
+
