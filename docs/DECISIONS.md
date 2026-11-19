@@ -1247,6 +1247,6 @@ AI 노동자 임금 바닥 (기본값 0.03 · 2~6):
 - 그 변경에 섞여 있던 건물 레벨 표기 `×22 +2` 는 2026-11-05 사용자 결정 `(22+2)` 로 되돌려 커밋했다.
 - 같은 날 사용자: "비주얼쪽이여도 그냥 리팩토링(같은 역할을 하는 코드)면 너가 바꿔도 됨" (CLAUDE.md UI 분업 예외). "커밋 정도는 너가 해도 되는 거 아냐?" 이후 Codex 대신 Claude 가 커밋한다.
 
-### 7-64. UI-20 에서 옛 CSS 파일 10개 삭제 (2026-11-20 wt-css, 결정 대기)
+### 7-64. UI-20 에서 옛 CSS 파일 10개 삭제 (2026-11-20 wt-css, 결정됨)
 - UI-20 규칙 4 는 빈 옛 파일 삭제를 사용자에게 묻기로 했지만, 5단계(ef15eea)는 파일을 비우는 대신 지웠다: `styles.css`, `workspace.css`, `strategy.css`, `system-ui.css`, `readability.css`, `kingdom-economy.css`, `ownership-theme.css`, `map/atlas.css`, `views/flow-row.css`, `views/demolition.css` (모두 `packages/client/src/` 아래). 규칙은 역할별 파일로 옮겼고 tools/cssv 74/74 같음.
-- 결정 대기: 삭제를 승인할지, 아니면 빈 파일로 되살릴지.
+- 결정 (2026-11-20 사용자): "삭제 승인, 합치기". 지운 채로 main 에 합친다.
