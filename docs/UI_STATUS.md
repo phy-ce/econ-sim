@@ -633,5 +633,6 @@ build 상세에만 새 문자열 buildCrownShare/buildOfficeWages/buildMaterials
 ### 2026-11-20 CompanyPanel.tsx 나누기 (Claude, 브랜치 wt-tsref, 화면 변경 없음)
 - `views/CompanyPanel.tsx` 삭제. 쓰는 부품: `views/buildingRow.ts`(rowOf, Row), `views/ConstructionProjects.tsx`(Projects), `views/BuildingControls.tsx`, `views/Wages.tsx`, `views/KingdomSummary.tsx`. 쓰는 곳 없던 `House`·`BuildList`·`BuildCard`·`BuildingRow` 삭제.
 - `views/company-panel.css` 삭제: 지운 코드만 쓰던 규칙 81개를 지우고(`cat`·`hrow` 계열 등), 52개는 `views/wages.css`·`kingdom-summary.css`·`construction-projects.css`·`building-controls.css` 로 `ui/index.css` 의 같은 자리에 옮겼다.
+- premerge: `ui/parts.css` 에 남아 있던 같은 죽은 클래스(`cat*`·`hrow*`·`house`·`hc-*`·`hd-h`·`blockers`·`build-catalogue`) 규칙 19줄도 지웠다.
 - tools/cssv 74/74 같음, 클라이언트 시험 130개 통과, typecheck 통과.
 

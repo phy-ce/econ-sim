@@ -29,7 +29,7 @@
 | 시세 (`market`) | 범위 세계/왕국/지역 (지도 선택과 따로). 시세표(공급 ÷ 수요 열) → 교역(지역 범위만) → 상품 상세(`ResourceInspector`) → 수요·공급 → 가격 추이 → 지역별 가격 |
 | 국가 (`state`) | 탭 둘 (`StatePanel.tsx:12`). 예산: 순금고/한도, 주간 수지, 세금·국영 임금·복지 단계 1~5 (호버·포커스로 단계별 미리보기), 줄 상세 서브윈도우, 시장 임금 (왕실은 읽기 전용, `FinancePanel.tsx:50`). 법: 세법·투자법·복지법 현행 법 세 칸, 선택 분야 법 목록, 상세·전환·취소·조건, 사전 책 아이콘 |
 | 연구 (`research`) | 현재 연구, 필터·검색 목록, 선택 기술 상세·연구 버튼. 전체 계통도는 서브윈도우(960×620, 깊이마다 한 행) |
-| 건설 (`construction`) | 지역 고르기와 탭 둘 (`ConstructionPanel.tsx:11~14`): 짓기(`BuildList`), 대기열(`Projects`, 왕실·민간, 순서·정지·취소, 지역 링크) |
+| 건설 (`construction`) | 지역 고르기와 탭 둘 (`ConstructionPanel.tsx` 의 `Segmented`): 짓기(건물 카드 `BuildingChoice` → 상세 `ConstructionDetail`), 대기열(`Projects`, `views/ConstructionProjects.tsx`, 왕실·민간, 순서·정지·취소, 지역 링크) |
 | 통계·소식 (`trends`) | 접고 순서를 바꾸는 구역들 (`SectionStack`): 경제 추이 9지표, 요약, 인구, 왕국 경제, 왕국 비교, 기상, 소식 |
 
 ### 2.3 서브윈도우 (`views/DetailWindow.tsx`)

@@ -229,9 +229,6 @@ table.goods tr.selected td:last-child { border-right: 2px solid var(--ink); }
 .project { border: 2px solid var(--ink); border-radius: 4px; padding: 8px 10px; display: flex; align-items: center; gap: 10px; background: var(--chip); }
 .project .tile { background: var(--sheet); }
 .project.waiting { background: var(--sheet); border-style: dashed; }
-.cat.open { grid-column: 1 / -1; box-shadow: var(--hard); }
-.cat-head .tile { grid-row: 1 / span 2; }
-.blockers { display: flex; flex-wrap: wrap; gap: 6px; }
 .tag-bad { font-size: 12px; font-weight: 700; color: var(--bad); border: 2px solid var(--bad); border-radius: 2px; padding: 0 6px; }
 .methods { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
 .method { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: center; padding: 8px 10px; border: 2px dashed var(--rule); border-radius: 4px; }
@@ -291,24 +288,16 @@ table.goods tr.selected td:last-child { border-right: 2px solid var(--ink); }
   .pane { padding: 14px; }
   .title-row.between { align-items: flex-start; }
 }
-.house { display: flex; flex-direction: column; min-width: 0; }
 .fchips, .schips { display: flex; flex-wrap: wrap; gap: 6px; }
 .fchips button, .schips button { gap: 6px; }
 .fchips button .pxnum { font-size: 11px; }
 .fchips button[aria-pressed="true"] { background: var(--ink); color: var(--sheet); font-weight: 700; box-shadow: var(--hard-s); }
-.hrow.open { box-shadow: var(--hard); }
-.hrow-head > .tile { grid-area: tile; align-self: start; }
-.hc-title .pxnum { font-family: var(--pixel); font-size: 13px; }
-.hc-title .q { color: var(--accent); font-size: 11px; margin-left: 2px; }
-.hc-name .lbl { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.hc-sub.pxnum, .hc-sub .pxnum { font-size: 11px; }
 .mm { display: grid; grid-template-columns: 50px minmax(0, 1fr); gap: 4px; align-items: center; font-size: 11px; }
 .mini { position: relative; display: block; height: 8px; border: 1px solid var(--ink); background: var(--chip); }
 .mini i { position: absolute; top: 0; bottom: 0; left: 0; display: block; }
 .pl-badge.pos { background: var(--good); color: var(--sheet); }
 .pl-badge.neg { background: var(--bad); color: var(--sheet); }
 .chev.up { transform: rotate(180deg); }
-.hd-h .pxnum { font-size: 12px; }
 .flow { display: grid; grid-template-columns: 26px minmax(0, 92px) minmax(50px, 1fr) 52px 70px; gap: 6px; align-items: center; font-size: 13px; }
 .flow > b { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .flow .num { font-size: 12px; }
@@ -357,7 +346,6 @@ html, body, #root { height:100%; overflow:hidden; }
 .market-ledger {font-size:12px;}
 .sort-label {display:flex;align-items:center;gap:5px;font-size:10px;color:var(--ink2);}
 .fchips button,.schips button {font-size:11px;padding:2px 6px;min-height:27px;}
-.house {gap:9px;}
 .window-trends .bottom {grid-template-columns:1fr;gap:10px;}
 .window-trends .bottom>.card {padding:10px;}
 .window-company h2 {font-size:18px;}
@@ -399,8 +387,6 @@ html, body, #root { height:100%; overflow:hidden; }
 .b-chip-icon .spr {width:72px;height:72px}
 .building-inspector .inspector-heading>.spr {width:100px;height:100px}
 .industry-row>.spr {width:72px;height:72px}
-.cat-head .tile.md,.hrow-head>.tile.md {width:66px;height:66px}
-.cat-head .tile.md .spr,.hrow-head>.tile.md .spr {width:64px;height:64px}
 .tile.xs .spr {width:32px;height:32px}
 .tile.xs {width:34px;height:34px}
 .b-chip-name {display:flex;flex-direction:column;align-items:flex-start;gap:4px;white-space:normal}
@@ -495,8 +481,6 @@ html, body, #root { height:100%; overflow:hidden; }
 .strategy-panel .industry-row>.spr {width:42px;height:42px}
 .strategy-panel .project {border:0;border-top:1px solid var(--rule);border-radius:0;background:none;gap:4px;padding:3px 0}
 .strategy-panel .project>.spr {width:40px;height:40px}
-.strategy-panel .cat-head .tile.md,.strategy-panel .cat-head .tile.md .spr {width:40px;height:40px;border:0;background:none}
-.strategy-panel .cat-head .tile {grid-row:auto}
 .strategy-panel .wages {gap:5px}
 .strategy-panel .wage {padding:5px 0;border:0;border-bottom:1px solid var(--rule)}
 .strategy-panel .tech {padding:5px 0;border:0;border-bottom:1px solid var(--rule);border-radius:0}
@@ -504,7 +488,6 @@ html, body, #root { height:100%; overflow:hidden; }
 .strategy-panel .ev-icon,.strategy-panel .ev-icon .spr {width:26px;height:26px}
 .strategy-panel .event-link {font-size:11px}
 :root[data-theme="dark"] .strategy-workspace {background:radial-gradient(ellipse at 65% 45%,#444e42,#202d30)}
-.strategy-panel .hrow-head>.tile.md,.strategy-panel .hrow-head>.tile.md .spr {width:40px;height:40px}
 .tax-law {display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:4px;padding:3px 0 6px;font-size:10px}
 .tax-law select {min-height:24px;padding:2px 4px;max-width:160px}
 .harvest-badge.flood {color:#236e9c;background:#3f9bd820}
@@ -591,8 +574,6 @@ html, body, #root { height:100%; overflow:hidden; }
 .notice-timeline .event-link {display:inline;text-align:left}
 .notice-timeline .event-link svg {display:inline;vertical-align:middle;margin-left:3px}
 .notice-timeline .entity-link {max-width:100%;overflow-wrap:anywhere;white-space:normal}
-.strategy-panel .build-catalogue .cat-head .tile.md,.strategy-panel .build-catalogue .cat-head .tile.md .spr {width:34px;height:34px}
-.build-catalogue .cat.open {background:var(--chip)}
 .strategy-panel .src-list .spr{width:32px;height:32px;flex:none;background:var(--sheet);filter:drop-shadow(0 1px 1px var(--ink2))}
 .strategy-panel .legend .spr,.strategy-panel .legend-sp .spr{width:24px;height:24px}
 .strategy-panel .legend{font-size:11px;gap:5px 8px}
