@@ -1,0 +1,10 @@
+/* BuildingControls 컴포넌트 (CompanyPanel.tsx 를 나누며 company-panel.css 에서 옮김). */
+.hctrl { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding-bottom: 10px; border-bottom: 2px solid var(--ink); }
+.hctrl select { flex: 1 1 200px; min-width: 0; max-width: 100%; font-size: 13px; }
+.util { flex: 1 1 180px; display: flex; align-items: center; gap: 8px; min-width: 0; }
+.util output { font-size: 12px; min-width: 38px; text-align: right; }
+.sm-btn { min-height: 32px; padding: 0 10px; font-size: 13px; }
+.strategy-panel .hctrl {padding:3px 0;gap:4px}
+.strategy-panel .hctrl button,.strategy-panel .hctrl select {font-size:10px;min-height:24px}
+.strategy-panel .hctrl .util {min-width:120px}
+.strategy-panel .hctrl select {max-width:100%;min-width:0}

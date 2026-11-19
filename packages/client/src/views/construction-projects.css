@@ -1,0 +1,24 @@
+/* ConstructionProjects 컴포넌트 (CompanyPanel.tsx 를 나누며 company-panel.css 에서 옮김). */
+.project-nums { color: var(--ink2); }
+.project-main { display: flex; flex-direction: column; gap: 4px; }
+.project-top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.project-top strong {display:flex;flex-wrap:wrap;align-items:center;gap:5px;}
+.construction-lane {min-width:0;border-radius:4px}
+.construction-lane>header {display:flex;justify-content:space-between;gap:8px;align-items:center}
+.construction-lane .project-top {flex-wrap:wrap}
+.construction-lanes {flex-direction:row;display:grid}
+.construction-lane>header {flex-wrap:wrap}
+.project-paused {opacity:.6}
+.project-actions {display:grid;grid-template-columns:repeat(2,28px);gap:3px;flex:none}
+.project-main {min-width:0;flex:1}
+.project-nums {display:flex;flex-wrap:wrap;gap:8px;justify-content:space-between}
+.project-top strong {font-size:13px}
+.project-confirm {position:absolute;inset:0;background:var(--sheet);z-index:3;border:2px solid var(--accent);padding:8px;display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:6px}
+.project-confirm p {margin:0;flex:1 1 100%;font-family:var(--sans);font-size:12px}
+.project-confirm button {min-height:26px;font-size:11px;padding:3px 8px}
+.strategy-panel .construction-lanes {grid-template-columns:1fr;padding:0;gap:7px}
+.strategy-panel .construction-lane {border:0;border-bottom:1px solid var(--rule);padding:0 0 5px}
+.strategy-panel .construction-lane header {margin:0 0 3px}
+.strategy-panel .project-top strong {font-size:11px}
+.strategy-panel .project-nums {font-size:10px}
+.strategy-panel .construction-lane:has(.project) {padding-bottom:5px}

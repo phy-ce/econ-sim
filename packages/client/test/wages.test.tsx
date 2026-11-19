@@ -2,7 +2,7 @@ import React from 'react';
 import {describe,it,expect} from 'vitest';
 import {renderToStaticMarkup} from 'react-dom/server';
 import {createWorld,playerCompany} from '@econ/sim';
-import {Wages} from '../src/views/CompanyPanel';
+import {Wages} from '../src/views/Wages';
 import {setLang} from '../src/i18n';
 import type {Game} from '../src/useGame';
 

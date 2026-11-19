@@ -14,7 +14,7 @@ import {buildBlockers,constructionForecast,constructionForecastKey,matchesConstr
 import {ActiveContent} from './ActiveContent';
 import {DetailWindow} from './DetailWindow';
 import {ConstructionDetail} from './ConstructionDetail';
-import {Projects} from './CompanyPanel';
+import {Projects} from './ConstructionProjects';
 
 export function ConstructionPanel({world,game,me,regionId,onRegion,onOpenRegion,onGood=()=>{},onCompany=()=>{},onOpenBuilding=()=>{}}:{world:World;game:Game;me:Company;regionId:number;onRegion:(id:number)=>void;onOpenRegion:(id:number)=>void;onGood?:(g:GoodId)=>void;onCompany?:(id:number)=>void;onOpenBuilding?:(id:number)=>void}){
  const T=useT(),C=T.constructionUI,lang=useLang();

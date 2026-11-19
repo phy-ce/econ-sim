@@ -5,7 +5,7 @@ import {officeFeeHelp} from '../officeFees';
 import {DetailWindow} from './DetailWindow';
 import {BudgetJobs} from './BudgetJobs';
 import {useNavigationState} from '../NavigationHistory';
-import { Wages } from './CompanyPanel';
+import { Wages } from './Wages';
 import { SortHeader } from './SortHeader';
 import { useState, useEffect } from 'react';
 import { TUNE, creditLimit, budgetPreview, budgetDrill, roundBudget, welfareCapDaily } from '@econ/sim';

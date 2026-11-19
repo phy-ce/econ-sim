@@ -1,0 +1,11 @@
+/* Wages 컴포넌트 (CompanyPanel.tsx 를 나누며 company-panel.css 에서 옮김). */
+.sw { display: inline-block; width: 10px; height: 10px; border: 2px solid var(--ink); margin-right: 6px; vertical-align: -1px; flex: none; }
+.wage-row { display: flex; justify-content: space-between; align-items: baseline; gap: 6px; }
+.wage-name { font-weight: 700; }
+.wage-out { font-family: var(--pixel); white-space: nowrap; }
+.wage-out small { font-size: 12px; }
+.wage-name { display: inline-flex; align-items: center; }
+.wage-meta { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; }
+.wage-unemp { display: inline-flex; align-items: center; gap: 6px; }
+.strategy-panel .wage-out {font-size:12px}
+.strategy-panel .wage-meta {gap:5px}

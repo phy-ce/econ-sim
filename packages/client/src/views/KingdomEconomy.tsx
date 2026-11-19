@@ -5,7 +5,7 @@ import {useNavigationState} from '../NavigationHistory';
 import {useLang,useT} from '../i18n';
 import {kingdomStats} from '../kingdomStats';
 import {NumericValue} from '../NumericValue';
-import {KingdomSummary} from './CompanyPanel';
+import {KingdomSummary} from './KingdomSummary';
 import {KingdomBuildings} from './KingdomBuildings';
 import {KingdomTrends} from './KingdomTrends';
 import {SortHeader} from './SortHeader';

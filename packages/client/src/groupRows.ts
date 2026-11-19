@@ -1,4 +1,4 @@
-import type {rowOf} from './views/CompanyPanel';
+import type {rowOf} from './views/buildingRow';
 type Row=ReturnType<typeof rowOf>;
 export function aggregateRows(rows:Row[]){
  const staff=new Map<string,Row['staff'][number]>();

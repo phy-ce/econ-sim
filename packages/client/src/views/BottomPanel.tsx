@@ -5,7 +5,7 @@ import {EconomyCharts} from './EconomyCharts';
 import {memo} from 'react';
 import { PopTable, type PopRequest } from './PopTable';
 import type { Game } from '../useGame';
-import {KingdomSummary} from './CompanyPanel';
+import {KingdomSummary} from './KingdomSummary';
 import { playerCompany, companyById } from '@econ/sim';
 import { SectionStack } from './SectionStack';
 import {useMemo} from 'react';

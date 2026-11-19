@@ -1,0 +1,11 @@
+/* KingdomSummary 컴포넌트 (CompanyPanel.tsx 를 나누며 company-panel.css 에서 옮김). */
+.badge-bad, .badge-ok { font-size: 11px; font-weight: 700; padding: 0 5px; border: 2px solid var(--ink); border-radius: 2px; white-space: nowrap; line-height: 1.4; }
+.badge-bad { background: var(--bad); color: var(--sheet); }
+.badge-ok { background: var(--sheet); color: var(--good); }
+.htile { display: flex; flex-direction: column; }
+.strategy-panel .htile {border-radius:0;background:none;gap:4px}
+.strategy-panel .htile:last-child {border-right:0}
+.strategy-panel .hsum {align-items:start}
+.strategy-panel .hsum {grid-template-columns:minmax(0,1fr);gap:5px}
+.strategy-panel .hsum>.htile:last-child {order:-1}
+.strategy-panel .hsum>.htile:nth-child(2):has(.badge-ok) {padding:2px 0}

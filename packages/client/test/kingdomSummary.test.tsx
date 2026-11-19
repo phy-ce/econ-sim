@@ -2,7 +2,7 @@ import React from 'react';
 import {describe,it,expect} from 'vitest';
 import {renderToStaticMarkup} from 'react-dom/server';
 import {createWorld,isGovernment,isOwnerBuilding,playerCompany} from '@econ/sim';
-import {KingdomSummary} from '../src/views/CompanyPanel';
+import {KingdomSummary} from '../src/views/KingdomSummary';
 describe('kingdom production summary',()=>{
  it('excludes government and owner institution profit from weekly production profit',()=>{
   const world=createWorld(42),government=playerCompany(world)!;

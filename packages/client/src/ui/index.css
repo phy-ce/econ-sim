@@ -42,7 +42,10 @@
 @import '../views/quake-badge.css';
 @import '../views/politics-panel.css';
 @import '../views/window-workspace.css';
-@import '../views/company-panel.css';
+@import '../views/wages.css';
+@import '../views/kingdom-summary.css';
+@import '../views/construction-projects.css';
+@import '../views/building-controls.css';
 @import '../views/price-gauge.css';
 @import '../views/source-breakdown.css';
 @import '../views/class-donut.css';

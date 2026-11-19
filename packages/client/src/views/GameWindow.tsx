@@ -13,7 +13,7 @@ import {BottomPanel} from './BottomPanel';
 import {FinancePanel} from './FinancePanel';
 import {PolicyPanel} from './PolicyPanel';
 import {ResearchPanel} from './ResearchPanel';
-import {Projects} from './CompanyPanel';
+import {Projects} from './ConstructionProjects';
 import {eventDestination} from '../eventDestination';
 export type ScreenRoute={kind:WindowId;regionId?:number;buildingId?:number;good?:GoodId;techId?:string;kingdomId?:number;companyId?:number;prof?:PopClass;industry?:boolean;sequence?:number;tab?:'budget'|'laws'};
 export type ScreenRequest={target:WindowId;route:ScreenRoute;sequence:number};

@@ -10,7 +10,7 @@ import { RegionExplorer } from './RegionExplorer';
 import { HelpText } from '../TooltipLayer';
 import { NumericValue } from '../NumericValue';
 import type { Game } from '../useGame';
-import { BuildList, Projects } from './CompanyPanel';
+import { Projects } from './ConstructionProjects';
 import { playerCompany, educationOf } from '@econ/sim';
 import { OwnerBadge } from './OwnerBadge';
 import { regionLivingStandard,lowerJobUnemployment } from '../systemMetrics';

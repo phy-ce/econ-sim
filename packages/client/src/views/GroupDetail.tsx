@@ -9,7 +9,8 @@ import {FlowRow} from './FlowRow';
 
 import {KEEP_SHARE,getMethod,isOwnerBuilding,TUNE,officeLoad,companyById} from '@econ/sim';
 import type {Building,GoodId,World} from '@econ/sim';
-import {rowOf,BuildingControls} from './CompanyPanel';
+import {rowOf} from './buildingRow';
+import {BuildingControls} from './BuildingControls';
 import type {Game} from '../useGame';
 import {NumericValue} from '../NumericValue';
 import {GoodSprite} from '../sprites';
