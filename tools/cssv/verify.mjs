@@ -1,6 +1,7 @@
 // usage (repo root): CSSV_URL=http://localhost:5199/ CSSV_OUT=.tmp/cssv/<label> node tools/cssv/cdp.mjs tools/cssv/verify.mjs
 // Opens 74 screen states (ko light, en dark) on a fixed seed and records every rendered element's box and a hash of its full computed style (and ::before/::after).
-import fs from 'node:fs';
+import fs from 'node:fs'; import { WINS } from './wins-page.mjs';
+const WMODE=!!process.env.CSSV_WINS; const W={meta:null,wins:new Set(),matched:new Set(),states:0};
 const URL_=process.env.CSSV_URL||'http://localhost:5197/', OUT=process.env.CSSV_OUT||'.tmp/cssv/run', SHOTS=process.env.CSSV_SHOTS!=='0';
 fs.mkdirSync(OUT,{recursive:true});
 const result={url:URL_,started:new Date().toISOString(),states:{}};
@@ -27,7 +28,7 @@ export default async api=>{
  async function closeDetails(){await api.eval("document.querySelectorAll('.detail-window .window-titlebar > button:last-child').forEach(b=>b.click())");await sleep(300);}
  async function openWindow(i){await closeDetails();await api.eval("document.querySelectorAll('.desktop-dock button[aria-pressed=true]').forEach(b=>b.click())");await click(`.desktop-dock button:nth-child(${i})`);}
  let prefix='';
- async function snap(name){await sleep(350);await api.send('Input.dispatchMouseEvent',{type:'mouseMoved',x:1915,y:1020});const key=`${prefix}-${name}`;result.states[key]=await api.eval(DUMP);if(SHOTS)await api.shot(`${OUT}/${key}`);}
+ async function snap(name){await sleep(350);await api.send('Input.dispatchMouseEvent',{type:'mouseMoved',x:1915,y:1020});const key=`${prefix}-${name}`;if(WMODE){const r=await api.eval(WINS);if(r.error)throw Error(r.error);if(!W.meta)W.meta=r.meta;r.wins.forEach(x=>W.wins.add(x));r.matched.forEach(x=>W.matched.add(x));W.states++;return;}result.states[key]=await api.eval(DUMP);if(SHOTS)await api.shot(`${OUT}/${key}`);}
  async function tabs(sel,name){const n=await api.eval(`document.querySelectorAll(${JSON.stringify(sel)}).length`);for(let i=0;i<n;i++){await click(`${sel}:nth-child(${i+1})`);await snap(`${name}-${i+1}`);}}
  for(const [lang,theme] of [['ko','light'],['en','dark']]){
   prefix=`${lang}-${theme}`;
@@ -51,8 +52,10 @@ export default async api=>{
   const ct=await api.eval("document.querySelectorAll('.construction-task-tabs button').length");for(let i=0;i<ct;i++){await click(`.construction-task-tabs button:nth-child(${i+1})`);await snap(`construction-detail-${i+1}`);}await closeDetails();
   await openWindow(6);await tabs('.window-trends .explorer-rail > button','trends-section');
   await openWindow(2);await api.eval("(()=>{const e=[...document.querySelectorAll('.window-market [data-help][tabindex]')].find(e=>e.getClientRects().length&&!e.closest('[hidden]'));e&&e.focus();})()");await sleep(500);
+  if(WMODE){await snap('tooltip');continue;}
   const key=`${prefix}-tooltip`;result.states[key]=await api.eval(DUMP);if(SHOTS)await api.shot(`${OUT}/${key}`);
  }
+ if(WMODE){fs.writeFileSync(`${OUT}/wins.json`,JSON.stringify({meta:W.meta,wins:[...W.wins],matched:[...W.matched],states:W.states}));console.log('WINS',W.states,'states',W.wins.size,'wins');return;}
  result.finished=new Date().toISOString();
  fs.writeFileSync(`${OUT}/dump.json`,JSON.stringify(result));console.log('DONE',Object.keys(result.states).length,'states');
 };

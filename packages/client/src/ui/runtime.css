@@ -28,7 +28,6 @@ body.game-runtime{font-family:var(--gu-font);color:var(--gu-ink);background:var(
 /* Construction detail: overview, per-building management, then an action area. */
 .construction-detail{display:flex;flex-direction:column}
 .construction-detail>.system-tabs{margin:0}
-.construction-detail h3{font-weight:600;display:flex;align-items:baseline;justify-content:space-between}
 .construction-detail h3 small{font-size:12px;font-weight:400;color:var(--gu-muted)}
 .construction-detail>.construction-management,.construction-detail>.construction-market{border-top:1px solid var(--gu-line)}
 .construction-detail>details>summary{display:flex;align-items:center;gap:8px;cursor:pointer;list-style:none}.construction-detail>details>summary:before{content:'+';color:var(--gu-muted)}.construction-detail>details[open]>summary:before{content:'−'}.construction-detail>details>summary>span{margin-left:auto;color:var(--gu-muted);font-size:12px}
@@ -39,7 +38,6 @@ body.game-runtime{font-family:var(--gu-font);color:var(--gu-ink);background:var(
 .construction-detail .group-detail-ledger{display:flex;flex-direction:column}.construction-detail .group-detail-ledger>details{margin:0;padding:0}.construction-detail .gu-production-diagram{margin:0}.construction-detail .group-detail-ledger>.system-tags{margin:0}.construction-detail .group-detail-ledger>.system-facts{margin:0;min-height:0}.construction-detail .group-detail-ledger>details:not([open]){height:auto}
 /* Dense detail windows retain hierarchy through type and separators, not empty space. */
 .construction-detail{gap:8px;padding:4px}
-.construction-detail h3{font-size:13px;margin:0 0 6px}
 .construction-overview{padding-bottom:0}.construction-overview>.ownership-launch{margin-bottom:6px}
 .construction-detail .group-detail-ledger{gap:4px}
 .construction-detail .group-detail-ledger>details>summary{min-height:24px;padding:2px 0}

@@ -1,0 +1,2882 @@
+[
+ {
+  "f": "kingdom-economy.css",
+  "sel": ".strategy-panel .kingdom-comparison th, .strategy-panel .kingdom-comparison td",
+  "decl": "overflow-wrap:normal"
+ },
+ {
+  "f": "kingdom-economy.css",
+  "sel": ".strategy-panel .kingdom-comparison th, .strategy-panel .kingdom-comparison td",
+  "decl": "padding:8px"
+ },
+ {
+  "f": "kingdom-economy.css",
+  "sel": ".strategy-panel .kingdom-comparison .th-sort",
+  "decl": "white-space:normal"
+ },
+ {
+  "f": "kingdom-economy.css",
+  "sel": ".kingdom-totals",
+  "decl": "display:grid"
+ },
+ {
+  "f": "kingdom-economy.css",
+  "sel": ".kingdom-totals",
+  "decl": "margin:6px 0"
+ },
+ {
+  "f": "kingdom-economy.css",
+  "sel": ".kingdom-totals>div",
+  "decl": "display:flex"
+ },
+ {
+  "f": "kingdom-economy.css",
+  "sel": ".kingdom-totals>div",
+  "decl": "flex-direction:column"
+ },
+ {
+  "f": "kingdom-economy.css",
+  "sel": ".kingdom-totals>div",
+  "decl": "gap:4px"
+ },
+ {
+  "f": "kingdom-economy.css",
+  "sel": ".kingdom-totals>div",
+  "decl": "border:1px solid var(--rule)"
+ },
+ {
+  "f": "kingdom-economy.css",
+  "sel": ".kingdom-totals>div",
+  "decl": "padding:6px"
+ },
+ {
+  "f": "kingdom-economy.css",
+  "sel": ".kingdom-totals>div>span:first-child",
+  "decl": "font-size:11px"
+ },
+ {
+  "f": "kingdom-economy.css",
+  "sel": ".kingdom-totals>div>span:first-child",
+  "decl": "color:var(--ink2)"
+ },
+ {
+  "f": "kingdom-economy.css",
+  "sel": ".kingdom-total-bar",
+  "decl": "height:8px"
+ },
+ {
+  "f": "kingdom-economy.css",
+  "sel": ".kingdom-total-bar",
+  "decl": "border:1px solid var(--ink)"
+ },
+ {
+  "f": "kingdom-economy.css",
+  "sel": ".strategy-panel .kingdom-building-link",
+  "decl": "background:none"
+ },
+ {
+  "f": "kingdom-economy.css",
+  "sel": ".kingdom-money",
+  "decl": "display:grid"
+ },
+ {
+  "f": "kingdom-economy.css",
+  "sel": ".kingdom-money",
+  "decl": "margin:6px 0"
+ },
+ {
+  "f": "ownership-theme.css",
+  "sel": ":root,:root[data-theme=\"dark\"]",
+  "decl": "--royal-owner:var(--gu-crown)"
+ },
+ {
+  "f": "system-ui.css",
+  "sel": ".system-table",
+  "decl": "width:100%"
+ },
+ {
+  "f": "system-ui.css",
+  "sel": ".system-table",
+  "decl": "border-collapse:collapse"
+ },
+ {
+  "f": "system-ui.css",
+  "sel": ".system-table",
+  "decl": "font-size:11px"
+ },
+ {
+  "f": "system-ui.css",
+  "sel": ".system-table th,.system-table td",
+  "decl": "padding:5px 3px"
+ },
+ {
+  "f": "system-ui.css",
+  "sel": ".system-table th,.system-table td",
+  "decl": "overflow-wrap:anywhere"
+ },
+ {
+  "f": "system-ui.css",
+  "sel": ".system-group th>div",
+  "decl": "padding-top:8px"
+ },
+ {
+  "f": "system-ui.css",
+  "sel": ".system-group .policy-steps",
+  "decl": "gap:3px"
+ },
+ {
+  "f": "system-ui.css",
+  "sel": ".system-group button[aria-pressed=true]",
+  "decl": "background:var(--ink)"
+ },
+ {
+  "f": "system-ui.css",
+  "sel": ".system-group button[aria-pressed=true]",
+  "decl": "color:var(--sheet)"
+ },
+ {
+  "f": "system-ui.css",
+  "sel": ".system-tags",
+  "decl": "gap:3px"
+ },
+ {
+  "f": "system-ui.css",
+  "sel": ".strategy-panel .research-node",
+  "decl": "gap:6px"
+ },
+ {
+  "f": "system-ui.css",
+  "sel": ".strategy-panel .research-node",
+  "decl": "padding:7px"
+ },
+ {
+  "f": "system-ui.css",
+  "sel": ".strategy-panel .research-node",
+  "decl": "background:var(--sheet)"
+ },
+ {
+  "f": "system-ui.css",
+  "sel": ".strategy-panel .research-node",
+  "decl": "border:1px solid var(--rule)"
+ },
+ {
+  "f": "system-ui.css",
+  "sel": ".unified-region .pop-directory",
+  "decl": "height:auto"
+ },
+ {
+  "f": "system-ui.css",
+  "sel": ".unified-region .pane-head",
+  "decl": "padding-top:4px"
+ },
+ {
+  "f": "system-ui.css",
+  "sel": ".strategy-panel .group-metrics .bar",
+  "decl": "height:3px"
+ },
+ {
+  "f": "system-ui.css",
+  "sel": ".strategy-panel .group-metrics .bar",
+  "decl": "min-height:3px"
+ },
+ {
+  "f": "system-ui.css",
+  "sel": ".group-detail-ledger",
+  "decl": "display:flex"
+ },
+ {
+  "f": "system-ui.css",
+  "sel": ".group-detail-ledger",
+  "decl": "flex-direction:column"
+ },
+ {
+  "f": "system-ui.css",
+  "sel": ".group-detail-ledger",
+  "decl": "gap:6px"
+ },
+ {
+  "f": "system-ui.css",
+  "sel": ".group-detail-ledger summary",
+  "decl": "padding:3px 0"
+ },
+ {
+  "f": "system-ui.css",
+  "sel": ".window-navigation button",
+  "decl": "padding:0"
+ },
+ {
+  "f": "system-ui.css",
+  "sel": ".window-navigation button",
+  "decl": "font-size:15px"
+ },
+ {
+  "f": "system-ui.css",
+  "sel": ".research-current-link",
+  "decl": "display:flex"
+ },
+ {
+  "f": "system-ui.css",
+  "sel": ".research-current-link",
+  "decl": "align-items:center"
+ },
+ {
+  "f": "system-ui.css",
+  "sel": ".research-current-link",
+  "decl": "gap:8px"
+ },
+ {
+  "f": "system-ui.css",
+  "sel": ".research-current-link",
+  "decl": "border:0"
+ },
+ {
+  "f": "system-ui.css",
+  "sel": ".research-current-link",
+  "decl": "background:none"
+ },
+ {
+  "f": "system-ui.css",
+  "sel": ".research-current-link",
+  "decl": "padding:6px 0"
+ },
+ {
+  "f": "system-ui.css",
+  "sel": ".research-current-link",
+  "decl": "color:var(--ink)"
+ },
+ {
+  "f": "system-ui.css",
+  "sel": ".research-current-link:disabled",
+  "decl": "opacity:1"
+ },
+ {
+  "f": "system-ui.css",
+  "sel": ".research-search",
+  "decl": "min-height:27px"
+ },
+ {
+  "f": "system-ui.css",
+  "sel": ".research-row",
+  "decl": "display:grid"
+ },
+ {
+  "f": "system-ui.css",
+  "sel": ".research-row",
+  "decl": "gap:5px"
+ },
+ {
+  "f": "system-ui.css",
+  "sel": ".research-row",
+  "decl": "align-items:center"
+ },
+ {
+  "f": "system-ui.css",
+  "sel": ".research-row",
+  "decl": "min-height:32px"
+ },
+ {
+  "f": "system-ui.css",
+  "sel": ".research-row",
+  "decl": "padding:4px"
+ },
+ {
+  "f": "system-ui.css",
+  "sel": ".research-row",
+  "decl": "background:none"
+ },
+ {
+  "f": "system-ui.css",
+  "sel": ".research-row",
+  "decl": "color:var(--ink)"
+ },
+ {
+  "f": "system-ui.css",
+  "sel": ".research-row",
+  "decl": "font-size:11px"
+ },
+ {
+  "f": "system-ui.css",
+  "sel": ".research-row[aria-pressed=true]",
+  "decl": "box-shadow:inset 3px 0 var(--gold)"
+ },
+ {
+  "f": "system-ui.css",
+  "sel": ".research-action",
+  "decl": "min-height:30px"
+ },
+ {
+  "f": "system-ui.css",
+  "sel": ".research-atlas-scroll",
+  "decl": "overflow:auto"
+ },
+ {
+  "f": "system-ui.css",
+  "sel": ".research-atlas .state-known",
+  "decl": "background:var(--chip)"
+ },
+ {
+  "f": "system-ui.css",
+  "sel": ".research-atlas .state-known",
+  "decl": "border-color:var(--pos)"
+ },
+ {
+  "f": "system-ui.css",
+  "sel": ".research-atlas .state-locked",
+  "decl": "border-style:dashed"
+ },
+ {
+  "f": "system-ui.css",
+  "sel": ".policy-enact",
+  "decl": "min-height:32px"
+ },
+ {
+  "f": "system-ui.css",
+  "sel": ".economic-chart h4",
+  "decl": "margin:0"
+ },
+ {
+  "f": "system-ui.css",
+  "sel": ".workforce-wage",
+  "decl": "display:flex"
+ },
+ {
+  "f": "system-ui.css",
+  "sel": ".workforce-wage",
+  "decl": "align-items:center"
+ },
+ {
+  "f": "system-ui.css",
+  "sel": ".workforce-wage",
+  "decl": "gap:3px"
+ },
+ {
+  "f": "system-ui.css",
+  "sel": ".sd-point",
+  "decl": "background:var(--sheet)"
+ },
+ {
+  "f": "system-ui.css",
+  "sel": ".strategy-panel .construction-card",
+  "decl": "display:grid"
+ },
+ {
+  "f": "system-ui.css",
+  "sel": ".strategy-panel .construction-card",
+  "decl": "grid-template-columns:40px minmax(0,1fr)"
+ },
+ {
+  "f": "system-ui.css",
+  "sel": ".strategy-panel .construction-card",
+  "decl": "gap:3px 5px"
+ },
+ {
+  "f": "system-ui.css",
+  "sel": ".strategy-panel .construction-card",
+  "decl": "min-width:0"
+ },
+ {
+  "f": "system-ui.css",
+  "sel": ".strategy-panel .construction-card",
+  "decl": "padding:6px"
+ },
+ {
+  "f": "system-ui.css",
+  "sel": ".strategy-panel .construction-card",
+  "decl": "text-align:left"
+ },
+ {
+  "f": "system-ui.css",
+  "sel": ".strategy-panel .construction-card",
+  "decl": "border:1px solid var(--rule)"
+ },
+ {
+  "f": "system-ui.css",
+  "sel": ".strategy-panel .construction-card",
+  "decl": "background:var(--sheet)"
+ },
+ {
+  "f": "system-ui.css",
+  "sel": ".strategy-panel .construction-card",
+  "decl": "font-size:11px"
+ },
+ {
+  "f": "system-ui.css",
+  "sel": ".construction-card.land-arable",
+  "decl": "background:color-mix(in srgb,var(--good) 12%,var(--sheet))"
+ },
+ {
+  "f": "system-ui.css",
+  "sel": ".construction-card.land-forest",
+  "decl": "background:color-mix(in srgb,var(--good) 8%,var(--sheet))"
+ },
+ {
+  "f": "system-ui.css",
+  "sel": ".construction-card.land-plot",
+  "decl": "background:color-mix(in srgb,var(--gold) 15%,var(--sheet))"
+ },
+ {
+  "f": "system-ui.css",
+  "sel": ".construction-card>span:nth-last-child(-n+2)",
+  "decl": "grid-column:1/-1"
+ },
+ {
+  "f": "system-ui.css",
+  "sel": ".construction-building>.entity-link",
+  "decl": "min-height:30px"
+ },
+ {
+  "f": "system-ui.css",
+  "sel": ".construction-crown",
+  "decl": "border-top:1px solid var(--gold)"
+ },
+ {
+  "f": "system-ui.css",
+  "sel": ".construction-crown",
+  "decl": "padding:6px 0"
+ },
+ {
+  "f": "system-ui.css",
+  "sel": ".construction-crown h3",
+  "decl": "font-size:12px"
+ },
+ {
+  "f": "system-ui.css",
+  "sel": ".construction-crown h3",
+  "decl": "margin:4px 0"
+ },
+ {
+  "f": "system-ui.css",
+  "sel": ".strategy-panel .ig-clout .bar",
+  "decl": "height:8px"
+ },
+ {
+  "f": "map/atlas.css",
+  "sel": ".atlas-provinces path",
+  "decl": "stroke-width:1.5"
+ },
+ {
+  "f": "map/atlas.css",
+  "sel": ".atlas-unclaimed path",
+  "decl": "stroke-width:1.5"
+ },
+ {
+  "f": "map/atlas.css",
+  "sel": ".atlas-rail",
+  "decl": "stroke:#554d40"
+ },
+ {
+  "f": "map/atlas.css",
+  "sel": ".atlas-rail",
+  "decl": "stroke-width:2"
+ },
+ {
+  "f": "map/atlas.css",
+  "sel": ".atlas-rail",
+  "decl": "stroke-dasharray:7 5"
+ },
+ {
+  "f": "map/atlas.css",
+  "sel": ".atlas-rail",
+  "decl": "opacity:.35"
+ },
+ {
+  "f": "styles.css",
+  "sel": "body",
+  "decl": "color:var(--ink)"
+ },
+ {
+  "f": "styles.css",
+  "sel": "h3",
+  "decl": "font-size:12px"
+ },
+ {
+  "f": "styles.css",
+  "sel": "h3",
+  "decl": "margin:0"
+ },
+ {
+  "f": "styles.css",
+  "sel": "h4",
+  "decl": "margin:0"
+ },
+ {
+  "f": "styles.css",
+  "sel": "p",
+  "decl": "margin:0"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".pxnum",
+  "decl": "font-family:var(--pixel)"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".pxnum",
+  "decl": "letter-spacing:0.02em"
+ },
+ {
+  "f": "styles.css",
+  "sel": ":root[data-theme=\"dark\"] .spr",
+  "decl": "background:#fbf6ea"
+ },
+ {
+  "f": "styles.css",
+  "sel": ":root[data-theme=\"dark\"] .tile, :root[data-theme=\"dark\"] .dl-tile, :root[data-theme=\"dark\"] .ev-icon, :root[data-theme=\"dark\"] .b-chip-icon",
+  "decl": "background:#fbf6ea"
+ },
+ {
+  "f": "styles.css",
+  "sel": "button",
+  "decl": "font-size:14px"
+ },
+ {
+  "f": "styles.css",
+  "sel": "button",
+  "decl": "min-height:36px"
+ },
+ {
+  "f": "styles.css",
+  "sel": "button",
+  "decl": "padding:0 14px"
+ },
+ {
+  "f": "styles.css",
+  "sel": "button",
+  "decl": "border-radius:4px"
+ },
+ {
+  "f": "styles.css",
+  "sel": "button",
+  "decl": "border:2px solid var(--ink)"
+ },
+ {
+  "f": "styles.css",
+  "sel": "button",
+  "decl": "background:var(--sheet)"
+ },
+ {
+  "f": "styles.css",
+  "sel": "button",
+  "decl": "color:var(--ink)"
+ },
+ {
+  "f": "styles.css",
+  "sel": "button",
+  "decl": "display:inline-flex"
+ },
+ {
+  "f": "styles.css",
+  "sel": "button",
+  "decl": "align-items:center"
+ },
+ {
+  "f": "styles.css",
+  "sel": "button",
+  "decl": "justify-content:center"
+ },
+ {
+  "f": "styles.css",
+  "sel": "button",
+  "decl": "gap:6px"
+ },
+ {
+  "f": "styles.css",
+  "sel": "button:disabled",
+  "decl": "opacity:0.45"
+ },
+ {
+  "f": "styles.css",
+  "sel": "button:disabled",
+  "decl": "cursor:not-allowed"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".icon-btn",
+  "decl": "width:44px"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".icon-btn",
+  "decl": "min-height:44px"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".icon-btn",
+  "decl": "padding:0"
+ },
+ {
+  "f": "styles.css",
+  "sel": "select",
+  "decl": "font-size:14px"
+ },
+ {
+  "f": "styles.css",
+  "sel": "select",
+  "decl": "min-height:36px"
+ },
+ {
+  "f": "styles.css",
+  "sel": "select",
+  "decl": "border-radius:4px"
+ },
+ {
+  "f": "styles.css",
+  "sel": "select",
+  "decl": "border:2px solid var(--ink)"
+ },
+ {
+  "f": "styles.css",
+  "sel": "select",
+  "decl": "background:var(--sheet)"
+ },
+ {
+  "f": "styles.css",
+  "sel": "select",
+  "decl": "color:var(--ink)"
+ },
+ {
+  "f": "styles.css",
+  "sel": "select",
+  "decl": "padding:0 8px"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".bar",
+  "decl": "position:relative"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".bar",
+  "decl": "display:block"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".bar",
+  "decl": "height:12px"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".bar",
+  "decl": "border:2px solid var(--ink)"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".bar",
+  "decl": "background:var(--sheet)"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".bar",
+  "decl": "overflow:hidden"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".bar.sm",
+  "decl": "height:10px"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".bar > i",
+  "decl": "display:block"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".segbar .bar",
+  "decl": "min-width:8px"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".segbar .bar",
+  "decl": "margin-right:-2px"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".segbar .bar:last-child",
+  "decl": "margin-right:0"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".wf-val",
+  "decl": "min-width:64px"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".stats",
+  "decl": "display:grid"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".stat",
+  "decl": "min-width:0"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".stat-value",
+  "decl": "font-family:var(--pixel)"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".topbar",
+  "decl": "background-image:var(--page-bg)"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".brand",
+  "decl": "gap:14px"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".brand-name",
+  "decl": "font-family:var(--serif)"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".date",
+  "decl": "line-height:1.15"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".ledger",
+  "decl": "flex-wrap:wrap"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".ledger",
+  "decl": "margin:0"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".chip",
+  "decl": "background:var(--chip)"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".chip",
+  "decl": "border-radius:4px"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".chip dt",
+  "decl": "font-size:12px"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".chip dd",
+  "decl": "font-family:var(--pixel)"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".chip dd",
+  "decl": "line-height:1.35"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".chip.bad",
+  "decl": "box-shadow:4px 4px 0 var(--bad)"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".segmented, .pxseg",
+  "decl": "box-shadow:var(--hard)"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".segmented button, .pxseg button",
+  "decl": "min-height:44px"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".segmented button, .pxseg button",
+  "decl": "padding:0 12px"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".segmented button, .pxseg button",
+  "decl": "font-size:14px"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".pxseg button",
+  "decl": "font-family:var(--sans)"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".title-row",
+  "decl": "align-items:baseline"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".title-row",
+  "decl": "flex-wrap:wrap"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".tag-soft",
+  "decl": "background:var(--chip)"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".tag-soft",
+  "decl": "border:1px solid var(--ink)"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".tag-soft",
+  "decl": "padding:0 6px"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".map-title",
+  "decl": "display:flex"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".map",
+  "decl": "width:100%"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".map",
+  "decl": "height:auto"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".map",
+  "decl": "border:2px solid var(--ink)"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".map",
+  "decl": "border-radius:2px"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".map-cell",
+  "decl": "cursor:pointer"
+ },
+ {
+  "f": "styles.css",
+  "sel": "table",
+  "decl": "border-collapse:collapse"
+ },
+ {
+  "f": "styles.css",
+  "sel": "table",
+  "decl": "width:100%"
+ },
+ {
+  "f": "styles.css",
+  "sel": "th",
+  "decl": "padding:6px 8px"
+ },
+ {
+  "f": "styles.css",
+  "sel": "td",
+  "decl": "padding:7px 8px"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".th-sort",
+  "decl": "border:none"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".th-sort",
+  "decl": "background:none"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".th-sort",
+  "decl": "min-height:28px"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".th-sort",
+  "decl": "padding:0"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".th-sort",
+  "decl": "font-size:inherit"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".th-sort",
+  "decl": "font-weight:inherit"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".th-sort",
+  "decl": "color:inherit"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".th-sort",
+  "decl": "border-radius:2px"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".th-sort",
+  "decl": "gap:2px"
+ },
+ {
+  "f": "styles.css",
+  "sel": "table.goods tbody tr",
+  "decl": "cursor:pointer"
+ },
+ {
+  "f": "styles.css",
+  "sel": "table.goods tr.selected td",
+  "decl": "background:var(--chip)"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".gauge-wrap",
+  "decl": "gap:8px"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".gauge",
+  "decl": "min-width:70px"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".gauge-mark",
+  "decl": "width:10px"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".gauge-mark",
+  "decl": "margin-left:-5px"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".gauge-label",
+  "decl": "font-family:var(--pixel)"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".gauge-label",
+  "decl": "font-size:11px"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".gauge-label",
+  "decl": "min-width:40px"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".price-chart",
+  "decl": "border:2px dashed var(--rule)"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".price-chart",
+  "decl": "border-radius:4px"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".src-break",
+  "decl": "border:2px solid var(--ink)"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".src-break",
+  "decl": "border-radius:4px"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".src-break",
+  "decl": "background:var(--sheet)"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".src-bar i",
+  "decl": "border-right:2px solid var(--ink)"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".src-list",
+  "decl": "gap:3px"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".src-list li",
+  "decl": "grid-template-columns:10px 16px minmax(0, 1fr) auto 36px"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".src-list li",
+  "decl": "gap:6px"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".src-sw",
+  "decl": "width:10px"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".src-sw",
+  "decl": "height:10px"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".src-sw",
+  "decl": "border:2px solid var(--ink)"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".donut-grid",
+  "decl": "grid-template-columns:minmax(0, 1fr)"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".donut-grid",
+  "decl": "gap:14px"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".donut-grid",
+  "decl": "align-items:center"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".donut-seg",
+  "decl": "cursor:pointer"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".donut-total",
+  "decl": "font-size:34px"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".donut-sub",
+  "decl": "font-size:16px"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".dl-head, .dl-row",
+  "decl": "display:grid"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".dl-row",
+  "decl": "min-height:54px"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".dl-row",
+  "decl": "padding:4px 8px"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".dl-row",
+  "decl": "border:2px solid transparent"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".dl-row",
+  "decl": "border-radius:4px"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".dl-row",
+  "decl": "background:transparent"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".dl-row",
+  "decl": "justify-content:initial"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".dl-tile",
+  "decl": "width:40px"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".dl-tile",
+  "decl": "height:40px"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".dl-tile",
+  "decl": "border:2px solid var(--ink)"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".dl-name",
+  "decl": "gap:6px"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".dl-wealth",
+  "decl": "display:flex"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".dl-row > .pxnum",
+  "decl": "font-size:13px"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".waffle",
+  "decl": "display:grid"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".wages",
+  "decl": "gap:14px"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".wage-out",
+  "decl": "font-size:18px"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".wage-meta",
+  "decl": "gap:12px"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".tile",
+  "decl": "width:44px"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".tile",
+  "decl": "height:44px"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".tile",
+  "decl": "border:2px solid var(--ink)"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".tile",
+  "decl": "background:var(--chip)"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".tile.lg",
+  "decl": "width:72px"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".tile.lg",
+  "decl": "height:72px"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".stepper",
+  "decl": "display:flex"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".stepper",
+  "decl": "gap:4px"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".stepper button",
+  "decl": "min-height:32px"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".stepper button",
+  "decl": "font-family:var(--pixel)"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".projects",
+  "decl": "display:flex"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".projects",
+  "decl": "flex-direction:column"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".projects",
+  "decl": "gap:6px"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".legend",
+  "decl": "flex-wrap:wrap"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".legend",
+  "decl": "gap:4px 12px"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".legend",
+  "decl": "font-size:12px"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".events",
+  "decl": "padding:0 4px 0 0"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".events",
+  "decl": "gap:10px"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".events",
+  "decl": "overflow-y:auto"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".events",
+  "decl": "max-height:300px"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".ev-icon",
+  "decl": "border:2px solid var(--ink)"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".ev-icon",
+  "decl": "background:var(--chip)"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".ev-main",
+  "decl": "min-width:0"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".ev-text",
+  "decl": "font-size:14px"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".hsum",
+  "decl": "display:grid"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".hsum",
+  "decl": "grid-template-columns:repeat(auto-fit, minmax(min(100%, 220px), 1fr))"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".hsum",
+  "decl": "gap:10px"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".htile",
+  "decl": "background:var(--sheet)"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".htile",
+  "decl": "border:2px solid var(--ink)"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".htile",
+  "decl": "border-radius:4px"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".htile",
+  "decl": "padding:8px 12px 10px"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".htile",
+  "decl": "gap:6px"
+ },
+ {
+  "f": "styles.css",
+  "sel": ".htile",
+  "decl": "min-width:0"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".ledger",
+  "decl": "gap:8px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".chip",
+  "decl": "border:1px solid var(--rule)"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".date",
+  "decl": "white-space:normal"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".controls",
+  "decl": "gap:8px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".segmented button",
+  "decl": "padding:0 9px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".stat",
+  "decl": "background:var(--chip)"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".stat",
+  "decl": "border-radius:4px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".region-tabs button, .relation-tabs button",
+  "decl": "padding:10px 6px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".region-tabs button, .relation-tabs button",
+  "decl": "font-size:13px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".resource-inspector",
+  "decl": "gap:14px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".inspector-heading",
+  "decl": "gap:14px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".inspector-heading > div",
+  "decl": "min-width:120px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".resource-emblem",
+  "decl": "background:var(--chip)"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".resource-emblem",
+  "decl": "border:1px solid var(--rule)"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".inspector-metrics",
+  "decl": "background:var(--chip)"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".inspector-metrics",
+  "decl": "border-radius:6px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".inspector-metrics > span",
+  "decl": "font-size:12px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".inspector-empty",
+  "decl": "border:1px dashed var(--rule)"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".market-ledger",
+  "decl": "border:1px solid var(--rule)"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".market-ledger",
+  "decl": "border-radius:6px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".table-scroll",
+  "decl": "max-width:100%"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".table-scroll",
+  "decl": "overflow-x:auto"
+ },
+ {
+  "f": "workspace.css",
+  "sel": "table.goods",
+  "decl": "min-width:470px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".src-break, .price-chart",
+  "decl": "border:1px solid var(--rule)"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".dl-name b",
+  "decl": "font-size:13px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".dl-row .num",
+  "decl": "font-size:12px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".date",
+  "decl": "font-size:20px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".brand-name",
+  "decl": "font-size:11px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".chip",
+  "decl": "padding:4px 10px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".chip dd",
+  "decl": "font-size:17px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".topbar .icon-btn",
+  "decl": "width:34px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".topbar .icon-btn",
+  "decl": "min-height:34px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".segmented button",
+  "decl": "min-height:32px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".window-titlebar",
+  "decl": "min-height:33px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".window-titlebar",
+  "decl": "background:var(--chip)"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".window-titlebar",
+  "decl": "border-bottom:1px solid var(--rule)"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".window-titlebar",
+  "decl": "border-radius:5px 5px 0 0"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".window-titlebar",
+  "decl": "padding:0 5px 0 8px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".window-body",
+  "decl": "min-height:0"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".window-body",
+  "decl": "overflow:auto"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".window-body",
+  "decl": "flex:1"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".window-body",
+  "decl": "padding:10px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".window-body",
+  "decl": "gap:10px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".window-body",
+  "decl": "scrollbar-gutter:stable"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".desktop-dock button",
+  "decl": "font-size:12px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".desktop-dock button[aria-pressed=true]",
+  "decl": "background:var(--sheet)"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".desktop-dock button[aria-pressed=true]",
+  "decl": "color:var(--ink)"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".pane-head",
+  "decl": "gap:7px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".pane-head",
+  "decl": "padding-bottom:8px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".title-row",
+  "decl": "gap:8px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".title-row h2",
+  "decl": "font-size:20px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".perks",
+  "decl": "gap:4px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".tag-soft",
+  "decl": "font-size:10px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".stats",
+  "decl": "grid-template-columns:repeat(6,minmax(0,1fr))"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".stats",
+  "decl": "gap:5px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".stat",
+  "decl": "padding:5px 7px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".stat-label",
+  "decl": "font-size:10px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".stat-value",
+  "decl": "font-size:17px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".stat .bar",
+  "decl": "height:5px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".stat .bar",
+  "decl": "border-width:1px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".resource-price",
+  "decl": "font-size:20px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".inspector-heading h2",
+  "decl": "font-size:20px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".inspector-metrics > span",
+  "decl": "padding:6px 10px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".inspector-metrics b",
+  "decl": "font-size:16px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".relation-tabs button",
+  "decl": "padding:5px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".relation-tabs button",
+  "decl": "min-height:30px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".src-break",
+  "decl": "padding:7px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".src-list",
+  "decl": "font-size:11px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".price-chart",
+  "decl": "padding:6px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".market-ledger",
+  "decl": "padding:6px 9px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".list-tools select",
+  "decl": "min-height:28px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".list-tools select",
+  "decl": "font-size:11px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".sort-direction",
+  "decl": "min-height:28px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".sort-direction",
+  "decl": "padding:0 6px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".sort-direction",
+  "decl": "border:1px solid var(--rule)"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".list-search",
+  "decl": "border-radius:4px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".list-search",
+  "decl": "padding:3px 6px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".list-search input",
+  "decl": "font-size:11px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".window-body .pxseg button",
+  "decl": "min-height:32px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".window-body .pxseg button",
+  "decl": "font-size:12px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".window-body .pxseg button",
+  "decl": "padding:0 9px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".unified-market",
+  "decl": "padding:0"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".unified-market .table-scroll",
+  "decl": "max-height:300px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".unified-market table.goods",
+  "decl": "width:100%"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".unified-market table.goods td",
+  "decl": "padding:3px 7px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".unified-market table.goods td",
+  "decl": "font-size:12px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".unified-market .th-sort",
+  "decl": "font-size:11px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".unified-market .th-sort",
+  "decl": "min-height:28px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".unified-market .good-name",
+  "decl": "gap:5px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".unified-market .good-name",
+  "decl": "white-space:nowrap"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".section-stack",
+  "decl": "gap:6px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".region-directory-table",
+  "decl": "width:100%"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".region-directory-table",
+  "decl": "border-collapse:collapse"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".region-directory-table .th-sort,.ranks .th-sort,.goods .th-sort",
+  "decl": "font-size:11px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".region-buildings-link",
+  "decl": "display:flex"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".region-buildings-link",
+  "decl": "align-items:center"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".region-buildings-link",
+  "decl": "gap:6px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".region-buildings-link",
+  "decl": "font-size:11px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".region-buildings-link",
+  "decl": "padding:4px 7px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".region-buildings-link",
+  "decl": "margin-top:6px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".owner-badge",
+  "decl": "max-width:100%"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".owner-badge",
+  "decl": "padding:2px 5px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".workforce-list",
+  "decl": "gap:5px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".workforce-list",
+  "decl": "margin:6px 0"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".workforce-row",
+  "decl": "gap:7px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".workforce-row",
+  "decl": "font-size:11px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".region-stats",
+  "decl": "grid-template-columns:repeat(4,minmax(0,1fr))"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".inspector-empty",
+  "decl": "min-height:64px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".inspector-empty",
+  "decl": "padding:12px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".topbar .chip .bar",
+  "decl": "margin-top:3px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".construction-lanes",
+  "decl": "gap:8px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".construction-lane",
+  "decl": "padding:6px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".construction-lane",
+  "decl": "border:1px solid var(--line)"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".construction-lane>header",
+  "decl": "margin-bottom:4px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".window-body .hsum",
+  "decl": "grid-template-columns:repeat(auto-fit,minmax(180px,1fr))"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".map-layers",
+  "decl": "margin-bottom:8px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".map-layers",
+  "decl": "width:100%"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".map-layers button",
+  "decl": "padding:5px 4px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".map-layers button",
+  "decl": "font-size:11px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".good-name>.spr",
+  "decl": "width:32px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".good-name>.spr",
+  "decl": "height:32px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".construction-lane",
+  "decl": "border-color:var(--rule)"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".region-art.tile",
+  "decl": "width:90px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".region-art.tile",
+  "decl": "height:90px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".region-art .spr",
+  "decl": "width:88px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".region-art .spr",
+  "decl": "height:88px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".good-name>.good-sprite",
+  "decl": "width:48px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".good-name>.good-sprite",
+  "decl": "height:48px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".unified-market td",
+  "decl": "padding-top:0"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".unified-market td",
+  "decl": "padding-bottom:0"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".unified-market .good-name",
+  "decl": "min-height:46px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".resource-emblem",
+  "decl": "width:66px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".resource-emblem",
+  "decl": "height:66px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".resource-emblem .spr",
+  "decl": "width:64px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".resource-emblem .spr",
+  "decl": "height:64px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".legend-sp .spr",
+  "decl": "width:28px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".legend-sp .spr",
+  "decl": "height:28px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".perks .spr",
+  "decl": "width:28px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".perks .spr",
+  "decl": "height:28px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".unified-market table.goods td",
+  "decl": "padding-top:0"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".unified-market table.goods td",
+  "decl": "padding-bottom:0"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".numeric-value",
+  "decl": "font-variant-numeric:tabular-nums"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".numeric-value",
+  "decl": "white-space:nowrap"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".event-link,.entity-link",
+  "decl": "color:var(--accent)"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".event-link,.entity-link",
+  "decl": "background:none"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".event-link,.entity-link",
+  "decl": "border:0"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".event-link,.entity-link",
+  "decl": "box-shadow:none"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".event-link,.entity-link",
+  "decl": "padding:0"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".entity-link",
+  "decl": "display:inline-flex"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".entity-link",
+  "decl": "align-items:center"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".entity-link",
+  "decl": "gap:4px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".ev-meta",
+  "decl": "flex-wrap:wrap"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".ev-icon",
+  "decl": "width:42px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".ev-icon",
+  "decl": "height:42px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".ev-icon .spr",
+  "decl": "width:40px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".ev-icon .spr",
+  "decl": "height:40px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".region-directory-table .name-link",
+  "decl": "background:none"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".pop-directory",
+  "decl": "min-height:0"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".pop-directory",
+  "decl": "height:100%"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".pop-filters",
+  "decl": "display:flex"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".pop-filters",
+  "decl": "flex-wrap:wrap"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".pop-filters",
+  "decl": "gap:6px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".pop-filters",
+  "decl": "padding-bottom:8px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".pop-filters select",
+  "decl": "max-width:190px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".pop-filters label",
+  "decl": "font-size:12px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".pop-table",
+  "decl": "width:100%"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".pop-table",
+  "decl": "min-width:1100px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".pop-table",
+  "decl": "border-collapse:collapse"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".pop-table",
+  "decl": "font-size:12px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".pop-table",
+  "decl": "table-layout:fixed"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".pop-table th,.pop-table td",
+  "decl": "padding:5px 7px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".pop-table .th-sort",
+  "decl": "white-space:normal"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".pop-table .th-sort",
+  "decl": "font-size:11px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".window-construction .construction-lanes",
+  "decl": "padding:10px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".construction-lanes",
+  "decl": "grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr))"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".loan-chip",
+  "decl": "box-shadow:none"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".chip-label",
+  "decl": "font-size:11px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".chip-label",
+  "decl": "color:var(--muted)"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".chip-value",
+  "decl": "font-size:18px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".chip-value",
+  "decl": "line-height:1.3"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".chip-value",
+  "decl": "margin-top:3px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".chip-value",
+  "decl": "font-variant-numeric:tabular-nums"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".topbar .bell .icon-btn",
+  "decl": "width:34px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".topbar .bell .icon-btn",
+  "decl": "height:34px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".loan-chip",
+  "decl": "display:block"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".loan-chip .chip-label",
+  "decl": "font-size:12px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".loan-chip .chip-label",
+  "decl": "line-height:normal"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".loan-chip .chip-value",
+  "decl": "font-family:var(--sans)"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".loan-chip .chip-value",
+  "decl": "font-size:17px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".loan-chip .chip-value",
+  "decl": "line-height:1.35"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".topbar .crest .spr",
+  "decl": "width:64px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".topbar .crest .spr",
+  "decl": "height:64px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".topbar .crest",
+  "decl": "width:64px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".pop-table .entity-link",
+  "decl": "min-height:0"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".pop-table .entity-link",
+  "decl": "padding:0"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".pop-table td",
+  "decl": "padding-top:6px"
+ },
+ {
+  "f": "workspace.css",
+  "sel": ".pop-table td",
+  "decl": "padding-bottom:6px"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".information-explorer",
+  "decl": "grid-template-columns:88px minmax(0,1fr)"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".information-explorer",
+  "decl": "gap:8px"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".explorer-rail",
+  "decl": "flex-direction:column"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".explorer-rail",
+  "decl": "gap:1px"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".explorer-rail",
+  "decl": "position:sticky"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".explorer-rail",
+  "decl": "top:0"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".strategy-panel .explorer-rail button[aria-pressed=\"true\"]",
+  "decl": "border-left-color:var(--gold)"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".explorer-detail",
+  "decl": "min-width:0"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".explorer-detail",
+  "decl": "border-left:1px solid var(--rule)"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".explorer-detail",
+  "decl": "padding-left:8px"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".strategy-panel .explorer-heading",
+  "decl": "font:600 12px var(--sans)"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".strategy-panel .explorer-heading",
+  "decl": "border-bottom:1px solid var(--rule)"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".strategy-panel .explorer-heading",
+  "decl": "margin-bottom:6px"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".explorer-building>span:not(.spr)",
+  "decl": "flex:1"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".strategy-panel .explorer-detail .pop-directory",
+  "decl": "height:360px"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".topbar .chip .bar",
+  "decl": "height:3px"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".topbar .chip .spr",
+  "decl": "width:20px"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".topbar .chip .spr",
+  "decl": "height:20px"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".world-map .map",
+  "decl": "inset:0"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".world-map .map",
+  "decl": "width:100%"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".world-map .map",
+  "decl": "height:100%"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".map-directory",
+  "decl": "right:18px"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".map-directory",
+  "decl": "top:88px"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".map-directory",
+  "decl": "width:280px"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".strategy-panel",
+  "decl": "max-height:calc(100% - 24px)"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".strategy-panel",
+  "decl": "background:var(--sheet)"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".strategy-panel",
+  "decl": "border:1px solid var(--rule)"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".strategy-panel",
+  "decl": "box-shadow:0 8px 26px #0004"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".strategy-panel",
+  "decl": "border-radius:2px"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".strategy-panel .window-titlebar",
+  "decl": "height:30px"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".strategy-panel .window-titlebar",
+  "decl": "min-height:30px"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".strategy-panel .window-titlebar",
+  "decl": "padding:0 8px"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".strategy-panel .window-titlebar",
+  "decl": "background:var(--ink)"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".strategy-panel .window-titlebar",
+  "decl": "color:var(--sheet)"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".strategy-panel .window-titlebar",
+  "decl": "border-bottom:2px solid var(--gold)"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".panel-close",
+  "decl": "border:0"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".panel-close",
+  "decl": "background:none"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".panel-close",
+  "decl": "color:inherit"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".panel-close",
+  "decl": "padding:0"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".panel-close",
+  "decl": "min-height:24px"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".panel-close",
+  "decl": "box-shadow:none"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".strategy-panel .window-body",
+  "decl": "padding:8px"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".strategy-panel .window-body",
+  "decl": "gap:6px"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".strategy-panel .window-body",
+  "decl": "scrollbar-gutter:auto"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".desktop-dock button",
+  "decl": "padding:0 12px"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".strategy-panel .region-art.tile",
+  "decl": "width:48px"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".strategy-panel .region-art.tile",
+  "decl": "height:48px"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".strategy-panel .region-art .spr",
+  "decl": "width:48px"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".strategy-panel .region-art .spr",
+  "decl": "height:48px"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".strategy-panel .perks .spr",
+  "decl": "width:20px"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".strategy-panel .perks .spr",
+  "decl": "height:20px"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".strategy-panel .tag-soft",
+  "decl": "font-size:10px"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".strategy-panel .stats,.strategy-panel .region-stats",
+  "decl": "grid-template-columns:repeat(4,minmax(0,1fr))"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".strategy-panel .stats,.strategy-panel .region-stats",
+  "decl": "gap:3px 7px"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".strategy-panel .stat",
+  "decl": "background:none"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".strategy-panel .stat",
+  "decl": "border:0"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".strategy-panel .stat",
+  "decl": "padding:2px 0"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".strategy-panel .stat-label,.strategy-panel .stat>span",
+  "decl": "font-size:10px"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".strategy-panel .stat-value,.strategy-panel .stat b",
+  "decl": "font-size:12px"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".strategy-panel .stat .bar",
+  "decl": "height:3px"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".strategy-panel .good-name>.good-sprite",
+  "decl": "width:30px"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".strategy-panel .good-name>.good-sprite",
+  "decl": "height:30px"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".strategy-panel .th-sort",
+  "decl": "min-height:22px"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".strategy-panel .th-sort",
+  "decl": "padding:2px"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".strategy-panel .pop-directory",
+  "decl": "height:280px"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".strategy-panel .pop-table td",
+  "decl": "padding:4px"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".strategy-panel .dl-row",
+  "decl": "min-height:30px"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".strategy-panel .dl-row",
+  "decl": "padding:2px 0"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".strategy-panel .dl-name b",
+  "decl": "font-size:10px"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".strategy-panel .dl-wealth",
+  "decl": "font-size:10px"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".strategy-panel .legend-sp .spr",
+  "decl": "width:20px"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".strategy-panel .legend-sp .spr",
+  "decl": "height:20px"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".strategy-panel .htile",
+  "decl": "border:0"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".strategy-panel .region-buildings-link",
+  "decl": "background:none"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".policy-steps",
+  "decl": "display:flex"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".policy-steps",
+  "decl": "gap:2px"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".strategy-panel .policy-steps button",
+  "decl": "padding:1px 4px"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".strategy-panel .th-sort",
+  "decl": "white-space:normal"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".strategy-panel .th-sort",
+  "decl": "text-align:inherit"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".strategy-panel .tile.md,.strategy-panel .ev-icon",
+  "decl": "overflow:visible"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".floating-workspace .strategy-panel",
+  "decl": "box-shadow:0 5px 18px #0003"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".floating-workspace .strategy-panel",
+  "decl": "border-color:var(--rule)"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".floating-workspace .window-titlebar",
+  "decl": "opacity:.88"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".floating-workspace .window-body",
+  "decl": "overflow:auto"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".help-text",
+  "decl": "text-underline-offset:3px"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".help-text",
+  "decl": "cursor:help"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".strategy-panel .donut-grid",
+  "decl": "grid-template-columns:minmax(110px,30%) minmax(0,1fr)"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".strategy-panel .donut-grid",
+  "decl": "gap:5px"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".strategy-panel .section-content,.strategy-panel .events,.strategy-panel .table-scroll",
+  "decl": "overflow:visible"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".strategy-panel .pop-table",
+  "decl": "font-size:11px"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".strategy-panel .htile",
+  "decl": "border-right:0"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".strategy-panel .htile",
+  "decl": "border-bottom:1px solid var(--rule)"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".strategy-panel .htile",
+  "decl": "padding:4px 0"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".strategy-panel .ev-icon",
+  "decl": "border:0"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".strategy-panel .title-row",
+  "decl": "flex-wrap:wrap"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".strategy-panel .stat-value",
+  "decl": "font-size:15px"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".strategy-panel .detail-launch",
+  "decl": "min-height:29px"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".strategy-panel .detail-launch",
+  "decl": "padding:4px 2px"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".strategy-panel .detail-launch",
+  "decl": "background:none"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".strategy-panel .detail-launch",
+  "decl": "font-size:11px"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".detail-window",
+  "decl": "background:var(--sheet)"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".detail-window",
+  "decl": "border:1px solid var(--gold)"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".detail-window",
+  "decl": "border-radius:3px"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".detail-window",
+  "decl": "box-shadow:0 10px 30px #0005"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".detail-window .window-titlebar",
+  "decl": "background:var(--ink)"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".detail-window .window-titlebar",
+  "decl": "color:var(--sheet)"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".detail-window .window-body",
+  "decl": "overflow:auto"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".strategy-panel .explorer-heading",
+  "decl": "padding:2px 0"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".strategy-panel .explorer-heading",
+  "decl": "margin:0 0 3px"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".strategy-panel .ownership-launch",
+  "decl": "padding:0"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".strategy-panel .ownership-launch",
+  "decl": "min-height:24px"
+ },
+ {
+  "f": "strategy.css",
+  "sel": ".ownership-meter",
+  "decl": "background:#687078"
+ },
+ {
+  "f": "ui/runtime.css",
+  "sel": ".construction-detail h3",
+  "decl": "font-weight:600"
+ },
+ {
+  "f": "ui/runtime.css",
+  "sel": ".construction-detail h3",
+  "decl": "display:flex"
+ },
+ {
+  "f": "ui/runtime.css",
+  "sel": ".construction-detail h3",
+  "decl": "align-items:baseline"
+ },
+ {
+  "f": "ui/runtime.css",
+  "sel": ".construction-detail h3",
+  "decl": "justify-content:space-between"
+ },
+ {
+  "f": "ui/runtime.css",
+  "sel": ".construction-detail h3",
+  "decl": "font-size:13px"
+ },
+ {
+  "f": "ui/runtime.css",
+  "sel": ".construction-detail h3",
+  "decl": "margin:0 0 6px"
+ }
+]

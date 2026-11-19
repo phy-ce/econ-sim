@@ -2,10 +2,10 @@
 .world-map {background:#93afb3}
 .world-map .map.atlas-map {left:0;right:0;top:0;bottom:0;width:100%;height:100%;overflow:hidden}
 .atlas-data {mix-blend-mode:multiply}
-.atlas-provinces path {fill:none;stroke:#76674e;stroke-width:1.5}
-.atlas-unclaimed path {stroke:#81735a;stroke-width:1.5}
+.atlas-provinces path {fill:none;stroke:#76674e}
+.atlas-unclaimed path {stroke:#81735a}
 .atlas-rivers path {fill:none}
-.atlas-rail {fill:none;stroke:#554d40;stroke-width:2;stroke-dasharray:7 5;opacity:.35;pointer-events:none}
+.atlas-rail {fill:none;pointer-events:none}
 .atlas-hit {fill:transparent;stroke:transparent;stroke-width:4;pointer-events:all;vector-effect:non-scaling-stroke}
 .map-cell:hover .atlas-hit {fill:#ffffff25;stroke:#fff5dc;stroke-width:1.5}
 .map-cell.selected .atlas-hit {stroke:#fff4c7;stroke-width:3;filter:drop-shadow(0 0 2px #58411e)}
