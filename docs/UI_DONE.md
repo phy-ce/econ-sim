@@ -2874,3 +2874,55 @@ main e21ebd4 와 1f014e9 의 커밋된 코드에서 `packages/client` 시험 128
 main 체크아웃에 커밋 안 한 시험 변경(`ownershipPop.test.tsx`, `productionDiagram.test.tsx`)이 있다. 그것이 고침이면 검증해 커밋한다. 화면이 맞고 시험이 낡았으면 시험을 고치고, 화면이 틀렸으면 화면을 고친다. 어느 쪽인지 UI_STATUS 에 적는다.
 
 완료 근거 (2026-11-18 Claude): main 체크아웃의 커밋 안 한 클라이언트 변경(System 02 적용, 정렬 머리, 시험 기대값)을 커밋하자 클라이언트 시험 128개 → 130개 모두 통과 (7f3f52e, 98f9e1c, e5898ba, 3c5a4a7). 사용자가 System 02 화면을 골랐다 (DECISIONS 7-63).
+
+## 2026-11-20 UI-20
+
+### UI-20. CSS 를 역할별로 다시 나누기 (사용자 2026-11-18, sim 변경 없음, 화면 변경 없음)
+사용자: CSS 가 시기별로 겹쳐 있다는 설명을 듣고 "제일 먼저 저걸 Codex 랑 같이 해결해야겠는데".
+
+조사 (2026-11-18, HEAD 6e2f55c):
+- 코드 조사 (Claude, 커밋된 본 게임 CSS): 클래스 265개가 두 파일 이상에 정의돼 있다. 같은 클래스의 같은 속성을 두 파일 이상이 정하는 곳이 484곳이다. 가장 많이 겹치는 짝은 `strategy.css`↔`workspace.css` 189, `strategy.css`↔`styles.css` 184, `styles.css`↔`workspace.css` 123. 예: `.bar` 는 7개 파일, `.window-body` 는 4개 파일이 속성 10개를 정한다.
+- 화면 조사 (Codex, `.tmp/css-runtime.md`, 84개 화면 상태, 한국어 밝음·영어 어두움): 규칙 2,309개 중 1,040개가 한 번이라도 요소에 맞았고 1,269개는 한 번도 맞지 않았다. `ui/components.css` 는 325개 중 32개만 맞았다. 마지막에 불러온 파일이 늘 이기지 않는다: `strategy.css` 의 긴 선택자(`.floating-workspace .strategy-panel.is-front` 등)가 `ui/runtime.css` 를 이긴다.
+- 불러오는 곳이 흩어져 있다: `main.tsx` 가 다섯 파일, `system-ui.css` 는 `FinancePanel.tsx` 가, `system-02/tokens.css` 는 두 번 (`ui/tokens.css` 와 `system-02/blocks.css` 에서) 불러온다. 본 게임이 초안 폴더의 `system-02/blocks.css` 에 기대고 있다.
+
+목표 짜임:
+```
+ui/index.css        @layer tokens, base, components, views; 와 아래 import 만. main.tsx 는 이 파일 하나만 불러온다.
+ui/tokens.css       값만 (색, 크기, 간격, 창 크기, 전환 시간). system-02/tokens.css 를 합친다.
+ui/base.css         reset, body, 글꼴, 기본 표·단추.
+ui/components.css   여러 창이 함께 쓰는 부품: 창 틀, 제목줄, 본문, 탭(segmented), 표, 정렬 머리, 막대, 칩, 링크, 툴팁, 배지.
+views/<창>.css      한 창만 쓰는 규칙 (시세, 지역, 국가, 연구, 건설, 통계, 지도, 재정 ...). 그 창 컴포넌트 옆에 둔다.
+```
+규칙:
+1. (요소, 속성) 하나는 파일 하나에서만 정한다. 같은 값을 두 번 쓰지 않는다.
+2. 덮어쓰기 순서는 `@layer` 로 정한다 (tokens → base → components → views). 이기려고 선택자를 길게 쓰지 않는다. `!important` 는 쓰지 않는다 (지금 있는 것은 이유를 UI_STATUS 에 적고 없앤다).
+3. 창 전용 CSS 는 그 창이 열릴 때만이 아니라 처음부터 같은 순서로 들어오게 한다 (1단계 전 `system-ui.css` 처럼 재정 창을 열면 다른 창 모양이 바뀌는 일이 없게. 1단계에서 풀렸다). `ui/index.css` 에서 `@import url(...) layer(views)` 로 모은다.
+4. 옛 파일 `styles.css`, `workspace.css`, `strategy.css`, `system-ui.css`, `readability.css`, `kingdom-economy.css`, `ownership-theme.css` 는 규칙을 다 옮기면 비운다. 빈 파일 삭제는 사용자에게 묻는다 (DECISIONS 7-61 과 같은 방식).
+5. 한 번도 맞지 않은 규칙은 바로 지우지 않는다. 코드에서 조합하는 클래스 이름(`gu-kingdom-${i}`, `edge-${dir}` 등), 의사 요소, 조사에서 열지 않은 상태(철거 중, 정지, 위험 사건, 첫 언어 고르기, 빈 차트)를 확인한 뒤 지운다. 지운 규칙 목록을 UI_STATUS 에 남긴다.
+6. `system-02/blocks.css` 에서 본 게임이 쓰는 부분은 `ui/components.css` 로 옮긴다. 초안 페이지(`design-system/`, `foundations/`, `system-02.html`)는 이 절의 범위가 아니다. 다만 그 페이지들이 본 게임 CSS 를 불러오면 빌드가 깨지지 않는지만 본다.
+
+진행 방법:
+- 시작 전: 기준을 잰다 (`tools/cssv`, 74개 상태, README). 커밋 안 한 변경 정리는 끝났다 (2026-11-18).
+- 옛 파일 하나씩 옮긴다. 한 파일을 옮길 때마다 `tools/cssv` 로 같은 74개 상태를 다시 재어 기준과 비교한다 (요소별 위치·크기·계산된 스타일·픽셀). 다르면 고치거나, 다른 곳과 이유를 UI_STATUS 에 적는다. 화면이 달라지는 정리(겹침을 풀다 원래 어긋났던 값이 바로잡히는 경우)는 사용자 승인 뒤에 한다.
+- 파일 하나 = 커밋 하나. 매번 루트 `npm run typecheck`, 클라이언트 시험.
+- 끝나면 위 두 조사를 다시 돌려 겹친 (클래스, 속성) 수와 미매칭 규칙 수를 UI_STATUS 에 적는다.
+
+나눠 맡기 (사용자 2026-11-18: "UI-20을 너가 중심으로 진행하고 codex한테 필요한 부분만 물어보는데, codex쪽 토큰좀 아껴봐"): Claude 가 진행한다. 화면이 바뀌지 않는 정리라 CLAUDE.md UI 분업 예외에 든다. Codex 에게는 필요한 것만 묻는다.
+
+검사 도구: `tools/cssv` (README). 시드를 고정하고 74개 화면 상태에서 모든 요소의 위치·크기와 계산된 스타일 전체, 픽셀을 바꾸기 전후로 비교한다. Codex 의 CDP 드라이버를 옮겨 왔다.
+
+진행 (2026-11-18, 브랜치 wt-css, 기준 main 3c5a4a7, 매 단계 74개 상태 모두 같음, 클라이언트 시험 130개 통과):
+1. 진입점 하나: `main.tsx` 는 `ui/index.css` 만 불러온다. 컴포넌트의 CSS import 를 지우고 브라우저가 쓰던 순서 그대로 `ui/index.css` 에 모았다. System 02 미리보기 페이지는 `blocks.css` 를 직접 불러온다.
+2. 죽은 규칙 251개 삭제 (약 18.5KB): 화면 조사에서 한 번도 맞지 않았고 클래스 이름이 코드 어디에도 없는 규칙. 조합 이름(`gu-kingdom-${i}` 등)과 라이브러리 클래스는 쓰는 것으로 봤다.
+3. 덮어써진 선언 233개 삭제: 같은 선택자·같은 @media 조건의 뒤 규칙이 같은 속성을 정하는 앞 선언. 공용 파일(`ui/components.css`, 토큰, `system-02/blocks.css`)은 같은 파일 안에서만.
+결과 (Claude 코드 조사, 같은 방법): 같은 클래스의 같은 속성을 두 파일 이상이 정하는 곳 484 → 423, 본 게임 규칙 약 2,300 → 약 1,960.
+
+4. 한 번도 이기지 못한 선언 576개 삭제 (2026-11-20, 커밋 04826f5, 기준 main 3a8df1b): 74개 상태에서 요소마다 이긴 선언을 재고(`tools/cssv/neverwin.mjs`), 맞는 요소는 있었지만 어디서도 이기지 못한 선언. 공용 파일, :hover·:focus 같은 상태 규칙, @container 안 규칙, 한 번도 맞지 않은 규칙(약 1,690 선언)은 남겼다. 알려진 약점: 이번에 열지 않은 화면(철거 중, 위험 사건 등)에서만 이기는 선언이 있었다면 그 화면이 바뀔 수 있다.
+
+5. 역할별 파일로 옮김 (2026-11-20, `tools/cssv/plan.mjs`): 옛 게임 파일 10개(`styles.css`, `workspace.css`, `strategy.css`, `system-ui.css`, `readability.css`, `kingdom-economy.css`, `ownership-theme.css`, `map/atlas.css`, `views/flow-row.css`, `views/demolition.css`)를 지우고 규칙을 나눴다.
+   - `ui/game-tokens.css`(변수만 정하는 규칙), `ui/base.css`(클래스 없는 선택자), `ui/parts.css`(여러 컴포넌트가 함께 쓰는 클래스), `views/<컴포넌트>.css`(그 클래스를 쓰는 .tsx 가 하나뿐인 규칙, 파일 이름은 컴포넌트 이름), `ui/runtime.css`(공용 부품을 게임에 맞게 덮어쓰기). 공용 파일 4개는 그대로다.
+   - 순서: 변수 → 태그 기본 → `system-02/blocks.css` → 게임 부품 → 컴포넌트별 → `ui/components.css` → `ui/runtime.css`. 공용 부품이 컴포넌트별 파일 뒤에 오는 것은 옮기기 전에도 그랬기 때문이다 (앞으로 옮기면 74개 상태에서 19곳이 바뀐다).
+   - 검사: 측정한 요소별 규칙 묶음 681가지에서 새 순서의 이긴 선언을 다시 셈해 바뀌는 곳 0 (바뀌던 몇 규칙은 진 쪽과 같은 파일로 옮겼다). tools/cssv 74/74 같음, 클라이언트 시험 130개 통과.
+   - `@layer` 는 걸지 않았다: 걸면 공용 부품이 구체성으로 이기던 14곳(예: `.gu-button` 이 `.research-row` 의 테두리를 이김)이 바뀐다. 공용 부품과 게임 규칙의 겹침을 화면 작업에서 정리한 뒤 다시 본다.
+   - 알려진 약점: 74개 상태에서 한 번도 맞지 않은 규칙끼리의 순서는 측정으로 확인하지 못했다. `ui/parts.css` 가 약 590 규칙으로 아직 크다.
+   - `deadrules.mjs`·`dupdecl.mjs`·`neverwin.mjs` 의 파일 목록은 5단계 전 파일 기준이다.

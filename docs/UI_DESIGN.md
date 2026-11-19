@@ -8,7 +8,7 @@
 ## 1. 화면 기준
 - 대상 화면은 1920×1080 하나다. 다른 해상도·크기 조절 대응은 목표가 아니다 (사용자 결정).
 - 시험 기준은 브라우저 CSS viewport 1920×1028 (화면 외곽 1920×1080에서 브라우저 틀을 뺀 값). 모니터 해상도와 CSS viewport를 혼동하지 않는다.
-- 창이 움직이는 범위는 viewport에서 상단 바와 아래 도크(38px, `strategy.css:58`)를 뺀 workspace이고, 코드는 이를 실측한다 (`WindowWorkspace.tsx:22` ResizeObserver, 첫 값 1920×998 `:14`).
+- 창이 움직이는 범위는 viewport에서 상단 바와 아래 도크(38px, `views/window-workspace.css` `.desktop-dock`)를 뺀 workspace이고, 코드는 이를 실측한다 (`WindowWorkspace.tsx:22` ResizeObserver, 첫 값 1920×998 `:14`).
 - 정보는 왼쪽·오른쪽 가장자리의 좁고 밀도 높은 창에 두고 가운데 지도가 보이게 한다 (사용자 기준). 글씨를 일괄 줄이기보다 장부형 표·서브윈도우·툴팁으로 밀도를 높인다.
 
 ## 2. 화면 구성
@@ -46,10 +46,10 @@
 
 ## 4. 시각 규칙
 ### 4.1 테마와 색
-- 색은 `:root` 토큰으로 쓰고 다크 모드는 `:root[data-theme="dark"]`에서 다시 정한다 (`styles.css:2~56`). 테마는 메뉴에서 고르고 `localStorage`에 남는다 (기본 낮, `App.tsx:43`).
-- 낮: 양피지 바탕 `--paper #f3ead8`, 종이 `--sheet`, 먹 `--ink`, 강조 `--accent`, 금 `--gold`. 밤은 같은 이름의 어두운 값. 밤에는 그림 뒤에 양피지 받침을 깐다 (`styles.css:85`).
+- 색은 `:root` 토큰으로 쓰고 다크 모드는 `:root[data-theme="dark"]`에서 다시 정한다 (`ui/base.css` 첫 규칙). 테마는 메뉴에서 고르고 `localStorage`에 남는다 (기본 낮, `App.tsx:43`).
+- 낮: 양피지 바탕 `--paper #f3ead8`, 종이 `--sheet`, 먹 `--ink`, 강조 `--accent`, 금 `--gold`. 밤은 같은 이름의 어두운 값. 밤에는 그림 뒤에 양피지 받침을 깐다 (UI-20 전 `styles.css:85`, 지금은 역할별 파일로 옮겨졌다).
 - 색의 뜻: `--good`/`.pos` 초록 = 이익·흑자, `--bad`/`.neg` 빨강 = 손실·부족, `--gold` = 주의·유보 자산. 이익 막대는 초록/빨강/회색과 +/−를 같이 쓴다 (색만으로 뜻을 전하지 않는다).
-- 계층 색 토큰: `--c-peasant`, `--c-unskilled`, `--c-skilled`, `--c-expert`, `--c-capitalist`, `--c-aristocrat`, `--c-gentry` (`styles.css:19~24`, `strategy.css:74`). 도넛·차트·표·막대가 같은 색을 쓴다.
+- 계층 색 토큰: `--c-peasant`, `--c-unskilled`, `--c-skilled`, `--c-expert`, `--c-capitalist`, `--c-aristocrat`, `--c-gentry` (`ui/base.css`). 도넛·차트·표·막대가 같은 색을 쓴다.
 - 손익 폭포 색: `--wf-rev` 매출, `--wf-raw` 원료, `--wf-wage` 임금.
 - 왕국 색은 sim이 준다 (`world.ts` `color`: 에스테라 `#e11d48`, 벨로니아 `#3b82f6`, 카르텐 `#10b981` 등). 지도 왕국 레이어와 소유 배지 띠에 쓴다.
 
@@ -64,7 +64,7 @@
 - 작은 막대는 `ui.tsx` `Bar` (tone pos/neg/gold/in/out). 채움은 0~100%로 자르고 숫자는 실제 값을 쓴다.
 - 그림: 게임 소품은 생성 아이콘 아틀라스 (`Sprite`, `Sprite64`, 480px 셀·최소 48px 여백, 상품·건물·계층·지역·기상·사건 72개, `npm run assets:check`가 sim id 대응을 검사). 조작 단추는 `lucide-react` 아이콘.
 - 지도: 생성 해안 바탕 + 공유 SVG 경계, 레이어 셋 (왕국 / 부 / 생활수준, `RegionMap.tsx:39`), 확대 100~300%, 이름표는 확대해도 같은 크기.
-- 최소 크기·대비 (1920×1080, 사용자 2026-11-01 "아이콘이 너무 작아서 잘 안 보인다", UI_CHANGES 2-77): 게임 그림(`Sprite` 계열) 24px, 색 견본·점 10px, 값을 보이는 막대 높이 6px, 글자 10px, 색 표식·막대 채움은 바탕과 3:1 이상 (WCAG 2.1 1.4.11 비텍스트 대비). `lucide-react` 조작 아이콘과 값이 아닌 손잡이(창 가장자리·섹션 크기 손잡이)는 뺀다. 근거: 24px는 지금 목록 아이콘이 이미 쓰는 크기(`workspace.css:101` 투입·산출, `system-ui.css:33` 시장 합산 표, `strategy.css:186` 서브윈도우 타일)이자 4.3 아이콘 바 높이와 같고, 아틀라스 그림은 여백 때문에 칸의 80% 안쪽만 차지해 16px면 그림이 약 13px로 줄어든다. 10px는 지금 견본(`styles.css:290` `.src-sw`)과 같다. 6px는 지금 읽히는 막대(`workspace.css:94` 5px, `workspace.css:252` 7px) 사이의 둥근 값이다. 글자 10px는 지금 가장 작은 글자 9px 한 단계 위다. 6px·10px는 비교로 고른 값이 아니라 추천이다.
+- 최소 크기·대비 (1920×1080, 사용자 2026-11-01 "아이콘이 너무 작아서 잘 안 보인다", UI_CHANGES 2-77): 게임 그림(`Sprite` 계열) 24px, 색 견본·점 10px, 값을 보이는 막대 높이 6px, 글자 10px, 색 표식·막대 채움은 바탕과 3:1 이상 (WCAG 2.1 1.4.11 비텍스트 대비). `lucide-react` 조작 아이콘과 값이 아닌 손잡이(창 가장자리·섹션 크기 손잡이)는 뺀다. 근거 (파일·줄은 2026-11-01 기준, UI-20 에서 CSS 파일이 역할별로 바뀌었다): 24px는 그때 목록 아이콘이 이미 쓰는 크기(`workspace.css:101` 투입·산출, `system-ui.css:33` 시장 합산 표, `strategy.css:186` 서브윈도우 타일)이자 4.3 아이콘 바 높이와 같고, 아틀라스 그림은 여백 때문에 칸의 80% 안쪽만 차지해 16px면 그림이 약 13px로 줄어든다. 10px는 지금 견본(`styles.css:290` `.src-sw`)과 같다. 6px는 지금 읽히는 막대(`workspace.css:94` 5px, `workspace.css:252` 7px) 사이의 둥근 값이다. 글자 10px는 지금 가장 작은 글자 9px 한 단계 위다. 6px·10px는 비교로 고른 값이 아니라 추천이다.
 - 글꼴: 제목 `--serif` (Gowun Batang), 본문 `--sans` (Noto Sans KR), 숫자 칸 `--pixel` (Silkscreen, `.pxnum`). 숫자는 `tabular-nums`.
 
 ## 5. 숫자 표기 (`format.ts`, `NumericValue.tsx`)

@@ -623,3 +623,8 @@ build 상세에만 새 문자열 buildCrownShare/buildOfficeWages/buildMaterials
 - 검사 도구 `tools/cssv`: 시드 4242 고정, 74개 화면 상태, 요소별 위치·크기·계산된 스타일 해시·픽셀 비교. 바꾸지 않은 화면을 두 번 재 같음을 확인 (개발 서버 첫 실행은 한 번 달랐다). 줄바꿈(CRLF/LF)과 사용자 변수 나열 순서로 생긴 거짓 차이를 도구에서 걸렀다.
 - 1단계 `ui/index.css` 단일 진입, 2단계 죽은 규칙 251개 (목록 `tools/cssv/removed/step2-deadrules.json`), 3단계 덮어써진 선언 233개 (목록 `tools/cssv/removed/step3-dupdecl.json`, 450a71d 의 CSS 에 같은 규칙을 다시 돌려 뽑음). 단계마다 main 3c5a4a7 (5199) 와 74개 상태 모두 같음. 루트 typecheck 통과.
 - 화면 미검증: 조사에서 열지 않은 상태(철거 중, 정지, 위험 사건, 첫 언어 고르기, 마우스 올림). 2단계는 코드에 없는 클래스만 지워 이 상태에도 영향이 없다. 3단계는 같은 선택자·같은 조건이라 모든 상태에서 같다.
+
+### 2026-11-20 UI-20 4~5단계 (Claude, 브랜치 wt-css)
+- 4단계: 74개 상태에서 한 번도 이기지 못한 선언 576개 삭제 (`tools/cssv/neverwin.mjs`).
+- 5단계: 게임 CSS 를 역할별 파일로 나눴다. 진입점 `ui/index.css` 의 순서: 변수 → 태그 기본 → System 02 블록 → 게임 부품(`ui/parts.css`) → 컴포넌트별(`views/<컴포넌트>.css`) → 공용 부품 → 게임용 덮어쓰기(`ui/runtime.css`). `@layer` 는 걸지 않았다 (UI_DONE UI-20).
+- 두 단계 모두 tools/cssv 74/74 같음, 클라이언트 시험 130개 통과.
