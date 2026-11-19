@@ -17,7 +17,10 @@
 - 상태 알림에 `GameEvent.key` 를 단다. 다음 주간 점검에서 그 조건이 풀렸으면 소식을 지우고 쿨다운도 지운다 (다시 걸리면 바로 알린다). 아직 걸려 있으면 마지막 소식의 글을 오늘 값으로 고친다. 기상 조건·광맥 같은 일회 소식은 지우지 않는다.
 - "공사가 잡혀 있지만 건축사무소가 없어 진행되지 않습니다"는 잘못 뜨던 알림이었다: 민간 공사는 왕실 사무소가 짓는데(`builderOf`) 회사 자기 사무소만 셌다. 이제 짓는 쪽(왕실)의 사무소를 보고, 민간 공사는 공사비를 낼 금고가 비어 멈춘 경우를 따로 알린다 ("공사 N건이 멈췄습니다: …").
 - 기아 알림은 늘 `warn` 이다. 식량 20% 아래에서 `danger` 였고, 화면의 "위험 알림에 멈춤"이 게임을 멈췄다 (사용자: "굶을 때 일시정지하는 것도 ㄴㄴ").
-- 연구 완료 소식에 `topic: 'researchDone'` 를 달았다. **화면 할 일 (UI-22 후보, Codex)**: 연구가 끝나면 게임을 멈추고 연구 창을 연다 (사용자 2026-11-20). main 체크아웃의 UI_CHANGES.md 에 Codex 의 커밋 안 한 변경이 있어, 그 변경을 커밋할 때 0장에 넣는다.
+- 연구 완료 소식에 `topic: 'researchDone'` 를 달았다. **화면 할 일 (UI-22 후보, Codex)**: 연구가 끝나면 게임을 멈추고 연구 창을 연다 (사용자 2026-11-20). main 체크아웃의 UI_CHANGES.md 에 Codex 의 커밋 안 한 변경이 있어, 그 변경을 커밋하는 세션이 아래 글을 그대로 넣는다 (DECISIONS 7-66):
+  - 0장 5번 뒤에: `6. **UI-22** (사용자 2026-11-20, sim wt-alerts): 연구 완료 소식(`GameEvent.topic === 'researchDone'`, companyId 100)이 오면 게임을 멈추고 연구 창을 연다. `eventDestination.ts` 에 researchDone → 연구 창을 더한다. 자세한 것은 2장 UI-22.`
+  - 2장 새 절 `### UI-22. 연구 완료 시 멈춤·해결된 소식 사라짐 (wt-alerts)`: (1) `EventTopic` 에 'researchDone' (sim `finance.ts advanceResearch`). 화면은 dangerPause 처럼 소식마다 한 번 멈추고 연구 창을 연다. (2) 새 칸 `GameEvent.key?: string`. 키가 `/^(unpaid|inputs|staff|nobuilder|nofunds|nopoints|spike|famine):/` 인 소식은 조건이 풀리면 다음 주간 점검에서 `world.events` 에서 빠지고, 걸려 있는 동안은 글·regionId·buildingId 가 제자리에서 바뀐다. 그래서 소식은 뒤에 붙기만 하지 않는다: `Notifications.tsx:77` 의 `key={`${e.tick}-${i}`}` 와 배열 순번으로 읽음을 세는 곳은 안정된 키(tick + key 또는 글)를 쓴다. (3) 기아 알림은 늘 'warn' 이라 "위험 알림에 멈춤"에 걸리지 않는다. (4) 클라이언트 컴파일 수정은 필요 없었다.
+  - 2장 2-74 끝 문장 "(2026-11-02 wt-uiapi 보류: 저장되는 `GameEvent` 에 칸을 더해야 해 읽기 전용이 아니다.)" 를 바꾼다: "(2026-11-20 wt-alerts: sim 이 넣었다. `alertOnce` 가 만드는 소식에 `key` 를 단다 (`unpaid:<건물>`, `inputs:<회사>`, `staff:<회사>`, `spike:<회사>`, `nobuilder|nofunds|nopoints:<회사>`, `famine:<지역>:<계층>` 등). 이 키의 소식은 조건이 풀리면 다음 주간 점검에서 `w.events` 에서 빠지고, 걸려 있는 동안은 같은 소식의 글이 바뀐다. 화면은 `e.key` 가 있으면 그것을 쓴다.)"
 - 확인: typecheck, test:core 124개, 새 시험 `test/core/alerts.test.ts` (묶기·풀리면 지우기). 1년 실행 (시드 42, 플레이어 조작 없음, main e6e29d3 대비): 전체 소식 581 → 239건, 플레이어(왕실) 소식 21 → 19건.
 
 ## 0-1120-tsref
