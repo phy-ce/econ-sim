@@ -51,6 +51,7 @@
 @import '../views/class-donut.css';
 @import '../views/bottom-panel.css';
 @import '../views/notifications.css';
+@import '../views/news-window.css';
 @import '../views/controls.css';
 @import '../views/list-tools.css';
 @import '../views/section-stack.css';
@@ -66,3 +67,5 @@
 @import '../views/building-metric-bars.css';
 @import './components.css';
 @import './runtime.css';
+
+@import './view-transition.css';

@@ -22,3 +22,5 @@
 .strategy-panel .pop-views {display:flex;margin:4px 0}
 .strategy-panel .pop-views button {font-size:11px;min-height:24px;padding:2px 8px}
 .strategy-panel .pop-table td:nth-child(2){min-width:28px}
+.strategy-panel .pop-table th,.strategy-panel .pop-table td {width:auto}
+.strategy-panel .pop-table td:first-child .entity-link {max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}

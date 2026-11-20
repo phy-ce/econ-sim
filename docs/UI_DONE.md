@@ -2927,3 +2927,103 @@ views/<창>.css      한 창만 쓰는 규칙 (시세, 지역, 국가, 연구, �
    - 알려진 약점: 74개 상태에서 한 번도 맞지 않은 규칙끼리의 순서는 측정으로 확인하지 못했다. `ui/parts.css` 가 약 590 규칙으로 아직 크다.
    - `deadrules.mjs`·`dupdecl.mjs`·`neverwin.mjs` 의 파일 목록은 5단계 전 파일 기준이다.
    - 끝난 뒤 조사: 겹친 (클래스, 속성) 수는 새 셈법으로만 다시 셌고 미매칭 규칙 수는 다시 재지 않았다 (이유와 숫자는 UI_STATUS 2026-11-20 절).
+
+
+## 2026-11-20 UI-15 (Codex, 미커밋)
+
+### UI-15. 통계 창 다시 만들기 (사용자 2026-11-09, sim 변경 없음)
+사용자: "통계소식도 처음부터 다시 만들어야 됨". 틀은 사용자가 골랐다: 통계·소식 두 창, 통계 창은 맨 위 탭.
+
+지금: `BottomPanel.tsx` 의 `SectionStack` 에 구역 9개가 세로로 쌓여 있다 (추이, 요약, 팝 목록, 왕국 경제, 왕국 비교, 자산, 계층 생활수준, 날씨, 소식). 계층이 보이지 않는다.
+
+새 모습 (주 창 420×560, 시세 창과 같은 짜임):
+- 맨 위 줄: 탭 `경제 | 생활 | 재정 | 왕국 비교` (`Segmented`). 그 아래 한 줄에 기간(1년/5년/전체)과 왕국 고르기. 지금 `EconomyCharts.tsx` 의 기간·왕국 단추를 쓴다.
+- 탭마다 제목이 있는 차트 구역 2~4개. 구역 하나에 차트 하나.
+  - 경제: 총생산, 1인당 생산, 흉작 지역 수 (지금 '날씨' 구역).
+  - 생활: 인구, 평균 생활수준, 계층별 생활수준 (지금 '계층 생활수준' 구역, 빈곤선 포함), 실업률, 문해율. 다섯이라 실업률·문해율은 한 구역에 두 선으로 묶어도 된다.
+  - 재정: 국고, 빚, 가계 저축.
+  - 왕국 비교: 지금 `KingdomComparison` 표. 행을 누르면 그 아래에 그 왕국의 `KingdomEconomy` 를 보인다. 다른 창에서 오는 `{kind:'trends',kingdomId}` 요청(`GameWindow.tsx:31`, `App.tsx:126`)은 이 탭을 열고 그 왕국을 고른다.
+- 창에서 빼는 것:
+  - 소식: UI-16 의 새 창으로.
+  - 팝 목록: 지역 창(`RegionWindow.tsx`)과 `DetailExplorer.tsx` 에 이미 있다. 통계 창에서는 지운다. 팝을 찾아가는 요청(`popRequest`)은 지역 창으로 보낸다.
+  - 요약(`KingdomSummary`)과 자산(`OwnershipAssets`): 국가 창(`StatePanel.tsx`)에 같은 값이 있으면 지운다. 없으면 국가 창의 알맞은 탭에 구역으로 옮긴다. 어느 쪽인지 UI_STATUS 에 적는다.
+- 화면 글: 구역 제목과 축·범례만. 차트 아래 설명 줄은 두지 않는다. 필요한 설명은 제목의 툴팁(`data-help`)으로.
+- 창 제목은 `통계` / `Statistics` 로 바꾼다 (`strings.ts:38`·`:613`).
+- 쓰지 않게 된 컴포넌트·문자열·CSS 는 지운다 (`storageKey="trends-v2"` 의 저장된 펼침 상태도 더 쓰지 않는다).
+
+확인: 탭 넷을 한국어 밝음·영어 어두움으로 1920×1028 스크린샷. 가로 스크롤이 없고 창이 420×560 을 넘지 않는지 본다. 다른 창에서 왕국·팝으로 가는 링크가 새 자리로 가는지 본다.
+
+
+완료 근거: 통계 맨 위 경제/생활/재정/왕국 비교 탭, 차트 3/4/3개. 요약·소유 자산은 국가 예산 탭에 없던 정보여서 옮김. 비교 지표는 선택식 두 열로 모두 보존하여 420px에서 숫자 충돌 방지. 영어 건물 지역명 줄바꿈 보정. 한국어 밝음·영어 어두움 1920×1028, 8개 탭 모두 420×560·가로 넘침 없음(.tmp/ui15-qa.json). 스크린샷: .tmp/ui15-ko-light-tab1.png~tab4.png, .tmp/ui15-en-dark-tab1.png~tab4.png, 각 언어 living-rates.png·state-assets.png. 루트 typecheck 통과, 클라이언트 49파일 134시험 통과. 왕국 비교 행 선택 확인; 팝 경로는 기존 지역 창 라우팅 유지. 미커밋.
+
+
+## 2026-11-20 UI-16 (Codex, 미커밋)
+
+### UI-16. 소식 창 (사용자 2026-11-09, sim 변경 없음)
+- 새 주 창 `소식` / `News` 를 왼쪽 창 단추 줄(`App.tsx:217`)에 더한다. 크기는 주 창 420×560.
+- 내용은 지금 `Notifications.tsx` 그대로: 맨 위 거르기 줄(내 왕국/경고/전체), 검색, 안 읽음만 보기, 목록. 거르기 줄을 시세 창처럼 맨 위 한 줄로 둔다.
+- 창 단추에 안 읽은 소식 수 배지를 단다 (`Notifications.tsx:57` 의 `unread`). 지금 `App.tsx` 에서 소식을 띄우는 다른 자리가 있으면 그 자리는 이 창을 열게 한다.
+- 소식 한 줄: 날짜, 아이콘, 짧은 글. 누르면 지금처럼 그 지역·회사·건물로 간다.
+
+확인: 한국어·영어 스크린샷, 안 읽음 배지가 읽으면 줄어드는지.
+
+
+완료 근거: 소식 7번째 주 창 추가, 상단 종과 창 단추가 같은 창을 엶. 내 왕국·공유 소식 미확인 집계를 news.ts로 통합하여 종/창 배지 일치. 맨 위 필터·검색·안 읽음·정렬 유지, 회사 링크로 통계 왕국 비교 이동 확인. 1920×1028 한국어 밝음·영어 어두움, 420×560 가로 넘침 없음. 양쪽 배지 22→읽음 후 0 확인. 스크린샷 .tmp/ui16-ko-light-news.png·read.png, .tmp/ui16-en-dark-news.png·read.png. 루트 typecheck 및 클라이언트 50파일 135시험 통과. 변경: App.tsx, news.ts, WindowWorkspace.tsx/css, GameWindow.tsx, Notifications.tsx, NewsWindow.tsx, news-window.css, ui/index.css, test/news.test.ts 및 이력 문서. 미커밋.
+
+
+## 2026-11-20 UI-18 (Codex, 미커밋)
+
+### UI-18. 화면 개선 다듬기 (사용자 2026-11-18, sim 변경 없음)
+사용자: "UI 개선 작업을 개선해봐".
+
+UI-15·UI-16 까지 끝낸 화면을 주 창 7개와 서브창마다 한국어 밝음·영어 어두움으로 다시 열어 보고, 아래 기준에 어긋나는 곳을 고친다. 기준은 시세 창이다.
+- 계층: 맨 위 고르는 줄 → 제목 있는 구역 → 표·차트. 한눈에 무엇이 제일 중요한지 보여야 한다 (UI_FOUNDATIONS Q2 답).
+- 글: 설명 문장은 화면에 두지 않는다. 라벨·숫자·막대만, 설명은 툴팁으로 (Q4 답).
+- 크기: 창이 정해진 크기(주 창 420×560, 서브창 1~4)를 넘지 않는다. 가로 스크롤 없음. 글자·숫자가 잘리거나 겹치지 않는다.
+- 일관성: 같은 뜻의 단추·아이콘·색·간격은 창마다 같다. 숫자는 오른쪽 정렬, 소수 둘째 자리까지.
+- 툴팁: 브라우저 기본 `title` 이 남지 않는다. 툴팁이 창 밖으로 잘리지 않는다.
+
+고친 것과 고치지 않은 것(사용자 결정이 필요한 것)을 UI_STATUS 에 창별로 적는다. 화면 규칙 자체를 바꿔야 하면 고치지 말고 적는다.
+
+
+완료 근거: 본 게임 index.html seed4242, 1920×1028 한국어 밝음·영어 어두움 66상태(주 창7, 상세1~4, 탭·구역, 툴팁) 점검. .tmp/ui18/dump.json 및 audit-final.json: 64일반 상태에서 창 가로 넘침·native title 0, 툴팁2상태는 별도 스크린샷. 루트 typecheck·클라이언트 50파일 135시험 통과. 변경: PopTable.tsx/pop-table.css, OwnershipAssets.tsx, ownership-bar.css, building-metric-bars.css, 이력 문서. 스크린샷 .tmp/ui18/{ko-light,en-dark}-{region,market,state,research,construction,trends,news,detail1,detail2,detail3,detail4,tooltip}.png, en-dark-bars-final.png·en-dark-detail3-final.png. 미커밋.
+
+
+## 2026-11-20 UI-19 (Codex, 미커밋)
+
+### UI-19. View Transition API (사용자 2026-11-18, sim 변경 없음)
+사용자: "View Transition API 쓸 데가 있으면 이용". 쓸 곳이 없으면 쓰지 않아도 된다. 쓴 곳과 안 쓴 이유를 UI_STATUS 에 적는다.
+
+확인한 것 (2026-11-18 웹): `document.startViewTransition()` 은 MDN 에서 Baseline 2025 (newly available)다. Chrome 문서는 Chrome 111 부터 같은 문서 안 전환을 지원한다고 한다. Firefox 가 기본 호출을 지원한 판은 확인 못 함. 그래서 기능이 없으면 바로 바꾸는 대체 경로가 꼭 있어야 한다.
+
+쓸 만한 곳 (후보):
+- 창 안의 탭 바꾸기: 통계 창 탭(UI-15), 국가 창 탭, 시세 창 범위 바꾸기.
+- 주 창·서브창 열기/닫기.
+- 밝음/어두움 테마 바꾸기.
+
+쓰지 않는 곳:
+- 날마다(틱마다) 바뀌는 값, 차트 갱신, 지도 갱신. 게임이 돌 때 매번 전환을 걸면 화면이 멈춘 것처럼 보인다.
+- 툴팁, 마우스를 올릴 때 생기는 변화.
+
+지켜야 할 것:
+- 한 곳의 공용 함수(예: `withViewTransition(update)`)로 감싼다. `document.startViewTransition` 이 없거나 `prefers-reduced-motion: reduce` 이면 `update()` 를 바로 부른다.
+- React 상태 변경은 전환 콜백 안에서 `flushSync` 로 감싸야 화면이 전환 전에 바뀐다.
+- 전환 시간은 짧게 (150~250ms). 시간 값은 토큰에 둔다.
+- 쓰는 브라우저 기능의 타입 선언이 없으면 최소한의 선언만 더한다. 패키지는 설치하지 않는다.
+
+확인: 전환을 단 곳마다 동작을 보고, 기능을 끈 경우(함수가 없을 때)에도 바로 바뀌는지 시험이나 화면으로 본다.
+
+
+완료 근거: 공용 ui/viewTransition.ts: 기능 없음·reduced-motion이면 즉시 변경, flushSync, 연속 조작 순서·오류 복구·정리. 200ms 토큰. 적용: 통계/국가 탭, 시세 범위·구역, 독의 주 창 열기/닫기·종의 소식 열기, 테마(상단·독·열린 창만). 지도·root는 전환 이름 none. 틱·차트 갱신·지도·툴팁·hover·드래그·포커스에는 적용 안 함: 자주 바뀌거나 직접 조작을 지연시키기 때문. 링크 자동 열기·상세창은 탐색 및 포커스 복원을 즉시 유지하도록 제외. 양 언어 9회씩 native ready 성공, fallback·reduced-motion·틱 비전환 확인(.tmp/ui19-qa.json). 1920×1028 스크린샷 .tmp/ui19-{ko-light,en-dark}-{tabs,windows,theme,fallback}.png. main53ea042에서 typecheck·클라이언트51파일139시험 통과. 변경: ui/viewTransition.ts, view-transition.css, tokens.css, index.css, App.tsx, BottomPanel.tsx, StatePanel.tsx, MarketWindow.tsx, SectionStack.tsx, WindowWorkspace.tsx, test/viewTransition.test.ts, 이력 문서. 참고: https://developer.mozilla.org/en-US/docs/Web/API/Document/startViewTransition 및 https://react.dev/reference/react-dom/flushSync. 미커밋.
+
+
+## 2026-11-20 UI-22 (Codex, 미커밋)
+
+### UI-22. 연구 완료 시 멈춤·해결된 소식 사라짐 (wt-alerts)
+1. `EventTopic` 에 'researchDone' (sim `finance.ts advanceResearch`). 화면은 dangerPause 처럼 소식마다 한 번 멈추고 연구 창을 연다.
+2. 새 칸 `GameEvent.key?: string`. 키가 `/^(unpaid|inputs|staff|nobuilder|nofunds|nopoints|spike|famine):/` 인 소식은 조건이 풀리면 다음 주간 점검에서 `world.events` 에서 빠지고, 걸려 있는 동안은 글·regionId·buildingId 가 제자리에서 바뀐다. 그래서 소식은 뒤에 붙기만 하지 않는다: Notifications 의 tick-배열순번 키와 배열 순번으로 읽음을 세는 곳은 안정된 키(tick + key 또는 글)를 쓴다.
+3. 기아 알림은 늘 'warn' 이라 "위험 알림에 멈춤"에 걸리지 않는다.
+4. 클라이언트 컴파일 수정은 필요 없었다.
+
+
+완료 근거: main53ea042의 researchDone 처리: 플레이어100의 새 소식이면 위험 멈춤 설정과 무관하게 정지 명령 전송·연구 창 열기. 기존 소식·타사 연구는 재정지/재열기 없음. eventDestination은 topic을 글/지역/건물보다 먼저 판정. eventKey(tick+companyId+key, 없으면 글)를 소식 React key·새 소식 검출에 함께 사용. 읽음은 기존 tick 기준이라 순번과 무관하며 글 수정 뒤에도 유지. dangerPause는 e.key 우선. 기아 warn 별도 처리 없음. HANDOFF 원문 요청을 UI_CHANGES 0/2장에 추가 후 완료 절로 이동, 2-74 반영 완료 문구 수정. 루트 typecheck·클라이언트52파일143시험 통과. 본 게임1920×1028 KO밝음/EN어두움, 워커 메시지 경계에 QA 소식 주입: 정지명령0·연구 창, 재전달/타사 제외, 앞 소식 삭제+글 변경에도 DOM행 동일·읽음 유지, 해결 소식 제거 확인(.tmp/ui22-qa.json). 실제 sim 연구를 끝까지 진행한 시험은 아니며 sim 수정 없음. 스크린샷 .tmp/ui22-{ko-light,en-dark}-{research,updated-news,resolved}.png. 변경: App.tsx, useGame.ts, news.ts, dangerPause.ts, eventDestination.ts, views/Notifications.tsx, test/alerts.test.ts, docs/UI_CHANGES.md·UI_DONE.md·UI_STATUS.md. 미커밋.

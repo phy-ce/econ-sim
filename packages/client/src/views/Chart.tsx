@@ -2,7 +2,7 @@ import { Area,AreaChart,CartesianGrid, Line, LineChart, ReferenceLine, Responsiv
 import { shortDate } from '../format';
 import { t } from '../i18n';
 
-export interface Series { key: string; name: string; color: string }
+export interface Series { key: string; name: string; color: string; dashed?: boolean }
 
 interface Props {
   data: Record<string, number>[];
@@ -40,7 +40,7 @@ export function TimeChart({ data, series, format = (v) => v.toFixed(1), tooltipF
         {reference && <ReferenceLine y={reference.y} stroke={reference.color ?? 'var(--ink2)'} strokeDasharray="5 4" strokeWidth={1.2}
            />}
         {stacked?series.map(s=><Area key={s.key} type="monotone" dataKey={s.key} name={s.name} stackId="levels" stroke={s.color} fill={s.color} fillOpacity={.65} dot={false} isAnimationActive={false}/>):series.map((s) => (
-          <Line key={s.key} type="monotone" dataKey={s.key} name={s.name} stroke={s.color} strokeWidth={2.4}
+          <Line key={s.key} type="monotone" dataKey={s.key} name={s.name} stroke={s.color} strokeWidth={2.4} strokeDasharray={s.dashed?'5 3':undefined}
             dot={false} activeDot={{ r: 4, strokeWidth: 2, stroke: 'var(--sheet)' }} isAnimationActive={false} />
         ))}
       </Chart>

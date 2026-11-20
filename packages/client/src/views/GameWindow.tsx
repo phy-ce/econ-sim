@@ -1,3 +1,4 @@
+import {NewsWindow} from './NewsWindow';
 import {ConstructionPanel} from './ConstructionPanel';
 import {StatePanel} from './StatePanel';
 import {memo, useCallback} from 'react';
@@ -40,7 +41,8 @@ function GameWindowView({id,game,mapRegionId,request,onOpenWindow,active=true}:{
  const techRequest=useMemo(()=>route.techId?{id:route.techId,sequence}:null,[route.techId,sequence]);
  if(route.kind==='region')return <RegionWindow key={`region-${sequence}`} game={game} world={world} region={region} history={game.history} selectedGood={route.good??'food'} onSelectGood={onGood} onViewCompany={onCompany} onViewPops={onPops} onOpenBuilding={onBuilding} tabRequest={tabRequest} buildingRequest={buildingRequest} popRequest={popRequest}/>;
  if(route.kind==='market')return <MarketWindow game={game} world={world} scope={scope} onScope={setScope} mapRegionId={region.id} history={game.history} good={route.good??'food'} onGood={onGood} onCompany={onCompany} onBuildings={onBuildings}/>;
- if(route.kind==='trends')return <BottomPanel onFinance={()=>go({kind:'state',tab:'budget'})} onGood={onGood} game={game} world={world} history={game.history} lastReadTick={game.lastReadTick} onRead={game.markRead} onJump={onRegion} kingdomId={route.kingdomId??world.companies.find(c=>c.id===route.companyId)?.kingdomId??null} onViewKingdom={onKingdom} sequence={route.kingdomId!==undefined||route.companyId!==undefined?sequence:undefined} onBuilding={onBuilding} onEvent={onEvent} popRequest={null}/>;
+ if(route.kind==='trends')return <BottomPanel world={world} kingdomId={route.kingdomId??world.companies.find(c=>c.id===route.companyId)?.kingdomId??null} sequence={sequence} onViewKingdom={onKingdom} onBuilding={onBuilding} onFinance={()=>go({kind:'state',tab:'budget'})}/>;
+ if(route.kind==='news')return <NewsWindow world={world} lastReadTick={game.lastReadTick} onRead={game.markRead} onJump={onRegion} onCompany={onCompany} onEvent={onEvent}/>;
  if(!me)return null;
  if(route.kind==='state')return <StatePanel active={active} game={game} world={world} me={me} onBuilding={onBuilding} onResearch={techId=>go({kind:'research',techId})} requestedTab={route.tab} sequence={sequence}/>;
  if(route.kind==='research')return <ResearchPanel onPolicy={()=>go({kind:'state',tab:'laws'})} game={game} world={world} me={me} request={techRequest}/>;

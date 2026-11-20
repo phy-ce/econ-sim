@@ -1,3 +1,4 @@
+import {withViewTransition} from '../ui/viewTransition';
 import {SectionHeading} from '../system-02/blocks';
 import {Button as UIButton} from '../ui/controls';
 import {ActiveContent} from './ActiveContent';
@@ -25,7 +26,7 @@ export function SectionStack({ storageKey, items, revealId, revealKey, explorer=
       if (!Array.isArray(saved)) return defaults();
       const result: Preference[] = [];
       for (const p of saved) {
-        const id=storageKey==='trends-v2'&&p?.id==='company'?'kingdom':p?.id;
+        const id=p?.id;
         if (!p || !items.some(i => i.id === id) || result.some(i => i.id === id)) continue;
         const fallback = items.find(i => i.id === id)!;
         result.push({ id, collapsed: p.collapsed === true, height: typeof p.height === 'number' && Number.isFinite(p.height) ? clamp(p.height) : fallback.height });
@@ -58,7 +59,7 @@ export function SectionStack({ storageKey, items, revealId, revealKey, explorer=
   return <div className="section-stack" ref={root}>
     {browse?<div className="information-explorer">
       <nav className="explorer-rail" aria-label={uiCopy().screenText['informationCategories']}>
-        {prefs.map(p=>items.find(i=>i.id===p.id)).filter((item):item is Item=>!!item).map(item=><UIButton key={item.id} aria-pressed={active===item.id} aria-controls={`${prefix}-detail`} data-help={item.title} onClick={()=>setSelected(item.id)}>{item.shortTitle??item.title}</UIButton>)}
+        {prefs.map(p=>items.find(i=>i.id===p.id)).filter((item):item is Item=>!!item).map(item=><UIButton key={item.id} aria-pressed={active===item.id} aria-controls={`${prefix}-detail`} data-help={item.title} onClick={()=>{if(active!==item.id)withViewTransition(()=>setSelected(item.id),'.window-market .window-body');}}>{item.shortTitle??item.title}</UIButton>)}
       </nav>
       <section className="explorer-detail" id={`${prefix}-detail`} aria-label={items.find(i=>i.id===active)?.title}>
         {items.map(item=><div key={item.id} hidden={active!==item.id} data-section={item.id}><SectionHeading className="explorer-heading">{item.title}</SectionHeading><ActiveContent active={active===item.id}>{item.content}</ActiveContent></div>)}

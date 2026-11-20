@@ -1,3 +1,4 @@
+import {eventKey,isPlayerResearchDone} from './news';
 import {dangerPause} from './dangerPause';
 import {TICKS_PER_YEAR} from '@econ/sim';
 import {trace,traceTick} from './trace';
@@ -23,12 +24,12 @@ function loadPrefs(): Prefs {
   try { return { pauseOnDanger: true, ...JSON.parse(localStorage.getItem(PREF_KEY) ?? '{}') }; } catch { return { pauseOnDanger: true }; }
 }
 
-const eventKey = (e: GameEvent) => `${e.tick}|${e.companyId}|${e.text}`;
 
 export function useGame() {
   const workerRef = useRef<Worker | null>(null);
   const [constructionActivity,setConstructionActivity] = useState<ConstructionActivity | null>(null);
   const [world, setWorld] = useState<World | null>(null);
+  const [researchCompleted,setResearchCompleted]=useState(0);
   const [hour, setHour] = useState(0);
   const [history, setHistory] = useState<HistoryPoint[]>([]);
   const [speed, setSpeedState] = useState(0);
@@ -77,15 +78,22 @@ export function useGame() {
         // 내 상회·왕국 전체에 생긴 새 소식: 주의 이상은 알림으로 띄우고, 위험은 게임을 멈춘다
         const keys = new Set(msg.world.events.map(eventKey));
         if (seenEvents.current) {
-          let pause:GameEvent|undefined;
+          let pause:GameEvent|undefined,research:GameEvent|undefined;
           for (const ev of msg.world.events) {
             if (seenEvents.current.has(eventKey(ev))) continue;
+            if(isPlayerResearchDone(ev))research=ev;
             // 내 상회 소식은 모두, 왕국 전체 소식은 위험만 알림으로 띄운다 (나머지는 알림 목록에만)
             if (ev.companyId === 100 || (ev.companyId === null && ev.kind === 'danger')) toast(ev, ev.kind, ev.regionId);
             else continue;
             if (ev.kind === 'danger' && ev.companyId === 100&&dangerPause(dangerEpisodes.current,ev,prefsRef.current.pauseOnDanger&&speedRef.current>0)) pause = ev;
           }
-          if (pause && prefsRef.current.pauseOnDanger && speedRef.current > 0) {
+          if(research){
+            trace('speed',{previous:speedRef.current,next:0,reason:'researchDone'});
+            setPauseReason({kind:'user',event:research});
+            speedRef.current=0;setSpeedState(0);
+            worker.postMessage({type:'speed',ticksPerSecond:0} satisfies ToWorker);
+            setResearchCompleted(n=>n+1);
+          }else if (pause && prefsRef.current.pauseOnDanger && speedRef.current > 0) {
             trace('speed',{previous:speedRef.current,next:0,reason:'danger'});
             setPauseReason({kind:'danger',event:pause});
             speedRef.current = 0;
@@ -124,6 +132,7 @@ export function useGame() {
   return useMemo(() => ({
     world,
     constructionActivity,
+    researchCompleted,
     hour,
     history,
     speed,
@@ -156,10 +165,11 @@ export function useGame() {
       dangerEpisodes.current.clear();
       seenEvents.current = null;
       setLastReadTick(-1);
+      setResearchCompleted(0);
       send({ type: 'new', seed: Math.floor(Math.random() * 1e6) });
       toast(both('started'));
     },
-  }), [world, constructionActivity, hour, history, speed,pauseReason, toasts, prefs, setPrefs, lastReadTick, setSpeed, send, toast]);
+  }), [world, constructionActivity, researchCompleted, hour, history, speed,pauseReason, toasts, prefs, setPrefs, lastReadTick, setSpeed, send, toast]);
 }
 
 export type Game = ReturnType<typeof useGame>;

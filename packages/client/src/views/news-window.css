@@ -1,0 +1,7 @@
+.news-window {min-width:0}
+.news-window .notice-filters {display:flex;gap:0}
+.news-window .notice-filters button {flex:1;min-width:0;display:flex;justify-content:center;gap:5px}
+.news-window .notice-timeline {overflow:visible;flex:none;list-style:none;margin:0}
+.news-window .ev {display:flex;gap:6px;border-bottom:1px solid var(--rule);padding:8px 0}
+.news-window .ev-main {min-width:0;flex:1}
+.news-window .ev-text {white-space:normal;text-align:left}

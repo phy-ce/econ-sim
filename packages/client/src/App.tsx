@@ -1,3 +1,4 @@
+import {withViewTransition} from './ui/viewTransition';
 import {Button as UIButton,Input as UIInput} from './ui/controls';
 import {t as uiCopy} from './i18n';
 import {hasStoredLang,chooseLang} from './lang';
@@ -16,7 +17,7 @@ import { NumericValue } from './NumericValue';
 import { taxCollectionRatio } from './systemMetrics';
 import { useCallback, useEffect, useRef, useState, useMemo } from 'react';
 import type { ReactNode } from 'react';
-import { Menu, Moon, Pause, SkipForward, Map, HardHat, Users, Package, Factory, Landmark, FlaskConical, ChartNoAxesCombined } from 'lucide-react';
+import { Menu, Moon, Pause, SkipForward, Map, HardHat, Users, Package, Factory, Landmark, FlaskConical, ChartNoAxesCombined, Bell } from 'lucide-react';
 import { WindowWorkspace } from './views/WindowWorkspace';
 import type { WindowId } from './views/WindowWorkspace';
 import { Sprite } from './sprites';
@@ -30,8 +31,7 @@ import { RegionMap } from './views/RegionMap';
 import { RegionPanel } from './views/RegionPanel';
 
 import { FinancePanel } from './views/FinancePanel';
-import { BottomPanel } from './views/BottomPanel';
-import { Notifications } from './views/Notifications';
+import { unreadNewsCount } from './news';
 
 
 // 1배속 = 하루 0.96초 (1년 약 5.8분). 10배속은 디버그용
@@ -73,6 +73,7 @@ export function App() {
   const [revealRequest,setRevealRequest] = useState(0);
   const [screenRequest,setScreenRequest]=useState<ScreenRequest|null>(null);
   const openLinkedWindow=useCallback((route:ScreenRoute)=>{trace('window',{id:route.kind,action:'open'});setOpened(current=>[...current.filter(w=>w!==route.kind),route.kind]);setScreenRequest(p=>({target:route.kind,route,sequence:(p?.sequence??0)+1}));},[]);
+  useEffect(()=>{if(game.researchCompleted>0)openLinkedWindow({kind:'research'});},[game.researchCompleted,openLinkedWindow]);
   const requestScreen=useCallback((target:WindowId,route:ScreenRoute)=>setScreenRequest(p=>({target,route,sequence:(p?.sequence??0)+1})),[]);
   const showWindow = useCallback((id: WindowId) => {trace('window',{id,action:'open'}); setOpened(current=>id==='map'?current:[...current.filter(w=>w!==id),id]); setRevealRequest(v=>v+1); },[]);
   const [popRequest,setPopRequest]=useState<PopRequest|null>(null);
@@ -140,7 +141,7 @@ export function App() {
   const collection = taxCollectionRatio(kingdom);
   const limit = me ? creditLimit(world, me) : 0;
   const debtRatio = me && limit > 0 ? me.debt / limit : 0;
-  const unread = world.events.filter((e) => e.tick > game.lastReadTick && (e.companyId === PLAYER_ID || e.companyId === null) && e.kind !== 'info').length;
+  const unread = unreadNewsCount(world,game.lastReadTick);
   const [datePart, timePart] = dateParts(world.tick, game.hour);
   const running = game.speed > 0;
 
@@ -175,14 +176,7 @@ export function App() {
 
           <div className="segmented"><UIButton onClick={()=>game.runUntilYearEnd(game.speed||4*BASE_TPS)}>▸ {T.yearEnd}</UIButton><Popover label={T.destination} button={<>▾</>}>{close=><UIButton onClick={()=>{game.runUntilYearEnd(game.speed||4*BASE_TPS);close();}}>{T.yearEnd}</UIButton>}</Popover></div>
           {!running&&<UIButton className="pause-reason" onClick={()=>{if(game.pauseReason.event)openEvent(game.pauseReason.event);}} disabled={!game.pauseReason.event}>{game.pauseReason.kind==='danger'?T.reasonDanger:game.pauseReason.kind==='yearEnd'?`${T.reasonReached} · ${T.yearEnd}`:T.pause}</UIButton>}
-          <Popover label={T.notifications(unread)} className="bell"
-            button={<><Sprite name="bell" size={20} />{unread > 0 && <span className="badge">{unread > 99 ? '99+' : unread}</span>}</>}>
-            {(close) => (
-              <div className="bell-panel">
-                <Notifications world={world} lastReadTick={game.lastReadTick} onRead={game.markRead} onJump={id=>{selectRegion(id);close();}} onCompany={id=>{viewCompany(id);close();}} onEvent={event=>{openEvent(event);close();}} />
-              </div>
-            )}
-          </Popover>
+          <UIButton className="icon-btn bell" aria-label={T.notifications(unread)} data-help={T.notifications(unread)} onClick={()=>opened.includes('news')?showWindow('news'):withViewTransition(()=>showWindow('news'),'.window-news')}><Sprite name="bell" size={20}/>{unread>0&&<span className="badge">{unread>99?'99+':unread}</span>}</UIButton>
 
           <Popover label={T.menu} button={<Menu size={18} aria-hidden="true" />}>
             {(close) => (
@@ -195,7 +189,7 @@ export function App() {
                   <UIInput type="checkbox" checked={game.prefs.pauseOnDanger} onChange={(e) => game.setPrefs({ pauseOnDanger: e.target.checked })} />
                   {T.pauseOnDanger}
                 </label>
-                <UIButton onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>
+                <UIButton onClick={() => withViewTransition(()=>{const next=theme==='dark'?'light':'dark';document.documentElement.dataset.theme=next;setTheme(next);},'.topbar,.desktop-dock,.strategy-panel:not([hidden])')}>
                   {theme === 'dark' ? <><Sprite name="sun" size={24} /> {T.dayTheme}</> : <><Moon size={14} aria-hidden="true" /> {T.nightTheme}</>}
                 </UIButton>
                 <hr />
@@ -214,7 +208,7 @@ export function App() {
 
       <WindowWorkspace opened={opened} onOpened={setOpened} windows={[
         {id:'map',title:T.paneMap,icon:<Map size={18}/>,content:<RegionMap world={world} selected={regionId} onSelect={selectRegion}/>},
-        ...([{id:'region',title:T.system.region,icon:<Users size={18}/>},{id:'market',title:T.market,icon:<Package size={18}/>},{id:'state',title:T.stateTitle,icon:<Landmark size={18}/>},{id:'research',title:T.research,icon:<FlaskConical size={18}/>},{id:'construction',title:T.construct,icon:<HardHat size={18}/>},{id:'trends',title:uiCopy().screenText['statistics'],icon:<ChartNoAxesCombined size={18}/>} ] as const).map(w=>({...w,content:<GameWindow id={w.id} active={opened.includes(w.id)} game={windowGame} mapRegionId={regionId} request={screenRequest} onOpenWindow={openLinkedWindow}/>}))
+        ...([{id:'region',title:T.system.region,icon:<Users size={18}/>},{id:'market',title:T.market,icon:<Package size={18}/>},{id:'state',title:T.stateTitle,icon:<Landmark size={18}/>},{id:'research',title:T.research,icon:<FlaskConical size={18}/>},{id:'construction',title:T.construct,icon:<HardHat size={18}/>},{id:'trends',title:uiCopy().screenText['statistics'],icon:<ChartNoAxesCombined size={18}/>},{id:'news',title:T.news,icon:<Bell size={18}/>,badge:unread} ] as const).map(w=>({...w,content:<GameWindow id={w.id} active={opened.includes(w.id)} game={windowGame} mapRegionId={regionId} request={screenRequest} onOpenWindow={openLinkedWindow}/>}))
       ]}/>
 
 

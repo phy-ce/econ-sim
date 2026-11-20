@@ -636,3 +636,43 @@ build 상세에만 새 문자열 buildCrownShare/buildOfficeWages/buildMaterials
 - premerge: `ui/parts.css` 에 남아 있던 같은 죽은 클래스(`cat*`·`hrow*`·`house`·`hc-*`·`hd-h`·`blockers`·`build-catalogue`) 규칙 19줄도 지웠다.
 - tools/cssv 74/74 같음, 클라이언트 시험 130개 통과, typecheck 통과.
 
+
+
+## 2026-11-20 UI-15
+
+통계 맨 위 경제/생활/재정/왕국 비교 탭, 차트 3/4/3개. 요약·소유 자산은 국가 예산 탭에 없던 정보여서 옮김. 비교 지표는 선택식 두 열로 모두 보존하여 420px에서 숫자 충돌 방지. 영어 건물 지역명 줄바꿈 보정. 한국어 밝음·영어 어두움 1920×1028, 8개 탭 모두 420×560·가로 넘침 없음(.tmp/ui15-qa.json). 스크린샷: .tmp/ui15-ko-light-tab1.png~tab4.png, .tmp/ui15-en-dark-tab1.png~tab4.png, 각 언어 living-rates.png·state-assets.png. 루트 typecheck 통과, 클라이언트 49파일 134시험 통과. 왕국 비교 행 선택 확인; 팝 경로는 기존 지역 창 라우팅 유지. 미커밋.
+
+
+## 2026-11-20 UI-16
+
+소식 7번째 주 창 추가, 상단 종과 창 단추가 같은 창을 엶. 내 왕국·공유 소식 미확인 집계를 news.ts로 통합하여 종/창 배지 일치. 맨 위 필터·검색·안 읽음·정렬 유지, 회사 링크로 통계 왕국 비교 이동 확인. 1920×1028 한국어 밝음·영어 어두움, 420×560 가로 넘침 없음. 양쪽 배지 22→읽음 후 0 확인. 스크린샷 .tmp/ui16-ko-light-news.png·read.png, .tmp/ui16-en-dark-news.png·read.png. 루트 typecheck 및 클라이언트 50파일 135시험 통과. 변경: App.tsx, news.ts, WindowWorkspace.tsx/css, GameWindow.tsx, Notifications.tsx, NewsWindow.tsx, news-window.css, ui/index.css, test/news.test.ts 및 이력 문서. 미커밋.
+
+
+## 2026-11-20 UI-18
+
+| 창 | 확인·수정 | 남긴 것 / 사용자 결정 |
+|---|---|---|
+| 지역 | 개요·인구·건물. 팝 직종 열 44px, 첫 3열의 낡은 120px 강제 폭 제거, 긴 이름 말줄임+툴팁, 영어 접근성 이름의 한국어 잔재 수정 | 글자 크기는 기존 UI-4 결정 대기 유지. 안내 문구 정리는 DECISIONS 7-62 목록 승인 뒤 |
+| 시세 | 5구역, 숫자 우측 정렬·공급/수요·가격·툴팁 확인, 수정 없음 | 영어 Transport·Turnover 줄바꿈은 정보 손실 없이 유지; 열/글자 크기 전면 변경 안 함 |
+| 국가 | 예산·법·정치. 소유 자산 막대의 80px 최소 폭이 셀을 넘던 것 수정 | 요약·자산은 UI-15에서 예산 아래 배치. 별도 결정 없음 |
+| 연구 | 목록·계통도·잠금 상태 확인, 수정 없음 | 글자 크기·안내 문구 대기는 공통 기준 |
+| 건설 | 건설 목록·대기열·상세3탭 확인, 수정 없음 | 이미 main에 들어온 (현재+공사) 표기 유지 |
+| 통계 | 4탭·기록 없음 상태 확인, UI-15의 실제 이력 차트 검증 병행 | 추가 결정 없음 |
+| 소식 | 필터·목록·배지, UI-16의 22→0 읽음 및 이동 확인 | 추가 결정 없음 |
+| 상세1 교육 | 320×240, 도넛·학교 링크 확인 | 추가 결정 없음 |
+| 상세2 인구·소유 | 360×360, 도넛·직종 목록 확인. 어두운 소유 막대에 기존 on-owner 토큰 적용 | 모든 소유 조합·팝 상태의 전수 조합 검사는 아님 |
+| 상세3 건물 | 420×420, 개요·건물·건설. 어두운 지표 막대 채움 밝기를 낮춰 흰 글자 대비 확보 | sim 주간 흐름 대기(UI-11)는 변경 안 함 |
+| 상세4 계통도 | 840×560, 연결선·선택·우측 상세 확인 | 추가 결정 없음 |
+| 지도·툴팁 | 지도는 변경 없음. 포커스 툴팁이 창 경계에 잘리지 않음 | 지도 범위 UI-10은 사용자 결정 대기. 실제 사용자 Edge·Windows 배율 검증은 미실시 |
+
+본 게임 index.html seed4242, 1920×1028 한국어 밝음·영어 어두움 66상태(주 창7, 상세1~4, 탭·구역, 툴팁) 점검. .tmp/ui18/dump.json 및 audit-final.json: 64일반 상태에서 창 가로 넘침·native title 0, 툴팁2상태는 별도 스크린샷. 루트 typecheck·클라이언트 50파일 135시험 통과. 변경: PopTable.tsx/pop-table.css, OwnershipAssets.tsx, ownership-bar.css, building-metric-bars.css, 이력 문서. 스크린샷 .tmp/ui18/{ko-light,en-dark}-{region,market,state,research,construction,trends,news,detail1,detail2,detail3,detail4,tooltip}.png, en-dark-bars-final.png·en-dark-detail3-final.png. 미커밋.
+
+
+## 2026-11-20 UI-19
+
+공용 ui/viewTransition.ts: 기능 없음·reduced-motion이면 즉시 변경, flushSync, 연속 조작 순서·오류 복구·정리. 200ms 토큰. 적용: 통계/국가 탭, 시세 범위·구역, 독의 주 창 열기/닫기·종의 소식 열기, 테마(상단·독·열린 창만). 지도·root는 전환 이름 none. 틱·차트 갱신·지도·툴팁·hover·드래그·포커스에는 적용 안 함: 자주 바뀌거나 직접 조작을 지연시키기 때문. 링크 자동 열기·상세창은 탐색 및 포커스 복원을 즉시 유지하도록 제외. 양 언어 9회씩 native ready 성공, fallback·reduced-motion·틱 비전환 확인(.tmp/ui19-qa.json). 1920×1028 스크린샷 .tmp/ui19-{ko-light,en-dark}-{tabs,windows,theme,fallback}.png. main53ea042에서 typecheck·클라이언트51파일139시험 통과. 변경: ui/viewTransition.ts, view-transition.css, tokens.css, index.css, App.tsx, BottomPanel.tsx, StatePanel.tsx, MarketWindow.tsx, SectionStack.tsx, WindowWorkspace.tsx, test/viewTransition.test.ts, 이력 문서. 참고: https://developer.mozilla.org/en-US/docs/Web/API/Document/startViewTransition 및 https://react.dev/reference/react-dom/flushSync. 미커밋.
+
+
+## 2026-11-20 UI-22
+
+main53ea042의 researchDone 처리: 플레이어100의 새 소식이면 위험 멈춤 설정과 무관하게 정지 명령 전송·연구 창 열기. 기존 소식·타사 연구는 재정지/재열기 없음. eventDestination은 topic을 글/지역/건물보다 먼저 판정. eventKey(tick+companyId+key, 없으면 글)를 소식 React key·새 소식 검출에 함께 사용. 읽음은 기존 tick 기준이라 순번과 무관하며 글 수정 뒤에도 유지. dangerPause는 e.key 우선. 기아 warn 별도 처리 없음. HANDOFF 원문 요청을 UI_CHANGES 0/2장에 추가 후 완료 절로 이동, 2-74 반영 완료 문구 수정. 루트 typecheck·클라이언트52파일143시험 통과. 본 게임1920×1028 KO밝음/EN어두움, 워커 메시지 경계에 QA 소식 주입: 정지명령0·연구 창, 재전달/타사 제외, 앞 소식 삭제+글 변경에도 DOM행 동일·읽음 유지, 해결 소식 제거 확인(.tmp/ui22-qa.json). 실제 sim 연구를 끝까지 진행한 시험은 아니며 sim 수정 없음. 스크린샷 .tmp/ui22-{ko-light,en-dark}-{research,updated-news,resolved}.png. 변경: App.tsx, useGame.ts, news.ts, dangerPause.ts, eventDestination.ts, views/Notifications.tsx, test/alerts.test.ts, docs/UI_CHANGES.md·UI_DONE.md·UI_STATUS.md. 미커밋.

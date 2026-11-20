@@ -1,5 +1,6 @@
 import type { GameEvent, World } from '@econ/sim';
 export function eventDestination(world:World,event:GameEvent) {
+  if(event.topic==='researchDone')return {kind:'research' as const};
   if(event.topic==='lawChanged'||event.topic==='lawFailed')return {kind:'state' as const,tab:'laws' as const};
   const building=event.buildingId===undefined?undefined:world.buildings.find(b=>b.id===event.buildingId);
   if(building) return {kind:'building' as const,id:building.id,regionId:building.regionId};

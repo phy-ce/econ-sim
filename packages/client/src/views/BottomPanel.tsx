@@ -1,56 +1,23 @@
-import {KingdomEconomy,KingdomComparison} from './KingdomEconomy';
-import {OwnershipAssets} from './OwnershipAssets';
-import {t as uiCopy} from '../i18n';
+import {withViewTransition} from '../ui/viewTransition';
+import {memo,useEffect} from 'react';
+import {playerCompany,type World} from '@econ/sim';
+import {Segmented} from '../ui/components';
+import {Button,Select} from '../ui/controls';
+import {useNavigationState} from '../NavigationHistory';
+import {useLang,useT} from '../i18n';
 import {EconomyCharts} from './EconomyCharts';
-import {memo} from 'react';
-import { PopTable, type PopRequest } from './PopTable';
-import type { Game } from '../useGame';
-import {KingdomSummary} from './KingdomSummary';
-import { playerCompany, companyById } from '@econ/sim';
-import { SectionStack } from './SectionStack';
-import {useMemo} from 'react';
-import {POP_CLASSES} from '@econ/sim';
-import type { HistoryPoint, World, GameEvent,GoodId } from '@econ/sim';
-import { TimeChart } from './Chart';
-import { Notifications } from './Notifications';
-import { ClassSprite } from '../sprites';
-import { CLASS_COLOR } from '../ui';
-import {className,useT} from '../i18n';
-
-function BottomPanelView({ world, history, lastReadTick, onRead, onJump, kingdomId, onViewKingdom, sequence,game, onEvent, popRequest, onBuilding,onGood,onFinance }: {onGood?:(g:GoodId)=>void;onFinance?:()=>void;sequence?:number;
-  popRequest:PopRequest|null; onBuilding:(id:number)=>void;
-  onEvent:(event:GameEvent)=>void; game:Game; world: World; history: HistoryPoint[];
-  lastReadTick: number; onRead: () => void; onJump: (regionId: number) => void;
-  kingdomId: number | null; onViewKingdom: (kingdomId: number) => void;
-}) {
-  const T = useT();
-  const me=playerCompany(world);
-  const viewed=world.kingdoms.find(k=>k.id===(kingdomId??me?.kingdomId));
-  const onViewCompany=(id:number)=>{const company=companyById(world,id);if(company)onViewKingdom(company.kingdomId);};
-  const wealthData = useMemo(() => history.map((p) => ({ tick: p.tick, ...p.sol })), [history]);
-  const series = POP_CLASSES.filter(c=>c!=='capitalist').map((c) => ({ key: c, name: className(c), color: CLASS_COLOR[c] }));
-
-  return (
-    <SectionStack explorer revealId={popRequest?'pops':'kingdom'} revealKey={popRequest?.sequence??sequence??kingdomId} storageKey="trends-v2" items={[
-      {id:'economy',shortTitle:uiCopy().screenText['trends'],title:uiCopy().screenText['economicPopulationAndFiscalTrends'],height:520,content:<EconomyCharts world={world}/>},
-      ...(me?[{id:'summary',shortTitle:uiCopy().screenText['summary'],title:T.kingdomSummary,height:220,content:<KingdomSummary world={world} government={me} onFinance={onFinance}/>}]:[]),
-      {id:'pops',shortTitle:uiCopy().screenText['pops'],title:T.popList,height:360,content:<PopTable world={world} request={popRequest} onRegion={onJump} onBuilding={onBuilding}/>},
-      ...(viewed?[{id:'kingdom',shortTitle:T.kingdomEconomy,title:T.kingdomEconomy,height:520,content:<KingdomEconomy world={world} id={viewed.id} onSelect={onViewKingdom} onBuilding={onBuilding} onFinance={onFinance}/>}]:[]),
-      {id:'kingdoms',shortTitle:T.kingdomCompare,title:T.kingdomCompare,height:300,content:<KingdomComparison world={world} onSelect={onViewKingdom}/>}, {id:'assets',title:T.assetsTitle,shortTitle:T.assetsTitle,height:360,content:<OwnershipAssets world={world}/>}, { id: 'wealth' , title: T.wealthByClassTitle, shortTitle:uiCopy().screenText['living'], height: 236, content: <>
-      
-        <div className="card-head">
-          
-          <ul className="legend">
-            {series.map((s) => (
-              <li key={s.key}><span className="legend-sp" style={{ color: s.color }}><ClassSprite c={s.key} size={24} /></span>{s.name}</li>
-            ))}
-          </ul>
-        </div>
-        <TimeChart data={wealthData} series={series} format={(v) => v.toFixed(0)} height={220} reference={{ y: 5, label: T.povertyLine, color: 'var(--bad)' }} />
-      </> }, {id:'weather',title:T.weatherRegions,shortTitle:uiCopy().screenText['weather'],height:164,content:<TimeChart data={(world.metrics??[]).map(p=>({tick:p.tick,affected:p.harvestRegions??0}))} series={[{key:'affected',name:T.weatherRegions,color:'var(--bad)'}]} format={v=>v.toFixed(0)} height={120}/>}, { id: 'news',shortTitle:uiCopy().screenText['news'], title: T.news, height: 190, content: <>
-        <Notifications onEvent={onEvent} onCompany={onViewCompany} world={world} lastReadTick={lastReadTick} onRead={onRead} onJump={onJump} />
-      </> }]} />
-  );
+import {KingdomComparison,KingdomEconomy} from './KingdomEconomy';
+type Tab='economy'|'living'|'finance'|'comparison';
+function BottomPanelView({world,kingdomId,sequence,onViewKingdom,onBuilding,onFinance}:{world:World;kingdomId:number|null;sequence?:number;onViewKingdom:(id:number)=>void;onBuilding:(id:number)=>void;onFinance?:()=>void}){
+ const T=useT(),S=T.screenText,ko=useLang()==='ko';
+ const [tab,setTab]=useNavigationState<Tab>('statistics:tab',kingdomId===null?'economy':'comparison');
+ const [period,setPeriod]=useNavigationState('statistics:period',0);
+ const [scope,setScope]=useNavigationState('statistics:kingdom','all');
+ useEffect(()=>{if(kingdomId!==null)setTab('comparison');},[kingdomId,sequence]);
+ const viewed=kingdomId??playerCompany(world)?.kingdomId??world.kingdoms[0]?.id;
+ return <div className="statistics-window"><Segmented className="statistics-tabs" label={S.statisticsGroup} value={tab} onChange={v=>{if(v!==tab)withViewTransition(()=>setTab(v as Tab),'.window-trends .window-body');}} options={[{id:'economy',label:S.economy},{id:'living',label:S.living},{id:'finance',label:S.finance},{id:'comparison',label:T.kingdomCompare}]}/>
+ {tab!=='comparison'&&<div className="statistics-toolbar"><div role="group" aria-label={S.period}>{[360,1800,0].map(p=><Button key={p} aria-pressed={p===period} onClick={()=>setPeriod(p)}>{p===0?S.all:p===360?S['1Year']:S['5Years']}</Button>)}</div><Select aria-label={T.kingdomLabel} value={scope} onChange={e=>setScope(e.target.value)}><option value="all">{S.all}</option>{world.kingdoms.map(k=><option key={k.id} value={k.id}>{ko?k.name:k.nameEn}</option>)}</Select></div>}
+ {tab==='comparison'?<><section className="statistics-section"><h3>{T.kingdomCompare}</h3><KingdomComparison world={world} onSelect={onViewKingdom}/></section>{viewed!==undefined&&<section className="statistics-section"><h3>{T.kingdomEconomy}</h3><KingdomEconomy world={world} id={viewed} onSelect={onViewKingdom} onBuilding={onBuilding} onFinance={onFinance}/></section>}</>:<EconomyCharts world={world} group={tab} period={period} kingdomId={scope==='all'?undefined:Number(scope)}/>}
+ </div>;
 }
-
 export const BottomPanel=memo(BottomPanelView);
