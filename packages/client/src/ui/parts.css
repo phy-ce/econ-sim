@@ -1196,6 +1196,13 @@ table.goods tr.selected td:last-child {
 .toast[role='button'] {
   cursor: pointer;
 }
+/* 알림 안 링크 버튼은 버튼 글자색(--ink)을 받아 알림 바탕(--ink)과 같아져 보이지 않았다 (2026-11-21) */
+.toast .event-link {
+  color: inherit;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+}
 @media (max-width: 1240px) {
   .board {
     grid-template-columns: minmax(280px, 1fr) minmax(0, 1.4fr);
