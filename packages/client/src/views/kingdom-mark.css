@@ -1,0 +1,36 @@
+.kingdom-mark {
+  display: inline-block;
+  flex: none;
+  vertical-align: middle;
+  overflow: visible;
+}
+.kingdom-mark-rim {
+  fill: #18232c;
+  stroke: #fff8df;
+  stroke-width: 1.4;
+  stroke-linejoin: round;
+}
+.kingdom-mark-field {
+  stroke: #18232c;
+  stroke-width: 0.7;
+}
+.kingdom-mark-charge {
+  fill: #fff8df;
+  stroke: #18232c;
+  stroke-width: 1;
+  stroke-linejoin: round;
+}
+.atlas-kingdom-label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  height: 100%;
+  font: 22px var(--sans);
+  white-space: nowrap;
+  text-shadow:
+    -1px -1px 0 #18232c,
+    1px -1px 0 #18232c,
+    -1px 1px 0 #18232c,
+    1px 1px 0 #18232c;
+}

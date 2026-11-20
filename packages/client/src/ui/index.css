@@ -9,6 +9,7 @@
 @import './parts.css';
 @import '../views/language-pick.css';
 @import '../views/kingdom-economy.css';
+@import '../views/kingdom-mark.css';
 @import '../views/kingdom-totals.css';
 @import '../views/kingdom-buildings.css';
 @import '../views/kingdom-money.css';

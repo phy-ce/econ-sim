@@ -676,3 +676,8 @@ build 상세에만 새 문자열 buildCrownShare/buildOfficeWages/buildMaterials
 ## 2026-11-20 UI-22
 
 main53ea042의 researchDone 처리: 플레이어100의 새 소식이면 위험 멈춤 설정과 무관하게 정지 명령 전송·연구 창 열기. 기존 소식·타사 연구는 재정지/재열기 없음. eventDestination은 topic을 글/지역/건물보다 먼저 판정. eventKey(tick+companyId+key, 없으면 글)를 소식 React key·새 소식 검출에 함께 사용. 읽음은 기존 tick 기준이라 순번과 무관하며 글 수정 뒤에도 유지. dangerPause는 e.key 우선. 기아 warn 별도 처리 없음. HANDOFF 원문 요청을 UI_CHANGES 0/2장에 추가 후 완료 절로 이동, 2-74 반영 완료 문구 수정. 루트 typecheck·클라이언트52파일143시험 통과. 본 게임1920×1028 KO밝음/EN어두움, 워커 메시지 경계에 QA 소식 주입: 정지명령0·연구 창, 재전달/타사 제외, 앞 소식 삭제+글 변경에도 DOM행 동일·읽음 유지, 해결 소식 제거 확인(.tmp/ui22-qa.json). 실제 sim 연구를 끝까지 진행한 시험은 아니며 sim 수정 없음. 스크린샷 .tmp/ui22-{ko-light,en-dark}-{research,updated-news,resolved}.png. 변경: App.tsx, useGame.ts, news.ts, dangerPause.ts, eventDestination.ts, views/Notifications.tsx, test/alerts.test.ts, docs/UI_CHANGES.md·UI_DONE.md·UI_STATUS.md. 미커밋.
+
+
+## 2026-11-21 UI-23
+
+공용 KingdomMark SVG 방패에 원·마름모·삼각형 및 사각형·십자·별·초승달·육각형 총 8종 표식. kingdom.color 채움과 밝고 어두운 이중 테두리. 지도·지역 목록·왕국 탭·비교표 4곳의 글자 도형 교체. 지도는 화면 실측 약13.84px, 목록·탭18px. 설명 문구 추가 없음, 왕국 이름 aria-label/data-help. 1920×1028 KO밝음/EN어두움 지도·지역 목록·왕국 탭 확인, 통계 창 가로 넘침0. 스크린샷 .tmp/ui23-{ko-light,en-dark}-{map,regions,kingdoms}.png, 측정 .tmp/ui23-qa.json. npm run format·typecheck·클라이언트52파일143시험 통과. 변경: views/KingdomMark.tsx·kingdom-mark.css·RegionMap.tsx·KingdomEconomy.tsx, ui/index.css, docs/UI_CHANGES.md·UI_DONE.md·UI_STATUS.md. sim 미수정·미커밋. 시작 HEAD d225f0b는 UI-21 16072ae 이후.

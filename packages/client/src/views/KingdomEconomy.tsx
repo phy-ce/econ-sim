@@ -1,3 +1,4 @@
+import { KingdomMark } from './KingdomMark';
 import { Button as UIButton, Select } from '../ui/controls';
 import { LedgerTable as UITable } from '../ui/primitives';
 import type { GoodId, World } from '@econ/sim';
@@ -37,9 +38,7 @@ export function KingdomEconomy({
       <nav className="system-tabs">
         {world.kingdoms.map((k, i) => (
           <UIButton key={k.id} aria-pressed={id === k.id} onClick={() => onSelect(k.id)}>
-            <span className="territory-marker" style={{ color: k.color }}>
-              {['●', '◆', '▲'][i]}
-            </span>
+            <KingdomMark kingdom={k} index={i} />
             {ko ? k.name : k.nameEn}
             {world.companies.find((c) => c.id === k.governmentId)?.isPlayer ? ' ★' : ''}
           </UIButton>
@@ -143,9 +142,7 @@ export function KingdomComparison({ world, onSelect }: { world: World; onSelect:
             <tr key={r.kingdom.id}>
               <th>
                 <UIButton className="entity-link" onClick={() => onSelect(r.kingdom.id)}>
-                  <span className="territory-marker" style={{ color: r.kingdom.color }}>
-                    {['●', '◆', '▲'][world.kingdoms.findIndex((k) => k.id === r.kingdom.id)]}
-                  </span>
+                  <KingdomMark kingdom={r.kingdom} index={world.kingdoms.findIndex((k) => k.id === r.kingdom.id)} />
                   {ko ? r.kingdom.name : r.kingdom.nameEn}
                   {r.government?.isPlayer ? ' ★' : ''}
                 </UIButton>

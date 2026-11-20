@@ -1,3 +1,4 @@
+import { KingdomMark } from './KingdomMark';
 import { Button as UIButton } from '../ui/controls';
 import { LedgerTable as UITable } from '../ui/primitives';
 import { t as uiCopy } from '../i18n';
@@ -305,10 +306,19 @@ function RegionMapView({
               <text x="0" y="0" className="atlas-label">
                 {regionName(r)}
               </text>
-              <text x="0" y="27" className="atlas-owner" fill={kingdomOf(r.kingdomId)?.color}>
-                {['●', '◆', '▲'][world.kingdoms.findIndex((k) => k.id === r.kingdomId)]} {kingdomName(r.kingdomId)}
-                {mine > 0 ? ` · ★ ${int(mine)}` : ''}
-              </text>
+              <foreignObject x={-220} y={5} width={440} height={30}>
+                <div className="atlas-kingdom-label" style={{ color: kingdomOf(r.kingdomId)?.color }}>
+                  <KingdomMark
+                    kingdom={kingdomOf(r.kingdomId)}
+                    index={world.kingdoms.findIndex((k) => k.id === r.kingdomId)}
+                    size={22}
+                  />
+                  <span>
+                    {kingdomName(r.kingdomId)}
+                    {mine > 0 ? ` · ★ ${int(mine)}` : ''}
+                  </span>
+                </div>
+              </foreignObject>
               {pending > 0 && (
                 <g className="atlas-demolition" data-help={T.demolitionQueue(pending)}>
                   <rect x={-52} y={34} width={104} height={44} rx={4} />
@@ -370,13 +380,10 @@ function RegionMapView({
               <tr key={r.id} className={r.id === selected ? 'selected' : ''}>
                 <td>
                   <UIButton className="name-link" aria-pressed={r.id === selected} onClick={() => onSelect(r.id)}>
-                    <span
-                      className="territory-marker"
-                      data-help={kingdomName(r.kingdomId)}
-                      style={{ color: kingdomOf(r.kingdomId)?.color }}
-                    >
-                      {['●', '◆', '▲'][world.kingdoms.findIndex((k) => k.id === r.kingdomId)]}
-                    </span>
+                    <KingdomMark
+                      kingdom={kingdomOf(r.kingdomId)}
+                      index={world.kingdoms.findIndex((k) => k.id === r.kingdomId)}
+                    />
                     {regionName(r)}
                   </UIButton>
                   <HarvestBadge world={world} regionId={r.id} />
