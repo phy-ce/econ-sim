@@ -27,9 +27,9 @@ export function weeklyAlerts(w: World) {
   // 이번 점검에서 조건이 걸린 키. 걸리지 않은 키의 소식은 끝에서 지운다 (해결된 소식은 남기지 않는다, 2026-11-20 사용자)
   const live = new Set<string>();
   const fire = (key: string, cooldown: number, companyId: number | null, text: string, opts?: Parameters<typeof alertOnce>[5]) => { live.add(key); return alertOnce(w, key, cooldown, companyId, text, opts); };
-  // 투입재·일손 부족은 회사마다 한 알림으로 묶는다 (건물마다 따로 내면 알림이 너무 많다, 2026-11-20 사용자). 가장 나쁜 건물을 가리킨다
+  // 투입재 부족은 회사마다 한 알림으로 묶는다 (건물마다 따로 내면 알림이 너무 많다, 2026-11-20 사용자). 가장 나쁜 건물을 가리킨다
   type Row = { b: Building; v: number; ko: string; en: string };
-  const inputs = new Map<number, Row[]>(), staff = new Map<number, Row[]>();
+  const inputs = new Map<number, Row[]>();
   const push = (m: Map<number, Row[]>, c: number, r: Row) => { const l = m.get(c); if (l) l.push(r); else m.set(c, [r]); };
   for (const b of w.buildings) {
     if (BUILDING_BY_ID[b.typeId].auto) continue;
@@ -49,10 +49,6 @@ export function weeklyAlerts(w: World) {
       push(inputs, b.companyId, { b, v: b.last.inputFill, ko: `${name} ${fill}%(${shortIds.map((g) => GOODS[g].name).join(', ') || '원료'})`,
         en: `${nameEn} ${fill}% (${shortIds.map(goodNameEn).join(', ') || 'materials'})` });
     }
-    if (b.active && b.last.staffing < 0.5 && b.last.staffing > 0) {
-      const pct = Math.round(b.last.staffing * 100);
-      push(staff, b.companyId, { b, v: b.last.staffing, ko: `${name} ${pct}%`, en: `${nameEn} ${pct}%` });
-    }
   }
   const grouped = (m: Map<number, Row[]>, key: string, ko: string, en: string) => {
     for (const [c, rows] of m) {
@@ -63,7 +59,7 @@ export function weeklyAlerts(w: World) {
     }
   };
   grouped(inputs, 'inputs', '투입재 부족', 'Inputs short');
-  grouped(staff, 'staff', '일손 부족', 'Understaffed');
+  // 일손 부족 알림은 없앴다 (2026-11-21 사용자 "일손 부족도 알림에 넣지 마"). 옛 저장의 staff 소식은 RESOLVABLE 이 지운다
   // 공사가 2주 넘게 포인트를 받지 못하는 까닭. 민간 공사는 왕실 사무소가 짓는다 (builderOf). 멈춘(paused) 공사는 세지 않는다
   for (const c of w.companies) {
     const mine = w.constructions.filter((k) => k.companyId === c.id && !k.paused);
@@ -99,28 +95,7 @@ export function weeklyAlerts(w: World) {
         { kind: 'warn', regionId: offices[0].regionId, buildingId: offices[0].id, en: `${headEn}: ${whyEn}.` });
     }
   }
-  // 내 투입재 가격 급등: 회사마다 한 알림 (지역·상품 목록, 가장 비싼 것부터)
-  for (const c of w.companies) {
-    const seen = new Set<string>();
-    const rows: { v: number; regionId: number; ko: string; en: string }[] = [];
-    for (const b of w.buildings) {
-      if (b.companyId !== c.id || !b.active) continue;
-      const method = getMethod(b.typeId, b.methodId);
-      for (const g of GOOD_IDS) {
-        if (!method.inputs[g]) continue;
-        const key = `${b.regionId}:${g}`;
-        if (seen.has(key)) continue;
-        seen.add(key);
-        const mg = regionById(w, b.regionId).market[g];
-        const x = mg.price / GOODS[g].basePrice;
-        if (x > 1.6) rows.push({ v: x, regionId: b.regionId, ko: `${regionById(w, b.regionId).name} ${GOODS[g].name} ${x.toFixed(1)}배`, en: `${goodNameEn(g)} in ${regionNameEn(b.regionId)} ${x.toFixed(1)}×` });
-      }
-    }
-    if (!rows.length) continue;
-    rows.sort((a, x) => x.v - a.v);
-    fire(`spike:${c.id}`, COOLDOWN, c.id, `투입재 가격 급등 ${rows.length}건 (기본가 대비): ${listKo(rows.map((x) => x.ko))}`,
-      { kind: 'warn', regionId: rows[0].regionId, en: `Input prices spiking, ${rows.length} (vs base price): ${listEn(rows.map((x) => x.en))}` });
-  }
+  // 투입재 가격 급등 알림은 없앴다 (2026-11-21 사용자 "넣지 말라고"). 옛 저장의 spike 소식은 RESOLVABLE 이 지운다
   // 지역 알림은 그 지역 왕국의 왕실에게만 간다 (다른 왕국의 기아·인력 사정은 알리지 않는다)
   const crownOf = (r: Region) => w.kingdoms.find((k) => k.id === r.kingdomId)?.governmentId ?? null;
   // 기상 조건: 지난 점검 뒤에 새로 걸린 조건마다 한 번 (조건은 날짜로 다시 계산하므로 따로 기억하지 않는다)

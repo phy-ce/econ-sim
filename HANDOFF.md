@@ -9,6 +9,10 @@
 - 클라우드 세션(claude.ai/code)으로 이어서 할 수 있다. 규칙은 CLAUDE.md "클라우드 세션"을 본다.
 - 옛 세션 기록: `docs/log/` (2026-10-25 이전 HANDOFF 절은 `docs/log/HANDOFF_2026-10-18_to_10-25.md`, 날짜별 UI 기록도 여기). 다른 문서의 "HANDOFF 0-ind3"·"HANDOFF 0-aifix" 같은 옛 절 참조는 그 파일에 있다.
 
+## 0-1121-alerts2
+- 브랜치 wt-alerts2 (main 01c3120 에서). 사용자 2026-11-21: 일손 부족·투입재 가격 급등 알림을 없앴다 (`alerts.ts`, DECISIONS 7-66 덧붙임). 시험 `test/core/alerts.test.ts` 는 투입재 부족 묶기·풀리면 지우기·두 알림 없음을 본다.
+- 같은 날 main 에서 (Claude, 화면 고침, 사용자 "알림이 안 보이는데 고쳐봐"): 지역이 있는 알림 토스트는 링크 버튼 글자색이 토스트 바탕(--ink)과 같아 글이 보이지 않았다. `ui/parts.css` 에 `.toast .event-link { color: inherit; ... }` 를 더했다 (브라우저로 글자색 rgb(34,45,52) → rgb(248,247,242) 확인).
+
 ## 0-1121-prettier
 - 브랜치 wt-prettier (main e08fe52 에서, 2026-11-21), UI-21 (DECISIONS 7-65, UI_DONE UI-21), 화면 변경 없음, sim·sim API 변경 없음 → UI_CHANGES 할 일 없음. prettier 3.9.10 루트 devDependency, `.prettierrc.json` (작은따옴표, 120자, endOfLine auto), `.prettierignore` (dist·public·.tmp-*·클라이언트 json·md). `packages/client` 파일 272개 한 번 정리, 200자 넘는 줄 72줄 남음 (Prettier 가 자르지 않는 긴 문자열·템플릿). `npm run format` / `format:check`, `npm run typecheck` 끝에 format:check (`prettier --check packages/client`). 확인: typecheck, 클라이언트 시험 143, tools/cssv 60개 상태 (verify.mjs 가 `--` 변수를 해시에서 빼고 탭을 순번으로 누름), 남은 차이는 금고 칸 등 너비 0.016px (JSX ` / ` 가 `{' '}` 로 나뉨, 글은 같음). 남은 것: Codex 가 main 체크아웃에 커밋 안 한 클라이언트 변경이 있으면 병합 뒤 `npm run format` 을 돌려야 typecheck 가 통과한다.
 
