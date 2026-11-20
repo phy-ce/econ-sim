@@ -1,19 +1,94 @@
 /* window-workspace 컴포넌트 (UI-20 5단계에서 역할별로 옮김). */
-.world-map {background:#93afb3}
-:root[data-theme="dark"] .world-map {background:#53696e}
-.desktop-dock {flex:none;display:flex;align-items:center;background:var(--ink);color:var(--sheet);border-top:1px solid var(--gold);}
-.desktop-dock button {position:relative;border:1px solid transparent;background:transparent;color:inherit;}
-.desktop-dock button:hover:not(:disabled) {background:#ffffff18;}
-.desktop-dock button[aria-pressed=true] i {position:absolute;bottom:2px;width:20px;height:2px;background:var(--accent);}
-.world-map {position:absolute;inset:0;overflow:hidden}
-.world-map .sea {fill:#93afb3}
-.panel-title {display:flex;align-items:center;gap:7px;flex:1;font:12px var(--sans)}
-.panel-title svg {width:15px;height:15px}
-.desktop-dock {height:38px;min-height:38px;padding:3px 12px;gap:2px;z-index:20}
-.desktop-dock button {min-height:29px;height:29px;border-radius:0;font:11px var(--sans);gap:6px}
-.desktop-dock button svg {width:15px;height:15px}
-.desktop-dock button[aria-pressed=true],.desktop-dock button[aria-pressed=true]:hover {background:var(--sheet);color:var(--ink)}
-.floating-workspace .strategy-panel.is-front {box-shadow:0 10px 30px #0005;border-color:var(--gold)}
-.desktop-dock button.is-open:not([aria-pressed=true]) i {position:absolute;bottom:2px;width:12px;height:2px;background:currentColor;opacity:.55}
+.world-map {
+  background: #93afb3;
+}
+:root[data-theme='dark'] .world-map {
+  background: #53696e;
+}
+.desktop-dock {
+  flex: none;
+  display: flex;
+  align-items: center;
+  background: var(--ink);
+  color: var(--sheet);
+  border-top: 1px solid var(--gold);
+}
+.desktop-dock button {
+  position: relative;
+  border: 1px solid transparent;
+  background: transparent;
+  color: inherit;
+}
+.desktop-dock button:hover:not(:disabled) {
+  background: #ffffff18;
+}
+.desktop-dock button[aria-pressed='true'] i {
+  position: absolute;
+  bottom: 2px;
+  width: 20px;
+  height: 2px;
+  background: var(--accent);
+}
+.world-map {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+.world-map .sea {
+  fill: #93afb3;
+}
+.panel-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex: 1;
+  font: 12px var(--sans);
+}
+.panel-title svg {
+  width: 15px;
+  height: 15px;
+}
+.desktop-dock {
+  height: 38px;
+  min-height: 38px;
+  padding: 3px 12px;
+  gap: 2px;
+  z-index: 20;
+}
+.desktop-dock button {
+  min-height: 29px;
+  height: 29px;
+  border-radius: 0;
+  font: 11px var(--sans);
+  gap: 6px;
+}
+.desktop-dock button svg {
+  width: 15px;
+  height: 15px;
+}
+.desktop-dock button[aria-pressed='true'],
+.desktop-dock button[aria-pressed='true']:hover {
+  background: var(--sheet);
+  color: var(--ink);
+}
+.floating-workspace .strategy-panel.is-front {
+  box-shadow: 0 10px 30px #0005;
+  border-color: var(--gold);
+}
+.desktop-dock button.is-open:not([aria-pressed='true']) i {
+  position: absolute;
+  bottom: 2px;
+  width: 12px;
+  height: 2px;
+  background: currentColor;
+  opacity: 0.55;
+}
 
-.desktop-dock .dock-badge {border-radius:8px;background:var(--accent);color:var(--sheet);padding:0 5px;font-size:10px;font-variant-numeric:tabular-nums}
+.desktop-dock .dock-badge {
+  border-radius: 8px;
+  background: var(--accent);
+  color: var(--sheet);
+  padding: 0 5px;
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}

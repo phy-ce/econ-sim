@@ -1,5 +1,16 @@
 /* kingdom-totals 컴포넌트 (UI-20 5단계에서 역할별로 옮김). */
-.kingdom-totals { grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px; }
-.kingdom-totals>div:last-child { grid-column:1 / -1; }
-.kingdom-total-bar { display:flex; background:var(--sheet); }
-.kingdom-total-bar i { display:block; height:100%; }
+.kingdom-totals {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+.kingdom-totals > div:last-child {
+  grid-column: 1 / -1;
+}
+.kingdom-total-bar {
+  display: flex;
+  background: var(--sheet);
+}
+.kingdom-total-bar i {
+  display: block;
+  height: 100%;
+}

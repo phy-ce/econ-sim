@@ -1,52 +1,240 @@
-import {Button as UIButton} from '../ui/controls';
-import {WelfareCap} from './WelfareCap';
-import {useEffect} from 'react';
-import {useNavigationState} from '../NavigationHistory';
-import {BookOpen,Lock} from 'lucide-react';
+import { Button as UIButton } from '../ui/controls';
+import { WelfareCap } from './WelfareCap';
+import { useEffect } from 'react';
+import { useNavigationState } from '../NavigationHistory';
+import { BookOpen, Lock } from 'lucide-react';
 import { INVEST_CLASSES, policyStatus, taxRates, TUNE } from '@econ/sim';
 import type { World, TaxLaw, InvestLaw, WelfareLaw } from '@econ/sim';
 import type { Game } from '../useGame';
 import { className, useT, techName } from '../i18n';
-import {Sprite64} from '../sprites';
+import { Sprite64 } from '../sprites';
 import { NumericValue } from '../NumericValue';
-import {exactNumber,shortDate} from '../format';
+import { exactNumber, shortDate } from '../format';
 import { Bar } from '../ui';
-const ratio=(value:number)=>`${exactNumber(value*100)}%`;
-export function PolicyPanel({world,game,kingdomId,onResearch,domainRequest}:{domainRequest?:{kind:'welfare';sequence:number}|null;world:World;game:Game;kingdomId:number;onResearch:(techId:string)=>void}) {
- const T=useT(),S=T.system,st=policyStatus(world,kingdomId),k=world.kingdoms.find(k=>k.id===kingdomId)!;
- const [kind,setKind]=useNavigationState<'tax'|'invest'|'welfare'>('policy:kind','tax');
- useEffect(()=>{if(domainRequest)setKind(domainRequest.kind);},[domainRequest]);
- const [choices,setChoices]=useNavigationState<Partial<Record<'tax'|'invest'|'welfare',string>>>('policy:choices',{});
- const status=st[kind],pending=status.pending;
- const pendingInvalid='pendingOk' in status&&status.pendingOk===false;
- const pendingThreshold=pending?status.options.find(o=>o.id===pending.to)?.threshold:null;
- const selected=status.options.find(o=>o.id===choices[kind])??status.options.find(o=>o.id===status.current)!;
- const locked='unlocked' in selected&&!selected.unlocked;
- const names:Record<string,string>=S;
- const help:Record<string,string>=T.policyHelp;
- const optionHelp=(id:string)=>{
-  const opt=status.options.find(o=>o.id===id)!;
-  const parts=[help[id]];
-  if(kind==='tax'){
-   const rates=taxRates(k,id as TaxLaw);
-   parts.push(id==='income'?`${T.incomeTaxRates}: ${ratio(rates.income)}`:`${T.taxPerPersonDay}: ƒ${exactNumber(id==='land'?rates.land:rates.poll)}`);
-  }
-  if(opt.threshold!==null)parts.push(`${S.financeRatio}: ${ratio(st.financeRatio)} / ${ratio(opt.threshold)}`);
-  if(pending)parts.push(`${S.transition}: ${names[pending.to]}`);
-  return parts.join('\n');
- };
- const entries={tax:'tax-laws',invest:'invest-law',welfare:'welfare'};
- const change=(kind:'tax'|'invest'|'welfare',law:string)=>kind==='tax'?game.command({type:'setTaxLaw',law:law as TaxLaw}):kind==='invest'?game.command({type:'setInvestLaw',law:law as InvestLaw}):game.command({type:'setWelfareLaw',law:law as WelfareLaw});
- return <div className="policy-desk">
-  <nav className="policy-domains" aria-label={S.policies}>{(['tax','invest','welfare'] as const).map(id=><UIButton key={id} aria-pressed={kind===id} onClick={()=>setKind(id)}><small>{S[id+'Law' as 'taxLaw'|'investLaw'|'welfareLaw']}</small><strong>{names[st[id].current]}</strong>{st[id].pending&&<span className="policy-pending-dot" data-help={`${S.transition}: ${names[st[id].pending!.to]}`} aria-label={S.transition}>◷</span>}</UIButton>)}</nav>
-  <div className="policy-context">{kind==='welfare'&&<WelfareCap kingdom={k}/>}<span tabIndex={0} data-help={S.conditionHelp}>{S.financeRatio} <b>{ratio(st.financeRatio)}</b></span><span>{S.ownerTreasury} <b><NumericValue value={k.investmentPool} format="money"/></b></span></div>
-  {pending&&<section className="policy-transition" aria-label={S.transition}><div><strong>{names[status.current]} → {names[pending.to]}</strong><span>{Math.max(0,pending.endTick-world.tick)} {S.days}</span><UIButton onClick={()=>change(kind,status.current)}>{S.cancel}</UIButton></div><Bar value={(world.tick-pending.startTick)/Math.max(1,pending.endTick-pending.startTick)} tone={pendingInvalid?'neg':'gold'} label={S.transition}/>{pendingThreshold!==null&&pendingThreshold!==undefined&&<small className={pendingInvalid?'neg':undefined} data-help={S.financeRatio}>{ratio(st.financeRatio)} / {ratio(pendingThreshold)}</small>}{'pendingOk' in status&&status.pendingOk===false&&<small className="neg" tabIndex={0} data-help={S.conditionHelp}>{S.conditionLost}</small>}</section>}
-  {kind!=='welfare'&&k.lawFail?.[kind]!==undefined&&<small className="neg">{S.failed} · {shortDate(k.lawFail[kind]!)}</small>}
-  <div className="policy-options" aria-label={S[kind+'Law' as 'taxLaw'|'investLaw'|'welfareLaw']}>{status.options.map(opt=>{const isLocked='unlocked' in opt&&!opt.unlocked;return <UIButton key={opt.id} aria-pressed={selected.id===opt.id} data-help={optionHelp(opt.id)} onClick={()=>setChoices(prev=>({...prev,[kind]:opt.id}))}><span aria-hidden="true">{opt.id===status.current?'✓':opt.id===pending?.to?'◷':isLocked?<Lock size={13}/>: '○'}</span><strong>{names[opt.id]}</strong><small>{opt.id===status.current?S.current:opt.id===pending?.to?S.transition:''}</small></UIButton>;})}</div>
-  <section className="policy-detail"><header><h3 tabIndex={0} className="help-text" data-help={optionHelp(selected.id)}>{names[selected.id]}</h3><a className="law-dictionary" href={`https://phy-ce.github.io/econ-sim/encyclopedia/#${entries[kind]}`} target="_blank" rel="noopener noreferrer" aria-label={`${names[selected.id]} · ${T.lawDictionary}`} data-help={T.lawDictionary}><BookOpen size={15}/></a></header>
-   {kind==='invest'&&<div className="policy-classes" aria-label={S.covered}>{INVEST_CLASSES[selected.id as InvestLaw].map(id=><span key={id} tabIndex={0} data-help={className(id)}><Sprite64 id={id} size={24} label={className(id)}/></span>)}</div>}
-   <dl>{'tech' in selected&&selected.tech&&<div><dt>{T.research}</dt><dd><UIButton className="entity-link" onClick={()=>{if('tech' in selected&&selected.tech)onResearch(selected.tech);}}>{locked?<Lock size={13} aria-hidden="true"/>: '✓ '}{techName(selected.tech)} ↗</UIButton></dd></div>}{selected.threshold!==null&&<div><dt>{S.financeRatio}</dt><dd className={st.financeRatio<selected.threshold?'neg':''}>{ratio(st.financeRatio)} / {ratio(selected.threshold)}</dd></div>}{'weekly' in selected&&<div><dt>{S.week}</dt><dd><NumericValue value={selected.weekly} format="signedMoney"/></dd></div>}<div><dt>{S.transition}</dt><dd>{TUNE.lawDays} {S.days}</dd></div></dl>
-   <div tabIndex={0} data-help={[optionHelp(selected.id),kind==='welfare'?'':S.conditionHelp,locked&&'tech' in selected&&selected.tech?techName(selected.tech):''].filter(Boolean).join('\n')}><UIButton className="policy-enact" disabled={!!pending||locked||!selected.eligible||selected.id===status.current} onClick={()=>change(kind,selected.id)}>{selected.id===status.current?S.current:selected.id===pending?.to?S.transition:S.enact}</UIButton></div>
-  </section>
- </div>;
+const ratio = (value: number) => `${exactNumber(value * 100)}%`;
+export function PolicyPanel({
+  world,
+  game,
+  kingdomId,
+  onResearch,
+  domainRequest,
+}: {
+  domainRequest?: { kind: 'welfare'; sequence: number } | null;
+  world: World;
+  game: Game;
+  kingdomId: number;
+  onResearch: (techId: string) => void;
+}) {
+  const T = useT(),
+    S = T.system,
+    st = policyStatus(world, kingdomId),
+    k = world.kingdoms.find((k) => k.id === kingdomId)!;
+  const [kind, setKind] = useNavigationState<'tax' | 'invest' | 'welfare'>('policy:kind', 'tax');
+  useEffect(() => {
+    if (domainRequest) setKind(domainRequest.kind);
+  }, [domainRequest]);
+  const [choices, setChoices] = useNavigationState<Partial<Record<'tax' | 'invest' | 'welfare', string>>>(
+    'policy:choices',
+    {},
+  );
+  const status = st[kind],
+    pending = status.pending;
+  const pendingInvalid = 'pendingOk' in status && status.pendingOk === false;
+  const pendingThreshold = pending ? status.options.find((o) => o.id === pending.to)?.threshold : null;
+  const selected =
+    status.options.find((o) => o.id === choices[kind]) ?? status.options.find((o) => o.id === status.current)!;
+  const locked = 'unlocked' in selected && !selected.unlocked;
+  const names: Record<string, string> = S;
+  const help: Record<string, string> = T.policyHelp;
+  const optionHelp = (id: string) => {
+    const opt = status.options.find((o) => o.id === id)!;
+    const parts = [help[id]];
+    if (kind === 'tax') {
+      const rates = taxRates(k, id as TaxLaw);
+      parts.push(
+        id === 'income'
+          ? `${T.incomeTaxRates}: ${ratio(rates.income)}`
+          : `${T.taxPerPersonDay}: ƒ${exactNumber(id === 'land' ? rates.land : rates.poll)}`,
+      );
+    }
+    if (opt.threshold !== null) parts.push(`${S.financeRatio}: ${ratio(st.financeRatio)} / ${ratio(opt.threshold)}`);
+    if (pending) parts.push(`${S.transition}: ${names[pending.to]}`);
+    return parts.join('\n');
+  };
+  const entries = { tax: 'tax-laws', invest: 'invest-law', welfare: 'welfare' };
+  const change = (kind: 'tax' | 'invest' | 'welfare', law: string) =>
+    kind === 'tax'
+      ? game.command({ type: 'setTaxLaw', law: law as TaxLaw })
+      : kind === 'invest'
+        ? game.command({ type: 'setInvestLaw', law: law as InvestLaw })
+        : game.command({ type: 'setWelfareLaw', law: law as WelfareLaw });
+  return (
+    <div className="policy-desk">
+      <nav className="policy-domains" aria-label={S.policies}>
+        {(['tax', 'invest', 'welfare'] as const).map((id) => (
+          <UIButton key={id} aria-pressed={kind === id} onClick={() => setKind(id)}>
+            <small>{S[(id + 'Law') as 'taxLaw' | 'investLaw' | 'welfareLaw']}</small>
+            <strong>{names[st[id].current]}</strong>
+            {st[id].pending && (
+              <span
+                className="policy-pending-dot"
+                data-help={`${S.transition}: ${names[st[id].pending!.to]}`}
+                aria-label={S.transition}
+              >
+                ◷
+              </span>
+            )}
+          </UIButton>
+        ))}
+      </nav>
+      <div className="policy-context">
+        {kind === 'welfare' && <WelfareCap kingdom={k} />}
+        <span tabIndex={0} data-help={S.conditionHelp}>
+          {S.financeRatio} <b>{ratio(st.financeRatio)}</b>
+        </span>
+        <span>
+          {S.ownerTreasury}{' '}
+          <b>
+            <NumericValue value={k.investmentPool} format="money" />
+          </b>
+        </span>
+      </div>
+      {pending && (
+        <section className="policy-transition" aria-label={S.transition}>
+          <div>
+            <strong>
+              {names[status.current]} → {names[pending.to]}
+            </strong>
+            <span>
+              {Math.max(0, pending.endTick - world.tick)} {S.days}
+            </span>
+            <UIButton onClick={() => change(kind, status.current)}>{S.cancel}</UIButton>
+          </div>
+          <Bar
+            value={(world.tick - pending.startTick) / Math.max(1, pending.endTick - pending.startTick)}
+            tone={pendingInvalid ? 'neg' : 'gold'}
+            label={S.transition}
+          />
+          {pendingThreshold !== null && pendingThreshold !== undefined && (
+            <small className={pendingInvalid ? 'neg' : undefined} data-help={S.financeRatio}>
+              {ratio(st.financeRatio)} / {ratio(pendingThreshold)}
+            </small>
+          )}
+          {'pendingOk' in status && status.pendingOk === false && (
+            <small className="neg" tabIndex={0} data-help={S.conditionHelp}>
+              {S.conditionLost}
+            </small>
+          )}
+        </section>
+      )}
+      {kind !== 'welfare' && k.lawFail?.[kind] !== undefined && (
+        <small className="neg">
+          {S.failed} · {shortDate(k.lawFail[kind]!)}
+        </small>
+      )}
+      <div className="policy-options" aria-label={S[(kind + 'Law') as 'taxLaw' | 'investLaw' | 'welfareLaw']}>
+        {status.options.map((opt) => {
+          const isLocked = 'unlocked' in opt && !opt.unlocked;
+          return (
+            <UIButton
+              key={opt.id}
+              aria-pressed={selected.id === opt.id}
+              data-help={optionHelp(opt.id)}
+              onClick={() => setChoices((prev) => ({ ...prev, [kind]: opt.id }))}
+            >
+              <span aria-hidden="true">
+                {opt.id === status.current ? '✓' : opt.id === pending?.to ? '◷' : isLocked ? <Lock size={13} /> : '○'}
+              </span>
+              <strong>{names[opt.id]}</strong>
+              <small>{opt.id === status.current ? S.current : opt.id === pending?.to ? S.transition : ''}</small>
+            </UIButton>
+          );
+        })}
+      </div>
+      <section className="policy-detail">
+        <header>
+          <h3 tabIndex={0} className="help-text" data-help={optionHelp(selected.id)}>
+            {names[selected.id]}
+          </h3>
+          <a
+            className="law-dictionary"
+            href={`https://phy-ce.github.io/econ-sim/encyclopedia/#${entries[kind]}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label={`${names[selected.id]} · ${T.lawDictionary}`}
+            data-help={T.lawDictionary}
+          >
+            <BookOpen size={15} />
+          </a>
+        </header>
+        {kind === 'invest' && (
+          <div className="policy-classes" aria-label={S.covered}>
+            {INVEST_CLASSES[selected.id as InvestLaw].map((id) => (
+              <span key={id} tabIndex={0} data-help={className(id)}>
+                <Sprite64 id={id} size={24} label={className(id)} />
+              </span>
+            ))}
+          </div>
+        )}
+        <dl>
+          {'tech' in selected && selected.tech && (
+            <div>
+              <dt>{T.research}</dt>
+              <dd>
+                <UIButton
+                  className="entity-link"
+                  onClick={() => {
+                    if ('tech' in selected && selected.tech) onResearch(selected.tech);
+                  }}
+                >
+                  {locked ? <Lock size={13} aria-hidden="true" /> : '✓ '}
+                  {techName(selected.tech)} ↗
+                </UIButton>
+              </dd>
+            </div>
+          )}
+          {selected.threshold !== null && (
+            <div>
+              <dt>{S.financeRatio}</dt>
+              <dd className={st.financeRatio < selected.threshold ? 'neg' : ''}>
+                {ratio(st.financeRatio)} / {ratio(selected.threshold)}
+              </dd>
+            </div>
+          )}
+          {'weekly' in selected && (
+            <div>
+              <dt>{S.week}</dt>
+              <dd>
+                <NumericValue value={selected.weekly} format="signedMoney" />
+              </dd>
+            </div>
+          )}
+          <div>
+            <dt>{S.transition}</dt>
+            <dd>
+              {TUNE.lawDays} {S.days}
+            </dd>
+          </div>
+        </dl>
+        <div
+          tabIndex={0}
+          data-help={[
+            optionHelp(selected.id),
+            kind === 'welfare' ? '' : S.conditionHelp,
+            locked && 'tech' in selected && selected.tech ? techName(selected.tech) : '',
+          ]
+            .filter(Boolean)
+            .join('\n')}
+        >
+          <UIButton
+            className="policy-enact"
+            disabled={!!pending || locked || !selected.eligible || selected.id === status.current}
+            onClick={() => change(kind, selected.id)}
+          >
+            {selected.id === status.current ? S.current : selected.id === pending?.to ? S.transition : S.enact}
+          </UIButton>
+        </div>
+      </section>
+    </div>
+  );
 }

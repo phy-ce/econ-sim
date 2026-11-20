@@ -7,7 +7,7 @@ fs.mkdirSync(OUT,{recursive:true});
 const result={url:URL_,started:new Date().toISOString(),states:{}};
 const DUMP=`(()=>{
  const h=s=>{let x=2166136261>>>0;for(let i=0;i<s.length;i++){x^=s.charCodeAt(i);x=Math.imul(x,16777619)>>>0;}return x.toString(36);};
- const sty=(e,p)=>{const c=getComputedStyle(e,p);const ks=[];for(let i=0;i<c.length;i++)ks.push(c[i]);ks.sort();let s='';for(const k of ks)s+=k+':'+c.getPropertyValue(k).replace(/\\s+/g,' ').trim()+';';return s;};
+ const sty=(e,p)=>{const c=getComputedStyle(e,p);const ks=[];for(let i=0;i<c.length;i++)if(!c[i].startsWith('--'))ks.push(c[i]);ks.sort();let s='';for(const k of ks)s+=k+':'+c.getPropertyValue(k).replace(/\\s+/g,' ').replace(/ ?, ?/g,',').trim()+';';return s;};
  const path=e=>{const a=[];while(e&&e!==document.documentElement){const p=e.parentElement;a.push(e.tagName.toLowerCase()+(p?[...p.children].indexOf(e):0));e=p;}return a.reverse().join('/');};
  const out={};
  for(const e of [document.documentElement,...document.querySelectorAll('body *')]){
@@ -29,7 +29,7 @@ export default async api=>{
  async function openWindow(i){await closeDetails();await api.eval("document.querySelectorAll('.desktop-dock button[aria-pressed=true]').forEach(b=>b.click())");await click(`.desktop-dock button:nth-child(${i})`);}
  let prefix='';
  async function snap(name){await sleep(350);await api.send('Input.dispatchMouseEvent',{type:'mouseMoved',x:1915,y:1020});const key=`${prefix}-${name}`;if(WMODE){const r=await api.eval(WINS);if(r.error)throw Error(r.error);if(!W.meta)W.meta=r.meta;r.wins.forEach(x=>W.wins.add(x));r.matched.forEach(x=>W.matched.add(x));r.sets.forEach(x=>W.sets.add(x));W.states++;return;}result.states[key]=await api.eval(DUMP);if(SHOTS)await api.shot(`${OUT}/${key}`);}
- async function tabs(sel,name){const n=await api.eval(`document.querySelectorAll(${JSON.stringify(sel)}).length`);for(let i=0;i<n;i++){await click(`${sel}:nth-child(${i+1})`);await snap(`${name}-${i+1}`);}}
+ async function tabs(sel,name){const n=await api.eval(`document.querySelectorAll(${JSON.stringify(sel)}).length`);for(let i=0;i<n;i++){await api.eval(`document.querySelectorAll(${JSON.stringify(sel)})[${i}].click()`);await sleep(300);await snap(`${name}-${i+1}`);}}
  for(const [lang,theme] of [['ko','light'],['en','dark']]){
   prefix=`${lang}-${theme}`;
   await api.goto(URL_);await api.eval(`localStorage.clear();localStorage.setItem('estera-lang','${lang}');localStorage.setItem('estera-theme','${theme}');`);await api.goto(URL_);

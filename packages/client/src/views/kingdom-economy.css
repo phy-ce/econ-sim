@@ -1,3 +1,16 @@
-.strategy-panel .kingdom-comparison{min-width:0;width:100%;table-layout:fixed}
-.strategy-panel .kingdom-comparison th:first-child{width:48%}.strategy-panel .kingdom-comparison td{text-align:right;white-space:nowrap}
-.strategy-panel .kingdom-comparison .entity-link{max-width:100%;white-space:normal}
+.strategy-panel .kingdom-comparison {
+  min-width: 0;
+  width: 100%;
+  table-layout: fixed;
+}
+.strategy-panel .kingdom-comparison th:first-child {
+  width: 48%;
+}
+.strategy-panel .kingdom-comparison td {
+  text-align: right;
+  white-space: nowrap;
+}
+.strategy-panel .kingdom-comparison .entity-link {
+  max-width: 100%;
+  white-space: normal;
+}

@@ -24,7 +24,7 @@
 - 확인: typecheck, test:core 124개, 새 시험 `test/core/alerts.test.ts` (묶기·풀리면 지우기). 1년 실행 (시드 42, 플레이어 조작 없음, main e6e29d3 대비): 전체 소식 581 → 239건, 플레이어(왕실) 소식 21 → 19건.
 
 ## 0-1120-tsref
-- 다음 Claude 일 (사용자 2026-11-20, DECISIONS 7-65): Codex 가 UI-19 까지 끝내면 UI-21 — Prettier 설치·클라이언트 전체 정리·`npm run typecheck` 에 정리 검사 넣기.
+- UI-21 (Prettier, DECISIONS 7-65) 은 2026-11-21 wt-prettier 에서 끝냈다 (UI_DONE UI-21). `npm run typecheck` 가 `prettier --check packages/client` 까지 돌린다. 고칠 때는 `npm run format`.
 - 브랜치 wt-tsref (main 9c0e5fb 에서, 2026-11-20), 클라이언트 리팩토링만 (화면 변경 없음, sim·sim API 변경 없음 → UI_CHANGES 할 일 없음). `views/CompanyPanel.tsx` 를 없애고 쓰는 부품을 새 파일로 나눴다 (`views/buildingRow.ts` rowOf, `ConstructionProjects.tsx` Projects, `BuildingControls.tsx`, `Wages.tsx`, `KingdomSummary.tsx`). 쓰는 곳 없던 `House`·`BuildList` 와 그 안 부품, 그것만 쓰던 CSS 규칙 81개(`cat*`, `hrow*` 등)를 지웠고, premerge 에서 `ui/parts.css` 에 남아 있던 같은 클래스(`cat*`·`hrow*`·`house`·`hc-*`·`hd-h`·`blockers`·`build-catalogue`) 규칙 19줄도 지웠다. 나머지 `company-panel.css` 규칙 52개는 CSS 4개(`wages.css`·`kingdom-summary.css`·`construction-projects.css`·`building-controls.css`)로 `ui/index.css` 같은 자리에 옮겼다. 확인: tools/cssv 74/74 같음, 클라이언트 시험 130, typecheck. 남은 것: 400자 넘는 줄 187줄은 저장소에 포매터(prettier 등)가 없어 정리하지 않았다 (설치는 사용자 승인 필요, DECISIONS 에 아직 항목 없음). Codex 에게: UI-15~UI-19 에서 CompanyPanel.tsx·company-panel.css 대신 새 파일을 본다.
 
 ## 0-1118-css2

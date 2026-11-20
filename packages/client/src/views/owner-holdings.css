@@ -1,9 +1,37 @@
 /* owner-holdings 컴포넌트 (UI-20 5단계에서 역할별로 옮김). */
-.ownership-browser .owner-holdings th:first-child,.ownership-browser .owner-holdings th:nth-child(2),.ownership-browser .owner-holdings th:nth-child(3) {width:auto}
-.owner-holdings {table-layout:fixed;width:100%}
-.owner-holdings th,.owner-holdings td {overflow-wrap:anywhere}
-.owner-holdings small {display:block;font-size:10px}
-.owner-holdings tfoot {border-top:2px solid var(--gold);font-weight:bold}
-.ownership-browser .owner-holdings th {white-space:normal;font-size:10px}
-.ownership-browser .owner-holdings td {white-space:nowrap;height:auto;vertical-align:middle}
-.ownership-browser .owner-holdings td small {position:static;display:block;line-height:1.5;margin-top:3px}
+.ownership-browser .owner-holdings th:first-child,
+.ownership-browser .owner-holdings th:nth-child(2),
+.ownership-browser .owner-holdings th:nth-child(3) {
+  width: auto;
+}
+.owner-holdings {
+  table-layout: fixed;
+  width: 100%;
+}
+.owner-holdings th,
+.owner-holdings td {
+  overflow-wrap: anywhere;
+}
+.owner-holdings small {
+  display: block;
+  font-size: 10px;
+}
+.owner-holdings tfoot {
+  border-top: 2px solid var(--gold);
+  font-weight: bold;
+}
+.ownership-browser .owner-holdings th {
+  white-space: normal;
+  font-size: 10px;
+}
+.ownership-browser .owner-holdings td {
+  white-space: nowrap;
+  height: auto;
+  vertical-align: middle;
+}
+.ownership-browser .owner-holdings td small {
+  position: static;
+  display: block;
+  line-height: 1.5;
+  margin-top: 3px;
+}

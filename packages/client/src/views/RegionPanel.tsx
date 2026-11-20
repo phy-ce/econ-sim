@@ -1,9 +1,9 @@
-import {Button as UIButton} from '../ui/controls';
-import {LedgerTable as UITable} from '../ui/primitives';
-import {QuakeBadge} from './QuakeBadge';
-import {t as uiCopy} from '../i18n';
-import {marketPriceHistory} from '../marketScope';
-import {memo, useCallback} from 'react';
+import { Button as UIButton } from '../ui/controls';
+import { LedgerTable as UITable } from '../ui/primitives';
+import { QuakeBadge } from './QuakeBadge';
+import { t as uiCopy } from '../i18n';
+import { marketPriceHistory } from '../marketScope';
+import { memo, useCallback } from 'react';
 import { RegionIndustry } from './RegionIndustry';
 import { BuildingEconomics } from './BuildingEconomics';
 import { RegionExplorer } from './RegionExplorer';
@@ -13,14 +13,20 @@ import type { Game } from '../useGame';
 import { Projects } from './ConstructionProjects';
 import { playerCompany, educationOf } from '@econ/sim';
 import { OwnerBadge } from './OwnerBadge';
-import { regionLivingStandard,lowerJobUnemployment } from '../systemMetrics';
+import { regionLivingStandard, lowerJobUnemployment } from '../systemMetrics';
 import { HarvestBadge } from './HarvestBadge';
 import { SortHeader } from './SortHeader';
 import { SectionStack } from './SectionStack';
 import { useMemo, useState, useEffect, useRef } from 'react';
 import {
-  GOOD_IDS, REGIONS, GOODS, LAND_TYPES,
-  companyById, landUsed, regionAvgWealth, regionPopulation,
+  GOOD_IDS,
+  REGIONS,
+  GOODS,
+  LAND_TYPES,
+  companyById,
+  landUsed,
+  regionAvgWealth,
+  regionPopulation,
 } from '@econ/sim';
 import type { PopClass, GoodId, HistoryPoint, Region, World } from '@econ/sim';
 import { MapPin, Package, Factory, Users } from 'lucide-react';
@@ -37,55 +43,93 @@ import { buildingName, companyName, goodName, landName, regionName, useLang, use
 
 type SortKey = 'value' | 'name' | 'price' | 'ratio' | 'balance';
 
-function RegionPanelView({ world, region, history, selectedGood, onSelectGood, onViewCompany, mode, onViewBuildings, game, buildingRequest, onViewPops, onOpenBuilding }: {
-  onOpenBuilding?:(id:number)=>void;
-  onViewPops?:(regionId:number,prof:PopClass)=>void;
-  buildingRequest?:{id:number;sequence:number}|null; game:Game;
+function RegionPanelView({
+  world,
+  region,
+  history,
+  selectedGood,
+  onSelectGood,
+  onViewCompany,
+  mode,
+  onViewBuildings,
+  game,
+  buildingRequest,
+  onViewPops,
+  onOpenBuilding,
+}: {
+  onOpenBuilding?: (id: number) => void;
+  onViewPops?: (regionId: number, prof: PopClass) => void;
+  buildingRequest?: { id: number; sequence: number } | null;
+  game: Game;
   onViewBuildings?: () => void;
   mode?: 'overview' | 'market' | 'industry';
-  world: World; region: Region; history: HistoryPoint[]; selectedGood: GoodId; onSelectGood: (g: GoodId) => void; onViewCompany: (companyId: number) => void;
+  world: World;
+  region: Region;
+  history: HistoryPoint[];
+  selectedGood: GoodId;
+  onSelectGood: (g: GoodId) => void;
+  onViewCompany: (companyId: number) => void;
 }) {
   const [localTab, setTab] = useState<'overview' | 'market' | 'industry'>('market');
   const tab = mode ?? localTab;
-  const [resourceRequest,setResourceRequest]=useState<number|null>(null);
-  const selectGood = (g: GoodId) => { onSelectGood(g); setTab('market'); setResourceRequest(v=>(v??0)+1); };
-  const me=playerCompany(world);
+  const [resourceRequest, setResourceRequest] = useState<number | null>(null);
+  const selectGood = (g: GoodId) => {
+    onSelectGood(g);
+    setTab('market');
+    setResourceRequest((v) => (v ?? 0) + 1);
+  };
+  const me = playerCompany(world);
   const r = region;
   const lang = useLang();
   const T = useT();
   const pop = regionPopulation(r);
-  const allBuildings = world.buildings.filter(b => b.regionId === r.id);
+  const allBuildings = world.buildings.filter((b) => b.regionId === r.id);
   const lower = r.households.peasant.population + r.households.unskilled.population + r.households.farmer.population;
   const laborer = r.households.unskilled;
-  const unemp = lowerJobUnemployment(world,r.id);
+  const unemp = lowerJobUnemployment(world, r.id);
   const tenantShare = lower > 0 ? r.households.peasant.population / lower : 0;
   const headline = `region-${r.id}`;
   const [sort, setSort] = useState<{ key: SortKey; dir: 1 | -1 }>({ key: 'value', dir: -1 });
-  const priceData = useMemo(() => marketPriceHistory(history,[r.id],selectedGood), [history, r.id, selectedGood]);
+  const priceData = useMemo(() => marketPriceHistory(history, [r.id], selectedGood), [history, r.id, selectedGood]);
 
   // 순서는 정렬 기준·지역이 바뀔 때와 게임 속 일주일마다만 다시 매긴다 (값이 매 순간 바뀌어 행이 뛰지 않게)
   const week = Math.floor(world.tick / 7);
-  const goods = useMemo(() => [...GOOD_IDS].sort((a, b) => {
-    if (sort.key === 'name') return goodName(a).localeCompare(goodName(b), lang) * sort.dir;
-    const ma = r.market[a], mb = r.market[b];
-    const v = (g: GoodId, m: typeof ma) =>
-      sort.key === 'value' ? m.price * (m.supplyEma + m.demandEma) / 2 : sort.key === 'price' ? m.price : sort.key === 'ratio' ? m.price / GOODS[g].basePrice : m.supplyEma - m.demandEma;
-    return (v(a, ma) - v(b, mb)) * sort.dir;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }), [sort, r.id, week, lang]);
-  const sortBy = (key: SortKey) => setSort((s) => ({ key, dir: s.key === key ? (s.dir === 1 ? -1 : 1) : key === 'name' ? 1 : -1 }));
+  const goods = useMemo(
+    () =>
+      [...GOOD_IDS].sort((a, b) => {
+        if (sort.key === 'name') return goodName(a).localeCompare(goodName(b), lang) * sort.dir;
+        const ma = r.market[a],
+          mb = r.market[b];
+        const v = (g: GoodId, m: typeof ma) =>
+          sort.key === 'value'
+            ? (m.price * (m.supplyEma + m.demandEma)) / 2
+            : sort.key === 'price'
+              ? m.price
+              : sort.key === 'ratio'
+                ? m.price / GOODS[g].basePrice
+                : m.supplyEma - m.demandEma;
+        return (v(a, ma) - v(b, mb)) * sort.dir;
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+      }),
+    [sort, r.id, week, lang],
+  );
+  const sortBy = (key: SortKey) =>
+    setSort((s) => ({ key, dir: s.key === key ? (s.dir === 1 ? -1 : 1) : key === 'name' ? 1 : -1 }));
   // 컴포넌트가 아니라 함수로 그린다: 매 갱신마다 새 컴포넌트가 되면 버튼이 다시 만들어져 클릭이 씹힌다
   const sortTh = (k: SortKey, children: string) => (
-    <SortHeader key={k} label={children} active={sort.key===k} direction={sort.dir} onClick={()=>sortBy(k)}/>
+    <SortHeader key={k} label={children} active={sort.key === k} direction={sort.dir} onClick={() => sortBy(k)} />
   );
 
   return (
     <>
-      <header className={`pane-head ${tab==='overview'?'explorer-region-head':''}`}>
+      <header className={`pane-head ${tab === 'overview' ? 'explorer-region-head' : ''}`}>
         <div className="title-row">
-          <span className="tile lg region-art"><Sprite64 id={headline} size={64} /></span>
+          <span className="tile lg region-art">
+            <Sprite64 id={headline} size={64} />
+          </span>
           <h2>{regionName(r)}</h2>
-          <HarvestBadge world={world} regionId={r.id}/><QuakeBadge world={world} regionId={r.id}/>
+          <HarvestBadge world={world} regionId={r.id} />
+          <QuakeBadge world={world} regionId={r.id} />
           {Object.entries(REGIONS.find((d) => d.id === r.id)?.perks ?? {}).length > 0 && (
             <span className="perks">
               {Object.entries(REGIONS.find((d) => d.id === r.id)!.perks).map(([t, v]) => (
@@ -96,81 +140,238 @@ function RegionPanelView({ world, region, history, selectedGood, onSelectGood, o
             </span>
           )}
         </div>
-        {tab==='overview'&&<div className="stats region-stats">
-          <div className="stat"><span className="stat-label"><HelpText text={T.help.sol}>{T.standardOfLiving}</HelpText></span><span className="stat-value">{regionLivingStandard(r).toFixed(1)}</span><Bar value={regionLivingStandard(r)/30} size="sm" label={T.standardOfLiving}/></div>
-          <div className="stat"><span className="stat-label"><HelpText text={T.help.population}>{T.population}</HelpText></span><span className="stat-value"><NumericValue value={pop} format="compact"/></span></div>
-          <div className="stat">
-            <span className="stat-label"><HelpText text={T.help.wealth}>{T.wealthPerHead}</HelpText></span>
-            <span className={`stat-value ${regionAvgWealth(r) < 4 ? 'neg' : ''}`}>{regionAvgWealth(r).toFixed(1)}</span>
+        {tab === 'overview' && (
+          <div className="stats region-stats">
+            <div className="stat">
+              <span className="stat-label">
+                <HelpText text={T.help.sol}>{T.standardOfLiving}</HelpText>
+              </span>
+              <span className="stat-value">{regionLivingStandard(r).toFixed(1)}</span>
+              <Bar value={regionLivingStandard(r) / 30} size="sm" label={T.standardOfLiving} />
+            </div>
+            <div className="stat">
+              <span className="stat-label">
+                <HelpText text={T.help.population}>{T.population}</HelpText>
+              </span>
+              <span className="stat-value">
+                <NumericValue value={pop} format="compact" />
+              </span>
+            </div>
+            <div className="stat">
+              <span className="stat-label">
+                <HelpText text={T.help.wealth}>{T.wealthPerHead}</HelpText>
+              </span>
+              <span className={`stat-value ${regionAvgWealth(r) < 4 ? 'neg' : ''}`}>
+                {regionAvgWealth(r).toFixed(1)}
+              </span>
+            </div>
+            <div className="stat">
+              <span className="stat-label">
+                <HelpText text={T.help.laborerWealth}>{T.laborerWealth}</HelpText>
+              </span>
+              <span className="stat-value">{laborer.wealth.toFixed(1)}</span>
+            </div>
+            <div className="stat">
+              <span className="stat-label">
+                <HelpText text={T.help.unemployment}>{T.unemployment}</HelpText>
+              </span>
+              <span className="stat-value">{pct(unemp)}</span>
+              <Bar value={unemp} tone="neg" size="sm" label={T.unemployment} />
+            </div>
+            <div className="stat">
+              <span className="stat-label">
+                <HelpText text={T.help.education}>{T.education}</HelpText>
+              </span>
+              <span className="stat-value">{pct(educationOf(r))}</span>
+              <Bar value={educationOf(r)} tone="pos" size="sm" label={T.education} />
+            </div>
+            <div className="stat">
+              <span className="stat-label">
+                <HelpText text={T.help.tenants}>{T.tenants}</HelpText>
+              </span>
+              <span className="stat-value accent">{pct(tenantShare)}</span>
+              <Bar value={tenantShare} tone="accent" size="sm" label={T.tenants} />
+            </div>
           </div>
-          <div className="stat">
-            <span className="stat-label"><HelpText text={T.help.laborerWealth}>{T.laborerWealth}</HelpText></span>
-            <span className="stat-value">{laborer.wealth.toFixed(1)}</span>
-          </div>
-          <div className="stat">
-            <span className="stat-label"><HelpText text={T.help.unemployment}>{T.unemployment}</HelpText></span>
-            <span className="stat-value">{pct(unemp)}</span>
-            <Bar value={unemp} tone="neg" size="sm" label={T.unemployment} />
-          </div>
-          <div className="stat"><span className="stat-label"><HelpText text={T.help.education}>{T.education}</HelpText></span><span className="stat-value">{pct(educationOf(r))}</span><Bar value={educationOf(r)} tone="pos" size="sm" label={T.education} /></div>
-          <div className="stat"><span className="stat-label"><HelpText text={T.help.tenants}>{T.tenants}</HelpText></span><span className="stat-value accent">{pct(tenantShare)}</span><Bar value={tenantShare} tone="accent" size="sm" label={T.tenants} /></div>
-        </div>}
-        {tab !== 'industry' && <UIButton className="region-buildings-link" onClick={() => { if (onViewBuildings) onViewBuildings(); else setTab('industry'); }}><Factory size={15}/>{uiCopy().screenText['allRegionalBuildings']} <b>{allBuildings.length}</b></UIButton>}
-
+        )}
+        {tab !== 'industry' && (
+          <UIButton
+            className="region-buildings-link"
+            onClick={() => {
+              if (onViewBuildings) onViewBuildings();
+              else setTab('industry');
+            }}
+          >
+            <Factory size={15} />
+            {uiCopy().screenText['allRegionalBuildings']} <b>{allBuildings.length}</b>
+          </UIButton>
+        )}
       </header>
 
-      {!mode && <nav className="region-tabs" aria-label={uiCopy().screenText['regionViews']}>
-        <UIButton aria-pressed={tab === 'overview'} onClick={() => setTab('overview')}><Users size={18}/>{uiCopy().screenText['overview207']}</UIButton>
-        <UIButton aria-pressed={tab === 'market'} onClick={() => setTab('market')}><Package size={18}/>{T.market}</UIButton>
-        <UIButton aria-pressed={tab === 'industry'} onClick={() => setTab('industry')}><Factory size={18}/>{T.buildings}<span className="count-pill">{allBuildings.length}</span></UIButton>
-      </nav>}
-      {tab === 'overview' && <RegionExplorer world={world} region={r} onBuildings={()=>{if(onViewBuildings)onViewBuildings();else setTab('industry');}} onPops={prof=>onViewPops?.(r.id,prof)}/>}
-      {tab === 'market' && <section className="block market-workspace">
-        <SectionStack explorer revealId="resource" revealKey={resourceRequest} storageKey="market" items={[{ id: 'prices', title: uiCopy().screenText['marketPrices'], height: 174, content: <section className="market-ledger unified-market">
-
-        <div className="table-scroll">
-          <UITable className="goods">
-            <thead><tr>
-              {sortTh('name', T.colGood)}{sortTh('price', T.colPrice)}{sortTh('ratio', T.colRatio)}
-              {sortTh('balance', T.colBalance)}{sortTh('value', T.colValue)}
-            </tr></thead>
-            <tbody>
-              {goods.map((g) => {
-                const m = r.market[g];
-                const short = m.supplyEma < m.demandEma * 0.5 && m.demandEma > 1;
-                return (
-                  <tr key={g} className={g === selectedGood ? 'selected' : ''} onClick={() => selectGood(g)} tabIndex={0} aria-selected={g === selectedGood}
-                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectGood(g); } }}>
-                    <td><span className="good-name"><GoodSprite g={g} size={24} /> {goodName(g)}</span></td>
-                    <td><NumericValue value={m.price} format="money"/></td>
-                    <td className="gauge-cell"><PriceGauge ratio={m.price / GOODS[g].basePrice} /></td>
-                    <td className={short ? 'neg strong' : ''}><NumericValue value={m.supplyEma} format="compact"/> / <NumericValue value={m.demandEma} format="compact"/></td>
-                    <td><NumericValue value={m.price * (m.supplyEma + m.demandEma) / 2} format="compactMoney"/></td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </UITable>
-        </div>
+      {!mode && (
+        <nav className="region-tabs" aria-label={uiCopy().screenText['regionViews']}>
+          <UIButton aria-pressed={tab === 'overview'} onClick={() => setTab('overview')}>
+            <Users size={18} />
+            {uiCopy().screenText['overview207']}
+          </UIButton>
+          <UIButton aria-pressed={tab === 'market'} onClick={() => setTab('market')}>
+            <Package size={18} />
+            {T.market}
+          </UIButton>
+          <UIButton aria-pressed={tab === 'industry'} onClick={() => setTab('industry')}>
+            <Factory size={18} />
+            {T.buildings}
+            <span className="count-pill">{allBuildings.length}</span>
+          </UIButton>
+        </nav>
+      )}
+      {tab === 'overview' && (
+        <RegionExplorer
+          world={world}
+          region={r}
+          onBuildings={() => {
+            if (onViewBuildings) onViewBuildings();
+            else setTab('industry');
+          }}
+          onPops={(prof) => onViewPops?.(r.id, prof)}
+        />
+      )}
+      {tab === 'market' && (
+        <section className="block market-workspace">
+          <SectionStack
+            explorer
+            revealId="resource"
+            revealKey={resourceRequest}
+            storageKey="market"
+            items={[
+              {
+                id: 'prices',
+                title: uiCopy().screenText['marketPrices'],
+                height: 174,
+                content: (
+                  <section className="market-ledger unified-market">
+                    <div className="table-scroll">
+                      <UITable className="goods">
+                        <thead>
+                          <tr>
+                            {sortTh('name', T.colGood)}
+                            {sortTh('price', T.colPrice)}
+                            {sortTh('ratio', T.colRatio)}
+                            {sortTh('balance', T.colBalance)}
+                            {sortTh('value', T.colValue)}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {goods.map((g) => {
+                            const m = r.market[g];
+                            const short = m.supplyEma < m.demandEma * 0.5 && m.demandEma > 1;
+                            return (
+                              <tr
+                                key={g}
+                                className={g === selectedGood ? 'selected' : ''}
+                                onClick={() => selectGood(g)}
+                                tabIndex={0}
+                                aria-selected={g === selectedGood}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter' || e.key === ' ') {
+                                    e.preventDefault();
+                                    selectGood(g);
+                                  }
+                                }}
+                              >
+                                <td>
+                                  <span className="good-name">
+                                    <GoodSprite g={g} size={24} /> {goodName(g)}
+                                  </span>
+                                </td>
+                                <td>
+                                  <NumericValue value={m.price} format="money" />
+                                </td>
+                                <td className="gauge-cell">
+                                  <PriceGauge ratio={m.price / GOODS[g].basePrice} />
+                                </td>
+                                <td className={short ? 'neg strong' : ''}>
+                                  <NumericValue value={m.supplyEma} format="compact" /> /{' '}
+                                  <NumericValue value={m.demandEma} format="compact" />
+                                </td>
+                                <td>
+                                  <NumericValue
+                                    value={(m.price * (m.supplyEma + m.demandEma)) / 2}
+                                    format="compactMoney"
+                                  />
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </UITable>
+                    </div>
+                  </section>
+                ),
+              },
+              {
+                id: 'resource',
+                shortTitle: uiCopy().screenText['goodDetails'],
+                title: uiCopy().screenText['selectedGoodBuildings'],
+                height: 290,
+                content: (
+                  <ResourceInspector
+                    game={game}
+                    key={`${r.id}-${selectedGood}`}
+                    world={world}
+                    region={r}
+                    good={selectedGood}
+                    onGood={selectGood}
+                    onCompany={onViewCompany}
+                  />
+                ),
+              },
+              {
+                id: 'sources',
+                shortTitle: uiCopy().screenText['supplyDemand'],
+                title: uiCopy().screenText['supplyAndDemand'],
+                height: 210,
+                content: <SourceBreakdown good={selectedGood} m={r.market[selectedGood]} />,
+              },
+              {
+                id: 'history',
+                title: uiCopy().screenText['priceHistory'],
+                height: 190,
+                content: (
+                  <div className="price-chart">
+                    <div className="card-head">
+                      <span className="good-name strong">
+                        <GoodSprite g={selectedGood} /> {T.priceTrend(goodName(selectedGood))}
+                      </span>
+                      <span className="lbl">{T.basePriceOf(money(GOODS[selectedGood].basePrice))}</span>
+                    </div>
+                    <TimeChart
+                      data={priceData}
+                      series={[{ key: 'price', name: T.price, color: 'var(--accent)' }]}
+                      format={(v) => `ƒ${v.toFixed(v < 10 ? 2 : 0)}`}
+                      reference={{ y: GOODS[selectedGood].basePrice, label: T.basePrice }}
+                      height={150}
+                    />
+                  </div>
+                ),
+              },
+            ]}
+          />
         </section>
-        }, { id: 'resource', shortTitle:uiCopy().screenText['goodDetails'], title: uiCopy().screenText['selectedGoodBuildings'], height: 290, content: <ResourceInspector game={game} key={`${r.id}-${selectedGood}`} world={world} region={r} good={selectedGood} onGood={selectGood} onCompany={onViewCompany}/>
-        }, { id: 'sources', shortTitle:uiCopy().screenText['supplyDemand'], title: uiCopy().screenText['supplyAndDemand'], height: 210, content: <SourceBreakdown good={selectedGood} m={r.market[selectedGood]} />
-        }, { id: 'history', title: uiCopy().screenText['priceHistory'], height: 190, content: <div className="price-chart">
-          <div className="card-head">
-            <span className="good-name strong"><GoodSprite g={selectedGood} /> {T.priceTrend(goodName(selectedGood))}</span>
-            <span className="lbl">{T.basePriceOf(money(GOODS[selectedGood].basePrice))}</span>
-          </div>
-          <TimeChart data={priceData} series={[{ key: 'price', name: T.price, color: 'var(--accent)' }]}
-            format={(v) => `ƒ${v.toFixed(v < 10 ? 2 : 0)}`} reference={{ y: GOODS[selectedGood].basePrice, label: T.basePrice }} height={150} />
-        </div>
-        }]} />
-      </section>
-
-      }
-      {tab === 'industry' && <RegionIndustry world={world} region={r} game={game} request={buildingRequest} onOpenBuilding={onOpenBuilding} onGood={selectGood} onCompany={onViewCompany}/>}
-
+      )}
+      {tab === 'industry' && (
+        <RegionIndustry
+          world={world}
+          region={r}
+          game={game}
+          request={buildingRequest}
+          onOpenBuilding={onOpenBuilding}
+          onGood={selectGood}
+          onCompany={onViewCompany}
+        />
+      )}
     </>
   );
 }
 
-export const RegionPanel=memo(RegionPanelView);
+export const RegionPanel = memo(RegionPanelView);

@@ -1,7 +1,7 @@
-import {eventKey,isPlayerResearchDone} from './news';
-import {dangerPause} from './dangerPause';
-import {TICKS_PER_YEAR} from '@econ/sim';
-import {trace,traceTick} from './trace';
+import { eventKey, isPlayerResearchDone } from './news';
+import { dangerPause } from './dangerPause';
+import { TICKS_PER_YEAR } from '@econ/sim';
+import { trace, traceTick } from './trace';
 import type { ConstructionActivity } from './constructionActivity';
 import { useCallback, useMemo, useEffect, useRef, useState } from 'react';
 import type { Command, GameEvent, HistoryPoint, World } from '@econ/sim';
@@ -13,29 +13,45 @@ const SAVE_KEY = 'estera-save-v7';
 const PREF_KEY = 'estera-prefs-v1';
 
 /** text 는 한국어, textEn 은 영어 (없으면 한국어로 보인다) */
-export interface Toast { id: number; text: string; textEn?: string; kind: 'error' | 'info' | 'warn' | 'danger'; regionId?: number }
-
-/** 사전의 같은 문구를 두 언어로 */
-const both = (k: { [K in keyof Dict]: Dict[K] extends string ? K : never }[keyof Dict]) => ({ text: KO[k] as string, textEn: EN[k] as string });
-
-interface Prefs { pauseOnDanger: boolean }
-
-function loadPrefs(): Prefs {
-  try { return { pauseOnDanger: true, ...JSON.parse(localStorage.getItem(PREF_KEY) ?? '{}') }; } catch { return { pauseOnDanger: true }; }
+export interface Toast {
+  id: number;
+  text: string;
+  textEn?: string;
+  kind: 'error' | 'info' | 'warn' | 'danger';
+  regionId?: number;
 }
 
+/** 사전의 같은 문구를 두 언어로 */
+const both = (k: { [K in keyof Dict]: Dict[K] extends string ? K : never }[keyof Dict]) => ({
+  text: KO[k] as string,
+  textEn: EN[k] as string,
+});
+
+interface Prefs {
+  pauseOnDanger: boolean;
+}
+
+function loadPrefs(): Prefs {
+  try {
+    return { pauseOnDanger: true, ...JSON.parse(localStorage.getItem(PREF_KEY) ?? '{}') };
+  } catch {
+    return { pauseOnDanger: true };
+  }
+}
 
 export function useGame() {
   const workerRef = useRef<Worker | null>(null);
-  const [constructionActivity,setConstructionActivity] = useState<ConstructionActivity | null>(null);
+  const [constructionActivity, setConstructionActivity] = useState<ConstructionActivity | null>(null);
   const [world, setWorld] = useState<World | null>(null);
-  const [researchCompleted,setResearchCompleted]=useState(0);
+  const [researchCompleted, setResearchCompleted] = useState(0);
   const [hour, setHour] = useState(0);
   const [history, setHistory] = useState<HistoryPoint[]>([]);
   const [speed, setSpeedState] = useState(0);
   const speedRef = useRef(0);
-  const [pauseReason,setPauseReason]=useState<{kind:'user'|'danger'|'yearEnd';event?:GameEvent}>({kind:'user'});
-  const dangerEpisodes=useRef(new Map<string,{tick:number;stopped:boolean}>());
+  const [pauseReason, setPauseReason] = useState<{ kind: 'user' | 'danger' | 'yearEnd'; event?: GameEvent }>({
+    kind: 'user',
+  });
+  const dangerEpisodes = useRef(new Map<string, { tick: number; stopped: boolean }>());
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [lastReadTick, setLastReadTick] = useState(-1);
   const [prefs, setPrefsState] = useState<Prefs>(loadPrefs);
@@ -43,22 +59,28 @@ export function useGame() {
   const toastId = useRef(0);
   const seenEvents = useRef<Set<string> | null>(null);
 
-  const toast = useCallback((msg: { text: string; textEn?: string }, kind: Toast['kind'] = 'info', regionId?: number) => {
-    const id = ++toastId.current;
-    setToasts((t) => [...t.slice(-4), { id, text: msg.text, textEn: msg.textEn, kind, regionId }]);
-    const ttl = kind === 'danger' ? 12000 : kind === 'warn' ? 8000 : 4000;
-    setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), ttl);
-  }, []);
+  const toast = useCallback(
+    (msg: { text: string; textEn?: string }, kind: Toast['kind'] = 'info', regionId?: number) => {
+      const id = ++toastId.current;
+      setToasts((t) => [...t.slice(-4), { id, text: msg.text, textEn: msg.textEn, kind, regionId }]);
+      const ttl = kind === 'danger' ? 12000 : kind === 'warn' ? 8000 : 4000;
+      setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), ttl);
+    },
+    [],
+  );
 
   const send = useCallback((msg: ToWorker) => workerRef.current?.postMessage(msg), []);
 
-  const setSpeed = useCallback((ticksPerSecond: number,reason:'user'|'key'='user') => {
-    setPauseReason({kind:'user'});
-    trace('speed',{previous:speedRef.current,next:ticksPerSecond,reason});
-    speedRef.current = ticksPerSecond;
-    setSpeedState(ticksPerSecond);
-    send({ type: 'speed', ticksPerSecond });
-  }, [send]);
+  const setSpeed = useCallback(
+    (ticksPerSecond: number, reason: 'user' | 'key' = 'user') => {
+      setPauseReason({ kind: 'user' });
+      trace('speed', { previous: speedRef.current, next: ticksPerSecond, reason });
+      speedRef.current = ticksPerSecond;
+      setSpeedState(ticksPerSecond);
+      send({ type: 'speed', ticksPerSecond });
+    },
+    [send],
+  );
 
   useEffect(() => {
     const worker = new Worker(new URL('./sim.worker.ts', import.meta.url), { type: 'module' });
@@ -73,29 +95,39 @@ export function useGame() {
         setHour(msg.hour);
         if (import.meta.env.DEV) (globalThis as { __world?: World }).__world = msg.world;
         setHistory((h) => (msg.resetHistory ? msg.history : msg.history.length ? [...h, ...msg.history] : h));
-        for (const err of msg.errors) {trace('error',{...err});toast(err, 'error');}
+        for (const err of msg.errors) {
+          trace('error', { ...err });
+          toast(err, 'error');
+        }
 
         // 내 상회·왕국 전체에 생긴 새 소식: 주의 이상은 알림으로 띄우고, 위험은 게임을 멈춘다
         const keys = new Set(msg.world.events.map(eventKey));
         if (seenEvents.current) {
-          let pause:GameEvent|undefined,research:GameEvent|undefined;
+          let pause: GameEvent | undefined, research: GameEvent | undefined;
           for (const ev of msg.world.events) {
             if (seenEvents.current.has(eventKey(ev))) continue;
-            if(isPlayerResearchDone(ev))research=ev;
+            if (isPlayerResearchDone(ev)) research = ev;
             // 내 상회 소식은 모두, 왕국 전체 소식은 위험만 알림으로 띄운다 (나머지는 알림 목록에만)
-            if (ev.companyId === 100 || (ev.companyId === null && ev.kind === 'danger')) toast(ev, ev.kind, ev.regionId);
+            if (ev.companyId === 100 || (ev.companyId === null && ev.kind === 'danger'))
+              toast(ev, ev.kind, ev.regionId);
             else continue;
-            if (ev.kind === 'danger' && ev.companyId === 100&&dangerPause(dangerEpisodes.current,ev,prefsRef.current.pauseOnDanger&&speedRef.current>0)) pause = ev;
+            if (
+              ev.kind === 'danger' &&
+              ev.companyId === 100 &&
+              dangerPause(dangerEpisodes.current, ev, prefsRef.current.pauseOnDanger && speedRef.current > 0)
+            )
+              pause = ev;
           }
-          if(research){
-            trace('speed',{previous:speedRef.current,next:0,reason:'researchDone'});
-            setPauseReason({kind:'user',event:research});
-            speedRef.current=0;setSpeedState(0);
-            worker.postMessage({type:'speed',ticksPerSecond:0} satisfies ToWorker);
-            setResearchCompleted(n=>n+1);
-          }else if (pause && prefsRef.current.pauseOnDanger && speedRef.current > 0) {
-            trace('speed',{previous:speedRef.current,next:0,reason:'danger'});
-            setPauseReason({kind:'danger',event:pause});
+          if (research) {
+            trace('speed', { previous: speedRef.current, next: 0, reason: 'researchDone' });
+            setPauseReason({ kind: 'user', event: research });
+            speedRef.current = 0;
+            setSpeedState(0);
+            worker.postMessage({ type: 'speed', ticksPerSecond: 0 } satisfies ToWorker);
+            setResearchCompleted((n) => n + 1);
+          } else if (pause && prefsRef.current.pauseOnDanger && speedRef.current > 0) {
+            trace('speed', { previous: speedRef.current, next: 0, reason: 'danger' });
+            setPauseReason({ kind: 'danger', event: pause });
             speedRef.current = 0;
             setSpeedState(0);
             worker.postMessage({ type: 'speed', ticksPerSecond: 0 } satisfies ToWorker);
@@ -103,7 +135,10 @@ export function useGame() {
         }
         seenEvents.current = keys;
       } else if (msg.type === 'reached') {
-        trace('speed',{previous:speedRef.current,next:0,reason:'reached'});speedRef.current=0;setSpeedState(0);setPauseReason({kind:'yearEnd'});
+        trace('speed', { previous: speedRef.current, next: 0, reason: 'reached' });
+        speedRef.current = 0;
+        setSpeedState(0);
+        setPauseReason({ kind: 'yearEnd' });
       } else if (msg.type === 'hour') {
         setHour(msg.hour);
       } else if (msg.type === 'saved') {
@@ -118,7 +153,9 @@ export function useGame() {
     try {
       const saved = localStorage.getItem(SAVE_KEY);
       if (saved) worker.postMessage({ type: 'load', world: JSON.parse(saved) } satisfies ToWorker);
-    } catch { /* 저장소를 못 읽으면 새 게임 */ }
+    } catch {
+      /* 저장소를 못 읽으면 새 게임 */
+    }
     return () => worker.terminate();
   }, [toast]);
 
@@ -126,50 +163,88 @@ export function useGame() {
     const next = { ...prefsRef.current, ...p };
     prefsRef.current = next;
     setPrefsState(next);
-    try { localStorage.setItem(PREF_KEY, JSON.stringify(next)); } catch { /* 선택 사항 */ }
+    try {
+      localStorage.setItem(PREF_KEY, JSON.stringify(next));
+    } catch {
+      /* 선택 사항 */
+    }
   }, []);
 
-  return useMemo(() => ({
-    world,
-    constructionActivity,
-    researchCompleted,
-    hour,
-    history,
-    speed,
-    pauseReason,
-    runUntilYearEnd:(rate:number)=>{if(!world)return;setPauseReason({kind:'user'});speedRef.current=rate;setSpeedState(rate);send({type:'speed',ticksPerSecond:rate});send({type:'runUntil',tick:(Math.floor(world.tick/TICKS_PER_YEAR)+1)*TICKS_PER_YEAR});trace('speed',{next:rate,reason:'user',target:'yearEnd'});},
-    toasts,
-    prefs,
-    setPrefs,
-    lastReadTick,
-    markRead: () => { if (world) setLastReadTick(world.tick); },
-    dismissToast: (id: number) => setToasts((t) => t.filter((x) => x.id !== id)),
-    setSpeed,
-    command: (cmd: Command) => {trace('command',{command:cmd});send({ type: 'command', cmd });},
-    stepOnce: () => send({ type: 'stepOnce' }),
-    save: () => send({ type: 'save' }),
-    load: () => {
-      try {
-        const saved = localStorage.getItem(SAVE_KEY);
-        if (!saved) { toast(both('noSave'), 'error'); return; }
+  return useMemo(
+    () => ({
+      world,
+      constructionActivity,
+      researchCompleted,
+      hour,
+      history,
+      speed,
+      pauseReason,
+      runUntilYearEnd: (rate: number) => {
+        if (!world) return;
+        setPauseReason({ kind: 'user' });
+        speedRef.current = rate;
+        setSpeedState(rate);
+        send({ type: 'speed', ticksPerSecond: rate });
+        send({ type: 'runUntil', tick: (Math.floor(world.tick / TICKS_PER_YEAR) + 1) * TICKS_PER_YEAR });
+        trace('speed', { next: rate, reason: 'user', target: 'yearEnd' });
+      },
+      toasts,
+      prefs,
+      setPrefs,
+      lastReadTick,
+      markRead: () => {
+        if (world) setLastReadTick(world.tick);
+      },
+      dismissToast: (id: number) => setToasts((t) => t.filter((x) => x.id !== id)),
+      setSpeed,
+      command: (cmd: Command) => {
+        trace('command', { command: cmd });
+        send({ type: 'command', cmd });
+      },
+      stepOnce: () => send({ type: 'stepOnce' }),
+      save: () => send({ type: 'save' }),
+      load: () => {
+        try {
+          const saved = localStorage.getItem(SAVE_KEY);
+          if (!saved) {
+            toast(both('noSave'), 'error');
+            return;
+          }
+          dangerEpisodes.current.clear();
+          dangerEpisodes.current.clear();
+          seenEvents.current = null;
+          send({ type: 'load', world: JSON.parse(saved) });
+          toast(both('loaded'));
+        } catch {
+          toast(both('loadFailed'), 'error');
+        }
+      },
+      newGame: () => {
         dangerEpisodes.current.clear();
-        dangerEpisodes.current.clear();
-      seenEvents.current = null;
-        send({ type: 'load', world: JSON.parse(saved) });
-        toast(both('loaded'));
-      } catch {
-        toast(both('loadFailed'), 'error');
-      }
-    },
-    newGame: () => {
-      dangerEpisodes.current.clear();
-      seenEvents.current = null;
-      setLastReadTick(-1);
-      setResearchCompleted(0);
-      send({ type: 'new', seed: Math.floor(Math.random() * 1e6) });
-      toast(both('started'));
-    },
-  }), [world, constructionActivity, researchCompleted, hour, history, speed,pauseReason, toasts, prefs, setPrefs, lastReadTick, setSpeed, send, toast]);
+        seenEvents.current = null;
+        setLastReadTick(-1);
+        setResearchCompleted(0);
+        send({ type: 'new', seed: Math.floor(Math.random() * 1e6) });
+        toast(both('started'));
+      },
+    }),
+    [
+      world,
+      constructionActivity,
+      researchCompleted,
+      hour,
+      history,
+      speed,
+      pauseReason,
+      toasts,
+      prefs,
+      setPrefs,
+      lastReadTick,
+      setSpeed,
+      send,
+      toast,
+    ],
+  );
 }
 
 export type Game = ReturnType<typeof useGame>;

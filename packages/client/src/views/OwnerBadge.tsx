@@ -1,16 +1,26 @@
 import type { Company, World } from '@econ/sim';
 import { Crown, BriefcaseBusiness, Star } from 'lucide-react';
-import { companyName, useT,useLang } from '../i18n';
+import { companyName, useT, useLang } from '../i18n';
 
 export function OwnerBadge({ company, world }: { company?: Company; world: World }) {
-  const T = useT(),ko=useLang()==='ko';
+  const T = useT(),
+    ko = useLang() === 'ko';
   if (!company) return <span>—</span>;
-  const kingdom = world.kingdoms.find(k => k.id === company.kingdomId);
+  const kingdom = world.kingdoms.find((k) => k.id === company.kingdomId);
   const Icon = company.state ? Crown : BriefcaseBusiness;
-  const display=company.state?companyName(company):T.privateOwner;
-  const kingdomLabel=kingdom?(ko?kingdom.name:kingdom.nameEn):'';
+  const display = company.state ? companyName(company) : T.privateOwner;
+  const kingdomLabel = kingdom ? (ko ? kingdom.name : kingdom.nameEn) : '';
   const label = `${kingdomLabel} · ${display}${company.isPlayer ? ` · ${T.playerOwner}` : ''}`;
-  return <span className={`owner-badge ${company.state ? 'royal' : 'private'} ${company.isPlayer ? 'player' : ''}`} style={{ borderInlineStartColor: kingdom?.color ?? company.color }} data-help={label} aria-label={label}>
-    <Icon size={14} aria-hidden="true"/><span>{display}</span>{company.isPlayer && <Star size={11} fill="currentColor" aria-hidden="true"/>}
-  </span>;
+  return (
+    <span
+      className={`owner-badge ${company.state ? 'royal' : 'private'} ${company.isPlayer ? 'player' : ''}`}
+      style={{ borderInlineStartColor: kingdom?.color ?? company.color }}
+      data-help={label}
+      aria-label={label}
+    >
+      <Icon size={14} aria-hidden="true" />
+      <span>{display}</span>
+      {company.isPlayer && <Star size={11} fill="currentColor" aria-hidden="true" />}
+    </span>
+  );
 }

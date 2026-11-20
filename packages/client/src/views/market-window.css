@@ -1,4 +1,20 @@
 /* market-window 컴포넌트 (UI-20 5단계에서 역할별로 옮김). */
-.market-scope-toolbar {display:flex;gap:4px;align-items:center;margin-bottom:6px;min-width:0}
-.market-follow {flex:none;padding:4px!important;min-width:28px}
-.market-sd {display:grid;gap:2px;text-align:right;color:var(--ink);font-size:10px}
+.market-scope-toolbar {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  margin-bottom: 6px;
+  min-width: 0;
+}
+.market-follow {
+  flex: none;
+  padding: 4px !important;
+  min-width: 28px;
+}
+.market-sd {
+  display: grid;
+  gap: 2px;
+  text-align: right;
+  color: var(--ink);
+  font-size: 10px;
+}

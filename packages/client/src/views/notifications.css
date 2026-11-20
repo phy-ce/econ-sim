@@ -1,39 +1,199 @@
 /* notifications 컴포넌트 (UI-20 5단계에서 역할별로 옮김). */
-.notices { display: flex; flex-direction: column; min-height: 0; flex: 1 1 auto; }
-.ev-icon { border-radius: 2px; display: grid; place-items: center; color: var(--ink2); }
-.ev.warn .ev-icon { background: rgba(166, 124, 46, 0.22); color: var(--gold); }
-.ev.danger .ev-icon { background: rgba(163, 52, 28, 0.16); color: var(--bad); }
-.ev.good .ev-icon { background: rgba(47, 107, 79, 0.16); color: var(--good); }
-.ev-main { display: flex; flex-direction: column; }
-.ev.danger .ev-text { color: var(--bad); }
-.ev-meta { display: flex; align-items: center; }
-.ev.link:hover .ev-text { text-decoration: underline; text-decoration-color: var(--rule); }
-.ev-meta {gap:6px}
-.ev-icon {flex:none}
-.strategy-panel .ev-icon {box-sizing:content-box}
-.notices {gap:6px;min-width:0}
-.notice-toolbar {display:grid;gap:5px;flex:none}
-.notice-status,.notice-status>span,.notice-options {display:flex;align-items:center;justify-content:space-between;gap:6px}
-.notice-status>span {justify-content:flex-start}
-.notice-status small {color:var(--ink2);font-variant-numeric:tabular-nums}
-.notice-read,.notice-options button {display:inline-flex;align-items:center;gap:4px;background:none;border:0;box-shadow:none;font-size:10px;padding:3px}
-.notice-search {display:flex;align-items:center;gap:5px;border:1px solid var(--rule);padding:0 6px;border-radius:3px;background:var(--sheet)}
-.notice-search input {min-width:0;width:100%;border:0;box-shadow:none;background:none;padding:5px 0;font-size:11px}
-.notice-search button {border:0;box-shadow:none;background:none;padding:2px}
-.notice-search:focus-within {outline:2px solid var(--accent);outline-offset:1px}
-.notice-options select {font-size:10px;padding:3px 5px;max-width:50%}
-.notice-unread-dot {width:6px;height:6px;border-radius:50%;background:var(--accent);display:inline-block}
-.notice-options button[aria-pressed="true"] {background:var(--chip);font-weight:700}
-.notices .notice-timeline {gap:0;padding:0;min-height:0}
-.notice-timeline .notice-date {padding:7px 0 3px;border-bottom:1px solid var(--rule);font-size:10px;font-weight:700;color:var(--ink2)}
-.notice-timeline .ev-icon {border:0;background:none;width:28px;height:28px;overflow:visible}
-.notice-timeline .ev-text {font-size:11px;line-height:1.55;overflow-wrap:anywhere}
-.notice-timeline .ev-meta {flex-wrap:wrap;row-gap:3px;margin-top:3px;font-size:10px}
-.notice-kind {color:var(--ink2)}
-.notice-fresh {color:var(--accent);font-size:10px;font-weight:700}
-.notice-timeline .notice-empty {display:flex;flex-direction:column;align-items:center;gap:7px;padding:24px 8px;color:var(--ink2);font-size:11px}
-.notice-empty button,.notice-more {font-size:11px;padding:5px 8px}
-.notice-more {flex:none;width:100%;background:var(--chip);border:1px solid var(--rule)}
-.notices button:focus-visible {outline:2px solid var(--accent);outline-offset:2px}
-.bell-panel .notices {max-height:100%;overflow-y:auto;padding-right:3px}
-.bell-panel .notice-timeline {overflow:visible;flex:none}
+.notices {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1 1 auto;
+}
+.ev-icon {
+  border-radius: 2px;
+  display: grid;
+  place-items: center;
+  color: var(--ink2);
+}
+.ev.warn .ev-icon {
+  background: rgba(166, 124, 46, 0.22);
+  color: var(--gold);
+}
+.ev.danger .ev-icon {
+  background: rgba(163, 52, 28, 0.16);
+  color: var(--bad);
+}
+.ev.good .ev-icon {
+  background: rgba(47, 107, 79, 0.16);
+  color: var(--good);
+}
+.ev-main {
+  display: flex;
+  flex-direction: column;
+}
+.ev.danger .ev-text {
+  color: var(--bad);
+}
+.ev-meta {
+  display: flex;
+  align-items: center;
+}
+.ev.link:hover .ev-text {
+  text-decoration: underline;
+  text-decoration-color: var(--rule);
+}
+.ev-meta {
+  gap: 6px;
+}
+.ev-icon {
+  flex: none;
+}
+.strategy-panel .ev-icon {
+  box-sizing: content-box;
+}
+.notices {
+  gap: 6px;
+  min-width: 0;
+}
+.notice-toolbar {
+  display: grid;
+  gap: 5px;
+  flex: none;
+}
+.notice-status,
+.notice-status > span,
+.notice-options {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+.notice-status > span {
+  justify-content: flex-start;
+}
+.notice-status small {
+  color: var(--ink2);
+  font-variant-numeric: tabular-nums;
+}
+.notice-read,
+.notice-options button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: 0;
+  box-shadow: none;
+  font-size: 10px;
+  padding: 3px;
+}
+.notice-search {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid var(--rule);
+  padding: 0 6px;
+  border-radius: 3px;
+  background: var(--sheet);
+}
+.notice-search input {
+  min-width: 0;
+  width: 100%;
+  border: 0;
+  box-shadow: none;
+  background: none;
+  padding: 5px 0;
+  font-size: 11px;
+}
+.notice-search button {
+  border: 0;
+  box-shadow: none;
+  background: none;
+  padding: 2px;
+}
+.notice-search:focus-within {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.notice-options select {
+  font-size: 10px;
+  padding: 3px 5px;
+  max-width: 50%;
+}
+.notice-unread-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  display: inline-block;
+}
+.notice-options button[aria-pressed='true'] {
+  background: var(--chip);
+  font-weight: 700;
+}
+.notices .notice-timeline {
+  gap: 0;
+  padding: 0;
+  min-height: 0;
+}
+.notice-timeline .notice-date {
+  padding: 7px 0 3px;
+  border-bottom: 1px solid var(--rule);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--ink2);
+}
+.notice-timeline .ev-icon {
+  border: 0;
+  background: none;
+  width: 28px;
+  height: 28px;
+  overflow: visible;
+}
+.notice-timeline .ev-text {
+  font-size: 11px;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+.notice-timeline .ev-meta {
+  flex-wrap: wrap;
+  row-gap: 3px;
+  margin-top: 3px;
+  font-size: 10px;
+}
+.notice-kind {
+  color: var(--ink2);
+}
+.notice-fresh {
+  color: var(--accent);
+  font-size: 10px;
+  font-weight: 700;
+}
+.notice-timeline .notice-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  padding: 24px 8px;
+  color: var(--ink2);
+  font-size: 11px;
+}
+.notice-empty button,
+.notice-more {
+  font-size: 11px;
+  padding: 5px 8px;
+}
+.notice-more {
+  flex: none;
+  width: 100%;
+  background: var(--chip);
+  border: 1px solid var(--rule);
+}
+.notices button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.bell-panel .notices {
+  max-height: 100%;
+  overflow-y: auto;
+  padding-right: 3px;
+}
+.bell-panel .notice-timeline {
+  overflow: visible;
+  flex: none;
+}

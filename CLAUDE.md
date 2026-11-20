@@ -63,7 +63,7 @@
   sim을 바꿀 때는 클라이언트가 쓰는 이름·타입을 되도록 그대로 둔다 (바꿔야 하면 화면용 사본을 남기고 UI_CHANGES에 적는다).
 
 ## 실행과 검증
-- `npm run typecheck`: sim + 클라이언트 + 사전 (변경할 때마다)
+- `npm run typecheck`: sim + 클라이언트 + 사전 + 클라이언트 코드 모양 검사(`prettier --check`, 고치기는 `npm run format`) (변경할 때마다)
 - `npm run test:core`: 화폐 보존·결정성(저장/불러오기)·사전 등 core 시험 (약 1분, 변경할 때마다)
 - `cd packages/sim && npx vitest run`: 전체 테스트 (파일 병렬, 약 1~2분). 시험은 코드 문제(완주·화폐 보존·결정성·범위·공식)만 판정하고 경제 결과로는 실패하지 않는다 (2026-11-01 사용자). `npm run test:long`: 20년 시드 1·2, 해마다 지표를 `.tmp/test-data/long-<시드>.jsonl`에 남긴다 (`python cli/report.py <id> 파일`로 보고서, `LONG_DATA=0`으로 끈다)
 - `bash packages/sim/cli/sweep.sh out.jsonl '<TUNE JSON>' ...` → `python packages/sim/cli/sweepsum.py out.jsonl`:

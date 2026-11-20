@@ -5,22 +5,26 @@ const nf1 = new Intl.NumberFormat('ko-KR', { maximumFractionDigits: 1, minimumFr
 const nf2 = new Intl.NumberFormat('ko-KR', { maximumFractionDigits: 2, minimumFractionDigits: 2 });
 const nfExact = new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 });
 
-export const money = (v: number) => `${v < 0 ? "−" : ""}ƒ${moneyAmount(Math.abs(v))}`;
+export const money = (v: number) => `${v < 0 ? '−' : ''}ƒ${moneyAmount(Math.abs(v))}`;
 export const signedMoney = (v: number) => `${v >= 0 ? '+' : '−'}ƒ${moneyAmount(Math.abs(v))}`;
 export const int = (v: number) => compact(v);
-export const one = (v: number) => Math.abs(v)>=1000?compact(v):nf1.format(v);
-export const two = (v: number) => Math.abs(v)>=1000?compact(v):nf2.format(v);
+export const one = (v: number) => (Math.abs(v) >= 1000 ? compact(v) : nf1.format(v));
+export const two = (v: number) => (Math.abs(v) >= 1000 ? compact(v) : nf2.format(v));
 export const pct = (v: number) => `${Math.round(v * 100)}%`;
 
 /** Presentation only: retain the raw ratio for calculations and sorting. */
-export function marginText(value:number|null|undefined, options:{signed?:boolean;decimals?:number;detail?:boolean}={}):string {
-  if(value==null||Number.isNaN(value)||value===Infinity)return '—';
-  if(value < -1&&!options.detail)return '< −100%';
-  if(!Number.isFinite(value))return '< −100%';
-  const percent=value*100;
-  if(!Number.isFinite(percent))return `${value.toExponential(2)} × 100%`;
-  if(options.detail&&Math.abs(percent)>=1000)return `${Math.abs(percent)>=1e15?percent.toExponential(2).replace('-', '−'):compact(percent)}%`;
-  return `${percent<0?'−':options.signed?'+':''}${Math.abs(percent).toFixed(options.decimals??0)}%`;
+export function marginText(
+  value: number | null | undefined,
+  options: { signed?: boolean; decimals?: number; detail?: boolean } = {},
+): string {
+  if (value == null || Number.isNaN(value) || value === Infinity) return '—';
+  if (value < -1 && !options.detail) return '< −100%';
+  if (!Number.isFinite(value)) return '< −100%';
+  const percent = value * 100;
+  if (!Number.isFinite(percent)) return `${value.toExponential(2)} × 100%`;
+  if (options.detail && Math.abs(percent) >= 1000)
+    return `${Math.abs(percent) >= 1e15 ? percent.toExponential(2).replace('-', '−') : compact(percent)}%`;
+  return `${percent < 0 ? '−' : options.signed ? '+' : ''}${Math.abs(percent).toFixed(options.decimals ?? 0)}%`;
 }
 
 /** 한글 조사 선택: 받침이 있으면 with, 없으면 without (예: particle('농장', '을', '를') → '농장을') */
@@ -31,19 +35,22 @@ export function particle(word: string, withBatchim: string, without: string): st
 }
 
 /** Shared compact notation for both languages; round across unit boundaries. */
-export function compact(v:number):string {
-  if(!Number.isFinite(v)) return '—';
-  const sign=v<0?'−':'';
-  const absolute=Math.abs(v);
-  if(absolute<1000) return sign+nf0.format(Math.round(absolute));
-  const units=['k','M','B','T'];
-  let unit=Math.min(3,Math.floor(Math.log10(absolute)/3)-1);
-  let scaled=absolute/1000**(unit+1);
-  let rounded=Number(scaled.toFixed(1));
-  if(rounded>=1000&&unit<3){unit++;rounded=1;}
+export function compact(v: number): string {
+  if (!Number.isFinite(v)) return '—';
+  const sign = v < 0 ? '−' : '';
+  const absolute = Math.abs(v);
+  if (absolute < 1000) return sign + nf0.format(Math.round(absolute));
+  const units = ['k', 'M', 'B', 'T'];
+  let unit = Math.min(3, Math.floor(Math.log10(absolute) / 3) - 1);
+  let scaled = absolute / 1000 ** (unit + 1);
+  let rounded = Number(scaled.toFixed(1));
+  if (rounded >= 1000 && unit < 3) {
+    unit++;
+    rounded = 1;
+  }
   return `${sign}${rounded}${units[unit]}`;
 }
-export const exactNumber=(v:number)=>Number.isFinite(v)?nfExact.format(v):'—';
+export const exactNumber = (v: number) => (Number.isFinite(v) ? nfExact.format(v) : '—');
 export const compactMoney = money;
 export const signedCompactMoney = (v: number) => `${v >= 0 ? '+' : '−'}ƒ${moneyAmount(Math.abs(v))}`;
 
@@ -63,4 +70,6 @@ export function dateParts(tick: number, hour?: number): [string, string] {
 /** 접두어 없는 날짜 (소식·차트 툴팁) */
 export const shortDate = (tick: number) => dateParts(tick)[0];
 
-function moneyAmount(v:number):string { return Number.isFinite(v) && v < 100 ? v.toFixed(2) : compact(v); }
+function moneyAmount(v: number): string {
+  return Number.isFinite(v) && v < 100 ? v.toFixed(2) : compact(v);
+}

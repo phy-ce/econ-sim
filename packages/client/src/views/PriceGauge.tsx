@@ -5,7 +5,8 @@
 import { t } from '../i18n';
 
 export function PriceGauge({ ratio }: { ratio: number }) {
-  const MIN = 0.25, MAX = 4;
+  const MIN = 0.25,
+    MAX = 4;
   const pos = (Math.log(Math.min(MAX, Math.max(MIN, ratio))) - Math.log(MIN)) / (Math.log(MAX) - Math.log(MIN));
   const kind = ratio > 1.05 ? 'short' : ratio < 0.95 ? 'glut' : 'even';
   const T = t();

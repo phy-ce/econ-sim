@@ -1,6 +1,16 @@
 // KO/EN 전환: useLang()/useT() 훅, t() 사전, 게임 데이터 이름 고르기.
 import { useSyncExternalStore } from 'react';
-import { BUILDING_BY_ID, CLASS_DEFS, GOODS, LAND_NAMES, LAND_NAMES_EN, REGIONS, SKILL_DEFS, TECH_BY_ID, companyNameEn } from '@econ/sim';
+import {
+  BUILDING_BY_ID,
+  CLASS_DEFS,
+  GOODS,
+  LAND_NAMES,
+  LAND_NAMES_EN,
+  REGIONS,
+  SKILL_DEFS,
+  TECH_BY_ID,
+  companyNameEn,
+} from '@econ/sim';
 import type { Company, GameEvent, GoodId, LandType, MethodDef, PopClass, Skill, TechDef } from '@econ/sim';
 import { EN, KO } from './strings';
 import type { Dict } from './strings';
@@ -43,7 +53,8 @@ export const skillName = (s: Skill) => pick(SKILL_DEFS[s].name, SKILL_DEFS[s].na
 export const landName = (l: LandType) => (en() ? LAND_NAMES_EN[l] : LAND_NAMES[l]);
 /** 지역 이름·설명은 월드 상태가 아니라 정적 정의에서 고른다 (옛 저장 파일도 같은 id) */
 export const regionName = (r: { id: number; name: string }) => pick(r.name, REGIONS.find((d) => d.id === r.id)?.nameEn);
-export const regionDesc = (r: { id: number; description: string }) => pick(r.description, REGIONS.find((d) => d.id === r.id)?.descriptionEn);
+export const regionDesc = (r: { id: number; description: string }) =>
+  pick(r.description, REGIONS.find((d) => d.id === r.id)?.descriptionEn);
 export const companyName = (c: Pick<Company, 'name'>) => (en() ? companyNameEn(c) : c.name);
 /** 소식 문장: 영어 화면에서는 textEn, 없으면 (옛 저장 파일) 한국어 */
 export const eventText = (e: Pick<GameEvent, 'text' | 'textEn'>) => pick(e.text, e.textEn);

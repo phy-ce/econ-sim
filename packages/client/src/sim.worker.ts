@@ -11,7 +11,7 @@ let activity: ConstructionActivity | null = null;
 let world: World = createWorld(Date.now() % 100000);
 recordHistory(world);
 let ticksPerSecond = 0;
-let targetTick:number|null=null;
+let targetTick: number | null = null;
 let queue: QueuedCommand[] = []; // 외부(서버)에서 들어올 명령용. 지금은 비어 있다
 let resetHistory = true;
 let pendingErrors: WorkerError[] = [];
@@ -35,8 +35,14 @@ let postedHistoryTick = -1; // 보낸 마지막 히스토리 점의 틱
 /** 내 상회의 가장 최근 위험 소식 (틱|글) */
 function latestDanger(): string {
   const me = playerCompany(world);
-  let best = '', tick = -1;
-  if (me) for (const e of world.events) if (e.kind === 'danger' && e.companyId === me.id && e.tick >= tick) { tick = e.tick; best = `${e.tick}|${e.text}`; }
+  let best = '',
+    tick = -1;
+  if (me)
+    for (const e of world.events)
+      if (e.kind === 'danger' && e.companyId === me.id && e.tick >= tick) {
+        tick = e.tick;
+        best = `${e.tick}|${e.text}`;
+      }
   return best;
 }
 
@@ -49,27 +55,56 @@ function publish() {
   // 히스토리는 1500점에서 앞이 잘려 길이가 늘지 않는다: 마지막으로 보낸 점의 틱으로 어디서부터 새 점인지 찾는다
   if (postedHistory > 0) {
     const at = world.history.findIndex((h) => h.tick === postedHistoryTick);
-    if (at >= 0) postedHistory = at + 1; else { postedHistory = 0; resetHistory = true; }
+    if (at >= 0) postedHistory = at + 1;
+    else {
+      postedHistory = 0;
+      resetHistory = true;
+    }
   }
   const history = world.history.slice(postedHistory);
   postedHistory = world.history.length;
   postedHistoryTick = world.history[postedHistory - 1]?.tick ?? -1;
-  post({ type: 'state', constructionActivity: activity, world: { ...world, history: [] }, history, resetHistory, errors: pendingErrors, hour });
+  post({
+    type: 'state',
+    constructionActivity: activity,
+    world: { ...world, history: [] },
+    history,
+    resetHistory,
+    errors: pendingErrors,
+    hour,
+  });
   resetHistory = false;
   pendingErrors = [];
 }
 
 function advance(n: number) {
   for (let i = 0; i < n; i++) {
-    if(targetTick!==null&&world.tick>=targetTick){ticksPerSecond=0;budget=0;targetTick=null;publish();post({type:'reached',reason:'yearEnd',tick:world.tick});return;}
+    if (targetTick !== null && world.tick >= targetTick) {
+      ticksPerSecond = 0;
+      budget = 0;
+      targetTick = null;
+      publish();
+      post({ type: 'reached', reason: 'yearEnd', tick: world.tick });
+      return;
+    }
     const before = captureConstruction(world);
     const errs = step(world, queue);
     activity = constructionActivity(before, world.tick);
     queue = [];
     pendingErrors.push(...errs.map((text) => ({ text })));
-    if(targetTick!==null&&world.tick>=targetTick){ticksPerSecond=0;budget=0;targetTick=null;publish();post({type:'reached',reason:'yearEnd',tick:world.tick});return;}
+    if (targetTick !== null && world.tick >= targetTick) {
+      ticksPerSecond = 0;
+      budget = 0;
+      targetTick = null;
+      publish();
+      post({ type: 'reached', reason: 'yearEnd', tick: world.tick });
+      return;
+    }
     // 히스토리가 앞에서 잘리면 전체를 다시 보낸다
-    if (world.history.length < postedHistory) { postedHistory = 0; resetHistory = true; }
+    if (world.history.length < postedHistory) {
+      postedHistory = 0;
+      resetHistory = true;
+    }
   }
 }
 
@@ -95,7 +130,10 @@ setInterval(() => {
   } else if (ticksPerSecond > 0) {
     // 시(時)는 화면이 받은 틱과 같은 틱 안에서만 보낸다 (틱이 앞서 있으면 날짜와 시계가 어긋난다)
     const hour = clockHour();
-    if (Math.floor(hour) !== postedHour) { postedHour = Math.floor(hour); post({ type: 'hour', hour }); }
+    if (Math.floor(hour) !== postedHour) {
+      postedHour = Math.floor(hour);
+      post({ type: 'hour', hour });
+    }
   }
 }, FRAME_MS);
 
@@ -103,24 +141,33 @@ self.onmessage = (e: MessageEvent<ToWorker>) => {
   const msg = e.data;
   switch (msg.type) {
     case 'runUntil':
-      targetTick=msg.tick;return;
+      targetTick = msg.tick;
+      return;
     case 'new':
-      targetTick=null;
+      targetTick = null;
       world = createWorld(msg.seed);
       recordHistory(world);
-      postedHistory = 0; resetHistory = true; queue = []; budget = 0; activity = null;
+      postedHistory = 0;
+      resetHistory = true;
+      queue = [];
+      budget = 0;
+      activity = null;
       break;
     case 'load': {
-      targetTick=null;
+      targetTick = null;
       // 옛 저장은 지금 형식으로 바꾼다 (sim compat.ts). 바꿀 수 없는 저장이면 지금 게임을 그대로 둔다
       const loaded = migrateWorld(msg.world);
       if (!loaded) break;
       world = loaded;
-      postedHistory = 0; resetHistory = true; queue = []; budget = 0; activity = null;
+      postedHistory = 0;
+      resetHistory = true;
+      queue = [];
+      budget = 0;
+      activity = null;
       break;
     }
     case 'speed':
-      targetTick=null;
+      targetTick = null;
       ticksPerSecond = msg.ticksPerSecond;
       return;
     case 'command':

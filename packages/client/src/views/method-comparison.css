@@ -1,15 +1,70 @@
 /* method-comparison 컴포넌트 (UI-20 5단계에서 역할별로 옮김). */
-.method-comparison {min-width:0;width:100%}
-.method-comparison summary {cursor:pointer;font-size:11px;padding:4px}
-.method-columns {max-width:100%;overflow-x:auto}
-.method-columns table {border-collapse:collapse;table-layout:fixed;font-size:10px}
-.method-columns th,.method-columns td {width:110px;padding:5px;border:1px solid var(--rule);text-align:right;vertical-align:top}
-.method-columns th:first-child {width:90px;text-align:left}
-.method-columns th>span {display:flex;flex-direction:column}
-.method-columns button {display:flex;align-items:center;gap:2px;width:100%;min-height:30px;white-space:normal;font-size:10px}
-.method-columns button:disabled {opacity:1;color:var(--ink2)}
-.method-columns small {display:block;font-size:10px}
-.method-columns .is-current {box-shadow:inset 2px 0 var(--gold);background:var(--chip)}
-.method-columns .is-locked {color:var(--ink2);background:var(--chip)}
-.method-delta {border:1px solid currentColor;padding:1px 3px;margin-top:3px;width:max-content;margin-left:auto}
-.method-columns th>span {overflow-wrap:anywhere}
+.method-comparison {
+  min-width: 0;
+  width: 100%;
+}
+.method-comparison summary {
+  cursor: pointer;
+  font-size: 11px;
+  padding: 4px;
+}
+.method-columns {
+  max-width: 100%;
+  overflow-x: auto;
+}
+.method-columns table {
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: 10px;
+}
+.method-columns th,
+.method-columns td {
+  width: 110px;
+  padding: 5px;
+  border: 1px solid var(--rule);
+  text-align: right;
+  vertical-align: top;
+}
+.method-columns th:first-child {
+  width: 90px;
+  text-align: left;
+}
+.method-columns th > span {
+  display: flex;
+  flex-direction: column;
+}
+.method-columns button {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  width: 100%;
+  min-height: 30px;
+  white-space: normal;
+  font-size: 10px;
+}
+.method-columns button:disabled {
+  opacity: 1;
+  color: var(--ink2);
+}
+.method-columns small {
+  display: block;
+  font-size: 10px;
+}
+.method-columns .is-current {
+  box-shadow: inset 2px 0 var(--gold);
+  background: var(--chip);
+}
+.method-columns .is-locked {
+  color: var(--ink2);
+  background: var(--chip);
+}
+.method-delta {
+  border: 1px solid currentColor;
+  padding: 1px 3px;
+  margin-top: 3px;
+  width: max-content;
+  margin-left: auto;
+}
+.method-columns th > span {
+  overflow-wrap: anywhere;
+}

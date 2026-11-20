@@ -4,7 +4,11 @@ export type Lang = 'ko' | 'en';
 const KEY = 'estera-lang';
 
 function loadLang(): Lang {
-  try { return localStorage.getItem(KEY) === 'en' ? 'en' : 'ko'; } catch { return 'ko'; }
+  try {
+    return localStorage.getItem(KEY) === 'en' ? 'en' : 'ko';
+  } catch {
+    return 'ko';
+  }
 }
 
 let current: Lang = loadLang();
@@ -12,24 +16,39 @@ const listeners = new Set<() => void>();
 
 export const getLang = (): Lang => current;
 
-export function hasStoredLang():boolean {
-  try {const value=localStorage.getItem(KEY);return value==='ko'||value==='en';}catch{return false;}
+export function hasStoredLang(): boolean {
+  try {
+    const value = localStorage.getItem(KEY);
+    return value === 'ko' || value === 'en';
+  } catch {
+    return false;
+  }
 }
-export function chooseLang(lang:Lang){
-  try{localStorage.setItem(KEY,lang);}catch{/* this session still proceeds */}
-  if(current===lang)return;
-  current=lang;
-  for(const f of listeners)f();
+export function chooseLang(lang: Lang) {
+  try {
+    localStorage.setItem(KEY, lang);
+  } catch {
+    /* this session still proceeds */
+  }
+  if (current === lang) return;
+  current = lang;
+  for (const f of listeners) f();
 }
 
 export function setLang(lang: Lang) {
   if (lang === current) return;
   current = lang;
-  try { localStorage.setItem(KEY, lang); } catch { /* 저장소를 못 쓰면 이번 세션만 */ }
+  try {
+    localStorage.setItem(KEY, lang);
+  } catch {
+    /* 저장소를 못 쓰면 이번 세션만 */
+  }
   for (const f of listeners) f();
 }
 
 export function subscribeLang(f: () => void): () => void {
   listeners.add(f);
-  return () => { listeners.delete(f); };
+  return () => {
+    listeners.delete(f);
+  };
 }

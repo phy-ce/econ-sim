@@ -10,16 +10,18 @@ describe('harvest UI', () => {
     let regionId = 0;
     for (let tick = 90; tick <= 7200 && !regionId; tick += 90) {
       world.tick = tick;
-      regionId = world.regions.find(r => harvestCondition(world, r.id))?.id ?? 0;
+      regionId = world.regions.find((r) => harvestCondition(world, r.id))?.id ?? 0;
     }
     expect(regionId).toBeGreaterThan(0);
     const condition = harvestCondition(world, regionId)!;
-    const markup = renderToStaticMarkup(<HarvestBadge world={world} regionId={regionId}/>);
+    const markup = renderToStaticMarkup(<HarvestBadge world={world} regionId={regionId} />);
     expect(markup).toContain(harvestLabel(world, regionId)!);
-    const affected = BUILDING_TYPES.find(b => b.land && condition.lands.includes(b.land))!;
-    expect(renderToStaticMarkup(<HarvestBadge world={world} regionId={regionId} typeId={affected.id}/>)).toContain(`−${Math.round(condition.cut*100)}%`);
-    for (const typeId of ['school','admin']) {
-      expect(renderToStaticMarkup(<HarvestBadge world={world} regionId={regionId} typeId={typeId}/>)).toBe('');
+    const affected = BUILDING_TYPES.find((b) => b.land && condition.lands.includes(b.land))!;
+    expect(renderToStaticMarkup(<HarvestBadge world={world} regionId={regionId} typeId={affected.id} />)).toContain(
+      `−${Math.round(condition.cut * 100)}%`,
+    );
+    for (const typeId of ['school', 'admin']) {
+      expect(renderToStaticMarkup(<HarvestBadge world={world} regionId={regionId} typeId={typeId} />)).toBe('');
     }
   });
 });

@@ -1,7 +1,38 @@
-.statistics-window{min-width:0}
-.statistics-window>.statistics-tabs{display:flex;width:100%}
-.statistics-window>.statistics-tabs>button{flex:1;min-width:0;padding:4px;font-size:12px;white-space:normal}
-.statistics-toolbar{display:flex;align-items:center;justify-content:space-between;gap:6px;padding:8px 0;border-bottom:1px solid var(--rule)}
-.statistics-toolbar>div{display:flex;gap:2px}.statistics-toolbar select{min-width:0;max-width:140px}
-.statistics-toolbar button{padding:4px 7px}
-.statistics-section{min-width:0;padding-block:6px;border-bottom:1px solid var(--rule)}
+.statistics-window {
+  min-width: 0;
+}
+.statistics-window > .statistics-tabs {
+  display: flex;
+  width: 100%;
+}
+.statistics-window > .statistics-tabs > button {
+  flex: 1;
+  min-width: 0;
+  padding: 4px;
+  font-size: 12px;
+  white-space: normal;
+}
+.statistics-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--rule);
+}
+.statistics-toolbar > div {
+  display: flex;
+  gap: 2px;
+}
+.statistics-toolbar select {
+  min-width: 0;
+  max-width: 140px;
+}
+.statistics-toolbar button {
+  padding: 4px 7px;
+}
+.statistics-section {
+  min-width: 0;
+  padding-block: 6px;
+  border-bottom: 1px solid var(--rule);
+}

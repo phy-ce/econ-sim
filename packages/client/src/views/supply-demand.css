@@ -1,16 +1,79 @@
 /* supply-demand 컴포넌트 (UI-20 5단계에서 역할별로 옮김). */
-.sd-preview {display:grid;gap:5px;padding:8px 4px 16px;border-top:1px solid var(--rule);font-size:10px}
-.sd-bar {position:relative;display:block;height:8px;border:1px solid var(--ink2);background:var(--sheet);margin:5px 6px 12px}
-.sd-tick {position:absolute;top:-3px;height:12px;border-left:1px solid var(--ink2)}
-.sd-tick small {position:absolute;top:12px;left:0;transform:translateX(-50%);font-size:10px}
-.sd-ai {position:absolute;top:-7px;height:20px;border-left:2px dashed var(--gold)}
-.sd-point {position:absolute;width:10px;height:10px;border:2px solid var(--ink);border-radius:50%;top:-2px;transform:translateX(-50%)}
-.sd-now {background:var(--ink)}
-.sd-compact {min-width:44px;margin:4px 5px;height:6px}
-.sd-compact .sd-tick {height:10px}
-.sd-compact .sd-tick small {display:none}
-.sd-compact .sd-point {top:-3px}
-.sd-current-row {display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:5px;align-items:center}
-.sd-current-row>span:first-child {display:flex;align-items:center;gap:4px;min-width:0}
-.sd-current-row>.sd-bar {grid-column:1/-1}
-.sd-current-row b {font-variant-numeric:tabular-nums}
+.sd-preview {
+  display: grid;
+  gap: 5px;
+  padding: 8px 4px 16px;
+  border-top: 1px solid var(--rule);
+  font-size: 10px;
+}
+.sd-bar {
+  position: relative;
+  display: block;
+  height: 8px;
+  border: 1px solid var(--ink2);
+  background: var(--sheet);
+  margin: 5px 6px 12px;
+}
+.sd-tick {
+  position: absolute;
+  top: -3px;
+  height: 12px;
+  border-left: 1px solid var(--ink2);
+}
+.sd-tick small {
+  position: absolute;
+  top: 12px;
+  left: 0;
+  transform: translateX(-50%);
+  font-size: 10px;
+}
+.sd-ai {
+  position: absolute;
+  top: -7px;
+  height: 20px;
+  border-left: 2px dashed var(--gold);
+}
+.sd-point {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border: 2px solid var(--ink);
+  border-radius: 50%;
+  top: -2px;
+  transform: translateX(-50%);
+}
+.sd-now {
+  background: var(--ink);
+}
+.sd-compact {
+  min-width: 44px;
+  margin: 4px 5px;
+  height: 6px;
+}
+.sd-compact .sd-tick {
+  height: 10px;
+}
+.sd-compact .sd-tick small {
+  display: none;
+}
+.sd-compact .sd-point {
+  top: -3px;
+}
+.sd-current-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 5px;
+  align-items: center;
+}
+.sd-current-row > span:first-child {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+.sd-current-row > .sd-bar {
+  grid-column: 1/-1;
+}
+.sd-current-row b {
+  font-variant-numeric: tabular-nums;
+}

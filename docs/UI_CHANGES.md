@@ -7,6 +7,7 @@
 - 화면에 설명 문구를 넣지 않는다. 아이콘, 색, 숫자, 짧은 이름만 쓴다. 툴팁은 써도 된다.
 - 한국어와 영어 UI를 모두 지원한다. 문자열은 `strings.ts`의 `T`와 `lang` 방식을 따른다.
 - `packages/sim`은 고치지 않는다. 필요한 export가 없으면 3장에 요청만 적는다.
+- 클라이언트 코드는 Prettier 모양을 따른다 (UI-21). 보고하기 전에 루트에서 `npm run format` 을 돌린다. `npm run typecheck` 가 `prettier --check` 로 확인한다.
 - 다크 모드(`:root[data-theme="dark"]`)에서도 구분이 되어야 한다.
 - 창과 해상도 규칙은 UI_DESIGN 1·3장을 따른다.
 - 검증: 루트에서 `npm run typecheck`가 통과해야 한다. 개발 서버는 `cd packages/client && npx vite --port 5199`로 띄운다. 스크린샷 확인은 UI_DESIGN 12장을 따른다.
@@ -19,9 +20,11 @@ UI-15·UI-16 의 줄 번호는 커밋 1f014e9 (main 체크아웃의 커밋 안 �
 UI-18·UI-19 (2026-11-18 추가)는 줄 번호 없이 창·기능 단위로 적었다.
 
 ### 할 일 (위에서부터)
-1. **UI-21** (사용자 2026-11-20, Claude 가 한다, 화면 변경 없음): Prettier 를 개발용으로 설치해 클라이언트 코드를 한 번 전체 정리하고, 정리 검사(`prettier --check`)를 `npm run typecheck` 단계에 넣어 정리 안 된 코드가 있으면 실패하게 한다. Codex 는 그동안 이 정리를 하지 않는다.
+지금 할 일 없음.
 
 UI-1~UI-9 는 끝났다 (2026-11-09, UI_DONE). UI-17 은 main 체크아웃의 커밋 안 한 변경을 커밋하며 풀렸다 (2026-11-18, 3c5a4a7 까지, 클라이언트 시험 130개 통과, UI_DONE). UI-20 (CSS 역할별 정리, Claude) 은 끝났다 (2026-11-20, UI_DONE). 화면 작업자는 이제 `ui/index.css` 의 파일 순서를 보고 고칠 파일을 찾는다.
+
+UI-21 (Prettier, Claude) 은 끝났다 (2026-11-21, UI_DONE).
 
 UI-15·UI-16·UI-18·UI-19·UI-22는 완료했다 (2026-11-20, Claude 가 커밋, UI_DONE·UI_STATUS 참조). UI-22 요청은 HANDOFF 0-1120-alerts에서 0장·2장에 추가한 뒤 완료 절로 옮겼다. main 53ea042의 sim 알림 변경을 클라이언트에 반영했으며, sim 파일은 수정하지 않았다.
 

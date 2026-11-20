@@ -1,46 +1,231 @@
-import {withViewTransition} from '../ui/viewTransition';
-import {useDesignTokens} from '../ui/tokens';
-import {WindowSurface,WindowHeader} from '../ui/primitives';
-import {Button as UIButton} from '../ui/controls';
-import {ActiveContent} from './ActiveContent';
-import {t as uiCopy} from '../i18n';
-import {trace} from '../trace';
-import {clampWindow,createWindowDrag} from '../windowDrag';
-import {NavigationButtons,NavigationProvider} from '../NavigationHistory';
-import {useEffect,useRef,useState} from 'react';
-import type {PointerEvent,ReactNode} from 'react';
-import {X} from 'lucide-react';
-import {useT,useLang} from '../i18n';
-export type WindowId='region'|'state'|'map'|'market'|'research'|'trends'|'construction'|'news';
-export interface WindowDefinition{id:WindowId;title:string;icon:ReactNode;content:ReactNode;badge?:number}
-type Point={x:number;y:number};
-export function WindowWorkspace({windows,opened,onOpened}:{windows:WindowDefinition[];opened:WindowId[];onOpened:(ids:WindowId[])=>void;revealRequest?:number}){
- const T=useT(),ko=useLang()==='ko',area=useRef<HTMLElement>(null);
- const [bounds,setBounds]=useState({width:1920,height:998});
- const [positions,setPositions]=useState<Partial<Record<WindowId,Point>>>({});
- const [interacting,setInteracting]=useState(false),settle=useRef<ReturnType<typeof setTimeout>|null>(null);
- const deferContent=()=>{setInteracting(true);if(settle.current)clearTimeout(settle.current);settle.current=setTimeout(()=>{settle.current=null;if(!drag.current)setInteracting(false);},200);};
- const drag=useRef<{id:WindowId;pointerId:number;controller:ReturnType<typeof createWindowDrag>;element:HTMLElement}|null>(null);
- const visible:WindowId[]=opened.filter(id=>id!=='map');const active=visible.at(-1),map=windows.find(w=>w.id==='map')!;
- const metrics=useDesignTokens();
- const width=Math.min(metrics.windowWidth,bounds.width-16),height=Math.min(metrics.windowHeight,bounds.height-16);
- const clamp=(p:Point)=>clampWindow(p,bounds.width,bounds.height,width,height);
- const clampRef=useRef(clamp);clampRef.current=clamp;
- const position=(id:WindowId,index:number)=>clamp(positions[id]??{x:24+index*76,y:16+index*36});
- useEffect(()=>{const observer=new ResizeObserver(([e])=>setBounds({width:e.contentRect.width,height:e.contentRect.height}));if(area.current)observer.observe(area.current);return()=>observer.disconnect();},[]);
- const focus=(id:WindowId)=>{trace('window',{id,action:'focus'});if(active!==id)onOpened([...visible.filter(w=>w!==id),id]);};
- const close=(id:WindowId)=>{trace('window',{id,action:'close'});withViewTransition(()=>onOpened(visible.filter(w=>w!==id)),`.window-${id}`);};
- const finish=()=>{const d=drag.current;if(!d)return;drag.current=null;d.controller.finish();d.element.style.willChange='';deferContent();};
- useEffect(()=>()=>{const d=drag.current;d?.controller.dispose();if(d)d.element.style.willChange='';drag.current=null;if(settle.current)clearTimeout(settle.current);},[]);
- useEffect(()=>{if(drag.current&&!opened.includes(drag.current.id))finish();},[opened]);
- const begin=(e:PointerEvent<HTMLElement>,id:WindowId,p:Point)=>{
-  if(e.button!==0||drag.current||(e.target as HTMLElement).closest('button'))return;
-  e.preventDefault();deferContent();focus(id);const element=e.currentTarget.parentElement!;element.style.willChange='transform';
-  const controller=createWindowDrag({origin:p,start:{x:e.clientX,y:e.clientY},clamp:p=>clampRef.current(p),paint:p=>{element.style.transform=`translate(${p.x}px, ${p.y}px)`;},commit:p=>setPositions(old=>({...old,[id]:p}))});
-  drag.current={id,pointerId:e.pointerId,controller,element};e.currentTarget.setPointerCapture(e.pointerId);
- };
- const move=(e:PointerEvent<HTMLElement>)=>{const d=drag.current;if(d?.pointerId===e.pointerId)d.controller.move({x:e.clientX,y:e.clientY});};
- const end=(e:PointerEvent<HTMLElement>)=>{if(drag.current?.pointerId!==e.pointerId)return;if(e.type==='pointerup')move(e);finish();};
- return <><main ref={area} className="strategy-workspace floating-workspace" onWheelCapture={deferContent} onScrollCapture={deferContent}><div className="world-map" aria-label={map.title}>{map.content}</div>{windows.filter(w=>w.id!=='map').map((win,index)=>{const p=position(win.id,index);return <NavigationProvider key={win.id}><WindowSurface hidden={!visible.includes(win.id)} className={`strategy-panel window-${win.id}${active===win.id?' is-front':''}`} aria-label={win.title} style={{left:0,top:0,transform:`translate(${p.x}px, ${p.y}px)`,width,height,zIndex:5+Math.max(0,visible.indexOf(win.id))}} onPointerDownCapture={()=>focus(win.id)}>
- <WindowHeader className="window-titlebar" tabIndex={0} aria-label={`${win.title} · ${T.windowMove}`} data-help={uiCopy().screenText['dragTitleToMoveArrowKeysTo']} onPointerDown={e=>begin(e,win.id,p)} onPointerMove={move} onPointerUp={end} onPointerCancel={end} onLostPointerCapture={end} onKeyDown={e=>{if(drag.current||e.target!==e.currentTarget||!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key))return;e.preventDefault();setPositions(old=>({...old,[win.id]:clamp({x:p.x+(e.key==='ArrowLeft'?-20:e.key==='ArrowRight'?20:0),y:p.y+(e.key==='ArrowUp'?-20:e.key==='ArrowDown'?20:0)})}));}}><span className="panel-title">{win.icon}<strong>{win.title}</strong></span><NavigationButtons ko={ko}/><UIButton className="panel-close" aria-label={`${win.title} ${T.windowClose}`} onClick={()=>close(win.id)} data-help={`${win.title} ${T.windowClose}`}><X size={15}/></UIButton></WindowHeader><div className="window-body"><ActiveContent active={visible.includes(win.id)} suspended={interacting}>{win.content}</ActiveContent></div></WindowSurface></NavigationProvider>;})}</main><nav className="desktop-dock" aria-label={T.windowDock}>{windows.filter(w=>w.id!=='map').map(win=><UIButton key={win.id} aria-pressed={visible.includes(win.id)} onClick={()=>visible.includes(win.id)?close(win.id):withViewTransition(()=>onOpened([...visible,win.id]),`.window-${win.id}`)}>{win.icon}<span>{win.title}</span>{!!win.badge&&<span className="dock-badge">{win.badge>99?'99+':win.badge}</span>}</UIButton>)}</nav></>;
+import { withViewTransition } from '../ui/viewTransition';
+import { useDesignTokens } from '../ui/tokens';
+import { WindowSurface, WindowHeader } from '../ui/primitives';
+import { Button as UIButton } from '../ui/controls';
+import { ActiveContent } from './ActiveContent';
+import { t as uiCopy } from '../i18n';
+import { trace } from '../trace';
+import { clampWindow, createWindowDrag } from '../windowDrag';
+import { NavigationButtons, NavigationProvider } from '../NavigationHistory';
+import { useEffect, useRef, useState } from 'react';
+import type { PointerEvent, ReactNode } from 'react';
+import { X } from 'lucide-react';
+import { useT, useLang } from '../i18n';
+export type WindowId = 'region' | 'state' | 'map' | 'market' | 'research' | 'trends' | 'construction' | 'news';
+export interface WindowDefinition {
+  id: WindowId;
+  title: string;
+  icon: ReactNode;
+  content: ReactNode;
+  badge?: number;
+}
+type Point = { x: number; y: number };
+export function WindowWorkspace({
+  windows,
+  opened,
+  onOpened,
+}: {
+  windows: WindowDefinition[];
+  opened: WindowId[];
+  onOpened: (ids: WindowId[]) => void;
+  revealRequest?: number;
+}) {
+  const T = useT(),
+    ko = useLang() === 'ko',
+    area = useRef<HTMLElement>(null);
+  const [bounds, setBounds] = useState({ width: 1920, height: 998 });
+  const [positions, setPositions] = useState<Partial<Record<WindowId, Point>>>({});
+  const [interacting, setInteracting] = useState(false),
+    settle = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const deferContent = () => {
+    setInteracting(true);
+    if (settle.current) clearTimeout(settle.current);
+    settle.current = setTimeout(() => {
+      settle.current = null;
+      if (!drag.current) setInteracting(false);
+    }, 200);
+  };
+  const drag = useRef<{
+    id: WindowId;
+    pointerId: number;
+    controller: ReturnType<typeof createWindowDrag>;
+    element: HTMLElement;
+  } | null>(null);
+  const visible: WindowId[] = opened.filter((id) => id !== 'map');
+  const active = visible.at(-1),
+    map = windows.find((w) => w.id === 'map')!;
+  const metrics = useDesignTokens();
+  const width = Math.min(metrics.windowWidth, bounds.width - 16),
+    height = Math.min(metrics.windowHeight, bounds.height - 16);
+  const clamp = (p: Point) => clampWindow(p, bounds.width, bounds.height, width, height);
+  const clampRef = useRef(clamp);
+  clampRef.current = clamp;
+  const position = (id: WindowId, index: number) => clamp(positions[id] ?? { x: 24 + index * 76, y: 16 + index * 36 });
+  useEffect(() => {
+    const observer = new ResizeObserver(([e]) =>
+      setBounds({ width: e.contentRect.width, height: e.contentRect.height }),
+    );
+    if (area.current) observer.observe(area.current);
+    return () => observer.disconnect();
+  }, []);
+  const focus = (id: WindowId) => {
+    trace('window', { id, action: 'focus' });
+    if (active !== id) onOpened([...visible.filter((w) => w !== id), id]);
+  };
+  const close = (id: WindowId) => {
+    trace('window', { id, action: 'close' });
+    withViewTransition(() => onOpened(visible.filter((w) => w !== id)), `.window-${id}`);
+  };
+  const finish = () => {
+    const d = drag.current;
+    if (!d) return;
+    drag.current = null;
+    d.controller.finish();
+    d.element.style.willChange = '';
+    deferContent();
+  };
+  useEffect(
+    () => () => {
+      const d = drag.current;
+      d?.controller.dispose();
+      if (d) d.element.style.willChange = '';
+      drag.current = null;
+      if (settle.current) clearTimeout(settle.current);
+    },
+    [],
+  );
+  useEffect(() => {
+    if (drag.current && !opened.includes(drag.current.id)) finish();
+  }, [opened]);
+  const begin = (e: PointerEvent<HTMLElement>, id: WindowId, p: Point) => {
+    if (e.button !== 0 || drag.current || (e.target as HTMLElement).closest('button')) return;
+    e.preventDefault();
+    deferContent();
+    focus(id);
+    const element = e.currentTarget.parentElement!;
+    element.style.willChange = 'transform';
+    const controller = createWindowDrag({
+      origin: p,
+      start: { x: e.clientX, y: e.clientY },
+      clamp: (p) => clampRef.current(p),
+      paint: (p) => {
+        element.style.transform = `translate(${p.x}px, ${p.y}px)`;
+      },
+      commit: (p) => setPositions((old) => ({ ...old, [id]: p })),
+    });
+    drag.current = { id, pointerId: e.pointerId, controller, element };
+    e.currentTarget.setPointerCapture(e.pointerId);
+  };
+  const move = (e: PointerEvent<HTMLElement>) => {
+    const d = drag.current;
+    if (d?.pointerId === e.pointerId) d.controller.move({ x: e.clientX, y: e.clientY });
+  };
+  const end = (e: PointerEvent<HTMLElement>) => {
+    if (drag.current?.pointerId !== e.pointerId) return;
+    if (e.type === 'pointerup') move(e);
+    finish();
+  };
+  return (
+    <>
+      <main
+        ref={area}
+        className="strategy-workspace floating-workspace"
+        onWheelCapture={deferContent}
+        onScrollCapture={deferContent}
+      >
+        <div className="world-map" aria-label={map.title}>
+          {map.content}
+        </div>
+        {windows
+          .filter((w) => w.id !== 'map')
+          .map((win, index) => {
+            const p = position(win.id, index);
+            return (
+              <NavigationProvider key={win.id}>
+                <WindowSurface
+                  hidden={!visible.includes(win.id)}
+                  className={`strategy-panel window-${win.id}${active === win.id ? ' is-front' : ''}`}
+                  aria-label={win.title}
+                  style={{
+                    left: 0,
+                    top: 0,
+                    transform: `translate(${p.x}px, ${p.y}px)`,
+                    width,
+                    height,
+                    zIndex: 5 + Math.max(0, visible.indexOf(win.id)),
+                  }}
+                  onPointerDownCapture={() => focus(win.id)}
+                >
+                  <WindowHeader
+                    className="window-titlebar"
+                    tabIndex={0}
+                    aria-label={`${win.title} · ${T.windowMove}`}
+                    data-help={uiCopy().screenText['dragTitleToMoveArrowKeysTo']}
+                    onPointerDown={(e) => begin(e, win.id, p)}
+                    onPointerMove={move}
+                    onPointerUp={end}
+                    onPointerCancel={end}
+                    onLostPointerCapture={end}
+                    onKeyDown={(e) => {
+                      if (
+                        drag.current ||
+                        e.target !== e.currentTarget ||
+                        !['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)
+                      )
+                        return;
+                      e.preventDefault();
+                      setPositions((old) => ({
+                        ...old,
+                        [win.id]: clamp({
+                          x: p.x + (e.key === 'ArrowLeft' ? -20 : e.key === 'ArrowRight' ? 20 : 0),
+                          y: p.y + (e.key === 'ArrowUp' ? -20 : e.key === 'ArrowDown' ? 20 : 0),
+                        }),
+                      }));
+                    }}
+                  >
+                    <span className="panel-title">
+                      {win.icon}
+                      <strong>{win.title}</strong>
+                    </span>
+                    <NavigationButtons ko={ko} />
+                    <UIButton
+                      className="panel-close"
+                      aria-label={`${win.title} ${T.windowClose}`}
+                      onClick={() => close(win.id)}
+                      data-help={`${win.title} ${T.windowClose}`}
+                    >
+                      <X size={15} />
+                    </UIButton>
+                  </WindowHeader>
+                  <div className="window-body">
+                    <ActiveContent active={visible.includes(win.id)} suspended={interacting}>
+                      {win.content}
+                    </ActiveContent>
+                  </div>
+                </WindowSurface>
+              </NavigationProvider>
+            );
+          })}
+      </main>
+      <nav className="desktop-dock" aria-label={T.windowDock}>
+        {windows
+          .filter((w) => w.id !== 'map')
+          .map((win) => (
+            <UIButton
+              key={win.id}
+              aria-pressed={visible.includes(win.id)}
+              onClick={() =>
+                visible.includes(win.id)
+                  ? close(win.id)
+                  : withViewTransition(() => onOpened([...visible, win.id]), `.window-${win.id}`)
+              }
+            >
+              {win.icon}
+              <span>{win.title}</span>
+              {!!win.badge && <span className="dock-badge">{win.badge > 99 ? '99+' : win.badge}</span>}
+            </UIButton>
+          ))}
+      </nav>
+    </>
+  );
 }

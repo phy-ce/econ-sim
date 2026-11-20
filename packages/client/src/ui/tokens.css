@@ -1,25 +1,98 @@
 @import '../system-02/tokens.css';
 /* Single source for catalogue and running game. */
 
-:root,.gu-scope {
- --gu-edge:#828877;
- --gu-paper:var(--es-panel); --gu-sheet:var(--es-panel); --gu-ink:var(--es-ink); --gu-muted:var(--es-muted);
- --gu-line:var(--es-line); --gu-soft:var(--es-subtle); --gu-action:var(--es-action); --gu-on-action:var(--es-on-action);
- --gu-positive:var(--es-positive); --gu-negative:var(--es-negative); --gu-focus:var(--es-focus);
- --gu-crown:#826130; --gu-manor:#536d4c; --gu-finance:#526d85; --gu-on-owner:#ffffff;
- --gu-font:'Noto Sans KR',sans-serif; --gu-title:'Gowun Batang',serif;
- --gu-space-1:4px; --gu-space-2:8px; --gu-space-3:12px; --gu-space-4:16px; --gu-space-6:24px;
- --gu-control:36px; --gu-row:32px; --gu-row-comfortable:56px;
+:root,
+.gu-scope {
+  --gu-edge: #828877;
+  --gu-paper: var(--es-panel);
+  --gu-sheet: var(--es-panel);
+  --gu-ink: var(--es-ink);
+  --gu-muted: var(--es-muted);
+  --gu-line: var(--es-line);
+  --gu-soft: var(--es-subtle);
+  --gu-action: var(--es-action);
+  --gu-on-action: var(--es-on-action);
+  --gu-positive: var(--es-positive);
+  --gu-negative: var(--es-negative);
+  --gu-focus: var(--es-focus);
+  --gu-crown: #826130;
+  --gu-manor: #536d4c;
+  --gu-finance: #526d85;
+  --gu-on-owner: #ffffff;
+  --gu-font: 'Noto Sans KR', sans-serif;
+  --gu-title: 'Gowun Batang', serif;
+  --gu-space-1: 4px;
+  --gu-space-2: 8px;
+  --gu-space-3: 12px;
+  --gu-space-4: 16px;
+  --gu-space-6: 24px;
+  --gu-control: 36px;
+  --gu-row: 32px;
+  --gu-row-comfortable: 56px;
 }
-:root[data-theme="dark"],:root[data-foundation-theme="dark"],.gu-scope[data-game-theme=dark] {
- --gu-edge:#8b9983;
- --gu-paper:var(--es-panel); --gu-sheet:var(--es-panel); --gu-ink:var(--es-ink); --gu-muted:var(--es-muted);
- --gu-line:var(--es-line); --gu-soft:var(--es-subtle); --gu-action:var(--es-action); --gu-on-action:var(--es-on-action);
- --gu-positive:var(--es-positive); --gu-negative:var(--es-negative); --gu-focus:var(--es-focus);
- --gu-crown:#dfc08a; --gu-manor:#bed0a7; --gu-finance:#b6cede; --gu-on-owner:#242c28;
+:root[data-theme='dark'],
+:root[data-foundation-theme='dark'],
+.gu-scope[data-game-theme='dark'] {
+  --gu-edge: #8b9983;
+  --gu-paper: var(--es-panel);
+  --gu-sheet: var(--es-panel);
+  --gu-ink: var(--es-ink);
+  --gu-muted: var(--es-muted);
+  --gu-line: var(--es-line);
+  --gu-soft: var(--es-subtle);
+  --gu-action: var(--es-action);
+  --gu-on-action: var(--es-on-action);
+  --gu-positive: var(--es-positive);
+  --gu-negative: var(--es-negative);
+  --gu-focus: var(--es-focus);
+  --gu-crown: #dfc08a;
+  --gu-manor: #bed0a7;
+  --gu-finance: #b6cede;
+  --gu-on-owner: #242c28;
 }
-:root{--gu-window-width:420px;--gu-window-height:560px;--gu-detail-1-width:320px;--gu-detail-1-height:240px;--gu-detail-2-width:360px;--gu-detail-2-height:360px;--gu-detail-3-width:420px;--gu-detail-3-height:420px;--gu-detail-4-width:840px;--gu-detail-4-height:560px;--gu-number-size:14px;--gu-number-compact-size:12px;--gu-metric-number-size:20px;--gu-body-size:14px;--gu-compact-font:12px;--gu-control-radius:5px;--gu-control-icon:16px;--gu-bar-height:7px;--gu-art-size:48px;--gu-flow-gap:16px;--gu-flow-gap-compact:6px;--gu-window-shadow:0 6px 18px #18201814}
+:root {
+  --gu-window-width: 420px;
+  --gu-window-height: 560px;
+  --gu-detail-1-width: 320px;
+  --gu-detail-1-height: 240px;
+  --gu-detail-2-width: 360px;
+  --gu-detail-2-height: 360px;
+  --gu-detail-3-width: 420px;
+  --gu-detail-3-height: 420px;
+  --gu-detail-4-width: 840px;
+  --gu-detail-4-height: 560px;
+  --gu-number-size: 14px;
+  --gu-number-compact-size: 12px;
+  --gu-metric-number-size: 20px;
+  --gu-body-size: 14px;
+  --gu-compact-font: 12px;
+  --gu-control-radius: 5px;
+  --gu-control-icon: 16px;
+  --gu-bar-height: 7px;
+  --gu-art-size: 48px;
+  --gu-flow-gap: 16px;
+  --gu-flow-gap-compact: 6px;
+  --gu-window-shadow: 0 6px 18px #18201814;
+}
 /* Foundation roles: one scale for catalogue and game. */
-:root,.gu-scope{--gu-number:'Noto Sans KR',sans-serif;--gu-label-size:13px;--gu-support-size:12px;--gu-value-size:18px;--gu-leading:1.5;--gu-row-gap:8px;--gu-row-padding:8px;--gu-rule-width:1px;--gu-meter-thickness:4px;--gu-body-size:14px;--gu-number-size:14px;--gu-number-compact-size:13px;--gu-compact-font:13px;--gu-art-size:48px}
+:root,
+.gu-scope {
+  --gu-number: 'Noto Sans KR', sans-serif;
+  --gu-label-size: 13px;
+  --gu-support-size: 12px;
+  --gu-value-size: 18px;
+  --gu-leading: 1.5;
+  --gu-row-gap: 8px;
+  --gu-row-padding: 8px;
+  --gu-rule-width: 1px;
+  --gu-meter-thickness: 4px;
+  --gu-body-size: 14px;
+  --gu-number-size: 14px;
+  --gu-number-compact-size: 13px;
+  --gu-compact-font: 13px;
+  --gu-art-size: 48px;
+}
 
-:root {--gu-transition-duration:200ms}
+:root {
+  --gu-transition-duration: 200ms;
+}

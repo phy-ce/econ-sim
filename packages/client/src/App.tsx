@@ -1,10 +1,10 @@
-import {withViewTransition} from './ui/viewTransition';
-import {Button as UIButton,Input as UIInput} from './ui/controls';
-import {t as uiCopy} from './i18n';
-import {hasStoredLang,chooseLang} from './lang';
-import {LanguagePick} from './views/LanguagePick';
-import {trace,TraceTools} from './trace';
-import {GameWindow,type ScreenRequest,type ScreenRoute} from './views/GameWindow';
+import { withViewTransition } from './ui/viewTransition';
+import { Button as UIButton, Input as UIInput } from './ui/controls';
+import { t as uiCopy } from './i18n';
+import { hasStoredLang, chooseLang } from './lang';
+import { LanguagePick } from './views/LanguagePick';
+import { trace, TraceTools } from './trace';
+import { GameWindow, type ScreenRequest, type ScreenRoute } from './views/GameWindow';
 
 import { regionName } from './i18n';
 import { MarketWindow, useMarketScope } from './views/MarketWindow';
@@ -17,7 +17,21 @@ import { NumericValue } from './NumericValue';
 import { taxCollectionRatio } from './systemMetrics';
 import { useCallback, useEffect, useRef, useState, useMemo } from 'react';
 import type { ReactNode } from 'react';
-import { Menu, Moon, Pause, SkipForward, Map, HardHat, Users, Package, Factory, Landmark, FlaskConical, ChartNoAxesCombined, Bell } from 'lucide-react';
+import {
+  Menu,
+  Moon,
+  Pause,
+  SkipForward,
+  Map,
+  HardHat,
+  Users,
+  Package,
+  Factory,
+  Landmark,
+  FlaskConical,
+  ChartNoAxesCombined,
+  Bell,
+} from 'lucide-react';
 import { WindowWorkspace } from './views/WindowWorkspace';
 import type { WindowId } from './views/WindowWorkspace';
 import { Sprite } from './sprites';
@@ -33,7 +47,6 @@ import { RegionPanel } from './views/RegionPanel';
 import { FinancePanel } from './views/FinancePanel';
 import { unreadNewsCount } from './news';
 
-
 // 1배속 = 하루 0.96초 (1년 약 5.8분). 10배속은 디버그용
 const BASE_TPS = 25 / 24;
 const SPEEDS = [1, 2, 3, 4, 10].map((x) => ({ label: `${x}×`, tps: BASE_TPS * x }));
@@ -41,25 +54,59 @@ const THEME_KEY = 'estera-theme';
 const PLAYER_ID = 100;
 
 function loadTheme(): 'light' | 'dark' {
-  try { return localStorage.getItem(THEME_KEY) === 'dark' ? 'dark' : 'light'; } catch { return 'light'; }
+  try {
+    return localStorage.getItem(THEME_KEY) === 'dark' ? 'dark' : 'light';
+  } catch {
+    return 'light';
+  }
 }
 
 /** 버튼 하나로 여닫는 작은 팝오버. 바깥을 누르거나 Esc 를 누르면 닫힌다 */
-function Popover({ button, label, children, className = '' }: { button: ReactNode; label: string; children: (close: () => void) => ReactNode; className?: string }) {
+function Popover({
+  button,
+  label,
+  children,
+  className = '',
+}: {
+  button: ReactNode;
+  label: string;
+  children: (close: () => void) => ReactNode;
+  className?: string;
+}) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!open) return;
-    const onDown = (e: MouseEvent) => { if (!ref.current?.contains(e.target as Node)) setOpen(false); };
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
+    const onDown = (e: MouseEvent) => {
+      if (!ref.current?.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false);
+    };
     document.addEventListener('mousedown', onDown);
     document.addEventListener('keydown', onKey);
-    return () => { document.removeEventListener('mousedown', onDown); document.removeEventListener('keydown', onKey); };
+    return () => {
+      document.removeEventListener('mousedown', onDown);
+      document.removeEventListener('keydown', onKey);
+    };
   }, [open]);
   return (
     <div className={`popover ${className}`} ref={ref}>
-      <UIButton className="icon-btn" aria-haspopup="true" aria-expanded={open} aria-label={label} data-help={label} onClick={() => setOpen(!open)}>{button}</UIButton>
-      {open && <div className="popover-panel" role="dialog" aria-label={label}>{children(() => setOpen(false))}</div>}
+      <UIButton
+        className="icon-btn"
+        aria-haspopup="true"
+        aria-expanded={open}
+        aria-label={label}
+        data-help={label}
+        onClick={() => setOpen(!open)}
+      >
+        {button}
+      </UIButton>
+      {open && (
+        <div className="popover-panel" role="dialog" aria-label={label}>
+          {children(() => setOpen(false))}
+        </div>
+      )}
     </div>
   );
 }
@@ -67,25 +114,53 @@ function Popover({ button, label, children, className = '' }: { button: ReactNod
 export function App() {
   const game = useGame();
   // Hour and toast messages only affect the chrome; window actions depend on these snapshots.
-  const windowGame=useMemo(()=>game,[game.world,game.history,game.constructionActivity,game.lastReadTick,game.speed,game.pauseReason,game.prefs]);
-  const [langChosen,setLangChosen]=useState(hasStoredLang);
+  const windowGame = useMemo(
+    () => game,
+    [game.world, game.history, game.constructionActivity, game.lastReadTick, game.speed, game.pauseReason, game.prefs],
+  );
+  const [langChosen, setLangChosen] = useState(hasStoredLang);
   const [opened, setOpened] = useState<WindowId[]>(['map']);
-  const [revealRequest,setRevealRequest] = useState(0);
-  const [screenRequest,setScreenRequest]=useState<ScreenRequest|null>(null);
-  const openLinkedWindow=useCallback((route:ScreenRoute)=>{trace('window',{id:route.kind,action:'open'});setOpened(current=>[...current.filter(w=>w!==route.kind),route.kind]);setScreenRequest(p=>({target:route.kind,route,sequence:(p?.sequence??0)+1}));},[]);
-  useEffect(()=>{if(game.researchCompleted>0)openLinkedWindow({kind:'research'});},[game.researchCompleted,openLinkedWindow]);
-  const requestScreen=useCallback((target:WindowId,route:ScreenRoute)=>setScreenRequest(p=>({target,route,sequence:(p?.sequence??0)+1})),[]);
-  const showWindow = useCallback((id: WindowId) => {trace('window',{id,action:'open'}); setOpened(current=>id==='map'?current:[...current.filter(w=>w!==id),id]); setRevealRequest(v=>v+1); },[]);
-  const [popRequest,setPopRequest]=useState<PopRequest|null>(null);
-  const [buildingRequest,setBuildingRequest]=useState<{id:number;sequence:number}|null>(null);
-  const [regionTabRequest,setRegionTabRequest]=useState({tab:'overview' as 'overview'|'industry',sequence:0});
-  const showRegionBuildings=()=>{setRegionTabRequest(r=>({tab:'industry',sequence:r.sequence+1}));showWindow('region');};
+  const [revealRequest, setRevealRequest] = useState(0);
+  const [screenRequest, setScreenRequest] = useState<ScreenRequest | null>(null);
+  const openLinkedWindow = useCallback((route: ScreenRoute) => {
+    trace('window', { id: route.kind, action: 'open' });
+    setOpened((current) => [...current.filter((w) => w !== route.kind), route.kind]);
+    setScreenRequest((p) => ({ target: route.kind, route, sequence: (p?.sequence ?? 0) + 1 }));
+  }, []);
+  useEffect(() => {
+    if (game.researchCompleted > 0) openLinkedWindow({ kind: 'research' });
+  }, [game.researchCompleted, openLinkedWindow]);
+  const requestScreen = useCallback(
+    (target: WindowId, route: ScreenRoute) =>
+      setScreenRequest((p) => ({ target, route, sequence: (p?.sequence ?? 0) + 1 })),
+    [],
+  );
+  const showWindow = useCallback((id: WindowId) => {
+    trace('window', { id, action: 'open' });
+    setOpened((current) => (id === 'map' ? current : [...current.filter((w) => w !== id), id]));
+    setRevealRequest((v) => v + 1);
+  }, []);
+  const [popRequest, setPopRequest] = useState<PopRequest | null>(null);
+  const [buildingRequest, setBuildingRequest] = useState<{ id: number; sequence: number } | null>(null);
+  const [regionTabRequest, setRegionTabRequest] = useState({ tab: 'overview' as 'overview' | 'industry', sequence: 0 });
+  const showRegionBuildings = () => {
+    setRegionTabRequest((r) => ({ tab: 'industry', sequence: r.sequence + 1 }));
+    showWindow('region');
+  };
   const [regionId, setRegionId] = useState(1);
-  const selectRegion = useCallback((id: number) => { requestScreen('region',{kind:'region',regionId:id}); setRegionId(id);setRegionTabRequest(r=>({tab:'overview',sequence:r.sequence+1})); showWindow('region'); },[requestScreen,showWindow]);
+  const selectRegion = useCallback(
+    (id: number) => {
+      requestScreen('region', { kind: 'region', regionId: id });
+      setRegionId(id);
+      setRegionTabRequest((r) => ({ tab: 'overview', sequence: r.sequence + 1 }));
+      showWindow('region');
+    },
+    [requestScreen, showWindow],
+  );
   const [good, setGood] = useState<GoodId>('food');
   const [theme, setTheme] = useState<'light' | 'dark'>(loadTheme);
   const { world } = game;
-  const marketScope='world' as const;
+  const marketScope = 'world' as const;
   const lang = useLang();
   const T = useT();
 
@@ -96,7 +171,11 @@ export function App() {
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
-    try { localStorage.setItem(THEME_KEY, theme); } catch { /* 저장소를 못 쓰면 이번 세션만 */ }
+    try {
+      localStorage.setItem(THEME_KEY, theme);
+    } catch {
+      /* 저장소를 못 쓰면 이번 세션만 */
+    }
   }, [theme]);
 
   // 단축키: Space 재생/정지, 1~4 속도 (입력 칸에 글을 쓰는 중에는 무시)
@@ -107,7 +186,13 @@ export function App() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement | null;
-      if (e.ctrlKey || e.metaKey || e.altKey || (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)))) return;
+      if (
+        e.ctrlKey ||
+        e.metaKey ||
+        e.altKey ||
+        (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)))
+      )
+        return;
       if (t?.closest('button, a, [role=button], [tabindex]')) return;
       if (e.code === 'Space') {
         e.preventDefault();
@@ -120,28 +205,66 @@ export function App() {
     return () => document.removeEventListener('keydown', onKey);
   }, []);
 
-  if (!langChosen) return <LanguagePick onPick={lang=>{chooseLang(lang);setLangChosen(true);}}/>;
-  if (!world) return <div className="boot" role="status" aria-label={T.booting}><Sprite name="crest" size={48} /></div>;
+  if (!langChosen)
+    return (
+      <LanguagePick
+        onPick={(lang) => {
+          chooseLang(lang);
+          setLangChosen(true);
+        }}
+      />
+    );
+  if (!world)
+    return (
+      <div className="boot" role="status" aria-label={T.booting}>
+        <Sprite name="crest" size={48} />
+      </div>
+    );
   const me = playerCompany(world);
   const region = regionById(world, regionId);
-  const viewCompany = (id:number) => {const company=companyById(world,id);if(!company)return;requestScreen('trends',{kind:'trends',kingdomId:company.kingdomId});setPopRequest(null);showWindow('trends');};
+  const viewCompany = (id: number) => {
+    const company = companyById(world, id);
+    if (!company) return;
+    requestScreen('trends', { kind: 'trends', kingdomId: company.kingdomId });
+    setPopRequest(null);
+    showWindow('trends');
+  };
 
-  const openPops=(regionId:number,prof:PopClass)=>{setRegionId(regionId);setPopRequest(p=>({regionId,prof,sequence:(p?.sequence??0)+1}));showWindow('region');};
-  const openBuilding=(id:number)=>{const b=world.buildings.find(b=>b.id===id);if(b){requestScreen('region',{kind:'region',regionId:b.regionId,buildingId:id});setRegionId(b.regionId);setBuildingRequest(p=>({id,sequence:(p?.sequence??0)+1}));showWindow('region');}};
-  const openEvent=(event:GameEvent)=>{
-    const destination=eventDestination(world,event);
-    if(!destination)return;
-    if(destination.kind==='building'){requestScreen('region',{kind:'region',regionId:destination.regionId,buildingId:destination.id});setRegionId(destination.regionId);setBuildingRequest(previous=>({id:destination.id,sequence:(previous?.sequence??0)+1}));showWindow('region');}
-    else if(destination.kind==='region')selectRegion(destination.id);
-    else if(destination.kind==='company')viewCompany(destination.id);
+  const openPops = (regionId: number, prof: PopClass) => {
+    setRegionId(regionId);
+    setPopRequest((p) => ({ regionId, prof, sequence: (p?.sequence ?? 0) + 1 }));
+    showWindow('region');
+  };
+  const openBuilding = (id: number) => {
+    const b = world.buildings.find((b) => b.id === id);
+    if (b) {
+      requestScreen('region', { kind: 'region', regionId: b.regionId, buildingId: id });
+      setRegionId(b.regionId);
+      setBuildingRequest((p) => ({ id, sequence: (p?.sequence ?? 0) + 1 }));
+      showWindow('region');
+    }
+  };
+  const openEvent = (event: GameEvent) => {
+    const destination = eventDestination(world, event);
+    if (!destination) return;
+    if (destination.kind === 'building') {
+      requestScreen('region', { kind: 'region', regionId: destination.regionId, buildingId: destination.id });
+      setRegionId(destination.regionId);
+      setBuildingRequest((previous) => ({ id: destination.id, sequence: (previous?.sequence ?? 0) + 1 }));
+      showWindow('region');
+    } else if (destination.kind === 'region') selectRegion(destination.id);
+    else if (destination.kind === 'company') viewCompany(destination.id);
     else openLinkedWindow(destination);
   };
-  const selectGood = (id: GoodId) => { setGood(id); showWindow('market'); };
-  const kingdom = world.kingdoms.find(k => k.id === me?.kingdomId);
+  const selectGood = (id: GoodId) => {
+    setGood(id);
+    showWindow('market');
+  };
+  const kingdom = world.kingdoms.find((k) => k.id === me?.kingdomId);
   const collection = taxCollectionRatio(kingdom);
   const limit = me ? creditLimit(world, me) : 0;
   const debtRatio = me && limit > 0 ? me.debt / limit : 0;
-  const unread = unreadNewsCount(world,game.lastReadTick);
+  const unread = unreadNewsCount(world, game.lastReadTick);
   const [datePart, timePart] = dateParts(world.tick, game.hour);
   const running = game.speed > 0;
 
@@ -149,55 +272,193 @@ export function App() {
     <div className="app">
       <header className="topbar">
         <div className="brand">
-          <span className="crest"><Sprite name="crest" size={48} /></span>
+          <span className="crest">
+            <Sprite name="crest" size={48} />
+          </span>
           <div className="brand-text">
-            <span className="brand-name">{T.title}{me ? ` · ${companyName(me)}` : ''}</span>
-            <span className="date">{T.datePrefix}{datePart} {timePart && <small>{timePart}</small>}</span>
+            <span className="brand-name">
+              {T.title}
+              {me ? ` · ${companyName(me)}` : ''}
+            </span>
+            <span className="date">
+              {T.datePrefix}
+              {datePart} {timePart && <small>{timePart}</small>}
+            </span>
           </div>
         </div>
 
         {me && (
           <div className="ledger">
-            <UIButton className={`chip loan-chip ${debtRatio>=1?'bad':debtRatio>=.7?'warn':''}`} onClick={()=>openLinkedWindow({kind:'state',tab:'budget'})} aria-label={T.finance} data-help={`${T.system.netTreasury}\n${T.cash}: ${me.cash.toFixed(2)} · ${T.loan}: ${me.debt.toFixed(2)}`}><span className="chip-label"><Sprite name="coin" size={24}/>{T.treasury}</span><span className="chip-value"><span className={me.cash-me.debt<0?'neg':undefined}><NumericValue value={me.cash-me.debt} format="money"/></span> / <NumericValue value={limit} format="money"/></span></UIButton>
-            <dl className={`chip ${me.lastWeekProfit >= 0 ? 'good' : 'bad'}`}><dt>{T.lastWeekPL}</dt><dd><NumericValue value={me.lastWeekProfit} format="signedMoney"/></dd></dl>
-            <dl className={`chip ${collection < .8 ? 'warn' : ''}`}><dt>{T.taxCollection}</dt><dd>{Math.round(collection*100)}%</dd><Bar value={collection} tone={collection < .8 ? 'gold' : 'pos'} size="sm" label={T.taxCollection}/></dl>
+            <UIButton
+              className={`chip loan-chip ${debtRatio >= 1 ? 'bad' : debtRatio >= 0.7 ? 'warn' : ''}`}
+              onClick={() => openLinkedWindow({ kind: 'state', tab: 'budget' })}
+              aria-label={T.finance}
+              data-help={`${T.system.netTreasury}\n${T.cash}: ${me.cash.toFixed(2)} · ${T.loan}: ${me.debt.toFixed(2)}`}
+            >
+              <span className="chip-label">
+                <Sprite name="coin" size={24} />
+                {T.treasury}
+              </span>
+              <span className="chip-value">
+                <span className={me.cash - me.debt < 0 ? 'neg' : undefined}>
+                  <NumericValue value={me.cash - me.debt} format="money" />
+                </span>{' '}
+                / <NumericValue value={limit} format="money" />
+              </span>
+            </UIButton>
+            <dl className={`chip ${me.lastWeekProfit >= 0 ? 'good' : 'bad'}`}>
+              <dt>{T.lastWeekPL}</dt>
+              <dd>
+                <NumericValue value={me.lastWeekProfit} format="signedMoney" />
+              </dd>
+            </dl>
+            <dl className={`chip ${collection < 0.8 ? 'warn' : ''}`}>
+              <dt>{T.taxCollection}</dt>
+              <dd>{Math.round(collection * 100)}%</dd>
+              <Bar value={collection} tone={collection < 0.8 ? 'gold' : 'pos'} size="sm" label={T.taxCollection} />
+            </dl>
           </div>
         )}
 
         <div className="controls">
           <div className="segmented" role="group" aria-label={T.speedGroup}>
-            <UIButton className="seg-play" aria-pressed={!running} aria-label={T.pause} data-help={T.pause}
-              onClick={() => game.setSpeed(0)}><Pause size={16} strokeWidth={2.4} aria-hidden="true" /></UIButton>
+            <UIButton
+              className="seg-play"
+              aria-pressed={!running}
+              aria-label={T.pause}
+              data-help={T.pause}
+              onClick={() => game.setSpeed(0)}
+            >
+              <Pause size={16} strokeWidth={2.4} aria-hidden="true" />
+            </UIButton>
             {SPEEDS.map((s) => (
-              <UIButton key={s.tps} aria-pressed={game.speed === s.tps} onClick={() => game.setSpeed(s.tps)} data-help={`${s.label} (${SPEEDS.indexOf(s) + 1})`} aria-label={`${s.label} (${SPEEDS.indexOf(s) + 1})`}>{s.label}</UIButton>
+              <UIButton
+                key={s.tps}
+                aria-pressed={game.speed === s.tps}
+                onClick={() => game.setSpeed(s.tps)}
+                data-help={`${s.label} (${SPEEDS.indexOf(s) + 1})`}
+                aria-label={`${s.label} (${SPEEDS.indexOf(s) + 1})`}
+              >
+                {s.label}
+              </UIButton>
             ))}
-            <UIButton onClick={game.stepOnce} disabled={running} data-help={T.stepDay} aria-label={T.stepDay}><SkipForward size={14} aria-hidden="true" /></UIButton>
+            <UIButton onClick={game.stepOnce} disabled={running} data-help={T.stepDay} aria-label={T.stepDay}>
+              <SkipForward size={14} aria-hidden="true" />
+            </UIButton>
           </div>
 
-          <div className="segmented"><UIButton onClick={()=>game.runUntilYearEnd(game.speed||4*BASE_TPS)}>▸ {T.yearEnd}</UIButton><Popover label={T.destination} button={<>▾</>}>{close=><UIButton onClick={()=>{game.runUntilYearEnd(game.speed||4*BASE_TPS);close();}}>{T.yearEnd}</UIButton>}</Popover></div>
-          {!running&&<UIButton className="pause-reason" onClick={()=>{if(game.pauseReason.event)openEvent(game.pauseReason.event);}} disabled={!game.pauseReason.event}>{game.pauseReason.kind==='danger'?T.reasonDanger:game.pauseReason.kind==='yearEnd'?`${T.reasonReached} · ${T.yearEnd}`:T.pause}</UIButton>}
-          <UIButton className="icon-btn bell" aria-label={T.notifications(unread)} data-help={T.notifications(unread)} onClick={()=>opened.includes('news')?showWindow('news'):withViewTransition(()=>showWindow('news'),'.window-news')}><Sprite name="bell" size={20}/>{unread>0&&<span className="badge">{unread>99?'99+':unread}</span>}</UIButton>
+          <div className="segmented">
+            <UIButton onClick={() => game.runUntilYearEnd(game.speed || 4 * BASE_TPS)}>▸ {T.yearEnd}</UIButton>
+            <Popover label={T.destination} button={<>▾</>}>
+              {(close) => (
+                <UIButton
+                  onClick={() => {
+                    game.runUntilYearEnd(game.speed || 4 * BASE_TPS);
+                    close();
+                  }}
+                >
+                  {T.yearEnd}
+                </UIButton>
+              )}
+            </Popover>
+          </div>
+          {!running && (
+            <UIButton
+              className="pause-reason"
+              onClick={() => {
+                if (game.pauseReason.event) openEvent(game.pauseReason.event);
+              }}
+              disabled={!game.pauseReason.event}
+            >
+              {game.pauseReason.kind === 'danger'
+                ? T.reasonDanger
+                : game.pauseReason.kind === 'yearEnd'
+                  ? `${T.reasonReached} · ${T.yearEnd}`
+                  : T.pause}
+            </UIButton>
+          )}
+          <UIButton
+            className="icon-btn bell"
+            aria-label={T.notifications(unread)}
+            data-help={T.notifications(unread)}
+            onClick={() =>
+              opened.includes('news')
+                ? showWindow('news')
+                : withViewTransition(() => showWindow('news'), '.window-news')
+            }
+          >
+            <Sprite name="bell" size={20} />
+            {unread > 0 && <span className="badge">{unread > 99 ? '99+' : unread}</span>}
+          </UIButton>
 
           <Popover label={T.menu} button={<Menu size={18} aria-hidden="true" />}>
             {(close) => (
-              <div className="menu"><TraceTools/>
-                <UIButton onClick={() => { game.save(); close(); }}>{T.save}</UIButton>
-                <UIButton onClick={() => { game.load(); close(); }}>{T.load}</UIButton>
-                <UIButton onClick={() => { if (confirm(T.confirmNewGame)) { game.newGame(); } close(); }}>{T.newGame}</UIButton>
+              <div className="menu">
+                <TraceTools />
+                <UIButton
+                  onClick={() => {
+                    game.save();
+                    close();
+                  }}
+                >
+                  {T.save}
+                </UIButton>
+                <UIButton
+                  onClick={() => {
+                    game.load();
+                    close();
+                  }}
+                >
+                  {T.load}
+                </UIButton>
+                <UIButton
+                  onClick={() => {
+                    if (confirm(T.confirmNewGame)) {
+                      game.newGame();
+                    }
+                    close();
+                  }}
+                >
+                  {T.newGame}
+                </UIButton>
                 <hr />
                 <label className="check">
-                  <UIInput type="checkbox" checked={game.prefs.pauseOnDanger} onChange={(e) => game.setPrefs({ pauseOnDanger: e.target.checked })} />
+                  <UIInput
+                    type="checkbox"
+                    checked={game.prefs.pauseOnDanger}
+                    onChange={(e) => game.setPrefs({ pauseOnDanger: e.target.checked })}
+                  />
                   {T.pauseOnDanger}
                 </label>
-                <UIButton onClick={() => withViewTransition(()=>{const next=theme==='dark'?'light':'dark';document.documentElement.dataset.theme=next;setTheme(next);},'.topbar,.desktop-dock,.strategy-panel:not([hidden])')}>
-                  {theme === 'dark' ? <><Sprite name="sun" size={24} /> {T.dayTheme}</> : <><Moon size={14} aria-hidden="true" /> {T.nightTheme}</>}
+                <UIButton
+                  onClick={() =>
+                    withViewTransition(() => {
+                      const next = theme === 'dark' ? 'light' : 'dark';
+                      document.documentElement.dataset.theme = next;
+                      setTheme(next);
+                    }, '.topbar,.desktop-dock,.strategy-panel:not([hidden])')
+                  }
+                >
+                  {theme === 'dark' ? (
+                    <>
+                      <Sprite name="sun" size={24} /> {T.dayTheme}
+                    </>
+                  ) : (
+                    <>
+                      <Moon size={14} aria-hidden="true" /> {T.nightTheme}
+                    </>
+                  )}
                 </UIButton>
                 <hr />
                 <div className="lang-switch" role="group" aria-label={T.language}>
                   <span className="lbl">{T.language}</span>
                   <div className="segmented">
-                    <UIButton aria-pressed={lang === 'ko'} lang="ko" onClick={() => setLang('ko')}>KO</UIButton>
-                    <UIButton aria-pressed={lang === 'en'} lang="en" onClick={() => setLang('en')}>EN</UIButton>
+                    <UIButton aria-pressed={lang === 'ko'} lang="ko" onClick={() => setLang('ko')}>
+                      KO
+                    </UIButton>
+                    <UIButton aria-pressed={lang === 'en'} lang="en" onClick={() => setLang('en')}>
+                      EN
+                    </UIButton>
                   </div>
                 </div>
               </div>
@@ -206,16 +467,58 @@ export function App() {
         </div>
       </header>
 
-      <WindowWorkspace opened={opened} onOpened={setOpened} windows={[
-        {id:'map',title:T.paneMap,icon:<Map size={18}/>,content:<RegionMap world={world} selected={regionId} onSelect={selectRegion}/>},
-        ...([{id:'region',title:T.system.region,icon:<Users size={18}/>},{id:'market',title:T.market,icon:<Package size={18}/>},{id:'state',title:T.stateTitle,icon:<Landmark size={18}/>},{id:'research',title:T.research,icon:<FlaskConical size={18}/>},{id:'construction',title:T.construct,icon:<HardHat size={18}/>},{id:'trends',title:uiCopy().screenText['statistics'],icon:<ChartNoAxesCombined size={18}/>},{id:'news',title:T.news,icon:<Bell size={18}/>,badge:unread} ] as const).map(w=>({...w,content:<GameWindow id={w.id} active={opened.includes(w.id)} game={windowGame} mapRegionId={regionId} request={screenRequest} onOpenWindow={openLinkedWindow}/>}))
-      ]}/>
-
+      <WindowWorkspace
+        opened={opened}
+        onOpened={setOpened}
+        windows={[
+          {
+            id: 'map',
+            title: T.paneMap,
+            icon: <Map size={18} />,
+            content: <RegionMap world={world} selected={regionId} onSelect={selectRegion} />,
+          },
+          ...(
+            [
+              { id: 'region', title: T.system.region, icon: <Users size={18} /> },
+              { id: 'market', title: T.market, icon: <Package size={18} /> },
+              { id: 'state', title: T.stateTitle, icon: <Landmark size={18} /> },
+              { id: 'research', title: T.research, icon: <FlaskConical size={18} /> },
+              { id: 'construction', title: T.construct, icon: <HardHat size={18} /> },
+              { id: 'trends', title: uiCopy().screenText['statistics'], icon: <ChartNoAxesCombined size={18} /> },
+              { id: 'news', title: T.news, icon: <Bell size={18} />, badge: unread },
+            ] as const
+          ).map((w) => ({
+            ...w,
+            content: (
+              <GameWindow
+                id={w.id}
+                active={opened.includes(w.id)}
+                game={windowGame}
+                mapRegionId={regionId}
+                request={screenRequest}
+                onOpenWindow={openLinkedWindow}
+              />
+            ),
+          })),
+        ]}
+      />
 
       <div className="toasts" aria-live="polite">
         {game.toasts.map((t) => (
           <div key={t.id} className={`toast ${t.kind}`}>
-            {t.regionId ? <UIButton className="event-link" onClick={()=>{selectRegion(t.regionId!);game.dismissToast(t.id);}}>{eventText(t)} ↗</UIButton> : eventText(t)}
+            {t.regionId ? (
+              <UIButton
+                className="event-link"
+                onClick={() => {
+                  selectRegion(t.regionId!);
+                  game.dismissToast(t.id);
+                }}
+              >
+                {eventText(t)} ↗
+              </UIButton>
+            ) : (
+              eventText(t)
+            )}
           </div>
         ))}
       </div>

@@ -3027,3 +3027,21 @@ UI-15·UI-16 까지 끝낸 화면을 주 창 7개와 서브창마다 한국어 �
 
 
 완료 근거: main53ea042의 researchDone 처리: 플레이어100의 새 소식이면 위험 멈춤 설정과 무관하게 정지 명령 전송·연구 창 열기. 기존 소식·타사 연구는 재정지/재열기 없음. eventDestination은 topic을 글/지역/건물보다 먼저 판정. eventKey(tick+companyId+key, 없으면 글)를 소식 React key·새 소식 검출에 함께 사용. 읽음은 기존 tick 기준이라 순번과 무관하며 글 수정 뒤에도 유지. dangerPause는 e.key 우선. 기아 warn 별도 처리 없음. HANDOFF 원문 요청을 UI_CHANGES 0/2장에 추가 후 완료 절로 이동, 2-74 반영 완료 문구 수정. 루트 typecheck·클라이언트52파일143시험 통과. 본 게임1920×1028 KO밝음/EN어두움, 워커 메시지 경계에 QA 소식 주입: 정지명령0·연구 창, 재전달/타사 제외, 앞 소식 삭제+글 변경에도 DOM행 동일·읽음 유지, 해결 소식 제거 확인(.tmp/ui22-qa.json). 실제 sim 연구를 끝까지 진행한 시험은 아니며 sim 수정 없음. 스크린샷 .tmp/ui22-{ko-light,en-dark}-{research,updated-news,resolved}.png. 변경: App.tsx, useGame.ts, news.ts, dangerPause.ts, eventDestination.ts, views/Notifications.tsx, test/alerts.test.ts, docs/UI_CHANGES.md·UI_DONE.md·UI_STATUS.md. 미커밋.
+
+## 2026-11-21 UI-21
+
+### UI-21. Prettier 로 클라이언트 코드 모양 맞추기 (사용자 2026-11-20, DECISIONS 7-65, 화면 변경 없음)
+원문: "Codex가 끝내면 너가 Prettier를 설치하고 한 번 전체 정리 2. 정리 검사를 시험(npm run typecheck 같은 단계)에 넣기. 정리 안 된 코드가 있으면 실패하게 해서, Codex나 제가 쓴 코드도 늘 같은 모양을 유지하게 합니다".
+
+한 것 (Claude, 브랜치 wt-prettier):
+- `prettier` 3.9.10 을 루트 devDependency 로 고정해 설치했다 (3.10.0 은 2026-11-11 에 나와 열흘이 안 돼 한 단계 앞 판을 골랐다).
+- 설정 `.prettierrc.json`: 작은따옴표, 한 줄 120자, 줄바꿈은 파일 그대로(`endOfLine: auto`, Windows 작업 트리의 CRLF 때문). `.prettierignore`: dist·public·`.tmp-*`, 그리고 클라이언트의 json(생성 데이터: `scripts/build-map.ts` 의 regions.json, sprites64.json, icons.json)과 md.
+- `packages/client` 의 ts·tsx·css·html·mjs 272개 파일을 한 번 정리했다. 200자 넘는 줄은 72줄이 남았다 (긴 문자열·템플릿처럼 Prettier 가 자르지 않는 줄).
+- 루트 `npm run format` (고치기), `npm run format:check` (검사). `npm run typecheck` 끝에 `format:check` 를 붙였다. 정리 안 된 파일이 있으면 typecheck 가 실패한다.
+
+확인:
+- typecheck 통과, 클라이언트 시험 143개 통과.
+- tools/cssv 60개 상태 (Codex UI-15~19 뒤 창·탭이 바뀌어 74개에서 줄었다). 기준은 main e08fe52 체크아웃 서버, 비교는 정리한 작업 트리 서버.
+  - CSS 변수 글이 바뀌어 (`'Noto Sans KR',sans-serif` → `'Noto Sans KR', sans-serif`, `0.10` → `0.1`) 모든 요소의 계산 스타일 해시가 달랐다. 변수가 그리는 값은 다른 속성에 그대로 나타나므로, 해시에서 `--` 변수를 뺐다 (`verify.mjs`).
+  - 남은 차이: 60개 상태 모두에서 맨 위 금고 칸 등 몇 요소의 너비가 0.016px 다르고 그 줄 픽셀이 조금 다르다. 원인: Prettier 가 JSX 의 ` / ` 를 `{' '}` 와 `/ ` 두 글 조각으로 나눠 글자 경계가 바뀌었다 (App.tsx 금고 칸 확인, 글은 같다). 같은 서버를 두 번 잰 비교는 차이 0 이었다.
+- `verify.mjs`: 탭을 `:nth-child` 대신 순번으로 누른다 (국가 창 탭 앞에 다른 요소가 생겨 4번째 탭을 못 찾았다).

@@ -1,0 +1,6 @@
+packages/client/dist/
+packages/client/public/
+packages/client/.tmp-*/
+# generated data (scripts/build-map.ts, sprite build) and docs
+packages/client/**/*.json
+packages/client/**/*.md

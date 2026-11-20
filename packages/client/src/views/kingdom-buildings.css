@@ -1,7 +1,38 @@
 /* kingdom-buildings 컴포넌트 (UI-20 5단계에서 역할별로 옮김). */
-.kingdom-building-row { display:flex; flex-direction:column; gap:5px; border-bottom:1px solid var(--rule); padding:7px 0; }
-.strategy-panel .kingdom-building-link { display:grid; grid-template-columns:32px minmax(0,1fr) auto; align-items:center; gap:6px; padding:0; text-align:left; border:0; }
-.kingdom-building-link>span { font-size:10px; color:var(--ink2); max-width:110px; white-space:normal; overflow-wrap:anywhere; }
-.kingdom-building-facts { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
-.kingdom-building-facts>span { display:flex; flex-direction:column; gap:3px; font-size:11px; }
-.kingdom-building-facts b { font-size:12px; }
+.kingdom-building-row {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  border-bottom: 1px solid var(--rule);
+  padding: 7px 0;
+}
+.strategy-panel .kingdom-building-link {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  text-align: left;
+  border: 0;
+}
+.kingdom-building-link > span {
+  font-size: 10px;
+  color: var(--ink2);
+  max-width: 110px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.kingdom-building-facts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.kingdom-building-facts > span {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 11px;
+}
+.kingdom-building-facts b {
+  font-size: 12px;
+}

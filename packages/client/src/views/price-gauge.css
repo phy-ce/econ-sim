@@ -1,13 +1,62 @@
 /* price-gauge 컴포넌트 (UI-20 5단계에서 역할별로 옮김). */
-.gauge-wrap { display: flex; align-items: center; }
-.gauge { position: relative; height: 8px; flex: 1; background: var(--chip); border: 1px solid var(--ink); }
-.gauge-mid { position: absolute; left: 50%; top: -4px; width: 2px; height: 14px; margin-left: -1px; background: var(--ink); }
-.gauge-mark { position: absolute; top: -4px; height: 14px; border: 2px solid var(--ink); }
-.gauge-label { color: var(--ink2); text-align: right; }
-.strategy-panel .explorer-detail .goods .gauge-wrap {flex-wrap:wrap}
-.strategy-panel .gauge {min-width:20px}
-.strategy-panel .gauge-wrap {gap:3px}
-.strategy-panel .gauge-label {min-width:31px;font:10px var(--sans)}
-.strategy-panel .gauge-mark {width:6px;margin-left:-3px;border-width:1px}
-.strategy-panel .stat-label,.strategy-panel .tag-soft,.strategy-panel .industry-name small,.strategy-panel .tax-controls label,.strategy-panel .gauge-label {font-size:10px}
-.strategy-panel .stat-label,.strategy-panel .stat>span,.strategy-panel .tag-soft,.strategy-panel .dl-wealth{font-size:11px}
+.gauge-wrap {
+  display: flex;
+  align-items: center;
+}
+.gauge {
+  position: relative;
+  height: 8px;
+  flex: 1;
+  background: var(--chip);
+  border: 1px solid var(--ink);
+}
+.gauge-mid {
+  position: absolute;
+  left: 50%;
+  top: -4px;
+  width: 2px;
+  height: 14px;
+  margin-left: -1px;
+  background: var(--ink);
+}
+.gauge-mark {
+  position: absolute;
+  top: -4px;
+  height: 14px;
+  border: 2px solid var(--ink);
+}
+.gauge-label {
+  color: var(--ink2);
+  text-align: right;
+}
+.strategy-panel .explorer-detail .goods .gauge-wrap {
+  flex-wrap: wrap;
+}
+.strategy-panel .gauge {
+  min-width: 20px;
+}
+.strategy-panel .gauge-wrap {
+  gap: 3px;
+}
+.strategy-panel .gauge-label {
+  min-width: 31px;
+  font: 10px var(--sans);
+}
+.strategy-panel .gauge-mark {
+  width: 6px;
+  margin-left: -3px;
+  border-width: 1px;
+}
+.strategy-panel .stat-label,
+.strategy-panel .tag-soft,
+.strategy-panel .industry-name small,
+.strategy-panel .tax-controls label,
+.strategy-panel .gauge-label {
+  font-size: 10px;
+}
+.strategy-panel .stat-label,
+.strategy-panel .stat > span,
+.strategy-panel .tag-soft,
+.strategy-panel .dl-wealth {
+  font-size: 11px;
+}

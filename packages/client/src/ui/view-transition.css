@@ -1,8 +1,33 @@
 /* Only surfaces explicitly named by withViewTransition participate. */
-:root.ui-transition {view-transition-name:none}
-::view-transition-group(*) {animation-duration:var(--gu-transition-duration);animation-timing-function:ease-out}
-::view-transition-old(*) {animation:ui-surface-out var(--gu-transition-duration) ease-out both;mix-blend-mode:normal}
-::view-transition-new(*) {animation:ui-surface-in var(--gu-transition-duration) ease-out both;mix-blend-mode:normal}
-@keyframes ui-surface-out {to {opacity:0}}
-@keyframes ui-surface-in {from {opacity:0}}
-@media (prefers-reduced-motion:reduce) {::view-transition-group(*),::view-transition-old(*),::view-transition-new(*) {animation:none}}
+:root.ui-transition {
+  view-transition-name: none;
+}
+::view-transition-group(*) {
+  animation-duration: var(--gu-transition-duration);
+  animation-timing-function: ease-out;
+}
+::view-transition-old(*) {
+  animation: ui-surface-out var(--gu-transition-duration) ease-out both;
+  mix-blend-mode: normal;
+}
+::view-transition-new(*) {
+  animation: ui-surface-in var(--gu-transition-duration) ease-out both;
+  mix-blend-mode: normal;
+}
+@keyframes ui-surface-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes ui-surface-in {
+  from {
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none;
+  }
+}

@@ -1,1 +1,1 @@
-﻿export {GameDesignSystem as FoundationsSite} from './GameDesignSystem';
+﻿export { GameDesignSystem as FoundationsSite } from './GameDesignSystem';

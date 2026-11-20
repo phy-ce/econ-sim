@@ -1,38 +1,210 @@
-import {ShareTrack} from '../ui/primitives';
-import {Button as UIButton} from '../ui/controls';
-import {LedgerTable as UITable} from '../ui/primitives';
-import {t as uiCopy} from '../i18n';
-import {OwnershipBrowser,shareLabel} from './OwnershipBrowser';
-import {buildingEcon,BUILDING_BY_ID} from '@econ/sim';
-import type {World,Building} from '@econ/sim';
-import {Crown,Landmark,House,Minus} from 'lucide-react';
-import {buildingName,companyName,regionName,useLang} from '../i18n';
-import {NumericValue} from '../NumericValue';
-import {DetailWindow} from './DetailWindow';
-import {pct} from '../format';
-const colors={state:'var(--royal-owner)',manor:'var(--manor-owner)',finance:'var(--finance-owner)',none:'var(--unassigned-owner)'};
-const icons={state:Crown,manor:House,finance:Landmark,none:Minus};
-type Kind=keyof typeof colors;
-export function OwnershipBar({world,buildings}:{world:World;buildings:Building[]}){
- const ko=useLang()==='ko',total=buildings.reduce((n,b)=>n+b.level,0);
- const tenancy=buildings.length>0&&buildings.every(b=>b.typeId==='subsistence');
- const rows=new Map<string,{kind:Kind;name:string;levels:number;dividend:number;buildingId?:number}>();
- const add=(key:string,kind:Kind,name:string,levels:number,dividend=0,buildingId?:number)=>{const old=rows.get(key);rows.set(key,{kind,name,buildingId,levels:levels+(old?.levels??0),dividend:dividend+(old?.dividend??0)});};
- for(const b of buildings){
- if(b.typeId==='subsistence'){
-  const manor=world.buildings.find(x=>x.regionId===b.regionId&&x.typeId==='manor');
-  const region=world.regions.find(x=>x.id===b.regionId);
-  if(manor)add(`rent:${manor.id}`,'manor',`${region?regionName(region)+' · ':''}${buildingName('manor')} #${manor.id}`,b.level,0,manor.id);
-  else add(`rent-missing:${b.regionId}`,'none',uiCopy().screenText['noRegionalManor'],b.level);
-  continue;
- }
- const e=buildingEcon(world,b);for(const o of e.owners){const owner=world.buildings.find(x=>x.id===o.ownerBuildingId),region=world.regions.find(x=>x.id===owner?.regionId),company=world.companies.find(x=>x.id===b.companyId);const name=o.owner==='state'?`${company?companyName(company):uiCopy().screenText['crown']}`:`${region?regionName(region)+' · ':''}${owner?buildingName(owner.typeId):o.owner} #${o.ownerBuildingId}`;add(o.owner==='state'?`state:${b.companyId}`:`owner:${o.ownerBuildingId}`,o.owner,name,o.levels,o.dividendWeek,o.ownerBuildingId);}
- const remainder=Math.max(0,b.level-e.owners.reduce((n,o)=>n+o.levels,0));if(remainder){const auto=BUILDING_BY_ID[b.typeId].auto;add(auto?`auto:${b.id}`:'unassigned','none',auto?`${buildingName(b.typeId)} #${b.id} · ${uiCopy().screenText['composition']}`:(uiCopy().screenText['noRegisteredOwner']),remainder,0,auto?b.id:undefined);}}
- const entries=[...rows.values()],kinds=(Object.keys(colors) as Kind[]).map(kind=>({kind,levels:entries.filter(x=>x.kind===kind).reduce((n,x)=>n+x.levels,0)})).filter(x=>x.levels>0);
- const names={state:uiCopy().screenText['crown'],manor:uiCopy().screenText['manor'],finance:uiCopy().screenText['finance119'],none:uiCopy().screenText['noShares']};
- const title=`${buildings[0]?buildingName(buildings[0].typeId):uiCopy().screenText['building']} · ${uiCopy().screenText['ownership']}`;
- return <DetailWindow size={2} title={title} help={(tenancy?(uiCopy().screenText['subsistenceLandIsLinkedToItsRegional']):uiCopy().screenText['levelBasedOwnershipClickForOwnersLocations'])+'\n'+kinds.map(x=>`${names[x.kind]} ${pct(total?x.levels/total:0)}`).join(' · ')} triggerContent={<ShareTrack className="ownership-meter" label={title} total={total} segments={kinds.map(x=>{const Icon=icons[x.kind],share=total?x.levels/total:0;return {id:x.kind,weight:x.levels,color:colors[x.kind],content:<><Icon size={15}/>{share>=.18&&<b>{names[x.kind]} {pct(share)}</b>}</>};})} fallback={<span style={{width:'100%',background:colors.none}}>{uiCopy().screenText['noBuildings']}</span>}/>}>
-
- <OwnershipBrowser world={world}>{go=><><div className="ownership-legend">{kinds.map(x=>{const Icon=icons[x.kind];return <span key={x.kind}><Icon size={14} color={colors[x.kind]}/>{names[x.kind]} {shareLabel(total?x.levels/total:0)}</span>;})}</div><UITable className="system-table ownership-table"><thead><tr><th>{uiCopy().screenText['ownerLocation']}</th><th><span tabIndex={0} className="help-text" data-help={tenancy?(uiCopy().screenText['subsistenceLandBelongsToTheRegionalManor']):uiCopy().screenText['sharesUseOwnedLevelsTotalLevelsGrey']}>{tenancy?(uiCopy().screenText['landL']):'L / %'}</span></th><th>{tenancy?(uiCopy().screenText['weeklyRent']):(uiCopy().screenText['weeklyDividend'])}</th></tr></thead><tbody>{entries.map((x,i)=>{const Icon=icons[x.kind];return <tr key={i}><th><span className="ownership-owner" style={{color:colors[x.kind]}}><Icon size={16}/>{x.buildingId!==undefined?<UIButton className="entity-link" onClick={()=>go(x.buildingId!)}>{x.name} ↗</UIButton>:x.name}</span></th><td><NumericValue value={x.levels} format="compact"/> / {shareLabel(total?x.levels/total:0)}</td><td>{tenancy?<span tabIndex={0} data-help={uiCopy().screenText['weeklyRentIsNotTrackedPerSubsistence']}>—</span>:<NumericValue value={x.dividend} format="money"/>}</td></tr>;})}</tbody></UITable></>}</OwnershipBrowser>
- </DetailWindow>;
+import { ShareTrack } from '../ui/primitives';
+import { Button as UIButton } from '../ui/controls';
+import { LedgerTable as UITable } from '../ui/primitives';
+import { t as uiCopy } from '../i18n';
+import { OwnershipBrowser, shareLabel } from './OwnershipBrowser';
+import { buildingEcon, BUILDING_BY_ID } from '@econ/sim';
+import type { World, Building } from '@econ/sim';
+import { Crown, Landmark, House, Minus } from 'lucide-react';
+import { buildingName, companyName, regionName, useLang } from '../i18n';
+import { NumericValue } from '../NumericValue';
+import { DetailWindow } from './DetailWindow';
+import { pct } from '../format';
+const colors = {
+  state: 'var(--royal-owner)',
+  manor: 'var(--manor-owner)',
+  finance: 'var(--finance-owner)',
+  none: 'var(--unassigned-owner)',
+};
+const icons = { state: Crown, manor: House, finance: Landmark, none: Minus };
+type Kind = keyof typeof colors;
+export function OwnershipBar({ world, buildings }: { world: World; buildings: Building[] }) {
+  const ko = useLang() === 'ko',
+    total = buildings.reduce((n, b) => n + b.level, 0);
+  const tenancy = buildings.length > 0 && buildings.every((b) => b.typeId === 'subsistence');
+  const rows = new Map<string, { kind: Kind; name: string; levels: number; dividend: number; buildingId?: number }>();
+  const add = (key: string, kind: Kind, name: string, levels: number, dividend = 0, buildingId?: number) => {
+    const old = rows.get(key);
+    rows.set(key, {
+      kind,
+      name,
+      buildingId,
+      levels: levels + (old?.levels ?? 0),
+      dividend: dividend + (old?.dividend ?? 0),
+    });
+  };
+  for (const b of buildings) {
+    if (b.typeId === 'subsistence') {
+      const manor = world.buildings.find((x) => x.regionId === b.regionId && x.typeId === 'manor');
+      const region = world.regions.find((x) => x.id === b.regionId);
+      if (manor)
+        add(
+          `rent:${manor.id}`,
+          'manor',
+          `${region ? regionName(region) + ' · ' : ''}${buildingName('manor')} #${manor.id}`,
+          b.level,
+          0,
+          manor.id,
+        );
+      else add(`rent-missing:${b.regionId}`, 'none', uiCopy().screenText['noRegionalManor'], b.level);
+      continue;
+    }
+    const e = buildingEcon(world, b);
+    for (const o of e.owners) {
+      const owner = world.buildings.find((x) => x.id === o.ownerBuildingId),
+        region = world.regions.find((x) => x.id === owner?.regionId),
+        company = world.companies.find((x) => x.id === b.companyId);
+      const name =
+        o.owner === 'state'
+          ? `${company ? companyName(company) : uiCopy().screenText['crown']}`
+          : `${region ? regionName(region) + ' · ' : ''}${owner ? buildingName(owner.typeId) : o.owner} #${o.ownerBuildingId}`;
+      add(
+        o.owner === 'state' ? `state:${b.companyId}` : `owner:${o.ownerBuildingId}`,
+        o.owner,
+        name,
+        o.levels,
+        o.dividendWeek,
+        o.ownerBuildingId,
+      );
+    }
+    const remainder = Math.max(0, b.level - e.owners.reduce((n, o) => n + o.levels, 0));
+    if (remainder) {
+      const auto = BUILDING_BY_ID[b.typeId].auto;
+      add(
+        auto ? `auto:${b.id}` : 'unassigned',
+        'none',
+        auto
+          ? `${buildingName(b.typeId)} #${b.id} · ${uiCopy().screenText['composition']}`
+          : uiCopy().screenText['noRegisteredOwner'],
+        remainder,
+        0,
+        auto ? b.id : undefined,
+      );
+    }
+  }
+  const entries = [...rows.values()],
+    kinds = (Object.keys(colors) as Kind[])
+      .map((kind) => ({ kind, levels: entries.filter((x) => x.kind === kind).reduce((n, x) => n + x.levels, 0) }))
+      .filter((x) => x.levels > 0);
+  const names = {
+    state: uiCopy().screenText['crown'],
+    manor: uiCopy().screenText['manor'],
+    finance: uiCopy().screenText['finance119'],
+    none: uiCopy().screenText['noShares'],
+  };
+  const title = `${buildings[0] ? buildingName(buildings[0].typeId) : uiCopy().screenText['building']} · ${uiCopy().screenText['ownership']}`;
+  return (
+    <DetailWindow
+      size={2}
+      title={title}
+      help={
+        (tenancy
+          ? uiCopy().screenText['subsistenceLandIsLinkedToItsRegional']
+          : uiCopy().screenText['levelBasedOwnershipClickForOwnersLocations']) +
+        '\n' +
+        kinds.map((x) => `${names[x.kind]} ${pct(total ? x.levels / total : 0)}`).join(' · ')
+      }
+      triggerContent={
+        <ShareTrack
+          className="ownership-meter"
+          label={title}
+          total={total}
+          segments={kinds.map((x) => {
+            const Icon = icons[x.kind],
+              share = total ? x.levels / total : 0;
+            return {
+              id: x.kind,
+              weight: x.levels,
+              color: colors[x.kind],
+              content: (
+                <>
+                  <Icon size={15} />
+                  {share >= 0.18 && (
+                    <b>
+                      {names[x.kind]} {pct(share)}
+                    </b>
+                  )}
+                </>
+              ),
+            };
+          })}
+          fallback={
+            <span style={{ width: '100%', background: colors.none }}>{uiCopy().screenText['noBuildings']}</span>
+          }
+        />
+      }
+    >
+      <OwnershipBrowser world={world}>
+        {(go) => (
+          <>
+            <div className="ownership-legend">
+              {kinds.map((x) => {
+                const Icon = icons[x.kind];
+                return (
+                  <span key={x.kind}>
+                    <Icon size={14} color={colors[x.kind]} />
+                    {names[x.kind]} {shareLabel(total ? x.levels / total : 0)}
+                  </span>
+                );
+              })}
+            </div>
+            <UITable className="system-table ownership-table">
+              <thead>
+                <tr>
+                  <th>{uiCopy().screenText['ownerLocation']}</th>
+                  <th>
+                    <span
+                      tabIndex={0}
+                      className="help-text"
+                      data-help={
+                        tenancy
+                          ? uiCopy().screenText['subsistenceLandBelongsToTheRegionalManor']
+                          : uiCopy().screenText['sharesUseOwnedLevelsTotalLevelsGrey']
+                      }
+                    >
+                      {tenancy ? uiCopy().screenText['landL'] : 'L / %'}
+                    </span>
+                  </th>
+                  <th>{tenancy ? uiCopy().screenText['weeklyRent'] : uiCopy().screenText['weeklyDividend']}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {entries.map((x, i) => {
+                  const Icon = icons[x.kind];
+                  return (
+                    <tr key={i}>
+                      <th>
+                        <span className="ownership-owner" style={{ color: colors[x.kind] }}>
+                          <Icon size={16} />
+                          {x.buildingId !== undefined ? (
+                            <UIButton className="entity-link" onClick={() => go(x.buildingId!)}>
+                              {x.name} ↗
+                            </UIButton>
+                          ) : (
+                            x.name
+                          )}
+                        </span>
+                      </th>
+                      <td>
+                        <NumericValue value={x.levels} format="compact" /> / {shareLabel(total ? x.levels / total : 0)}
+                      </td>
+                      <td>
+                        {tenancy ? (
+                          <span tabIndex={0} data-help={uiCopy().screenText['weeklyRentIsNotTrackedPerSubsistence']}>
+                            —
+                          </span>
+                        ) : (
+                          <NumericValue value={x.dividend} format="money" />
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </UITable>
+          </>
+        )}
+      </OwnershipBrowser>
+    </DetailWindow>
+  );
 }

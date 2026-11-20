@@ -1,4 +1,4 @@
-import {Button as UIButton} from '../ui/controls';
+import { Button as UIButton } from '../ui/controls';
 // 지역 계층 도넛: 원 전체를 인구 / 부(인구×부 단계) / 하루 소득(현물 포함) 중 하나로 나눈다.
 // 디자인 기준: .tmp/classdesign/project/Main.dc.html
 import { useState } from 'react';
@@ -15,10 +15,19 @@ type TextKey = keyof Dict & `m${string}`;
 /** 문구는 사전 키 (mPop, mPopCol, mPopCenter …) */
 const METRICS: { id: Metric; key: 'mPop' | 'mWealth' | 'mIncome'; icon: string }[] = [
   { id: 'pop', key: 'mPop', icon: 'M2 1h2v2h-2zM6 1h2v2h-2zM1 4h4v4h-4zM5 4h4v4h-4z' },
-  { id: 'wealth', key: 'mWealth', icon: 'M3 1h4v1h-4zM2 2h1v1h-1zM7 2h1v1h-1zM1 3h8v2h-8zM2 5h6v1h-6zM1 6h8v2h-8zM2 8h6v1h-6z' },
-  { id: 'income', key: 'mIncome', icon: 'M3 2h4v1h-4zM2 3h1v4h-1zM7 3h1v4h-1zM3 7h4v1h-4zM4 4h2v2h-2zM8 0h2v1h-2zM9 1h1v1h-1z' },
+  {
+    id: 'wealth',
+    key: 'mWealth',
+    icon: 'M3 1h4v1h-4zM2 2h1v1h-1zM7 2h1v1h-1zM1 3h8v2h-8zM2 5h6v1h-6zM1 6h8v2h-8zM2 8h6v1h-6z',
+  },
+  {
+    id: 'income',
+    key: 'mIncome',
+    icon: 'M3 2h4v1h-4zM2 3h1v4h-1zM7 3h1v4h-1zM3 7h4v1h-4zM4 4h2v2h-2zM8 0h2v1h-2zM9 1h1v1h-1z',
+  },
 ];
-const GAP = 0.012, C = 200;
+const GAP = 0.012,
+  C = 200;
 
 function arc(r0: number, r1: number, a0: number, a1: number): string {
   const large = a1 - a0 > Math.PI ? 1 : 0;
@@ -26,58 +35,85 @@ function arc(r0: number, r1: number, a0: number, a1: number): string {
   return `M${p(r1, a0)}A${r1} ${r1} 0 ${large} 1 ${p(r1, a1)}L${p(r0, a1)}A${r0} ${r0} 0 ${large} 0 ${p(r0, a0)}Z`;
 }
 
-export function ClassDonut({ region: r, onViewPops }: { region: Region; onViewPops?:(prof:PopClass)=>void }) {
+export function ClassDonut({ region: r, onViewPops }: { region: Region; onViewPops?: (prof: PopClass) => void }) {
   const [metric, setMetric] = useState<Metric>('pop');
   const [sel, setSel] = useState<PopClass | null>(null);
-  const [hover,setHover]=useState<PopClass|null>(null);
+  const [hover, setHover] = useState<PopClass | null>(null);
   const T = useT();
   const txt = (m: (typeof METRICS)[number], part: '' | 'Col' | 'Center') => T[`${m.key}${part}` as TextKey] as string;
   const curM = METRICS.find((m) => m.id === metric)!;
   const cur = { label: txt(curM, ''), col: txt(curM, 'Col'), center: txt(curM, 'Center') };
 
-  const rows = POP_CLASSES.filter((c) => r.households[c].population >= 0.5).map((c) => {
-    const h = r.households[c];
-    const inKind = GOOD_IDS.reduce((a, g) => a + (h.inKind[g] ?? 0) * r.market[g].price, 0);
-    const income = Math.max(0, h.incomeEma + inKind);
-    const v = metric === 'pop' ? h.population : metric === 'wealth' ? h.population * h.wealth : income;
-    return { c, h, v, food: h.food ?? h.fulfillment };
-  }).sort((p, q) => q.v - p.v); // 비율이 큰 계층부터 (12시에서 시계 방향, 목록 위에서 아래)
+  const rows = POP_CLASSES.filter((c) => r.households[c].population >= 0.5)
+    .map((c) => {
+      const h = r.households[c];
+      const inKind = GOOD_IDS.reduce((a, g) => a + (h.inKind[g] ?? 0) * r.market[g].price, 0);
+      const income = Math.max(0, h.incomeEma + inKind);
+      const v = metric === 'pop' ? h.population : metric === 'wealth' ? h.population * h.wealth : income;
+      return { c, h, v, food: h.food ?? h.fulfillment };
+    })
+    .sort((p, q) => q.v - p.v); // 비율이 큰 계층부터 (12시에서 시계 방향, 목록 위에서 아래)
   const actualTotal = rows.reduce((a, x) => a + x.v, 0);
   const total = actualTotal || 1;
-  const show = (v: number) => (metric === 'income' ? compactMoney(v) : metric === 'pop' ? T.people(compact(v)) : compact(v));
+  const show = (v: number) =>
+    metric === 'income' ? compactMoney(v) : metric === 'pop' ? T.people(compact(v)) : compact(v);
 
   // Keep exact proportions; tiny classes remain accessible through their legend buttons.
-  let a=-Math.PI/2;
-  const segs=rows.filter(x=>x.v>0).map(x=>{
-    const sweep=x.v/total*Math.PI*2,gap=Math.min(GAP,sweep*.15);
-    const on=x.c===(hover??sel);
-    const d=arc(on?96:104,on?168:158,a+gap/2,a+sweep-gap/2);
-    a+=sweep;return {c:x.c,d,on};
-  });
-  const explain=(c:PopClass)=>{
-    const x=rows.find(x=>x.c===c)!;
-    return `${className(c)} · ${cur.col}: ${exactNumber(x.v)} (${pct(x.v/total)})\n${T.population}: ${exactNumber(x.h.population)}\n${T.standardOfLiving}: ${x.h.sol.toFixed(1)} · ${T.wealthLevel}: ${x.h.wealth.toFixed(1)}\n${T.food(pct(x.food))}\n${T.ringOpenPops}`;
+  let a = -Math.PI / 2;
+  const segs = rows
+    .filter((x) => x.v > 0)
+    .map((x) => {
+      const sweep = (x.v / total) * Math.PI * 2,
+        gap = Math.min(GAP, sweep * 0.15);
+      const on = x.c === (hover ?? sel);
+      const d = arc(on ? 96 : 104, on ? 168 : 158, a + gap / 2, a + sweep - gap / 2);
+      a += sweep;
+      return { c: x.c, d, on };
+    });
+  const explain = (c: PopClass) => {
+    const x = rows.find((x) => x.c === c)!;
+    return `${className(c)} · ${cur.col}: ${exactNumber(x.v)} (${pct(x.v / total)})\n${T.population}: ${exactNumber(x.h.population)}\n${T.standardOfLiving}: ${x.h.sol.toFixed(1)} · ${T.wealthLevel}: ${x.h.wealth.toFixed(1)}\n${T.food(pct(x.food))}\n${T.ringOpenPops}`;
   };
 
   // 100칸 와플: 1칸 = 1%
   const counts = rows.map((x) => Math.floor((x.v / total) * 100));
   let left = 100 - counts.reduce((s, x) => s + x, 0);
-  rows.map((x, i) => ({ i, rem: (x.v / total) * 100 - counts[i] })).sort((p, q) => q.rem - p.rem)
-    .forEach((o) => { if (left > 0 && rows[o.i].v / total >= 0.01) { counts[o.i] += 1; left -= 1; } });
+  rows
+    .map((x, i) => ({ i, rem: (x.v / total) * 100 - counts[i] }))
+    .sort((p, q) => q.rem - p.rem)
+    .forEach((o) => {
+      if (left > 0 && rows[o.i].v / total >= 0.01) {
+        counts[o.i] += 1;
+        left -= 1;
+      }
+    });
   const cells: string[] = [];
-  rows.forEach((x, i) => { for (let j = 0; j < counts[i]; j++) cells.push(CLASS_COLOR[x.c]); });
+  rows.forEach((x, i) => {
+    for (let j = 0; j < counts[i]; j++) cells.push(CLASS_COLOR[x.c]);
+  });
   while (cells.length < 100) cells.push('var(--sheet)');
 
-  const selRow = rows.find((x) => x.c === (hover??sel));
-  const label = T.donutAria(regionName(r), cur.label, rows.map((x) => `${className(x.c)} ${pct(x.v / total)}`).join(', '));
+  const selRow = rows.find((x) => x.c === (hover ?? sel));
+  const label = T.donutAria(
+    regionName(r),
+    cur.label,
+    rows.map((x) => `${className(x.c)} ${pct(x.v / total)}`).join(', '),
+  );
 
   return (
     <div className="donut-block">
       <div className="donut-top">
         <div className="pxseg" role="group" aria-label={T.donutPick}>
           {METRICS.map((m) => (
-            <UIButton key={m.id} data-help={m.id==='pop'?T.help.classPop:m.id==='wealth'?T.help.classWealth:T.help.classIncome} aria-pressed={metric === m.id} onClick={() => setMetric(m.id)}>
-              <svg width="16" height="16" viewBox="0 0 10 10" aria-hidden="true" shapeRendering="crispEdges"><path d={m.icon} fill="currentColor" /></svg>
+            <UIButton
+              key={m.id}
+              data-help={m.id === 'pop' ? T.help.classPop : m.id === 'wealth' ? T.help.classWealth : T.help.classIncome}
+              aria-pressed={metric === m.id}
+              onClick={() => setMetric(m.id)}
+            >
+              <svg width="16" height="16" viewBox="0 0 10 10" aria-hidden="true" shapeRendering="crispEdges">
+                <path d={m.icon} fill="currentColor" />
+              </svg>
               {txt(m, '')}
             </UIButton>
           ))}
@@ -88,30 +124,75 @@ export function ClassDonut({ region: r, onViewPops }: { region: Region; onViewPo
           <svg viewBox="0 0 400 400" role="img" aria-label={label}>
             <circle cx={C} cy={C} r={170} fill="none" stroke="var(--ink)" strokeWidth={2} strokeDasharray="4 4" />
             {segs.map((s) => (
-              <path key={s.c} d={s.d} fill={CLASS_COLOR[s.c]} stroke="var(--ink)" strokeWidth={s.on ? 3 : 1.5}
-                className="donut-seg" data-help={explain(s.c)} onPointerEnter={()=>setHover(s.c)} onPointerLeave={()=>setHover(null)} onClick={() => {setSel(s.c);onViewPops?.(s.c);}} />
+              <path
+                key={s.c}
+                d={s.d}
+                fill={CLASS_COLOR[s.c]}
+                stroke="var(--ink)"
+                strokeWidth={s.on ? 3 : 1.5}
+                className="donut-seg"
+                data-help={explain(s.c)}
+                onPointerEnter={() => setHover(s.c)}
+                onPointerLeave={() => setHover(null)}
+                onClick={() => {
+                  setSel(s.c);
+                  onViewPops?.(s.c);
+                }}
+              />
             ))}
-            {selRow
-              ? <>
+            {selRow ? (
+              <>
                 <SvgSprite64 id={selRow.c} x={164} y={112} size={72} />
-                <text x={C} y={222} className="donut-name">{className(selRow.c)}</text>
-                <text x={C} y={254} className="donut-val">{show(selRow.v)}</text>
-                <text x={C} y={282} className="donut-sub">{pct(selRow.v / total)}</text>
+                <text x={C} y={222} className="donut-name">
+                  {className(selRow.c)}
+                </text>
+                <text x={C} y={254} className="donut-val">
+                  {show(selRow.v)}
+                </text>
+                <text x={C} y={282} className="donut-sub">
+                  {pct(selRow.v / total)}
+                </text>
               </>
-              : <>
-                <text x={C} y={188} className="donut-sub">{cur.center}</text>
-                <text x={C} y={232} className="donut-total">{show(actualTotal)}</text>
-              </>}
+            ) : (
+              <>
+                <text x={C} y={188} className="donut-sub">
+                  {cur.center}
+                </text>
+                <text x={C} y={232} className="donut-total">
+                  {show(actualTotal)}
+                </text>
+              </>
+            )}
           </svg>
         </div>
         <div className="donut-legend">
-          <div className="dl-head lbl"><span /><span>{T.classWealth}</span><span className="num">{cur.col}</span><span className="num">{T.share}</span></div>
+          <div className="dl-head lbl">
+            <span />
+            <span>{T.classWealth}</span>
+            <span className="num">{cur.col}</span>
+            <span className="num">{T.share}</span>
+          </div>
           {rows.map((x) => {
             const on = x.c === sel;
             const share = x.v / total;
             return (
-              <UIButton key={x.c} className={`dl-row ${on ? 'on' : ''}`} aria-pressed={on} data-help={explain(x.c)} onPointerEnter={()=>setHover(x.c)} onPointerLeave={()=>setHover(null)} onFocus={()=>setHover(x.c)} onBlur={()=>setHover(null)} onClick={() => {setSel(on ? null : x.c);onViewPops?.(x.c);}}>
-                <span className="dl-tile" style={{ color: CLASS_COLOR[x.c] }}><ClassSprite c={x.c} size={32} /></span>
+              <UIButton
+                key={x.c}
+                className={`dl-row ${on ? 'on' : ''}`}
+                aria-pressed={on}
+                data-help={explain(x.c)}
+                onPointerEnter={() => setHover(x.c)}
+                onPointerLeave={() => setHover(null)}
+                onFocus={() => setHover(x.c)}
+                onBlur={() => setHover(null)}
+                onClick={() => {
+                  setSel(on ? null : x.c);
+                  onViewPops?.(x.c);
+                }}
+              >
+                <span className="dl-tile" style={{ color: CLASS_COLOR[x.c] }}>
+                  <ClassSprite c={x.c} size={32} />
+                </span>
                 <span className="dl-main">
                   <span className="dl-name">
                     <span className="dl-sw" style={{ background: CLASS_COLOR[x.c] }} />
@@ -120,7 +201,15 @@ export function ClassDonut({ region: r, onViewPops }: { region: Region; onViewPo
                   </span>
                   <span className="dl-wealth" data-help={T.help.wealth}>
                     <Bar value={x.h.wealth / 30} color={CLASS_COLOR[x.c]} size="sm" />
-                    <span className="pxnum small">{T.wealthLevel} {x.h.wealth.toFixed(1)}</span></span><span className="dl-wealth" data-help={T.help.sol}><Bar value={x.h.sol / 30} color={CLASS_COLOR[x.c]} size="sm"/><span className="pxnum small">{T.standardOfLiving} {x.h.sol.toFixed(1)}</span>
+                    <span className="pxnum small">
+                      {T.wealthLevel} {x.h.wealth.toFixed(1)}
+                    </span>
+                  </span>
+                  <span className="dl-wealth" data-help={T.help.sol}>
+                    <Bar value={x.h.sol / 30} color={CLASS_COLOR[x.c]} size="sm" />
+                    <span className="pxnum small">
+                      {T.standardOfLiving} {x.h.sol.toFixed(1)}
+                    </span>
                   </span>
                 </span>
                 <span className="pxnum num">{show(x.v)}</span>
@@ -131,9 +220,10 @@ export function ClassDonut({ region: r, onViewPops }: { region: Region; onViewPo
         </div>
       </div>
       <div className="waffle" role="img" aria-label={label}>
-        {cells.map((bg, i) => <span key={i} style={{ background: bg }} />)}
+        {cells.map((bg, i) => (
+          <span key={i} style={{ background: bg }} />
+        ))}
       </div>
     </div>
   );
 }
-

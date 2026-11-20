@@ -15,13 +15,16 @@
     "test:core": "npm run test:core -w @econ/sim",
     "test:long": "npm run test:long -w @econ/sim",
     "golden:update": "npm run golden:update -w @econ/sim",
-    "typecheck": "npm run typecheck -w @econ/sim && npm run typecheck -w @econ/client && npm run typecheck -w @econ/encyclopedia"
+    "typecheck": "npm run typecheck -w @econ/sim && npm run typecheck -w @econ/client && npm run typecheck -w @econ/encyclopedia && npm run format:check",
+    "format": "prettier --write packages/client --log-level warn",
+    "format:check": "prettier --check packages/client --log-level warn"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react": "^4.3.4",
+    "prettier": "3.9.10",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2",
     "vite": "^6.0.7",
