@@ -9,6 +9,9 @@
 - 클라우드 세션(claude.ai/code)으로 이어서 할 수 있다. 규칙은 CLAUDE.md "클라우드 세션"을 본다.
 - 옛 세션 기록: `docs/log/` (2026-10-25 이전 HANDOFF 절은 `docs/log/HANDOFF_2026-10-18_to_10-25.md`, 날짜별 UI 기록도 여기). 다른 문서의 "HANDOFF 0-ind3"·"HANDOFF 0-aifix" 같은 옛 절 참조는 그 파일에 있다.
 
+## 0-1121-prettier
+- 브랜치 wt-prettier (main e08fe52 에서, 2026-11-21), UI-21 (DECISIONS 7-65, UI_DONE UI-21), 화면 변경 없음, sim·sim API 변경 없음 → UI_CHANGES 할 일 없음. prettier 3.9.10 루트 devDependency, `.prettierrc.json` (작은따옴표, 120자, endOfLine auto), `.prettierignore` (dist·public·.tmp-*·클라이언트 json·md). `packages/client` 파일 272개 한 번 정리, 200자 넘는 줄 72줄 남음 (Prettier 가 자르지 않는 긴 문자열·템플릿). `npm run format` / `format:check`, `npm run typecheck` 끝에 format:check (`prettier --check packages/client`). 확인: typecheck, 클라이언트 시험 143, tools/cssv 60개 상태 (verify.mjs 가 `--` 변수를 해시에서 빼고 탭을 순번으로 누름), 남은 차이는 금고 칸 등 너비 0.016px (JSX ` / ` 가 `{' '}` 로 나뉨, 글은 같음). 남은 것: Codex 가 main 체크아웃에 커밋 안 한 클라이언트 변경이 있으면 병합 뒤 `npm run format` 을 돌려야 typecheck 가 통과한다.
+
 ## 0-1120-alerts
 
 2026-11-20 사용자: "알림이 너무 많이 뜬다". 브랜치 wt-alerts, sim 만 바꿨다 (`alerts.ts`, `economy.ts alertOnce`, `commands.ts`, `production.ts`, `finance.ts`, `types.ts`).
@@ -24,15 +27,14 @@
 - 확인: typecheck, test:core 124개, 새 시험 `test/core/alerts.test.ts` (묶기·풀리면 지우기). 1년 실행 (시드 42, 플레이어 조작 없음, main e6e29d3 대비): 전체 소식 581 → 239건, 플레이어(왕실) 소식 21 → 19건.
 
 ## 0-1120-tsref
-- UI-21 (Prettier, DECISIONS 7-65) 은 2026-11-21 wt-prettier 에서 끝냈다 (UI_DONE UI-21). `npm run typecheck` 가 `prettier --check packages/client` 까지 돌린다. 고칠 때는 `npm run format`.
-- 브랜치 wt-tsref (main 9c0e5fb 에서, 2026-11-20), 클라이언트 리팩토링만 (화면 변경 없음, sim·sim API 변경 없음 → UI_CHANGES 할 일 없음). `views/CompanyPanel.tsx` 를 없애고 쓰는 부품을 새 파일로 나눴다 (`views/buildingRow.ts` rowOf, `ConstructionProjects.tsx` Projects, `BuildingControls.tsx`, `Wages.tsx`, `KingdomSummary.tsx`). 쓰는 곳 없던 `House`·`BuildList` 와 그 안 부품, 그것만 쓰던 CSS 규칙 81개(`cat*`, `hrow*` 등)를 지웠고, premerge 에서 `ui/parts.css` 에 남아 있던 같은 클래스(`cat*`·`hrow*`·`house`·`hc-*`·`hd-h`·`blockers`·`build-catalogue`) 규칙 19줄도 지웠다. 나머지 `company-panel.css` 규칙 52개는 CSS 4개(`wages.css`·`kingdom-summary.css`·`construction-projects.css`·`building-controls.css`)로 `ui/index.css` 같은 자리에 옮겼다. 확인: tools/cssv 74/74 같음, 클라이언트 시험 130, typecheck. 남은 것: 400자 넘는 줄 187줄은 저장소에 포매터(prettier 등)가 없어 정리하지 않았다 (설치는 사용자 승인 필요, DECISIONS 에 아직 항목 없음). Codex 에게: UI-15~UI-19 에서 CompanyPanel.tsx·company-panel.css 대신 새 파일을 본다.
+- 브랜치 wt-tsref (main 9c0e5fb 에서, 2026-11-20), 클라이언트 리팩토링만 (화면 변경 없음, sim·sim API 변경 없음 → UI_CHANGES 할 일 없음). `views/CompanyPanel.tsx` 를 없애고 쓰는 부품을 새 파일로 나눴다 (`views/buildingRow.ts` rowOf, `ConstructionProjects.tsx` Projects, `BuildingControls.tsx`, `Wages.tsx`, `KingdomSummary.tsx`). 쓰는 곳 없던 `House`·`BuildList` 와 그 안 부품, 그것만 쓰던 CSS 규칙 81개(`cat*`, `hrow*` 등)를 지웠고, premerge 에서 `ui/parts.css` 에 남아 있던 같은 클래스(`cat*`·`hrow*`·`house`·`hc-*`·`hd-h`·`blockers`·`build-catalogue`) 규칙 19줄도 지웠다. 나머지 `company-panel.css` 규칙 52개는 CSS 4개(`wages.css`·`kingdom-summary.css`·`construction-projects.css`·`building-controls.css`)로 `ui/index.css` 같은 자리에 옮겼다. 확인: tools/cssv 74/74 같음, 클라이언트 시험 130, typecheck. 남은 것이던 400자 넘는 줄 187줄은 0-1121-prettier (UI-21) 에서 Prettier 로 정리했다. Codex 에게: UI-15~UI-19 에서 CompanyPanel.tsx·company-panel.css 대신 새 파일을 본다.
 
 ## 0-1118-css2
-- 브랜치 wt-css (main 3a8df1b 에서, 2026-11-20). UI-20 4~5단계 끝 → UI-20 완료 (UI_DONE). 4단계: 이기지 못한 선언 576개 삭제. 5단계: 게임 CSS 를 역할별 파일 58개로 나눔 (`ui/index.css` 순서, `tools/cssv/plan.mjs`), `@layer` 는 공용 부품과 14곳이 겹쳐 걸지 않음. 화면 변경 없음 (tools/cssv 74/74, 클라이언트 시험 130). 다음: Codex 가 UI-15~UI-19 (파일 위치가 바뀐 것을 알려야 함). Claude 의 TS 정리 (CompanyPanel 부품 옮기기) 는 0-1120-tsref 에서 끝남, 400자 넘는 줄 정리는 남음. 옛 CSS 파일 10개 삭제는 사용자 승인 (DECISIONS 7-64, 2026-11-20).
+- 브랜치 wt-css (main 3a8df1b 에서, 2026-11-20). UI-20 4~5단계 끝 → UI-20 완료 (UI_DONE). 4단계: 이기지 못한 선언 576개 삭제. 5단계: 게임 CSS 를 역할별 파일 58개로 나눔 (`ui/index.css` 순서, `tools/cssv/plan.mjs`), `@layer` 는 공용 부품과 14곳이 겹쳐 걸지 않음. 화면 변경 없음 (tools/cssv 74/74, 클라이언트 시험 130). 다음: Codex 가 UI-15~UI-19 (파일 위치가 바뀐 것을 알려야 함). Claude 의 TS 정리 (CompanyPanel 부품 옮기기) 는 0-1120-tsref 에서 끝남, 400자 넘는 줄 정리는 0-1121-prettier (UI-21) 에서 끝남. 옛 CSS 파일 10개 삭제는 사용자 승인 (DECISIONS 7-64, 2026-11-20).
 
 ## 0-1118-css
 - 브랜치 wt-uitidy (main 6e2f55c 에서), 문서만. 사용자가 CSS 구조 정리를 맨 먼저 하기로 했다 (UI_CHANGES UI-20). 조사: Claude 코드 조사 (겹친 (클래스, 속성) 484곳), Codex 화면 조사 `.tmp/css-runtime.md` (규칙 2,309개 중 1,269개 미매칭). 순서: Codex 가 main 체크아웃의 커밋 안 한 변경을 정리 (결과는 Codex 가 `.tmp/uncommitted-review.md` 에 새로 쓴다, 아직 없음. 사용자 2026-11-18 결정) → UI-20 → UI-15~UI-19. 2026-11-18 에 main 체크아웃에서 커밋 안 한 클라이언트 파일: 고침 `system-02/main.tsx`, `system-02/system.css`, `ui/tokens.css`, `views/CompanyPanel.tsx`, `views/ConstructionDetail.tsx`, `views/ConstructionPanel.tsx`, `views/FlowRow.tsx`, `views/KingdomMoney.tsx`, `views/KingdomTotals.tsx`, `views/SectionStack.tsx`, `views/SortHeader.tsx`, `test/ownershipPop.test.tsx`, `test/productionDiagram.test.tsx`; 새 파일 `system-02/blocks.css`, `system-02/blocks.tsx`, `system-02/tokens.css`, `views/sort-header.css`, `test/sortHeader.test.tsx`, `.tmp-ui-nine/`, `.tmp-ui-prod/` (모두 `packages/client/` 아래, `src/` 생략).
-- CLAUDE.md UI 분업에 예외를 더했다 (사용자 2026-11-18): 화면이 바뀌지 않는 리팩토링은 Claude 가 직접 한다. 다음 Claude 일: `views/CompanyPanel.tsx` 부품을 쓰는 창 옆으로 옮기기 (쓰는 곳 없는 `BuildList` 삭제), 400자 넘는 줄 정리. 커밋 안 한 변경 정리가 끝난 뒤 시작한다.
+- CLAUDE.md UI 분업에 예외를 더했다 (사용자 2026-11-18): 화면이 바뀌지 않는 리팩토링은 Claude 가 직접 한다. 다음 Claude 일: `views/CompanyPanel.tsx` 부품을 쓰는 창 옆으로 옮기기 (쓰는 곳 없는 `BuildList` 삭제), 400자 넘는 줄 정리. 커밋 안 한 변경 정리가 끝난 뒤 시작한다. (둘 다 끝남: CompanyPanel 은 0-1120-tsref, 400자 줄은 UI-21 2026-11-21.)
 
 ## 0-1118-uipolish
 - 브랜치 wt-uitidy (main c7ec123 에서), 문서만. UI_CHANGES 에 UI-18 (화면 개선 다듬기)·UI-19 (View Transition API) 를 더했다 (사용자 2026-11-18). Codex 가 다시 시작되어 UI-15~UI-17 은 2026-11-09 에 넘긴 뒤 아무 커밋도 없었다. UI-15~UI-19 를 다시 넘긴다.

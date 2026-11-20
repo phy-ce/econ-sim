@@ -15,7 +15,7 @@
 - `deadrules.mjs`: Codex 화면 조사(`.tmp/css-runtime-data.json`)에서 한 번도 맞지 않았고, 클래스 이름이 코드 어디에도 없는 규칙을 찾는다.
 - `dupdecl.mjs`: 같은 선택자·같은 조건의 뒤 규칙이 늘 덮어쓰는 선언을 찾는다. 초안 페이지도 쓰는 공용 파일은 같은 파일 안에서만 지운다.
 - `neverwin.mjs`: 화면에서 이긴 선언을 잰 결과로, 맞는 요소는 있었지만 어느 요소에서도 이기지 못한 선언을 찾는다 (UI-20 4단계).
-   측정: `CSSV_WINS=1 CSSV_URL=.. CSSV_OUT=.tmp/cssv/wins node tools/cssv/cdp.mjs tools/cssv/verify.mjs` (같은 74개 상태, `wins.json`).
+   측정: `CSSV_WINS=1 CSSV_URL=.. CSSV_OUT=.tmp/cssv/wins node tools/cssv/cdp.mjs tools/cssv/verify.mjs` (위와 같은 상태, 2026-11-21 기준 60개, `wins.json`).
    목록: `CSSV_WINS_IN=.tmp/cssv/wins/wins.json [CSSV_APPLY=1] node tools/cssv/cdp.mjs tools/cssv/neverwin.mjs`.
    지키는 것: 공용 파일은 건드리지 않는다. :hover·:focus 같은 상태 선택자와 그 밖의 의사 요소가 붙은 규칙, @container 안 규칙은 남긴다.
    @media·@supports 안 규칙이 이긴 경우는 그 규칙이 없는 환경도 따져, 진 쪽을 이긴 것으로 친다. 한 번도 맞지 않은 규칙은 이 단계에서 지우지 않는다.
